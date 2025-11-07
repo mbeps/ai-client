@@ -4,6 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Visual variants shared across all badge instances.
+ */
 const badgeVariants = cva(
   "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
   {
@@ -23,8 +26,16 @@ const badgeVariants = cva(
       variant: "default",
     },
   }
-)
+) 
 
+/**
+ * Renders a styled badge that adapts to links, spans, or other hosts.
+ * @param className Optional class names to extend styling.
+ * @param variant Visual variant of the badge.
+ * @param asChild Whether to render the badge as the provided child.
+ * @param props Native span props forwarded to the host element.
+ * @returns Badge element annotated with slot metadata.
+ */
 function Badge({
   className,
   variant,

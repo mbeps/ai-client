@@ -1,5 +1,8 @@
 import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core"
 
+/**
+ * Stores end-user identities and custom profile fields.
+ */
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -19,6 +22,9 @@ export const user = pgTable("user", {
   favoriteNumber: integer("favorite_number").notNull(),
 })
 
+/**
+ * Tracks active user sessions along with device metadata.
+ */
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -36,6 +42,9 @@ export const session = pgTable("session", {
   activeOrganizationId: text("active_organization_id"),
 })
 
+/**
+ * Persists OAuth account connections and credential-based secrets.
+ */
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
@@ -56,6 +65,9 @@ export const account = pgTable("account", {
     .notNull(),
 })
 
+/**
+ * Contains email verifications, password resets, and other one-time tokens.
+ */
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
@@ -68,6 +80,9 @@ export const verification = pgTable("verification", {
     .notNull(),
 })
 
+/**
+ * Holds shared secrets and backup codes for TOTP-based 2FA.
+ */
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),
   secret: text("secret").notNull(),
@@ -77,6 +92,9 @@ export const twoFactor = pgTable("two_factor", {
     .references(() => user.id, { onDelete: "cascade" }),
 })
 
+/**
+ * Stores WebAuthn passkey material for passwordless login.
+ */
 export const passkey = pgTable("passkey", {
   id: text("id").primaryKey(),
   name: text("name"),
@@ -93,6 +111,9 @@ export const passkey = pgTable("passkey", {
   aaguid: text("aaguid"),
 })
 
+/**
+ * Defines collaborative organizations created via the Better Auth plugin.
+ */
 export const organization = pgTable("organization", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -102,6 +123,9 @@ export const organization = pgTable("organization", {
   metadata: text("metadata"),
 })
 
+/**
+ * Links users to organizations with role-based access metadata.
+ */
 export const member = pgTable("member", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -114,6 +138,9 @@ export const member = pgTable("member", {
   createdAt: timestamp("created_at").notNull(),
 })
 
+/**
+ * Tracks pending invitations sent to prospective organization members.
+ */
 export const invitation = pgTable("invitation", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")

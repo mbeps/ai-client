@@ -31,6 +31,11 @@ type TwoFactorData = {
   backupCodes: string[]
 }
 
+/**
+ * Manages enabling or disabling TOTP-based two-factor authentication.
+ * @param isEnabled Flag indicating whether 2FA is already active.
+ * @returns Two-factor form that switches between enable and disable states.
+ */
 export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(null)
   const router = useRouter()
@@ -41,6 +46,10 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Disables two-factor authentication after verifying the user's password.
+   * @param data Form payload containing the account password.
+   */
   async function handleDisableTwoFactorAuth(data: TwoFactorAuthForm) {
     await authClient.twoFactor.disable(
       {
@@ -58,6 +67,10 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
     )
   }
 
+  /**
+   * Enables two-factor authentication and displays verification instructions.
+   * @param data Form payload containing the account password.
+   */
   async function handleEnableTwoFactorAuth(data: TwoFactorAuthForm) {
     const result = await authClient.twoFactor.enable({
       password: data.password,
@@ -126,6 +139,13 @@ const qrSchema = z.object({
 
 type QrForm = z.infer<typeof qrSchema>
 
+/**
+ * Verifies a newly enabled TOTP setup and reveals backup codes.
+ * @param totpURI QR code value produced by Better Auth.
+ * @param backupCodes Codes that can be used when the authenticator is unavailable.
+ * @param onDone Callback invoked when the verification flow completes.
+ * @returns Verification form and backup code viewer.
+ */
 function QRCodeVerify({
   totpURI,
   backupCodes,
@@ -140,6 +160,10 @@ function QRCodeVerify({
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Verifies the TOTP code entered by the user to finalize 2FA setup.
+   * @param data Form payload containing the 6-digit token.
+   */
   async function handleQrCode(data: QrForm) {
     await authClient.twoFactor.verifyTotp(
       {

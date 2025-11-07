@@ -16,6 +16,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+/**
+ * Button that runs an async action, handles loading state, and surfaces toast feedback.
+ * @param action Async callback that returns an error flag and optional message.
+ * @param requireAreYouSure Whether to prompt for confirmation before running the action.
+ * @param areYouSureDescription Custom confirmation prompt copy.
+ * @returns Shadcn button wired with toast-driven feedback.
+ */
 export function ActionButton({
   action,
   requireAreYouSure = false,
@@ -28,6 +35,9 @@ export function ActionButton({
 }) {
   const [isLoading, startTransition] = useTransition()
 
+  /**
+   * Executes the async action and displays toast feedback based on the result.
+   */
   function performAction() {
     startTransition(async () => {
       const data = await action()

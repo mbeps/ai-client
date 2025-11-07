@@ -27,6 +27,12 @@ import { MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+/**
+ * Row renderer for the admin users table with impersonation and moderation actions.
+ * @param user User record augmented with role metadata.
+ * @param selfId Identifier for the currently authenticated admin.
+ * @returns Table row containing user details and management controls.
+ */
 export function UserRow({
   user,
   selfId,
@@ -38,6 +44,11 @@ export function UserRow({
   const router = useRouter()
   const isSelf = user.id === selfId
 
+  // Admin action handlers.
+  /**
+   * Starts impersonating another user and redirects back home.
+   * @param userId Identifier for the user being impersonated.
+   */
   function handleImpersonateUser(userId: string) {
     authClient.admin.impersonateUser(
       { userId },
@@ -53,6 +64,10 @@ export function UserRow({
     )
   }
 
+  /**
+   * Bans a user and refreshes the admin list on success.
+   * @param userId Identifier for the account being banned.
+   */
   function handleBanUser(userId: string) {
     authClient.admin.banUser(
       { userId },
@@ -68,6 +83,10 @@ export function UserRow({
     )
   }
 
+  /**
+   * Removes an active ban from the selected user.
+   * @param userId Identifier for the account being unbanned.
+   */
   function handleUnbanUser(userId: string) {
     authClient.admin.unbanUser(
       { userId },
@@ -83,6 +102,10 @@ export function UserRow({
     )
   }
 
+  /**
+   * Revokes all sessions for a user via the admin API.
+   * @param userId Identifier for the account whose sessions are revoked.
+   */
   function handleRevokeSessions(userId: string) {
     authClient.admin.revokeUserSessions(
       { userId },
@@ -97,6 +120,10 @@ export function UserRow({
     )
   }
 
+  /**
+   * Permanently deletes a user after confirmation.
+   * @param userId Identifier for the account being deleted.
+   */
   function handleRemoveUser(userId: string) {
     authClient.admin.removeUser(
       { userId },

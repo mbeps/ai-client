@@ -6,24 +6,47 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Root select component that wires Radix Select to slot metadata.
+ * @param props Radix select props forwarded to the root.
+ * @returns Select root element.
+ */
 function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
+/**
+ * Group helper used to cluster select items.
+ * @param props Radix group props forwarded to the element.
+ * @returns Select group wrapper.
+ */
 function SelectGroup({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Group>) {
   return <SelectPrimitive.Group data-slot="select-group" {...props} />
 }
 
+/**
+ * Select value placeholder and text renderer.
+ * @param props Radix value props forwarded to the element.
+ * @returns Current select value component.
+ */
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
+/**
+ * Button-like trigger that opens the select content.
+ * @param className Optional class names to extend styling.
+ * @param size Size token controlling trigger height.
+ * @param children Trigger contents typically including the value.
+ * @param props Radix trigger props forwarded to the element.
+ * @returns Select trigger component with icons and responsive styles.
+ */
 function SelectTrigger({
   className,
   size = "default",
@@ -50,6 +73,14 @@ function SelectTrigger({
   )
 }
 
+/**
+ * Floating panel that lists available select options.
+ * @param className Optional class names to extend styling.
+ * @param children Option nodes rendered inside the viewport.
+ * @param position Positioning strategy for the dropdown.
+ * @param props Radix content props forwarded to the element.
+ * @returns Select content surface with scroll buttons.
+ */
 function SelectContent({
   className,
   children,
@@ -85,6 +116,12 @@ function SelectContent({
   )
 }
 
+/**
+ * Label displayed at the top of a group of select options.
+ * @param className Optional class names to extend styling.
+ * @param props Radix label props forwarded to the element.
+ * @returns Styled select label component.
+ */
 function SelectLabel({
   className,
   ...props
@@ -98,6 +135,13 @@ function SelectLabel({
   )
 }
 
+/**
+ * Selectable option within the dropdown panel.
+ * @param className Optional class names to extend styling.
+ * @param children Rendered option label.
+ * @param props Radix item props forwarded to the element.
+ * @returns Select item with a check indicator.
+ */
 function SelectItem({
   className,
   children,
@@ -122,6 +166,12 @@ function SelectItem({
   )
 }
 
+/**
+ * Divider that separates logical sections inside select content.
+ * @param className Optional class names to extend styling.
+ * @param props Radix separator props forwarded to the element.
+ * @returns Select separator component.
+ */
 function SelectSeparator({
   className,
   ...props
@@ -135,6 +185,12 @@ function SelectSeparator({
   )
 }
 
+/**
+ * Scroll control that reveals options above the current viewport.
+ * @param className Optional class names to extend styling.
+ * @param props Radix scroll button props forwarded to the element.
+ * @returns Scroll up button with chevron icon.
+ */
 function SelectScrollUpButton({
   className,
   ...props
@@ -153,6 +209,12 @@ function SelectScrollUpButton({
   )
 }
 
+/**
+ * Scroll control that reveals options below the current viewport.
+ * @param className Optional class names to extend styling.
+ * @param props Radix scroll button props forwarded to the element.
+ * @returns Scroll down button with chevron icon.
+ */
 function SelectScrollDownButton({
   className,
   ...props

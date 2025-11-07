@@ -23,6 +23,11 @@ const forgotPasswordSchema = z.object({
 
 type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
 
+/**
+ * Form that requests a password reset email for the provided address.
+ * @param openSignInTab Callback used to return to the sign-in tab.
+ * @returns Forgot password form component.
+ */
 export function ForgotPassword({
   openSignInTab,
 }: {
@@ -37,6 +42,10 @@ export function ForgotPassword({
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Sends a password reset email and reports success via toast notifications.
+   * @param data Form payload containing the email address.
+   */
   async function handleForgotPassword(data: ForgotPasswordForm) {
     await authClient.requestPasswordReset(
       {

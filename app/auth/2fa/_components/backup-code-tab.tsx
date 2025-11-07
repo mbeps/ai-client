@@ -24,6 +24,10 @@ const backupCodeSchema = z.object({
 
 type BackupCodeForm = z.infer<typeof backupCodeSchema>
 
+/**
+ * Backup code verification tab for two-factor authentication.
+ * @returns Backup code verification form component.
+ */
 export function BackupCodeTab() {
   const router = useRouter()
   const form = useForm<BackupCodeForm>({
@@ -35,6 +39,10 @@ export function BackupCodeTab() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Validates a backup code and redirects to the home page on success.
+   * @param data Form payload containing the backup code.
+   */
   async function handleBackupCodeVerification(data: BackupCodeForm) {
     await authClient.twoFactor.verifyBackupCode(data, {
       onError: error => {

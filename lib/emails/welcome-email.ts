@@ -1,5 +1,9 @@
 import { sendEmail } from "./send-email"
 
+/**
+ * Greets newly registered users after successful sign-up.
+ * @param user User profile details used to personalize the message.
+ */
 export async function sendWelcomeEmail(user: { name: string; email: string }) {
   await sendEmail({
     to: user.email,

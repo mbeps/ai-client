@@ -41,6 +41,10 @@ const createInviteSchema = z.object({
 
 type CreateInviteForm = z.infer<typeof createInviteSchema>
 
+/**
+ * Dialog-triggered form for inviting members to the active organization.
+ * @returns Invite button component with modal form.
+ */
 export function CreateInviteButton() {
   const [open, setOpen] = useState(false)
 
@@ -54,6 +58,10 @@ export function CreateInviteButton() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Creates an invitation and closes the dialog when successful.
+   * @param data Form values including email and role selection.
+   */
   async function handleCreateInvite(data: CreateInviteForm) {
     await authClient.organization.inviteMember(data, {
       onError: error => {

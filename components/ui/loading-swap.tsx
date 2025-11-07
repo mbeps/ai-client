@@ -2,6 +2,13 @@ import { cn } from "@/lib/utils"
 import { Loader2Icon } from "lucide-react"
 import type { ReactNode } from "react"
 
+/**
+ * Swaps between children and a spinner without shifting layout.
+ * @param isLoading Whether to display the loading spinner.
+ * @param children Content that appears when not loading.
+ * @param className Optional class names applied to both layers.
+ * @returns Wrapper that toggles visibility for loading states.
+ */
 export function LoadingSwap({
   isLoading,
   children,

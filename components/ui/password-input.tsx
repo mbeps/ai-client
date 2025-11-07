@@ -6,6 +6,12 @@ import { cn } from "@/lib/utils"
 import { EyeIcon, EyeOffIcon } from "lucide-react"
 import { useState, type ComponentProps } from "react"
 
+/**
+ * Password input with toggleable visibility while preserving styling.
+ * @param className Optional class names to extend styling.
+ * @param props Input props forwarded to the underlying text field.
+ * @returns Password field with an inline visibility toggle control.
+ */
 export function PasswordInput({
   className,
   ...props
@@ -25,6 +31,7 @@ export function PasswordInput({
         size="icon"
         type="button"
         className="absolute inset-y-1/2 right-1 size-7 -translate-y-1/2"
+        // Toggle between password and text visibility.
         onClick={() => setShowPassword(p => !p)}
       >
         <Icon className="size-5" />

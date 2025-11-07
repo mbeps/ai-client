@@ -6,12 +6,22 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Root dropdown menu component that wires keyboard interactions.
+ * @param props Radix dropdown menu props forwarded to the root.
+ * @returns Dropdown menu root element.
+ */
 function DropdownMenu({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
 }
 
+/**
+ * Portal component that renders menu content outside the DOM flow.
+ * @param props Radix portal props forwarded to the element.
+ * @returns Portal used by dropdown menus.
+ */
 function DropdownMenuPortal({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
@@ -20,6 +30,11 @@ function DropdownMenuPortal({
   )
 }
 
+/**
+ * Trigger element that toggles the dropdown menu.
+ * @param props Radix trigger props forwarded to the element.
+ * @returns Trigger annotated with dropdown slot metadata.
+ */
 function DropdownMenuTrigger({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
@@ -31,6 +46,13 @@ function DropdownMenuTrigger({
   )
 }
 
+/**
+ * Floating content surface that hosts menu items.
+ * @param className Optional class names to extend styling.
+ * @param sideOffset Offset distance from the trigger element.
+ * @param props Radix content props forwarded to the element.
+ * @returns Styled dropdown content container.
+ */
 function DropdownMenuContent({
   className,
   sideOffset = 4,
@@ -51,6 +73,11 @@ function DropdownMenuContent({
   )
 }
 
+/**
+ * Logical grouping helper for related menu items.
+ * @param props Radix group props forwarded to the element.
+ * @returns Group wrapper used within dropdown menus.
+ */
 function DropdownMenuGroup({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
@@ -59,6 +86,14 @@ function DropdownMenuGroup({
   )
 }
 
+/**
+ * Standard clickable menu item with optional destructive styling.
+ * @param className Optional class names to extend styling.
+ * @param inset Whether to offset the item for nested menus.
+ * @param variant Visual variant for destructive states.
+ * @param props Radix item props forwarded to the element.
+ * @returns Menu item component with keyboard focus styling.
+ */
 function DropdownMenuItem({
   className,
   inset,
@@ -82,6 +117,14 @@ function DropdownMenuItem({
   )
 }
 
+/**
+ * Checkbox-style menu item that can toggle boolean options.
+ * @param className Optional class names to extend styling.
+ * @param children Item content rendered alongside the indicator.
+ * @param checked Whether the checkbox indicator is active.
+ * @param props Radix checkbox item props forwarded to the element.
+ * @returns Menu item with a checkbox indicator.
+ */
 function DropdownMenuCheckboxItem({
   className,
   children,
@@ -108,6 +151,11 @@ function DropdownMenuCheckboxItem({
   )
 }
 
+/**
+ * Radio group used to manage mutually exclusive menu selections.
+ * @param props Radix radio group props forwarded to the element.
+ * @returns Radio group component for dropdown menus.
+ */
 function DropdownMenuRadioGroup({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>) {
@@ -119,6 +167,13 @@ function DropdownMenuRadioGroup({
   )
 }
 
+/**
+ * Radio item that displays a filled circle when selected.
+ * @param className Optional class names to extend styling.
+ * @param children Label content rendered inside the item.
+ * @param props Radix radio item props forwarded to the element.
+ * @returns Menu item representing a single radio choice.
+ */
 function DropdownMenuRadioItem({
   className,
   children,
@@ -143,6 +198,13 @@ function DropdownMenuRadioItem({
   )
 }
 
+/**
+ * Non-interactive label used to segment menu sections.
+ * @param className Optional class names to extend styling.
+ * @param inset Whether to indent the label for nested content.
+ * @param props Radix label props forwarded to the element.
+ * @returns Styled menu label element.
+ */
 function DropdownMenuLabel({
   className,
   inset,
@@ -163,6 +225,12 @@ function DropdownMenuLabel({
   )
 }
 
+/**
+ * Separator line that visually divides menu groups.
+ * @param className Optional class names to extend styling.
+ * @param props Radix separator props forwarded to the element.
+ * @returns Horizontal divider within the dropdown menu.
+ */
 function DropdownMenuSeparator({
   className,
   ...props
@@ -176,6 +244,12 @@ function DropdownMenuSeparator({
   )
 }
 
+/**
+ * Helper span that presents keyboard shortcuts alongside menu items.
+ * @param className Optional class names to extend styling.
+ * @param props Native span props forwarded to the element.
+ * @returns Inline element for shortcut hints.
+ */
 function DropdownMenuShortcut({
   className,
   ...props
@@ -192,12 +266,25 @@ function DropdownMenuShortcut({
   )
 }
 
+/**
+ * Sub-menu container that supports nested dropdowns.
+ * @param props Radix sub props forwarded to the element.
+ * @returns Sub-menu wrapper.
+ */
 function DropdownMenuSub({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
   return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />
 }
 
+/**
+ * Trigger element that opens a nested sub-menu.
+ * @param className Optional class names to extend styling.
+ * @param inset Whether to indent the trigger.
+ * @param children Trigger contents rendered before the chevron.
+ * @param props Radix sub trigger props forwarded to the element.
+ * @returns Sub-menu trigger component.
+ */
 function DropdownMenuSubTrigger({
   className,
   inset,
@@ -222,6 +309,12 @@ function DropdownMenuSubTrigger({
   )
 }
 
+/**
+ * Container for nested sub-menu items.
+ * @param className Optional class names to extend styling.
+ * @param props Radix sub content props forwarded to the element.
+ * @returns Styled surface for sub-menu options.
+ */
 function DropdownMenuSubContent({
   className,
   ...props

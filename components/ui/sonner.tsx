@@ -3,6 +3,12 @@
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, ToasterProps } from "sonner"
 
+/**
+ * Wrapper around Sonner's toaster that syncs with the active theme.
+ * @param props Sonner toaster props forwarded to the underlying component.
+ * @returns Theme-aware toast provider.
+ * @see https://sonner.emilkowal.ski
+ */
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 

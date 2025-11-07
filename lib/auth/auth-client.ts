@@ -9,6 +9,10 @@ import {
 } from "better-auth/client/plugins"
 import { ac, admin, user } from "@/components/auth/permissions"
 
+/**
+ * Better Auth React client with passkey, two-factor, admin, and organization plugins.
+ * @see https://docs.better-auth.com/client/react
+ */
 export const authClient = createAuthClient({
   plugins: [
     inferAdditionalFields<typeof auth>(),

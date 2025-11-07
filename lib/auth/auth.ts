@@ -16,6 +16,10 @@ import { sendOrganizationInviteEmail } from "../emails/organization-invite-email
 import { desc, eq } from "drizzle-orm"
 import { member } from "@/drizzle/schema"
 
+/**
+ * Better Auth server configured with email, OAuth, passkey, and organization features.
+ * @see https://docs.better-auth.com
+ */
 export const auth = betterAuth({
   appName: "Better Auth Demo",
   user: {

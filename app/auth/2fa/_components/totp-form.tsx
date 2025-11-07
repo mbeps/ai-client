@@ -24,6 +24,10 @@ const totpSchema = z.object({
 
 type TotpForm = z.infer<typeof totpSchema>
 
+/**
+ * Form that accepts a 6-digit TOTP code during the two-factor challenge.
+ * @returns TOTP verification form component.
+ */
 export function TotpForm() {
   const router = useRouter()
   const form = useForm<TotpForm>({
@@ -35,6 +39,10 @@ export function TotpForm() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Verifies the provided TOTP code and redirects to the home page on success.
+   * @param data Form payload containing the 6-digit code.
+   */
   async function handleTotpVerification(data: TotpForm) {
     await authClient.twoFactor.verifyTotp(data, {
       onError: error => {

@@ -8,6 +8,10 @@ import {
   SUPPORTED_OAUTH_PROVIDERS,
 } from "@/lib/auth/o-auth-providers"
 
+/**
+ * Renders buttons for each configured OAuth provider.
+ * @returns Array of Better Auth action buttons for social sign-in.
+ */
 export function SocialAuthButtons() {
   return SUPPORTED_OAUTH_PROVIDERS.map(provider => {
     const Icon = SUPPORTED_OAUTH_PROVIDER_DETAILS[provider].Icon

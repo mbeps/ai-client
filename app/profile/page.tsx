@@ -31,8 +31,13 @@ import { AccountDeletion } from "./_components/account-deletion"
 import { TwoFactorAuth } from "./_components/two-factor-auth"
 import { PasskeyManagement } from "./_components/passkey-management"
 
+/**
+ * Profile dashboard that surfaces personal data, security tools, and danger zone actions.
+ * @returns Server-rendered profile page requiring an authenticated session.
+ */
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() })
+  // Redirect guests to the authentication flow.
   if (session == null) return redirect("/auth/login")
 
   return (
@@ -136,6 +141,10 @@ export default async function ProfilePage() {
   )
 }
 
+/**
+ * Server component that lists linked social accounts and masks credential providers.
+ * @returns Card section with account linking controls.
+ */
 async function LinkedAccountsTab() {
   const accounts = await auth.api.listUserAccounts({ headers: await headers() })
   const nonCredentialAccounts = accounts.filter(
@@ -150,6 +159,11 @@ async function LinkedAccountsTab() {
     </Card>
   )
 }
+/**
+ * Server component that fetches sessions and renders revocation controls.
+ * @param currentSessionToken Token representing the active browser session.
+ * @returns Card containing the session management UI.
+ */
 async function SessionsTab({
   currentSessionToken,
 }: {
@@ -169,6 +183,12 @@ async function SessionsTab({
   )
 }
 
+/**
+ * Server component that aggregates password, 2FA, and passkey management data.
+ * @param email Email address used for password setup flows.
+ * @param isTwoFactorEnabled Current two-factor state for the user.
+ * @returns Stacked security cards for password, 2FA, and passkeys.
+ */
 async function SecurityTab({
   email,
   isTwoFactorEnabled,
@@ -236,6 +256,11 @@ async function SecurityTab({
   )
 }
 
+/**
+ * Suspense boundary with a subtle loading indicator for tab panels.
+ * @param children Lazy content to render when data is resolved.
+ * @returns Suspense wrapper with a spinning loader fallback.
+ */
 function LoadingSuspense({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={<Loader2Icon className="size-20 animate-spin" />}>

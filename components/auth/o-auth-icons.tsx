@@ -1,5 +1,10 @@
 import { ComponentProps } from "react"
 
+/**
+ * Discord logo rendered with the shared icon sizing.
+ * @param props SVG props forwarded to the element.
+ * @returns Discord brand icon.
+ */
 export function DiscordIcon(props: ComponentProps<"svg">) {
   return (
     <svg className="size-4" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -8,6 +13,11 @@ export function DiscordIcon(props: ComponentProps<"svg">) {
   )
 }
 
+/**
+ * GitHub logo rendered with the shared icon sizing.
+ * @param props SVG props forwarded to the element.
+ * @returns GitHub brand icon.
+ */
 export function GitHubIcon(props: ComponentProps<"svg">) {
   return (
     <svg className="size-4" viewBox="0 0 24 24" fill="currentColor" {...props}>

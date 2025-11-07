@@ -19,9 +19,14 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { UserRow } from "./_components/user-row"
 
+/**
+ * Server-rendered admin dashboard listing users and management actions.
+ * @returns Admin page component guarded by Better Auth permissions.
+ */
 export default async function AdminPage() {
   const session = await auth.api.getSession({ headers: await headers() })
 
+  // Ensure only admins with list permission can view the dashboard.
   if (session == null) return redirect("/auth/login")
   const hasAccess = await auth.api.userHasPermission({
     headers: await headers(),

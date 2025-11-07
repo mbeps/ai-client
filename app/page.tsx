@@ -6,10 +6,15 @@ import { authClient } from "@/lib/auth/auth-client"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
+/**
+ * Landing page that surfaces navigation options based on session state.
+ * @returns Client-rendered home page component.
+ */
 export default function Home() {
   const [hasAdminPermission, setHasAdminPermission] = useState(false)
   const { data: session, isPending: loading } = authClient.useSession()
 
+  // Seed admin state as soon as session loads.
   useEffect(() => {
     authClient.admin
       .hasPermission({ permission: { user: ["list"] } })

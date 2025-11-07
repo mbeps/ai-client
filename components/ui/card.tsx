@@ -2,6 +2,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Base card container with consistent padding and elevation.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the container.
+ * @returns Card wrapper element.
+ */
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -15,6 +21,12 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Card section reserved for titles, descriptions, or actions.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the section.
+ * @returns Structured header region.
+ */
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -28,6 +40,12 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Typography wrapper for card headings.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the title.
+ * @returns Title element with consistent font weight.
+ */
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -38,6 +56,12 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Subheading text displayed beneath the card title.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the description.
+ * @returns Description element styled for secondary copy.
+ */
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -48,6 +72,12 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Layout region for header-level actions such as buttons.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the action slot.
+ * @returns Positioned action container.
+ */
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -61,6 +91,12 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Main card body that holds interactive or textual content.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the section.
+ * @returns Content container with horizontal padding.
+ */
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -71,6 +107,12 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Bottom-aligned card section for supporting actions or meta info.
+ * @param className Optional class names to extend styling.
+ * @param props Native div props forwarded to the section.
+ * @returns Footer container that mirrors header spacing.
+ */
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

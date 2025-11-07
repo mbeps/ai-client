@@ -20,17 +20,26 @@ import { ForgotPassword } from "./_components/forgot-password"
 
 type Tab = "signin" | "signup" | "email-verification" | "forgot-password"
 
+/**
+ * Auth entry point that combines sign-in, sign-up, verification, and reset flows.
+ * @returns Client-rendered login page with tabbed navigation.
+ */
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [selectedTab, setSelectedTab] = useState<Tab>("signin")
 
+  // Redirect authenticated users away from the auth flow.
   useEffect(() => {
     authClient.getSession().then(session => {
       if (session.data != null) router.push("/")
     })
   }, [router])
 
+  /**
+   * Switches to the email verification tab and stores the target email.
+   * @param email Address that needs verification.
+   */
   function openEmailVerificationTab(email: string) {
     setEmail(email)
     setSelectedTab("email-verification")

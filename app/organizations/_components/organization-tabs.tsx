@@ -6,6 +6,10 @@ import { authClient } from "@/lib/auth/auth-client"
 import { MembersTab } from "./members-tab"
 import { InvitesTab } from "./invites-tab"
 
+/**
+ * Tabs container that toggles between organization members and invitations.
+ * @returns Organization tab layout driven by Better Auth data hooks.
+ */
 export function OrganizationTabs() {
   const { data: activeOrganization } = authClient.useActiveOrganization()
 

@@ -2,6 +2,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Styled input element that forwards native props and supports file inputs.
+ * @param className Optional class names to extend styling.
+ * @param type Input type forwarded to the native element.
+ * @param props Native input props forwarded to the element.
+ * @returns Text input with consistent focus and error styles.
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

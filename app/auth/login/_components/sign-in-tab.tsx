@@ -27,6 +27,12 @@ const signInSchema = z.object({
 
 type SignInForm = z.infer<typeof signInSchema>
 
+/**
+ * Email and password sign-in form with passkey shortcut and password reset link.
+ * @param openEmailVerificationTab Callback that opens the verification tab when required.
+ * @param openForgotPassword Callback that opens the password reset tab.
+ * @returns Sign-in form component.
+ */
 export function SignInTab({
   openEmailVerificationTab,
   openForgotPassword,
@@ -45,6 +51,10 @@ export function SignInTab({
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Attempts to authenticate with email and password and handles verification errors.
+   * @param data Form submission payload containing credentials.
+   */
   async function handleSignIn(data: SignInForm) {
     await authClient.signIn.email(
       { ...data, callbackURL: "/" },

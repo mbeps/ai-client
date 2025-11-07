@@ -27,6 +27,11 @@ const profileUpdateSchema = z.object({
 
 type ProfileUpdateForm = z.infer<typeof profileUpdateSchema>
 
+/**
+ * Form that updates profile metadata and triggers email change verification.
+ * @param user Initial user data used to seed the form.
+ * @returns Controlled profile update form component.
+ */
 export function ProfileUpdateForm({
   user,
 }: {
@@ -44,6 +49,10 @@ export function ProfileUpdateForm({
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Updates profile fields and optionally initiates an email change flow.
+   * @param data Form submission containing updated profile values.
+   */
   async function handleProfileUpdate(data: ProfileUpdateForm) {
     const promises = [
       authClient.updateUser({

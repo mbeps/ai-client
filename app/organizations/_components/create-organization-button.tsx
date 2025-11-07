@@ -33,6 +33,10 @@ const createOrganizationSchema = z.object({
 
 type CreateOrganizationForm = z.infer<typeof createOrganizationSchema>
 
+/**
+ * Dialog form for creating a new organization and setting it active.
+ * @returns Button that opens the organization creation dialog.
+ */
 export function CreateOrganizationButton() {
   const [open, setOpen] = useState(false)
   const form = useForm<CreateOrganizationForm>({
@@ -44,6 +48,10 @@ export function CreateOrganizationButton() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Creates an organization and makes it the active context on success.
+   * @param data Form payload containing the organization name.
+   */
   async function handleCreateOrganization(data: CreateOrganizationForm) {
     const slug = data.name
       .trim()

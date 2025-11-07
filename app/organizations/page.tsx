@@ -7,8 +7,13 @@ import { OrganizationSelect } from "./_components/organization-select"
 import { CreateOrganizationButton } from "./_components/create-organization-button"
 import { OrganizationTabs } from "./_components/organization-tabs"
 
+/**
+ * Organizations dashboard where members switch, create, and manage teams.
+ * @returns Server-rendered organizations page.
+ */
 export default async function OrganizationsPage() {
   const session = await auth.api.getSession({ headers: await headers() })
+  // Require authentication before accessing organization resources.
   if (session == null) return redirect("/auth/login")
 
   return (

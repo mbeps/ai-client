@@ -6,12 +6,22 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
+/**
+ * Wraps the Radix alert dialog root with slot metadata for styling.
+ * @param props Radix alert dialog props.
+ * @returns The alert dialog root element.
+ */
 function AlertDialog({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 
+/**
+ * Trigger element helper for the alert dialog.
+ * @param props Radix trigger props.
+ * @returns Trigger element that opens the dialog.
+ */
 function AlertDialogTrigger({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
@@ -20,6 +30,11 @@ function AlertDialogTrigger({
   )
 }
 
+/**
+ * Portal element used to render dialogs outside layout flow.
+ * @param props Radix portal props.
+ * @returns Portal configured with a descriptive slot.
+ */
 function AlertDialogPortal({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Portal>) {
@@ -28,6 +43,12 @@ function AlertDialogPortal({
   )
 }
 
+/**
+ * Full-screen backdrop that handles focus trapping.
+ * @param className Optional class names to extend styling.
+ * @param props Radix overlay props.
+ * @returns Overlay component that dims the background.
+ */
 function AlertDialogOverlay({
   className,
   ...props
@@ -44,6 +65,12 @@ function AlertDialogOverlay({
   )
 }
 
+/**
+ * Content container that renders the dialog panel.
+ * @param className Optional class names to extend styling.
+ * @param props Radix content props.
+ * @returns Modal content region.
+ */
 function AlertDialogContent({
   className,
   ...props
@@ -63,6 +90,12 @@ function AlertDialogContent({
   )
 }
 
+/**
+ * Header region that typically hosts the title and description.
+ * @param className Optional class names to extend styling.
+ * @param props Div props forwarded to the header.
+ * @returns Styled dialog header container.
+ */
 function AlertDialogHeader({
   className,
   ...props
@@ -76,6 +109,12 @@ function AlertDialogHeader({
   )
 }
 
+/**
+ * Footer region used for action buttons.
+ * @param className Optional class names to extend styling.
+ * @param props Div props forwarded to the footer.
+ * @returns Styled dialog footer container.
+ */
 function AlertDialogFooter({
   className,
   ...props
@@ -92,6 +131,12 @@ function AlertDialogFooter({
   )
 }
 
+/**
+ * Dialog title element with consistent typography.
+ * @param className Optional class names to extend styling.
+ * @param props Radix title props.
+ * @returns Dialog title component.
+ */
 function AlertDialogTitle({
   className,
   ...props
@@ -105,6 +150,12 @@ function AlertDialogTitle({
   )
 }
 
+/**
+ * Dialog description helper that surfaces contextual copy.
+ * @param className Optional class names to extend styling.
+ * @param props Radix description props.
+ * @returns Paragraph styled for dialog descriptions.
+ */
 function AlertDialogDescription({
   className,
   ...props
@@ -118,6 +169,12 @@ function AlertDialogDescription({
   )
 }
 
+/**
+ * Primary affirmative action button that inherits button variants.
+ * @param className Optional class names to extend styling.
+ * @param props Radix action props.
+ * @returns Styled action button for confirmation.
+ */
 function AlertDialogAction({
   className,
   ...props
@@ -130,6 +187,12 @@ function AlertDialogAction({
   )
 }
 
+/**
+ * Secondary cancel button that closes the dialog.
+ * @param className Optional class names to extend styling.
+ * @param props Radix cancel props.
+ * @returns Styled cancel button component.
+ */
 function AlertDialogCancel({
   className,
   ...props

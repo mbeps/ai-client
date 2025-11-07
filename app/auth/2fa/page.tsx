@@ -6,8 +6,13 @@ import { auth } from "@/lib/auth/auth"
 import { TotpForm } from "./_components/totp-form"
 import { BackupCodeTab } from "./_components/backup-code-tab"
 
+/**
+ * Interstitial page that verifies users during two-factor authentication challenges.
+ * @returns Two-factor challenge page with TOTP and backup code tabs.
+ */
 export default async function TwoFactorPage() {
   const session = await auth.api.getSession({ headers: await headers() })
+  // Redirect signed-in users away from the 2FA challenge screen.
   if (session != null) return redirect("/")
 
   return (

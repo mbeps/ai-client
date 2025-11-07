@@ -32,6 +32,10 @@ const resetPasswordSchema = z.object({
 
 type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 
+/**
+ * Password reset page that validates Better Auth tokens before showing the form.
+ * @returns Client-rendered password reset experience.
+ */
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -47,6 +51,10 @@ export default function ResetPasswordPage() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Resets the account password using the token from the URL.
+   * @param data Form payload containing the new password.
+   */
   async function handleResetPassword(data: ResetPasswordForm) {
     if (token == null) return
 

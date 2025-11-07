@@ -5,6 +5,12 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Root tabs component that stacks triggers and content vertically.
+ * @param className Optional class names to extend styling.
+ * @param props Radix tabs props forwarded to the root.
+ * @returns Tabs root element with slot metadata.
+ */
 function Tabs({
   className,
   ...props
@@ -18,6 +24,12 @@ function Tabs({
   )
 }
 
+/**
+ * Container for tab triggers with a subtle background.
+ * @param className Optional class names to extend styling.
+ * @param props Radix tabs list props forwarded to the element.
+ * @returns Styled tabs list component.
+ */
 function TabsList({
   className,
   ...props
@@ -34,6 +46,12 @@ function TabsList({
   )
 }
 
+/**
+ * Individual tab trigger styled to look like a segmented control.
+ * @param className Optional class names to extend styling.
+ * @param props Radix tabs trigger props forwarded to the element.
+ * @returns Tabs trigger with active and focus styles.
+ */
 function TabsTrigger({
   className,
   ...props
@@ -50,6 +68,12 @@ function TabsTrigger({
   )
 }
 
+/**
+ * Content region associated with an active tab trigger.
+ * @param className Optional class names to extend styling.
+ * @param props Radix tabs content props forwarded to the element.
+ * @returns Tabs content element.
+ */
 function TabsContent({
   className,
   ...props

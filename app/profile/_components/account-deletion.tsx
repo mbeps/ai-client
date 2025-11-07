@@ -3,6 +3,10 @@
 import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
 import { authClient } from "@/lib/auth/auth-client"
 
+/**
+ * Danger zone button that starts the Better Auth account deletion flow.
+ * @returns Action button that emails a confirmation link.
+ */
 export function AccountDeletion() {
   return (
     <BetterAuthActionButton

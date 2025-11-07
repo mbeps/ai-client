@@ -13,12 +13,21 @@ import { authClient } from "@/lib/auth/auth-client"
 import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
 import { CreateInviteButton } from "./create-invite-button"
 
+/**
+ * Shows pending invitations and allows cancellation or new invites.
+ * @returns Invitations tab populated from the active organization hook.
+ */
 export function InvitesTab() {
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingInvites = activeOrganization?.invitations?.filter(
     invite => invite.status === "pending"
   )
 
+  /**
+   * Cancels an outstanding organization invitation.
+   * @param invitationId Identifier for the invite being revoked.
+   * @returns Promise for the cancel request.
+   */
   function cancelInvitation(invitationId: string) {
     return authClient.organization.cancelInvitation({ invitationId })
   }

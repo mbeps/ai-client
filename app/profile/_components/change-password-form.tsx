@@ -26,6 +26,10 @@ const changePasswordSchema = z.object({
 
 type ChangePasswordForm = z.infer<typeof changePasswordSchema>
 
+/**
+ * Form that lets users update credentials and optionally revoke other sessions.
+ * @returns Controlled password change form component.
+ */
 export function ChangePasswordForm() {
   const form = useForm<ChangePasswordForm>({
     resolver: zodResolver(changePasswordSchema),
@@ -38,6 +42,10 @@ export function ChangePasswordForm() {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Submits a Better Auth password change request.
+   * @param data Form payload containing the current and new password.
+   */
   async function handlePasswordChange(data: ChangePasswordForm) {
     await authClient.changePassword(data, {
       onError: error => {

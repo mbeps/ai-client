@@ -28,6 +28,11 @@ const signUpSchema = z.object({
 
 type SignUpForm = z.infer<typeof signUpSchema>
 
+/**
+ * Sign-up form that captures user info and triggers Better Auth registration.
+ * @param openEmailVerificationTab Callback invoked when verification is required.
+ * @returns Sign-up form component.
+ */
 export function SignUpTab({
   openEmailVerificationTab,
 }: {
@@ -44,6 +49,10 @@ export function SignUpTab({
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Registers a user with email and password and prompts for verification if needed.
+   * @param data Form payload containing the new account information.
+   */
   async function handleSignUp(data: SignUpForm) {
     const res = await authClient.signUp.email(
       { ...data, callbackURL: "/" },

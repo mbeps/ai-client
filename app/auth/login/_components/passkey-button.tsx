@@ -5,10 +5,15 @@ import { authClient } from "@/lib/auth/auth-client"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
+/**
+ * Attempts automatic passkey sign-in and offers a manual passkey button.
+ * @returns Passkey sign-in button component.
+ */
 export function PasskeyButton() {
   const router = useRouter()
   const { refetch } = authClient.useSession()
 
+  // Attempt a silent passkey sign-in when the component mounts.
   useEffect(() => {
     authClient.signIn.passkey(
       { autoFill: true },

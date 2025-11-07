@@ -6,6 +6,12 @@ import { CheckIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Checkbox component backed by Radix primitives with Better Auth styling.
+ * @param className Optional class names to extend styling.
+ * @param props Radix checkbox props forwarded to the root.
+ * @returns Styled checkbox element with indicator slot.
+ */
 function Checkbox({
   className,
   ...props

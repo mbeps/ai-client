@@ -15,6 +15,11 @@ import { useRouter } from "next/navigation"
 
 type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number]
 
+/**
+ * Lists linked OAuth accounts and offers buttons to link or unlink providers.
+ * @param currentAccounts Accounts currently associated with the user.
+ * @returns Account linking layout composed of provider cards.
+ */
 export function AccountLinking({
   currentAccounts,
 }: {
@@ -59,6 +64,12 @@ export function AccountLinking({
   )
 }
 
+/**
+ * Provider-specific card that shows link status and actions.
+ * @param provider OAuth provider identifier.
+ * @param account Optional linked account metadata.
+ * @returns Card component with link or unlink button.
+ */
 function AccountCard({
   provider,
   account,
@@ -75,6 +86,10 @@ function AccountCard({
     Icon: Shield,
   }
 
+  /**
+   * Begins the social account linking flow.
+   * @returns Promise that resolves when the linking redirect completes.
+   */
   function linkAccount() {
     return authClient.linkSocial({
       provider,
@@ -82,6 +97,10 @@ function AccountCard({
     })
   }
 
+  /**
+   * Unlinks the current social account and refreshes profile data.
+   * @returns Promise describing the unlink operation result.
+   */
   function unlinkAccount() {
     if (account == null) {
       return Promise.resolve({ error: { message: "Account not found" } })

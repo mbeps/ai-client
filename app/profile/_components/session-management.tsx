@@ -9,6 +9,12 @@ import { Monitor, Smartphone, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { UAParser } from "ua-parser-js"
 
+/**
+ * Displays the current session and allows revoking other active sessions.
+ * @param sessions List of sessions returned by Better Auth.
+ * @param currentSessionToken Token for the session currently in use.
+ * @returns Session management interface with revoke controls.
+ */
 export function SessionManagement({
   sessions,
   currentSessionToken,
@@ -21,6 +27,10 @@ export function SessionManagement({
   const otherSessions = sessions.filter(s => s.token !== currentSessionToken)
   const currentSession = sessions.find(s => s.token === currentSessionToken)
 
+  /**
+   * Revokes every session except the current one.
+   * @returns Promise that resolves when sessions are revoked.
+   */
   function revokeOtherSessions() {
     return authClient.revokeOtherSessions(undefined, {
       onSuccess: () => {
@@ -67,6 +77,12 @@ export function SessionManagement({
   )
 }
 
+/**
+ * Renders an individual session card with browser metadata and revoke actions.
+ * @param session Session being displayed.
+ * @param isCurrentSession Whether the session matches the active token.
+ * @returns Card element describing a session.
+ */
 function SessionCard({
   session,
   isCurrentSession = false,
@@ -77,6 +93,10 @@ function SessionCard({
   const router = useRouter()
   const userAgentInfo = session.userAgent ? UAParser(session.userAgent) : null
 
+  /**
+   * Formats a human-readable browser and OS label from the user agent.
+   * @returns Browser information string suitable for display.
+   */
   function getBrowserInformation() {
     if (userAgentInfo == null) return "Unknown Device"
     if (userAgentInfo.browser.name == null && userAgentInfo.os.name == null) {
@@ -89,6 +109,11 @@ function SessionCard({
     return `${userAgentInfo.browser.name}, ${userAgentInfo.os.name}`
   }
 
+  /**
+   * Formats a date with medium detail for timestamps.
+   * @param date Date instance to format.
+   * @returns Localized string representation of the date.
+   */
   function formatDate(date: Date) {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
@@ -96,6 +121,10 @@ function SessionCard({
     }).format(new Date(date))
   }
 
+  /**
+   * Revokes a specific session token via Better Auth.
+   * @returns Promise that resolves when the session is revoked.
+   */
   function revokeSession() {
     return authClient.revokeSession(
       {

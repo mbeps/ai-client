@@ -4,6 +4,11 @@ import { BetterAuthActionButton } from "@/components/auth/better-auth-action-but
 import { authClient } from "@/lib/auth/auth-client"
 import { useEffect, useRef, useState } from "react"
 
+/**
+ * Guides users through resending their email verification link with a cooldown.
+ * @param email Address that should receive the verification email.
+ * @returns Email verification helper component.
+ */
 export function EmailVerification({ email }: { email: string }) {
   const [timeToNextResend, setTimeToNextResend] = useState(30)
   const interval = useRef<NodeJS.Timeout>(undefined)
@@ -12,6 +17,10 @@ export function EmailVerification({ email }: { email: string }) {
     startEmailVerificationCountdown()
   }, [])
 
+  /**
+   * Starts a countdown that prevents immediate resend spam.
+   * @param time Countdown duration in seconds.
+   */
   function startEmailVerificationCountdown(time = 30) {
     setTimeToNextResend(time)
 

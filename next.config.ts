@@ -1,5 +1,8 @@
 import type { NextConfig } from "next"
 
+/**
+ * Next.js configuration enabling remote images for common OAuth providers.
+ */
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [

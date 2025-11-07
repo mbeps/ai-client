@@ -4,6 +4,11 @@ import { BetterAuthActionButton } from "@/components/auth/better-auth-action-but
 import { authClient } from "@/lib/auth/auth-client"
 import { useRouter } from "next/navigation"
 
+/**
+ * Displays actions for accepting or rejecting an organization invitation.
+ * @param invitation Invitation metadata fetched from Better Auth.
+ * @returns Action buttons that drive the invitation response.
+ */
 export function InviteInformation({
   invitation,
 }: {
@@ -11,6 +16,10 @@ export function InviteInformation({
 }) {
   const router = useRouter()
 
+  /**
+   * Accepts the invitation and activates the organization context.
+   * @returns Promise describing the accept mutation.
+   */
   function acceptInvite() {
     return authClient.organization.acceptInvitation(
       { invitationId: invitation.id },
@@ -24,6 +33,10 @@ export function InviteInformation({
       }
     )
   }
+  /**
+   * Rejects the pending invitation and redirects home.
+   * @returns Promise describing the reject mutation.
+   */
   function rejectInvite() {
     return authClient.organization.rejectInvitation(
       {

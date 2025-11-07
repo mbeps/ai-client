@@ -10,10 +10,16 @@ import {
 } from "@/components/ui/card"
 import { InviteInformation } from "./_components/invite-information"
 
+/**
+ * Invitation landing page that lets users accept or reject organization invites.
+ * @param params Route params containing the invitation identifier.
+ * @returns Server-rendered invitation page gated behind authentication.
+ */
 export default async function InvitationPage({
   params,
 }: PageProps<"/organizations/invites/[id]">) {
   const session = await auth.api.getSession({ headers: await headers() })
+  // Force login before revealing invitation details.
   if (session == null) return redirect("/auth/login")
 
   const { id } = await params

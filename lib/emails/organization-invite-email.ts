@@ -1,5 +1,12 @@
 import { sendEmail } from "./send-email"
 
+/**
+ * Notifies a user that they have been invited to join an organization.
+ * @param invitation Invitation payload supplied by Better Auth.
+ * @param inviter User who initiated the invitation.
+ * @param organization Organization that issued the invite.
+ * @param email Recipient email address for the invitee.
+ */
 export async function sendOrganizationInviteEmail({
   invitation,
   inviter,

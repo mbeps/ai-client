@@ -42,6 +42,11 @@ const passkeySchema = z.object({
 
 type PasskeyForm = z.infer<typeof passkeySchema>
 
+/**
+ * Displays existing passkeys and provides controls for creating or deleting them.
+ * @param passkeys List of registered passkeys for the current user.
+ * @returns Passkey management interface with modal creation flow.
+ */
 export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const router = useRouter()
@@ -54,6 +59,10 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
 
   const { isSubmitting } = form.formState
 
+  /**
+   * Creates a new WebAuthn passkey using Better Auth's passkey plugin.
+   * @param data Form payload containing the passkey label.
+   */
   async function handleAddPasskey(data: PasskeyForm) {
     await authClient.passkey.addPasskey(data, {
       onError: error => {
@@ -65,6 +74,11 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
       },
     })
   }
+  /**
+   * Removes an existing passkey and refreshes the passkey list.
+   * @param passkeyId Identifier for the passkey being removed.
+   * @returns Promise that resolves upon successful deletion.
+   */
   function handleDeletePasskey(passkeyId: string) {
     return authClient.passkey.deletePasskey(
       { id: passkeyId },

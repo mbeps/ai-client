@@ -5,10 +5,15 @@ import { UserX } from "lucide-react"
 import { BetterAuthActionButton } from "./better-auth-action-button"
 import { useRouter } from "next/navigation"
 
+/**
+ * Renders a floating button that lets admins stop impersonation sessions.
+ * @returns UI fragment that is only visible while impersonating another user.
+ */
 export function ImpersonationIndicator() {
   const router = useRouter()
   const { data: session, refetch } = authClient.useSession()
 
+  // Do not render when there is no impersonation metadata.
   if (session?.session.impersonatedBy == null) return null
 
   return (

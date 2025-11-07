@@ -5,6 +5,12 @@ import * as LabelPrimitive from "@radix-ui/react-label"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Accessible label component that integrates with form field slots.
+ * @param className Optional class names to extend styling.
+ * @param props Radix label props forwarded to the element.
+ * @returns Label element with shared styling.
+ */
 function Label({
   className,
   ...props

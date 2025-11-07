@@ -8,6 +8,11 @@ interface EmailVerificationData {
   url: string
 }
 
+/**
+ * Sends the confirmation message that guards permanent account deletion.
+ * @param user Account owner information.
+ * @param url Verification link allowing the user to approve deletion.
+ */
 export async function sendDeleteAccountVerificationEmail({
   user,
   url,

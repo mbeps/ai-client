@@ -12,10 +12,19 @@ import { Badge } from "@/components/ui/badge"
 import { authClient } from "@/lib/auth/auth-client"
 import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
 
+/**
+ * Lists active organization members with removal controls.
+ * @returns Members tab content driven by the active organization hook.
+ */
 export function MembersTab() {
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const { data: session } = authClient.useSession()
 
+  /**
+   * Removes a member from the organization via Better Auth.
+   * @param memberId Member identifier supplied by Better Auth.
+   * @returns Promise that resolves when the server call finishes.
+   */
   function removeMember(memberId: string) {
     return authClient.organization.removeMember({
       memberIdOrEmail: memberId,

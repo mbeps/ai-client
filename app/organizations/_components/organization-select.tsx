@@ -10,6 +10,10 @@ import {
 import { authClient } from "@/lib/auth/auth-client"
 import { toast } from "sonner"
 
+/**
+ * Dropdown that switches the active organization for the current session.
+ * @returns Select input populated with organizations the user belongs to.
+ */
 export function OrganizationSelect() {
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const { data: organizations } = authClient.useListOrganizations()
@@ -18,6 +22,10 @@ export function OrganizationSelect() {
     return null
   }
 
+  /**
+   * Activates an organization to scope subsequent API calls.
+   * @param organizationId Organization identifier stored in Better Auth.
+   */
   function setActiveOrganization(organizationId: string) {
     authClient.organization.setActive(
       { organizationId },
