@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import z from "zod";
 import {
   Form,
   FormControl,
@@ -10,22 +10,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { Passkey } from "better-auth/plugins/passkey"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Passkey } from "@better-auth/passkey";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
-import { Trash2 } from "lucide-react"
+} from "@/components/ui/card";
+import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button";
+import { Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,14 +33,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { useState } from "react"
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 const passkeySchema = z.object({
   name: z.string().min(1),
-})
+});
 
-type PasskeyForm = z.infer<typeof passkeySchema>
+type PasskeyForm = z.infer<typeof passkeySchema>;
 
 /**
  * Displays existing passkeys and provides controls for creating or deleting them.
@@ -48,16 +48,16 @@ type PasskeyForm = z.infer<typeof passkeySchema>
  * @returns Passkey management interface with modal creation flow.
  */
 export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const router = useRouter()
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const router = useRouter();
   const form = useForm<PasskeyForm>({
     resolver: zodResolver(passkeySchema),
     defaultValues: {
       name: "",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Creates a new WebAuthn passkey using Better Auth's passkey plugin.
@@ -65,14 +65,14 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
    */
   async function handleAddPasskey(data: PasskeyForm) {
     await authClient.passkey.addPasskey(data, {
-      onError: error => {
-        toast.error(error.error.message || "Failed to add passkey")
+      onError: (error) => {
+        toast.error(error.error.message || "Failed to add passkey");
       },
       onSuccess: () => {
-        router.refresh()
-        setIsDialogOpen(false)
+        router.refresh();
+        setIsDialogOpen(false);
       },
-    })
+    });
   }
   /**
    * Removes an existing passkey and refreshes the passkey list.
@@ -83,7 +83,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
     return authClient.passkey.deletePasskey(
       { id: passkeyId },
       { onSuccess: () => router.refresh() }
-    )
+    );
   }
 
   return (
@@ -99,7 +99,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
         </Card>
       ) : (
         <div className="space-y-4">
-          {passkeys.map(passkey => (
+          {passkeys.map((passkey) => (
             <Card key={passkey.id}>
               <CardHeader className="flex gap-2 items-center justify-between">
                 <div className="space-y-1">
@@ -123,9 +123,9 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
       )}
       <Dialog
         open={isDialogOpen}
-        onOpenChange={o => {
-          if (o) form.reset()
-          setIsDialogOpen(o)
+        onOpenChange={(o) => {
+          if (o) form.reset();
+          setIsDialogOpen(o);
         }}
       >
         <DialogTrigger asChild>
@@ -166,5 +166,5 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
