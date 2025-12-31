@@ -1,13 +1,13 @@
-import { createAuthClient } from "better-auth/react"
-import { auth } from "./auth"
+import { createAuthClient } from "better-auth/react";
+import { auth } from "./auth";
 import {
   inferAdditionalFields,
-  passkeyClient,
   twoFactorClient,
   adminClient,
   organizationClient,
-} from "better-auth/client/plugins"
-import { ac, admin, user } from "@/components/auth/permissions"
+} from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
+import { ac, admin, user } from "@/components/auth/permissions";
 
 /**
  * Better Auth React client with passkey, two-factor, admin, and organization plugins.
@@ -19,7 +19,7 @@ export const authClient = createAuthClient({
     passkeyClient(),
     twoFactorClient({
       onTwoFactorRedirect: () => {
-        window.location.href = "/auth/2fa"
+        window.location.href = "/auth/2fa";
       },
     }),
     adminClient({
@@ -31,4 +31,4 @@ export const authClient = createAuthClient({
     }),
     organizationClient(),
   ],
-})
+});
