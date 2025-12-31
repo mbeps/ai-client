@@ -18,6 +18,7 @@ import { member } from "@/drizzle/schema";
 
 /**
  * Better Auth server configured with email, OAuth, passkey, and organization features.
+ * Uses JWT-based stateless sessions stored in encrypted cookies.
  * @see https://docs.better-auth.com
  */
 export const auth = betterAuth({
@@ -80,9 +81,14 @@ export const auth = betterAuth({
     },
   },
   session: {
+    // JWT-based stateless sessions with encrypted cookies
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // Refresh session token every 24 hours
     cookieCache: {
       enabled: true,
-      maxAge: 60, // 1 minute
+      maxAge: 60 * 60 * 24 * 7, // 7 days cache duration
+      strategy: "jwt", // JWT tokens for session validation
+      refreshCache: true, // Enable stateless refresh
     },
   },
   plugins: [
