@@ -79,7 +79,7 @@ Transactional emails run through Postmark so you can trace every step from invit
 # Design
 
 ## Better Auth Configuration
-- `lib/auth/auth.ts` wires Better Auth with Postgres, custom `favoriteNumber` fields, change-email and delete-user verification, GitHub and Discord mapping, and cookie caching.
+- `lib/auth/auth.ts` wires Better Auth with Postgres, change-email and delete-user verification, GitHub and Discord mapping, and cookie caching.
 - Plugins enabled: `nextCookies`, `twoFactor`, `passkey`, `adminPlugin` (with custom access control), and `organization`.
 - `createAuthMiddleware` fires welcome emails after sign-up, while `databaseHooks.session.create` injects the latest `activeOrganizationId`.
 - Sessions track impersonation metadata, IP address, user agents, and the active organization so the UI can react without extra fetches.

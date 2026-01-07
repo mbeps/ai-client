@@ -22,8 +22,8 @@ import { ForgotPassword } from "./_components/forms/forgot-password";
 const TAB_VALUES = {
   SIGN_IN: "signin",
   SIGN_UP: "signup",
-  EMAIL_VERIFICATION: "email-verification",
-  FORGOT_PASSWORD: "forgot-password",
+  EMAIL_VERIFICATION: "email-verification", // invisible
+  FORGOT_PASSWORD: "forgot-password", // invisible
 } as const;
 
 type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];

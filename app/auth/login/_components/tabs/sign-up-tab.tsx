@@ -17,7 +17,6 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
-import { NumberInput } from "@/components/ui/number-input";
 import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
 
 /**
@@ -99,20 +98,6 @@ export function SignUpTab({
               <FormLabel>Password</FormLabel>
               <FormControl>
                 <PasswordInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="favoriteNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Favorite Number</FormLabel>
-              <FormControl>
-                <NumberInput {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
