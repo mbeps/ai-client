@@ -18,15 +18,6 @@ import { passkey } from "@better-auth/passkey";
 export const auth = betterAuth({
   appName: "Better Auth Demo",
   user: {
-    changeEmail: {
-      enabled: true,
-      sendChangeEmailVerification: async ({ user, url, newEmail }) => {
-        await sendEmailVerificationEmail({
-          user: { ...user, email: newEmail },
-          url,
-        });
-      },
-    },
     deleteUser: {
       enabled: true,
       sendDeleteAccountVerification: async ({ user, url }) => {
@@ -72,11 +63,7 @@ export const auth = betterAuth({
       refreshCache: true, // Enable stateless refresh
     },
   },
-  plugins: [
-    nextCookies(),
-    twoFactor(),
-    passkey(),
-  ],
+  plugins: [nextCookies(), twoFactor(), passkey()],
   database: drizzleAdapter(db, {
     provider: "pg",
   }),

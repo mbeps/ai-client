@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -23,7 +22,7 @@ import {
 } from "@/schemas/profile-update";
 
 /**
- * Form that updates profile metadata and triggers email change verification.
+ * Form that updates profile metadata.
  * @param user Initial user data used to seed the form.
  * @returns Controlled profile update form component.
  */
@@ -38,46 +37,26 @@ export function ProfileUpdateForm({
   const router = useRouter();
   const form = useForm<ProfileUpdateFormData>({
     resolver: zodResolver(profileUpdateSchema),
-    defaultValues: user,
+    defaultValues: {
+      name: user.name,
+    },
   });
 
   const { isSubmitting } = form.formState;
 
   /**
-   * Updates profile fields and optionally initiates an email change flow.
+   * Updates profile fields.
    * @param data Form submission containing updated profile values.
    */
   async function handleProfileUpdate(data: ProfileUpdateFormData) {
-    const promises = [
-      authClient.updateUser({
-        name: data.name,
-      }),
-    ];
+    const { error } = await authClient.updateUser({
+      name: data.name,
+    });
 
-    if (data.email !== user.email) {
-      promises.push(
-        authClient.changeEmail({
-          newEmail: data.email,
-          callbackURL: ROUTES.PROFILE,
-        })
-      );
-    }
-
-    const res = await Promise.all(promises);
-
-    const updateUserResult = res[0];
-    const emailResult = res[1] ?? { error: false };
-
-    if (updateUserResult.error) {
-      toast.error(updateUserResult.error.message || "Failed to update profile");
-    } else if (emailResult.error) {
-      toast.error(emailResult.error.message || "Failed to change email");
+    if (error) {
+      toast.error(error.message || "Failed to update profile");
     } else {
-      if (data.email !== user.email) {
-        toast.success("Verify your new email address to complete the change.");
-      } else {
-        toast.success("Profile updated successfully");
-      }
+      toast.success("Profile updated successfully");
       router.refresh();
     }
   }
@@ -101,19 +80,14 @@ export function ProfileUpdateForm({
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="hello@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
+        <div className="space-y-2">
+          <FormLabel>Email</FormLabel>
+          <Input value={user.email} disabled />
+          <p className="text-xs text-muted-foreground">
+            Email address cannot be changed.
+          </p>
+        </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
           <LoadingSwap isLoading={isSubmitting}>Update Profile</LoadingSwap>
