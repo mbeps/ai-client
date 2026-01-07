@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Card,
@@ -6,58 +6,67 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SignUpTab } from "./_components/sign-up-tab"
-import { SignInTab } from "./_components/sign-in-tab"
-import { Separator } from "@/components/ui/separator"
-import { SocialAuthButtons } from "./_components/social-auth-buttons"
-import { useEffect, useState } from "react"
-import { authClient } from "@/lib/auth/auth-client"
-import { useRouter } from "next/navigation"
-import { EmailVerification } from "./_components/email-verification"
-import { ForgotPassword } from "./_components/forgot-password"
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SignUpTab } from "./_components/tabs/sign-up-tab";
+import { SignInTab } from "./_components/tabs/sign-in-tab";
+import { Separator } from "@/components/ui/separator";
+import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
+import { useEffect, useState } from "react";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { useRouter } from "next/navigation";
+import { EmailVerification } from "./_components/forms/email-verification";
+import { ForgotPassword } from "./_components/forms/forgot-password";
 
-type Tab = "signin" | "signup" | "email-verification" | "forgot-password"
+const TAB_VALUES = {
+  SIGN_IN: "signin",
+  SIGN_UP: "signup",
+  EMAIL_VERIFICATION: "email-verification",
+  FORGOT_PASSWORD: "forgot-password",
+} as const;
+
+type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];
 
 /**
  * Auth entry point that combines sign-in, sign-up, verification, and reset flows.
  * @returns Client-rendered login page with tabbed navigation.
  */
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [selectedTab, setSelectedTab] = useState<Tab>("signin")
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [selectedTab, setSelectedTab] = useState<Tab>(TAB_VALUES.SIGN_IN);
 
   // Redirect authenticated users away from the auth flow.
   useEffect(() => {
-    authClient.getSession().then(session => {
-      if (session.data != null) router.push("/")
-    })
-  }, [router])
+    authClient.getSession().then((session) => {
+      if (session.data != null) router.push(ROUTES.HOME);
+    });
+  }, [router]);
 
   /**
    * Switches to the email verification tab and stores the target email.
    * @param email Address that needs verification.
    */
   function openEmailVerificationTab(email: string) {
-    setEmail(email)
-    setSelectedTab("email-verification")
+    setEmail(email);
+    setSelectedTab(TAB_VALUES.EMAIL_VERIFICATION);
   }
 
   return (
     <Tabs
       value={selectedTab}
-      onValueChange={t => setSelectedTab(t as Tab)}
+      onValueChange={(t) => setSelectedTab(t as Tab)}
       className="max-auto w-full my-6 px-4"
     >
-      {(selectedTab === "signin" || selectedTab === "signup") && (
+      {(selectedTab === TAB_VALUES.SIGN_IN ||
+        selectedTab === TAB_VALUES.SIGN_UP) && (
         <TabsList>
-          <TabsTrigger value="signin">Sign In</TabsTrigger>
-          <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <TabsTrigger value={TAB_VALUES.SIGN_IN}>Sign In</TabsTrigger>
+          <TabsTrigger value={TAB_VALUES.SIGN_UP}>Sign Up</TabsTrigger>
         </TabsList>
       )}
-      <TabsContent value="signin">
+      <TabsContent value={TAB_VALUES.SIGN_IN}>
         <Card>
           <CardHeader className="text-2xl font-bold">
             <CardTitle>Sign In</CardTitle>
@@ -65,7 +74,9 @@ export default function LoginPage() {
           <CardContent>
             <SignInTab
               openEmailVerificationTab={openEmailVerificationTab}
-              openForgotPassword={() => setSelectedTab("forgot-password")}
+              openForgotPassword={() =>
+                setSelectedTab(TAB_VALUES.FORGOT_PASSWORD)
+              }
             />
           </CardContent>
 
@@ -77,7 +88,7 @@ export default function LoginPage() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="signup">
+      <TabsContent value={TAB_VALUES.SIGN_UP}>
         <Card>
           <CardHeader className="text-2xl font-bold">
             <CardTitle>Sign Up</CardTitle>
@@ -94,7 +105,7 @@ export default function LoginPage() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="email-verification">
+      <TabsContent value={TAB_VALUES.EMAIL_VERIFICATION}>
         <Card>
           <CardHeader className="text-2xl font-bold">
             <CardTitle>Verify Your Email</CardTitle>
@@ -105,16 +116,18 @@ export default function LoginPage() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="forgot-password">
+      <TabsContent value={TAB_VALUES.FORGOT_PASSWORD}>
         <Card>
           <CardHeader className="text-2xl font-bold">
             <CardTitle>Forgot Password</CardTitle>
           </CardHeader>
           <CardContent>
-            <ForgotPassword openSignInTab={() => setSelectedTab("signin")} />
+            <ForgotPassword
+              openSignInTab={() => setSelectedTab(TAB_VALUES.SIGN_IN)}
+            />
           </CardContent>
         </Card>
       </TabsContent>
     </Tabs>
-  )
+  );
 }

@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.github/copilot-instructions.md
+
+# drizzle
+drizzle/migrations/**

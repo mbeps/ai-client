@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   AlertDialog,
@@ -10,22 +10,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { TableCell, TableRow } from "@/components/ui/table"
-import { authClient } from "@/lib/auth/auth-client"
-import { UserWithRole } from "better-auth/plugins/admin"
-import { MoreHorizontal } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+} from "@/components/ui/dropdown-menu";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { authClient } from "@/lib/auth/auth-client";
+import { GLOBAL_ROLES } from "@/lib/auth/roles";
+import { ROUTES } from "@/lib/routes";
+import { UserWithRole } from "better-auth/plugins/admin";
+import { MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 /**
  * Row renderer for the admin users table with impersonation and moderation actions.
@@ -37,12 +39,12 @@ export function UserRow({
   user,
   selfId,
 }: {
-  user: UserWithRole
-  selfId: string
+  user: UserWithRole;
+  selfId: string;
 }) {
-  const { refetch } = authClient.useSession()
-  const router = useRouter()
-  const isSelf = user.id === selfId
+  const { refetch } = authClient.useSession();
+  const router = useRouter();
+  const isSelf = user.id === selfId;
 
   // Admin action handlers.
   /**
@@ -53,15 +55,15 @@ export function UserRow({
     authClient.admin.impersonateUser(
       { userId },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to impersonate")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to impersonate");
         },
         onSuccess: () => {
-          refetch()
-          router.push("/")
+          refetch();
+          router.push(ROUTES.HOME);
         },
       }
-    )
+    );
   }
 
   /**
@@ -72,15 +74,15 @@ export function UserRow({
     authClient.admin.banUser(
       { userId },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to ban user")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to ban user");
         },
         onSuccess: () => {
-          toast.success("User banned")
-          router.refresh()
+          toast.success("User banned");
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   /**
@@ -91,15 +93,15 @@ export function UserRow({
     authClient.admin.unbanUser(
       { userId },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to unban user")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to unban user");
         },
         onSuccess: () => {
-          toast.success("User unbanned")
-          router.refresh()
+          toast.success("User unbanned");
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   /**
@@ -110,14 +112,14 @@ export function UserRow({
     authClient.admin.revokeUserSessions(
       { userId },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to revoke user sessions")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to revoke user sessions");
         },
         onSuccess: () => {
-          toast.success("User sessions revoked")
+          toast.success("User sessions revoked");
         },
       }
-    )
+    );
   }
 
   /**
@@ -128,15 +130,15 @@ export function UserRow({
     authClient.admin.removeUser(
       { userId },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to delete user")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to delete user");
         },
         onSuccess: () => {
-          toast.success("User deleted")
-          router.refresh()
+          toast.success("User deleted");
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   return (
@@ -153,7 +155,9 @@ export function UserRow({
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+        <Badge
+          variant={user.role === GLOBAL_ROLES.ADMIN ? "default" : "secondary"}
+        >
           {user.role}
         </Badge>
       </TableCell>
@@ -216,5 +220,5 @@ export function UserRow({
         )}
       </TableCell>
     </TableRow>
-  )
+  );
 }

@@ -2,7 +2,6 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import z from "zod";
 import {
   Form,
   FormControl,
@@ -14,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
 import {
@@ -25,12 +25,10 @@ import {
 } from "@/components/ui/card";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-const resetPasswordSchema = z.object({
-  password: z.string().min(6),
-});
-
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
+import {
+  resetPasswordSchema,
+  ResetPasswordForm,
+} from "@/schemas/reset-password";
 
 export default function ResetPasswordClient() {
   const router = useRouter();
@@ -64,7 +62,7 @@ export default function ResetPasswordClient() {
             description: "Redirection to login...",
           });
           setTimeout(() => {
-            router.push("/auth/login");
+            router.push(ROUTES.AUTH.LOGIN);
           }, 1000);
         },
       }
@@ -83,7 +81,7 @@ export default function ResetPasswordClient() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href="/auth/login">Back to Login</Link>
+              <Link href={ROUTES.AUTH.LOGIN}>Back to Login</Link>
             </Button>
           </CardContent>
         </Card>

@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
-import { authClient } from "@/lib/auth/auth-client"
-import { useRouter } from "next/navigation"
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { useRouter } from "next/navigation";
 
 /**
  * Displays actions for accepting or rejecting an organization invitation.
@@ -12,9 +13,9 @@ import { useRouter } from "next/navigation"
 export function InviteInformation({
   invitation,
 }: {
-  invitation: { id: string; organizationId: string }
+  invitation: { id: string; organizationId: string };
 }) {
-  const router = useRouter()
+  const router = useRouter();
 
   /**
    * Accepts the invitation and activates the organization context.
@@ -27,11 +28,11 @@ export function InviteInformation({
         onSuccess: async () => {
           await authClient.organization.setActive({
             organizationId: invitation.organizationId,
-          })
-          router.push("/organizations")
+          });
+          router.push(ROUTES.ORGANIZATIONS.DASHBOARD);
         },
       }
-    )
+    );
   }
   /**
    * Rejects the pending invitation and redirects home.
@@ -42,8 +43,8 @@ export function InviteInformation({
       {
         invitationId: invitation.id,
       },
-      { onSuccess: () => router.push("/") }
-    )
+      { onSuccess: () => router.push(ROUTES.HOME) }
+    );
   }
 
   return (
@@ -59,5 +60,5 @@ export function InviteInformation({
         Reject
       </BetterAuthActionButton>
     </div>
-  )
+  );
 }
