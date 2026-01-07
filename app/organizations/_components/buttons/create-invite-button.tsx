@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createInviteSchema, CreateInviteForm } from "@/schemas/create-invite";
+import { ORG_ROLES } from "@/lib/auth/roles";
 
 /**
  * Dialog-triggered form for inviting members to the active organization.
@@ -45,7 +46,7 @@ export function CreateInviteButton() {
     resolver: zodResolver(createInviteSchema),
     defaultValues: {
       email: "",
-      role: "member",
+      role: ORG_ROLES.MEMBER,
     },
   });
 
@@ -111,8 +112,8 @@ export function CreateInviteButton() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value={ORG_ROLES.MEMBER}>Member</SelectItem>
+                        <SelectItem value={ORG_ROLES.ADMIN}>Admin</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -9,6 +9,7 @@ import {
 import { passkeyClient } from "@better-auth/passkey/client";
 import { ac, admin, user } from "@/components/auth/utils/permissions";
 import { ROUTES } from "../routes";
+import { GLOBAL_ROLES } from "./roles";
 
 /**
  * Better Auth React client with passkey, two-factor, admin, and organization plugins.
@@ -26,8 +27,8 @@ export const authClient = createAuthClient({
     adminClient({
       ac,
       roles: {
-        admin,
-        user,
+        [GLOBAL_ROLES.ADMIN]: admin,
+        [GLOBAL_ROLES.USER]: user,
       },
     }),
     organizationClient(),

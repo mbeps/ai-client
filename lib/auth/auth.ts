@@ -13,6 +13,7 @@ import { admin as adminPlugin } from "better-auth/plugins/admin";
 import { organization } from "better-auth/plugins/organization";
 import { ac, admin, user } from "@/components/auth/utils/permissions";
 import { sendOrganizationInviteEmail } from "../emails/organization-invite-email";
+import { GLOBAL_ROLES } from "./roles";
 import { desc, eq } from "drizzle-orm";
 import { member } from "@/drizzle/schema";
 
@@ -98,8 +99,8 @@ export const auth = betterAuth({
     adminPlugin({
       ac,
       roles: {
-        admin,
-        user,
+        [GLOBAL_ROLES.ADMIN]: admin,
+        [GLOBAL_ROLES.USER]: user,
       },
     }),
     organization({

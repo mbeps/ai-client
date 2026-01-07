@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { authClient } from "@/lib/auth/auth-client";
+import { GLOBAL_ROLES } from "@/lib/auth/roles";
 import { ROUTES } from "@/lib/routes";
 import { UserWithRole } from "better-auth/plugins/admin";
 import { MoreHorizontal } from "lucide-react";
@@ -154,7 +155,9 @@ export function UserRow({
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+        <Badge
+          variant={user.role === GLOBAL_ROLES.ADMIN ? "default" : "secondary"}
+        >
           {user.role}
         </Badge>
       </TableCell>

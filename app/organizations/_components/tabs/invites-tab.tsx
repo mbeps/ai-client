@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { authClient } from "@/lib/auth/auth-client";
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { CreateInviteButton } from "../buttons/create-invite-button";
+import { INVITATION_STATUS, ORG_ROLES } from "@/lib/auth/roles";
 
 /**
  * Shows pending invitations and allows cancellation or new invites.
@@ -20,7 +21,7 @@ import { CreateInviteButton } from "../buttons/create-invite-button";
 export function InvitesTab() {
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const pendingInvites = activeOrganization?.invitations?.filter(
-    (invite) => invite.status === "pending"
+    (invite) => invite.status === INVITATION_STATUS.PENDING
   );
 
   /**

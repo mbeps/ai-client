@@ -1,4 +1,11 @@
-import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core"
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  integer,
+} from "drizzle-orm/pg-core";
+import { INVITATION_STATUS, ORG_ROLES } from "@/lib/auth/roles";
 
 /**
  * Stores end-user identities and custom profile fields.
@@ -20,7 +27,7 @@ export const user = pgTable("user", {
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
   favoriteNumber: integer("favorite_number").notNull(),
-})
+});
 
 /**
  * Tracks active user sessions along with device metadata.
@@ -40,7 +47,7 @@ export const session = pgTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
   impersonatedBy: text("impersonated_by"),
   activeOrganizationId: text("active_organization_id"),
-})
+});
 
 /**
  * Persists OAuth account connections and credential-based secrets.
@@ -63,7 +70,7 @@ export const account = pgTable("account", {
   updatedAt: timestamp("updated_at")
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
+});
 
 /**
  * Contains email verifications, password resets, and other one-time tokens.
@@ -78,7 +85,7 @@ export const verification = pgTable("verification", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
+});
 
 /**
  * Holds shared secrets and backup codes for TOTP-based 2FA.
@@ -90,7 +97,7 @@ export const twoFactor = pgTable("two_factor", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-})
+});
 
 /**
  * Stores WebAuthn passkey material for passwordless login.
@@ -109,7 +116,7 @@ export const passkey = pgTable("passkey", {
   transports: text("transports"),
   createdAt: timestamp("created_at"),
   aaguid: text("aaguid"),
-})
+});
 
 /**
  * Defines collaborative organizations created via the Better Auth plugin.
@@ -121,7 +128,7 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull(),
   metadata: text("metadata"),
-})
+});
 
 /**
  * Links users to organizations with role-based access metadata.
@@ -134,9 +141,9 @@ export const member = pgTable("member", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  role: text("role").default("member").notNull(),
+  role: text("role").default(ORG_ROLES.MEMBER).notNull(),
   createdAt: timestamp("created_at").notNull(),
-})
+});
 
 /**
  * Tracks pending invitations sent to prospective organization members.
@@ -148,9 +155,9 @@ export const invitation = pgTable("invitation", {
     .references(() => organization.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   role: text("role"),
-  status: text("status").default("pending").notNull(),
+  status: text("status").default(INVITATION_STATUS.PENDING).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   inviterId: text("inviter_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-})
+});
