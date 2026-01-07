@@ -7,7 +7,7 @@ import {
   organizationClient,
 } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
-import { ac, admin, user } from "@/components/auth/permissions";
+import { ac, admin, user } from "@/components/auth/utils/permissions";
 
 /**
  * Better Auth React client with passkey, two-factor, admin, and organization plugins.

@@ -1,20 +1,20 @@
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { auth } from "@/lib/auth/auth"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-import { OrganizationSelect } from "./_components/organization-select"
-import { CreateOrganizationButton } from "./_components/create-organization-button"
-import { OrganizationTabs } from "./_components/organization-tabs"
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { auth } from "@/lib/auth/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { OrganizationSelect } from "./_components/select/organization-select";
+import { CreateOrganizationButton } from "./_components/buttons/create-organization-button";
+import { OrganizationTabs } from "./_components/tabs/organization-tabs";
 
 /**
  * Organizations dashboard where members switch, create, and manage teams.
  * @returns Server-rendered organizations page.
  */
 export default async function OrganizationsPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await auth.api.getSession({ headers: await headers() });
   // Require authentication before accessing organization resources.
-  if (session == null) return redirect("/auth/login")
+  if (session == null) return redirect("/auth/login");
 
   return (
     <div className="container mx-auto my-6 px-4">
@@ -30,5 +30,5 @@ export default async function OrganizationsPage() {
 
       <OrganizationTabs />
     </div>
-  )
+  );
 }

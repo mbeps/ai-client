@@ -1,6 +1,6 @@
 "use client"
 
-import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button"
 import { authClient } from "@/lib/auth/auth-client"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"

@@ -8,28 +8,23 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth/auth";
-import {
-  ArrowLeft,
-  Key,
-  LinkIcon,
-  Loader2Icon,
-  Shield,
-  Trash2,
-  User,
-} from "lucide-react";
+import { ArrowLeft, Key, LinkIcon, Shield, Trash2, User } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ProfileUpdateForm } from "./_components/profile-update-form";
-import { ReactNode, Suspense } from "react";
-import { SetPasswordButton } from "./_components/set-password-button";
-import { ChangePasswordForm } from "./_components/change-password-form";
-import { SessionManagement } from "./_components/session-management";
-import { AccountLinking } from "./_components/account-linking";
-import { AccountDeletion } from "./_components/account-deletion";
-import { TwoFactorAuth } from "./_components/two-factor-auth";
-import { PasskeyManagement } from "./_components/passkey-management";
+import { ProfileUpdateForm } from "./_components/profile/profile-update-form";
+import { SetPasswordButton } from "./_components/security/set-password-button";
+import { ChangePasswordForm } from "./_components/security/change-password-form";
+import { SessionManagement } from "./_components/session/session-management";
+import { AccountLinking } from "./_components/account/account-linking";
+import { AccountDeletion } from "./_components/account/account-deletion";
+import { TwoFactorAuth } from "./_components/security/two-factor-auth";
+import { PasskeyManagement } from "./_components/security/passkey-management";
+import { LinkedAccountsTab } from "./_components/account/linked-accounts-tab";
+import { SessionsTab } from "./_components/session/sessions-tab";
+import { SecurityTab } from "./_components/security/security-tab";
+import { LoadingSuspense } from "./_components/shared/loading-suspense";
 
 const TAB_VALUES = {
   PROFILE: "profile",
@@ -146,137 +141,5 @@ export default async function ProfilePage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-/**
- * Server component that lists linked social accounts and masks credential providers.
- * @returns Card section with account linking controls.
- */
-async function LinkedAccountsTab() {
-  const accounts = await auth.api.listUserAccounts({
-    headers: await headers(),
-  });
-  const nonCredentialAccounts = accounts.filter(
-    (a) => a.providerId !== "credential"
-  );
-
-  return (
-    <Card>
-      <CardContent>
-        <AccountLinking currentAccounts={nonCredentialAccounts} />
-      </CardContent>
-    </Card>
-  );
-}
-/**
- * Server component that fetches sessions and renders revocation controls.
- * @param currentSessionToken Token representing the active browser session.
- * @returns Card containing the session management UI.
- */
-async function SessionsTab({
-  currentSessionToken,
-}: {
-  currentSessionToken: string;
-}) {
-  const sessions = await auth.api.listSessions({ headers: await headers() });
-
-  return (
-    <Card>
-      <CardContent>
-        <SessionManagement
-          sessions={sessions}
-          currentSessionToken={currentSessionToken}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * Server component that aggregates password, 2FA, and passkey management data.
- * @param email Email address used for password setup flows.
- * @param isTwoFactorEnabled Current two-factor state for the user.
- * @returns Stacked security cards for password, 2FA, and passkeys.
- */
-async function SecurityTab({
-  email,
-  isTwoFactorEnabled,
-}: {
-  email: string;
-  isTwoFactorEnabled: boolean;
-}) {
-  const [passkeys, accounts] = await Promise.all([
-    auth.api.listPasskeys({ headers: await headers() }),
-    auth.api.listUserAccounts({ headers: await headers() }),
-  ]);
-
-  const hasPasswordAccount = accounts.some(
-    (a) => a.providerId === "credential"
-  );
-
-  return (
-    <div className="space-y-6">
-      {hasPasswordAccount ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-            <CardDescription>
-              Update your password for improved security.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChangePasswordForm />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Set Password</CardTitle>
-            <CardDescription>
-              We will send you a password reset email to set up a password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SetPasswordButton email={email} />
-          </CardContent>
-        </Card>
-      )}
-      {hasPasswordAccount && (
-        <Card>
-          <CardHeader className="flex items-center justify-between gap-2">
-            <CardTitle>Two-Factor Authentication</CardTitle>
-            <Badge variant={isTwoFactorEnabled ? "default" : "secondary"}>
-              {isTwoFactorEnabled ? "Enabled" : "Disabled"}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <TwoFactorAuth isEnabled={isTwoFactorEnabled} />
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Passkeys</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PasskeyManagement passkeys={passkeys} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/**
- * Suspense boundary with a subtle loading indicator for tab panels.
- * @param children Lazy content to render when data is resolved.
- * @returns Suspense wrapper with a spinning loader fallback.
- */
-function LoadingSuspense({ children }: { children: ReactNode }) {
-  return (
-    <Suspense fallback={<Loader2Icon className="size-20 animate-spin" />}>
-      {children}
-    </Suspense>
   );
 }

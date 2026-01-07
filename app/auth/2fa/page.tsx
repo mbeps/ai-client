@@ -3,8 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { TotpForm } from "./_components/totp-form";
-import { BackupCodeTab } from "./_components/backup-code-tab";
+import { TotpForm } from "./_components/forms/totp-form";
+import { BackupCodeTab } from "./_components/tabs/backup-code-tab";
 
 const TAB_VALUES = {
   TOTP: "totp",

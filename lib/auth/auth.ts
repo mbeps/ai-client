@@ -11,7 +11,7 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 import { passkey } from "@better-auth/passkey";
 import { admin as adminPlugin } from "better-auth/plugins/admin";
 import { organization } from "better-auth/plugins/organization";
-import { ac, admin, user } from "@/components/auth/permissions";
+import { ac, admin, user } from "@/components/auth/utils/permissions";
 import { sendOrganizationInviteEmail } from "../emails/organization-invite-email";
 import { desc, eq } from "drizzle-orm";
 import { member } from "@/drizzle/schema";

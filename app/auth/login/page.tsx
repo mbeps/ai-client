@@ -8,15 +8,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignUpTab } from "./_components/sign-up-tab";
-import { SignInTab } from "./_components/sign-in-tab";
+import { SignUpTab } from "./_components/tabs/sign-up-tab";
+import { SignInTab } from "./_components/tabs/sign-in-tab";
 import { Separator } from "@/components/ui/separator";
-import { SocialAuthButtons } from "./_components/social-auth-buttons";
+import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth/auth-client";
 import { useRouter } from "next/navigation";
-import { EmailVerification } from "./_components/email-verification";
-import { ForgotPassword } from "./_components/forgot-password";
+import { EmailVerification } from "./_components/forms/email-verification";
+import { ForgotPassword } from "./_components/forms/forgot-password";
 
 const TAB_VALUES = {
   SIGN_IN: "signin",

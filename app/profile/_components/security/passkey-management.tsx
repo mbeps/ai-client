@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { Trash2 } from "lucide-react";
 import {
   Dialog,

@@ -17,7 +17,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { PasskeyButton } from "./passkey-button";
+import { PasskeyButton } from "../buttons/passkey-button";
 import { signInSchema, SignInForm } from "@/schemas/sign-in";
 
 /**
