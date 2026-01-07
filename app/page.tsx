@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import Link from "next/link";
@@ -33,6 +34,13 @@ export default function Home() {
               <Button asChild size="lg">
                 <Link href={ROUTES.PROFILE}>Profile</Link>
               </Button>
+              <BetterAuthActionButton
+                action={() => authClient.signOut()}
+                successMessage="Signed out successfully"
+                size="lg"
+              >
+                Sign Out
+              </BetterAuthActionButton>
             </div>
           </>
         )}
