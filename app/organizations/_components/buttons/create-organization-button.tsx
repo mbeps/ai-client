@@ -29,6 +29,7 @@ import {
   createOrganizationSchema,
   CreateOrganizationForm,
 } from "@/schemas/create-organization";
+import { createSlug } from "@/lib/create-slug";
 
 /**
  * Dialog form for creating a new organization and setting it active.
@@ -50,10 +51,7 @@ export function CreateOrganizationButton() {
    * @param data Form payload containing the organization name.
    */
   async function handleCreateOrganization(data: CreateOrganizationForm) {
-    const slug = data.name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-");
+    const slug = createSlug(data.name);
     const res = await authClient.organization.create({
       name: data.name,
       slug,
