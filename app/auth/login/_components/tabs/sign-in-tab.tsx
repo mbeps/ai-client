@@ -77,11 +77,7 @@ export function SignInTab({
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    autoComplete="email webauthn"
-                    {...field}
-                  />
+                  <Input type="email" autoComplete="email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -106,10 +102,7 @@ export function SignInTab({
                   </Button>
                 </div>
                 <FormControl>
-                  <PasswordInput
-                    autoComplete="current-password webauthn"
-                    {...field}
-                  />
+                  <PasswordInput autoComplete="current-password" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
