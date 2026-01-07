@@ -224,8 +224,18 @@ function QRCodeVerify({
           </Button>
         </form>
       </Form>
-      <div className="p-4 bg-white w-fit">
-        <QRCode size={256} value={totpURI} />
+      <div className="flex flex-col items-center space-y-4">
+        <div className="p-4 bg-white">
+          <QRCode size={256} value={totpURI} />
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground mb-2">
+            Or enter this code manually:
+          </p>
+          <code className="bg-muted px-2 py-1 rounded text-sm font-mono break-all">
+            {new URL(totpURI).searchParams.get("secret")}
+          </code>
+        </div>
       </div>
     </div>
   );
