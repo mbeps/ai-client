@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PasskeyButton } from "../buttons/passkey-button";
@@ -50,7 +51,7 @@ export function SignInTab({
    */
   async function handleSignIn(data: SignInForm) {
     await authClient.signIn.email(
-      { ...data, callbackURL: "/" },
+      { ...data, callbackURL: ROUTES.HOME },
       {
         onError: (error) => {
           if (error.error.code === "EMAIL_NOT_VERIFIED") {
@@ -59,7 +60,7 @@ export function SignInTab({
           toast.error(error.error.message || "Failed to sign in");
         },
         onSuccess: () => {
-          router.push("/");
+          router.push(ROUTES.HOME);
         },
       }
     );

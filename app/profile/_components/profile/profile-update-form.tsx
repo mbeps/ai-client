@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { NumberInput } from "@/components/ui/number-input";
 import { useRouter } from "next/navigation";
@@ -60,7 +61,7 @@ export function ProfileUpdateForm({
       promises.push(
         authClient.changeEmail({
           newEmail: data.email,
-          callbackURL: "/profile",
+          callbackURL: ROUTES.PROFILE,
         })
       );
     }

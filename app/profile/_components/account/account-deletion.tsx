@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button"
-import { authClient } from "@/lib/auth/auth-client"
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Danger zone button that starts the Better Auth account deletion flow.
@@ -14,9 +15,9 @@ export function AccountDeletion() {
       variant="destructive"
       className="w-full"
       successMessage="Account deletion initiated. Please check your email to confirm."
-      action={() => authClient.deleteUser({ callbackURL: "/" })}
+      action={() => authClient.deleteUser({ callbackURL: ROUTES.HOME })}
     >
       Delete Account Permanently
     </BetterAuthActionButton>
-  )
+  );
 }

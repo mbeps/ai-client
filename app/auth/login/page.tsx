@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";
@@ -39,7 +40,7 @@ export default function LoginPage() {
   // Redirect authenticated users away from the auth flow.
   useEffect(() => {
     authClient.getSession().then((session) => {
-      if (session.data != null) router.push("/");
+      if (session.data != null) router.push(ROUTES.HOME);
     });
   }, [router]);
 

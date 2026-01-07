@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { NumberInput } from "@/components/ui/number-input";
 import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
@@ -46,7 +47,7 @@ export function SignUpTab({
    */
   async function handleSignUp(data: SignUpForm) {
     const res = await authClient.signUp.email(
-      { ...data, callbackURL: "/" },
+      { ...data, callbackURL: ROUTES.HOME },
       {
         onError: (error) => {
           toast.error(error.error.message || "Failed to sign up");

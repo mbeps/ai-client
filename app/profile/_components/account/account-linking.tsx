@@ -4,6 +4,7 @@ import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-ac
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth/auth";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import {
   SUPPORTED_OAUTH_PROVIDER_DETAILS,
   SUPPORTED_OAUTH_PROVIDERS,
@@ -94,7 +95,7 @@ function AccountCard({
   function linkAccount() {
     return authClient.linkSocial({
       provider,
-      callbackURL: "/profile",
+      callbackURL: ROUTES.PROFILE,
     });
   }
 

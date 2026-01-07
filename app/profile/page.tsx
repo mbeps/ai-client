@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth/auth";
+import { ROUTES } from "@/lib/routes";
 import { ArrowLeft, Key, LinkIcon, Shield, Trash2, User } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -41,12 +42,12 @@ const TAB_VALUES = {
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   // Redirect guests to the authentication flow.
-  if (session == null) return redirect("/auth/login");
+  if (session == null) return redirect(ROUTES.AUTH.LOGIN);
 
   return (
     <div className="max-w-4xl mx-auto my-6 px-4">
       <div className="mb-8">
-        <Link href="/" className="inline-flex items-center mb-6">
+        <Link href={ROUTES.HOME} className="inline-flex items-center mb-6">
           <ArrowLeft className="size-4 mr-2" />
           Back to Home
         </Link>

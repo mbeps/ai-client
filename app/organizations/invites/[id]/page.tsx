@@ -1,14 +1,15 @@
-import { auth } from "@/lib/auth/auth"
-import { redirect } from "next/navigation"
-import { headers } from "next/headers"
+import { auth } from "@/lib/auth/auth";
+import { ROUTES } from "@/lib/routes";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { InviteInformation } from "./_components/invite-information"
+} from "@/components/ui/card";
+import { InviteInformation } from "./_components/invite-information";
 
 /**
  * Invitation landing page that lets users accept or reject organization invites.
@@ -18,18 +19,18 @@ import { InviteInformation } from "./_components/invite-information"
 export default async function InvitationPage({
   params,
 }: PageProps<"/organizations/invites/[id]">) {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await auth.api.getSession({ headers: await headers() });
   // Force login before revealing invitation details.
-  if (session == null) return redirect("/auth/login")
+  if (session == null) return redirect(ROUTES.AUTH.LOGIN);
 
-  const { id } = await params
+  const { id } = await params;
 
   const invitation = await auth.api
     .getInvitation({
       headers: await headers(),
       query: { id },
     })
-    .catch(() => redirect("/"))
+    .catch(() => redirect(ROUTES.HOME));
 
   return (
     <div className="container mx-auto my-6 max-w-2xl px-4">
@@ -46,5 +47,5 @@ export default async function InvitationPage({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

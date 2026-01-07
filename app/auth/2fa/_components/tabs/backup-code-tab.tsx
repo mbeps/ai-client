@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { backupCodeSchema, BackupCodeForm } from "@/schemas/backup-code";
@@ -43,7 +44,7 @@ export function BackupCodeTab() {
         toast.error(error.error.message || "Failed to verify code");
       },
       onSuccess: () => {
-        router.push("/");
+        router.push(ROUTES.HOME);
       },
     });
   }

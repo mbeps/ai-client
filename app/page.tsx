@@ -1,30 +1,31 @@
-"use client"
+"use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button"
-import { Button } from "@/components/ui/button"
-import { authClient } from "@/lib/auth/auth-client"
-import Link from "next/link"
-import { useEffect, useState } from "react"
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 /**
  * Landing page that surfaces navigation options based on session state.
  * @returns Client-rendered home page component.
  */
 export default function Home() {
-  const [hasAdminPermission, setHasAdminPermission] = useState(false)
-  const { data: session, isPending: loading } = authClient.useSession()
+  const [hasAdminPermission, setHasAdminPermission] = useState(false);
+  const { data: session, isPending: loading } = authClient.useSession();
 
   // Seed admin state as soon as session loads.
   useEffect(() => {
     authClient.admin
       .hasPermission({ permission: { user: ["list"] } })
       .then(({ data }) => {
-        setHasAdminPermission(data?.success ?? false)
-      })
-  }, [])
+        setHasAdminPermission(data?.success ?? false);
+      });
+  }, []);
 
   if (loading) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   return (
@@ -34,7 +35,7 @@ export default function Home() {
           <>
             <h1 className="text-3xl font-bold">Welcome to Our App</h1>
             <Button asChild size="lg">
-              <Link href="/auth/login">Sign In / Sign Up</Link>
+              <Link href={ROUTES.AUTH.LOGIN}>Sign In / Sign Up</Link>
             </Button>
           </>
         ) : (
@@ -42,14 +43,14 @@ export default function Home() {
             <h1 className="text-3xl font-bold">Welcome {session.user.name}!</h1>
             <div className="flex gap-4 justify-center">
               <Button asChild size="lg">
-                <Link href="/profile">Profile</Link>
+                <Link href={ROUTES.PROFILE}>Profile</Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link href="/organizations">Organizations</Link>
+                <Link href={ROUTES.ORGANIZATIONS.DASHBOARD}>Organizations</Link>
               </Button>
               {hasAdminPermission && (
                 <Button variant="outline" asChild size="lg">
-                  <Link href="/admin">Admin</Link>
+                  <Link href={ROUTES.ADMIN}>Admin</Link>
                 </Button>
               )}
               <BetterAuthActionButton
@@ -64,5 +65,5 @@ export default function Home() {
         )}
       </div>
     </div>
-  )
+  );
 }

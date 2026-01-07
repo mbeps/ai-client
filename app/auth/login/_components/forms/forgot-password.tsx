@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import {
   forgotPasswordSchema,
@@ -47,7 +48,7 @@ export function ForgotPassword({
     await authClient.requestPasswordReset(
       {
         ...data,
-        redirectTo: "/auth/reset-password",
+        redirectTo: ROUTES.AUTH.RESET_PASSWORD,
       },
       {
         onError: (error) => {

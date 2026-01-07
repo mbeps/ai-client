@@ -2,6 +2,7 @@
 
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -55,7 +56,7 @@ export function EmailVerification({ email }: { email: string }) {
           startEmailVerificationCountdown();
           return authClient.sendVerificationEmail({
             email,
-            callbackURL: "/",
+            callbackURL: ROUTES.HOME,
           });
         }}
       >

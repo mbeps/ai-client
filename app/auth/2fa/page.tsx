@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
+import { ROUTES } from "@/lib/routes";
 import { TotpForm } from "./_components/forms/totp-form";
 import { BackupCodeTab } from "./_components/tabs/backup-code-tab";
 
@@ -18,7 +19,7 @@ const TAB_VALUES = {
 export default async function TwoFactorPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   // Redirect signed-in users away from the 2FA challenge screen.
-  if (session != null) return redirect("/");
+  if (session != null) return redirect(ROUTES.HOME);
 
   return (
     <div className="my-6 px-4">

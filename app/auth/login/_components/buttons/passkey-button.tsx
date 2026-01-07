@@ -1,17 +1,18 @@
-"use client"
+"use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button"
-import { authClient } from "@/lib/auth/auth-client"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 /**
  * Attempts automatic passkey sign-in and offers a manual passkey button.
  * @returns Passkey sign-in button component.
  */
 export function PasskeyButton() {
-  const router = useRouter()
-  const { refetch } = authClient.useSession()
+  const router = useRouter();
+  const { refetch } = authClient.useSession();
 
   // Attempt a silent passkey sign-in when the component mounts.
   useEffect(() => {
@@ -19,12 +20,12 @@ export function PasskeyButton() {
       { autoFill: true },
       {
         onSuccess() {
-          refetch()
-          router.push("/")
+          refetch();
+          router.push(ROUTES.HOME);
         },
       }
-    )
-  }, [router, refetch])
+    );
+  }, [router, refetch]);
 
   return (
     <BetterAuthActionButton
@@ -33,13 +34,13 @@ export function PasskeyButton() {
       action={() =>
         authClient.signIn.passkey(undefined, {
           onSuccess() {
-            refetch()
-            router.push("/")
+            refetch();
+            router.push(ROUTES.HOME);
           },
         })
       }
     >
       Use Passkey
     </BetterAuthActionButton>
-  )
+  );
 }

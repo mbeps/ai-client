@@ -1,20 +1,21 @@
-"use client"
+"use client";
 
-import { authClient } from "@/lib/auth/auth-client"
-import { UserX } from "lucide-react"
-import { BetterAuthActionButton } from "./better-auth-action-button"
-import { useRouter } from "next/navigation"
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { UserX } from "lucide-react";
+import { BetterAuthActionButton } from "./better-auth-action-button";
+import { useRouter } from "next/navigation";
 
 /**
  * Renders a floating button that lets admins stop impersonation sessions.
  * @returns UI fragment that is only visible while impersonating another user.
  */
 export function ImpersonationIndicator() {
-  const router = useRouter()
-  const { data: session, refetch } = authClient.useSession()
+  const router = useRouter();
+  const { data: session, refetch } = authClient.useSession();
 
   // Do not render when there is no impersonation metadata.
-  if (session?.session.impersonatedBy == null) return null
+  if (session?.session.impersonatedBy == null) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50">
@@ -22,8 +23,8 @@ export function ImpersonationIndicator() {
         action={() =>
           authClient.admin.stopImpersonating(undefined, {
             onSuccess: () => {
-              router.push("/admin")
-              refetch()
+              router.push(ROUTES.ADMIN);
+              refetch();
             },
           })
         }
@@ -33,5 +34,5 @@ export function ImpersonationIndicator() {
         <UserX className="size-4" />
       </BetterAuthActionButton>
     </div>
-  )
+  );
 }
