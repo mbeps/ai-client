@@ -2,7 +2,6 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import z from "zod";
 import {
   Form,
   FormControl,
@@ -25,12 +24,10 @@ import {
 } from "@/components/ui/card";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-const resetPasswordSchema = z.object({
-  password: z.string().min(6),
-});
-
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
+import {
+  resetPasswordSchema,
+  ResetPasswordForm,
+} from "@/schemas/reset-password";
 
 export default function ResetPasswordClient() {
   const router = useRouter();

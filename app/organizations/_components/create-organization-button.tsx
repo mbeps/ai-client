@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,12 +9,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -24,29 +23,27 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { useState } from "react"
-
-const createOrganizationSchema = z.object({
-  name: z.string().min(1),
-})
-
-type CreateOrganizationForm = z.infer<typeof createOrganizationSchema>
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import {
+  createOrganizationSchema,
+  CreateOrganizationForm,
+} from "@/schemas/create-organization";
 
 /**
  * Dialog form for creating a new organization and setting it active.
  * @returns Button that opens the organization creation dialog.
  */
 export function CreateOrganizationButton() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   const form = useForm<CreateOrganizationForm>({
     resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
       name: "",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Creates an organization and makes it the active context on success.
@@ -56,18 +53,18 @@ export function CreateOrganizationButton() {
     const slug = data.name
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/[^a-z0-9]+/g, "-");
     const res = await authClient.organization.create({
       name: data.name,
       slug,
-    })
+    });
 
     if (res.error) {
-      toast.error(res.error.message || "Failed to create organization")
+      toast.error(res.error.message || "Failed to create organization");
     } else {
-      form.reset()
-      setOpen(false)
-      await authClient.organization.setActive({ organizationId: res.data.id })
+      form.reset();
+      setOpen(false);
+      await authClient.organization.setActive({ organizationId: res.data.id });
     }
   }
 
@@ -118,5 +115,5 @@ export function CreateOrganizationButton() {
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,18 +9,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-
-const forgotPasswordSchema = z.object({
-  email: z.email().min(1),
-})
-
-type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
+import {
+  forgotPasswordSchema,
+  ForgotPasswordForm,
+} from "@/schemas/forgot-password";
 
 /**
  * Form that requests a password reset email for the provided address.
@@ -31,16 +28,16 @@ type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
 export function ForgotPassword({
   openSignInTab,
 }: {
-  openSignInTab: () => void
+  openSignInTab: () => void;
 }) {
   const form = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Sends a password reset email and reports success via toast notifications.
@@ -53,16 +50,16 @@ export function ForgotPassword({
         redirectTo: "/auth/reset-password",
       },
       {
-        onError: error => {
+        onError: (error) => {
           toast.error(
             error.error.message || "Failed to send password reset email"
-          )
+          );
         },
         onSuccess: () => {
-          toast.success("Password reset email sent")
+          toast.success("Password reset email sent");
         },
       }
-    )
+    );
   }
 
   return (
@@ -95,5 +92,5 @@ export function ForgotPassword({
         </div>
       </form>
     </Form>
-  )
+  );
 }

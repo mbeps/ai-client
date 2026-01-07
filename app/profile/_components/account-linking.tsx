@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button"
-import { Card, CardContent } from "@/components/ui/card"
-import { auth } from "@/lib/auth/auth"
-import { authClient } from "@/lib/auth/auth-client"
+import { BetterAuthActionButton } from "@/components/auth/better-auth-action-button";
+import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/lib/auth/auth";
+import { authClient } from "@/lib/auth/auth-client";
 import {
   SUPPORTED_OAUTH_PROVIDER_DETAILS,
   SUPPORTED_OAUTH_PROVIDERS,
   SupportedOAuthProvider,
-} from "@/lib/auth/o-auth-providers"
-import { router } from "better-auth/api"
-import { Plus, Shield, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+} from "@/lib/auth/o-auth-providers";
+import { router } from "better-auth/api";
+import { Plus, Shield, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number]
+type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
 
 /**
  * Lists linked OAuth accounts and offers buttons to link or unlink providers.
@@ -23,7 +23,7 @@ type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number]
 export function AccountLinking({
   currentAccounts,
 }: {
-  currentAccounts: Account[]
+  currentAccounts: Account[];
 }) {
   return (
     <div className="space-y-6">
@@ -38,7 +38,7 @@ export function AccountLinking({
           </Card>
         ) : (
           <div className="space-y-3">
-            {currentAccounts.map(account => (
+            {currentAccounts.map((account) => (
               <AccountCard
                 key={account.id}
                 provider={account.providerId}
@@ -53,15 +53,15 @@ export function AccountLinking({
         <h3 className="text-lg font-medium">Link Other Accounts</h3>
         <div className="grid gap-3">
           {SUPPORTED_OAUTH_PROVIDERS.filter(
-            provider =>
-              !currentAccounts.find(acc => acc.providerId === provider)
-          ).map(provider => (
+            (provider) =>
+              !currentAccounts.find((acc) => acc.providerId === provider)
+          ).map((provider) => (
             <AccountCard key={provider} provider={provider} />
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -74,17 +74,18 @@ function AccountCard({
   provider,
   account,
 }: {
-  provider: string
-  account?: Account
+  provider: string;
+  account?: Account;
 }) {
-  const router = useRouter()
+  const router = useRouter();
 
   const providerDetails = SUPPORTED_OAUTH_PROVIDER_DETAILS[
     provider as SupportedOAuthProvider
   ] ?? {
+    // In case of an unsupported provider, use generic details
     name: provider,
     Icon: Shield,
-  }
+  };
 
   /**
    * Begins the social account linking flow.
@@ -94,7 +95,7 @@ function AccountCard({
     return authClient.linkSocial({
       provider,
       callbackURL: "/profile",
-    })
+    });
   }
 
   /**
@@ -103,7 +104,7 @@ function AccountCard({
    */
   function unlinkAccount() {
     if (account == null) {
-      return Promise.resolve({ error: { message: "Account not found" } })
+      return Promise.resolve({ error: { message: "Account not found" } });
     }
     return authClient.unlinkAccount(
       {
@@ -112,10 +113,10 @@ function AccountCard({
       },
       {
         onSuccess: () => {
-          router.refresh()
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   return (
@@ -159,5 +160,5 @@ function AccountCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

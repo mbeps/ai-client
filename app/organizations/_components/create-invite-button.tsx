@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,12 +9,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -24,29 +23,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { useState } from "react"
+} from "@/components/ui/dialog";
+import { useState } from "react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-
-const createInviteSchema = z.object({
-  email: z.email().min(1).trim(),
-  role: z.enum(["member", "admin"]),
-})
-
-type CreateInviteForm = z.infer<typeof createInviteSchema>
+} from "@/components/ui/select";
+import { createInviteSchema, CreateInviteForm } from "@/schemas/create-invite";
 
 /**
  * Dialog-triggered form for inviting members to the active organization.
  * @returns Invite button component with modal form.
  */
 export function CreateInviteButton() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   const form = useForm<CreateInviteForm>({
     resolver: zodResolver(createInviteSchema),
@@ -54,9 +47,9 @@ export function CreateInviteButton() {
       email: "",
       role: "member",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Creates an invitation and closes the dialog when successful.
@@ -64,14 +57,14 @@ export function CreateInviteButton() {
    */
   async function handleCreateInvite(data: CreateInviteForm) {
     await authClient.organization.inviteMember(data, {
-      onError: error => {
-        toast.error(error.error.message || "Failed to invite user")
+      onError: (error) => {
+        toast.error(error.error.message || "Failed to invite user");
       },
       onSuccess: () => {
-        form.reset()
-        setOpen(false)
+        form.reset();
+        setOpen(false);
       },
-    })
+    });
   }
 
   return (
@@ -124,7 +117,7 @@ export function CreateInviteButton() {
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )
+                );
               }}
             />
 
@@ -145,5 +138,5 @@ export function CreateInviteButton() {
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

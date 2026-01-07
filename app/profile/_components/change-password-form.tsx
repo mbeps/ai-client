@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,52 +9,48 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-import { PasswordInput } from "@/components/ui/password-input"
-import { Checkbox } from "@/components/ui/checkbox"
-
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(6),
-  revokeOtherSessions: z.boolean(),
-})
-
-type ChangePasswordForm = z.infer<typeof changePasswordSchema>
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  changePasswordSchema,
+  ChangePasswordFormData,
+} from "@/schemas/change-password";
 
 /**
  * Form that lets users update credentials and optionally revoke other sessions.
  * @returns Controlled password change form component.
  */
 export function ChangePasswordForm() {
-  const form = useForm<ChangePasswordForm>({
+  const form = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
       currentPassword: "",
       newPassword: "",
       revokeOtherSessions: true,
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Submits a Better Auth password change request.
    * @param data Form payload containing the current and new password.
    */
-  async function handlePasswordChange(data: ChangePasswordForm) {
+  async function handlePasswordChange(data: ChangePasswordFormData) {
     await authClient.changePassword(data, {
-      onError: error => {
-        toast.error(error.error.message || "Failed to change password")
+      onError: (error) => {
+        toast.error(error.error.message || "Failed to change password");
       },
       onSuccess: () => {
-        toast.success("Password changed successfully")
-        form.reset()
+        toast.success("Password changed successfully");
+        form.reset();
       },
-    })
+    });
   }
 
   return (
@@ -114,5 +109,5 @@ export function ChangePasswordForm() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }

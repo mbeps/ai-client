@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,26 +9,26 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { PasswordInput } from "@/components/ui/password-input"
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import QRCode from "react-qr-code"
-
-const twoFactorAuthSchema = z.object({
-  password: z.string().min(1),
-})
-
-type TwoFactorAuthForm = z.infer<typeof twoFactorAuthSchema>
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import QRCode from "react-qr-code";
+import {
+  twoFactorAuthSchema,
+  TwoFactorAuthForm,
+  qrSchema,
+  QrForm,
+} from "@/schemas/two-factor-auth";
 type TwoFactorData = {
-  totpURI: string
-  backupCodes: string[]
-}
+  totpURI: string;
+  backupCodes: string[];
+};
 
 /**
  * Manages enabling or disabling TOTP-based two-factor authentication.
@@ -37,14 +36,16 @@ type TwoFactorData = {
  * @returns Two-factor form that switches between enable and disable states.
  */
 export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
-  const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(null)
-  const router = useRouter()
+  const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(
+    null
+  );
+  const router = useRouter();
   const form = useForm<TwoFactorAuthForm>({
     resolver: zodResolver(twoFactorAuthSchema),
     defaultValues: { password: "" },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Disables two-factor authentication after verifying the user's password.
@@ -56,15 +57,15 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
         password: data.password,
       },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to disable 2FA")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to disable 2FA");
         },
         onSuccess: () => {
-          form.reset()
-          router.refresh()
+          form.reset();
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   /**
@@ -74,14 +75,14 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   async function handleEnableTwoFactorAuth(data: TwoFactorAuthForm) {
     const result = await authClient.twoFactor.enable({
       password: data.password,
-    })
+    });
 
     if (result.error) {
-      toast.error(result.error.message || "Failed to enable 2FA")
+      toast.error(result.error.message || "Failed to enable 2FA");
     }
     {
-      setTwoFactorData(result.data)
-      form.reset()
+      setTwoFactorData(result.data);
+      form.reset();
     }
   }
 
@@ -90,10 +91,10 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
       <QRCodeVerify
         {...twoFactorData}
         onDone={() => {
-          setTwoFactorData(null)
+          setTwoFactorData(null);
         }}
       />
-    )
+    );
   }
 
   return (
@@ -130,14 +131,8 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
         </Button>
       </form>
     </Form>
-  )
+  );
 }
-
-const qrSchema = z.object({
-  token: z.string().length(6),
-})
-
-type QrForm = z.infer<typeof qrSchema>
 
 /**
  * Verifies a newly enabled TOTP setup and reveals backup codes.
@@ -151,14 +146,14 @@ function QRCodeVerify({
   backupCodes,
   onDone,
 }: TwoFactorData & { onDone: () => void }) {
-  const [successfullyEnabled, setSuccessfullyEnabled] = useState(false)
-  const router = useRouter()
+  const [successfullyEnabled, setSuccessfullyEnabled] = useState(false);
+  const router = useRouter();
   const form = useForm<QrForm>({
     resolver: zodResolver(qrSchema),
     defaultValues: { token: "" },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Verifies the TOTP code entered by the user to finalize 2FA setup.
@@ -170,15 +165,15 @@ function QRCodeVerify({
         code: data.token,
       },
       {
-        onError: error => {
-          toast.error(error.error.message || "Failed to verify code")
+        onError: (error) => {
+          toast.error(error.error.message || "Failed to verify code");
         },
         onSuccess: () => {
-          setSuccessfullyEnabled(true)
-          router.refresh()
+          setSuccessfullyEnabled(true);
+          router.refresh();
         },
       }
-    )
+    );
   }
 
   if (successfullyEnabled) {
@@ -199,7 +194,7 @@ function QRCodeVerify({
           Done
         </Button>
       </>
-    )
+    );
   }
 
   return (
@@ -233,5 +228,5 @@ function QRCodeVerify({
         <QRCode size={256} value={totpURI} />
       </div>
     </div>
-  )
+  );
 }

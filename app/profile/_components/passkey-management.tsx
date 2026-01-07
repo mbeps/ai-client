@@ -2,7 +2,6 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import z from "zod";
 import {
   Form,
   FormControl,
@@ -35,12 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-
-const passkeySchema = z.object({
-  name: z.string().min(1),
-});
-
-type PasskeyForm = z.infer<typeof passkeySchema>;
+import { passkeySchema, PasskeyForm } from "@/schemas/passkey";
 
 /**
  * Displays existing passkeys and provides controls for creating or deleting them.
