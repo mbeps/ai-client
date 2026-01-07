@@ -6,6 +6,7 @@
     "dev": "next dev --turbo",
     "build": "next build --turbo",
     "start": "next start",
+    "build-start": "next build --turbo && next start",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
