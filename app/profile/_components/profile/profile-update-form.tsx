@@ -16,7 +16,6 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
-import { NumberInput } from "@/components/ui/number-input";
 import { useRouter } from "next/navigation";
 import {
   profileUpdateSchema,
@@ -34,7 +33,6 @@ export function ProfileUpdateForm({
   user: {
     email: string;
     name: string;
-    favoriteNumber: number;
   };
 }) {
   const router = useRouter();
@@ -53,7 +51,6 @@ export function ProfileUpdateForm({
     const promises = [
       authClient.updateUser({
         name: data.name,
-        favoriteNumber: data.favoriteNumber,
       }),
     ];
 
@@ -98,13 +95,12 @@ export function ProfileUpdateForm({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="John Doe" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="email"
@@ -112,21 +108,7 @@ export function ProfileUpdateForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="favoriteNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Favorite Number</FormLabel>
-              <FormControl>
-                <NumberInput {...field} />
+                <Input type="email" placeholder="hello@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

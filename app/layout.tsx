@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { ImpersonationIndicator } from "@/components/auth/buttons/impersonation-indicator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,12 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased dark flex justify-center`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex justify-center`}
       >
         <div className="w-3xl">
           {children}
           <Toaster position="top-left" />
-          <ImpersonationIndicator />
         </div>
       </body>
     </html>

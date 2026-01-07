@@ -9,13 +9,6 @@ import { sendWelcomeEmail } from "../emails/welcome-email";
 import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { passkey } from "@better-auth/passkey";
-import { admin as adminPlugin } from "better-auth/plugins/admin";
-import { organization } from "better-auth/plugins/organization";
-import { ac, admin, user } from "@/components/auth/utils/permissions";
-import { sendOrganizationInviteEmail } from "../emails/organization-invite-email";
-import { GLOBAL_ROLES } from "./roles";
-import { desc, eq } from "drizzle-orm";
-import { member } from "@/drizzle/schema";
 
 /**
  * Better Auth server configured with email, OAuth, passkey, and organization features.
@@ -41,10 +34,7 @@ export const auth = betterAuth({
       },
     },
     additionalFields: {
-      favoriteNumber: {
-        type: "number",
-        required: true,
-      },
+      // Intentionally left empty for future extensibility
     },
   },
   emailAndPassword: {
@@ -65,20 +55,10 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      mapProfileToUser: (profile) => {
-        return {
-          favoriteNumber: Number(profile.public_repos) || 0,
-        };
-      },
     },
     discord: {
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-      mapProfileToUser: () => {
-        return {
-          favoriteNumber: 0,
-        };
-      },
     },
   },
   session: {
@@ -96,28 +76,6 @@ export const auth = betterAuth({
     nextCookies(),
     twoFactor(),
     passkey(),
-    adminPlugin({
-      ac,
-      roles: {
-        [GLOBAL_ROLES.ADMIN]: admin,
-        [GLOBAL_ROLES.USER]: user,
-      },
-    }),
-    organization({
-      sendInvitationEmail: async ({
-        email,
-        organization,
-        inviter,
-        invitation,
-      }) => {
-        await sendOrganizationInviteEmail({
-          invitation,
-          inviter: inviter.user,
-          organization,
-          email,
-        });
-      },
-    }),
   ],
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -135,25 +93,5 @@ export const auth = betterAuth({
         }
       }
     }),
-  },
-  databaseHooks: {
-    session: {
-      create: {
-        before: async (userSession) => {
-          const membership = await db.query.member.findFirst({
-            where: eq(member.userId, userSession.userId),
-            orderBy: desc(member.createdAt),
-            columns: { organizationId: true },
-          });
-
-          return {
-            data: {
-              ...userSession,
-              activeOrganizationId: membership?.organizationId,
-            },
-          };
-        },
-      },
-    },
   },
 });

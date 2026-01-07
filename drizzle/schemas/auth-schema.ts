@@ -5,7 +5,6 @@ import {
   boolean,
   integer,
 } from "drizzle-orm/pg-core";
-import { INVITATION_STATUS, ORG_ROLES } from "@/lib/auth/roles";
 
 /**
  * Stores end-user identities and custom profile fields.
@@ -22,11 +21,6 @@ export const user = pgTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
-  role: text("role"),
-  banned: boolean("banned").default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
-  favoriteNumber: integer("favorite_number").notNull(),
 });
 
 /**
@@ -45,8 +39,6 @@ export const session = pgTable("session", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  impersonatedBy: text("impersonated_by"),
-  activeOrganizationId: text("active_organization_id"),
 });
 
 /**
@@ -116,48 +108,4 @@ export const passkey = pgTable("passkey", {
   transports: text("transports"),
   createdAt: timestamp("created_at"),
   aaguid: text("aaguid"),
-});
-
-/**
- * Defines collaborative organizations created via the Better Auth plugin.
- */
-export const organization = pgTable("organization", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").unique(),
-  logo: text("logo"),
-  createdAt: timestamp("created_at").notNull(),
-  metadata: text("metadata"),
-});
-
-/**
- * Links users to organizations with role-based access metadata.
- */
-export const member = pgTable("member", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  role: text("role").default(ORG_ROLES.MEMBER).notNull(),
-  createdAt: timestamp("created_at").notNull(),
-});
-
-/**
- * Tracks pending invitations sent to prospective organization members.
- */
-export const invitation = pgTable("invitation", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: text("role"),
-  status: text("status").default(INVITATION_STATUS.PENDING).notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  inviterId: text("inviter_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
 });
