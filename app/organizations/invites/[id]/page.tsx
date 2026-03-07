@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { organization } from "better-auth/plugins/organization";
 import { InviteInformation } from "./_components/invite-information";
 
 /**
@@ -20,12 +21,14 @@ export default async function InvitationPage({
   params,
 }: PageProps<"/organizations/invites/[id]">) {
   const session = await auth.api.getSession({ headers: await headers() });
+  const organizationApi = auth.api as typeof auth.api &
+    ReturnType<typeof organization>["endpoints"];
   // Force login before revealing invitation details.
   if (session == null) return redirect(ROUTES.AUTH.LOGIN);
 
   const { id } = await params;
 
-  const invitation = await auth.api
+  const invitation = await organizationApi
     .getInvitation({
       headers: await headers(),
       query: { id },

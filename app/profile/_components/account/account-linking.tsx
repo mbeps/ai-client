@@ -2,7 +2,7 @@
 
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { auth } from "@/lib/auth/auth";
+import type { auth } from "@/lib/auth/auth";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import {
@@ -10,7 +10,6 @@ import {
   SUPPORTED_OAUTH_PROVIDERS,
   SupportedOAuthProvider,
 } from "@/lib/auth/o-auth-providers";
-import { router } from "better-auth/api";
 import { Plus, Shield, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -55,7 +54,7 @@ export function AccountLinking({
         <div className="grid gap-3">
           {SUPPORTED_OAUTH_PROVIDERS.filter(
             (provider) =>
-              !currentAccounts.find((acc) => acc.providerId === provider)
+              !currentAccounts.find((acc) => acc.providerId === provider),
           ).map((provider) => (
             <AccountCard key={provider} provider={provider} />
           ))}
@@ -116,7 +115,7 @@ function AccountCard({
         onSuccess: () => {
           router.refresh();
         },
-      }
+      },
     );
   }
 

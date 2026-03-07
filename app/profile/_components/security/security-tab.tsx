@@ -12,6 +12,9 @@ import { SetPasswordButton } from "./set-password-button";
 import { ChangePasswordForm } from "./change-password-form";
 import { TwoFactorAuth } from "./two-factor-auth";
 import { PasskeyManagement } from "./passkey-management";
+import { passkey } from "@better-auth/passkey";
+
+type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
 
 /**
  * Server component that aggregates password, 2FA, and passkey management data.
@@ -26,13 +29,15 @@ export async function SecurityTab({
   email: string;
   isTwoFactorEnabled: boolean;
 }) {
+  const passkeyApi = auth.api as typeof auth.api &
+    ReturnType<typeof passkey>["endpoints"];
   const [passkeys, accounts] = await Promise.all([
-    auth.api.listPasskeys({ headers: await headers() }),
+    passkeyApi.listPasskeys({ headers: await headers() }),
     auth.api.listUserAccounts({ headers: await headers() }),
   ]);
 
   const hasPasswordAccount = accounts.some(
-    (a) => a.providerId === "credential"
+    (account: Account) => account.providerId === "credential",
   );
 
   return (

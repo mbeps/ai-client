@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { auth } from "@/lib/auth/auth";
 import { ROUTES } from "@/lib/routes";
+import { admin, UserWithRole } from "better-auth/plugins/admin";
 import { ArrowLeft, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -26,16 +27,18 @@ import { UserRow } from "./_components/user-row";
  */
 export default async function AdminPage() {
   const session = await auth.api.getSession({ headers: await headers() });
+  const adminApi = auth.api as typeof auth.api &
+    ReturnType<typeof admin>["endpoints"];
 
   // Ensure only admins with list permission can view the dashboard.
   if (session == null) return redirect(ROUTES.AUTH.LOGIN);
-  const hasAccess = await auth.api.userHasPermission({
+  const hasAccess = await adminApi.userHasPermission({
     headers: await headers(),
-    body: { permission: { user: ["list"] } },
+    body: { permissions: { user: ["list"] } },
   });
   if (!hasAccess.success) return redirect(ROUTES.HOME);
 
-  const users = await auth.api.listUsers({
+  const users = await adminApi.listUsers({
     headers: await headers(),
     query: { limit: 100, sortBy: "createdAt", sortDirection: "desc" },
   });
@@ -69,7 +72,7 @@ export default async function AdminPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.users.map((user) => (
+                {users.users.map((user: UserWithRole) => (
                   <UserRow key={user.id} user={user} selfId={session.user.id} />
                 ))}
               </TableBody>

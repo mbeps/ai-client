@@ -18,7 +18,7 @@ export default function Home() {
   // Seed admin state as soon as session loads.
   useEffect(() => {
     authClient.admin
-      .hasPermission({ permission: { user: ["list"] } })
+      .hasPermission({ permissions: { user: ["list"] } })
       .then(({ data }) => {
         setHasAdminPermission(data?.success ?? false);
       });

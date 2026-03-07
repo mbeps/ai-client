@@ -23,6 +23,8 @@ import {
   ProfileUpdateFormData,
 } from "@/schemas/profile-update";
 
+type UpdateUserPayload = Parameters<typeof authClient.updateUser>[0];
+
 /**
  * Form that updates profile metadata and triggers email change verification.
  * @param user Initial user data used to seed the form.
@@ -50,19 +52,19 @@ export function ProfileUpdateForm({
    * @param data Form submission containing updated profile values.
    */
   async function handleProfileUpdate(data: ProfileUpdateFormData) {
-    const promises = [
-      authClient.updateUser({
-        name: data.name,
-        favoriteNumber: data.favoriteNumber,
-      }),
-    ];
+    const updateUserPayload: UpdateUserPayload = {
+      name: data.name,
+      favoriteNumber: data.favoriteNumber,
+    };
+
+    const promises = [authClient.updateUser(updateUserPayload)];
 
     if (data.email !== user.email) {
       promises.push(
         authClient.changeEmail({
           newEmail: data.email,
           callbackURL: ROUTES.PROFILE,
-        })
+        }),
       );
     }
 

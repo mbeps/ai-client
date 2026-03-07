@@ -43,6 +43,11 @@ export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   // Redirect guests to the authentication flow.
   if (session == null) return redirect(ROUTES.AUTH.LOGIN);
+  const user = session.user as typeof session.user & {
+    favoriteNumber: number;
+    role?: string;
+    twoFactorEnabled?: boolean;
+  };
 
   return (
     <div className="max-w-4xl mx-auto my-6 px-4">
@@ -53,11 +58,11 @@ export default async function ProfilePage() {
         </Link>
         <div className="flex items-center space-x-4">
           <div className="size-16 bg-muted rounded-full flex items-center justify-center overflow-hidden">
-            {session.user.image ? (
+            {user.image ? (
               <Image
                 width={64}
                 height={64}
-                src={session.user.image}
+                src={user.image}
                 alt="User Avatar"
                 className="object-cover"
               />
@@ -68,11 +73,11 @@ export default async function ProfilePage() {
           <div className="flex-1">
             <div className="flex gap-1 justify-between items-start">
               <h1 className="text-3xl font-bold">
-                {session.user.name || "User Profile"}
+                {user.name || "User Profile"}
               </h1>
-              <Badge>{session.user.role}</Badge>
+              <Badge>{user.role}</Badge>
             </div>
-            <p className="text-muted-foreground">{session.user.email}</p>
+            <p className="text-muted-foreground">{user.email}</p>
           </div>
         </div>
       </div>
@@ -104,7 +109,7 @@ export default async function ProfilePage() {
         <TabsContent value={TAB_VALUES.PROFILE}>
           <Card>
             <CardContent>
-              <ProfileUpdateForm user={session.user} />
+              <ProfileUpdateForm user={user} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -112,8 +117,8 @@ export default async function ProfilePage() {
         <TabsContent value={TAB_VALUES.SECURITY}>
           <LoadingSuspense>
             <SecurityTab
-              email={session.user.email}
-              isTwoFactorEnabled={session.user.twoFactorEnabled ?? false}
+              email={user.email}
+              isTwoFactorEnabled={user.twoFactorEnabled ?? false}
             />
           </LoadingSuspense>
         </TabsContent>

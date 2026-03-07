@@ -27,7 +27,7 @@ export const auth = betterAuth({
   user: {
     changeEmail: {
       enabled: true,
-      sendChangeEmailVerification: async ({ user, url, newEmail }) => {
+      sendChangeEmailConfirmation: async ({ user, url, newEmail }: any) => {
         await sendEmailVerificationEmail({
           user: { ...user, email: newEmail },
           url,
@@ -36,7 +36,7 @@ export const auth = betterAuth({
     },
     deleteUser: {
       enabled: true,
-      sendDeleteAccountVerification: async ({ user, url }) => {
+      sendDeleteAccountVerification: async ({ user, url }: any) => {
         await sendDeleteAccountVerificationEmail({ user, url });
       },
     },
@@ -50,14 +50,14 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url }: any) => {
       await sendPasswordResetEmail({ user, url });
     },
   },
   emailVerification: {
     autoSignInAfterVerification: true,
     sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }: any) => {
       await sendEmailVerificationEmail({ user, url });
     },
   },
@@ -65,7 +65,9 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      mapProfileToUser: (profile) => {
+      mapProfileToUser: (profile: {
+        public_repos?: number | string | null;
+      }) => {
         return {
           favoriteNumber: Number(profile.public_repos) || 0,
         };
@@ -109,7 +111,7 @@ export const auth = betterAuth({
         organization,
         inviter,
         invitation,
-      }) => {
+      }: any) => {
         await sendOrganizationInviteEmail({
           invitation,
           inviter: inviter.user,
@@ -139,7 +141,7 @@ export const auth = betterAuth({
   databaseHooks: {
     session: {
       create: {
-        before: async (userSession) => {
+        before: async (userSession: any) => {
           const membership = await db.query.member.findFirst({
             where: eq(member.userId, userSession.userId),
             orderBy: desc(member.createdAt),
