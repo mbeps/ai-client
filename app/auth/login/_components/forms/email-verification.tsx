@@ -6,9 +6,12 @@ import { ROUTES } from "@/lib/routes";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Guides users through resending their email verification link with a cooldown.
- * @param email Address that should receive the verification email.
- * @returns Email verification helper component.
+ * Post-registration panel that prompts users to verify their email address.
+ * Enforces a 30-second cooldown between resend attempts using a countdown timer.
+ * Shown automatically after sign-up when `user.emailVerified` is `false`.
+ *
+ * @param props.email - Address to send the verification link to
+ * @author Maruf Bepary
  */
 export function EmailVerification({ email }: { email: string }) {
   const [timeToNextResend, setTimeToNextResend] = useState(30);
@@ -56,7 +59,7 @@ export function EmailVerification({ email }: { email: string }) {
           startEmailVerificationCountdown();
           return authClient.sendVerificationEmail({
             email,
-            callbackURL: ROUTES.HOME,
+            callbackURL: ROUTES.HOME.path,
           });
         }}
       >

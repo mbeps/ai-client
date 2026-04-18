@@ -20,8 +20,11 @@ import { useRouter } from "next/navigation";
 import { totpSchema, TotpFormData } from "@/schemas/totp";
 
 /**
- * Form that accepts a 6-digit TOTP code during the two-factor challenge.
- * @returns TOTP verification form component.
+ * Primary two-factor authentication form that validates a 6-digit TOTP code.
+ * Calls `authClient.twoFactor.verifyTotp`; redirects to `ROUTES.HOME` on success.
+ * Rendered as the default tab on the 2FA challenge page.
+ *
+ * @author Maruf Bepary
  */
 export function TotpForm() {
   const router = useRouter();
@@ -44,7 +47,7 @@ export function TotpForm() {
         toast.error(error.error.message || "Failed to verify code");
       },
       onSuccess: () => {
-        router.push(ROUTES.HOME);
+        router.push(ROUTES.HOME.path);
       },
     });
   }

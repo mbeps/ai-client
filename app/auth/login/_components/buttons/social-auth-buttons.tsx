@@ -10,8 +10,11 @@ import {
 } from "@/lib/auth/o-auth-providers";
 
 /**
- * Renders buttons for each configured OAuth provider.
- * @returns Array of Better Auth action buttons for social sign-in.
+ * Renders a `BetterAuthActionButton` for every configured OAuth provider.
+ * Iterates `SUPPORTED_OAUTH_PROVIDERS`, rendering each provider's icon and name.
+ * Redirects to `ROUTES.HOME` on a successful OAuth callback.
+ *
+ * @author Maruf Bepary
  */
 export function SocialAuthButtons() {
   return SUPPORTED_OAUTH_PROVIDERS.map((provider) => {
@@ -24,7 +27,7 @@ export function SocialAuthButtons() {
         action={() => {
           return authClient.signIn.social({
             provider,
-            callbackURL: ROUTES.HOME,
+            callbackURL: ROUTES.HOME.path,
           });
         }}
       >

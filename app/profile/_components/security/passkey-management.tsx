@@ -40,6 +40,7 @@ import { passkeySchema, PasskeyForm } from "@/schemas/passkey";
  * Displays existing passkeys and provides controls for creating or deleting them.
  * @param passkeys List of registered passkeys for the current user.
  * @returns Passkey management interface with modal creation flow.
+ * @author Maruf Bepary
  */
 export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -76,7 +77,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   function handleDeletePasskey(passkeyId: string) {
     return authClient.passkey.deletePasskey(
       { id: passkeyId },
-      { onSuccess: () => router.refresh() }
+      { onSuccess: () => router.refresh() },
     );
   }
 

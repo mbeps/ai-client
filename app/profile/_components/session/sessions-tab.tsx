@@ -7,6 +7,7 @@ import { SessionManagement } from "./session-management";
  * Server component that fetches sessions and renders revocation controls.
  * @param currentSessionToken Token representing the active browser session.
  * @returns Card containing the session management UI.
+ * @author Maruf Bepary
  */
 export async function SessionsTab({
   currentSessionToken,

@@ -20,8 +20,11 @@ import { useRouter } from "next/navigation";
 import { backupCodeSchema, BackupCodeForm } from "@/schemas/backup-code";
 
 /**
- * Backup code verification tab for two-factor authentication.
- * @returns Backup code verification form component.
+ * Two-factor authentication fallback that accepts a static backup code.
+ * Calls `authClient.twoFactor.verifyBackupCode`; redirects to `ROUTES.HOME` on success.
+ * Shown as an alternative to the TOTP form on the 2FA challenge page.
+ *
+ * @author Maruf Bepary
  */
 export function BackupCodeTab() {
   const router = useRouter();
@@ -44,7 +47,7 @@ export function BackupCodeTab() {
         toast.error(error.error.message || "Failed to verify code");
       },
       onSuccess: () => {
-        router.push(ROUTES.HOME);
+        router.push(ROUTES.HOME.path);
       },
     });
   }

@@ -1,0 +1,83 @@
+"use client";
+
+import { useAppStore } from "@/lib/store";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MessageSquare } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { ChatCard } from "@/components/chat/chat-card";
+
+/**
+ * Chat list page with text search and filter by scope (all / in-project / with-assistant / standalone).
+ * Route: /chats. Reads all chats from the Zustand store.
+ *
+ * @author Maruf Bepary
+ */
+export default function ChatsPage() {
+  const chats = useAppStore((state) => state.chats);
+  const deleteChat = useAppStore((state) => state.deleteChat);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  const chatsList = Object.values(chats);
+
+  const filtered = chatsList.filter((chat) => {
+    if (search && !chat.title.toLowerCase().includes(search.toLowerCase()))
+      return false;
+    if (filter === "project" && !chat.projectId) return false;
+    if (filter === "assistant" && !chat.assistantId) return false;
+    if (filter === "none" && (chat.projectId || chat.assistantId)) return false;
+    return true;
+  });
+
+  const sorted = [...filtered].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
+
+  return (
+    <div className="page-container">
+      <PageHeader
+        icon={<MessageSquare className="h-8 w-8 text-primary" />}
+        title="All Chats"
+        description="Manage all your conversations."
+      />
+
+      <div className="flex gap-4 max-w-xl mb-6">
+        <Input
+          placeholder="Search chats..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1"
+        />
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Chats</SelectItem>
+            <SelectItem value="project">In Projects</SelectItem>
+            <SelectItem value="assistant">With Assistants</SelectItem>
+            <SelectItem value="none">Standalone</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {sorted.map((chat) => (
+          <ChatCard
+            key={chat.id}
+            chat={chat}
+            onDelete={() => deleteChat(chat.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

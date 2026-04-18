@@ -11,9 +11,14 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 import { passkey } from "@better-auth/passkey";
 
 /**
- * Better Auth server configured with email, OAuth, passkey, and organization features.
- * Uses JWT-based stateless sessions stored in encrypted cookies.
- * @see https://docs.better-auth.com
+ * Better Auth server instance. SERVER-ONLY — do not import in client components.
+ * Configured with email/password, GitHub and Discord OAuth, passkey, and two-factor plugins.
+ * Sessions are stored as JWT-based encrypted HTTP-only cookies via the nextCookies plugin.
+ * Transactional emails for verification, password reset, account deletion, and welcome
+ * are dispatched via Postmark.
+ *
+ * @see https://better-auth.com/docs
+ * @author Maruf Bepary
  */
 export const auth = betterAuth({
   appName: "Better Auth Demo",

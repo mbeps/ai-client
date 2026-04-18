@@ -20,9 +20,12 @@ import { toast } from "sonner";
 import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
 
 /**
- * Sign-up form that captures user info and triggers Better Auth registration.
- * @param openEmailVerificationTab Callback invoked when verification is required.
- * @returns Sign-up form component.
+ * Registration form that creates a new account via `authClient.signUp.email`.
+ * After successful registration, opens the email-verification tab when the
+ * returned `user.emailVerified` flag is `false`.
+ *
+ * @param props.openEmailVerificationTab - Called with the user's email to show the verification step
+ * @author Maruf Bepary
  */
 export function SignUpTab({
   openEmailVerificationTab,
@@ -46,12 +49,12 @@ export function SignUpTab({
    */
   async function handleSignUp(data: SignUpForm) {
     const res = await authClient.signUp.email(
-      { ...data, callbackURL: ROUTES.HOME },
+      { ...data, callbackURL: ROUTES.HOME.path },
       {
         onError: (error) => {
           toast.error(error.error.message || "Failed to sign up");
         },
-      }
+      },
     );
 
     if (res.error == null && !res.data.user.emailVerified) {

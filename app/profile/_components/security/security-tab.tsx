@@ -18,6 +18,7 @@ import { PasskeyManagement } from "./passkey-management";
  * @param email Email address used for password setup flows.
  * @param isTwoFactorEnabled Current two-factor state for the user.
  * @returns Stacked security cards for password, 2FA, and passkeys.
+ * @author Maruf Bepary
  */
 export async function SecurityTab({
   email,
@@ -32,7 +33,7 @@ export async function SecurityTab({
   ]);
 
   const hasPasswordAccount = accounts.some(
-    (a) => a.providerId === "credential"
+    (a) => a.providerId === "credential",
   );
 
   return (

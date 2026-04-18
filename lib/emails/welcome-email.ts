@@ -1,8 +1,11 @@
-import { sendEmail } from "./send-email"
+import { sendEmail } from "./send-email";
 
 /**
- * Greets newly registered users after successful sign-up.
- * @param user User profile details used to personalize the message.
+ * Sends a welcome email to a newly registered user.
+ * Triggered by the Better Auth `after` hook on user creation.
+ *
+ * @param user - Name and email of the newly registered user.
+ * @author Maruf Bepary
  */
 export async function sendWelcomeEmail(user: { name: string; email: string }) {
   await sendEmail({
@@ -19,5 +22,5 @@ export async function sendWelcomeEmail(user: { name: string; email: string }) {
       </div>
     `,
     text: `Hello ${user.name},\n\nThank you for signing up for our app! We're excited to have you on board.\n\nBest regards,\nYour App Team`,
-  })
+  });
 }

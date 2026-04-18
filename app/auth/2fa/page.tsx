@@ -13,13 +13,16 @@ const TAB_VALUES = {
 } as const;
 
 /**
- * Interstitial page that verifies users during two-factor authentication challenges.
- * @returns Two-factor challenge page with TOTP and backup code tabs.
+ * Server-rendered interstitial that handles two-factor authentication challenges.
+ * Route: /auth/2fa. Redirects fully authenticated sessions back to the home page.
+ *
+ * @returns Two-factor challenge page with TOTP and backup-code tabs.
+ * @author Maruf Bepary
  */
 export default async function TwoFactorPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   // Redirect signed-in users away from the 2FA challenge screen.
-  if (session != null) return redirect(ROUTES.HOME);
+  if (session != null) return redirect(ROUTES.HOME.path);
 
   return (
     <div className="my-6 px-4">

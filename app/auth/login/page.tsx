@@ -29,8 +29,11 @@ const TAB_VALUES = {
 type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];
 
 /**
- * Auth entry point that combines sign-in, sign-up, verification, and reset flows.
+ * Auth entry point that combines sign-in, sign-up, email verification, and password reset flows.
+ * Route: /auth/login. Redirects already-authenticated users to the home page.
+ *
  * @returns Client-rendered login page with tabbed navigation.
+ * @author Maruf Bepary
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +43,7 @@ export default function LoginPage() {
   // Redirect authenticated users away from the auth flow.
   useEffect(() => {
     authClient.getSession().then((session) => {
-      if (session.data != null) router.push(ROUTES.HOME);
+      if (session.data != null) router.push(ROUTES.HOME.path);
     });
   }, [router]);
 

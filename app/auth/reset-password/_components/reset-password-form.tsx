@@ -30,6 +30,14 @@ import {
   ResetPasswordForm,
 } from "@/schemas/reset-password";
 
+/**
+ * Password reset page component driven by a signed token in the URL.
+ * Reads `token` from search params; renders an invalid-link card when the token
+ * is absent or `error` is present. On valid submission calls
+ * `authClient.resetPassword` and redirects to the login page after 1 s.
+ *
+ * @author Maruf Bepary
+ */
 export default function ResetPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,10 +70,10 @@ export default function ResetPasswordClient() {
             description: "Redirection to login...",
           });
           setTimeout(() => {
-            router.push(ROUTES.AUTH.LOGIN);
+            router.push(ROUTES.AUTH.LOGIN.path);
           }, 1000);
         },
-      }
+      },
     );
   }
 
@@ -81,7 +89,7 @@ export default function ResetPasswordClient() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href={ROUTES.AUTH.LOGIN}>Back to Login</Link>
+              <Link href={ROUTES.AUTH.LOGIN.path}>Back to Login</Link>
             </Button>
           </CardContent>
         </Card>

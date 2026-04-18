@@ -120,3 +120,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .page-container {
+    @apply w-full overflow-y-auto h-full p-6 space-y-6 max-w-7xl mx-auto;
+  }
+  .page-container-detail {
+    @apply w-full overflow-y-auto h-full p-6 space-y-6 max-w-5xl mx-auto;
+  }
+}

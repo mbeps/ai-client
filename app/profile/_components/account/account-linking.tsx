@@ -10,7 +10,6 @@ import {
   SUPPORTED_OAUTH_PROVIDERS,
   SupportedOAuthProvider,
 } from "@/lib/auth/o-auth-providers";
-import { router } from "better-auth/api";
 import { Plus, Shield, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -20,6 +19,7 @@ type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
  * Lists linked OAuth accounts and offers buttons to link or unlink providers.
  * @param currentAccounts Accounts currently associated with the user.
  * @returns Account linking layout composed of provider cards.
+ * @author Maruf Bepary
  */
 export function AccountLinking({
   currentAccounts,
@@ -55,7 +55,7 @@ export function AccountLinking({
         <div className="grid gap-3">
           {SUPPORTED_OAUTH_PROVIDERS.filter(
             (provider) =>
-              !currentAccounts.find((acc) => acc.providerId === provider)
+              !currentAccounts.find((acc) => acc.providerId === provider),
           ).map((provider) => (
             <AccountCard key={provider} provider={provider} />
           ))}
@@ -95,7 +95,7 @@ function AccountCard({
   function linkAccount() {
     return authClient.linkSocial({
       provider,
-      callbackURL: ROUTES.PROFILE,
+      callbackURL: ROUTES.PROFILE.path,
     });
   }
 
@@ -116,7 +116,7 @@ function AccountCard({
         onSuccess: () => {
           router.refresh();
         },
-      }
+      },
     );
   }
 

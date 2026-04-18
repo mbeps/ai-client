@@ -22,10 +22,14 @@ import { PasskeyButton } from "../buttons/passkey-button";
 import { signInSchema, SignInForm } from "@/schemas/sign-in";
 
 /**
- * Email and password sign-in form with passkey shortcut and password reset link.
- * @param openEmailVerificationTab Callback that opens the verification tab when required.
- * @param openForgotPassword Callback that opens the password reset tab.
- * @returns Sign-in form component.
+ * Email/password sign-in form with passkey and password-reset shortcuts.
+ * Redirects to `ROUTES.HOME` on success. Delegates to `openEmailVerificationTab`
+ * when Better Auth returns `EMAIL_NOT_VERIFIED`, and to `openForgotPassword`
+ * when the user activates the forgot-password link.
+ *
+ * @param props.openEmailVerificationTab - Called with the email when verification is required
+ * @param props.openForgotPassword - Switches the parent view to the forgot-password flow
+ * @author Maruf Bepary
  */
 export function SignInTab({
   openEmailVerificationTab,
@@ -51,7 +55,7 @@ export function SignInTab({
    */
   async function handleSignIn(data: SignInForm) {
     await authClient.signIn.email(
-      { ...data, callbackURL: ROUTES.HOME },
+      { ...data, callbackURL: ROUTES.HOME.path },
       {
         onError: (error) => {
           if (error.error.code === "EMAIL_NOT_VERIFIED") {
@@ -60,9 +64,9 @@ export function SignInTab({
           toast.error(error.error.message || "Failed to sign in");
         },
         onSuccess: () => {
-          router.push(ROUTES.HOME);
+          router.push(ROUTES.HOME.path);
         },
-      }
+      },
     );
   }
 

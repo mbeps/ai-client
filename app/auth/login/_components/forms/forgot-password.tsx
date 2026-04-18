@@ -22,9 +22,12 @@ import {
 } from "@/schemas/forgot-password";
 
 /**
- * Form that requests a password reset email for the provided address.
- * @param openSignInTab Callback used to return to the sign-in tab.
- * @returns Forgot password form component.
+ * Form that sends a Better Auth password reset email to the supplied address.
+ * On success, a Sonner toast confirms dispatch; the reset link redirects to
+ * `ROUTES.AUTH.RESET_PASSWORD`. Includes a Back button to return to sign-in.
+ *
+ * @param props.openSignInTab - Callback that switches the parent view back to sign-in
+ * @author Maruf Bepary
  */
 export function ForgotPassword({
   openSignInTab,
@@ -48,18 +51,18 @@ export function ForgotPassword({
     await authClient.requestPasswordReset(
       {
         ...data,
-        redirectTo: ROUTES.AUTH.RESET_PASSWORD,
+        redirectTo: ROUTES.AUTH.RESET_PASSWORD.path,
       },
       {
         onError: (error) => {
           toast.error(
-            error.error.message || "Failed to send password reset email"
+            error.error.message || "Failed to send password reset email",
           );
         },
         onSuccess: () => {
           toast.success("Password reset email sent");
         },
-      }
+      },
     );
   }
 

@@ -7,7 +7,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Stores end-user identities and custom profile fields.
+ * Stores core user account data and profile fields.
+ * One-to-many with session, account, and passkey; one-to-one with twoFactor.
+ *
+ * @author Maruf Bepary
  */
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -24,7 +27,10 @@ export const user = pgTable("user", {
 });
 
 /**
- * Tracks active user sessions along with device metadata.
+ * Tracks active user sessions with device fingerprinting metadata.
+ * Many-to-one with user (CASCADE DELETE). Stores ip_address and user_agent for session management and revocation.
+ *
+ * @author Maruf Bepary
  */
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -42,7 +48,10 @@ export const session = pgTable("session", {
 });
 
 /**
- * Persists OAuth account connections and credential-based secrets.
+ * Persists OAuth account links and email/password credential hashes per user.
+ * Many-to-one with user (CASCADE DELETE). providerId identifies the provider (e.g. "github", "credential").
+ *
+ * @author Maruf Bepary
  */
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -65,7 +74,10 @@ export const account = pgTable("account", {
 });
 
 /**
- * Contains email verifications, password resets, and other one-time tokens.
+ * Stores short-lived tokens for email verification and password resets.
+ * identifier holds the email address; value holds the token or hash; expiresAt enforces TTL.
+ *
+ * @author Maruf Bepary
  */
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -80,7 +92,10 @@ export const verification = pgTable("verification", {
 });
 
 /**
- * Holds shared secrets and backup codes for TOTP-based 2FA.
+ * Holds TOTP shared secrets and encrypted backup codes for two-factor authentication.
+ * One-to-one with user (CASCADE DELETE). backupCodes is a JSON-serialised array of one-time codes.
+ *
+ * @author Maruf Bepary
  */
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),
@@ -92,7 +107,10 @@ export const twoFactor = pgTable("two_factor", {
 });
 
 /**
- * Stores WebAuthn passkey material for passwordless login.
+ * Stores WebAuthn passkey credentials for passwordless authentication.
+ * Many-to-one with user (CASCADE DELETE). counter increments on each use to prevent credential replay attacks.
+ *
+ * @author Maruf Bepary
  */
 export const passkey = pgTable("passkey", {
   id: text("id").primaryKey(),

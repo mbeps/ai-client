@@ -6,8 +6,12 @@ import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 
 /**
- * Offers a manual passkey button for sign-in.
- * @returns Passkey sign-in button component.
+ * Sign-in button that triggers the WebAuthn passkey flow.
+ * Calls `authClient.signIn.passkey` with `autoFill: false` so the browser
+ * prompt is displayed on explicit interaction only. Redirects to `ROUTES.HOME`
+ * on success and refreshes the active session.
+ *
+ * @author Maruf Bepary
  */
 export function PasskeyButton() {
   const router = useRouter();
@@ -23,9 +27,9 @@ export function PasskeyButton() {
           {
             onSuccess() {
               refetch();
-              router.push(ROUTES.HOME);
+              router.push(ROUTES.HOME.path);
             },
-          }
+          },
         )
       }
     >

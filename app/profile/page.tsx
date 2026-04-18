@@ -1,11 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth/auth";
 import { ROUTES } from "@/lib/routes";
@@ -15,13 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProfileUpdateForm } from "./_components/profile/profile-update-form";
-import { SetPasswordButton } from "./_components/security/set-password-button";
-import { ChangePasswordForm } from "./_components/security/change-password-form";
-import { SessionManagement } from "./_components/session/session-management";
-import { AccountLinking } from "./_components/account/account-linking";
 import { AccountDeletion } from "./_components/account/account-deletion";
-import { TwoFactorAuth } from "./_components/security/two-factor-auth";
-import { PasskeyManagement } from "./_components/security/passkey-management";
 import { LinkedAccountsTab } from "./_components/account/linked-accounts-tab";
 import { SessionsTab } from "./_components/session/sessions-tab";
 import { SecurityTab } from "./_components/security/security-tab";
@@ -38,16 +25,17 @@ const TAB_VALUES = {
 /**
  * Profile dashboard that surfaces personal data, security tools, and danger zone actions.
  * @returns Server-rendered profile page requiring an authenticated session.
+ * @author Maruf Bepary
  */
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   // Redirect guests to the authentication flow.
-  if (session == null) return redirect(ROUTES.AUTH.LOGIN);
+  if (session == null) return redirect(ROUTES.AUTH.LOGIN.path);
 
   return (
     <div className="max-w-4xl mx-auto my-6 px-4">
       <div className="mb-8">
-        <Link href={ROUTES.HOME} className="inline-flex items-center mb-6">
+        <Link href={ROUTES.HOME.path} className="inline-flex items-center mb-6">
           <ArrowLeft className="size-4 mr-2" />
           Back to Home
         </Link>

@@ -34,10 +34,11 @@ type TwoFactorData = {
  * Manages enabling or disabling TOTP-based two-factor authentication.
  * @param isEnabled Flag indicating whether 2FA is already active.
  * @returns Two-factor form that switches between enable and disable states.
+ * @author Maruf Bepary
  */
 export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(
-    null
+    null,
   );
   const router = useRouter();
   const form = useForm<TwoFactorAuthForm>({
@@ -64,7 +65,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
           form.reset();
           router.refresh();
         },
-      }
+      },
     );
   }
 
@@ -102,7 +103,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
       <form
         className="space-y-4"
         onSubmit={form.handleSubmit(
-          isEnabled ? handleDisableTwoFactorAuth : handleEnableTwoFactorAuth
+          isEnabled ? handleDisableTwoFactorAuth : handleEnableTwoFactorAuth,
         )}
       >
         <FormField
@@ -172,7 +173,7 @@ function QRCodeVerify({
           setSuccessfullyEnabled(true);
           router.refresh();
         },
-      }
+      },
     );
   }
 

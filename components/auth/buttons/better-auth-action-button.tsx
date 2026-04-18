@@ -4,10 +4,14 @@ import { ComponentProps } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 
 /**
- * Wraps `ActionButton` with Better Auth's error shape and optional success toast.
- * @param action Callback that performs the Better Auth operation.
- * @param successMessage Optional message displayed when the action succeeds.
- * @returns Rendered button configured for Better Auth mutations.
+ * Wraps `ActionButton` with Better Auth's `{ error }` response shape.
+ * The canonical pattern for all Better Auth mutations in the app. Normalises
+ * `{ error: null | { message } }` into `ActionButton`'s `{ error: boolean }` shape
+ * and forwards toast feedback and the optional confirmation dialog.
+ *
+ * @param props.action - Better Auth mutation; must return `{ error: null | { message? } }`
+ * @param props.successMessage - Toast message shown on success; omit to suppress
+ * @author Maruf Bepary
  */
 export function BetterAuthActionButton({
   action,

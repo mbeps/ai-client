@@ -7,6 +7,7 @@ import { ROUTES } from "@/lib/routes";
 /**
  * Danger zone button that starts the Better Auth account deletion flow.
  * @returns Action button that emails a confirmation link.
+ * @author Maruf Bepary
  */
 export function AccountDeletion() {
   return (
@@ -15,7 +16,7 @@ export function AccountDeletion() {
       variant="destructive"
       className="w-full"
       successMessage="Account deletion initiated. Please check your email to confirm."
-      action={() => authClient.deleteUser({ callbackURL: ROUTES.HOME })}
+      action={() => authClient.deleteUser({ callbackURL: ROUTES.HOME.path })}
     >
       Delete Account Permanently
     </BetterAuthActionButton>

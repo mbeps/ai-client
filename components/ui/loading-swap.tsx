@@ -1,22 +1,25 @@
-import { cn } from "@/lib/utils"
-import { Loader2Icon } from "lucide-react"
-import type { ReactNode } from "react"
+import { cn } from "@/lib/utils";
+import { Loader2Icon } from "lucide-react";
+import type { ReactNode } from "react";
 
 /**
- * Swaps between children and a spinner without shifting layout.
- * @param isLoading Whether to display the loading spinner.
- * @param children Content that appears when not loading.
- * @param className Optional class names applied to both layers.
- * @returns Wrapper that toggles visibility for loading states.
+ * Overlays a spinner over content without causing layout shift.
+ * Both layers occupy the same CSS grid cell; visibility is toggled so the
+ * button maintains its original width during async operations.
+ *
+ * @param props.isLoading - When `true`, hides children and shows the spinner
+ * @param props.children - Content rendered when not in a loading state
+ * @param props.className - Additional classes applied to both overlay layers
+ * @author Maruf Bepary
  */
 export function LoadingSwap({
   isLoading,
   children,
   className,
 }: {
-  isLoading: boolean
-  children: ReactNode
-  className?: string
+  isLoading: boolean;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
     <div className="grid grid-cols-1 items-center justify-items-center">
@@ -39,5 +42,5 @@ export function LoadingSwap({
         <Loader2Icon className="animate-spin" />
       </div>
     </div>
-  )
+  );
 }
