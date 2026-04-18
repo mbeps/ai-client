@@ -1,19 +1,18 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { useParams } from "next/navigation";
+import { NotFoundMessage } from "@/components/not-found-message";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, Trash2, Upload } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
-import { NotFoundMessage } from "@/components/not-found-message";
+import { FileText, Trash2, Upload } from "lucide-react";
+import { useParams } from "next/navigation";
 
 /**
  * Knowledge base detail page showing storage usage and a mock document list.

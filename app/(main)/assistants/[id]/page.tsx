@@ -1,24 +1,23 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { useParams, useRouter } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatHistoryCard } from "@/components/chat/chat-history-card";
+import { EmptyState } from "@/components/empty-state";
+import { NotFoundMessage } from "@/components/not-found-message";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquarePlus, Bot } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
-import { NotFoundMessage } from "@/components/not-found-message";
-import { EmptyState } from "@/components/empty-state";
-import { ChatHistoryCard } from "@/components/chat/chat-history-card";
+import { useAppStore } from "@/lib/store";
+import { Bot, MessageSquarePlus } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 
 /**
  * Assistant detail page with Past Chats and Configuration tabs.
