@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FolderOpen, Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ProjectCard } from "@/components/project/project-card";
+import { EmptyState } from "@/components/empty-state";
 
 /**
  * Project grid page with text search and recency-sorted listing.
@@ -52,9 +53,13 @@ export default function ProjectsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {sorted.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
+        {sorted.length === 0 ? (
+          <EmptyState message="No projects yet. Create one to group chats with a shared system prompt." />
+        ) : (
+          sorted.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))
+        )}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Bot, Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { AssistantCard } from "@/components/assistant/assistant-card";
+import { EmptyState } from "@/components/empty-state";
 
 /**
  * Assistant grid page with text search and recency-sorted listing.
@@ -51,9 +52,13 @@ export default function AssistantsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {sorted.map((assistant) => (
-          <AssistantCard key={assistant.id} assistant={assistant} />
-        ))}
+        {sorted.length === 0 ? (
+          <EmptyState message="No assistants yet. Create one to define a custom AI persona." />
+        ) : (
+          sorted.map((assistant) => (
+            <AssistantCard key={assistant.id} assistant={assistant} />
+          ))
+        )}
       </div>
     </div>
   );

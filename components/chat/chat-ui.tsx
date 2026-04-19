@@ -7,6 +7,8 @@ import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { SideView } from "./side-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { v4 as uuidv4 } from "uuid";
+import { apiPersistMessage } from "@/lib/chat/api";
 
 /**
  * Props for the ChatUI component.
@@ -16,6 +18,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface ChatUIProps {
   /** The ID of the chat to display; used to look up the chat from the Zustand store. */
   chatId: string;
+  /** Optional message to send automatically when the chat first loads (e.g. from dashboard). */
+  initialMessage?: string;
+  /** Called after the initial message has been sent, so the caller can clear it. */
+  onInitialMessageSent?: () => void;
 }
 
 /**
@@ -27,16 +33,31 @@ interface ChatUIProps {
  * @param props.chatId - The ID of the chat to display.
  * @author Maruf Bepary
  */
-export function ChatUI({ chatId }: ChatUIProps) {
+export function ChatUI({
+  chatId,
+  initialMessage,
+  onInitialMessageSent,
+}: ChatUIProps) {
   const chat = useAppStore((state) => state.chats[chatId]);
   const addMessage = useAppStore((state) => state.addMessage);
   const deleteMessage = useAppStore((state) => state.deleteMessage);
   const setCurrentLeaf = useAppStore((state) => state.setCurrentLeaf);
 
   const [sideViewContent, setSideViewContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sentInitial = useRef(false);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-send the initial message once the chat is hydrated into Zustand
+  useEffect(() => {
+    if (initialMessage && chat && !sentInitial.current) {
+      sentInitial.current = true;
+      onInitialMessageSent?.();
+      handleSend(initialMessage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat]);
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -54,46 +75,88 @@ export function ChatUI({ chatId }: ChatUIProps) {
     ? reconstructThread(chat.messages, chat.currentLeafId)
     : [];
 
-  /**
-   * Adds a user message to the store and triggers a mocked AI response after 1 s.
-   * Detects "diagram"/"mermaid" and "math" keywords to produce special AI responses
-   * and opens the SideView panel for Mermaid content.
-   *
-   * @param content - The raw text entered by the user.
-   */
-  const handleSend = (content: string) => {
-    // 1. Add user message
-    addMessage(chatId, "user", content, chat.currentLeafId);
+  const streamResponse = async (
+    userMsgId: string,
+    content: string,
+    parentId: string | null,
+  ) => {
+    addMessage(chatId, "user", content, parentId, userMsgId);
 
-    // 2. Mock AI response after a short delay
-    setTimeout(() => {
-      // Very basic mock to show side view capability if asked
-      let aiResponse = "I'm a mocked AI response.";
+    apiPersistMessage(chatId, {
+      id: userMsgId,
+      role: "user",
+      content,
+      parentId,
+    }).catch(() => {});
 
-      if (
-        content.toLowerCase().includes("diagram") ||
-        content.toLowerCase().includes("mermaid")
-      ) {
-        aiResponse =
-          "Here is a diagram representing your request:\n\n```mermaid\ngraph TD;\n    A-->B;\n    A-->C;\n    B-->D;\n    C-->D;\n```\nI have generated the diagram.";
-      } else if (content.toLowerCase().includes("math")) {
-        aiResponse =
-          "Here is the formula:\n\n$$\ne^{i\\pi} + 1 = 0\n$$\n\nThis is Euler's identity.";
+    const latestChat = useAppStore.getState().chats[chatId];
+    const latestThread = latestChat?.currentLeafId
+      ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
+      : [];
+    const history = latestThread.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId,
+          userMessageId: userMsgId,
+          messages: history,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Stream request failed");
       }
 
-      // Check if we should open side view
-      if (aiResponse.includes("```mermaid")) {
-        setSideViewContent(
-          aiResponse.match(/```mermaid[\s\S]*?```/)?.[0] || "",
-        );
-      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
 
-      // Get the newly added user message ID (it will be the new current leaf)
-      // Since addMessage is synchronous in Zustand, we can grab the latest state
-      const state = useAppStore.getState();
-      const newLeafId = state.chats[chatId].currentLeafId;
-      addMessage(chatId, "assistant", aiResponse, newLeafId);
-    }, 1000);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        for (const line of text.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const event = JSON.parse(line.slice(6)) as {
+            type: string;
+            delta?: string;
+            id?: string;
+          };
+
+          if (event.type === "text" && event.delta) {
+            accumulated += event.delta;
+            setStreamingContent(accumulated);
+          } else if (event.type === "done" && event.id) {
+            addMessage(chatId, "assistant", accumulated, userMsgId, event.id);
+            setStreamingContent(null);
+          } else if (event.type === "error") {
+            setStreamingContent(null);
+            addMessage(
+              chatId,
+              "assistant",
+              "Sorry, I couldn't generate a response. Please try again.",
+              userMsgId,
+            );
+          }
+        }
+      }
+    } catch {
+      setStreamingContent(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSend = async (content: string) => {
+    setIsLoading(true);
+    await streamResponse(uuidv4(), content, chat.currentLeafId);
   };
 
   /**
@@ -105,27 +168,11 @@ export function ChatUI({ chatId }: ChatUIProps) {
     deleteMessage(chatId, id);
   };
 
-  /**
-   * Simulates editing a message by branching from the original message's parent.
-   * Adds a new user message at the same tree level and appends a mocked assistant
-   * response, leaving the original branch intact for navigation.
-   *
-   * @param id - The ID of the message being replaced.
-   * @param newContent - The replacement text for the message.
-   */
-  const handleEdit = (id: string, newContent: string) => {
-    // In a real app, editing a message creates a NEW message node connected to the original parent
-    // For this mock, we just add it to the parent and set it as the new leaf to simulate branching
+  const handleEdit = async (id: string, newContent: string) => {
     const msg = chat.messages[id];
-    if (msg) {
-      addMessage(chatId, "user", newContent, msg.parentId);
-      // Wait for state update to add AI response mock
-      setTimeout(() => {
-        const state = useAppStore.getState();
-        const newLeafId = state.chats[chatId].currentLeafId;
-        addMessage(chatId, "assistant", "Edited response.", newLeafId);
-      }, 500);
-    }
+    if (!msg) return;
+    setIsLoading(true);
+    await streamResponse(uuidv4(), newContent, msg.parentId);
   };
 
   return (
@@ -176,11 +223,29 @@ export function ChatUI({ chatId }: ChatUIProps) {
                 );
               })
             )}
+            {streamingContent !== null && (
+              <MessageBubble
+                message={{
+                  id: "streaming",
+                  role: "assistant",
+                  content: streamingContent,
+                  createdAt: new Date(),
+                  parentId: null,
+                  childrenIds: [],
+                }}
+                isLatest={true}
+                onDelete={() => {}}
+                onEdit={() => {}}
+                siblings={[]}
+                currentSiblingIndex={0}
+                onNavigateBranch={() => {}}
+              />
+            )}
           </div>
         </ScrollArea>
 
         <div className="px-4 md:px-8 pb-4">
-          <ChatInput onSend={handleSend} />
+          <ChatInput onSend={handleSend} isLoading={isLoading} />
         </div>
       </div>
 

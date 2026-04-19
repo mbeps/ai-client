@@ -44,3 +44,6 @@ next-env.d.ts
 
 # drizzle
 drizzle/migrations/**
+
+
+docs/SubAgent docs/**

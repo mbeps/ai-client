@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Database, Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
+import { EmptyState } from "@/components/empty-state";
 
 /**
  * Knowledge base grid page with text search, capacity bars, and recency-sorted listing.
@@ -51,9 +52,13 @@ export default function KnowledgebasesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {sorted.map((kb) => (
-          <KnowledgebaseCard key={kb.id} knowledgebase={kb} />
-        ))}
+        {sorted.length === 0 ? (
+          <EmptyState message="No knowledge bases yet. Create one to attach documents to projects or assistants." />
+        ) : (
+          sorted.map((kb) => (
+            <KnowledgebaseCard key={kb.id} knowledgebase={kb} />
+          ))
+        )}
       </div>
     </div>
   );

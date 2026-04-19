@@ -9,6 +9,12 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { getDeepestLeaf } from "@/lib/chat/tree-utils";
+import {
+  apiCreateChat,
+  apiDeleteChat,
+  type ChatRow,
+  type MessageRow,
+} from "@/lib/chat/api";
 
 /**
  * A grouped workspace that links chats to a shared system prompt and knowledge bases.
@@ -147,6 +153,7 @@ type AppState = {
     role: "user" | "assistant",
     content: string,
     parentId: string | null,
+    id?: string,
   ) => void;
   /** Removes a message and all its descendants from the tree. */
   deleteMessage: (chatId: string, messageId: string) => void;
@@ -154,168 +161,20 @@ type AppState = {
   setCurrentLeaf: (chatId: string, leafId: string) => void;
   /** Removes an entire chat and its message tree from the store. */
   deleteChat: (chatId: string) => void;
-};
 
-// Initial Mock Data
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: "p1",
-    name: "Alpha Research",
-    description: "Market research",
-    isPinned: true,
-    updatedAt: new Date(),
-    globalPrompt: "You are a research assistant.",
-    knowledgebases: ["kb1"],
-  },
-  {
-    id: "p2",
-    name: "Beta App Dev",
-    description: "App development",
-    isPinned: false,
-    updatedAt: new Date(Date.now() - 86400000),
-    globalPrompt: "You are a coding assistant.",
-    knowledgebases: [],
-  },
-  {
-    id: "p3",
-    name: "Marketing Campaign",
-    description: "Q3 Campaign",
-    isPinned: true,
-    updatedAt: new Date(Date.now() - 186400000),
-    globalPrompt: "You are a marketing expert.",
-    knowledgebases: ["kb2"],
-  },
-  {
-    id: "p4",
-    name: "Website Redesign",
-    description: "Company site",
-    isPinned: false,
-    updatedAt: new Date(),
-    globalPrompt: "",
-    knowledgebases: [],
-  },
-  {
-    id: "p5",
-    name: "AI Integration",
-    description: "Adding LLMs",
-    isPinned: false,
-    updatedAt: new Date(),
-    globalPrompt: "",
-    knowledgebases: [],
-  },
-  {
-    id: "p6",
-    name: "Legacy System",
-    description: "Old system maintenance",
-    isPinned: false,
-    updatedAt: new Date(Date.now() - 1000000000),
-    globalPrompt: "",
-    knowledgebases: [],
-  },
-];
-
-const MOCK_ASSISTANTS: Assistant[] = [
-  {
-    id: "a1",
-    name: "Code Guru",
-    description: "Expert programmer",
-    prompt: "Write clean code.",
-    tools: ["terminal", "editor"],
-    knowledgebases: [],
-    updatedAt: new Date(),
-  },
-  {
-    id: "a2",
-    name: "Data Analyst",
-    description: "Python data science",
-    prompt: "Analyze data.",
-    tools: ["jupyter"],
-    knowledgebases: ["kb1"],
-    updatedAt: new Date(),
-  },
-  {
-    id: "a3",
-    name: "Copywriter",
-    description: "SEO optimized content",
-    prompt: "Write blogs.",
-    tools: [],
-    knowledgebases: ["kb2"],
-    updatedAt: new Date(),
-  },
-];
-
-const MOCK_KBS: Knowledgebase[] = [
-  {
-    id: "kb1",
-    name: "Company Docs",
-    description: "Internal wiki",
-    sizeBytes: 50 * 1024 * 1024,
-    maxSizeBytes: 100 * 1024 * 1024,
-    documentCount: 15,
-    updatedAt: new Date(),
-  },
-  {
-    id: "kb2",
-    name: "Brand Guidelines",
-    description: "Logos, fonts",
-    sizeBytes: 85 * 1024 * 1024,
-    maxSizeBytes: 100 * 1024 * 1024,
-    documentCount: 5,
-    updatedAt: new Date(),
-  },
-];
-
-const MOCK_CHATS: Record<string, Chat> = {
-  chat1: {
-    id: "chat1",
-    title: "How to use Better Auth?",
-    projectId: "p2",
-    updatedAt: new Date(),
-    messages: {
-      m1: {
-        id: "m1",
-        role: "user",
-        content: "How do I add passkeys?",
-        createdAt: new Date(),
-        parentId: null,
-        childrenIds: ["m2"],
-      },
-      m2: {
-        id: "m2",
-        role: "assistant",
-        content: "You can use the `@better-auth/passkey` plugin.",
-        createdAt: new Date(),
-        parentId: "m1",
-        childrenIds: [],
-      },
-    },
-    currentLeafId: "m2",
-  },
-  chat2: {
-    id: "chat2",
-    title: "Drafting an email",
-    assistantId: "a3",
-    updatedAt: new Date(Date.now() - 3600000),
-    messages: {
-      m1: {
-        id: "m1",
-        role: "user",
-        content: "Write a welcome email.",
-        createdAt: new Date(),
-        parentId: null,
-        childrenIds: ["m2"],
-      },
-      m2: {
-        id: "m2",
-        role: "assistant",
-        content: "Welcome to our platform!",
-        createdAt: new Date(),
-        parentId: "m1",
-        childrenIds: [],
-      },
-    },
-    currentLeafId: "m2",
-  },
+  // DB-backed actions
+  /** Hydrates the store from a flat list of DB rows, rebuilding childrenIds. */
+  loadChats: (rows: ChatRow[], messageRows: MessageRow[]) => void;
+  /** Creates a new chat in the DB and adds it to the store; returns the new chat's ID. */
+  createChatDb: (
+    title?: string,
+    projectId?: string,
+    assistantId?: string,
+  ) => Promise<string>;
+  /** Deletes a chat from the DB and removes it from the store. */
+  deleteChatDb: (chatId: string) => Promise<void>;
+  /** Inserts or replaces a chat entry in the store. */
+  upsertChat: (chat: Chat) => void;
 };
 
 /**
@@ -325,11 +184,11 @@ const MOCK_CHATS: Record<string, Chat> = {
  *
  * @author Maruf Bepary
  */
-export const useAppStore = create<AppState>((set) => ({
-  projects: MOCK_PROJECTS,
-  assistants: MOCK_ASSISTANTS,
-  knowledgebases: MOCK_KBS,
-  chats: MOCK_CHATS,
+export const useAppStore = create<AppState>((set, get) => ({
+  projects: [],
+  assistants: [],
+  knowledgebases: [],
+  chats: {},
 
   /**
    * Toggles the pinned state of a project.
@@ -378,8 +237,8 @@ export const useAppStore = create<AppState>((set) => ({
    * @param content - Text body of the message.
    * @param parentId - Parent message ID in the tree, or null for a root message.
    */
-  addMessage: (chatId, role, content, parentId) => {
-    const newMessageId = uuidv4();
+  addMessage: (chatId, role, content, parentId, id) => {
+    const newMessageId = id ?? uuidv4();
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -498,6 +357,75 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       const { [chatId]: removed, ...rest } = state.chats;
       return { chats: rest };
+    });
+  },
+
+  loadChats: (rows, messageRows) => {
+    const chats: Record<string, Chat> = {};
+
+    for (const row of rows) {
+      chats[row.id] = {
+        id: row.id,
+        title: row.title,
+        projectId: row.projectId ?? undefined,
+        assistantId: row.assistantId ?? undefined,
+        updatedAt: new Date(row.updatedAt),
+        messages: {},
+        currentLeafId: row.currentLeafId,
+      };
+    }
+
+    for (const m of messageRows) {
+      const chatEntry = chats[m.chatId];
+      if (!chatEntry) continue;
+      chatEntry.messages[m.id] = {
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        createdAt: new Date(m.createdAt),
+        parentId: m.parentId,
+        childrenIds: [],
+      };
+    }
+
+    for (const m of messageRows) {
+      if (!m.parentId) continue;
+      const chatEntry = chats[m.chatId];
+      if (!chatEntry) continue;
+      const parent = chatEntry.messages[m.parentId];
+      if (parent) parent.childrenIds.push(m.id);
+    }
+
+    set({ chats });
+  },
+
+  upsertChat: (chat) => {
+    set((state) => ({
+      chats: { ...state.chats, [chat.id]: chat },
+    }));
+  },
+
+  createChatDb: async (title, projectId, assistantId) => {
+    const row = await apiCreateChat(title, projectId, assistantId);
+    const newChat: Chat = {
+      id: row.id,
+      title: row.title,
+      projectId: row.projectId ?? undefined,
+      assistantId: row.assistantId ?? undefined,
+      updatedAt: new Date(row.updatedAt),
+      messages: {},
+      currentLeafId: null,
+    };
+    set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
+    return row.id;
+  },
+
+  deleteChatDb: async (chatId) => {
+    await apiDeleteChat(chatId);
+    set((state) => {
+      const next = { ...state.chats };
+      delete next[chatId];
+      return { chats: next };
     });
   },
 }));

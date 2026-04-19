@@ -15,6 +15,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.53",
     "@base-ui/react": "^1.4.0",
     "@better-auth/passkey": "^1.4.10",
     "@hookform/resolvers": "^5.2.2",
@@ -27,6 +28,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
+    "ai": "^6.0.168",
     "better-auth": "^1.4.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

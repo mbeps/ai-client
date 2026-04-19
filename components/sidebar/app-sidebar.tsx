@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/lib/store";
+import { apiListChats } from "@/lib/chat/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
@@ -60,14 +61,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isMobile } = useSidebar();
 
   const chats = useAppStore((state) => state.chats);
-  const createChat = useAppStore((state) => state.createChat);
+  const loadChats = useAppStore((state) => state.loadChats);
+  const createChatDb = useAppStore((state) => state.createChatDb);
 
   const recentChats = Object.values(chats)
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .slice(0, 20);
 
-  const handleNewChat = () => {
-    const id = createChat();
+  React.useEffect(() => {
+    apiListChats()
+      .then((rows) => {
+        loadChats(rows, []);
+      })
+      .catch(() => {
+        // silently ignore — sidebar will show empty state
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleNewChat = async () => {
+    const id = await createChatDb("New Chat");
     router.push(ROUTES.CHATS.detail(id));
   };
 

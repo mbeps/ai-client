@@ -28,13 +28,17 @@ import { Button } from "@/components/ui/button";
  * and redirects to the chats list.
  * @props chat - The chat object containing at least an id and title.
  */
-export function ChatActionMenu({ chat }: { chat: { id: string; title: string } }) {
+export function ChatActionMenu({
+  chat,
+}: {
+  chat: { id: string; title: string };
+}) {
   const { isMobile } = useSidebar();
-  const deleteChat = useAppStore((state) => state.deleteChat);
+  const deleteChatDb = useAppStore((state) => state.deleteChatDb);
   const router = useRouter();
 
-  const handleDelete = () => {
-    deleteChat(chat.id);
+  const handleDelete = async () => {
+    await deleteChatDb(chat.id);
     router.push(ROUTES.CHATS.path);
   };
 

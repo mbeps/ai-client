@@ -12,21 +12,21 @@ import { ROUTES } from "@/lib/routes";
 
 /**
  * Dashboard home page with a personalised greeting and quick-start chat input.
- * Route: /. Reads the session user name from Better Auth and dispatches
- * createChat/addMessage to the Zustand store to open a new conversation.
+ * Route: /. Reads the session user name from Better Auth and creates a new
+ * DB-backed chat before navigating to it.
  *
  * @author Maruf Bepary
  */
 export default function HomePage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
-  const createChat = useAppStore((state) => state.createChat);
-  const addMessage = useAppStore((state) => state.addMessage);
-  const handleStart = (content: string) => {
+  const createChatDb = useAppStore((state) => state.createChatDb);
+  const handleStart = async (content: string) => {
     if (!content.trim()) return;
-    const chatId = createChat();
-    addMessage(chatId, "user", content.trim(), null);
-    router.push(ROUTES.CHATS.detail(chatId));
+    const chatId = await createChatDb(content.slice(0, 60));
+    router.push(
+      `${ROUTES.CHATS.detail(chatId)}?msg=${encodeURIComponent(content)}`,
+    );
   };
 
   const quickActions = [

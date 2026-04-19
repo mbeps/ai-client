@@ -13,6 +13,7 @@ import {
 import { MessageSquare } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ChatCard } from "@/components/chat/chat-card";
+import { EmptyState } from "@/components/empty-state";
 
 /**
  * Chat list page with text search and filter by scope (all / in-project / with-assistant / standalone).
@@ -70,13 +71,17 @@ export default function ChatsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {sorted.map((chat) => (
-          <ChatCard
-            key={chat.id}
-            chat={chat}
-            onDelete={() => deleteChat(chat.id)}
-          />
-        ))}
+        {sorted.length === 0 ? (
+          <EmptyState message="No chats yet. Start a new conversation from the home page." />
+        ) : (
+          sorted.map((chat) => (
+            <ChatCard
+              key={chat.id}
+              chat={chat}
+              onDelete={() => deleteChat(chat.id)}
+            />
+          ))
+        )}
       </div>
     </div>
   );
