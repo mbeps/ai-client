@@ -9,12 +9,9 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { getDeepestLeaf } from "@/lib/chat/tree-utils";
-import {
-  apiCreateChat,
-  apiDeleteChat,
-  type ChatRow,
-  type MessageRow,
-} from "@/lib/chat/api";
+import { createChat } from "@/lib/actions/chats/create-chat";
+import { deleteChat } from "@/lib/actions/chats/delete-chat";
+import type { ChatRow, MessageRow } from "@/lib/actions/chats/types";
 
 /**
  * A grouped workspace that links chats to a shared system prompt and knowledge bases.
@@ -406,7 +403,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createChatDb: async (title, projectId, assistantId) => {
-    const row = await apiCreateChat(title, projectId, assistantId);
+    const row = await createChat(title, projectId, assistantId);
     const newChat: Chat = {
       id: row.id,
       title: row.title,
@@ -421,7 +418,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteChatDb: async (chatId) => {
-    await apiDeleteChat(chatId);
+    await deleteChat(chatId);
     set((state) => {
       const next = { ...state.chats };
       delete next[chatId];

@@ -8,7 +8,7 @@ import { ChatInput } from "./chat-input";
 import { SideView } from "./side-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
-import { apiPersistMessage } from "@/lib/chat/api";
+import { persistMessage } from "@/lib/actions/chats/persist-message";
 
 /**
  * Props for the ChatUI component.
@@ -82,7 +82,7 @@ export function ChatUI({
   ) => {
     addMessage(chatId, "user", content, parentId, userMsgId);
 
-    apiPersistMessage(chatId, {
+    persistMessage(chatId, {
       id: userMsgId,
       role: "user",
       content,

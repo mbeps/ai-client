@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/lib/store";
-import { apiListChats } from "@/lib/chat/api";
+import { listChats } from "@/lib/actions/chats/list-chats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     .slice(0, 20);
 
   React.useEffect(() => {
-    apiListChats()
+    listChats()
       .then((rows) => {
         loadChats(rows, []);
       })
