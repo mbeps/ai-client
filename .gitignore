@@ -47,3 +47,4 @@ drizzle/migrations/**
 
 
 docs/SubAgent docs/**
+scripts/hash-password.js

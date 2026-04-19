@@ -11,6 +11,11 @@ import { v4 as uuidv4 } from "uuid";
 import { getDeepestLeaf } from "@/lib/chat/tree-utils";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
+import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
+import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
+import { renameProject as renameProjectAction } from "@/lib/actions/projects/rename-project";
+import { renameAssistant as renameAssistantAction } from "@/lib/actions/assistants/rename-assistant";
+import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import type { ChatRow, MessageRow } from "@/lib/actions/chats/types";
 
 /**
@@ -160,6 +165,17 @@ type AppState = {
   deleteChat: (chatId: string) => void;
 
   // DB-backed actions
+  /** Updates a chat's title in both DB and local state. */
+  renameChatDb: (id: string, title: string) => Promise<void>;
+  /** Changes a chat's linked project in both DB and local state. */
+  moveChatDb: (id: string, projectId: string | null) => Promise<void>;
+  /** Updates a project's name in both DB and local state. */
+  renameProjectDb: (id: string, name: string) => Promise<void>;
+  /** Updates an assistant's name in both DB and local state. */
+  renameAssistantDb: (id: string, name: string) => Promise<void>;
+  /** Updates a knowledgebase's name in both DB and local state. */
+  renameKnowledgebaseDb: (id: string, name: string) => Promise<void>;
+
   /** Hydrates the store from a flat list of DB rows, rebuilding childrenIds. */
   loadChats: (rows: ChatRow[], messageRows: MessageRow[]) => void;
   /** Creates a new chat in the DB and adds it to the store; returns the new chat's ID. */
@@ -399,6 +415,79 @@ export const useAppStore = create<AppState>((set, get) => ({
   upsertChat: (chat) => {
     set((state) => ({
       chats: { ...state.chats, [chat.id]: chat },
+    }));
+  },
+
+  renameChatDb: async (id, title) => {
+    const updated = await renameChatAction(id, title);
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            title: updated.title,
+            updatedAt: new Date(updated.updatedAt),
+          },
+        },
+      };
+    });
+  },
+
+  moveChatDb: async (id, projectId) => {
+    const updated = await moveChatAction(id, projectId);
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            projectId: updated.projectId ?? undefined,
+            updatedAt: new Date(updated.updatedAt),
+          },
+        },
+      };
+    });
+  },
+
+  renameProjectDb: async (id, name) => {
+    const updated = await renameProjectAction(id, name);
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === id
+          ? { ...p, name: updated.name, updatedAt: new Date(updated.updatedAt) }
+          : p,
+      ),
+    }));
+  },
+
+  renameAssistantDb: async (id, name) => {
+    const updated = await renameAssistantAction(id, name);
+    set((state) => ({
+      assistants: state.assistants.map((a) =>
+        a.id === id
+          ? { ...a, name: updated.name, updatedAt: new Date(updated.updatedAt) }
+          : a,
+      ),
+    }));
+  },
+
+  renameKnowledgebaseDb: async (id, name) => {
+    const updated = await renameKnowledgebaseAction(id, name);
+    set((state) => ({
+      knowledgebases: state.knowledgebases.map((kb) =>
+        kb.id === id
+          ? {
+              ...kb,
+              name: updated.name,
+              updatedAt: new Date(updated.updatedAt),
+            }
+          : kb,
+      ),
     }));
   },
 

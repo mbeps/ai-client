@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, Trash2, MoreHorizontal } from "lucide-react";
+import { Database, Trash2, MoreHorizontal, Edit2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -24,6 +25,8 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import type { Knowledgebase } from "@/lib/store";
+import { RenameDialog } from "@/components/shared/rename-dialog";
+import { toast } from "sonner";
 
 /**
  * Internal options menu for a knowledgebase card.
@@ -33,55 +36,105 @@ import type { Knowledgebase } from "@/lib/store";
 function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [showRename, setShowRename] = useState(false);
+
+  const renameKnowledgebaseDb = useAppStore(
+    (state) => state.renameKnowledgebaseDb,
+  );
+
+  const handleRename = async (newName: string) => {
+    try {
+      await renameKnowledgebaseDb(kb.id, newName);
+      toast.success("Knowledgebase renamed");
+    } catch (error) {
+      toast.error("Failed to rename knowledgebase");
+      throw error;
+    }
+  };
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{kb.name}</DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4">
-            <Button
-              variant="destructive"
-              className="w-full justify-start"
-              onClick={() => {
-                setOpen(false);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Knowledgebase
+      <>
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
-          </div>
-          <DrawerFooter className="pt-2">
-            <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>{kb.name}</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  setShowRename(true);
+                  setOpen(false);
+                }}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Rename Knowledgebase
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full justify-start"
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Knowledgebase
+              </Button>
+            </div>
+            <DrawerFooter className="pt-2">
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <RenameDialog
+          isOpen={showRename}
+          onClose={() => setShowRename(false)}
+          initialValue={kb.name}
+          onConfirm={handleRename}
+          title="Rename Knowledgebase"
+        />
+      </>
     );
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Knowledgebase
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setShowRename(true)}>
+            <Edit2 className="mr-2 h-4 w-4" />
+            Rename Knowledgebase
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Knowledgebase
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <RenameDialog
+        isOpen={showRename}
+        onClose={() => setShowRename(false)}
+        initialValue={kb.name}
+        onConfirm={handleRename}
+        title="Rename Knowledgebase"
+      />
+    </>
   );
 }
 
