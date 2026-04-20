@@ -2,8 +2,8 @@
 
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
-import { chat, message } from "@/drizzle/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { chat, message, attachment } from "@/drizzle/schema";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { ChatWithMessages } from "./types";
 
@@ -24,5 +24,14 @@ export async function getChat(chatId: string): Promise<ChatWithMessages> {
     .where(eq(message.chatId, chatId))
     .orderBy(asc(message.createdAt));
 
-  return { ...chatRow, messages };
+  const messageIds = messages.map((m) => m.id);
+  const attachments =
+    messageIds.length > 0
+      ? await db
+          .select()
+          .from(attachment)
+          .where(inArray(attachment.messageId, messageIds))
+      : [];
+
+  return { ...chatRow, messages, attachments };
 }

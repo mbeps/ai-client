@@ -16,7 +16,20 @@ import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
 import { renameProject as renameProjectAction } from "@/lib/actions/projects/rename-project";
 import { renameAssistant as renameAssistantAction } from "@/lib/actions/assistants/rename-assistant";
 import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
-import type { ChatRow, MessageRow } from "@/lib/actions/chats/types";
+import type {
+  ChatRow,
+  MessageRow,
+  AttachmentRow,
+} from "@/lib/actions/chats/types";
+import {
+  listMcpServers as listMcpServersAction,
+  createMcpServer as createMcpServerAction,
+  deleteMcpServer as deleteMcpServerAction,
+  renameMcpServer as renameMcpServerAction,
+  toggleMcpServer as toggleMcpServerAction,
+  updateMcpServer as updateMcpServerAction,
+} from "@/lib/actions/mcp-servers";
+import type { CreateMcpServer, UpdateMcpServer } from "@/schemas/mcp-server";
 
 /**
  * A grouped workspace that links chats to a shared system prompt and knowledge bases.
@@ -87,6 +100,52 @@ export type Knowledgebase = {
 };
 
 /**
+ * A configured MCP server that provides tools to the AI chat pipeline.
+ *
+ * @author Maruf Bepary
+ */
+export type McpServer = {
+  id: string;
+  name: string;
+  type: "stdio" | "http";
+  command: string | null;
+  args: string | null;
+  url: string | null;
+  headers: string | null;
+  env: string | null;
+  enabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * A file attachment on a message — images and documents.
+ * Starts local (dataUrl only) and gains S3 fields after upload.
+ *
+ * @author Maruf Bepary
+ */
+export type Attachment = {
+  /** Unique attachment identifier. */
+  id: string;
+  /** Whether this is an image or a document. */
+  type: "image" | "document";
+  /** Original file name. */
+  name: string;
+  /** MIME type of the file. */
+  mimeType: string;
+  /** File size in bytes. */
+  sizeBytes: number;
+  /** Base-64 data URL for local preview. */
+  dataUrl: string;
+  /** Extracted text content (documents only). */
+  extractedText?: string;
+  /** S3 object key — set after upload to MinIO. */
+  key?: string;
+  /** Presigned URL for serving — fetched on demand. */
+  url?: string;
+};
+
+/**
  * A single message node within a branching conversation tree.
  * Multiple children on a node indicate a branch point (e.g. after an edit).
  *
@@ -105,6 +164,10 @@ export type Message = {
   parentId: string | null;
   /** IDs of direct child messages; more than one child means a branch exists at this node. */
   childrenIds: string[];
+  /** Optional JSON string for tool call metadata. */
+  metadata?: string | null;
+  /** Files attached to this message. */
+  attachments?: Attachment[];
 };
 
 /**
@@ -143,6 +206,8 @@ type AppState = {
   knowledgebases: Knowledgebase[];
   /** All chats keyed by their ID. */
   chats: Record<string, Chat>;
+  /** All configured MCP servers. */
+  mcpServers: McpServer[];
 
   // Actions
   /** Toggles the pinned state of a project. */
@@ -156,6 +221,8 @@ type AppState = {
     content: string,
     parentId: string | null,
     id?: string,
+    metadata?: string | null,
+    attachments?: Attachment[],
   ) => void;
   /** Removes a message and all its descendants from the tree. */
   deleteMessage: (chatId: string, messageId: string) => void;
@@ -163,6 +230,12 @@ type AppState = {
   setCurrentLeaf: (chatId: string, leafId: string) => void;
   /** Removes an entire chat and its message tree from the store. */
   deleteChat: (chatId: string) => void;
+  /** Patches attachment metadata (e.g. S3 key) on an existing message after upload. */
+  updateMessageAttachments: (
+    chatId: string,
+    messageId: string,
+    attachments: Attachment[],
+  ) => void;
 
   // DB-backed actions
   /** Updates a chat's title in both DB and local state. */
@@ -176,8 +249,25 @@ type AppState = {
   /** Updates a knowledgebase's name in both DB and local state. */
   renameKnowledgebaseDb: (id: string, name: string) => Promise<void>;
 
+  /** Fetches all MCP servers from the DB and sets them in state. */
+  loadMcpServers: () => Promise<void>;
+  /** Creates a new MCP server in the DB and adds it to state. */
+  addMcpServer: (data: CreateMcpServer) => Promise<void>;
+  /** Deletes an MCP server from the DB and removes it from state. */
+  removeMcpServer: (id: string) => Promise<void>;
+  /** Renames an MCP server in the DB and updates state. */
+  renameMcpServer: (id: string, name: string) => Promise<void>;
+  /** Toggles an MCP server's enabled state in the DB and updates state. */
+  toggleMcpServer: (id: string) => Promise<void>;
+  /** Updates an MCP server's configuration in the DB and updates state. */
+  updateMcpServer: (id: string, data: UpdateMcpServer) => Promise<void>;
+
   /** Hydrates the store from a flat list of DB rows, rebuilding childrenIds. */
-  loadChats: (rows: ChatRow[], messageRows: MessageRow[]) => void;
+  loadChats: (
+    rows: ChatRow[],
+    messageRows: MessageRow[],
+    attachmentRows?: AttachmentRow[],
+  ) => void;
   /** Creates a new chat in the DB and adds it to the store; returns the new chat's ID. */
   createChatDb: (
     title?: string,
@@ -202,6 +292,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   assistants: [],
   knowledgebases: [],
   chats: {},
+  mcpServers: [],
 
   /**
    * Toggles the pinned state of a project.
@@ -250,7 +341,7 @@ export const useAppStore = create<AppState>((set, get) => ({
    * @param content - Text body of the message.
    * @param parentId - Parent message ID in the tree, or null for a root message.
    */
-  addMessage: (chatId, role, content, parentId, id) => {
+  addMessage: (chatId, role, content, parentId, id, metadata, attachments) => {
     const newMessageId = id ?? uuidv4();
     set((state) => {
       const chat = state.chats[chatId];
@@ -263,6 +354,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: new Date(),
         parentId,
         childrenIds: [],
+        metadata: metadata ?? null,
+        attachments: attachments ?? [],
       };
 
       const updatedMessages = { ...chat.messages, [newMessageId]: newMessage };
@@ -373,7 +466,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  loadChats: (rows, messageRows) => {
+  updateMessageAttachments: (chatId, messageId, attachments) => {
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      const msg = chat.messages[messageId];
+      if (!msg) return state;
+      const updateMap = new Map(attachments.map((a) => [a.id, a]));
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: {
+            ...chat,
+            messages: {
+              ...chat.messages,
+              [messageId]: {
+                ...msg,
+                attachments: (msg.attachments ?? []).map((a) =>
+                  updateMap.has(a.id) ? { ...a, ...updateMap.get(a.id)! } : a,
+                ),
+              },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  loadChats: (rows, messageRows, attachmentRows) => {
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
@@ -398,6 +518,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: new Date(m.createdAt),
         parentId: m.parentId,
         childrenIds: [],
+        metadata: m.metadata ?? null,
+        attachments: [],
       };
     }
 
@@ -407,6 +529,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!chatEntry) continue;
       const parent = chatEntry.messages[m.parentId];
       if (parent) parent.childrenIds.push(m.id);
+    }
+
+    if (attachmentRows) {
+      for (const att of attachmentRows) {
+        for (const chatEntry of Object.values(chats)) {
+          const msg = chatEntry.messages[att.messageId];
+          if (msg) {
+            const isImage = att.mimeType.startsWith("image/");
+            msg.attachments = msg.attachments || [];
+            msg.attachments.push({
+              id: att.id,
+              type: isImage ? "image" : "document",
+              name: att.name,
+              mimeType: att.mimeType,
+              sizeBytes: att.size,
+              dataUrl: "",
+              key: att.key,
+            });
+            break;
+          }
+        }
+      }
     }
 
     set({ chats });
@@ -513,5 +657,110 @@ export const useAppStore = create<AppState>((set, get) => ({
       delete next[chatId];
       return { chats: next };
     });
+  },
+
+  loadMcpServers: async () => {
+    const rows = await listMcpServersAction();
+    set({
+      mcpServers: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        command: r.command,
+        args: r.args,
+        url: r.url,
+        headers: r.headers,
+        env: r.env,
+        enabled: r.enabled,
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      })),
+    });
+  },
+
+  addMcpServer: async (data) => {
+    const row = await createMcpServerAction(data);
+    set((state) => ({
+      mcpServers: [
+        {
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          command: row.command,
+          args: row.args,
+          url: row.url,
+          headers: row.headers,
+          env: row.env,
+          enabled: row.enabled,
+          createdAt: new Date(row.createdAt),
+          updatedAt: new Date(row.updatedAt),
+        },
+        ...state.mcpServers,
+      ],
+    }));
+  },
+
+  removeMcpServer: async (id) => {
+    await deleteMcpServerAction(id);
+    set((state) => ({
+      mcpServers: state.mcpServers.filter((s) => s.id !== id),
+    }));
+  },
+
+  renameMcpServer: async (id, name) => {
+    const updated = await renameMcpServerAction(id, name);
+    set((state) => ({
+      mcpServers: state.mcpServers
+        .map((s) =>
+          s.id === id
+            ? {
+                ...s,
+                name: updated.name,
+                updatedAt: new Date(updated.updatedAt),
+              }
+            : s,
+        )
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+    }));
+  },
+
+  toggleMcpServer: async (id) => {
+    const updated = await toggleMcpServerAction(id);
+    set((state) => ({
+      mcpServers: state.mcpServers.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              enabled: updated.enabled,
+              updatedAt: new Date(updated.updatedAt),
+            }
+          : s,
+      ),
+    }));
+  },
+
+  updateMcpServer: async (id, data) => {
+    const updated = await updateMcpServerAction(id, data);
+    set((state) => ({
+      mcpServers: state.mcpServers
+        .map((s) =>
+          s.id === id
+            ? {
+                id: updated.id,
+                name: updated.name,
+                type: updated.type,
+                command: updated.command,
+                args: updated.args,
+                url: updated.url,
+                headers: updated.headers,
+                env: updated.env,
+                enabled: updated.enabled,
+                createdAt: new Date(updated.createdAt),
+                updatedAt: new Date(updated.updatedAt),
+              }
+            : s,
+        )
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+    }));
   },
 }));

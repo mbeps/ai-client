@@ -9,7 +9,13 @@ import type { MessageRow } from "./types";
 
 export async function persistMessage(
   chatId: string,
-  msg: { id: string; role: string; content: string; parentId: string | null },
+  msg: {
+    id: string;
+    role: string;
+    content: string;
+    parentId: string | null;
+    metadata?: string | null;
+  },
 ): Promise<MessageRow> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
@@ -26,9 +32,10 @@ export async function persistMessage(
     .values({
       id: msg.id,
       chatId,
-      role: msg.role,
+      role: msg.role as "user" | "assistant" | "system",
       content: msg.content,
       parentId: msg.parentId ?? null,
+      metadata: msg.metadata ?? null,
     })
     .returning();
 

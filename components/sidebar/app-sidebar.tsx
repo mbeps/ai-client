@@ -20,6 +20,7 @@ import {
   FolderOpen,
   Bot,
   Database,
+  Wrench,
   Search,
   MessageSquare,
   Settings,
@@ -131,6 +132,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Link href={ROUTES.KNOWLEDGEBASES.path}>
                   <Database className="h-4 w-4" />
                   <span>Knowledgebases</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Tools">
+                <Link href={ROUTES.TOOLS.path}>
+                  <Wrench className="h-4 w-4" />
+                  <span>Tools</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

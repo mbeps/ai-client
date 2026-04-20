@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useAppStore, type Attachment, type McpServer } from "@/lib/store";
 import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
 import { useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./message-bubble";
@@ -42,12 +42,33 @@ export function ChatUI({
   const addMessage = useAppStore((state) => state.addMessage);
   const deleteMessage = useAppStore((state) => state.deleteMessage);
   const setCurrentLeaf = useAppStore((state) => state.setCurrentLeaf);
+  const updateMessageAttachments = useAppStore(
+    (state) => state.updateMessageAttachments,
+  );
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const [sideViewContent, setSideViewContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [activeToolCalls, setActiveToolCalls] = useState<
+    Array<{
+      toolCallId: string;
+      toolName: string;
+      args: unknown;
+      result?: unknown;
+      status: "calling" | "complete";
+    }>
+  >([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+
+  useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-send the initial message once the chat is hydrated into Zustand
   useEffect(() => {
@@ -79,15 +100,48 @@ export function ChatUI({
     userMsgId: string,
     content: string,
     parentId: string | null,
+    attachments: Attachment[] = [],
+    model = "nvidia/nemotron-nano-12b-v2-vl:free",
+    selectedServerIds: string[] = [],
   ) => {
-    addMessage(chatId, "user", content, parentId, userMsgId);
+    addMessage(chatId, "user", content, parentId, userMsgId, null, attachments);
 
-    persistMessage(chatId, {
+    await persistMessage(chatId, {
       id: userMsgId,
       role: "user",
       content,
       parentId,
     }).catch(() => {});
+
+    // Upload attachments to server
+    const uploadedAttachments: Attachment[] = [];
+    for (const att of attachments) {
+      try {
+        const formData = new FormData();
+        // Convert dataUrl back to File for upload
+        const response = await fetch(att.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], att.name, { type: att.mimeType });
+        formData.append("file", file);
+        formData.append("messageId", userMsgId);
+
+        const uploadRes = await fetch("/api/attachments/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          uploadedAttachments.push({ ...att, id: data.id, key: data.key });
+        }
+      } catch {
+        // Upload failed silently — attachment was already shown locally
+      }
+    }
+
+    if (uploadedAttachments.length > 0) {
+      updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
+    }
 
     const latestChat = useAppStore.getState().chats[chatId];
     const latestThread = latestChat?.currentLeafId
@@ -96,6 +150,13 @@ export function ChatUI({
     const history = latestThread.map((m) => ({
       role: m.role,
       content: m.content,
+      attachments: m.attachments?.map((att) => ({
+        type: att.type,
+        dataUrl: att.dataUrl,
+        name: att.name,
+        mimeType: att.mimeType,
+        extractedText: att.extractedText,
+      })),
     }));
 
     try {
@@ -106,6 +167,8 @@ export function ChatUI({
           chatId,
           userMessageId: userMsgId,
           messages: history,
+          model,
+          selectedServerIds,
         }),
       });
 
@@ -128,16 +191,59 @@ export function ChatUI({
             type: string;
             delta?: string;
             id?: string;
+            toolCallId?: string;
+            toolName?: string;
+            args?: unknown;
+            result?: unknown;
+            metadata?: { toolCalls: unknown[]; toolResults: unknown[] };
           };
 
           if (event.type === "text" && event.delta) {
             accumulated += event.delta;
             setStreamingContent(accumulated);
+          } else if (
+            event.type === "tool-call" &&
+            event.toolCallId &&
+            event.toolName
+          ) {
+            setActiveToolCalls((prev) => [
+              ...prev,
+              {
+                toolCallId: event.toolCallId!,
+                toolName: event.toolName!,
+                args: event.args,
+                status: "calling",
+              },
+            ]);
+          } else if (event.type === "tool-result" && event.toolCallId) {
+            setActiveToolCalls((prev) =>
+              prev.map((tc) =>
+                tc.toolCallId === event.toolCallId
+                  ? { ...tc, status: "complete" as const, result: event.result }
+                  : tc,
+              ),
+            );
           } else if (event.type === "done" && event.id) {
-            addMessage(chatId, "assistant", accumulated, userMsgId, event.id);
+            const metadata = event.metadata
+              ? JSON.stringify(event.metadata)
+              : null;
+            addMessage(
+              chatId,
+              "assistant",
+              accumulated,
+              userMsgId,
+              event.id,
+              metadata,
+            );
+            const mermaidMatch = accumulated.match(/```mermaid\n([\s\S]*?)```/);
+            if (mermaidMatch) {
+              setSideViewContent(mermaidMatch[0]);
+            }
             setStreamingContent(null);
+            setActiveToolCalls([]);
           } else if (event.type === "error") {
             setStreamingContent(null);
+            setActiveToolCalls([]);
             addMessage(
               chatId,
               "assistant",
@@ -149,14 +255,27 @@ export function ChatUI({
       }
     } catch {
       setStreamingContent(null);
+      setActiveToolCalls([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (
+    content: string,
+    attachments: Attachment[] = [],
+    model = "nvidia/nemotron-nano-12b-v2-vl:free",
+    selectedServerIds: string[] = [],
+  ) => {
     setIsLoading(true);
-    await streamResponse(uuidv4(), content, chat.currentLeafId);
+    await streamResponse(
+      uuidv4(),
+      content,
+      chat.currentLeafId,
+      attachments,
+      model,
+      selectedServerIds,
+    );
   };
 
   /**
@@ -172,7 +291,7 @@ export function ChatUI({
     const msg = chat.messages[id];
     if (!msg) return;
     setIsLoading(true);
-    await streamResponse(uuidv4(), newContent, msg.parentId);
+    await streamResponse(uuidv4(), newContent, msg.parentId, []);
   };
 
   return (
@@ -223,29 +342,48 @@ export function ChatUI({
                 );
               })
             )}
-            {streamingContent !== null && (
-              <MessageBubble
-                message={{
-                  id: "streaming",
-                  role: "assistant",
-                  content: streamingContent,
-                  createdAt: new Date(),
-                  parentId: null,
-                  childrenIds: [],
-                }}
-                isLatest={true}
-                onDelete={() => {}}
-                onEdit={() => {}}
-                siblings={[]}
-                currentSiblingIndex={0}
-                onNavigateBranch={() => {}}
-              />
+            {(streamingContent !== null || activeToolCalls.length > 0) && (
+              <>
+                {activeToolCalls.length > 0 && (
+                  <div className="text-muted-foreground text-sm space-y-1 ml-2">
+                    {activeToolCalls.map((tc) => (
+                      <div key={tc.toolCallId}>
+                        {tc.status === "calling"
+                          ? `🔧 Calling ${tc.toolName}…`
+                          : `✅ ${tc.toolName} complete`}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {streamingContent !== null && (
+                  <MessageBubble
+                    message={{
+                      id: "streaming",
+                      role: "assistant",
+                      content: streamingContent,
+                      createdAt: new Date(),
+                      parentId: null,
+                      childrenIds: [],
+                    }}
+                    isLatest={true}
+                    onDelete={() => {}}
+                    onEdit={() => {}}
+                    siblings={[]}
+                    currentSiblingIndex={0}
+                    onNavigateBranch={() => {}}
+                  />
+                )}
+              </>
             )}
           </div>
         </ScrollArea>
 
         <div className="px-4 md:px-8 pb-4">
-          <ChatInput onSend={handleSend} isLoading={isLoading} />
+          <ChatInput
+            onSend={handleSend}
+            isLoading={isLoading}
+            servers={mcpServers.filter((s) => s.enabled)}
+          />
         </div>
       </div>
 

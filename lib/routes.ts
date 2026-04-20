@@ -51,6 +51,11 @@ export const ROUTES = {
     name: "Knowledge Bases",
     detail: (id: string) => `/knowledgebases/${id}` as const,
   },
+  TOOLS: {
+    path: "/tools" as const,
+    name: "Tools",
+    detail: (id: string) => `/tools/${id}` as const,
+  },
   PROFILE: { path: "/profile" as const, name: "Profile" },
   API: {
     AUTH: { path: "/api/auth" as const, name: "Auth API" },

@@ -14,12 +14,30 @@ function buildChatFromRows(row: ChatWithMessages): Chat {
       createdAt: new Date(m.createdAt),
       parentId: m.parentId,
       childrenIds: [],
+      attachments: [],
     };
   }
 
   for (const m of row.messages) {
     if (m.parentId && messages[m.parentId]) {
       messages[m.parentId].childrenIds.push(m.id);
+    }
+  }
+
+  for (const att of row.attachments) {
+    const msg = messages[att.messageId];
+    if (msg) {
+      const isImage = att.mimeType.startsWith("image/");
+      msg.attachments = msg.attachments || [];
+      msg.attachments.push({
+        id: att.id,
+        type: isImage ? "image" : "document",
+        name: att.name,
+        mimeType: att.mimeType,
+        sizeBytes: att.size,
+        dataUrl: "",
+        key: att.key,
+      });
     }
   }
 
