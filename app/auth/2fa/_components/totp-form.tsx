@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,48 +9,47 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-
-const totpSchema = z.object({
-  code: z.string().length(6),
-})
-
-type TotpForm = z.infer<typeof totpSchema>
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { totpSchema, TotpFormData } from "@/schemas/totp";
 
 /**
- * Form that accepts a 6-digit TOTP code during the two-factor challenge.
- * @returns TOTP verification form component.
+ * Primary two-factor authentication form that validates a 6-digit TOTP code.
+ * Calls `authClient.twoFactor.verifyTotp`; redirects to `ROUTES.HOME` on success.
+ * Rendered as the default tab on the 2FA challenge page.
+ *
+ * @author Maruf Bepary
  */
 export function TotpForm() {
-  const router = useRouter()
-  const form = useForm<TotpForm>({
+  const router = useRouter();
+  const form = useForm<TotpFormData>({
     resolver: zodResolver(totpSchema),
     defaultValues: {
       code: "",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Verifies the provided TOTP code and redirects to the home page on success.
    * @param data Form payload containing the 6-digit code.
    */
-  async function handleTotpVerification(data: TotpForm) {
+  async function handleTotpVerification(data: TotpFormData) {
     await authClient.twoFactor.verifyTotp(data, {
-      onError: error => {
-        toast.error(error.error.message || "Failed to verify code")
+      onError: (error) => {
+        toast.error(error.error.message || "Failed to verify code");
       },
       onSuccess: () => {
-        router.push("/")
+        router.push(ROUTES.HOME.path);
       },
-    })
+    });
   }
 
   return (
@@ -79,5 +77,5 @@ export function TotpForm() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }

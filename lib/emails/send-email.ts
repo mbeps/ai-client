@@ -1,15 +1,25 @@
-import { ServerClient } from "postmark"
+/**
+ * Postmark transactional email integration.
+ * All outbound emails (verification, reset, welcome, deletion) are dispatched
+ * through the single `sendEmail` helper exposed by this module.
+ */
 
-const postmarkClient = new ServerClient(process.env.POSTMARK_SERVER_TOKEN!)
+import { ServerClient } from "postmark";
+
+/** Singleton Postmark server client initialised from `POSTMARK_SERVER_TOKEN`. */
+const postmarkClient = new ServerClient(process.env.POSTMARK_SERVER_TOKEN!);
 
 /**
  * Sends a transactional email through the configured Postmark client.
- * @param to Recipient email address.
- * @param subject Message subject line.
- * @param html HTML content rendered in rich clients.
- * @param text Plain-text fallback content.
- * @returns Promise that resolves with Postmark's API response.
- * @see https://postmarkapp.com/developer
+ * The `From` address is read from `POSTMARK_FROM_EMAIL`; both HTML and
+ * plain-text bodies should be supplied for maximum client compatibility.
+ *
+ * @param to - Recipient email address.
+ * @param subject - Message subject line.
+ * @param html - HTML body rendered in rich email clients.
+ * @param text - Plain-text fallback for clients that do not render HTML.
+ * @returns Promise resolving with Postmark's send response.
+ * @author Maruf Bepary
  */
 export function sendEmail({
   to,
@@ -17,10 +27,10 @@ export function sendEmail({
   html,
   text,
 }: {
-  to: string
-  subject: string
-  html: string
-  text: string
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
 }) {
   return postmarkClient.sendEmail({
     From: process.env.POSTMARK_FROM_EMAIL!,
@@ -28,5 +38,5 @@ export function sendEmail({
     Subject: subject,
     HtmlBody: html,
     TextBody: text,
-  })
+  });
 }

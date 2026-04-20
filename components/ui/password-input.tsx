@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import { EyeIcon, EyeOffIcon } from "lucide-react"
-import { useState, type ComponentProps } from "react"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { useState, type ComponentProps } from "react";
 
 /**
- * Password input with toggleable visibility while preserving styling.
- * @param className Optional class names to extend styling.
- * @param props Input props forwarded to the underlying text field.
- * @returns Password field with an inline visibility toggle control.
+ * Password input with an inline visibility toggle button.
+ * Switches between `type="password"` and `type="text"` on toggle. Accepts all
+ * standard `Input` props except `type`, which is managed internally.
+ *
+ * @param props.className - Additional classes forwarded to the `Input` element
+ * @author Maruf Bepary
  */
 export function PasswordInput({
   className,
   ...props
 }: Omit<ComponentProps<typeof Input>, "type">) {
-  const [showPassword, setShowPassword] = useState(false)
-  const Icon = showPassword ? EyeOffIcon : EyeIcon
+  const [showPassword, setShowPassword] = useState(false);
+  const Icon = showPassword ? EyeOffIcon : EyeIcon;
 
   return (
     <div className="relative">
@@ -32,7 +34,7 @@ export function PasswordInput({
         type="button"
         className="absolute inset-y-1/2 right-1 size-7 -translate-y-1/2"
         // Toggle between password and text visibility.
-        onClick={() => setShowPassword(p => !p)}
+        onClick={() => setShowPassword((p) => !p)}
       >
         <Icon className="size-5" />
         <span className="sr-only">
@@ -40,5 +42,5 @@ export function PasswordInput({
         </span>
       </Button>
     </div>
-  )
+  );
 }

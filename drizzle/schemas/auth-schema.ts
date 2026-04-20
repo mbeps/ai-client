@@ -1,7 +1,16 @@
-import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core"
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  integer,
+} from "drizzle-orm/pg-core";
 
 /**
- * Stores end-user identities and custom profile fields.
+ * Stores core user account data and profile fields.
+ * One-to-many with session, account, and passkey; one-to-one with twoFactor.
+ *
+ * @author Maruf Bepary
  */
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -15,15 +24,13 @@ export const user = pgTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
-  role: text("role"),
-  banned: boolean("banned").default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
-  favoriteNumber: integer("favorite_number").notNull(),
-})
+});
 
 /**
- * Tracks active user sessions along with device metadata.
+ * Tracks active user sessions with device fingerprinting metadata.
+ * Many-to-one with user (CASCADE DELETE). Stores ip_address and user_agent for session management and revocation.
+ *
+ * @author Maruf Bepary
  */
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -38,12 +45,13 @@ export const session = pgTable("session", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  impersonatedBy: text("impersonated_by"),
-  activeOrganizationId: text("active_organization_id"),
-})
+});
 
 /**
- * Persists OAuth account connections and credential-based secrets.
+ * Persists OAuth account links and email/password credential hashes per user.
+ * Many-to-one with user (CASCADE DELETE). providerId identifies the provider (e.g. "github", "credential").
+ *
+ * @author Maruf Bepary
  */
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -63,10 +71,13 @@ export const account = pgTable("account", {
   updatedAt: timestamp("updated_at")
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
+});
 
 /**
- * Contains email verifications, password resets, and other one-time tokens.
+ * Stores short-lived tokens for email verification and password resets.
+ * identifier holds the email address; value holds the token or hash; expiresAt enforces TTL.
+ *
+ * @author Maruf Bepary
  */
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -78,10 +89,13 @@ export const verification = pgTable("verification", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
+});
 
 /**
- * Holds shared secrets and backup codes for TOTP-based 2FA.
+ * Holds TOTP shared secrets and encrypted backup codes for two-factor authentication.
+ * One-to-one with user (CASCADE DELETE). backupCodes is a JSON-serialised array of one-time codes.
+ *
+ * @author Maruf Bepary
  */
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),
@@ -90,10 +104,13 @@ export const twoFactor = pgTable("two_factor", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-})
+});
 
 /**
- * Stores WebAuthn passkey material for passwordless login.
+ * Stores WebAuthn passkey credentials for passwordless authentication.
+ * Many-to-one with user (CASCADE DELETE). counter increments on each use to prevent credential replay attacks.
+ *
+ * @author Maruf Bepary
  */
 export const passkey = pgTable("passkey", {
   id: text("id").primaryKey(),
@@ -109,48 +126,4 @@ export const passkey = pgTable("passkey", {
   transports: text("transports"),
   createdAt: timestamp("created_at"),
   aaguid: text("aaguid"),
-})
-
-/**
- * Defines collaborative organizations created via the Better Auth plugin.
- */
-export const organization = pgTable("organization", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").unique(),
-  logo: text("logo"),
-  createdAt: timestamp("created_at").notNull(),
-  metadata: text("metadata"),
-})
-
-/**
- * Links users to organizations with role-based access metadata.
- */
-export const member = pgTable("member", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  role: text("role").default("member").notNull(),
-  createdAt: timestamp("created_at").notNull(),
-})
-
-/**
- * Tracks pending invitations sent to prospective organization members.
- */
-export const invitation = pgTable("invitation", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: text("role"),
-  status: text("status").default("pending").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  inviterId: text("inviter_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-})
+});

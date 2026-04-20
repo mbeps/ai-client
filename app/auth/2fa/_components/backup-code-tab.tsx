@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -10,34 +9,33 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { LoadingSwap } from "@/components/ui/loading-swap"
-import { authClient } from "@/lib/auth/auth-client"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-
-const backupCodeSchema = z.object({
-  code: z.string().min(1),
-})
-
-type BackupCodeForm = z.infer<typeof backupCodeSchema>
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { backupCodeSchema, BackupCodeForm } from "@/schemas/backup-code";
 
 /**
- * Backup code verification tab for two-factor authentication.
- * @returns Backup code verification form component.
+ * Two-factor authentication fallback that accepts a static backup code.
+ * Calls `authClient.twoFactor.verifyBackupCode`; redirects to `ROUTES.HOME` on success.
+ * Shown as an alternative to the TOTP form on the 2FA challenge page.
+ *
+ * @author Maruf Bepary
  */
 export function BackupCodeTab() {
-  const router = useRouter()
+  const router = useRouter();
   const form = useForm<BackupCodeForm>({
     resolver: zodResolver(backupCodeSchema),
     defaultValues: {
       code: "",
     },
-  })
+  });
 
-  const { isSubmitting } = form.formState
+  const { isSubmitting } = form.formState;
 
   /**
    * Validates a backup code and redirects to the home page on success.
@@ -45,13 +43,13 @@ export function BackupCodeTab() {
    */
   async function handleBackupCodeVerification(data: BackupCodeForm) {
     await authClient.twoFactor.verifyBackupCode(data, {
-      onError: error => {
-        toast.error(error.error.message || "Failed to verify code")
+      onError: (error) => {
+        toast.error(error.error.message || "Failed to verify code");
       },
       onSuccess: () => {
-        router.push("/")
+        router.push(ROUTES.HOME.path);
       },
-    })
+    });
   }
 
   return (
@@ -79,5 +77,5 @@ export function BackupCodeTab() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }

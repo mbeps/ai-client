@@ -3,15 +3,17 @@ import { auth } from "./auth";
 import {
   inferAdditionalFields,
   twoFactorClient,
-  adminClient,
-  organizationClient,
 } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
-import { ac, admin, user } from "@/components/auth/permissions";
+import { ROUTES } from "../routes";
 
 /**
- * Better Auth React client with passkey, two-factor, admin, and organization plugins.
- * @see https://docs.better-auth.com/client/react
+ * Better Auth React client configured with passkey, two-factor, and field-inference plugins.
+ * Use for all client-side auth operations (sign-in, sign-up, session hooks, etc.).
+ * The twoFactorClient plugin automatically redirects to /auth/2fa when a 2FA challenge is required.
+ *
+ * @see https://better-auth.com/docs/client/react
+ * @author Maruf Bepary
  */
 export const authClient = createAuthClient({
   plugins: [
@@ -19,16 +21,8 @@ export const authClient = createAuthClient({
     passkeyClient(),
     twoFactorClient({
       onTwoFactorRedirect: () => {
-        window.location.href = "/auth/2fa";
+        window.location.href = ROUTES.AUTH.TWO_FACTOR.path;
       },
     }),
-    adminClient({
-      ac,
-      roles: {
-        admin,
-        user,
-      },
-    }),
-    organizationClient(),
   ],
 });

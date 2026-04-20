@@ -2,7 +2,6 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import z from "zod";
 import {
   Form,
   FormControl,
@@ -14,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
+import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
 import {
@@ -25,13 +25,19 @@ import {
 } from "@/components/ui/card";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import {
+  resetPasswordSchema,
+  ResetPasswordForm,
+} from "@/schemas/reset-password";
 
-const resetPasswordSchema = z.object({
-  password: z.string().min(6),
-});
-
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
-
+/**
+ * Password reset page component driven by a signed token in the URL.
+ * Reads `token` from search params; renders an invalid-link card when the token
+ * is absent or `error` is present. On valid submission calls
+ * `authClient.resetPassword` and redirects to the login page after 1 s.
+ *
+ * @author Maruf Bepary
+ */
 export default function ResetPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,10 +70,10 @@ export default function ResetPasswordClient() {
             description: "Redirection to login...",
           });
           setTimeout(() => {
-            router.push("/auth/login");
+            router.push(ROUTES.AUTH.LOGIN.path);
           }, 1000);
         },
-      }
+      },
     );
   }
 
@@ -83,7 +89,7 @@ export default function ResetPasswordClient() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href="/auth/login">Back to Login</Link>
+              <Link href={ROUTES.AUTH.LOGIN.path}>Back to Login</Link>
             </Button>
           </CardContent>
         </Card>

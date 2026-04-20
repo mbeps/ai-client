@@ -1,30 +1,32 @@
-import { Input } from "@/components/ui/input"
-import { type ComponentProps } from "react"
+import { Input } from "@/components/ui/input";
+import { type ComponentProps } from "react";
 
 /**
- * Numeric input wrapper that keeps form values as numbers instead of strings.
- * @param onChange Handler that receives a number or null when the field changes.
- * @param value Current numeric value supplied by the form controller.
- * @param props Additional input props forwarded to the underlying input.
- * @returns Controlled number input using the shared styling.
+ * Controlled number input that surfaces numeric values instead of strings.
+ * Converts the native `input` event value to a number, emitting `null` for
+ * empty or non-numeric input. Designed for use with React Hook Form controllers.
+ *
+ * @param props.onChange - Receives the parsed number, or `null` for empty input
+ * @param props.value - Current numeric value from the form controller
+ * @author Maruf Bepary
  */
 export function NumberInput({
   onChange,
   value,
   ...props
 }: Omit<ComponentProps<typeof Input>, "type" | "onChange" | "value"> & {
-  onChange: (value: number | null) => void
-  value: undefined | null | number
+  onChange: (value: number | null) => void;
+  value: undefined | null | number;
 }) {
   return (
     <Input
       {...props}
-      onChange={e => {
-        const number = e.target.valueAsNumber
-        onChange(isNaN(number) ? null : number)
+      onChange={(e) => {
+        const number = e.target.valueAsNumber;
+        onChange(isNaN(number) ? null : number);
       }}
       value={value ?? ""}
       type="number"
     />
-  )
+  );
 }
