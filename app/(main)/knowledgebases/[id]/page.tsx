@@ -21,6 +21,14 @@ import { useParams } from "next/navigation";
  *
  * @author Maruf Bepary
  */
+// Mock documents
+const MOCK_DOCS = Array.from({ length: 5 }).map((_, i) => ({
+  id: `doc${i}`,
+  name: `Document_${i + 1}.pdf`,
+  size: Math.random() * 5 * 1024 * 1024,
+  date: new Date(Date.now() - Math.random() * 1000000000),
+}));
+
 export default function KnowledgebasePage() {
   const params = useParams();
   const kbId = params.id as string;
@@ -31,14 +39,6 @@ export default function KnowledgebasePage() {
   if (!kb) return <NotFoundMessage entity="Knowledgebase" />;
 
   const usagePercentage = Math.min(100, (kb.sizeBytes / kb.maxSizeBytes) * 100);
-
-  // Mock documents
-  const mockDocs = Array.from({ length: 5 }).map((_, i) => ({
-    id: `doc${i}`,
-    name: `Document_${i + 1}.pdf`,
-    size: Math.random() * 5 * 1024 * 1024,
-    date: new Date(Date.now() - Math.random() * 1000000000),
-  }));
 
   return (
     <div className="page-container-detail">
@@ -88,7 +88,7 @@ export default function KnowledgebasePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockDocs.map((doc) => (
+            {MOCK_DOCS.map((doc) => (
               <div
                 key={doc.id}
                 className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors"

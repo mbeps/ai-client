@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -67,7 +67,7 @@ export function AddServerDialog({
   });
 
   const { isSubmitting } = form.formState;
-  const serverType = form.watch("type");
+  const serverType = useWatch({ control: form.control, name: "type" });
 
   function handleTypeChange(value: "stdio" | "http") {
     form.reset(value === "stdio" ? STDIO_DEFAULTS : HTTP_DEFAULTS);

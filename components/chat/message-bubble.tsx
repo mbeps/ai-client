@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -220,10 +221,13 @@ export function MessageBubble({
                 if (att.type === "image") {
                   return displayUrl ? (
                     <div key={att.id} className="relative group/att">
-                      <img
+                      <Image
                         src={displayUrl}
                         alt={att.name}
+                        width={256}
+                        height={192}
                         className="max-h-48 max-w-64 rounded-lg border object-cover"
+                        unoptimized
                       />
                       <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white opacity-0 group-hover/att:opacity-100 transition-opacity">
                         {att.name}

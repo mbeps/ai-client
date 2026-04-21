@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/lib/store";
 import { ChatUI } from "@/components/chat/chat-ui";
@@ -15,7 +15,7 @@ export function ChatPageClient({
   initialMessage,
 }: ChatPageClientProps) {
   const upsertChat = useAppStore((state) => state.upsertChat);
-  const didSendInitial = useRef(false);
+  const [hasSentInitial, setHasSentInitial] = useState(false);
 
   useEffect(() => {
     upsertChat(initialChat);
@@ -24,9 +24,9 @@ export function ChatPageClient({
   return (
     <ChatUI
       chatId={initialChat.id}
-      initialMessage={!didSendInitial.current ? initialMessage : undefined}
+      initialMessage={!hasSentInitial ? initialMessage : undefined}
       onInitialMessageSent={() => {
-        didSendInitial.current = true;
+        setHasSentInitial(true);
       }}
     />
   );
