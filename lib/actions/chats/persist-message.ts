@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import type { MessageRow } from "./types";
+import type { MessageRow } from "@/types/message-row";
 
 export async function persistMessage(
   chatId: string,

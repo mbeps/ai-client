@@ -10,7 +10,7 @@ import {
   type CreateMcpServer,
   type UpdateMcpServer,
 } from "@/schemas/mcp-server";
-import type { McpServerRow } from "./types";
+import type { McpServerRow } from "@/types/mcp-server-row";
 
 export async function listMcpServers(): Promise<McpServerRow[]> {
   const session = await requireSession();

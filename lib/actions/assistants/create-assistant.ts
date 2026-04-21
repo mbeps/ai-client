@@ -3,7 +3,7 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import type { AssistantRow } from "./types";
+import type { AssistantRow } from "@/types/assistant-row";
 
 export async function createAssistant(data: {
   name: string;

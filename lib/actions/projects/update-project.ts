@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { ProjectRow } from "./types";
+import type { ProjectRow } from "@/types/project-row";
 
 export async function updateProject(
   id: string,

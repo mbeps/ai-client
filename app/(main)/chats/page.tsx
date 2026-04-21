@@ -1,7 +1,7 @@
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { ChatsClient } from "./_components/chats-client";
 import type { Chat } from "@/lib/store";
-import type { ChatRow } from "@/lib/actions/chats/types";
+import type { ChatRow } from "@/types/chat-row";
 
 function chatRowToChat(row: ChatRow): Chat {
   return {

@@ -1,6 +1,6 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { buildTransport } from "./build-transport";
-import type { McpServerConfig } from "./types";
+import type { McpServerConfig } from "@/types/mcp-server-config";
 
 export type DiscoveredTool = {
   name: string;

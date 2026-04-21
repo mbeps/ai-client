@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
-import type { ChatRow } from "./types";
+import type { ChatRow } from "@/types/chat-row";
 
 export async function listChats(): Promise<ChatRow[]> {
   const session = await requireSession();

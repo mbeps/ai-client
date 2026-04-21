@@ -27,13 +27,11 @@ import { createAssistant as createAssistantAction } from "@/lib/actions/assistan
 import { updateAssistant as updateAssistantAction } from "@/lib/actions/assistants/update-assistant";
 import { deleteAssistant as deleteAssistantAction } from "@/lib/actions/assistants/delete-assistant";
 import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
-import type { ProjectRow } from "@/lib/actions/projects/types";
-import type { AssistantRow } from "@/lib/actions/assistants/types";
-import type {
-  ChatRow,
-  MessageRow,
-  AttachmentRow,
-} from "@/lib/actions/chats/types";
+import type { ProjectRow } from "@/types/project-row";
+import type { AssistantRow } from "@/types/assistant-row";
+import type { ChatRow } from "@/types/chat-row";
+import type { MessageRow } from "@/types/message-row";
+import type { AttachmentRow } from "@/types/attachment-row";
 import {
   listMcpServers as listMcpServersAction,
   createMcpServer as createMcpServerAction,
