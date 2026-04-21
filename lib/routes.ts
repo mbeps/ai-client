@@ -59,6 +59,7 @@ export const ROUTES = {
   PROFILE: {
     path: "/profile" as const,
     name: "Profile",
+    GENERAL: { path: "/profile/general" as const, name: "General" },
     SECURITY: { path: "/profile/security" as const, name: "Security" },
     SESSIONS: { path: "/profile/sessions" as const, name: "Sessions" },
     ACCOUNTS: { path: "/profile/accounts" as const, name: "Linked Accounts" },

@@ -7,6 +7,8 @@ import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+
 /**
  * Authentication-guarded layout for all main app routes.
  * Performs a client-side session check; redirects unauthenticated users to /auth/login.
@@ -45,7 +47,7 @@ export default function MainLayout({
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
           <SidebarTrigger />
           <div className="w-full flex-1">
-            {/* Header content like title or global tools can go here */}
+            <DynamicBreadcrumbs />
           </div>
         </header>
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
