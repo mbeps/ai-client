@@ -1,10 +1,9 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and, desc, not } from "drizzle-orm";
-import { headers } from "next/headers";
 import {
   createMcpServerSchema,
   updateMcpServerSchema,
@@ -14,8 +13,7 @@ import {
 import type { McpServerRow } from "./types";
 
 export async function listMcpServers(): Promise<McpServerRow[]> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   return db
     .select()
@@ -25,8 +23,7 @@ export async function listMcpServers(): Promise<McpServerRow[]> {
 }
 
 export async function getMcpServer(id: string): Promise<McpServerRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [row] = await db
     .select()
@@ -41,8 +38,7 @@ export async function getMcpServer(id: string): Promise<McpServerRow> {
 export async function createMcpServer(
   data: CreateMcpServer,
 ): Promise<McpServerRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const parsed = createMcpServerSchema.parse(data);
 
@@ -82,8 +78,7 @@ export async function updateMcpServer(
   id: string,
   data: UpdateMcpServer,
 ): Promise<McpServerRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const parsed = updateMcpServerSchema.parse(data);
 
@@ -120,8 +115,7 @@ export async function updateMcpServer(
 }
 
 export async function deleteMcpServer(id: string): Promise<void> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [deleted] = await db
     .delete(mcpServer)
@@ -132,8 +126,7 @@ export async function deleteMcpServer(id: string): Promise<void> {
 }
 
 export async function toggleMcpServer(id: string): Promise<McpServerRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [toggled] = await db
     .update(mcpServer)
@@ -150,8 +143,7 @@ export async function renameMcpServer(
   id: string,
   name: string,
 ): Promise<McpServerRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [renamed] = await db
     .update(mcpServer)

@@ -1,10 +1,9 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { headers } from "next/headers";
 import type { MessageRow } from "./types";
 
 export async function persistMessage(
@@ -17,8 +16,7 @@ export async function persistMessage(
     metadata?: string | null;
   },
 ): Promise<MessageRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [chatRow] = await db
     .select({ id: chat.id })

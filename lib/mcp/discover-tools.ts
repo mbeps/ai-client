@@ -1,5 +1,6 @@
 import { createMCPClient } from "@ai-sdk/mcp";
-import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
+import { buildTransport } from "./build-transport";
+import type { McpServerConfig } from "./types";
 
 export type DiscoveredTool = {
   name: string;
@@ -7,28 +8,47 @@ export type DiscoveredTool = {
   inputSchema: Record<string, unknown>;
 };
 
-type McpServerConfig = {
-  type: "stdio" | "http";
-  command: string | null;
-  args: string | null;
-  url: string | null;
-  headers: string | null;
-  env: string | null;
-};
+const DISCOVER_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() =>
+    clearTimeout(timeoutId!),
+  );
+}
 
 export async function discoverTools(
   server: McpServerConfig,
 ): Promise<DiscoveredTool[]> {
-  const client = await buildDiscoveryClient(server);
+  const transport = buildTransport(server);
+  const client = await withTimeout(
+    createMCPClient({ transport }),
+    DISCOVER_TIMEOUT_MS,
+    "discoverTools connect",
+  );
 
   try {
     const allTools: DiscoveredTool[] = [];
     let cursor: string | undefined;
 
     do {
-      const result = await client.listTools({
-        params: cursor ? { cursor } : undefined,
-      });
+      const result = await withTimeout(
+        client.listTools({
+          params: cursor ? { cursor } : undefined,
+        }),
+        DISCOVER_TIMEOUT_MS,
+        "discoverTools listTools",
+      );
 
       for (const tool of result.tools) {
         allTools.push({
@@ -45,66 +65,4 @@ export async function discoverTools(
   } finally {
     await client.close();
   }
-}
-
-async function buildDiscoveryClient(server: McpServerConfig) {
-  if (server.type === "stdio") {
-    if (!server.command) throw new Error("stdio server requires a command");
-
-    let args: string[] = [];
-    if (server.args) {
-      try {
-        args = JSON.parse(server.args);
-      } catch {
-        throw new Error("Invalid args JSON");
-      }
-    }
-
-    const SAFE_ENV_KEYS = ["PATH", "HOME", "LANG", "NODE_ENV"];
-    const baseEnv = Object.fromEntries(
-      SAFE_ENV_KEYS.filter((k) => process.env[k]).map((k) => [
-        k,
-        process.env[k]!,
-      ]),
-    );
-    let env: Record<string, string> = baseEnv;
-    if (server.env) {
-      try {
-        env = { ...baseEnv, ...JSON.parse(server.env) };
-      } catch {
-        throw new Error("Invalid env JSON");
-      }
-    }
-
-    return createMCPClient({
-      transport: new Experimental_StdioMCPTransport({
-        command: server.command,
-        args,
-        env,
-      }),
-    });
-  }
-
-  if (server.type === "http") {
-    if (!server.url) throw new Error("HTTP server requires a URL");
-
-    let headers: Record<string, string> | undefined;
-    if (server.headers) {
-      try {
-        headers = JSON.parse(server.headers);
-      } catch {
-        throw new Error("Invalid headers JSON");
-      }
-    }
-
-    return createMCPClient({
-      transport: {
-        type: "http",
-        url: server.url,
-        headers,
-      },
-    });
-  }
-
-  throw new Error(`Unsupported server type: ${server.type}`);
 }

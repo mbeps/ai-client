@@ -1,4 +1,5 @@
 import z from "zod";
+import { passwordField } from "@/schemas/shared-fields";
 
 /**
  * Validates the password-reset form.
@@ -7,7 +8,7 @@ import z from "zod";
  * @author Maruf Bepary
  */
 export const resetPasswordSchema = z.object({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: passwordField,
 });
 
 /**

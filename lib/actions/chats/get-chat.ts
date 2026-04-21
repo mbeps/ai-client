@@ -1,15 +1,13 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message, attachment } from "@/drizzle/schema";
 import { eq, and, asc, inArray } from "drizzle-orm";
-import { headers } from "next/headers";
 import type { ChatWithMessages } from "./types";
 
 export async function getChat(chatId: string): Promise<ChatWithMessages> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [chatRow] = await db
     .select()

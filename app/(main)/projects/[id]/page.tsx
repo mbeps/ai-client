@@ -20,13 +20,9 @@ import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
 import { ChatHistoryCard } from "@/components/chat/chat-history-card";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 
-/**
- * Project detail page with Chats, Global Prompt, Knowledgebase, and Settings tabs.
- * Route: /projects/[id]. Reads the project, linked chats, and attached knowledge bases from Zustand.
- *
- * @author Maruf Bepary
- */
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
@@ -42,6 +38,15 @@ export default function ProjectPage() {
   const allKbs = useAppStore((state) => state.knowledgebases);
   const kbs = allKbs.filter((k) => project?.knowledgebases.includes(k.id));
   const createChat = useAppStore((state) => state.createChat);
+  const updateProjectDb = useAppStore((state) => state.updateProjectDb);
+  const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
+
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!project) return <NotFoundMessage entity="Project" />;
 
@@ -50,9 +55,52 @@ export default function ProjectPage() {
     router.push(ROUTES.PROJECTS.chat(projectId, chatId));
   };
 
+  const handleSavePrompt = async () => {
+    setSavingPrompt(true);
+    try {
+      await updateProjectDb(projectId, {
+        globalPrompt: promptRef.current?.value ?? project.globalPrompt,
+      });
+      toast.success("Global prompt saved");
+    } catch {
+      toast.error("Failed to save prompt");
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await updateProjectDb(projectId, {
+        name: nameRef.current?.value ?? project.name,
+        description: descRef.current?.value ?? project.description,
+      });
+      toast.success("Settings saved");
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete project "${project.name}"? This cannot be undone.`))
+      return;
+    setDeleting(true);
+    try {
+      await deleteProjectDb(projectId);
+      toast.success("Project deleted");
+      router.push(ROUTES.PROJECTS.path);
+    } catch {
+      toast.error("Failed to delete project");
+      setDeleting(false);
+    }
+  };
+
   const totalKbSize = kbs.reduce((acc, kb) => acc + kb.sizeBytes, 0);
   const maxKbSize =
-    kbs.reduce((acc, kb) => acc + kb.maxSizeBytes, 0) || 100 * 1024 * 1024; // Default 100MB if no KB
+    kbs.reduce((acc, kb) => acc + kb.maxSizeBytes, 0) || 100 * 1024 * 1024;
   const usagePercentage = Math.min(100, (totalKbSize / maxKbSize) * 100);
 
   return (
@@ -105,13 +153,16 @@ export default function ProjectPage() {
             </CardHeader>
             <CardContent>
               <Textarea
+                ref={promptRef}
                 defaultValue={project.globalPrompt}
                 rows={10}
                 placeholder="e.g., You are an expert code reviewer specializing in React."
               />
             </CardContent>
             <CardFooter>
-              <Button>Save Prompt</Button>
+              <Button onClick={handleSavePrompt} disabled={savingPrompt}>
+                {savingPrompt ? "Saving..." : "Save Prompt"}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -183,16 +234,24 @@ export default function ProjectPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Project Name</label>
-                <Input defaultValue={project.name} />
+                <Input ref={nameRef} defaultValue={project.name} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
-                <Textarea defaultValue={project.description} />
+                <Textarea ref={descRef} defaultValue={project.description} />
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button>Save Settings</Button>
-              <Button variant="destructive">Delete Project</Button>
+              <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                {savingSettings ? "Saving..." : "Save Settings"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Project"}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>

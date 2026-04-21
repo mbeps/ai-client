@@ -1,4 +1,5 @@
 import z from "zod";
+import { emailField, requiredPasswordField } from "@/schemas/shared-fields";
 
 /**
  * Validates sign-in form data.
@@ -7,11 +8,8 @@ import z from "zod";
  * @author Maruf Bepary
  */
 export const signInSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: emailField,
+  password: requiredPasswordField,
 });
 
 /**

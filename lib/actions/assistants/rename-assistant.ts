@@ -1,20 +1,26 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
-import { headers } from "next/headers";
+import { assistant } from "@/drizzle/schema";
+import { and, eq } from "drizzle-orm";
+import type { AssistantRow } from "./types";
 
-/**
- * Renames an assistant in the database.
- *
- * @param assistantId - Unique identifier of the assistant.
- * @param name - The new name for the assistant.
- * @returns The updated assistant record (mocked for now).
- */
-export async function renameAssistant(assistantId: string, name: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+export async function renameAssistant(
+  assistantId: string,
+  name: string,
+): Promise<AssistantRow> {
+  const session = await requireSession();
 
-  console.log(`Renaming assistant ${assistantId} to ${name}`);
-  return { id: assistantId, name, updatedAt: new Date() };
+  const [updated] = await db
+    .update(assistant)
+    .set({ name, updatedAt: new Date() })
+    .where(
+      and(eq(assistant.id, assistantId), eq(assistant.userId, session.user.id)),
+    )
+    .returning();
+
+  if (!updated) throw new Error("Not Found");
+
+  return updated;
 }
