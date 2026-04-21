@@ -49,12 +49,12 @@ export const auth = betterAuth({
   },
   socialProviders: {
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: process.env.CLIENT_ID_GITHUB!,
+      clientSecret: process.env.CLIENT_SECRET_GITHUB!,
     },
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      clientId: process.env.CLIENT_ID_DISCORD!,
+      clientSecret: process.env.CLIENT_SECRET_DISCORD!,
     },
   },
   session: {

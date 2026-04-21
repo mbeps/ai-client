@@ -10,14 +10,16 @@ export default async function ProjectChatPage({
 }) {
   const { id, chatId } = await params;
 
+  let chat;
   try {
     const data = await getChat(chatId);
-    const chat = buildChatFromRows(data);
+    chat = buildChatFromRows(data);
     if (chat.projectId !== id) {
       notFound();
     }
-    return <ChatPageClient initialChat={chat} />;
   } catch {
     notFound();
   }
+
+  return <ChatPageClient initialChat={chat!} />;
 }
