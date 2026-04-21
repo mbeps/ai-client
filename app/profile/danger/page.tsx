@@ -2,32 +2,32 @@ import { auth } from "@/lib/auth/auth";
 import { ROUTES } from "@/lib/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ProfileUpdateForm } from "./_components/profile/profile-update-form";
+import { AccountDeletion } from "../_components/account/account-deletion";
 
 /**
- * General profile settings page.
- * @returns Server-rendered profile update form.
+ * Danger zone page for critical actions.
+ * @returns Server-rendered account deletion section.
  */
-export default async function ProfilePage() {
+export default async function DangerZonePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (session == null) return redirect(ROUTES.AUTH.LOGIN.path);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">General Settings</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Danger Zone</h2>
         <p className="text-muted-foreground">
-          Update your personal information and how it appears to others.
+          Critical actions that can have permanent consequences for your account.
         </p>
       </div>
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium">Profile Information</h3>
+          <h3 className="text-lg font-medium text-destructive">Delete Account</h3>
           <p className="text-sm text-muted-foreground">
-            This information will be displayed on your public profile.
+            Permanently delete your account and all associated data. This action cannot be undone.
           </p>
         </div>
-        <ProfileUpdateForm user={session.user} />
+        <AccountDeletion />
       </div>
     </div>
   );

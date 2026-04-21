@@ -56,7 +56,14 @@ export const ROUTES = {
     name: "Tools",
     detail: (id: string) => `/tools/${id}` as const,
   },
-  PROFILE: { path: "/profile" as const, name: "Profile" },
+  PROFILE: {
+    path: "/profile" as const,
+    name: "Profile",
+    SECURITY: { path: "/profile/security" as const, name: "Security" },
+    SESSIONS: { path: "/profile/sessions" as const, name: "Sessions" },
+    ACCOUNTS: { path: "/profile/accounts" as const, name: "Linked Accounts" },
+    DANGER: { path: "/profile/danger" as const, name: "Danger Zone" },
+  },
   API: {
     AUTH: { path: "/api/auth" as const, name: "Auth API" },
   },
