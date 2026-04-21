@@ -7,6 +7,8 @@ import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+
 /**
  * Authentication-guarded layout for all profile routes.
  * Mirrors the structure of MainLayout but uses ProfileSidebar.
@@ -40,9 +42,7 @@ export default function ProfileLayout({
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
           <SidebarTrigger />
           <div className="w-full flex-1">
-            <h1 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Settings
-            </h1>
+            <DynamicBreadcrumbs />
           </div>
         </header>
         <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">

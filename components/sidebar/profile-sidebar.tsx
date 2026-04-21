@@ -42,7 +42,7 @@ export function ProfileSidebar({ ...props }: React.ComponentProps<typeof Sidebar
   const navigation = [
     {
       name: "General",
-      href: ROUTES.PROFILE.path,
+      href: ROUTES.PROFILE.GENERAL.path,
       icon: User,
     },
     {
