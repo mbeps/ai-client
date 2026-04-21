@@ -257,7 +257,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     await authClient.signOut();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
-                  className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground w-full"
+                  className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

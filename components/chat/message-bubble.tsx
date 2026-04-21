@@ -373,7 +373,7 @@ export function MessageBubble({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
                 onClick={() => onDelete(message.id)}
               >
                 <Trash2 className="h-3 w-3" />

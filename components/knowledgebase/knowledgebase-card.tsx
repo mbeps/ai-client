@@ -120,7 +120,7 @@ function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
             <Edit2 className="mr-2 h-4 w-4" />
             Rename Knowledgebase
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
+          <DropdownMenuItem className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete Knowledgebase
           </DropdownMenuItem>
