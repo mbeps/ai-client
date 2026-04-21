@@ -1,6 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { authClient } from "@/lib/auth/auth-client";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +113,7 @@ export function MessageBubble({
   currentSiblingIndex,
   onNavigateBranch,
 }: MessageBubbleProps) {
+  const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const toolData = useMemo(
     () => (!isUser ? parseToolData(message.metadata) : null),
@@ -172,14 +174,20 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex gap-4 p-4 w-full group ${isUser ? "" : "bg-muted/30"}`}
+      className={`flex gap-4 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
     >
       <div className="shrink-0 mt-1">
         <Avatar className="h-8 w-8">
           {isUser ? (
-            <AvatarFallback className="bg-primary/10 text-primary">
-              <User className="h-4 w-4" />
-            </AvatarFallback>
+            <>
+              <AvatarImage
+                src={session?.user?.image || undefined}
+                alt={session?.user?.name || ""}
+              />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </>
           ) : (
             <AvatarFallback className="bg-secondary text-secondary-foreground">
               <Bot className="h-4 w-4" />
