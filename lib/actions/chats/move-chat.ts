@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import type { ChatRow } from "./types";
+import type { ChatRow } from "@/types/chat-row";
 
 /**
  * Moves a chat to a specific project or removes it from all projects.

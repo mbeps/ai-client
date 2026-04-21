@@ -96,7 +96,7 @@ export function ResponsiveMenu({
                 <DropdownMenuItem
                   className={
                     item.isDestructive
-                      ? "text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                      ? "focus:bg-destructive focus:text-destructive-foreground"
                       : undefined
                   }
                   onClick={item.onClick}

@@ -1,5 +1,5 @@
 import type { Chat, Message, Attachment } from "@/lib/store";
-import type { ChatWithMessages } from "./types";
+import type { ChatWithMessages } from "@/types/chat-with-messages";
 
 export function buildChatFromRows(row: ChatWithMessages): Chat {
   const messages: Record<string, Message> = {};

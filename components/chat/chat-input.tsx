@@ -285,7 +285,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => removeAttachment(att.id)}
-                className="ml-1 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
+                className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
               >
                 <X className="h-3 w-3" />
               </button>

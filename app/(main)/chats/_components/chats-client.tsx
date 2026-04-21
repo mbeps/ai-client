@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/lib/store";
+import { ROUTES } from "@/lib/routes";
+import { MessageSquare, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -9,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { ChatCard } from "@/components/chat/chat-card";
 import { EmptyState } from "@/components/empty-state";
@@ -21,9 +25,16 @@ interface ChatsClientProps {
 }
 
 export function ChatsClient({ initialChats }: ChatsClientProps) {
+  const router = useRouter();
+  const createChatDb = useAppStore((state) => state.createChatDb);
   const [chats, setChats] = useState<Chat[]>(initialChats);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+
+  const handleNewChat = async () => {
+    const id = await createChatDb("New Chat");
+    router.push(ROUTES.CHATS.detail(id));
+  };
 
   const filtered = chats.filter((chat) => {
     if (search && !chat.title.toLowerCase().includes(search.toLowerCase()))
@@ -52,6 +63,12 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
         icon={<MessageSquare className="h-8 w-8 text-primary" />}
         title="All Chats"
         description="Manage all your conversations."
+        action={
+          <Button onClick={handleNewChat}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
+          </Button>
+        }
       />
       <div className="flex gap-4 max-w-xl mb-6">
         <Input

@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message, attachment } from "@/drizzle/schema";
 import { eq, and, asc, inArray } from "drizzle-orm";
-import type { ChatWithMessages } from "./types";
+import type { ChatWithMessages } from "@/types/chat-with-messages";
 
 export async function getChat(chatId: string): Promise<ChatWithMessages> {
   const session = await requireSession();

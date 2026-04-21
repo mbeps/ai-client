@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -71,6 +72,9 @@ export function CreateProjectDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New Project</DialogTitle>
+          <DialogDescription>
+            Create a new project to organize your chats and knowledge bases.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

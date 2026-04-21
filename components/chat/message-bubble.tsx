@@ -1,6 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { authClient } from "@/lib/auth/auth-client";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +12,10 @@ import {
 import { type Attachment, Message } from "@/lib/store";
 import {
   Bot,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   Edit2,
   FileText,
@@ -22,6 +25,12 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type ToolCall = {
   toolCallId: string;
@@ -104,6 +113,7 @@ export function MessageBubble({
   currentSiblingIndex,
   onNavigateBranch,
 }: MessageBubbleProps) {
+  const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const toolData = useMemo(
     () => (!isUser ? parseToolData(message.metadata) : null),
@@ -111,6 +121,18 @@ export function MessageBubble({
   );
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("Failed to copy text");
+    }
+  };
 
   useEffect(() => {
     if (!message.attachments || message.attachments.length === 0) return;
@@ -152,14 +174,20 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex gap-4 p-4 w-full group ${isUser ? "" : "bg-muted/30"}`}
+      className={`flex gap-4 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
     >
       <div className="shrink-0 mt-1">
         <Avatar className="h-8 w-8">
           {isUser ? (
-            <AvatarFallback className="bg-primary/10 text-primary">
-              <User className="h-4 w-4" />
-            </AvatarFallback>
+            <>
+              <AvatarImage
+                src={session?.user?.image || undefined}
+                alt={session?.user?.name || ""}
+              />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </>
           ) : (
             <AvatarFallback className="bg-secondary text-secondary-foreground">
               <Bot className="h-4 w-4" />
@@ -190,7 +218,7 @@ export function MessageBubble({
                       <ChevronRight className="h-3.5 w-3.5 transition-transform [[data-state=open]>&]:rotate-90" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-1 ml-5 text-xs">
-                      <div className="rounded-md bg-muted p-2 font-mono">
+                      <div className="rounded-lg bg-muted p-2 font-mono">
                         <p className="font-semibold mb-1">Input:</p>
                         <pre className="whitespace-pre-wrap">
                           {JSON.stringify(tc.args, null, 2)}
@@ -306,25 +334,53 @@ export function MessageBubble({
             </div>
           )}
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <Check className="h-3 w-3 text-green-500" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy markdown</TooltipContent>
+          </Tooltip>
+
           {isUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              onClick={() => onEdit?.(message.id, message.content)}
-            >
-              <Edit2 className="h-3 w-3" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => onEdit?.(message.id, message.content)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit message</TooltipContent>
+            </Tooltip>
           )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(message.id)}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => onDelete(message.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete message</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { AssistantRow } from "./types";
+import type { AssistantRow } from "@/types/assistant-row";
 
 export async function getAssistant(id: string): Promise<AssistantRow> {
   const session = await requireSession();

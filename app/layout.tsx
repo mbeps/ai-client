@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PopoverProvider } from "@/components/ui/popover";
 
 /**
  * Root layout that wires global fonts, theming, and toast providers.
@@ -43,8 +44,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <TooltipProvider>
-          {children}
-          <Toaster position="bottom-right" />
+          <PopoverProvider>
+            {children}
+            <Toaster position="bottom-right" />
+          </PopoverProvider>
         </TooltipProvider>
       </body>
     </html>

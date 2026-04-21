@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { v4 as uuidv4 } from "uuid";
-import type { ChatRow } from "./types";
+import type { ChatRow } from "@/types/chat-row";
 
 export async function createChat(
   title?: string,

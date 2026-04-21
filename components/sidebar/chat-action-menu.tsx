@@ -224,7 +224,7 @@ export function ChatActionMenu({
             <DropdownMenuItem
               onClick={handleDelete}
               disabled={isPending}
-              className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+              className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               <span>Delete</span>
