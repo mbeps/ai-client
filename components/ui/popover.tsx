@@ -5,6 +5,10 @@ import { Popover as PopoverPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
+function PopoverProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
+}
+
 function Popover({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -86,4 +90,5 @@ export {
   PopoverHeader,
   PopoverTitle,
   PopoverDescription,
+  PopoverProvider,
 }
