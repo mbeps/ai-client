@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -73,6 +74,9 @@ export function CreateAssistantDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Assistant</DialogTitle>
+          <DialogDescription>
+            Configure a new AI assistant with a custom persona and system prompt.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

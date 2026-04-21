@@ -174,11 +174,13 @@ export function ChatUI({
       role: m.role,
       content: m.content,
       attachments: m.attachments?.map((att) => ({
+        id: att.id,
         type: att.type,
         dataUrl: att.dataUrl,
         name: att.name,
         mimeType: att.mimeType,
         extractedText: att.extractedText,
+        key: att.key,
       })),
     }));
 

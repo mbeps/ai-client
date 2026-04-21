@@ -56,6 +56,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
+    console.error("[Chat API] Invalid request:", JSON.stringify(parsed.error.format(), null, 2));
     return Response.json(
       { error: "Invalid request", details: parsed.error.flatten() },
       { status: 400 },
