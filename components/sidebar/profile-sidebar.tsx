@@ -11,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -78,6 +79,28 @@ export function ProfileSidebar({ ...props }: React.ComponentProps<typeof Sidebar
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarSeparator className="mx-0 my-2" />
+          <SidebarMenuItem>
+            <div className="flex items-center gap-3 px-3 py-2">
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage
+                  src={session?.user?.image || undefined}
+                  alt={session?.user?.name || ""}
+                />
+                <AvatarFallback className="rounded-lg">
+                  {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">
+                  {session?.user?.name}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {session?.user?.email}
+                </span>
+              </div>
+            </div>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
@@ -104,27 +127,6 @@ export function ProfileSidebar({ ...props }: React.ComponentProps<typeof Sidebar
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex items-center gap-3 px-3 py-2">
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage
-                  src={session?.user?.image || undefined}
-                  alt={session?.user?.name || ""}
-                />
-                <AvatarFallback className="rounded-lg">
-                  {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {session?.user?.name}
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {session?.user?.email}
-                </span>
-              </div>
-            </div>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={async () => {
