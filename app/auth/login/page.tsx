@@ -60,7 +60,7 @@ export default function LoginPage() {
     <Tabs
       value={selectedTab}
       onValueChange={(t) => setSelectedTab(t as Tab)}
-      className="max-auto w-full my-6 px-4"
+      className="max-w-4xl mx-auto my-6 px-4"
     >
       {(selectedTab === TAB_VALUES.SIGN_IN ||
         selectedTab === TAB_VALUES.SIGN_UP) && (
