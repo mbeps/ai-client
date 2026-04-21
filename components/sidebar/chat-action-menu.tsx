@@ -94,9 +94,9 @@ export function ChatActionMenu({
     });
   };
 
-  if (isMobile) {
-    return (
-      <>
+  return (
+    <>
+      {isMobile ? (
         <Drawer>
           <DrawerTrigger asChild>
             <SidebarMenuAction className="lg:opacity-0 lg:group-hover/menu-item:opacity-100">
@@ -172,76 +172,66 @@ export function ChatActionMenu({
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuAction className="lg:opacity-0 lg:group-hover/menu-item:opacity-100">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">More</span>
+            </SidebarMenuAction>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" className="w-56">
+            <DropdownMenuItem onClick={() => setShowRename(true)}>
+              <Edit2 className="mr-2 h-4 w-4" />
+              <span>Rename</span>
+            </DropdownMenuItem>
 
-        <RenameDialog
-          isOpen={showRename}
-          onClose={() => setShowRename(false)}
-          initialValue={chat.title}
-          onConfirm={handleRename}
-          title="Rename Chat"
-          label="Title"
-        />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuAction className="lg:opacity-0 lg:group-hover/menu-item:opacity-100">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">More</span>
-          </SidebarMenuAction>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" className="w-56">
-          <DropdownMenuItem onClick={() => setShowRename(true)}>
-            <Edit2 className="mr-2 h-4 w-4" />
-            <span>Rename</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <FolderInput className="mr-2 h-4 w-4" />
-              <span>Move to Project</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => handleMove(null)}>
-                  {!chat.projectId && (
-                    <Check className="mr-2 h-4 w-4 text-primary" />
-                  )}
-                  <span className={!chat.projectId ? "" : "ml-6"}>
-                    None (Standalone)
-                  </span>
-                </DropdownMenuItem>
-                {projects.length > 0 && <DropdownMenuSeparator />}
-                {projects.map((p) => (
-                  <DropdownMenuItem key={p.id} onClick={() => handleMove(p.id)}>
-                    {chat.projectId === p.id && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInput className="mr-2 h-4 w-4" />
+                <span>Move to Project</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => handleMove(null)}>
+                    {!chat.projectId && (
                       <Check className="mr-2 h-4 w-4 text-primary" />
                     )}
-                    <span className={chat.projectId === p.id ? "" : "ml-6"}>
-                      {p.name}
+                    <span className={!chat.projectId ? "" : "ml-6"}>
+                      None (Standalone)
                     </span>
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
+                  {projects.length > 0 && <DropdownMenuSeparator />}
+                  {projects.map((p) => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => handleMove(p.id)}
+                    >
+                      {chat.projectId === p.id && (
+                        <Check className="mr-2 h-4 w-4 text-primary" />
+                      )}
+                      <span className={chat.projectId === p.id ? "" : "ml-6"}>
+                        {p.name}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
 
-          <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
 
-          <DropdownMenuItem
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            <span>Delete</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Delete</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <RenameDialog
         isOpen={showRename}
@@ -254,3 +244,4 @@ export function ChatActionMenu({
     </>
   );
 }
+

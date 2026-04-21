@@ -1,10 +1,9 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { headers } from "next/headers";
 import type { ChatRow } from "./types";
 
 /**
@@ -15,9 +14,11 @@ import type { ChatRow } from "./types";
  * @returns The updated chat record.
  * @author Maruf Bepary
  */
-export async function moveChat(chatId: string, projectId: string | null): Promise<ChatRow> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+export async function moveChat(
+  chatId: string,
+  projectId: string | null,
+): Promise<ChatRow> {
+  const session = await requireSession();
 
   const [updatedChat] = await db
     .update(chat)

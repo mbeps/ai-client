@@ -1,17 +1,15 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { headers } from "next/headers";
 import { discoverTools, type DiscoveredTool } from "@/lib/mcp/discover-tools";
 
 export async function discoverMcpServerTools(
   serverId: string,
 ): Promise<DiscoveredTool[]> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   const [row] = await db
     .select()
@@ -23,6 +21,8 @@ export async function discoverMcpServerTools(
   if (!row) throw new Error("Not Found");
 
   return discoverTools({
+    id: row.id,
+    name: row.name,
     type: row.type,
     command: row.command,
     args: row.args,

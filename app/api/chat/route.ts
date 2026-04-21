@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
 import { chat, message, mcpServer } from "@/drizzle/schema";
@@ -24,29 +25,50 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
 
+  const attachmentSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    mimeType: z.string().optional(),
+    type: z.enum(["image", "document"]).optional(),
+    dataUrl: z.string().optional(),
+    extractedText: z.string().optional(),
+    key: z.string().optional(),
+  });
+
+  const messageSchema = z
+    .object({
+      role: z.enum(["user", "assistant", "system"]),
+      content: z.union([z.string(), z.array(z.any())]),
+      id: z.string().optional(),
+      parentId: z.string().optional(),
+      attachments: z.array(attachmentSchema).optional(),
+    })
+    .passthrough();
+
+  const chatRequestSchema = z.object({
+    chatId: z.string().min(1),
+    userMessageId: z.string().min(1).optional(),
+    model: z.string().min(1).optional(),
+    messages: z.array(messageSchema).max(500),
+    selectedServerIds: z.array(z.string()).max(20).optional(),
+  });
+
+  const body = await req.json();
+  const parsed = chatRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Invalid request", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
   const {
     chatId,
     userMessageId,
     messages: history,
     model: requestedModel,
     selectedServerIds,
-  }: {
-    chatId: string;
-    userMessageId: string;
-    model?: string;
-    selectedServerIds?: string[];
-    messages: Array<{
-      role: "user" | "assistant" | "system";
-      content: string;
-      attachments?: Array<{
-        type: "image" | "document";
-        dataUrl: string;
-        name: string;
-        mimeType: string;
-        extractedText?: string;
-      }>;
-    }>;
-  } = await req.json();
+  } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
 
@@ -95,7 +117,7 @@ export async function POST(req: Request) {
 
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-  const processedMessages: ModelMessage[] = history.map((m) => {
+  const processedMessages = history.map((m) => {
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
       const parts: Array<TextPart | ImagePart> = [];
 
@@ -110,7 +132,7 @@ export async function POST(req: Request) {
       }
 
       // Add user message text
-      if (m.content.trim()) {
+      if (typeof m.content === "string" && m.content.trim()) {
         parts.push({ type: "text", text: m.content });
       }
 
@@ -134,7 +156,7 @@ export async function POST(req: Request) {
       };
     }
     return { role: m.role, content: m.content };
-  });
+  }) as ModelMessage[];
 
   // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
   // rather than the OpenAI Responses API (/responses), which OpenRouter does not support.
@@ -165,51 +187,72 @@ export async function POST(req: Request) {
           result: unknown;
         }[] = [];
 
-        for await (const chunk of result.fullStream) {
-          switch (chunk.type) {
-            case "text-delta":
-              fullText += chunk.text;
-              controller.enqueue(encode({ type: "text", delta: chunk.text }));
-              break;
+        try {
+          for await (const chunk of result.fullStream) {
+            switch (chunk.type) {
+              case "text-delta":
+                fullText += chunk.text;
+                controller.enqueue(encode({ type: "text", delta: chunk.text }));
+                break;
 
-            case "tool-call":
-              toolCalls.push({
-                toolCallId: chunk.toolCallId,
-                toolName: chunk.toolName,
-                args: chunk.input,
-              });
-              controller.enqueue(
-                encode({
-                  type: "tool-call",
+              case "tool-call":
+                toolCalls.push({
                   toolCallId: chunk.toolCallId,
                   toolName: chunk.toolName,
                   args: chunk.input,
-                }),
-              );
-              break;
+                });
+                controller.enqueue(
+                  encode({
+                    type: "tool-call",
+                    toolCallId: chunk.toolCallId,
+                    toolName: chunk.toolName,
+                    args: chunk.input,
+                  }),
+                );
+                break;
 
-            case "tool-result":
-              toolResults.push({
-                toolCallId: chunk.toolCallId,
-                toolName: chunk.toolName,
-                result: chunk.output,
-              });
-              controller.enqueue(
-                encode({
-                  type: "tool-result",
+              case "tool-result":
+                toolResults.push({
                   toolCallId: chunk.toolCallId,
                   toolName: chunk.toolName,
                   result: chunk.output,
-                }),
-              );
-              break;
+                });
+                controller.enqueue(
+                  encode({
+                    type: "tool-result",
+                    toolCallId: chunk.toolCallId,
+                    toolName: chunk.toolName,
+                    result: chunk.output,
+                  }),
+                );
+                break;
 
-            case "error":
-              controller.enqueue(
-                encode({ type: "error", message: String(chunk.error) }),
-              );
-              break;
+              case "error":
+                controller.enqueue(
+                  encode({ type: "error", message: String(chunk.error) }),
+                );
+                break;
+            }
           }
+        } catch (error: any) {
+          console.error("[Chat API Error]:", error);
+          let message = "An error occurred during generation";
+          let code = "ERROR";
+
+          if (error.name === "AI_RetryError" || error.name === "AI_APICallError") {
+            const statusCode = error.statusCode || error.lastError?.statusCode;
+            if (statusCode === 429) {
+              message = "Too many requests. Please try again later or add your own API key.";
+              code = "RATE_LIMIT";
+            } else if (error.message?.includes("rate-limited")) {
+              message = "The AI provider is temporarily rate-limited. Please try again shortly.";
+              code = "RATE_LIMIT";
+            }
+          }
+
+          controller.enqueue(encode({ type: "error", message, code }));
+          controller.close();
+          return;
         }
 
         if (!fullText && toolCalls.length === 0) {

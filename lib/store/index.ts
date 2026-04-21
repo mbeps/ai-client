@@ -13,9 +13,22 @@ import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
 import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
+import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
+import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { renameProject as renameProjectAction } from "@/lib/actions/projects/rename-project";
+import { listProjects as listProjectsAction } from "@/lib/actions/projects/list-projects";
+import { createProject as createProjectAction } from "@/lib/actions/projects/create-project";
+import { updateProject as updateProjectAction } from "@/lib/actions/projects/update-project";
+import { deleteProject as deleteProjectAction } from "@/lib/actions/projects/delete-project";
+import { togglePinProject as togglePinProjectAction } from "@/lib/actions/projects/toggle-pin-project";
 import { renameAssistant as renameAssistantAction } from "@/lib/actions/assistants/rename-assistant";
+import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
+import { createAssistant as createAssistantAction } from "@/lib/actions/assistants/create-assistant";
+import { updateAssistant as updateAssistantAction } from "@/lib/actions/assistants/update-assistant";
+import { deleteAssistant as deleteAssistantAction } from "@/lib/actions/assistants/delete-assistant";
 import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
+import type { ProjectRow } from "@/lib/actions/projects/types";
+import type { AssistantRow } from "@/lib/actions/assistants/types";
 import type {
   ChatRow,
   MessageRow,
@@ -226,8 +239,12 @@ type AppState = {
   ) => void;
   /** Removes a message and all its descendants from the tree. */
   deleteMessage: (chatId: string, messageId: string) => void;
+  /** Deletes a message and all its descendants from the DB and the store. */
+  deleteMessageDb: (chatId: string, messageId: string) => Promise<void>;
   /** Updates the active leaf node for a chat, switching the visible conversation branch. */
   setCurrentLeaf: (chatId: string, leafId: string) => void;
+  /** Persists the active leaf node for a chat to the DB and updates state. */
+  setCurrentLeafDb: (chatId: string, leafId: string) => Promise<void>;
   /** Removes an entire chat and its message tree from the store. */
   deleteChat: (chatId: string) => void;
   /** Patches attachment metadata (e.g. S3 key) on an existing message after upload. */
@@ -244,8 +261,43 @@ type AppState = {
   moveChatDb: (id: string, projectId: string | null) => Promise<void>;
   /** Updates a project's name in both DB and local state. */
   renameProjectDb: (id: string, name: string) => Promise<void>;
+  /** Fetches all projects from the DB and sets them in state. */
+  loadProjects: () => Promise<void>;
+  /** Hydrates projects from DB rows without a network call. */
+  loadProjectRows: (rows: ProjectRow[]) => void;
+  /** Creates a new project in the DB and adds it to state; returns the new project's ID. */
+  createProjectDb: (data: {
+    name: string;
+    description?: string;
+  }) => Promise<string>;
+  /** Updates a project's fields in the DB and updates state. */
+  updateProjectDb: (
+    id: string,
+    data: { name?: string; description?: string; globalPrompt?: string },
+  ) => Promise<void>;
+  /** Deletes a project from the DB and removes it from state. */
+  deleteProjectDb: (id: string) => Promise<void>;
+  /** Toggles the pinned state of a project in the DB and updates state. */
+  toggleProjectPinDb: (id: string) => Promise<void>;
   /** Updates an assistant's name in both DB and local state. */
   renameAssistantDb: (id: string, name: string) => Promise<void>;
+  /** Fetches all assistants from the DB and sets them in state. */
+  loadAssistants: () => Promise<void>;
+  /** Hydrates assistants from DB rows without a network call. */
+  loadAssistantRows: (rows: AssistantRow[]) => void;
+  /** Creates a new assistant in the DB and adds it to state; returns the new assistant's ID. */
+  createAssistantDb: (data: {
+    name: string;
+    description?: string;
+    prompt?: string;
+  }) => Promise<string>;
+  /** Updates an assistant's fields in the DB and updates state. */
+  updateAssistantDb: (
+    id: string,
+    data: { name?: string; description?: string; prompt?: string },
+  ) => Promise<void>;
+  /** Deletes an assistant from the DB and removes it from state. */
+  deleteAssistantDb: (id: string) => Promise<void>;
   /** Updates a knowledgebase's name in both DB and local state. */
   renameKnowledgebaseDb: (id: string, name: string) => Promise<void>;
 
@@ -279,6 +331,37 @@ type AppState = {
   /** Inserts or replaces a chat entry in the store. */
   upsertChat: (chat: Chat) => void;
 };
+
+/**
+ * Maps a ProjectRow from the DB to the Zustand Project shape.
+ */
+function projectRowToStore(row: ProjectRow): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? "",
+    isPinned: row.isPinned,
+    updatedAt: new Date(row.updatedAt),
+    globalPrompt: row.globalPrompt ?? "",
+    knowledgebases: [],
+  };
+}
+
+/**
+ * Maps an AssistantRow from the DB to the Zustand Assistant shape.
+ */
+function assistantRowToStore(row: AssistantRow): Assistant {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? "",
+    prompt: row.prompt ?? "",
+    tools: [],
+    knowledgebases: [],
+    avatar: row.avatar ?? undefined,
+    updatedAt: new Date(row.updatedAt),
+  };
+}
 
 /**
  * Global Zustand store hook for the AI chat client.
@@ -432,6 +515,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
+  deleteMessageDb: async (chatId, messageId) => {
+    // 1. Optimistic: compute new leaf and mutate Zustand immediately
+    get().deleteMessage(chatId, messageId);
+    // 2. Read the new leaf from state after the optimistic update
+    const newLeafId = get().chats[chatId]?.currentLeafId ?? null;
+    // 3. Persist deletion to DB
+    try {
+      await deleteMessageAction(chatId, messageId, newLeafId);
+    } catch (err) {
+      console.error("Failed to delete message from DB:", err);
+    }
+  },
+
   /**
    * Sets the active leaf node for a chat, switching the visible conversation branch.
    *
@@ -452,6 +548,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       };
     });
+  },
+
+  setCurrentLeafDb: async (chatId, leafId) => {
+    get().setCurrentLeaf(chatId, leafId);
+    try {
+      await updateCurrentLeafAction(chatId, leafId);
+    } catch (err) {
+      console.error("Failed to update current leaf:", err);
+    }
   },
 
   /**
@@ -632,6 +737,81 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : kb,
       ),
+    }));
+  },
+
+  loadProjectRows: (rows) => {
+    set({ projects: rows.map(projectRowToStore) });
+  },
+
+  loadProjects: async () => {
+    const rows = await listProjectsAction();
+    set({ projects: rows.map(projectRowToStore) });
+  },
+
+  createProjectDb: async (data) => {
+    const row = await createProjectAction(data);
+    set((state) => ({ projects: [projectRowToStore(row), ...state.projects] }));
+    return row.id;
+  },
+
+  updateProjectDb: async (id, data) => {
+    const row = await updateProjectAction(id, data);
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === id ? { ...p, ...projectRowToStore(row) } : p,
+      ),
+    }));
+  },
+
+  deleteProjectDb: async (id) => {
+    await deleteProjectAction(id);
+    set((state) => ({
+      projects: state.projects.filter((p) => p.id !== id),
+    }));
+  },
+
+  toggleProjectPinDb: async (id) => {
+    const row = await togglePinProjectAction(id);
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === id
+          ? { ...p, isPinned: row.isPinned, updatedAt: new Date(row.updatedAt) }
+          : p,
+      ),
+    }));
+  },
+
+  loadAssistantRows: (rows) => {
+    set({ assistants: rows.map(assistantRowToStore) });
+  },
+
+  loadAssistants: async () => {
+    const rows = await listAssistantsAction();
+    set({ assistants: rows.map(assistantRowToStore) });
+  },
+
+  createAssistantDb: async (data) => {
+    const row = await createAssistantAction(data);
+    set((state) => ({
+      assistants: [assistantRowToStore(row), ...state.assistants],
+    }));
+    return row.id;
+  },
+
+  updateAssistantDb: async (id, data) => {
+    const row = await updateAssistantAction(id, data);
+    set((state) => ({
+      assistants: state.assistants.map((a) =>
+        a.id === id ? { ...a, ...assistantRowToStore(row) } : a,
+      ),
+    }));
+  },
+
+  deleteAssistantDb: async (id) => {
+    await deleteAssistantAction(id);
+    set((state) => ({
+      assistants: state.assistants.filter((a) => a.id !== id),
     }));
   },
 

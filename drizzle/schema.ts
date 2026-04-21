@@ -6,3 +6,5 @@
 export * from "./schemas/auth-schema";
 export * from "./schemas/chat-schema";
 export * from "./schemas/mcp-server-schema";
+export * from "./schemas/project-schema";
+export * from "./schemas/assistant-schema";

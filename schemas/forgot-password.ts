@@ -1,4 +1,5 @@
 import z from "zod";
+import { emailField } from "@/schemas/shared-fields";
 
 /**
  * Validates the forgot-password request form.
@@ -7,10 +8,7 @@ import z from "zod";
  * @author Maruf Bepary
  */
 export const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
+  email: emailField,
 });
 
 /**

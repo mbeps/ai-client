@@ -2,13 +2,14 @@
 
 import { useAppStore, type Attachment, type McpServer } from "@/lib/store";
 import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { SideView } from "./side-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
+import { toast } from "sonner";
 
 /**
  * Props for the ChatUI component.
@@ -40,8 +41,8 @@ export function ChatUI({
 }: ChatUIProps) {
   const chat = useAppStore((state) => state.chats[chatId]);
   const addMessage = useAppStore((state) => state.addMessage);
-  const deleteMessage = useAppStore((state) => state.deleteMessage);
-  const setCurrentLeaf = useAppStore((state) => state.setCurrentLeaf);
+  const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
+  const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
   );
@@ -62,6 +63,7 @@ export function ChatUI({
   >([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (mcpServers.length === 0) {
@@ -85,6 +87,16 @@ export function ChatUI({
     }
   }, [chat?.currentLeafId]);
 
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   if (!chat)
     return (
       <div className="flex h-full items-center justify-center">
@@ -104,14 +116,25 @@ export function ChatUI({
     model = "nvidia/nemotron-nano-12b-v2-vl:free",
     selectedServerIds: string[] = [],
   ) => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     addMessage(chatId, "user", content, parentId, userMsgId, null, attachments);
 
-    await persistMessage(chatId, {
-      id: userMsgId,
-      role: "user",
-      content,
-      parentId,
-    }).catch(() => {});
+    try {
+      await persistMessage(chatId, {
+        id: userMsgId,
+        role: "user",
+        content,
+        parentId,
+      });
+    } catch (err) {
+      console.error("Failed to persist message:", err);
+      toast.error(
+        "Message may not have been saved. Please check your connection.",
+      );
+    }
 
     // Upload attachments to server
     const uploadedAttachments: Attachment[] = [];
@@ -159,6 +182,8 @@ export function ChatUI({
       })),
     }));
 
+    let accumulated = "";
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -170,27 +195,43 @@ export function ChatUI({
           model,
           selectedServerIds,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("Stream request failed");
+        if (response.status === 429) {
+          toast.error("Too many requests. Please try again later.");
+          throw new Error("Rate limit exceeded");
+        }
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.");
+          throw new Error("Unauthorized");
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Stream request failed");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let accumulated = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value, { stream: true });
-        for (const line of text.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const event = JSON.parse(line.slice(6)) as {
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const event = JSON.parse(trimmed.slice(6)) as {
             type: string;
             delta?: string;
             id?: string;
+            message?: string;
+            code?: string;
             toolCallId?: string;
             toolName?: string;
             args?: unknown;
@@ -244,19 +285,31 @@ export function ChatUI({
           } else if (event.type === "error") {
             setStreamingContent(null);
             setActiveToolCalls([]);
+            toast.error(event.message || "An error occurred during generation");
             addMessage(
               chatId,
               "assistant",
-              "Sorry, I couldn't generate a response. Please try again.",
+              event.message ||
+                "Sorry, I couldn't generate a response. Please try again.",
               userMsgId,
             );
           }
         }
       }
-    } catch {
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        toast.info("Generation stopped");
+        if (accumulated.trim()) {
+          addMessage(chatId, "assistant", accumulated, userMsgId);
+        }
+      } else {
+        console.error("Stream error:", err);
+        toast.error(err.message || "Failed to generate response");
+      }
+    } finally {
+      abortControllerRef.current = null;
       setStreamingContent(null);
       setActiveToolCalls([]);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -284,7 +337,7 @@ export function ChatUI({
    * @param id - The ID of the message to delete.
    */
   const handleDelete = (id: string) => {
-    deleteMessage(chatId, id);
+    deleteMessageDb(chatId, id);
   };
 
   const handleEdit = async (id: string, newContent: string) => {
@@ -293,6 +346,7 @@ export function ChatUI({
     setIsLoading(true);
     await streamResponse(uuidv4(), newContent, msg.parentId, []);
   };
+
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -333,7 +387,7 @@ export function ChatUI({
                     siblings={siblings}
                     currentSiblingIndex={currentIndex}
                     onNavigateBranch={(siblingId) => {
-                      setCurrentLeaf(
+                      setCurrentLeafDb(
                         chatId,
                         getDeepestLeaf(chat.messages, siblingId),
                       );
@@ -382,6 +436,7 @@ export function ChatUI({
           <ChatInput
             onSend={handleSend}
             isLoading={isLoading}
+            onStop={handleStop}
             servers={mcpServers.filter((s) => s.enabled)}
           />
         </div>

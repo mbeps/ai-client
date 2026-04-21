@@ -1,8 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
+import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
-import { headers } from "next/headers";
 
 /**
  * Renames a knowledgebase in the database.
@@ -12,8 +11,7 @@ import { headers } from "next/headers";
  * @returns The updated knowledgebase record (mocked for now).
  */
 export async function renameKnowledgebase(kbId: string, name: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  const session = await requireSession();
 
   console.log(`Renaming knowledgebase ${kbId} to ${name}`);
   return { id: kbId, name, updatedAt: new Date() };

@@ -18,13 +18,9 @@ import { ROUTES } from "@/lib/routes";
 import { useAppStore } from "@/lib/store";
 import { Bot, MessageSquarePlus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 
-/**
- * Assistant detail page with Past Chats and Configuration tabs.
- * Route: /assistants/[id]. Reads the assistant and all chats bound to it from Zustand.
- *
- * @author Maruf Bepary
- */
 export default function AssistantPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,12 +34,48 @@ export default function AssistantPage() {
     (c) => c.assistantId === assistantId,
   );
   const createChat = useAppStore((state) => state.createChat);
+  const updateAssistantDb = useAppStore((state) => state.updateAssistantDb);
+  const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
+
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!assistant) return <NotFoundMessage entity="Assistant" />;
 
   const handleNewChat = () => {
     const chatId = createChat(undefined, assistantId);
     router.push(ROUTES.CHATS.detail(chatId));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateAssistantDb(assistantId, {
+        prompt: promptRef.current?.value ?? assistant.prompt,
+      });
+      toast.success("Configuration saved");
+    } catch {
+      toast.error("Failed to save configuration");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(`Delete assistant "${assistant.name}"? This cannot be undone.`)
+    )
+      return;
+    setDeleting(true);
+    try {
+      await deleteAssistantDb(assistantId);
+      toast.success("Assistant deleted");
+      router.push(ROUTES.ASSISTANTS.path);
+    } catch {
+      toast.error("Failed to delete assistant");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -96,6 +128,7 @@ export default function AssistantPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">System Prompt</label>
                 <Textarea
+                  ref={promptRef}
                   defaultValue={assistant.prompt}
                   rows={8}
                   placeholder="e.g., You are a friendly helpful assistant."
@@ -125,8 +158,17 @@ export default function AssistantPage() {
                 </Button>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button>Save Configuration</Button>
+            <CardFooter className="flex justify-between">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save Configuration"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Assistant"}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>

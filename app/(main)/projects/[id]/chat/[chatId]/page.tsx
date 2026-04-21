@@ -1,11 +1,23 @@
-"use client";
+import { notFound } from "next/navigation";
+import { getChat } from "@/lib/actions/chats/get-chat";
+import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
+import { ChatPageClient } from "@/components/chat/chat-page-client";
 
-import { ChatUI } from "@/components/chat/chat-ui";
-import { useParams } from "next/navigation";
+export default async function ProjectChatPage({
+  params,
+}: {
+  params: Promise<{ id: string; chatId: string }>;
+}) {
+  const { id, chatId } = await params;
 
-export default function ProjectChatPage() {
-  const params = useParams();
-  const chatId = params.chatId as string;
-
-  return <ChatUI chatId={chatId} />;
+  try {
+    const data = await getChat(chatId);
+    const chat = buildChatFromRows(data);
+    if (chat.projectId !== id) {
+      notFound();
+    }
+    return <ChatPageClient initialChat={chat} />;
+  } catch {
+    notFound();
+  }
 }

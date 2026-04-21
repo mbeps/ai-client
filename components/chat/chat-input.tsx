@@ -7,6 +7,7 @@ import {
   Plus,
   Mic,
   Send,
+  Square,
   Paperclip,
   Wrench,
   Database,
@@ -57,10 +58,16 @@ interface ChatInputProps {
     selectedServerIds: string[],
   ) => void;
   isLoading?: boolean;
+  onStop?: () => void;
   servers?: McpServer[];
 }
 
-export function ChatInput({ onSend, isLoading, servers }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  isLoading,
+  onStop,
+  servers,
+}: ChatInputProps) {
   const [input, setInput] = useState("");
   const [model, setModel] = useState<Model>(MODELS[0]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -350,14 +357,25 @@ export function ChatInput({ onSend, isLoading, servers }: ChatInputProps) {
           >
             <Mic className="h-3.5 w-3.5" />
           </Button>
-          <Button
-            size="icon"
-            className="h-7 w-7 rounded-full"
-            onClick={handleSend}
-            disabled={(!input.trim() && attachments.length === 0) || isLoading}
-          >
-            <Send className="h-3.5 w-3.5 ml-0.5" />
-          </Button>
+          {isLoading ? (
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7 rounded-full"
+              onClick={onStop}
+            >
+              <Square className="h-3 w-3 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              className="h-7 w-7 rounded-full"
+              onClick={handleSend}
+              disabled={!input.trim() && attachments.length === 0}
+            >
+              <Send className="h-3.5 w-3.5 ml-0.5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

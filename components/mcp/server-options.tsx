@@ -1,38 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Trash2,
-  MoreHorizontal,
-  Edit2,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
+import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import type { McpServer } from "@/lib/store";
 import { RenameDialog } from "@/components/shared/rename-dialog";
+import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { toast } from "sonner";
 
 export function ServerOptions({ server }: { server: McpServer }) {
   const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
   const [showRename, setShowRename] = useState(false);
 
   const renameMcpServer = useAppStore((state) => state.renameMcpServer);
@@ -56,7 +34,6 @@ export function ServerOptions({ server }: { server: McpServer }) {
     } catch {
       toast.error("Failed to toggle server");
     }
-    setOpen(false);
   };
 
   const handleDelete = async () => {
@@ -66,115 +43,34 @@ export function ServerOptions({ server }: { server: McpServer }) {
     } catch {
       toast.error("Failed to delete server");
     }
-    setOpen(false);
   };
 
-  if (isMobile) {
-    return (
-      <>
-        <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>{server.name}</DrawerTitle>
-            </DrawerHeader>
-            <div className="p-4 space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setShowRename(true);
-                  setOpen(false);
-                }}
-              >
-                <Edit2 className="mr-2 h-4 w-4" />
-                Rename Server
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleToggle}
-              >
-                {server.enabled ? (
-                  <>
-                    <ToggleRight className="mr-2 h-4 w-4" />
-                    Disable Server
-                  </>
-                ) : (
-                  <>
-                    <ToggleLeft className="mr-2 h-4 w-4" />
-                    Enable Server
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full justify-start"
-                onClick={handleDelete}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Server
-              </Button>
-            </div>
-            <DrawerFooter className="pt-2">
-              <DrawerClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-
-        <RenameDialog
-          isOpen={showRename}
-          onClose={() => setShowRename(false)}
-          initialValue={server.name}
-          onConfirm={handleRename}
-          title="Rename Server"
-        />
-      </>
-    );
-  }
+  const items = [
+    {
+      label: "Rename Server",
+      icon: <Edit2 className="mr-2 h-4 w-4" />,
+      onClick: () => setShowRename(true),
+    },
+    {
+      label: server.enabled ? "Disable Server" : "Enable Server",
+      icon: server.enabled ? (
+        <ToggleRight className="mr-2 h-4 w-4" />
+      ) : (
+        <ToggleLeft className="mr-2 h-4 w-4" />
+      ),
+      onClick: handleToggle,
+    },
+    {
+      label: "Delete Server",
+      icon: <Trash2 className="mr-2 h-4 w-4" />,
+      onClick: handleDelete,
+      isDestructive: true,
+    },
+  ];
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setShowRename(true)}>
-            <Edit2 className="mr-2 h-4 w-4" />
-            Rename Server
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleToggle}>
-            {server.enabled ? (
-              <>
-                <ToggleRight className="mr-2 h-4 w-4" />
-                Disable Server
-              </>
-            ) : (
-              <>
-                <ToggleLeft className="mr-2 h-4 w-4" />
-                Enable Server
-              </>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-            onClick={handleDelete}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Server
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
+      <ResponsiveMenu title={server.name} items={items} isMobile={isMobile} />
       <RenameDialog
         isOpen={showRename}
         onClose={() => setShowRename(false)}
