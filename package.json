@@ -1,7 +1,12 @@
 {
-  "name": "better-auth-crash-course",
+  "name": "ai-client",
   "version": "0.1.0",
   "private": true,
+  "author": {
+    "name": "Maruf Bepary",
+    "email": "bepary71@gmail.com"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
