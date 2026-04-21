@@ -81,11 +81,23 @@ export function ChatUI({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat]);
-  useEffect(() => {
+
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      );
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      } else {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
-  }, [chat?.currentLeafId]);
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chat?.currentLeafId, streamingContent, activeToolCalls.length, scrollToBottom]);
 
   const handleStop = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -352,95 +364,99 @@ export function ChatUI({
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="flex-1 flex flex-col min-w-0">
-        <ScrollArea className="flex-1 px-4 md:px-8 py-6" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto space-y-6 pb-20">
-            {thread.length === 0 ? (
-              <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-50">
-                <h2 className="text-2xl font-bold mb-2">
-                  How can I help you today?
-                </h2>
-                <p>Try asking for a diagram, math formula, or standard text.</p>
-              </div>
-            ) : (
-              thread.map((msg, index) => {
-                // Find siblings to support branching UI
-                const parent = msg.parentId
-                  ? chat.messages[msg.parentId]
-                  : null;
-                // Root messages (parentId null) are siblings of each other
-                const siblingsIds = parent
-                  ? parent.childrenIds
-                  : Object.values(chat.messages)
-                      .filter((m) => !m.parentId)
-                      .map((m) => m.id);
-                const siblings = siblingsIds
-                  .map((id) => chat.messages[id])
-                  .filter(Boolean);
-                const currentIndex = siblings.findIndex((s) => s.id === msg.id);
+      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
+          <div className="px-4 md:px-8 py-6">
+            <div className="max-w-4xl mx-auto space-y-6 pb-12">
+              {thread.length === 0 ? (
+                <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-50">
+                  <h2 className="text-2xl font-bold mb-2">
+                    How can I help you today?
+                  </h2>
+                  <p>
+                    Try asking for a diagram, math formula, or standard text.
+                  </p>
+                </div>
+              ) : (
+                thread.map((msg, index) => {
+                  // Find siblings to support branching UI
+                  const parent = msg.parentId ? chat.messages[msg.parentId] : null;
+                  // Root messages (parentId null) are siblings of each other
+                  const siblingsIds = parent
+                    ? parent.childrenIds
+                    : Object.values(chat.messages)
+                        .filter((m) => !m.parentId)
+                        .map((m) => m.id);
+                  const siblings = siblingsIds
+                    .map((id) => chat.messages[id])
+                    .filter(Boolean);
+                  const currentIndex = siblings.findIndex((s) => s.id === msg.id);
 
-                return (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    isLatest={index === thread.length - 1}
-                    onDelete={handleDelete}
-                    onEdit={handleEdit}
-                    siblings={siblings}
-                    currentSiblingIndex={currentIndex}
-                    onNavigateBranch={(siblingId) => {
-                      setCurrentLeafDb(
-                        chatId,
-                        getDeepestLeaf(chat.messages, siblingId),
-                      );
-                    }}
-                  />
-                );
-              })
-            )}
-            {(streamingContent !== null || activeToolCalls.length > 0) && (
-              <>
-                {activeToolCalls.length > 0 && (
-                  <div className="text-muted-foreground text-sm space-y-1 ml-2">
-                    {activeToolCalls.map((tc) => (
-                      <div key={tc.toolCallId}>
-                        {tc.status === "calling"
-                          ? `🔧 Calling ${tc.toolName}…`
-                          : `✅ ${tc.toolName} complete`}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {streamingContent !== null && (
-                  <MessageBubble
-                    message={{
-                      id: "streaming",
-                      role: "assistant",
-                      content: streamingContent,
-                      createdAt: new Date(),
-                      parentId: null,
-                      childrenIds: [],
-                    }}
-                    isLatest={true}
-                    onDelete={() => {}}
-                    onEdit={() => {}}
-                    siblings={[]}
-                    currentSiblingIndex={0}
-                    onNavigateBranch={() => {}}
-                  />
-                )}
-              </>
-            )}
+                  return (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      isLatest={index === thread.length - 1}
+                      onDelete={handleDelete}
+                      onEdit={handleEdit}
+                      siblings={siblings}
+                      currentSiblingIndex={currentIndex}
+                      onNavigateBranch={(siblingId) => {
+                        setCurrentLeafDb(
+                          chatId,
+                          getDeepestLeaf(chat.messages, siblingId),
+                        );
+                      }}
+                    />
+                  );
+                })
+              )}
+              {(streamingContent !== null || activeToolCalls.length > 0) && (
+                <>
+                  {activeToolCalls.length > 0 && (
+                    <div className="text-muted-foreground text-sm space-y-1 ml-2">
+                      {activeToolCalls.map((tc) => (
+                        <div key={tc.toolCallId}>
+                          {tc.status === "calling"
+                            ? `🔧 Calling ${tc.toolName}…`
+                            : `✅ ${tc.toolName} complete`}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {streamingContent !== null && (
+                    <MessageBubble
+                      message={{
+                        id: "streaming",
+                        role: "assistant",
+                        content: streamingContent,
+                        createdAt: new Date(),
+                        parentId: null,
+                        childrenIds: [],
+                      }}
+                      isLatest={true}
+                      onDelete={() => {}}
+                      onEdit={() => {}}
+                      siblings={[]}
+                      currentSiblingIndex={0}
+                      onNavigateBranch={() => {}}
+                    />
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </ScrollArea>
 
-        <div className="px-4 md:px-8 pb-4">
-          <ChatInput
-            onSend={handleSend}
-            isLoading={isLoading}
-            onStop={handleStop}
-            servers={mcpServers.filter((s) => s.enabled)}
-          />
+        <div className="px-4 md:px-8 pb-4 shrink-0 bg-background/80 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto">
+            <ChatInput
+              onSend={handleSend}
+              isLoading={isLoading}
+              onStop={handleStop}
+              servers={mcpServers.filter((s) => s.enabled)}
+            />
+          </div>
         </div>
       </div>
 
