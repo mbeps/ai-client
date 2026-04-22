@@ -14,7 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, MessageSquarePlus } from "lucide-react";
+import {
+  Library,
+  Loader2,
+  MessageSquare,
+  MessageSquarePlus,
+  Settings,
+  Terminal,
+} from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
@@ -141,11 +148,35 @@ export default function ProjectPage() {
       </div>
 
       <Tabs defaultValue="chats" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="chats">Chats</TabsTrigger>
-          <TabsTrigger value="prompt">Global Prompt</TabsTrigger>
-          <TabsTrigger value="knowledge">Knowledgebase</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsList className="mb-4 h-auto w-full flex-wrap md:w-fit">
+          <TabsTrigger
+            value="chats"
+            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
+          >
+            <MessageSquare className="size-4" />
+            <span>Chats</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="prompt"
+            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
+          >
+            <Terminal className="size-4" />
+            <span>Global Prompt</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="knowledge"
+            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
+          >
+            <Library className="size-4" />
+            <span>Knowledge-base</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
+          >
+            <Settings className="size-4" />
+            <span>Settings</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="chats" className="space-y-4">
@@ -223,10 +254,7 @@ export default function ProjectPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Project Name</label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
