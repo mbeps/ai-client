@@ -52,6 +52,10 @@ export function ChatUI({
   const [sideViewContent, setSideViewContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(
+    null,
+  );
+  const [isStreamingReasoning, setIsStreamingReasoning] = useState(false);
   const [activeToolCalls, setActiveToolCalls] = useState<
     Array<{
       toolCallId: string;
@@ -97,7 +101,12 @@ export function ChatUI({
 
   useEffect(() => {
     scrollToBottom();
-  }, [chat?.currentLeafId, streamingContent, activeToolCalls.length, scrollToBottom]);
+  }, [
+    chat?.currentLeafId,
+    streamingContent,
+    activeToolCalls.length,
+    scrollToBottom,
+  ]);
 
   const handleStop = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -197,6 +206,7 @@ export function ChatUI({
     }));
 
     let accumulated = "";
+    let accumulatedReasoning = "";
 
     try {
       const response = await fetch("/api/chat", {
@@ -253,7 +263,12 @@ export function ChatUI({
             metadata?: { toolCalls: unknown[]; toolResults: unknown[] };
           };
 
-          if (event.type === "text" && event.delta) {
+          if (event.type === "reasoning" && event.delta) {
+            accumulatedReasoning += event.delta;
+            setStreamingReasoning(accumulatedReasoning);
+            setIsStreamingReasoning(true);
+          } else if (event.type === "text" && event.delta) {
+            setIsStreamingReasoning(false);
             accumulated += event.delta;
             setStreamingContent(accumulated);
           } else if (
@@ -261,6 +276,7 @@ export function ChatUI({
             event.toolCallId &&
             event.toolName
           ) {
+            setIsStreamingReasoning(false);
             setActiveToolCalls((prev) => [
               ...prev,
               {
@@ -289,12 +305,16 @@ export function ChatUI({
               userMsgId,
               event.id,
               metadata,
+              undefined,
+              accumulatedReasoning || undefined,
             );
             const mermaidMatch = accumulated.match(/```mermaid\n([\s\S]*?)```/);
             if (mermaidMatch) {
               setSideViewContent(mermaidMatch[0]);
             }
             setStreamingContent(null);
+            setStreamingReasoning(null);
+            setIsStreamingReasoning(false);
             setActiveToolCalls([]);
           } else if (event.type === "error") {
             setStreamingContent(null);
@@ -314,7 +334,16 @@ export function ChatUI({
       if (err.name === "AbortError") {
         toast.info("Generation stopped");
         if (accumulated.trim()) {
-          addMessage(chatId, "assistant", accumulated, userMsgId);
+          addMessage(
+            chatId,
+            "assistant",
+            accumulated,
+            userMsgId,
+            undefined,
+            null,
+            undefined,
+            accumulatedReasoning || undefined,
+          );
         }
       } else {
         console.error("Stream error:", err);
@@ -323,6 +352,8 @@ export function ChatUI({
     } finally {
       abortControllerRef.current = null;
       setStreamingContent(null);
+      setStreamingReasoning(null);
+      setIsStreamingReasoning(false);
       setActiveToolCalls([]);
       setIsLoading(false);
     }
@@ -361,7 +392,6 @@ export function ChatUI({
     await streamResponse(uuidv4(), newContent, msg.parentId, []);
   };
 
-
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
@@ -380,7 +410,9 @@ export function ChatUI({
               ) : (
                 thread.map((msg, index) => {
                   // Find siblings to support branching UI
-                  const parent = msg.parentId ? chat.messages[msg.parentId] : null;
+                  const parent = msg.parentId
+                    ? chat.messages[msg.parentId]
+                    : null;
                   // Root messages (parentId null) are siblings of each other
                   const siblingsIds = parent
                     ? parent.childrenIds
@@ -390,7 +422,9 @@ export function ChatUI({
                   const siblings = siblingsIds
                     .map((id) => chat.messages[id])
                     .filter(Boolean);
-                  const currentIndex = siblings.findIndex((s) => s.id === msg.id);
+                  const currentIndex = siblings.findIndex(
+                    (s) => s.id === msg.id,
+                  );
 
                   return (
                     <MessageBubble
@@ -407,11 +441,15 @@ export function ChatUI({
                           getDeepestLeaf(chat.messages, siblingId),
                         );
                       }}
+                      reasoning={msg.reasoning}
+                      isStreamingReasoning={false}
                     />
                   );
                 })
               )}
-              {(streamingContent !== null || activeToolCalls.length > 0) && (
+              {(streamingContent !== null ||
+                activeToolCalls.length > 0 ||
+                streamingReasoning !== null) && (
                 <>
                   {activeToolCalls.length > 0 && (
                     <div className="text-muted-foreground text-sm space-y-1 ml-2">
@@ -424,12 +462,13 @@ export function ChatUI({
                       ))}
                     </div>
                   )}
-                  {streamingContent !== null && (
+                  {(streamingContent !== null ||
+                    streamingReasoning !== null) && (
                     <MessageBubble
                       message={{
                         id: "streaming",
                         role: "assistant",
-                        content: streamingContent,
+                        content: streamingContent ?? "",
                         createdAt: new Date(),
                         parentId: null,
                         childrenIds: [],
@@ -440,6 +479,8 @@ export function ChatUI({
                       siblings={[]}
                       currentSiblingIndex={0}
                       onNavigateBranch={() => {}}
+                      reasoning={streamingReasoning ?? undefined}
+                      isStreamingReasoning={isStreamingReasoning}
                     />
                   )}
                 </>

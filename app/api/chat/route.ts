@@ -56,7 +56,10 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
-    console.error("[Chat API] Invalid request:", JSON.stringify(parsed.error.format(), null, 2));
+    console.error(
+      "[Chat API] Invalid request:",
+      JSON.stringify(parsed.error.format(), null, 2),
+    );
     return Response.json(
       { error: "Invalid request", details: parsed.error.flatten() },
       { status: 400 },
@@ -170,6 +173,7 @@ export async function POST(req: Request) {
 
   const assistantMessageId = uuidv4();
   let fullText = "";
+  let fullReasoning = "";
 
   const encode = (data: object) =>
     new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
@@ -228,6 +232,13 @@ export async function POST(req: Request) {
                 );
                 break;
 
+              case "reasoning-delta":
+                fullReasoning += chunk.text;
+                controller.enqueue(
+                  encode({ type: "reasoning", delta: chunk.text }),
+                );
+                break;
+
               case "error":
                 controller.enqueue(
                   encode({ type: "error", message: String(chunk.error) }),
@@ -240,13 +251,18 @@ export async function POST(req: Request) {
           let message = "An error occurred during generation";
           let code = "ERROR";
 
-          if (error.name === "AI_RetryError" || error.name === "AI_APICallError") {
+          if (
+            error.name === "AI_RetryError" ||
+            error.name === "AI_APICallError"
+          ) {
             const statusCode = error.statusCode || error.lastError?.statusCode;
             if (statusCode === 429) {
-              message = "Too many requests. Please try again later or add your own API key.";
+              message =
+                "Too many requests. Please try again later or add your own API key.";
               code = "RATE_LIMIT";
             } else if (error.message?.includes("rate-limited")) {
-              message = "The AI provider is temporarily rate-limited. Please try again shortly.";
+              message =
+                "The AI provider is temporarily rate-limited. Please try again shortly.";
               code = "RATE_LIMIT";
             }
           }
@@ -256,7 +272,7 @@ export async function POST(req: Request) {
           return;
         }
 
-        if (!fullText && toolCalls.length === 0) {
+        if (!fullText && toolCalls.length === 0 && !fullReasoning) {
           controller.enqueue(
             encode({ type: "error", message: "No response from model" }),
           );
@@ -264,9 +280,17 @@ export async function POST(req: Request) {
           return;
         }
 
+        const metadataObj: Record<string, unknown> = {};
+        if (toolCalls.length > 0) {
+          metadataObj.toolCalls = toolCalls;
+          metadataObj.toolResults = toolResults;
+        }
+        if (fullReasoning) {
+          metadataObj.reasoning = fullReasoning;
+        }
         const metadata =
-          toolCalls.length > 0
-            ? JSON.stringify({ toolCalls, toolResults })
+          Object.keys(metadataObj).length > 0
+            ? JSON.stringify(metadataObj)
             : null;
 
         await db.insert(message).values({

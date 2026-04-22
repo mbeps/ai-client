@@ -177,6 +177,8 @@ export type Message = {
   childrenIds: string[];
   /** Optional JSON string for tool call metadata. */
   metadata?: string | null;
+  /** AI reasoning/thinking tokens, if present. */
+  reasoning?: string;
   /** Files attached to this message. */
   attachments?: Attachment[];
 };
@@ -234,6 +236,7 @@ type AppState = {
     id?: string,
     metadata?: string | null,
     attachments?: Attachment[],
+    reasoning?: string,
   ) => void;
   /** Removes a message and all its descendants from the tree. */
   deleteMessage: (chatId: string, messageId: string) => void;
@@ -422,7 +425,16 @@ export const useAppStore = create<AppState>((set, get) => ({
    * @param content - Text body of the message.
    * @param parentId - Parent message ID in the tree, or null for a root message.
    */
-  addMessage: (chatId, role, content, parentId, id, metadata, attachments) => {
+  addMessage: (
+    chatId,
+    role,
+    content,
+    parentId,
+    id,
+    metadata,
+    attachments,
+    reasoning,
+  ) => {
     const newMessageId = id ?? uuidv4();
     set((state) => {
       const chat = state.chats[chatId];
@@ -436,6 +448,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         parentId,
         childrenIds: [],
         metadata: metadata ?? null,
+        reasoning: reasoning ?? undefined,
         attachments: attachments ?? [],
       };
 
@@ -614,6 +627,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     for (const m of messageRows) {
       const chatEntry = chats[m.chatId];
       if (!chatEntry) continue;
+      let parsedReasoning: string | undefined;
+      if (m.metadata) {
+        try {
+          const parsed = JSON.parse(m.metadata);
+          parsedReasoning = parsed?.reasoning ?? undefined;
+        } catch {
+          parsedReasoning = undefined;
+        }
+      }
       chatEntry.messages[m.id] = {
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -622,6 +644,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         parentId: m.parentId,
         childrenIds: [],
         metadata: m.metadata ?? null,
+        reasoning: parsedReasoning,
         attachments: [],
       };
     }
