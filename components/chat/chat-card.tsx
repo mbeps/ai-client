@@ -35,7 +35,9 @@ export function ChatCard({ chat }: ChatCardProps) {
         router.push(
           chat.projectId
             ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
-            : ROUTES.CHATS.detail(chat.id),
+            : chat.assistantId
+              ? ROUTES.ASSISTANTS.chat(chat.assistantId, chat.id)
+              : ROUTES.CHATS.detail(chat.id),
         )
       }
     >

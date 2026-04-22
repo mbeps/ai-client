@@ -119,6 +119,7 @@ export function CreateAssistantDialog({
                     <Textarea
                       placeholder="e.g., You are a helpful code reviewer..."
                       rows={4}
+                      className="max-h-48"
                       {...field}
                     />
                   </FormControl>

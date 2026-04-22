@@ -8,12 +8,14 @@ import { and, eq } from "drizzle-orm";
 export async function deleteProject(id: string): Promise<void> {
   const session = await requireSession();
 
-  await db
-    .update(chat)
-    .set({ projectId: null })
-    .where(and(eq(chat.projectId, id), eq(chat.userId, session.user.id)));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(chat)
+      .set({ projectId: null })
+      .where(and(eq(chat.projectId, id), eq(chat.userId, session.user.id)));
 
-  await db
-    .delete(project)
-    .where(and(eq(project.id, id), eq(project.userId, session.user.id)));
+    await tx
+      .delete(project)
+      .where(and(eq(project.id, id), eq(project.userId, session.user.id)));
+  });
 }

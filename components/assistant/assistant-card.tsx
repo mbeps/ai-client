@@ -2,9 +2,8 @@
 
 import { Card } from "@/components/ui/card";
 import { Bot } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { ROUTES } from "@/lib/routes";
 import type { Assistant } from "@/lib/store";
+import { useCreateChat } from "@/hooks/use-create-chat";
 import { AssistantOptions } from "./assistant-options";
 
 /**
@@ -25,12 +24,12 @@ interface AssistantCardProps {
  * @author Maruf Bepary
  */
 export function AssistantCard({ assistant }: AssistantCardProps) {
-  const router = useRouter();
+  const createNewChat = useCreateChat();
 
   return (
     <Card
       className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[100px]"
-      onClick={() => router.push(ROUTES.ASSISTANTS.detail(assistant.id))}
+      onClick={() => createNewChat("New Chat", undefined, assistant.id)}
     >
       <div className="flex justify-between items-start gap-4">
         <div className="flex items-start gap-3 flex-1 min-w-0">
