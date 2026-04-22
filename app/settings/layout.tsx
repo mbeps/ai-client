@@ -1,19 +1,17 @@
 "use client";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ProfileSidebar } from "@/components/sidebar/profile-sidebar";
+import { SettingsSidebar } from "@/components/sidebar/settings-sidebar";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
 
 /**
- * Authentication-guarded layout for all profile routes.
- * Mirrors the structure of MainLayout but uses ProfileSidebar.
+ * Authentication-guarded layout for all settings routes.
  */
-export default function ProfileLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -37,7 +35,7 @@ export default function ProfileLayout({
 
   return (
     <SidebarProvider>
-      <ProfileSidebar />
+      <SettingsSidebar />
       <main className="flex flex-col flex-1 h-screen overflow-hidden bg-background">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
           <SidebarTrigger />
