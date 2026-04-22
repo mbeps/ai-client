@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ROUTES } from "@/lib/routes";
 
 export default function ToolError({
   error,
@@ -33,7 +34,7 @@ export default function ToolError({
           Try again
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/tools">Back to tools</Link>
+          <Link href={ROUTES.TOOLS.path}>Back to tools</Link>
         </Button>
       </div>
     </div>

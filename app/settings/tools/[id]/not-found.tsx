@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/routes";
 
 export default function ToolNotFound() {
   return (
@@ -10,7 +11,7 @@ export default function ToolNotFound() {
         This MCP server does not exist or you don&apos;t have access to it.
       </p>
       <Button asChild>
-        <Link href="/tools">Back to tools</Link>
+        <Link href={ROUTES.TOOLS.path}>Back to tools</Link>
       </Button>
     </div>
   );

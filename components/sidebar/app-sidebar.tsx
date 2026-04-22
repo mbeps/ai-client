@@ -134,14 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Tools">
-                <Link href={ROUTES.TOOLS.path}>
-                  <Wrench className="h-4 w-4" />
-                  <span>Tools</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+
           </SidebarMenu>
         </SidebarGroup>
 
@@ -247,7 +240,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
-                      href={ROUTES.PROFILE.path}
+                      href={ROUTES.SETTINGS.path}
                       className="cursor-pointer w-full"
                     >
                       <Settings className="mr-2 h-4 w-4" />

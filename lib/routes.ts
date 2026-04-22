@@ -53,10 +53,20 @@ export const ROUTES = {
     name: "Knowledge Bases",
     detail: (id: string) => `/knowledgebases/${id}` as const,
   },
+  SETTINGS: {
+    path: "/settings" as const,
+    name: "Settings",
+    APP: { path: "/settings/app" as const, name: "App Settings" },
+    TOOLS: {
+      path: "/settings/tools" as const,
+      name: "Tools",
+      detail: (id: string) => `/settings/tools/${id}` as const,
+    },
+  },
   TOOLS: {
-    path: "/tools" as const,
+    path: "/settings/tools" as const,
     name: "Tools",
-    detail: (id: string) => `/tools/${id}` as const,
+    detail: (id: string) => `/settings/tools/${id}` as const,
   },
   PROFILE: {
     path: "/profile" as const,
