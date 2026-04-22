@@ -9,9 +9,6 @@ import {
   Mic,
   Send,
   Square,
-  Paperclip,
-  Wrench,
-  Database,
   X,
   FileText,
   Image as ImageIcon,
@@ -32,24 +29,11 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import type { Attachment, McpServer } from "@/lib/store";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft } from "lucide-react";
+import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
-
-type Model = { label: string; value: string };
-
-const MODELS: Model[] = [
-  {
-    label: "Nemotron Nano VL (Free)",
-    value: "nvidia/nemotron-nano-12b-v2-vl:free",
-  },
-  { label: "Gemma 3 27B (Free)", value: "google/gemma-3-27b-it:free" },
-  { label: "Gemma 3 12B (Free)", value: "google/gemma-3-12b-it:free" },
-  { label: "Gemma 4 31B (Free)", value: "google/gemma-4-31b-it:free" },
-  { label: "GPT-4o", value: "openai/gpt-4o" },
-  { label: "Claude 3.5 Sonnet", value: "anthropic/claude-3-5-sonnet" },
-];
+import { MODELS } from "@/models";
+import { Model } from "@/types/model";
 
 interface ChatInputProps {
   onSend: (
@@ -62,84 +46,6 @@ interface ChatInputProps {
   onStop?: () => void;
   servers?: McpServer[];
 }
-
-interface AttachmentsMenuProps {
-  showToolsPanel: boolean;
-  setShowToolsPanel: (show: boolean) => void;
-  servers?: McpServer[];
-  selectedServerIds: Set<string>;
-  toggleServer: (id: string) => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-}
-
-const AttachmentsMenu = ({
-  showToolsPanel,
-  setShowToolsPanel,
-  servers,
-  selectedServerIds,
-  toggleServer,
-  fileInputRef,
-}: AttachmentsMenuProps) => (
-  <div className="flex flex-col gap-0.5 p-1">
-    {showToolsPanel ? (
-      <>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          onClick={() => setShowToolsPanel(false)}
-        >
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <div className="px-1 py-0.5">
-          {!servers || servers.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-1">
-              No tools available
-            </p>
-          ) : (
-            servers.map((server) => (
-              <label
-                key={server.id}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer hover:bg-accent text-sm"
-              >
-                <Checkbox
-                  checked={selectedServerIds.has(server.id)}
-                  onCheckedChange={() => toggleServer(server.id)}
-                />
-                <span className="truncate">{server.name}</span>
-              </label>
-            ))
-          )}
-        </div>
-      </>
-    ) : (
-      <>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className="mr-2 h-4 w-4" /> Upload File
-        </Button>
-        <Button variant="ghost" size="sm" className="justify-start">
-          <Database className="mr-2 h-4 w-4" /> Add Knowledgebase
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          disabled={!servers || servers.length === 0}
-          onClick={() => setShowToolsPanel(true)}
-        >
-          <Wrench className="mr-2 h-4 w-4" />
-          Select Tools
-          {selectedServerIds.size > 0 ? ` (${selectedServerIds.size})` : ""}
-        </Button>
-      </>
-    )}
-  </div>
-);
 
 export function ChatInput({
   onSend,
@@ -238,7 +144,6 @@ export function ChatInput({
     });
   };
 
-
   return (
     <div
       className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border-t md:border md:rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
@@ -267,14 +172,14 @@ export function ChatInput({
             >
               {att.type === "image" ? (
                 att.dataUrl ? (
-                <Image
-                  src={att.dataUrl}
-                  alt={att.name}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded object-cover"
-                  unoptimized
-                />
+                  <Image
+                    src={att.dataUrl}
+                    alt={att.name}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <ImageIcon className="h-4 w-4 text-muted-foreground" />
                 )

@@ -15,8 +15,6 @@ import { ChatOptions } from "./chat-options";
 interface ChatCardProps {
   /** The chat entity to display. */
   chat: Chat;
-  /** Callback invoked when the user confirms deletion. */
-  onDelete: () => void;
 }
 
 /**
@@ -25,10 +23,9 @@ interface ChatCardProps {
  * Shows a chat type label and an options menu with Move and Delete actions.
  *
  * @param props.chat - The chat to display.
- * @param props.onDelete - Called when the user deletes the chat.
  * @author Maruf Bepary
  */
-export function ChatCard({ chat, onDelete }: ChatCardProps) {
+export function ChatCard({ chat }: ChatCardProps) {
   const router = useRouter();
 
   return (
@@ -61,7 +58,7 @@ export function ChatCard({ chat, onDelete }: ChatCardProps) {
           </div>
         </div>
         <div onClick={(e) => e.stopPropagation()}>
-          <ChatOptions chat={chat} onDelete={onDelete} />
+          <ChatOptions chat={chat} />
         </div>
       </div>
     </Card>

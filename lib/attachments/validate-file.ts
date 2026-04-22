@@ -13,10 +13,10 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   "text/markdown",
 ]);
 
-const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
-const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
-const MAX_IMAGES_PER_MESSAGE = 3;
-const MAX_ATTACHMENTS_PER_MESSAGE = 5;
+const MAX_IMAGE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
+const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_IMAGES_PER_MESSAGE = 2;
+const MAX_ATTACHMENTS_PER_MESSAGE = 3;
 
 type ValidationResult = { valid: true } | { valid: false; reason: string };
 

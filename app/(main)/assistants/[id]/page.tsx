@@ -20,6 +20,7 @@ import { Bot, MessageSquarePlus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { useCreateChat } from "@/hooks/use-create-chat";
 
 export default function AssistantPage() {
   const params = useParams();
@@ -33,7 +34,7 @@ export default function AssistantPage() {
   const chats = Object.values(allChats).filter(
     (c) => c.assistantId === assistantId,
   );
-  const createChat = useAppStore((state) => state.createChat);
+  const createNewChat = useCreateChat();
   const updateAssistantDb = useAppStore((state) => state.updateAssistantDb);
   const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
 
@@ -43,10 +44,7 @@ export default function AssistantPage() {
 
   if (!assistant) return <NotFoundMessage entity="Assistant" />;
 
-  const handleNewChat = () => {
-    const chatId = createChat(undefined, assistantId);
-    router.push(ROUTES.CHATS.detail(chatId));
-  };
+  const handleNewChat = () => createNewChat("New Chat", undefined, assistantId);
 
   const handleSave = async () => {
     setSaving(true);

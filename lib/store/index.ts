@@ -177,6 +177,8 @@ export type Message = {
   childrenIds: string[];
   /** Optional JSON string for tool call metadata. */
   metadata?: string | null;
+  /** AI reasoning/thinking tokens, if present. */
+  reasoning?: string;
   /** Files attached to this message. */
   attachments?: Attachment[];
 };
@@ -234,6 +236,7 @@ type AppState = {
     id?: string,
     metadata?: string | null,
     attachments?: Attachment[],
+    reasoning?: string,
   ) => void;
   /** Removes a message and all its descendants from the tree. */
   deleteMessage: (chatId: string, messageId: string) => void;
@@ -333,7 +336,7 @@ type AppState = {
 /**
  * Maps a ProjectRow from the DB to the Zustand Project shape.
  */
-function projectRowToStore(row: ProjectRow): Project {
+export function projectRowToStore(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
@@ -348,7 +351,7 @@ function projectRowToStore(row: ProjectRow): Project {
 /**
  * Maps an AssistantRow from the DB to the Zustand Assistant shape.
  */
-function assistantRowToStore(row: AssistantRow): Assistant {
+export function assistantRowToStore(row: AssistantRow): Assistant {
   return {
     id: row.id,
     name: row.name,
@@ -358,6 +361,21 @@ function assistantRowToStore(row: AssistantRow): Assistant {
     knowledgebases: [],
     avatar: row.avatar ?? undefined,
     updatedAt: new Date(row.updatedAt),
+  };
+}
+
+/**
+ * Maps a ChatRow from the DB to the Zustand Chat shape.
+ */
+export function chatRowToStore(row: ChatRow): Chat {
+  return {
+    id: row.id,
+    title: row.title,
+    projectId: row.projectId ?? undefined,
+    assistantId: row.assistantId ?? undefined,
+    updatedAt: new Date(row.updatedAt),
+    messages: {},
+    currentLeafId: row.currentLeafId ?? null,
   };
 }
 
@@ -422,7 +440,16 @@ export const useAppStore = create<AppState>((set, get) => ({
    * @param content - Text body of the message.
    * @param parentId - Parent message ID in the tree, or null for a root message.
    */
-  addMessage: (chatId, role, content, parentId, id, metadata, attachments) => {
+  addMessage: (
+    chatId,
+    role,
+    content,
+    parentId,
+    id,
+    metadata,
+    attachments,
+    reasoning,
+  ) => {
     const newMessageId = id ?? uuidv4();
     set((state) => {
       const chat = state.chats[chatId];
@@ -436,6 +463,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         parentId,
         childrenIds: [],
         metadata: metadata ?? null,
+        reasoning: reasoning ?? undefined,
         attachments: attachments ?? [],
       };
 
@@ -600,20 +628,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
-      chats[row.id] = {
-        id: row.id,
-        title: row.title,
-        projectId: row.projectId ?? undefined,
-        assistantId: row.assistantId ?? undefined,
-        updatedAt: new Date(row.updatedAt),
-        messages: {},
-        currentLeafId: row.currentLeafId,
-      };
+      chats[row.id] = chatRowToStore(row);
     }
 
     for (const m of messageRows) {
       const chatEntry = chats[m.chatId];
       if (!chatEntry) continue;
+      let parsedReasoning: string | undefined;
+      if (m.metadata) {
+        try {
+          const parsed = JSON.parse(m.metadata);
+          parsedReasoning = parsed?.reasoning ?? undefined;
+        } catch {
+          parsedReasoning = undefined;
+        }
+      }
       chatEntry.messages[m.id] = {
         id: m.id,
         role: m.role as "user" | "assistant",
@@ -622,6 +651,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         parentId: m.parentId,
         childrenIds: [],
         metadata: m.metadata ?? null,
+        reasoning: parsedReasoning,
         attachments: [],
       };
     }
@@ -815,15 +845,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createChatDb: async (title, projectId, assistantId) => {
     const row = await createChat(title, projectId, assistantId);
-    const newChat: Chat = {
-      id: row.id,
-      title: row.title,
-      projectId: row.projectId ?? undefined,
-      assistantId: row.assistantId ?? undefined,
-      updatedAt: new Date(row.updatedAt),
-      messages: {},
-      currentLeafId: null,
-    };
+    const newChat = chatRowToStore(row);
     set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
     return row.id;
   },

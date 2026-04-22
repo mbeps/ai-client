@@ -20,8 +20,10 @@ import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
 import { ChatHistoryCard } from "@/components/chat/chat-history-card";
+import { useCreateChat } from "@/hooks/use-create-chat";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+
 
 export default function ProjectPage() {
   const params = useParams();
@@ -37,7 +39,7 @@ export default function ProjectPage() {
   );
   const allKbs = useAppStore((state) => state.knowledgebases);
   const kbs = allKbs.filter((k) => project?.knowledgebases.includes(k.id));
-  const createChat = useAppStore((state) => state.createChat);
+  const createNewChat = useCreateChat();
   const updateProjectDb = useAppStore((state) => state.updateProjectDb);
   const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
 
@@ -50,10 +52,7 @@ export default function ProjectPage() {
 
   if (!project) return <NotFoundMessage entity="Project" />;
 
-  const handleNewChat = () => {
-    const chatId = createChat(projectId);
-    router.push(ROUTES.PROJECTS.chat(projectId, chatId));
-  };
+  const handleNewChat = () => createNewChat("New Chat", projectId);
 
   const handleSavePrompt = async () => {
     setSavingPrompt(true);
@@ -110,9 +109,9 @@ export default function ProjectPage() {
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-muted-foreground">{project.description}</p>
         </div>
-        <Button onClick={handleNewChat}>
+        <Button onClick={handleNewChat} size="lg">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
-          New Chat in Project
+          New Chat
         </Button>
       </div>
 

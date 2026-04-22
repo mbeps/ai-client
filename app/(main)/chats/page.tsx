@@ -1,22 +1,10 @@
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { ChatsClient } from "./_components/chats-client";
-import type { Chat } from "@/lib/store";
+import { chatRowToStore } from "@/lib/store";
 import type { ChatRow } from "@/types/chat-row";
-
-function chatRowToChat(row: ChatRow): Chat {
-  return {
-    id: row.id,
-    title: row.title,
-    projectId: row.projectId ?? undefined,
-    assistantId: row.assistantId ?? undefined,
-    updatedAt: new Date(row.updatedAt),
-    messages: {},
-    currentLeafId: row.currentLeafId,
-  };
-}
 
 export default async function ChatsPage() {
   const rows = await listChats().catch(() => [] as ChatRow[]);
-  const chats = rows.map(chatRowToChat);
+  const chats = rows.map(chatRowToStore);
   return <ChatsClient initialChats={chats} />;
 }

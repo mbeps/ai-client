@@ -35,6 +35,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
+import { useCreateChat } from "@/hooks/use-create-chat";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -63,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
-  const createChatDb = useAppStore((state) => state.createChatDb);
+  const createNewChat = useCreateChat();
 
   const recentChats = Object.values(chats)
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
@@ -79,10 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleNewChat = async () => {
-    const id = await createChatDb("New Chat");
-    router.push(ROUTES.CHATS.detail(id));
-  };
+  const handleNewChat = () => createNewChat();
 
   return (
     <Sidebar {...props}>

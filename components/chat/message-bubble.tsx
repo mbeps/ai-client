@@ -12,7 +12,9 @@ import {
 import { type Attachment, Message } from "@/lib/store";
 import {
   Bot,
+  Brain,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -88,6 +90,10 @@ interface MessageBubbleProps {
   currentSiblingIndex: number;
   /** Callback invoked with a sibling's ID when the user clicks a branch arrow. */
   onNavigateBranch: (siblingId: string) => void;
+  /** The full reasoning/thinking text produced by the model. */
+  reasoning?: string;
+  /** True while the model is actively streaming its reasoning. */
+  isStreamingReasoning?: boolean;
 }
 
 /**
@@ -107,11 +113,14 @@ interface MessageBubbleProps {
  */
 export function MessageBubble({
   message,
+  isLatest,
   onDelete,
   onEdit,
   siblings,
   currentSiblingIndex,
   onNavigateBranch,
+  reasoning,
+  isStreamingReasoning,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -122,6 +131,7 @@ export function MessageBubble({
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [isThinkingOpen, setIsThinkingOpen] = useState(isLatest && !!reasoning);
 
   const handleCopy = async () => {
     try {
@@ -202,6 +212,30 @@ export function MessageBubble({
         </div>
 
         <div className="text-sm">
+          {!isUser && isStreamingReasoning && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse mb-2">
+              <Brain className="size-4" />
+              <span>Thinking...</span>
+            </div>
+          )}
+          {!isUser && reasoning && !isStreamingReasoning && (
+            <Collapsible open={isThinkingOpen} onOpenChange={setIsThinkingOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground mb-2 w-full">
+                <Brain className="size-4" />
+                <span>Thought process</span>
+                <ChevronDown
+                  className={`size-3 ml-auto transition-transform ${
+                    isThinkingOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="text-xs text-muted-foreground mb-2">
+                  <MarkdownRenderer content={reasoning} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
           {toolData && toolData.toolCalls.length > 0 && (
             <div className="space-y-2 mb-3">
               {toolData.toolCalls.map((tc) => {
