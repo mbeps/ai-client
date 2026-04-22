@@ -128,7 +128,7 @@ export default function AssistantPage() {
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <Bot className="h-8 w-8 text-primary" />
@@ -138,7 +138,7 @@ export default function AssistantPage() {
             <p className="text-muted-foreground">{assistant.description}</p>
           </div>
         </div>
-        <Button onClick={handleNewChat} size="lg">
+        <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
           Chat with Assistant
         </Button>

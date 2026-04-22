@@ -122,12 +122,12 @@ export default function ProjectPage() {
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-muted-foreground">{project.description}</p>
         </div>
-        <Button onClick={handleNewChat} size="lg">
+        <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
           New Chat
         </Button>

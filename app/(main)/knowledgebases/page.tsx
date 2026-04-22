@@ -19,7 +19,7 @@ export default function KnowledgebasesPage() {
       emptyStateMessage="No knowledge bases yet. Create one to attach documents to projects or assistants."
       searchPlaceholder="Search knowledgebases..."
       action={
-        <Button>
+        <Button className="w-full md:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           New Knowledgebase
         </Button>

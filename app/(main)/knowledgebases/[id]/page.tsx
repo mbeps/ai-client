@@ -43,12 +43,12 @@ export default function KnowledgebasePage() {
 
   return (
     <div className="page-container-detail">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
         <div>
           <h1 className="text-3xl font-bold">{kb.name}</h1>
           <p className="text-muted-foreground">{kb.description}</p>
         </div>
-        <Button>
+        <Button className="w-full md:w-auto">
           <Upload className="mr-2 h-4 w-4" />
           Upload Document
         </Button>
