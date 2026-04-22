@@ -7,6 +7,27 @@
 /** Base path segment shared by all authentication routes. */
 const AUTH_BASE = "/auth" as const;
 
+/** Base path segment for chat routes. */
+const CHATS_BASE = "/chats" as const;
+
+/** Base path segment for project routes. */
+const PROJECTS_BASE = "/projects" as const;
+
+/** Base path segment for assistant routes. */
+const ASSISTANTS_BASE = "/assistants" as const;
+
+/** Base path segment for knowledge base routes. */
+const KNOWLEDGEBASES_BASE = "/knowledgebases" as const;
+
+/** Base path segment for settings routes. */
+const SETTINGS_BASE = "/settings" as const;
+
+/** Base path segment for profile routes. */
+const PROFILE_BASE = "/profile" as const;
+
+/** Base path segment for API routes. */
+const API_BASE = "/api" as const;
+
 /**
  * Typed route map for every page in the application.
  * Static routes expose a `.path` string; dynamic routes expose helper functions
@@ -30,59 +51,62 @@ export const ROUTES = {
     },
   },
   CHATS: {
-    path: "/chats" as const,
+    path: CHATS_BASE,
     name: "Chats",
-    detail: (id: string) => `/chats/${id}` as const,
+    detail: (id: string) => `${CHATS_BASE}/${id}` as const,
   },
   PROJECTS: {
-    path: "/projects" as const,
+    path: PROJECTS_BASE,
     name: "Projects",
-    detail: (id: string) => `/projects/${id}` as const,
+    detail: (id: string) => `${PROJECTS_BASE}/${id}` as const,
     chat: (projectId: string, chatId: string) =>
-      `/projects/${projectId}/${chatId}` as const,
+      `${PROJECTS_BASE}/${projectId}/${chatId}` as const,
   },
   ASSISTANTS: {
-    path: "/assistants" as const,
+    path: ASSISTANTS_BASE,
     name: "Assistants",
-    detail: (id: string) => `/assistants/${id}` as const,
+    detail: (id: string) => `${ASSISTANTS_BASE}/${id}` as const,
     chat: (assistantId: string, chatId: string) =>
-      `/assistants/${assistantId}/${chatId}` as const,
+      `${ASSISTANTS_BASE}/${assistantId}/${chatId}` as const,
   },
   KNOWLEDGEBASES: {
-    path: "/knowledgebases" as const,
+    path: KNOWLEDGEBASES_BASE,
     name: "Knowledge Bases",
-    detail: (id: string) => `/knowledgebases/${id}` as const,
+    detail: (id: string) => `${KNOWLEDGEBASES_BASE}/${id}` as const,
   },
   SETTINGS: {
-    path: "/settings" as const,
+    path: SETTINGS_BASE,
     name: "Settings",
-    APP: { path: "/settings/app" as const, name: "App Settings" },
+    APP: { path: `${SETTINGS_BASE}/app` as const, name: "App Settings" },
     TOOLS: {
-      path: "/settings/tools" as const,
+      path: `${SETTINGS_BASE}/tools` as const,
       name: "Tools",
-      detail: (id: string) => `/settings/tools/${id}` as const,
+      detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
     },
     PROMPTS: {
-      path: "/settings/prompts" as const,
+      path: `${SETTINGS_BASE}/prompts` as const,
       name: "Prompts",
-      detail: (id: string) => `/settings/prompts/${id}` as const,
+      detail: (id: string) => `${SETTINGS_BASE}/prompts/${id}` as const,
     },
   },
   TOOLS: {
-    path: "/settings/tools" as const,
+    path: `${SETTINGS_BASE}/tools` as const,
     name: "Tools",
-    detail: (id: string) => `/settings/tools/${id}` as const,
+    detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
   },
   PROFILE: {
-    path: "/profile" as const,
+    path: PROFILE_BASE,
     name: "Profile",
-    GENERAL: { path: "/profile/general" as const, name: "General" },
-    SECURITY: { path: "/profile/security" as const, name: "Security" },
-    SESSIONS: { path: "/profile/sessions" as const, name: "Sessions" },
-    ACCOUNTS: { path: "/profile/accounts" as const, name: "Linked Accounts" },
-    DANGER: { path: "/profile/danger" as const, name: "Danger Zone" },
+    GENERAL: { path: `${PROFILE_BASE}/general` as const, name: "General" },
+    SECURITY: { path: `${PROFILE_BASE}/security` as const, name: "Security" },
+    SESSIONS: { path: `${PROFILE_BASE}/sessions` as const, name: "Sessions" },
+    ACCOUNTS: {
+      path: `${PROFILE_BASE}/accounts` as const,
+      name: "Linked Accounts",
+    },
+    DANGER: { path: `${PROFILE_BASE}/danger` as const, name: "Danger Zone" },
   },
   API: {
-    AUTH: { path: "/api/auth" as const, name: "Auth API" },
+    AUTH: { path: `${API_BASE}/auth` as const, name: "Auth API" },
   },
 } as const;
