@@ -336,7 +336,7 @@ type AppState = {
 /**
  * Maps a ProjectRow from the DB to the Zustand Project shape.
  */
-function projectRowToStore(row: ProjectRow): Project {
+export function projectRowToStore(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
@@ -351,7 +351,7 @@ function projectRowToStore(row: ProjectRow): Project {
 /**
  * Maps an AssistantRow from the DB to the Zustand Assistant shape.
  */
-function assistantRowToStore(row: AssistantRow): Assistant {
+export function assistantRowToStore(row: AssistantRow): Assistant {
   return {
     id: row.id,
     name: row.name,
@@ -361,6 +361,21 @@ function assistantRowToStore(row: AssistantRow): Assistant {
     knowledgebases: [],
     avatar: row.avatar ?? undefined,
     updatedAt: new Date(row.updatedAt),
+  };
+}
+
+/**
+ * Maps a ChatRow from the DB to the Zustand Chat shape.
+ */
+export function chatRowToStore(row: ChatRow): Chat {
+  return {
+    id: row.id,
+    title: row.title,
+    projectId: row.projectId ?? undefined,
+    assistantId: row.assistantId ?? undefined,
+    updatedAt: new Date(row.updatedAt),
+    messages: {},
+    currentLeafId: row.currentLeafId ?? null,
   };
 }
 
@@ -613,15 +628,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
-      chats[row.id] = {
-        id: row.id,
-        title: row.title,
-        projectId: row.projectId ?? undefined,
-        assistantId: row.assistantId ?? undefined,
-        updatedAt: new Date(row.updatedAt),
-        messages: {},
-        currentLeafId: row.currentLeafId,
-      };
+      chats[row.id] = chatRowToStore(row);
     }
 
     for (const m of messageRows) {
@@ -838,15 +845,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createChatDb: async (title, projectId, assistantId) => {
     const row = await createChat(title, projectId, assistantId);
-    const newChat: Chat = {
-      id: row.id,
-      title: row.title,
-      projectId: row.projectId ?? undefined,
-      assistantId: row.assistantId ?? undefined,
-      updatedAt: new Date(row.updatedAt),
-      messages: {},
-      currentLeafId: null,
-    };
+    const newChat = chatRowToStore(row);
     set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
     return row.id;
   },
