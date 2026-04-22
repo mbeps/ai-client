@@ -25,7 +25,7 @@ export default function AssistantsPage() {
         searchPlaceholder="Search assistants..."
         onMount={loadAssistants}
         action={
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Create Assistant
           </Button>

@@ -31,7 +31,7 @@ export function PageHeader({
   action,
 }: PageHeaderProps) {
   return (
-    <div className="flex justify-between items-center mb-6">
+    <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
       <div className="flex items-center gap-3">
         {icon}
         <div>
@@ -39,7 +39,7 @@ export function PageHeader({
           <p className="text-muted-foreground">{description}</p>
         </div>
       </div>
-      {action}
+      {action && <div className="w-full md:w-auto">{action}</div>}
     </div>
   );
 }

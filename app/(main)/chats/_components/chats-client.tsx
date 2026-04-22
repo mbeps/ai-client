@@ -57,7 +57,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
       emptyStateMessage="No chats yet. Start a new conversation from the home page."
       searchPlaceholder="Search chats..."
       action={
-        <Button onClick={() => createNewChat()}>
+        <Button onClick={() => createNewChat()} className="w-full md:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           New Chat
         </Button>

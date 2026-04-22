@@ -20,7 +20,6 @@ import {
   MessageSquare,
   MessageSquarePlus,
   Settings,
-  Terminal,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
@@ -54,7 +53,6 @@ export default function ProjectPage() {
   const [description, setDescription] = useState(project?.description ?? "");
   const [globalPrompt, setGlobalPrompt] = useState(project?.globalPrompt ?? "");
   const [searchQuery, setSearchQuery] = useState("");
-  const [savingPrompt, setSavingPrompt] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -98,22 +96,10 @@ export default function ProjectPage() {
 
   const handleNewChat = () => createNewChat("New Chat", projectId);
 
-  const handleSavePrompt = async () => {
-    setSavingPrompt(true);
-    try {
-      await updateProjectDb(projectId, { globalPrompt });
-      toast.success("Global prompt saved");
-    } catch {
-      toast.error("Failed to save prompt");
-    } finally {
-      setSavingPrompt(false);
-    }
-  };
-
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await updateProjectDb(projectId, { name, description });
+      await updateProjectDb(projectId, { name, description, globalPrompt });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -136,12 +122,12 @@ export default function ProjectPage() {
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-muted-foreground">{project.description}</p>
         </div>
-        <Button onClick={handleNewChat} size="lg">
+        <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
           New Chat
         </Button>
@@ -157,18 +143,11 @@ export default function ProjectPage() {
             <span>Chats</span>
           </TabsTrigger>
           <TabsTrigger
-            value="prompt"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <Terminal className="size-4" />
-            <span>Global Prompt</span>
-          </TabsTrigger>
-          <TabsTrigger
             value="knowledge"
             className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
           >
             <Library className="size-4" />
-            <span>Knowledge-base</span>
+            <span>Knowledge</span>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -204,35 +183,10 @@ export default function ProjectPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="prompt">
-          <Card>
-            <CardHeader>
-              <CardTitle>Global Prompt</CardTitle>
-              <CardDescription>
-                This prompt will be injected as system instructions for all new
-                chats in this project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={globalPrompt}
-                onChange={(e) => setGlobalPrompt(e.target.value)}
-                rows={10}
-                placeholder="e.g., You are an expert code reviewer specializing in React."
-              />
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSavePrompt} disabled={savingPrompt}>
-                {savingPrompt ? "Saving..." : "Save Prompt"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="knowledge">
           <Card>
             <CardHeader>
-              <CardTitle>Knowledgebase</CardTitle>
+              <CardTitle>Knowledge</CardTitle>
               <CardDescription>
                 Attach knowledge bases to provide context to the AI in this
                 project.
@@ -246,10 +200,36 @@ export default function ProjectPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Project Settings</CardTitle>
+              <CardTitle>Global Prompt</CardTitle>
+              <CardDescription>
+                Instructions injected as system prompts for all new chats in
+                this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={globalPrompt}
+                onChange={(e) => setGlobalPrompt(e.target.value)}
+                rows={8}
+                placeholder="e.g., You are an expert code reviewer specializing in React."
+              />
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                {savingSettings ? "Saving..." : "Save Prompt"}
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Details</CardTitle>
+              <CardDescription>
+                Manage the project name and description.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -264,10 +244,25 @@ export default function ProjectPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? "Saving..." : "Save Settings"}
+                {savingSettings ? "Saving..." : "Save Details"}
               </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible actions for this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Deleting this project will permanently remove it. Chats will be
+                dissociated but not deleted. This action cannot be undone.
+              </p>
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteDialog(true)}
@@ -275,7 +270,7 @@ export default function ProjectPage() {
               >
                 Delete Project
               </Button>
-            </CardFooter>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

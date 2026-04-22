@@ -25,7 +25,6 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Settings,
-  Terminal,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -84,7 +83,12 @@ export default function AssistantPage() {
       setPrompt(assistant.prompt ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assistant?.id, assistant?.name, assistant?.description, assistant?.prompt]);
+  }, [
+    assistant?.id,
+    assistant?.name,
+    assistant?.description,
+    assistant?.prompt,
+  ]);
 
   if (loading) {
     return (
@@ -124,7 +128,7 @@ export default function AssistantPage() {
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <Bot className="h-8 w-8 text-primary" />
@@ -134,13 +138,13 @@ export default function AssistantPage() {
             <p className="text-muted-foreground">{assistant.description}</p>
           </div>
         </div>
-        <Button onClick={handleNewChat} size="lg">
+        <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
           Chat with Assistant
         </Button>
       </div>
 
-      <Tabs defaultValue="chats" className="w-full">
+      <Tabs defaultValue="settings" className="w-full">
         <TabsList className="mb-4 h-auto w-full flex-wrap md:w-fit">
           <TabsTrigger
             value="chats"
@@ -148,13 +152,6 @@ export default function AssistantPage() {
           >
             <MessageSquare className="size-4" />
             <span>Chats</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="config"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <Terminal className="size-4" />
-            <span>Prompt</span>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -190,25 +187,22 @@ export default function AssistantPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="config">
+        <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Assistant Prompt</CardTitle>
+              <CardTitle>System Prompt</CardTitle>
               <CardDescription>
                 Customize the persona and capabilities of this assistant.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">System Prompt</label>
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={10}
-                  className="max-h-64"
-                  placeholder="e.g., You are a friendly helpful assistant."
-                />
-              </div>
+            <CardContent>
+              <Textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={8}
+                className="max-h-64"
+                placeholder="e.g., You are a friendly helpful assistant."
+              />
             </CardContent>
             <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
@@ -216,12 +210,13 @@ export default function AssistantPage() {
               </Button>
             </CardFooter>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="settings">
           <Card>
             <CardHeader>
-              <CardTitle>Assistant Settings</CardTitle>
+              <CardTitle>Assistant Details</CardTitle>
+              <CardDescription>
+                Manage the assistant name and description.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -236,10 +231,25 @@ export default function AssistantPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Settings"}
+                {saving ? "Saving..." : "Save Details"}
               </Button>
+            </CardFooter>
+          </Card>
+
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible actions for this assistant.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Deleting this assistant will permanently remove it. This action
+                cannot be undone.
+              </p>
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteDialog(true)}
@@ -247,7 +257,7 @@ export default function AssistantPage() {
               >
                 Delete Assistant
               </Button>
-            </CardFooter>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
