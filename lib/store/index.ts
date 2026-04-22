@@ -27,8 +27,15 @@ import { createAssistant as createAssistantAction } from "@/lib/actions/assistan
 import { updateAssistant as updateAssistantAction } from "@/lib/actions/assistants/update-assistant";
 import { deleteAssistant as deleteAssistantAction } from "@/lib/actions/assistants/delete-assistant";
 import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
+import {
+  listPrompts as listPromptsAction,
+  createPrompt as createPromptAction,
+  updatePrompt as updatePromptAction,
+  deletePrompt as deletePromptAction,
+} from "@/lib/actions/prompts";
 import type { ProjectRow } from "@/types/project-row";
 import type { AssistantRow } from "@/types/assistant-row";
+import type { PromptRow } from "@/types/prompt-row";
 import type { ChatRow } from "@/types/chat-row";
 import type { MessageRow } from "@/types/message-row";
 import type { AttachmentRow } from "@/types/attachment-row";
@@ -41,6 +48,24 @@ import {
   updateMcpServer as updateMcpServerAction,
 } from "@/lib/actions/mcp-servers";
 import type { CreateMcpServer, UpdateMcpServer } from "@/schemas/mcp-server";
+
+/**
+ * A reusable prompt snippet that can be inserted into the chat input via shortcuts.
+ *
+ * @author Maruf Bepary
+ */
+export type Prompt = {
+  /** Unique prompt identifier. */
+  id: string;
+  /** Display name shown in the prompt list. */
+  title: string;
+  /** Keyboard shortcut or trigger string (e.g. "/brief"). */
+  shortcut: string;
+  /** The actual prompt content to be inserted. */
+  content: string;
+  /** Timestamp of the most recent modification. */
+  updatedAt: Date;
+};
 
 /**
  * A grouped workspace that links chats to a shared system prompt and knowledge bases.
@@ -219,6 +244,8 @@ type AppState = {
   projects: Project[];
   /** All custom AI assistants. */
   assistants: Assistant[];
+  /** All quick-insert prompts. */
+  prompts: Prompt[];
   /** All knowledge bases. */
   knowledgebases: Knowledgebase[];
   /** All chats keyed by their ID. */
@@ -268,7 +295,12 @@ type AppState = {
   renameProjectDb: (id: string, name: string) => Promise<void>;
   /** Fetches all projects from the DB and sets them in state. */
   loadProjects: () => Promise<void>;
-  /** Hydrates projects from DB rows without a network call. */
+  /**
+   * Hydrates projects from DB rows without a network call.
+   *
+   * OPTIMIZATION: This allows the client to have access to project global prompts
+   * immediately on page load via SSR props, avoiding subsequent fetch requests.
+   */
   loadProjectRows: (rows: ProjectRow[]) => void;
   /** Creates a new project in the DB and adds it to state; returns the new project's ID. */
   createProjectDb: (data: {
@@ -288,7 +320,12 @@ type AppState = {
   renameAssistantDb: (id: string, name: string) => Promise<void>;
   /** Fetches all assistants from the DB and sets them in state. */
   loadAssistants: () => Promise<void>;
-  /** Hydrates assistants from DB rows without a network call. */
+  /**
+   * Hydrates assistants from DB rows without a network call.
+   *
+   * OPTIMIZATION: This allows the client to have access to assistant persona prompts
+   * immediately on page load via SSR props, avoiding subsequent fetch requests.
+   */
   loadAssistantRows: (rows: AssistantRow[]) => void;
   /** Creates a new assistant in the DB and adds it to state; returns the new assistant's ID. */
   createAssistantDb: (data: {
@@ -303,6 +340,23 @@ type AppState = {
   ) => Promise<void>;
   /** Deletes an assistant from the DB and removes it from state. */
   deleteAssistantDb: (id: string) => Promise<void>;
+
+  /** Fetches all prompts from the DB and sets them in state. */
+  loadPrompts: () => Promise<void>;
+  /** Creates a new prompt in the DB and adds it to state. */
+  createPromptDb: (data: {
+    title: string;
+    shortcut: string;
+    content: string;
+  }) => Promise<string>;
+  /** Updates a prompt's fields in the DB and updates state. */
+  updatePromptDb: (
+    id: string,
+    data: { title?: string; shortcut?: string; content?: string },
+  ) => Promise<void>;
+  /** Deletes a prompt from the DB and removes it from state. */
+  deletePromptDb: (id: string) => Promise<void>;
+
   /** Updates a knowledgebase's name in both DB and local state. */
   renameKnowledgebaseDb: (id: string, name: string) => Promise<void>;
 
@@ -369,6 +423,19 @@ export function assistantRowToStore(row: AssistantRow): Assistant {
 }
 
 /**
+ * Maps a PromptRow from the DB to the Zustand Prompt shape.
+ */
+export function promptRowToStore(row: PromptRow): Prompt {
+  return {
+    id: row.id,
+    title: row.title,
+    shortcut: row.shortcut,
+    content: row.content,
+    updatedAt: new Date(row.updatedAt),
+  };
+}
+
+/**
  * Maps a ChatRow from the DB to the Zustand Chat shape.
  */
 export function chatRowToStore(row: ChatRow): Chat {
@@ -393,6 +460,7 @@ export function chatRowToStore(row: ChatRow): Chat {
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   assistants: [],
+  prompts: [],
   knowledgebases: [],
   chats: {},
   mcpServers: [],
@@ -858,6 +926,33 @@ export const useAppStore = create<AppState>((set, get) => ({
             : [chatId, chat],
         ),
       ),
+    }));
+  },
+
+  loadPrompts: async () => {
+    const rows = await listPromptsAction();
+    set({ prompts: rows.map(promptRowToStore) });
+  },
+
+  createPromptDb: async (data) => {
+    const row = await createPromptAction(data);
+    set((state) => ({ prompts: [promptRowToStore(row), ...state.prompts] }));
+    return row.id;
+  },
+
+  updatePromptDb: async (id, data) => {
+    const row = await updatePromptAction(id, data);
+    set((state) => ({
+      prompts: state.prompts.map((p) =>
+        p.id === id ? { ...p, ...promptRowToStore(row) } : p,
+      ),
+    }));
+  },
+
+  deletePromptDb: async (id) => {
+    await deletePromptAction(id);
+    set((state) => ({
+      prompts: state.prompts.filter((p) => p.id !== id),
     }));
   },
 

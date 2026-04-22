@@ -30,6 +30,7 @@ const ROUTE_LABELS: Record<string, string> = {
   danger: "Danger Zone",
   general: "General",
   settings: "Settings",
+  prompts: "Prompts",
 };
 
 /**
@@ -40,7 +41,7 @@ const ROUTE_LABELS: Record<string, string> = {
  */
 export function DynamicBreadcrumbs() {
   const pathname = usePathname();
-  const { chats, projects, assistants, knowledgebases, loadProjects } = useAppStore();
+  const { chats, projects, assistants, knowledgebases, prompts, loadProjects, loadPrompts } = useAppStore();
   
   // Load projects if not available
   React.useEffect(() => {
@@ -48,6 +49,13 @@ export function DynamicBreadcrumbs() {
       loadProjects().catch(() => {});
     }
   }, [projects.length, loadProjects]);
+
+  // Load prompts if not available
+  React.useEffect(() => {
+    if (prompts.length === 0) {
+      loadPrompts().catch(() => {});
+    }
+  }, [prompts.length, loadPrompts]);
 
   // Split pathname into segments and remove empty strings
   const segments = pathname.split("/").filter(Boolean);
@@ -69,6 +77,7 @@ export function DynamicBreadcrumbs() {
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
             knowledgebases.find((kb) => kb.id === segment)?.name ||
+            prompts.find((p) => p.id === segment)?.title ||
             // Fallback for project/assistant names from chat object
             (Object.values(chats).find(c => c.projectId === segment)?.projectName) ||
             (Object.values(chats).find(c => c.assistantId === segment)?.assistantName) ||

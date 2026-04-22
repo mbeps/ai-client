@@ -21,6 +21,17 @@ const openrouter = createOpenAI({
 
 const DEFAULT_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free";
 
+/**
+ * POST handler for the AI chat streaming pipeline.
+ *
+ * OPTIMIZATION: Project and Assistant prompts are fetched from the database and prepended
+ * on the server side. This avoids sending large system prompt strings over the network
+ * from the client for every message, saving significant bandwidth.
+ *
+ * @param req - The incoming chat request containing history and model configuration.
+ * @returns A streaming response (text/event-stream) with AI content and tool events.
+ * @author Maruf Bepary
+ */
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });

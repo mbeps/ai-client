@@ -6,6 +6,18 @@ import { chat, message, attachment, project, assistant } from "@/drizzle/schema"
 import { eq, and, asc, inArray } from "drizzle-orm";
 import type { ChatWithMessages } from "@/types/chat-with-messages";
 
+/**
+ * Fetches a single chat with its messages and attachments.
+ *
+ * OPTIMIZATION: This query uses a left join to fetch related project and assistant names
+ * but intentionally omits the large 'globalPrompt' and 'prompt' fields to keep the
+ * network payload lean. Prompts are fetched only when needed for AI generation or settings.
+ *
+ * @param chatId - The ID of the chat to retrieve.
+ * @returns The chat row extended with messages and attachments.
+ * @throws Error if the chat is not found or the user does not own it.
+ * @author Maruf Bepary
+ */
 export async function getChat(chatId: string): Promise<ChatWithMessages> {
   const session = await requireSession();
 
