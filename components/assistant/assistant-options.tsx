@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Edit2 } from "lucide-react";
+import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/lib/store";
@@ -11,6 +11,7 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import { useCreateChat } from "@/hooks/use-create-chat";
 
 /**
  * Options menu for an assistant, providing Rename and Delete actions.
@@ -27,6 +28,7 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const createNewChat = useCreateChat();
   const renameAssistantDb = useAppStore((state) => state.renameAssistantDb);
   const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
 
@@ -54,6 +56,17 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   };
 
   const items = [
+    {
+      label: "New Chat",
+      icon: <MessageSquare className="mr-2 h-4 w-4" />,
+      onClick: () => createNewChat("New Chat", undefined, assistant.id),
+    },
+    {
+      label: "Manage",
+      icon: <Settings2 className="mr-2 h-4 w-4" />,
+      onClick: () => router.push(ROUTES.ASSISTANTS.detail(assistant.id)),
+      separator: true,
+    },
     {
       label: "Rename Assistant",
       icon: <Edit2 className="mr-2 h-4 w-4" />,

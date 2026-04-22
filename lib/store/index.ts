@@ -851,6 +851,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     await deleteAssistantAction(id);
     set((state) => ({
       assistants: state.assistants.filter((a) => a.id !== id),
+      chats: Object.fromEntries(
+        Object.entries(state.chats).map(([chatId, chat]) =>
+          chat.assistantId === id
+            ? [chatId, { ...chat, assistantId: undefined }]
+            : [chatId, chat],
+        ),
+      ),
     }));
   },
 

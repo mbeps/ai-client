@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
-import { chat, message, mcpServer, project } from "@/drizzle/schema";
+import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -102,6 +102,21 @@ export async function POST(req: Request) {
         .then((rows) => rows[0] ?? null)
     : null;
 
+  // Fetch assistant prompt if this chat belongs to an assistant
+  const assistantRow = chatRow.assistantId
+    ? await db
+        .select({ prompt: assistant.prompt })
+        .from(assistant)
+        .where(
+          and(
+            eq(assistant.id, chatRow.assistantId),
+            eq(assistant.userId, session.user.id),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
+
   // Fetch enabled MCP servers for this user
   const servers = await db
     .select({
@@ -181,10 +196,13 @@ export async function POST(req: Request) {
     return { role: m.role, content: m.content };
   }) as ModelMessage[];
 
-  // Prepend project global prompt as system message if present
+  // Prepend system messages: project global prompt then assistant prompt
   const systemMessages: ModelMessage[] = [];
   if (projectRow?.globalPrompt?.trim()) {
     systemMessages.push({ role: "system", content: projectRow.globalPrompt });
+  }
+  if (assistantRow?.prompt?.trim()) {
+    systemMessages.push({ role: "system", content: assistantRow.prompt });
   }
   const finalMessages: ModelMessage[] = [
     ...systemMessages,

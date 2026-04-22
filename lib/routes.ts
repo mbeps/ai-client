@@ -45,6 +45,8 @@ export const ROUTES = {
     path: "/assistants" as const,
     name: "Assistants",
     detail: (id: string) => `/assistants/${id}` as const,
+    chat: (assistantId: string, chatId: string) =>
+      `/assistants/${assistantId}/${chatId}` as const,
   },
   KNOWLEDGEBASES: {
     path: "/knowledgebases" as const,

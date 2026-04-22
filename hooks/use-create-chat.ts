@@ -25,7 +25,9 @@ export function useCreateChat() {
       router.push(
         projectId
           ? ROUTES.PROJECTS.chat(projectId, id)
-          : ROUTES.CHATS.detail(id),
+          : assistantId
+            ? ROUTES.ASSISTANTS.chat(assistantId, id)
+            : ROUTES.CHATS.detail(id),
       );
       return id;
     } catch (error) {
