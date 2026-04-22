@@ -142,19 +142,43 @@ export function ChatUI({
     attachments: Attachment[] = [],
     model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
+    selectedPromptId?: string,
   ) => {
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    addMessage(chatId, "user", content, parentId, userMsgId, null, attachments);
+    let fullContent = content;
+    let userMsgMetadata: string | null = null;
+    if (selectedPromptId) {
+      const prompts = useAppStore.getState().prompts;
+      const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
+      if (selectedPrompt) {
+        fullContent = selectedPrompt.content + "\n\n" + content;
+        userMsgMetadata = JSON.stringify({
+          promptId: selectedPromptId,
+          userContent: content,
+        });
+      }
+    }
+
+    addMessage(
+      chatId,
+      "user",
+      fullContent,
+      parentId,
+      userMsgId,
+      userMsgMetadata,
+      attachments,
+    );
 
     try {
       await persistMessage(chatId, {
         id: userMsgId,
         role: "user",
-        content,
+        content: fullContent,
         parentId,
+        metadata: userMsgMetadata ?? undefined,
       });
     } catch (err) {
       console.error("Failed to persist message:", err);
@@ -370,6 +394,7 @@ export function ChatUI({
     attachments: Attachment[] = [],
     model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
+    selectedPromptId?: string,
   ) => {
     setIsLoading(true);
     await streamResponse(
@@ -379,6 +404,7 @@ export function ChatUI({
       attachments,
       model,
       selectedServerIds,
+      selectedPromptId,
     );
   };
 

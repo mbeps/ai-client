@@ -3,13 +3,15 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/auth-client";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { type Attachment, Message } from "@/lib/store";
+import { type Attachment, Message, useAppStore } from "@/lib/store";
+import { ROUTES } from "@/lib/routes";
 import {
   Bot,
   Brain,
@@ -17,6 +19,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Command,
   Copy,
   Download,
   Edit2,
@@ -50,6 +53,24 @@ type ToolData = {
   toolCalls: ToolCall[];
   toolResults: ToolResult[];
 };
+
+function parsePromptMeta(
+  metadata: string | null | undefined,
+): { promptId: string; userContent: string } | null {
+  if (!metadata) return null;
+  try {
+    const parsed = JSON.parse(metadata);
+    if (
+      typeof parsed.promptId === "string" &&
+      typeof parsed.userContent === "string"
+    ) {
+      return { promptId: parsed.promptId, userContent: parsed.userContent };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function parseToolData(metadata: string | null | undefined): ToolData | null {
   if (!metadata) return null;
@@ -124,10 +145,18 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
+  const prompts = useAppStore((state) => state.prompts);
   const toolData = useMemo(
     () => (!isUser ? parseToolData(message.metadata) : null),
     [isUser, message.metadata],
   );
+  const promptMeta = useMemo(
+    () => (isUser ? parsePromptMeta(message.metadata) : null),
+    [isUser, message.metadata],
+  );
+  const promptEntry = promptMeta
+    ? prompts.find((p) => p.id === promptMeta.promptId)
+    : null;
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
@@ -330,7 +359,20 @@ export function MessageBubble({
             </div>
           )}
           {isUser ? (
-            <div className="whitespace-pre-wrap">{message.content}</div>
+            <div>
+              {promptMeta && (
+                <Link
+                  href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
+                  className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 mb-2 hover:bg-primary/20 transition-colors cursor-pointer"
+                >
+                  <Command className="h-3 w-3" />/
+                  {promptEntry?.shortcut ?? promptMeta.promptId}
+                </Link>
+              )}
+              <div className="whitespace-pre-wrap">
+                {promptMeta ? promptMeta.userContent : message.content}
+              </div>
+            </div>
           ) : (
             <MarkdownRenderer content={message.content} />
           )}
@@ -393,7 +435,12 @@ export function MessageBubble({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => onEdit?.(message.id, message.content)}
+                  onClick={() =>
+                    onEdit?.(
+                      message.id,
+                      promptMeta ? promptMeta.userContent : message.content,
+                    )
+                  }
                 >
                   <Edit2 className="h-3 w-3" />
                 </Button>

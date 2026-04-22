@@ -62,6 +62,11 @@ export const ROUTES = {
       name: "Tools",
       detail: (id: string) => `/settings/tools/${id}` as const,
     },
+    PROMPTS: {
+      path: "/settings/prompts" as const,
+      name: "Prompts",
+      detail: (id: string) => `/settings/prompts/${id}` as const,
+    },
   },
   TOOLS: {
     path: "/settings/tools" as const,
