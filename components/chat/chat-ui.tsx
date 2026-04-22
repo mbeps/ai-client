@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { toast } from "sonner";
+import { DEFAULT_MODEL } from "@/models";
 
 /**
  * Props for the ChatUI component.
@@ -134,7 +135,7 @@ export function ChatUI({
     content: string,
     parentId: string | null,
     attachments: Attachment[] = [],
-    model = "nvidia/nemotron-nano-12b-v2-vl:free",
+    model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
   ) => {
     abortControllerRef.current?.abort();
@@ -362,7 +363,7 @@ export function ChatUI({
   const handleSend = async (
     content: string,
     attachments: Attachment[] = [],
-    model = "nvidia/nemotron-nano-12b-v2-vl:free",
+    model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
   ) => {
     setIsLoading(true);
