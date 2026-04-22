@@ -11,6 +11,8 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
+
 
 /**
  * Options menu for a chat, providing Rename, Move, and Delete actions.
@@ -20,12 +22,21 @@ import { ROUTES } from "@/lib/routes";
  * @param props.chat - The chat entity to manage.
  * @author Maruf Bepary
  */
-export function ChatOptions({ chat }: { chat: Chat }) {
+export function ChatOptions({
+  chat,
+  trigger,
+}: {
+  chat: Chat;
+  trigger?: React.ReactNode;
+}) {
+
   const isMobile = useIsMobile();
   const router = useRouter();
   const [showRename, setShowRename] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showMove, setShowMove] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
 
   const renameChatDb = useAppStore((state) => state.renameChatDb);
   const deleteChatDb = useAppStore((state) => state.deleteChatDb);
@@ -62,8 +73,9 @@ export function ChatOptions({ chat }: { chat: Chat }) {
     {
       label: "Move Chat",
       icon: <FolderOutput className="mr-2 h-4 w-4" />,
-      onClick: () => {},
+      onClick: () => setShowMove(true),
     },
+
     {
       label: "Delete Chat",
       icon: <Trash2 className="mr-2 h-4 w-4" />,
@@ -75,7 +87,12 @@ export function ChatOptions({ chat }: { chat: Chat }) {
 
   return (
     <>
-      <ResponsiveMenu title={chat.title} items={items} isMobile={isMobile} />
+      <ResponsiveMenu
+        title={chat.title}
+        items={items}
+        isMobile={isMobile}
+        trigger={trigger}
+      />
       <RenameDialog
         isOpen={showRename}
         onClose={() => setShowRename(false)}
@@ -92,6 +109,13 @@ export function ChatOptions({ chat }: { chat: Chat }) {
         description={`Are you sure you want to delete "${chat.title}"? This action cannot be undone.`}
         loading={isDeleting}
       />
+      <MoveChatDialog
+        isOpen={showMove}
+        onClose={() => setShowMove(false)}
+        chatId={chat.id}
+        currentProjectId={chat.projectId}
+      />
     </>
+
   );
 }
