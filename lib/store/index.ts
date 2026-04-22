@@ -198,6 +198,10 @@ export type Chat = {
   projectId?: string;
   /** ID of the assistant this chat is bound to, if any. */
   assistantId?: string;
+  /** Name of the project this chat belongs to (for breadcrumbs). */
+  projectName?: string;
+  /** Name of the assistant this chat belongs to (for breadcrumbs). */
+  assistantName?: string;
   /** Timestamp of the most recent modification. */
   updatedAt: Date;
   /** Flat map of all messages keyed by ID, forming the full message tree. */
@@ -796,6 +800,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     await deleteProjectAction(id);
     set((state) => ({
       projects: state.projects.filter((p) => p.id !== id),
+      chats: Object.fromEntries(
+        Object.entries(state.chats).map(([chatId, chat]) =>
+          chat.projectId === id
+            ? [chatId, { ...chat, projectId: undefined }]
+            : [chatId, chat],
+        ),
+      ),
     }));
   },
 

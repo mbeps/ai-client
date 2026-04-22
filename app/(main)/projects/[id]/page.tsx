@@ -7,48 +7,85 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquarePlus, Database } from "lucide-react";
-import Link from "next/link";
+import { Loader2, MessageSquarePlus } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
-import { ChatHistoryCard } from "@/components/chat/chat-history-card";
+import { ChatCard } from "@/components/chat/chat-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useCreateChat } from "@/hooks/use-create-chat";
-import { useRef, useState } from "react";
+import { listChats } from "@/lib/actions/chats/list-chats";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-
 
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.id as string;
 
-  const project = useAppStore((state) =>
-    state.projects.find((p) => p.id === projectId),
-  );
+  const projects = useAppStore((state) => state.projects);
+  const project = projects.find((p) => p.id === projectId);
   const allChats = useAppStore((state) => state.chats);
   const chats = Object.values(allChats).filter(
     (c) => c.projectId === projectId,
   );
-  const allKbs = useAppStore((state) => state.knowledgebases);
-  const kbs = allKbs.filter((k) => project?.knowledgebases.includes(k.id));
   const createNewChat = useCreateChat();
   const updateProjectDb = useAppStore((state) => state.updateProjectDb);
   const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
+  const loadProjects = useAppStore((state) => state.loadProjects);
+  const loadChats = useAppStore((state) => state.loadChats);
 
-  const promptRef = useRef<HTMLTextAreaElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const descRef = useRef<HTMLTextAreaElement>(null);
+  const [loading, setLoading] = useState(projects.length === 0);
+  const [name, setName] = useState(project?.name ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
+  const [globalPrompt, setGlobalPrompt] = useState(project?.globalPrompt ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const filteredChats = useMemo(() => {
+    return chats
+      .filter((chat) =>
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  }, [chats, searchQuery]);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      Promise.all([
+        loadProjects(),
+        listChats()
+          .then((rows) => loadChats(rows, []))
+          .catch(() => {}),
+      ]).finally(() => setLoading(false));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setDescription(project.description ?? "");
+      setGlobalPrompt(project.globalPrompt ?? "");
+    }
+  }, [project]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!project) return <NotFoundMessage entity="Project" />;
 
@@ -57,9 +94,7 @@ export default function ProjectPage() {
   const handleSavePrompt = async () => {
     setSavingPrompt(true);
     try {
-      await updateProjectDb(projectId, {
-        globalPrompt: promptRef.current?.value ?? project.globalPrompt,
-      });
+      await updateProjectDb(projectId, { globalPrompt });
       toast.success("Global prompt saved");
     } catch {
       toast.error("Failed to save prompt");
@@ -71,10 +106,7 @@ export default function ProjectPage() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await updateProjectDb(projectId, {
-        name: nameRef.current?.value ?? project.name,
-        description: descRef.current?.value ?? project.description,
-      });
+      await updateProjectDb(projectId, { name, description });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -84,8 +116,6 @@ export default function ProjectPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete project "${project.name}"? This cannot be undone.`))
-      return;
     setDeleting(true);
     try {
       await deleteProjectDb(projectId);
@@ -97,13 +127,8 @@ export default function ProjectPage() {
     }
   };
 
-  const totalKbSize = kbs.reduce((acc, kb) => acc + kb.sizeBytes, 0);
-  const maxKbSize =
-    kbs.reduce((acc, kb) => acc + kb.maxSizeBytes, 0) || 100 * 1024 * 1024;
-  const usagePercentage = Math.min(100, (totalKbSize / maxKbSize) * 100);
-
   return (
-    <div className="page-container-detail">
+    <div className="page-container">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
@@ -119,24 +144,31 @@ export default function ProjectPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="chats">Chats</TabsTrigger>
           <TabsTrigger value="prompt">Global Prompt</TabsTrigger>
-          <TabsTrigger value="knowledge">
-            Knowledgebase ({kbs.length})
-          </TabsTrigger>
+          <TabsTrigger value="knowledge">Knowledgebase</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="chats" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {chats.map((chat) => (
-              <ChatHistoryCard
-                key={chat.id}
-                title={chat.title}
-                updatedAt={chat.updatedAt}
-                href={ROUTES.PROJECTS.chat(projectId, chat.id)}
-              />
+          <div className="w-full sm:max-w-xs">
+            <Input
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredChats.map((chat) => (
+              <ChatCard key={chat.id} chat={chat} />
             ))}
-            {chats.length === 0 && (
-              <EmptyState message="No chats in this project yet." />
+            {filteredChats.length === 0 && (
+              <EmptyState
+                message={
+                  searchQuery
+                    ? "No chats match your search."
+                    : "No chats in this project yet."
+                }
+              />
             )}
           </div>
         </TabsContent>
@@ -152,8 +184,8 @@ export default function ProjectPage() {
             </CardHeader>
             <CardContent>
               <Textarea
-                ref={promptRef}
-                defaultValue={project.globalPrompt}
+                value={globalPrompt}
+                onChange={(e) => setGlobalPrompt(e.target.value)}
                 rows={10}
                 placeholder="e.g., You are an expert code reviewer specializing in React."
               />
@@ -166,62 +198,20 @@ export default function ProjectPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="knowledge" className="space-y-6">
+        <TabsContent value="knowledge">
           <Card>
             <CardHeader>
-              <CardTitle>Project Knowledge</CardTitle>
+              <CardTitle>Knowledgebase</CardTitle>
               <CardDescription>
-                Knowledgebases attached to this project providing context to the
-                AI.
+                Attach knowledge bases to provide context to the AI in this
+                project.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>
-                    Storage Used: {((totalKbSize / maxKbSize) * 100).toFixed(1)}
-                    %
-                  </span>
-                  <span className="text-muted-foreground">
-                    {((1 - totalKbSize / maxKbSize) * 100).toFixed(1)}%
-                    Available
-                  </span>
-                </div>
-                <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary"
-                    style={{ width: `${usagePercentage}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {kbs.map((kb) => (
-                  <div
-                    key={kb.id}
-                    className="p-4 border rounded-lg flex justify-between items-center bg-card"
-                  >
-                    <div className="flex items-center">
-                      <Database className="h-5 w-5 mr-3 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{kb.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {kb.documentCount} documents
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={ROUTES.KNOWLEDGEBASES.detail(kb.id)}>
-                        Manage
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
+            <CardContent>
+              <p className="text-muted-foreground text-sm">
+                Knowledge base support coming soon.
+              </p>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline">Link another Knowledgebase</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
@@ -233,11 +223,17 @@ export default function ProjectPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Project Name</label>
-                <Input ref={nameRef} defaultValue={project.name} />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
-                <Textarea ref={descRef} defaultValue={project.description} />
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
@@ -246,15 +242,24 @@ export default function ProjectPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
               >
-                {deleting ? "Deleting..." : "Delete Project"}
+                Delete Project
               </Button>
             </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <DeleteConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title={`Delete "${project.name}"?`}
+        description="This will permanently delete the project. Chats will be dissociated but not deleted. This cannot be undone."
+        loading={deleting}
+      />
     </div>
   );
 }

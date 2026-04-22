@@ -22,7 +22,11 @@ export function useCreateChat() {
   ) => {
     try {
       const id = await createChatDb(title, projectId, assistantId);
-      router.push(ROUTES.CHATS.detail(id));
+      router.push(
+        projectId
+          ? ROUTES.PROJECTS.chat(projectId, id)
+          : ROUTES.CHATS.detail(id),
+      );
       return id;
     } catch (error) {
       console.error("Failed to create new chat:", error);

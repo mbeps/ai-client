@@ -2,11 +2,16 @@
 
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
-import { project } from "@/drizzle/schema";
+import { project, chat } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 
 export async function deleteProject(id: string): Promise<void> {
   const session = await requireSession();
+
+  await db
+    .update(chat)
+    .set({ projectId: null })
+    .where(and(eq(chat.projectId, id), eq(chat.userId, session.user.id)));
 
   await db
     .delete(project)

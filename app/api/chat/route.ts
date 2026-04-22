@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
-import { chat, message, mcpServer } from "@/drizzle/schema";
+import { chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -77,11 +77,30 @@ export async function POST(req: Request) {
   const model = requestedModel ?? DEFAULT_MODEL;
 
   const [chatRow] = await db
-    .select({ id: chat.id })
+    .select({
+      id: chat.id,
+      projectId: chat.projectId,
+      assistantId: chat.assistantId,
+    })
     .from(chat)
     .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)));
 
   if (!chatRow) return new Response("Not Found", { status: 404 });
+
+  // Fetch project globalPrompt if this chat belongs to a project
+  const projectRow = chatRow.projectId
+    ? await db
+        .select({ globalPrompt: project.globalPrompt })
+        .from(project)
+        .where(
+          and(
+            eq(project.id, chatRow.projectId),
+            eq(project.userId, session.user.id),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
 
   // Fetch enabled MCP servers for this user
   const servers = await db
@@ -162,11 +181,21 @@ export async function POST(req: Request) {
     return { role: m.role, content: m.content };
   }) as ModelMessage[];
 
+  // Prepend project global prompt as system message if present
+  const systemMessages: ModelMessage[] = [];
+  if (projectRow?.globalPrompt?.trim()) {
+    systemMessages.push({ role: "system", content: projectRow.globalPrompt });
+  }
+  const finalMessages: ModelMessage[] = [
+    ...systemMessages,
+    ...processedMessages,
+  ];
+
   // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
   // rather than the OpenAI Responses API (/responses), which OpenRouter does not support.
   const result = streamText({
     model: openrouter.chat(model),
-    messages: processedMessages,
+    messages: finalMessages,
     tools: hasMcpTools ? mcpTools : undefined,
     stopWhen: hasMcpTools ? stepCountIs(10) : undefined,
   });

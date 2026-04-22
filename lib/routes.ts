@@ -39,7 +39,7 @@ export const ROUTES = {
     name: "Projects",
     detail: (id: string) => `/projects/${id}` as const,
     chat: (projectId: string, chatId: string) =>
-      `/projects/${projectId}/c/${chatId}` as const,
+      `/projects/${projectId}/${chatId}` as const,
   },
   ASSISTANTS: {
     path: "/assistants" as const,
