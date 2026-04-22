@@ -67,6 +67,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const createNewChat = useCreateChat();
 
   const recentChats = Object.values(chats)
+    .filter((chat) => !chat.projectId)
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .slice(0, 20);
 
@@ -157,17 +158,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </Link>
           </SidebarGroupLabel>
           <SidebarMenu>
-            {recentChats.map((chat) => (
-              <SidebarMenuItem key={chat.id}>
-                <SidebarMenuButton asChild tooltip={chat.title}>
-                  <Link href={ROUTES.CHATS.detail(chat.id)}>
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="truncate">{chat.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-                <ChatActionMenu chat={chat} />
-              </SidebarMenuItem>
-            ))}
+            {recentChats.map((chat) => {
+              const href = chat.projectId
+                ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
+                : ROUTES.CHATS.detail(chat.id);
+              return (
+                <SidebarMenuItem key={chat.id}>
+                  <SidebarMenuButton asChild tooltip={chat.title}>
+                    <Link href={href}>
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="truncate">{chat.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <ChatActionMenu chat={chat} />
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
