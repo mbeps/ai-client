@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
@@ -17,26 +17,37 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { ChatCard } from "@/components/chat/chat-card";
 import { EmptyState } from "@/components/empty-state";
-import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import type { Chat } from "@/lib/store";
 
 interface ChatsClientProps {
   initialChats: Chat[];
 }
 
+/**
+ * Client-side component for the chat list page.
+ * Manages search, filtering, and optimistic updates via the Zustand store.
+ *
+ * @param props.initialChats - The list of chats from the server.
+ * @author Maruf Bepary
+ */
 export function ChatsClient({ initialChats }: ChatsClientProps) {
   const router = useRouter();
-  const createChatDb = useAppStore((state) => state.createChatDb);
-  const [chats, setChats] = useState<Chat[]>(initialChats);
+  const { chats: storeChats, upsertChat, createChatDb } = useAppStore();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
+  // Sync initial server data into the store on mount
+  useEffect(() => {
+    initialChats.forEach((chat) => upsertChat(chat));
+  }, [initialChats, upsertChat]);
+
+  const allChats = Object.values(storeChats);
   const handleNewChat = async () => {
     const id = await createChatDb("New Chat");
     router.push(ROUTES.CHATS.detail(id));
   };
 
-  const filtered = chats.filter((chat) => {
+  const filtered = allChats.filter((chat) => {
     if (search && !chat.title.toLowerCase().includes(search.toLowerCase()))
       return false;
     if (filter === "project" && !chat.projectId) return false;
@@ -44,25 +55,17 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
     if (filter === "none" && (chat.projectId || chat.assistantId)) return false;
     return true;
   });
+
   const sorted = [...filtered].sort(
     (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
   );
 
-  const handleDelete = async (chatId: string) => {
-    try {
-      await deleteChat(chatId);
-      setChats((prev) => prev.filter((c) => c.id !== chatId));
-    } catch {
-      // silently ignore deletion errors
-    }
-  };
-
   return (
-    <div className="page-container">
+    <div className="page-container space-y-6">
       <PageHeader
         icon={<MessageSquare className="h-8 w-8 text-primary" />}
-        title="All Chats"
-        description="Manage all your conversations."
+        title="Chats"
+        description="Your conversation history."
         action={
           <Button onClick={handleNewChat}>
             <Plus className="h-4 w-4 mr-2" />
@@ -70,12 +73,13 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
           </Button>
         }
       />
-      <div className="flex gap-4 max-w-xl mb-6">
+
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
         <Input
           placeholder="Search chats..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
+          className="max-w-xs"
         />
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-[180px]">
@@ -89,6 +93,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {sorted.length === 0 ? (
           <EmptyState message="No chats yet. Start a new conversation from the home page." />
@@ -97,7 +102,6 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
             <ChatCard
               key={chat.id}
               chat={chat}
-              onDelete={() => handleDelete(chat.id)}
             />
           ))
         )}

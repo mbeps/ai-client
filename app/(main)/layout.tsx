@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+import { EntityOptions } from "@/components/shared/entity-options";
 
 /**
  * Authentication-guarded layout for all main app routes.
@@ -49,6 +50,7 @@ export default function MainLayout({
           <div className="w-full flex-1">
             <DynamicBreadcrumbs />
           </div>
+          <EntityOptions />
         </header>
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {children}

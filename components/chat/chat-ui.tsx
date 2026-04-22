@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore, type Attachment, type McpServer } from "@/lib/store";
+import { useAppStore, type Attachment } from "@/lib/store";
 import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./message-bubble";
@@ -396,6 +396,7 @@ export function ChatUI({
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
+
         <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
           <div className="px-4 md:px-8 py-6">
             <div className="max-w-4xl mx-auto space-y-6 pb-12">
