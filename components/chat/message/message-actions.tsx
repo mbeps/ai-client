@@ -31,6 +31,7 @@ interface MessageActionsProps {
   currentSiblingIndex: number;
   onNavigateBranch: (siblingId: string) => void;
   editContent?: string;
+  modelName?: string | null;
 }
 
 export function MessageActions({
@@ -44,6 +45,7 @@ export function MessageActions({
   currentSiblingIndex,
   onNavigateBranch,
   editContent,
+  modelName,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
@@ -153,6 +155,12 @@ export function MessageActions({
           </TooltipTrigger>
           <TooltipContent>Regenerate response</TooltipContent>
         </Tooltip>
+      )}
+
+      {!isUser && modelName && (
+        <div className="ml-auto text-[10px] text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+          {modelName}
+        </div>
       )}
     </div>
   );

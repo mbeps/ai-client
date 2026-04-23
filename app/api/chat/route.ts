@@ -354,6 +354,7 @@ export async function POST(req: Request) {
         if (fullReasoning) {
           metadataObj.reasoning = fullReasoning;
         }
+        metadataObj.model = model;
         const metadata =
           Object.keys(metadataObj).length > 0
             ? JSON.stringify(metadataObj)

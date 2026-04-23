@@ -59,4 +59,5 @@ export const messageMetadataSchema = z.object({
     )
     .optional(),
   reasoning: z.string().optional(),
+  model: z.string().optional(),
 });
