@@ -1,10 +1,4 @@
-export interface ChatRow {
-  id: string;
-  title: string;
-  userId: string;
-  projectId: string | null;
-  assistantId: string | null;
-  currentLeafId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { type InferSelectModel } from "drizzle-orm";
+import { chat } from "../drizzle/schema";
+
+export type ChatRow = InferSelectModel<typeof chat>;

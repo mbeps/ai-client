@@ -1,9 +1,4 @@
-export type PromptRow = {
-  id: string;
-  userId: string;
-  title: string;
-  shortcut: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { type InferSelectModel } from "drizzle-orm";
+import { prompt } from "../drizzle/schema";
+
+export type PromptRow = InferSelectModel<typeof prompt>;

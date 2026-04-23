@@ -1,10 +1,4 @@
-export type AssistantRow = {
-  id: string;
-  userId: string;
-  name: string;
-  description: string | null;
-  prompt: string | null;
-  avatar: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { type InferSelectModel } from "drizzle-orm";
+import { assistant } from "../drizzle/schema";
+
+export type AssistantRow = InferSelectModel<typeof assistant>;
