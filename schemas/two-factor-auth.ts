@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requiredPasswordField, sixDigitCodeField } from "./shared-fields";
 
 /**
  * Validates the password confirmation step when enabling or disabling two-factor authentication.
@@ -7,7 +8,7 @@ import { z } from "zod";
  * @author Maruf Bepary
  */
 export const twoFactorAuthSchema = z.object({
-  password: z.string().min(1, "Password is required"),
+  password: requiredPasswordField,
 });
 
 /**
@@ -24,7 +25,7 @@ export type TwoFactorAuthForm = z.infer<typeof twoFactorAuthSchema>;
  * @author Maruf Bepary
  */
 export const qrSchema = z.object({
-  token: z.string().length(6, "Token must be exactly 6 digits"),
+  token: sixDigitCodeField("Token"),
 });
 
 /**

@@ -29,3 +29,9 @@ export const descriptionField = z
 export const renameSchema = z.object({
   name: nameField,
 });
+
+export const sixDigitCodeField = (label: string = "Code") =>
+  z
+    .string()
+    .length(6, `${label} must be exactly 6 digits`)
+    .regex(/^\d{6}$/, `${label} must only contain digits`);

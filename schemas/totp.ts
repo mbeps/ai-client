@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sixDigitCodeField } from "./shared-fields";
 
 /**
  * Validates a TOTP verification code entry.
@@ -8,10 +9,7 @@ import { z } from "zod";
  * @author Maruf Bepary
  */
 export const totpSchema = z.object({
-  code: z
-    .string()
-    .length(6, "Code must be exactly 6 digits")
-    .regex(/^\d{6}$/, "Code must only contain digits"),
+  code: sixDigitCodeField(),
 });
 
 /**

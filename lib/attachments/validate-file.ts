@@ -1,22 +1,12 @@
 import type { Attachment } from "@/lib/store";
-
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-]);
-
-const ALLOWED_DOCUMENT_TYPES = new Set([
-  "application/pdf",
-  "text/plain",
-  "text/markdown",
-]);
-
-const MAX_IMAGE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
-const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
-const MAX_IMAGES_PER_MESSAGE = 2;
-const MAX_ATTACHMENTS_PER_MESSAGE = 3;
+import {
+  ALLOWED_DOCUMENT_TYPES,
+  ALLOWED_IMAGE_TYPES,
+  MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_DOCUMENT_SIZE_BYTES,
+  MAX_IMAGES_PER_MESSAGE,
+  MAX_IMAGE_SIZE_BYTES,
+} from "./constants";
 
 type ValidationResult = { valid: true } | { valid: false; reason: string };
 
