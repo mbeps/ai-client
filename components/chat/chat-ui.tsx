@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { DEFAULT_MODEL } from "@/models";
 import { Bot } from "lucide-react";
+import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
 /**
  * Props for the ChatUI component.
@@ -224,10 +225,16 @@ export function ChatUI({
                   );
                 })
               )}
-              {(streamingContent !== null ||
+              {(isLoading ||
+                streamingContent !== null ||
                 activeToolCalls.length > 0 ||
                 streamingReasoning !== null) && (
                 <>
+                  {isLoading &&
+                    streamingContent === null &&
+                    streamingReasoning === null &&
+                    activeToolCalls.length === 0 && <StreamingPlaceholder />}
+
                   {activeToolCalls.length > 0 && (
                     <div className="text-muted-foreground text-sm space-y-1 ml-2">
                       {activeToolCalls.map((tc) => (
