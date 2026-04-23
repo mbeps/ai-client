@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ROUTES } from "@/lib/routes";
-import type { Knowledgebase } from "@/lib/store";
+import type { Knowledgebase } from "@/types/knowledgebase";
 import { Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { KnowledgebaseOptions } from "./knowledgebase-options";

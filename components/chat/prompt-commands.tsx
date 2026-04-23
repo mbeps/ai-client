@@ -7,7 +7,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { type Prompt } from "@/lib/store";
+import type { Prompt } from "@/types/prompt";
 import { cn } from "@/lib/utils";
 
 interface PromptCommandsProps {

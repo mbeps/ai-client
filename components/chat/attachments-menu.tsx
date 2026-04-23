@@ -8,7 +8,7 @@ import {
   Database,
   Wrench,
 } from "lucide-react";
-import type { McpServer } from "@/lib/store";
+import type { McpServer } from "@/types/mcp-server";
 
 interface AttachmentsMenuProps {
   showToolsPanel: boolean;

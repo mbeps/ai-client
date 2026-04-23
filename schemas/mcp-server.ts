@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 
 const jsonArraySchema = z.string().refine(
@@ -27,6 +27,7 @@ const jsonObjectSchema = z.string().refine(
 const commandSchema = z
   .string()
   .min(1, "Command is required")
+  .max(255)
   .refine(
     (val) => {
       if (val.startsWith("/")) return false; // no absolute paths
@@ -53,6 +54,7 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
     url: z
       .string()
       .url("Invalid URL")
+      .max(1024)
       .refine((val) => !isBlockedUrl(val), {
         message: "URL points to a blocked or internal address",
       }),
@@ -61,6 +63,9 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
 ]);
 
 export const createMcpServerSchema = mcpServerSchema;
+
+// Update schema might want to allow partial updates but keeping it simple for now
+// as the UI might send the whole object.
 export const updateMcpServerSchema = mcpServerSchema;
 
 export type CreateMcpServer = z.infer<typeof mcpServerSchema>;

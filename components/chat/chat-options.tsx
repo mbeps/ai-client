@@ -1,17 +1,14 @@
 "use client";
-
 import { useState } from "react";
 import { Trash2, FolderOutput, Edit2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { Chat } from "@/lib/store";
+import type { Chat } from "@/types/chat";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
 import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 
 /**
@@ -29,40 +26,27 @@ export function ChatOptions({
   chat: Chat;
   trigger?: React.ReactNode;
 }) {
-
-  const isMobile = useIsMobile();
-  const router = useRouter();
-  const [showRename, setShowRename] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
   const [showMove, setShowMove] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
 
   const renameChatDb = useAppStore((state) => state.renameChatDb);
   const deleteChatDb = useAppStore((state) => state.deleteChatDb);
 
-  const handleRename = async (newName: string) => {
-    try {
-      await renameChatDb(chat.id, newName);
-      toast.success("Chat renamed");
-    } catch (error) {
-      toast.error("Failed to rename chat");
-      throw error;
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteChatDb(chat.id);
-      toast.success("Chat deleted");
-      router.push(ROUTES.CHATS.path);
-    } catch {
-      toast.error("Failed to delete chat");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: chat.id,
+    type: "Chat",
+    onRename: (id, name) => renameChatDb(id, name),
+    onDelete: (id) => deleteChatDb(id),
+    redirectPath: ROUTES.CHATS.path,
+  });
 
   const items = [
     {

@@ -1,10 +1,4 @@
-export type ProjectRow = {
-  id: string;
-  userId: string;
-  name: string;
-  description: string | null;
-  globalPrompt: string | null;
-  isPinned: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { type InferSelectModel } from "drizzle-orm";
+import { project } from "../drizzle/schema";
+
+export type ProjectRow = InferSelectModel<typeof project>;

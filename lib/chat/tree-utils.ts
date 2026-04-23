@@ -4,7 +4,7 @@
  * or descend that structure for rendering and auto-selection purposes.
  */
 
-import type { Message } from "@/lib/store";
+import type { Message } from "@/types/message";
 
 /**
  * Reconstructs the linear conversation thread from a leaf node back to the root.

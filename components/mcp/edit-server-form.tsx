@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { useAppStore } from "@/lib/store";
-import type { McpServer } from "@/lib/store";
+import type { McpServer } from "@/types/mcp-server";
 import {
   updateMcpServerSchema,
   type UpdateMcpServer,

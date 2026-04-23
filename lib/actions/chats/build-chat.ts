@@ -1,4 +1,6 @@
-import type { Chat, Message, Attachment } from "@/lib/store";
+import type { Chat } from "@/types/chat";
+import type { Message } from "@/types/message";
+import type { Attachment } from "@/types/attachment";
 import type { ChatWithMessages } from "@/types/chat-with-messages";
 
 export function buildChatFromRows(row: ChatWithMessages): Chat {

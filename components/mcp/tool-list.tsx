@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { discoverMcpServerTools } from "@/lib/actions/mcp-servers/discover-tools";
 import type { DiscoveredTool } from "@/lib/mcp/discover-tools";
-import type { McpServer } from "@/lib/store";
+import type { McpServer } from "@/types/mcp-server";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { emailField, requiredPasswordField } from "@/schemas/shared-fields";
 
 /**

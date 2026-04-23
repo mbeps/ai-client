@@ -1,6 +1,7 @@
 import { validateFile } from "./validate-file";
 import { extractPdf, extractPlainText } from "./extract-document";
-import type { Attachment } from "@/lib/store";
+import type { Attachment } from "@/types/attachment";
+import { ALLOWED_IMAGE_TYPES } from "./constants";
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -22,12 +23,6 @@ export async function processAttachment(
   }
 
   const id = crypto.randomUUID();
-  const ALLOWED_IMAGE_TYPES = new Set([
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/webp",
-  ]);
   const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
 
   if (isImage) {

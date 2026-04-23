@@ -1,9 +1,4 @@
-export interface MessageRow {
-  id: string;
-  chatId: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  parentId: string | null;
-  metadata: string | null;
-  createdAt: Date;
-}
+import { type InferSelectModel } from "drizzle-orm";
+import { message } from "../drizzle/schema";
+
+export type MessageRow = InferSelectModel<typeof message>;

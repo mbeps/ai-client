@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { env } from "@/lib/env";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
 import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
@@ -16,7 +17,7 @@ export const maxDuration = 60;
 
 const openrouter = createOpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: env.OPENROUTER_API_KEY,
 });
 
 const DEFAULT_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free";
@@ -37,31 +38,38 @@ export async function POST(req: Request) {
   if (!session) return new Response("Unauthorized", { status: 401 });
 
   const attachmentSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    mimeType: z.string().optional(),
+    id: z.string().uuid(),
+    name: z.string().min(1).max(255),
+    mimeType: z.string().max(100).optional(),
     type: z.enum(["image", "document"]).optional(),
     dataUrl: z.string().optional(),
     extractedText: z.string().optional(),
-    key: z.string().optional(),
+    key: z.string().max(1024).optional(),
   });
 
-  const messageSchema = z
-    .object({
-      role: z.enum(["user", "assistant", "system"]),
-      content: z.union([z.string(), z.array(z.any())]),
-      id: z.string().optional(),
-      parentId: z.string().optional(),
-      attachments: z.array(attachmentSchema).optional(),
-    })
-    .passthrough();
+  const contentPartSchema = z.union([
+    z.object({ type: z.literal("text"), text: z.string() }),
+    z.object({
+      type: z.literal("image"),
+      image: z.union([z.string().url(), z.string()]),
+      mimeType: z.string().optional(),
+    }),
+  ]);
+
+  const messageSchema = z.object({
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.union([z.string(), z.array(contentPartSchema)]),
+    id: z.string().uuid().optional(),
+    parentId: z.string().uuid().optional(),
+    attachments: z.array(attachmentSchema).optional(),
+  });
 
   const chatRequestSchema = z.object({
-    chatId: z.string().min(1),
-    userMessageId: z.string().min(1).optional(),
-    model: z.string().min(1).optional(),
+    chatId: z.string().uuid(),
+    userMessageId: z.string().uuid().optional(),
+    model: z.string().min(1).max(100).optional(),
     messages: z.array(messageSchema).max(500),
-    selectedServerIds: z.array(z.string()).max(20).optional(),
+    selectedServerIds: z.array(z.string().uuid()).max(20).optional(),
   });
 
   const body = await req.json();

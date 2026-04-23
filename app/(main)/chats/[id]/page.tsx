@@ -2,7 +2,7 @@ import { getChat } from "@/lib/actions/chats/get-chat";
 import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
 import { notFound } from "next/navigation";
-import type { Chat } from "@/lib/store";
+import type { Chat } from "@/types/chat";
 
 export default async function ChatPage({
   params,

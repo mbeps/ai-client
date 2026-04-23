@@ -1,31 +1,33 @@
 "use client";
-
-import { useState } from "react";
 import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { McpServer } from "@/lib/store";
+import type { McpServer } from "@/types/mcp-server";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 export function ServerOptions({ server }: { server: McpServer }) {
-  const isMobile = useIsMobile();
-  const [showRename, setShowRename] = useState(false);
-
   const renameMcpServer = useAppStore((state) => state.renameMcpServer);
   const toggleMcpServer = useAppStore((state) => state.toggleMcpServer);
   const removeMcpServer = useAppStore((state) => state.removeMcpServer);
 
-  const handleRename = async (newName: string) => {
-    try {
-      await renameMcpServer(server.id, newName);
-      toast.success("Server renamed");
-    } catch (error) {
-      toast.error("Failed to rename server");
-      throw error;
-    }
-  };
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: server.id,
+    type: "Server",
+    onRename: (id, name) => renameMcpServer(id, name),
+    onDelete: (id) => removeMcpServer(id),
+  });
 
   const handleToggle = async () => {
     try {
@@ -33,15 +35,6 @@ export function ServerOptions({ server }: { server: McpServer }) {
       toast.success(server.enabled ? "Server disabled" : "Server enabled");
     } catch {
       toast.error("Failed to toggle server");
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await removeMcpServer(server.id);
-      toast.success("Server deleted");
-    } catch {
-      toast.error("Failed to delete server");
     }
   };
 
@@ -63,7 +56,7 @@ export function ServerOptions({ server }: { server: McpServer }) {
     {
       label: "Delete Server",
       icon: <Trash2 className="mr-2 h-4 w-4" />,
-      onClick: handleDelete,
+      onClick: () => setShowDelete(true),
       isDestructive: true,
     },
   ];
@@ -77,6 +70,14 @@ export function ServerOptions({ server }: { server: McpServer }) {
         initialValue={server.name}
         onConfirm={handleRename}
         title="Rename Server"
+      />
+      <DeleteConfirmDialog
+        isOpen={showDelete}
+        onClose={() => setShowDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete Server"
+        description={`Are you sure you want to delete "${server.name}"? This action cannot be undone.`}
+        loading={isDeleting}
       />
     </>
   );

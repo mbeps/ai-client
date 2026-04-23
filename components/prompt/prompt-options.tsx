@@ -1,16 +1,13 @@
 "use client";
-
-import { useState } from "react";
 import { Trash2, Edit2, ExternalLink } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { Prompt } from "@/lib/store";
+import type { Prompt } from "@/types/prompt";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
  * Options menu for a prompt, providing Rename, Edit, and Delete actions.
@@ -19,37 +16,26 @@ import { ROUTES } from "@/lib/routes";
  * @author Maruf Bepary
  */
 export function PromptOptions({ prompt }: { prompt: Prompt }) {
-  const isMobile = useIsMobile();
   const router = useRouter();
-  const [showRename, setShowRename] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const updatePromptDb = useAppStore((state) => state.updatePromptDb);
   const deletePromptDb = useAppStore((state) => state.deletePromptDb);
 
-  const handleRename = async (newName: string) => {
-    try {
-      await updatePromptDb(prompt.id, { title: newName });
-      toast.success("Prompt renamed");
-    } catch (error) {
-      toast.error("Failed to rename prompt");
-      throw error;
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deletePromptDb(prompt.id);
-      toast.success("Prompt deleted");
-      router.push(ROUTES.SETTINGS.PROMPTS.path);
-    } catch {
-      toast.error("Failed to delete prompt");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: prompt.id,
+    type: "Prompt",
+    onRename: (id, name) => updatePromptDb(id, { title: name }),
+    onDelete: (id) => deletePromptDb(id),
+    redirectPath: ROUTES.SETTINGS.PROMPTS.path,
+  });
 
   const items = [
     {

@@ -1,10 +1,4 @@
-export interface AttachmentRow {
-  id: string;
-  messageId: string;
-  userId: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  key: string;
-  createdAt: Date;
-}
+import { type InferSelectModel } from "drizzle-orm";
+import { attachment } from "../drizzle/schema";
+
+export type AttachmentRow = InferSelectModel<typeof attachment>;

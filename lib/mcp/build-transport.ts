@@ -1,6 +1,8 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { isBlockedUrl } from "./url-guard";
+import { env as appEnv } from "@/lib/env";
+import { z } from "zod";
 
 export type TransportConfig = {
   name?: string;
@@ -13,6 +15,10 @@ export type TransportConfig = {
 };
 
 type MCPTransport = Parameters<typeof createMCPClient>[0]["transport"];
+
+const argsSchema = z.array(z.string());
+const envSchema = z.record(z.string(), z.string());
+const headersSchema = z.record(z.string(), z.string());
 
 /**
  * Builds an MCP transport from a server config.
@@ -29,24 +35,24 @@ export function buildTransport(server: TransportConfig): MCPTransport {
     let args: string[] = [];
     if (server.args) {
       try {
-        args = JSON.parse(server.args);
+        args = argsSchema.parse(JSON.parse(server.args));
       } catch {
         throw new Error(`Invalid args JSON for "${label}"`);
       }
     }
 
-    const SAFE_ENV_KEYS = ["PATH", "HOME", "LANG", "NODE_ENV"];
+    const SAFE_ENV_KEYS = ["PATH", "HOME", "LANG", "NODE_ENV"] as const;
     const baseEnv = Object.fromEntries(
-      SAFE_ENV_KEYS.filter((k) => process.env[k]).map((k) => [
+      SAFE_ENV_KEYS.filter((k) => (appEnv as any)[k] !== undefined).map((k) => [
         k,
-        process.env[k]!,
+        (appEnv as any)[k] as string,
       ]),
     );
 
     let userEnv: Record<string, string> = {};
     if (server.env) {
       try {
-        userEnv = JSON.parse(server.env);
+        userEnv = envSchema.parse(JSON.parse(server.env));
       } catch {
         throw new Error(`Invalid env JSON for "${label}"`);
       }
@@ -74,7 +80,7 @@ export function buildTransport(server: TransportConfig): MCPTransport {
     let headers: Record<string, string> | undefined;
     if (server.headers) {
       try {
-        headers = JSON.parse(server.headers);
+        headers = headersSchema.parse(JSON.parse(server.headers));
       } catch {
         throw new Error(`Invalid headers JSON for "${label}"`);
       }

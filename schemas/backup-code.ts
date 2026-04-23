@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 /**
  * Validates a 2FA backup code entry.
