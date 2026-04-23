@@ -4,7 +4,7 @@ import * as React from "react";
 import { SidebarMenuAction } from "@/components/ui/sidebar";
 import { MoreHorizontal } from "lucide-react";
 import { ChatOptions } from "@/components/chat/chat-options";
-import type { Chat } from "@/lib/store";
+import type { Chat } from "@/types/chat";
 
 /**
  * Internal action menu for a sidebar chat item.

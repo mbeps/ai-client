@@ -10,7 +10,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { type Attachment, Message, useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
+import type { Attachment } from "@/types/attachment";
+import type { Message } from "@/types/message";
 import { getAttachmentUrl } from "@/lib/actions/attachments";
 import { ROUTES } from "@/lib/routes";
 import {

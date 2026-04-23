@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { McpServer } from "@/lib/store";
+import type { McpServer } from "@/types/mcp-server";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { toast } from "sonner";

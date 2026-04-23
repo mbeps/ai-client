@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Trash2, FolderOutput, Edit2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { Chat } from "@/lib/store";
+import type { Chat } from "@/types/chat";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

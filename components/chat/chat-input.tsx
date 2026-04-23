@@ -31,7 +31,10 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { useAppStore, type Attachment, type McpServer, type Prompt } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
+import type { Attachment } from "@/types/attachment";
+import type { McpServer } from "@/types/mcp-server";
+import type { Prompt } from "@/types/prompt";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";

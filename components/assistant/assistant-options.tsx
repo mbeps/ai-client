@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
-import type { Assistant } from "@/lib/store";
+import type { Assistant } from "@/types/assistant";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

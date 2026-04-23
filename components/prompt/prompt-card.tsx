@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Command } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
-import type { Prompt } from "@/lib/store";
+import type { Prompt } from "@/types/prompt";
 import { PromptOptions } from "./prompt-options";
 import { Badge } from "@/components/ui/badge";
 

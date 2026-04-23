@@ -1,4 +1,4 @@
-import type { Attachment } from "@/lib/store";
+import type { Attachment } from "@/types/attachment";
 import {
   ALLOWED_DOCUMENT_TYPES,
   ALLOWED_IMAGE_TYPES,

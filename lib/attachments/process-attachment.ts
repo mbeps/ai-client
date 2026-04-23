@@ -1,6 +1,6 @@
 import { validateFile } from "./validate-file";
 import { extractPdf, extractPlainText } from "./extract-document";
-import type { Attachment } from "@/lib/store";
+import type { Attachment } from "@/types/attachment";
 import { ALLOWED_IMAGE_TYPES } from "./constants";
 
 function readAsDataUrl(file: File): Promise<string> {

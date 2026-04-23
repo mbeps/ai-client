@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Bot } from "lucide-react";
-import type { Assistant } from "@/lib/store";
+import type { Assistant } from "@/types/assistant";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import { AssistantOptions } from "./assistant-options";
 

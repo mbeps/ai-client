@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { FolderOpen, Pin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
-import type { Project } from "@/lib/store";
+import type { Project } from "@/types/project";
 import { ProjectOptions } from "./project-options";
 
 /**

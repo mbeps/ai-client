@@ -1,6 +1,8 @@
 "use client";
 
-import { useAppStore, type Attachment } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
+import type { Message } from "@/types/message";
+import type { Attachment } from "@/types/attachment";
 import { uploadAttachment } from "@/lib/actions/attachments";
 import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
