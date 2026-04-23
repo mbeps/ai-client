@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/types/assistant";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
 import { useCreateChat } from "@/hooks/use-create-chat";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
  * Options menu for an assistant, providing Rename and Delete actions.
@@ -22,38 +20,27 @@ import { useCreateChat } from "@/hooks/use-create-chat";
  * @author Maruf Bepary
  */
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {
-  const isMobile = useIsMobile();
   const router = useRouter();
-  const [showRename, setShowRename] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const createNewChat = useCreateChat();
   const renameAssistantDb = useAppStore((state) => state.renameAssistantDb);
   const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
 
-  const handleRename = async (newName: string) => {
-    try {
-      await renameAssistantDb(assistant.id, newName);
-      toast.success("Assistant renamed");
-    } catch (error) {
-      toast.error("Failed to rename assistant");
-      throw error;
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteAssistantDb(assistant.id);
-      toast.success("Assistant deleted");
-      router.push(ROUTES.ASSISTANTS.path);
-    } catch {
-      toast.error("Failed to delete assistant");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: assistant.id,
+    type: "Assistant",
+    onRename: (id, name) => renameAssistantDb(id, name),
+    onDelete: (id) => deleteAssistantDb(id),
+    redirectPath: ROUTES.ASSISTANTS.path,
+  });
 
   const items = [
     {

@@ -1,16 +1,13 @@
 "use client";
-
-import { useState } from "react";
 import { Trash2, Pin, PinOff, Edit2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAppStore } from "@/lib/store";
 import type { Project } from "@/types/project";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
  * Options menu for a project, providing Rename, Pin/Unpin, and Delete actions.
@@ -21,44 +18,32 @@ import { ROUTES } from "@/lib/routes";
  * @author Maruf Bepary
  */
 export function ProjectOptions({ project }: { project: Project }) {
-  const isMobile = useIsMobile();
-  const router = useRouter();
-  const [showRename, setShowRename] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const toggleProjectPinDb = useAppStore((state) => state.toggleProjectPinDb);
   const renameProjectDb = useAppStore((state) => state.renameProjectDb);
   const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
 
-  const handleRename = async (newName: string) => {
-    try {
-      await renameProjectDb(project.id, newName);
-      toast.success("Project renamed");
-    } catch (error) {
-      toast.error("Failed to rename project");
-      throw error;
-    }
-  };
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: project.id,
+    type: "Project",
+    onRename: (id, name) => renameProjectDb(id, name),
+    onDelete: (id) => deleteProjectDb(id),
+    redirectPath: ROUTES.PROJECTS.path,
+  });
 
   const handleTogglePin = async () => {
     try {
       await toggleProjectPinDb(project.id);
     } catch {
       toast.error("Failed to update pin");
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteProjectDb(project.id);
-      toast.success("Project deleted");
-      router.push(ROUTES.PROJECTS.path);
-    } catch {
-      toast.error("Failed to delete project");
-    } finally {
-      setIsDeleting(false);
     }
   };
 

@@ -1,34 +1,22 @@
 "use client";
-
-import { useState } from "react";
-import { Trash2, Edit2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Edit2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Knowledgebase } from "@/types/knowledgebase";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { ROUTES } from "@/lib/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 
 export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
-  const isMobile = useIsMobile();
-  const router = useRouter();
-  const [showRename, setShowRename] = useState(false);
-
   const renameKnowledgebaseDb = useAppStore(
     (state) => state.renameKnowledgebaseDb,
   );
 
-  const handleRename = async (newName: string) => {
-    try {
-      await renameKnowledgebaseDb(kb.id, newName);
-      toast.success("Knowledgebase renamed");
-    } catch (error) {
-      toast.error("Failed to rename knowledgebase");
-      throw error;
-    }
-  };
+  const { isMobile, showRename, setShowRename, handleRename } =
+    useEntityOptions({
+      id: kb.id,
+      type: "Knowledgebase",
+      onRename: (id, name) => renameKnowledgebaseDb(id, name),
+    });
 
   const items = [
     {
