@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { renameSchema } from "@/schemas/shared-fields";
+import type { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+
+type RenameFormData = z.infer<typeof renameSchema>;
 
 /**
  * Shared modal for renaming entities like chats, projects, or assistants.
@@ -40,18 +46,36 @@ export function RenameDialog({
   title?: string;
   label?: string;
 }) {
-  const [value, setValue] = useState(initialValue);
   const [loading, setLoading] = useState(false);
 
-  const handleConfirm = async () => {
-    if (!value.trim() || value === initialValue) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<RenameFormData>({
+    resolver: zodResolver(renameSchema),
+    defaultValues: {
+      name: initialValue,
+    },
+  });
+
+  // Sync initialValue when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      reset({ name: initialValue });
+    }
+  }, [isOpen, initialValue, reset]);
+
+  const onSubmit = async (data: RenameFormData) => {
+    if (data.name === initialValue) {
       onClose();
       return;
     }
 
     setLoading(true);
     try {
-      await onConfirm(value);
+      await onConfirm(data.name);
       onClose();
     } catch (error) {
       console.error("Rename failed:", error);
@@ -69,29 +93,35 @@ export function RenameDialog({
             Enter a new name for the item.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="rename-input">{label}</Label>
-            <Input
-              id="rename-input"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Enter new name..."
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleConfirm();
-              }}
-            />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rename-input">{label}</Label>
+              <Input
+                id="rename-input"
+                {...register("name")}
+                placeholder="Enter new name..."
+                autoFocus
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm} disabled={loading || !value.trim()}>
-            {loading ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !isDirty}>
+              {loading ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

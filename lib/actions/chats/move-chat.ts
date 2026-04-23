@@ -5,6 +5,8 @@ import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import type { ChatRow } from "@/types/chat-row";
+import { moveChatSchema } from "@/schemas/chat";
+import { z } from "zod";
 
 /**
  * Moves a chat to a specific project or removes it from all projects.
@@ -20,10 +22,16 @@ export async function moveChat(
 ): Promise<ChatRow> {
   const session = await requireSession();
 
+  // Validate inputs
+  const validatedChatId = z.string().uuid().parse(chatId);
+  const validatedData = moveChatSchema.parse({ projectId });
+
   const [updatedChat] = await db
     .update(chat)
-    .set({ projectId, updatedAt: new Date() })
-    .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)))
+    .set({ projectId: validatedData.projectId, updatedAt: new Date() })
+    .where(
+      and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+    )
     .returning();
 
   if (!updatedChat) throw new Error("Chat not found or access denied");

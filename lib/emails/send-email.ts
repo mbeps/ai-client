@@ -4,10 +4,11 @@
  * through the single `sendEmail` helper exposed by this module.
  */
 
+import { env } from "@/lib/env";
 import { ServerClient } from "postmark";
 
 /** Singleton Postmark server client initialised from `POSTMARK_SERVER_TOKEN`. */
-const postmarkClient = new ServerClient(process.env.POSTMARK_SERVER_TOKEN!);
+const postmarkClient = new ServerClient(env.POSTMARK_SERVER_TOKEN);
 
 /**
  * Sends a transactional email through the configured Postmark client.
@@ -33,7 +34,7 @@ export function sendEmail({
   text: string;
 }) {
   return postmarkClient.sendEmail({
-    From: process.env.POSTMARK_FROM_EMAIL!,
+    From: env.POSTMARK_FROM_EMAIL,
     To: to,
     Subject: subject,
     HtmlBody: html,

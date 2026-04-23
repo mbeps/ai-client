@@ -1,7 +1,7 @@
 /**
  * Centralised in-memory application state using Zustand.
  * Single source of truth for Projects, Assistants, Knowledge Bases, Chats, and Messages.
- * Chat data is not yet persisted to the database — all state resets on page refresh.
+ * Chat data is persisted to the database via server actions.
  *
  * @see useAppStore for the main store hook
  * @author Maruf Bepary
@@ -48,6 +48,7 @@ import {
   updateMcpServer as updateMcpServerAction,
 } from "@/lib/actions/mcp-servers";
 import type { CreateMcpServer, UpdateMcpServer } from "@/schemas/mcp-server";
+import { messageMetadataSchema } from "@/schemas/chat";
 
 /**
  * A reusable prompt snippet that can be inserted into the chat input via shortcuts.
@@ -453,7 +454,7 @@ export function chatRowToStore(row: ChatRow): Chat {
 /**
  * Global Zustand store hook for the AI chat client.
  * Manages projects, assistants, knowledge bases, and chats entirely in-memory.
- * Chat data is not yet persisted to the database.
+ * Chat data is persisted to the database via server actions.
  *
  * @author Maruf Bepary
  */
@@ -709,8 +710,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       let parsedReasoning: string | undefined;
       if (m.metadata) {
         try {
-          const parsed = JSON.parse(m.metadata);
-          parsedReasoning = parsed?.reasoning ?? undefined;
+          const raw = JSON.parse(m.metadata);
+          const parsed = messageMetadataSchema.safeParse(raw);
+          parsedReasoning = parsed.success ? parsed.data.reasoning : undefined;
         } catch {
           parsedReasoning = undefined;
         }

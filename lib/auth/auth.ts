@@ -9,6 +9,7 @@ import { sendWelcomeEmail } from "../emails/welcome-email";
 import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { passkey } from "@better-auth/passkey";
+import { env } from "@/lib/env";
 
 /**
  * Better Auth server instance. SERVER-ONLY — do not import in client components.
@@ -22,6 +23,8 @@ import { passkey } from "@better-auth/passkey";
  */
 export const auth = betterAuth({
   appName: "Better Auth Demo",
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
   user: {
     deleteUser: {
       enabled: true,
@@ -49,12 +52,12 @@ export const auth = betterAuth({
   },
   socialProviders: {
     github: {
-      clientId: process.env.CLIENT_ID_GITHUB!,
-      clientSecret: process.env.CLIENT_SECRET_GITHUB!,
+      clientId: env.CLIENT_ID_GITHUB!,
+      clientSecret: env.CLIENT_SECRET_GITHUB!,
     },
     discord: {
-      clientId: process.env.CLIENT_ID_DISCORD!,
-      clientSecret: process.env.CLIENT_SECRET_DISCORD!,
+      clientId: env.CLIENT_ID_DISCORD!,
+      clientSecret: env.CLIENT_SECRET_DISCORD!,
     },
   },
   session: {

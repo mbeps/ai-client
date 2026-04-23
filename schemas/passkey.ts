@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 /**
  * Validates the passkey registration form.

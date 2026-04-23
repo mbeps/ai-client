@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import {
   S3Client,
   PutObjectCommand,
@@ -10,16 +11,16 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const s3Client = new S3Client({
-  endpoint: process.env.S3_ENDPOINT!,
-  region: process.env.S3_REGION ?? "us-east-1",
+  endpoint: env.S3_ENDPOINT,
+  region: env.S3_REGION,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY!,
-    secretAccessKey: process.env.S3_SECRET_KEY!,
+    accessKeyId: env.S3_ACCESS_KEY,
+    secretAccessKey: env.S3_SECRET_KEY,
   },
   forcePathStyle: true,
 });
 
-export const S3_BUCKET = process.env.S3_BUCKET ?? "ai-client-uploads";
+export const S3_BUCKET = env.S3_BUCKET;
 
 export async function ensureBucket() {
   try {

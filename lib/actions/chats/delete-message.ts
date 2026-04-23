@@ -4,7 +4,17 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { and, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 
+/**
+ * Recursively deletes a message and all its children/descendants from the tree.
+ * Bulk deletes the collected IDs and updates the chat's current leaf tip.
+ *
+ * @param chatId - The ID of the chat containing the message.
+ * @param messageId - The ID of the message to delete.
+ * @param newLeafId - The new leaf node ID to set as current for the chat.
+ * @author Maruf Bepary
+ */
 export async function deleteMessage(
   chatId: string,
   messageId: string,
@@ -12,11 +22,16 @@ export async function deleteMessage(
 ): Promise<void> {
   const session = await requireSession();
 
+  // Validate inputs
+  const validatedChatId = z.string().uuid().parse(chatId);
+  const validatedMessageId = z.string().uuid().parse(messageId);
+  const validatedNewLeafId = z.string().uuid().nullable().parse(newLeafId);
+
   // Verify chat ownership
   const [chatRow] = await db
     .select({ id: chat.id })
     .from(chat)
-    .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)));
+    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)));
 
   if (!chatRow) throw new Error("Not Found");
 
@@ -24,7 +39,7 @@ export async function deleteMessage(
   const allMessages = await db
     .select({ id: message.id, parentId: message.parentId })
     .from(message)
-    .where(eq(message.chatId, chatId));
+    .where(eq(message.chatId, validatedChatId));
 
   // Build a children map: parentId → childIds[]
   const childrenMap = new Map<string, string[]>();
@@ -44,14 +59,16 @@ export async function deleteMessage(
       collect(childId);
     }
   };
-  collect(messageId);
+  collect(validatedMessageId);
 
   // Bulk delete — attachment rows cascade-delete automatically via FK
-  await db.delete(message).where(inArray(message.id, toDelete));
+  if (toDelete.length > 0) {
+    await db.delete(message).where(inArray(message.id, toDelete));
+  }
 
   // Update the chat's currentLeafId to the newly computed leaf
   await db
     .update(chat)
-    .set({ currentLeafId: newLeafId, updatedAt: new Date() })
-    .where(eq(chat.id, chatId));
+    .set({ currentLeafId: validatedNewLeafId, updatedAt: new Date() })
+    .where(eq(chat.id, validatedChatId));
 }

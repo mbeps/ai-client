@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 /**
  * Validates the password confirmation step when enabling or disabling two-factor authentication.
