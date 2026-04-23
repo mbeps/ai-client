@@ -25,6 +25,9 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Settings,
+  Save,
+  Trash2,
+  Search,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -163,9 +166,11 @@ export default function AssistantPage() {
         </TabsList>
 
         <TabsContent value="chats" className="space-y-4">
-          <div className="w-full sm:max-w-xs">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search chats..."
+              className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -206,7 +211,14 @@ export default function AssistantPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Prompt"}
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -233,7 +245,14 @@ export default function AssistantPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Details"}
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Details
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -255,6 +274,7 @@ export default function AssistantPage() {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
               >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Assistant
               </Button>
             </CardContent>

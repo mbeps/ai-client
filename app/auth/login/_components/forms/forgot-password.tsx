@@ -16,6 +16,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
+import { ArrowLeft, Mail } from "lucide-react";
 import {
   forgotPasswordSchema,
   ForgotPasswordForm,
@@ -88,10 +89,16 @@ export function ForgotPassword({
 
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={openSignInTab}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
           <Button type="submit" disabled={isSubmitting} className="flex-1">
-            <LoadingSwap isLoading={isSubmitting}>Send Reset Email</LoadingSwap>
+            <LoadingSwap isLoading={isSubmitting}>
+              <div className="flex items-center">
+                <Mail className="mr-2 h-4 w-4" />
+                Send Reset Email
+              </div>
+            </LoadingSwap>
           </Button>
         </div>
       </form>

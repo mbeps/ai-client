@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { Plus, X } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import {
   createMcpServerSchema,
@@ -256,10 +257,16 @@ export function AddServerDialog({
                 onClick={() => handleOpenChange(false)}
                 disabled={isSubmitting}
               >
+                <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                <LoadingSwap isLoading={isSubmitting}>Add Server</LoadingSwap>
+                <LoadingSwap isLoading={isSubmitting}>
+                  <div className="flex items-center">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Server
+                  </div>
+                </LoadingSwap>
               </Button>
             </DialogFooter>
           </form>

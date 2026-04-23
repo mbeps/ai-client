@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { User } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,12 @@ export function ProfileUpdateForm({
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          <LoadingSwap isLoading={isSubmitting}>Update Profile</LoadingSwap>
+          <LoadingSwap isLoading={isSubmitting}>
+            <div className="flex items-center">
+              <User className="mr-2 h-4 w-4" />
+              Update Profile
+            </div>
+          </LoadingSwap>
         </Button>
       </form>
     </Form>

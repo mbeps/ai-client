@@ -17,6 +17,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
+import { UserPlus } from "lucide-react";
 import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
 
 /**
@@ -108,7 +109,12 @@ export function SignUpTab({
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          <LoadingSwap isLoading={isSubmitting}>Sign Up</LoadingSwap>
+          <LoadingSwap isLoading={isSubmitting}>
+            <div className="flex items-center">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Sign Up
+            </div>
+          </LoadingSwap>
         </Button>
       </form>
     </Form>

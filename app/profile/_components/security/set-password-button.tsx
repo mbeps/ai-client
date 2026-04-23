@@ -3,6 +3,7 @@
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
+import { Mail } from "lucide-react";
 
 /**
  * Button that triggers the password reset flow for users without a password.
@@ -22,6 +23,7 @@ export function SetPasswordButton({ email }: { email: string }) {
         });
       }}
     >
+      <Mail className="mr-2 h-4 w-4" />
       Send Password Reset Email
     </BetterAuthActionButton>
   );

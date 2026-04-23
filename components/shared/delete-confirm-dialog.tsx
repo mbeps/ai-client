@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Trash2, X } from "lucide-react";
 
 interface DeleteConfirmDialogProps {
   /** Whether the dialog is currently visible. */
@@ -48,7 +49,10 @@ export function DeleteConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>
+            <X className="mr-2 h-4 w-4" />
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={async (e) => {
               e.preventDefault();
@@ -58,7 +62,14 @@ export function DeleteConfirmDialog({
             disabled={loading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {loading ? "Deleting..." : "Delete"}
+            {loading ? (
+              "Deleting..."
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </>
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

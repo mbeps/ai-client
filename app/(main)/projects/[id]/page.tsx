@@ -20,6 +20,9 @@ import {
   MessageSquare,
   MessageSquarePlus,
   Settings,
+  Save,
+  Trash2,
+  Search,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
@@ -159,9 +162,11 @@ export default function ProjectPage() {
         </TabsList>
 
         <TabsContent value="chats" className="space-y-4">
-          <div className="w-full sm:max-w-xs">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search chats..."
+              className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -219,7 +224,14 @@ export default function ProjectPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? "Saving..." : "Save Prompt"}
+                {savingSettings ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -246,7 +258,14 @@ export default function ProjectPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? "Saving..." : "Save Details"}
+                {savingSettings ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Details
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -268,6 +287,7 @@ export default function ProjectPage() {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
               >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Project
               </Button>
             </CardContent>

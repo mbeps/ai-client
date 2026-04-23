@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
+import { Wrench } from "lucide-react";
 
 export default function ToolNotFound() {
   return (
@@ -11,7 +12,10 @@ export default function ToolNotFound() {
         This MCP server does not exist or you don&apos;t have access to it.
       </p>
       <Button asChild>
-        <Link href={ROUTES.TOOLS.path}>Back to tools</Link>
+        <Link href={ROUTES.TOOLS.path}>
+          <Wrench className="mr-2 h-4 w-4" />
+          Back to tools
+        </Link>
       </Button>
     </div>
   );

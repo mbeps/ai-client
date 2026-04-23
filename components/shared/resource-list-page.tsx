@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { Search } from "lucide-react";
 
 interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
   /** Leading icon for the page type. */
@@ -78,9 +79,11 @@ export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
       />
 
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
-        <div className="w-full sm:max-w-xs">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
+            className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

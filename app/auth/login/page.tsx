@@ -18,6 +18,7 @@ import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";
+import { LogIn, UserPlus } from "lucide-react";
 
 const TAB_VALUES = {
   SIGN_IN: "signin",
@@ -65,8 +66,14 @@ export default function LoginPage() {
       {(selectedTab === TAB_VALUES.SIGN_IN ||
         selectedTab === TAB_VALUES.SIGN_UP) && (
         <TabsList>
-          <TabsTrigger value={TAB_VALUES.SIGN_IN}>Sign In</TabsTrigger>
-          <TabsTrigger value={TAB_VALUES.SIGN_UP}>Sign Up</TabsTrigger>
+          <TabsTrigger value={TAB_VALUES.SIGN_IN} className="flex items-center">
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign In
+          </TabsTrigger>
+          <TabsTrigger value={TAB_VALUES.SIGN_UP} className="flex items-center">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Sign Up
+          </TabsTrigger>
         </TabsList>
       )}
       <TabsContent value={TAB_VALUES.SIGN_IN}>

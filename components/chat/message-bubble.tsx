@@ -9,6 +9,7 @@ import type { Attachment } from "@/types/attachment";
 import type { Message } from "@/types/message";
 import { getAttachmentUrl } from "@/lib/actions/attachments";
 import { ROUTES } from "@/lib/routes";
+import { MODELS } from "@/models";
 import {
   Bot,
   Command,
@@ -75,6 +76,16 @@ function parseToolData(metadata: string | null | undefined): ToolData | null {
   }
 }
 
+function parseModel(metadata: string | null | undefined): string | null {
+  if (!metadata) return null;
+  try {
+    const parsed = JSON.parse(metadata);
+    return typeof parsed.model === "string" ? parsed.model : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Props for the MessageBubble component.
  *
@@ -89,6 +100,8 @@ interface MessageBubbleProps {
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */
   onEdit: (id: string, newContent: string) => void;
+  /** Callback to regenerate an assistant response. */
+  onRegenerate?: (id: string) => void;
   // Branching props
   /** All sibling messages sharing the same parent; enables branch navigation. */
   siblings: Message[];
@@ -127,6 +140,7 @@ export function MessageBubble({
   onNavigateBranch,
   reasoning,
   isStreamingReasoning,
+  onRegenerate,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -142,6 +156,13 @@ export function MessageBubble({
   const promptEntry = promptMeta
     ? prompts.find((p) => p.id === promptMeta.promptId)
     : null;
+    
+  const modelName = useMemo(() => {
+    if (isUser) return null;
+    const modelId = parseModel(message.metadata);
+    if (!modelId) return null;
+    return MODELS.find((m) => m.value === modelId)?.label || modelId;
+  }, [isUser, message.metadata]);
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
 
@@ -307,7 +328,9 @@ export function MessageBubble({
           siblings={siblings}
           currentSiblingIndex={currentSiblingIndex}
           onNavigateBranch={onNavigateBranch}
+          onRegenerate={onRegenerate}
           editContent={promptMeta ? promptMeta.userContent : undefined}
+          modelName={modelName}
         />
       </div>
     </div>

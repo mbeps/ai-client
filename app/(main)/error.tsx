@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { RotateCcw, Home } from "lucide-react";
 
 export default function MainError({
   error,
@@ -30,10 +31,14 @@ export default function MainError({
       </div>
       <div className="flex gap-2">
         <Button variant="outline" onClick={reset}>
+          <RotateCcw className="mr-2 h-4 w-4" />
           Try again
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/">Go home</Link>
+          <Link href="/">
+            <Home className="mr-2 h-4 w-4" />
+            Go home
+          </Link>
         </Button>
       </div>
     </div>

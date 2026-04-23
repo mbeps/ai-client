@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Copy,
   Edit2,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,11 +25,13 @@ interface MessageActionsProps {
   contentToCopy: string;
   onEdit?: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  onRegenerate?: (id: string) => void;
   // Branching props
   siblings: Message[];
   currentSiblingIndex: number;
   onNavigateBranch: (siblingId: string) => void;
   editContent?: string;
+  modelName?: string | null;
 }
 
 export function MessageActions({
@@ -37,10 +40,12 @@ export function MessageActions({
   contentToCopy,
   onEdit,
   onDelete,
+  onRegenerate,
   siblings,
   currentSiblingIndex,
   onNavigateBranch,
   editContent,
+  modelName,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
@@ -135,6 +140,28 @@ export function MessageActions({
         </TooltipTrigger>
         <TooltipContent>Delete message</TooltipContent>
       </Tooltip>
+
+      {!isUser && onRegenerate && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={() => onRegenerate(message.id)}
+            >
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Regenerate response</TooltipContent>
+        </Tooltip>
+      )}
+
+      {!isUser && modelName && (
+        <div className="ml-auto text-[10px] text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+          {modelName}
+        </div>
+      )}
     </div>
   );
 }

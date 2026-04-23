@@ -19,6 +19,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import QRCode from "react-qr-code";
+import { Check, ShieldCheck, ShieldX } from "lucide-react";
 import {
   twoFactorAuthSchema,
   TwoFactorAuthForm,
@@ -127,7 +128,19 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
           variant={isEnabled ? "destructive" : "default"}
         >
           <LoadingSwap isLoading={isSubmitting}>
-            {isEnabled ? "Disable 2FA" : "Enable 2FA"}
+            <div className="flex items-center">
+              {isEnabled ? (
+                <>
+                  <ShieldX className="mr-2 h-4 w-4" />
+                  Disable 2FA
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Enable 2FA
+                </>
+              )}
+            </div>
           </LoadingSwap>
         </Button>
       </form>
@@ -192,6 +205,7 @@ function QRCodeVerify({
           ))}
         </div>
         <Button variant="outline" onClick={onDone}>
+          <Check className="mr-2 h-4 w-4" />
           Done
         </Button>
       </>
@@ -221,7 +235,12 @@ function QRCodeVerify({
           />
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            <LoadingSwap isLoading={isSubmitting}>Submit Code</LoadingSwap>
+            <LoadingSwap isLoading={isSubmitting}>
+              <div className="flex items-center">
+                <Check className="mr-2 h-4 w-4" />
+                Submit Code
+              </div>
+            </LoadingSwap>
           </Button>
         </form>
       </Form>

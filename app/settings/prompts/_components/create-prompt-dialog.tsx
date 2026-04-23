@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -155,10 +156,18 @@ export function CreatePromptDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
+                <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Prompt"}
+                {isSubmitting ? (
+                  "Creating..."
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Prompt
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

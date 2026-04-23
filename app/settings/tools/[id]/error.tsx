@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { RotateCcw, Wrench } from "lucide-react";
 
 export default function ToolError({
   error,
@@ -31,10 +32,14 @@ export default function ToolError({
       </div>
       <div className="flex gap-2">
         <Button variant="outline" onClick={reset}>
+          <RotateCcw className="mr-2 h-4 w-4" />
           Try again
         </Button>
         <Button asChild variant="ghost">
-          <Link href={ROUTES.TOOLS.path}>Back to tools</Link>
+          <Link href={ROUTES.TOOLS.path}>
+            <Wrench className="mr-2 h-4 w-4" />
+            Back to tools
+          </Link>
         </Button>
       </div>
     </div>

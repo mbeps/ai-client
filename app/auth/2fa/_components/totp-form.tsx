@@ -17,6 +17,7 @@ import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { totpSchema, TotpFormData } from "@/schemas/totp";
 
 /**
@@ -73,7 +74,12 @@ export function TotpForm() {
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          <LoadingSwap isLoading={isSubmitting}>Verify</LoadingSwap>
+          <LoadingSwap isLoading={isSubmitting}>
+            <div className="flex items-center">
+              <Check className="mr-2 h-4 w-4" />
+              Verify
+            </div>
+          </LoadingSwap>
         </Button>
       </form>
     </Form>
