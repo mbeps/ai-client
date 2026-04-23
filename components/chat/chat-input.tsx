@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -31,16 +31,15 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment";
 import type { McpServer } from "@/types/mcp-server";
-import type { Prompt } from "@/types/prompt";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
 import { MODELS } from "@/models";
 import { Model } from "@/types/model";
 import { PromptCommands } from "./prompt-commands";
+import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";
 
 interface ChatInputProps {
   onSend: (
@@ -69,27 +68,22 @@ export function ChatInput({
     new Set(),
   );
   const [showToolsPanel, setShowToolsPanel] = useState(false);
-  const [commandQuery, setCommandQuery] = useState("");
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  const prompts = useAppStore((state) => state.prompts);
-
-  const filteredPrompts = useMemo(() => {
-    if (!isCommandOpen) return [];
-    const q = commandQuery.toLowerCase();
-    return prompts.filter(
-      (p) =>
-        p.shortcut.toLowerCase().includes(q) ||
-        p.title.toLowerCase().includes(q),
-    );
-  }, [commandQuery, prompts, isCommandOpen]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+
+  const {
+    isCommandOpen,
+    setIsCommandOpen,
+    filteredPrompts,
+    selectedIndex,
+    selectedPrompt,
+    setSelectedPrompt,
+    handleInputChange,
+    handleKeyDown: handleCommandKeyDown,
+    handlePromptSelect,
+  } = usePromptCommands(input, setInput, textareaRef);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -146,85 +140,11 @@ export function ChatInput({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const pos = e.target.selectionStart;
-    setInput(value);
-    setCursorPosition(pos);
-
-    // Detect / trigger
-    const textBeforeCursor = value.slice(0, pos);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
-
-    if (lastSlashIndex !== -1) {
-      const isStartOfLine = lastSlashIndex === 0;
-      const isAfterSpace = textBeforeCursor[lastSlashIndex - 1] === " ";
-      const hasNewlineAfterSlash = value
-        .slice(lastSlashIndex, pos)
-        .includes("\n");
-
-      if ((isStartOfLine || isAfterSpace) && !hasNewlineAfterSlash && !selectedPrompt) {
-        setIsCommandOpen(true);
-        setCommandQuery(value.slice(lastSlashIndex + 1, pos));
-        setSelectedIndex(0);
-      } else {
-        setIsCommandOpen(false);
-      }
-    } else {
-      setIsCommandOpen(false);
-    }
-  };
-
-  const handlePromptSelect = (prompt: Prompt) => {
-    const textBeforeCursor = input.slice(0, cursorPosition);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
-
-    if (lastSlashIndex !== -1) {
-      const newInput =
-        input.slice(0, lastSlashIndex) + input.slice(cursorPosition);
-
-      setInput(newInput);
-      setSelectedPrompt(prompt);
-      setIsCommandOpen(false);
-
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(lastSlashIndex, lastSlashIndex);
-        }
-      }, 0);
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (isCommandOpen) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % filteredPrompts.length);
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex(
-          (prev) => (prev - 1 + filteredPrompts.length) % filteredPrompts.length,
-        );
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (filteredPrompts[selectedIndex]) {
-          handlePromptSelect(filteredPrompts[selectedIndex]);
-        }
-        return;
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setIsCommandOpen(false);
-        return;
-      }
-    }
+    const wasCommandHandled = handleCommandKeyDown(e);
+    if (wasCommandHandled) return;
 
-    if (e.key === "Enter" && !e.shiftKey && !isCommandOpen) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }

@@ -4,12 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/auth-client";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment";
 import type { Message } from "@/types/message";
@@ -17,28 +11,16 @@ import { getAttachmentUrl } from "@/lib/actions/attachments";
 import { ROUTES } from "@/lib/routes";
 import {
   Bot,
-  Brain,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Command,
-  Copy,
   Download,
-  Edit2,
   FileText,
-  Trash2,
   User,
-  Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
-import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ToolCallDisplay } from "./message/tool-call-display";
+import { ThinkingDisplay } from "./message/thinking-display";
+import { MessageActions } from "./message/message-actions";
 
 type ToolCall = {
   toolCallId: string;
@@ -162,19 +144,6 @@ export function MessageBubble({
     : null;
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
-  const [copied, setCopied] = useState(false);
-  const [isThinkingOpen, setIsThinkingOpen] = useState(isLatest && !!reasoning);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      toast.success("Copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error("Failed to copy text");
-    }
-  };
 
   useEffect(() => {
     if (!message.attachments || message.attachments.length === 0) return;
@@ -241,68 +210,19 @@ export function MessageBubble({
         </div>
 
         <div className="text-sm">
-          {!isUser && isStreamingReasoning && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse mb-2">
-              <Brain className="size-4" />
-              <span>Thinking...</span>
-            </div>
+          <ThinkingDisplay 
+            reasoning={reasoning ?? ""} 
+            isStreaming={!isUser && isStreamingReasoning} 
+            initialOpen={isLatest && !!reasoning}
+          />
+          
+          {toolData && (
+            <ToolCallDisplay 
+              toolCalls={toolData.toolCalls} 
+              toolResults={toolData.toolResults} 
+            />
           )}
-          {!isUser && reasoning && !isStreamingReasoning && (
-            <Collapsible open={isThinkingOpen} onOpenChange={setIsThinkingOpen}>
-              <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground mb-2 w-full">
-                <Brain className="size-4" />
-                <span>Thought process</span>
-                <ChevronDown
-                  className={`size-3 ml-auto transition-transform ${
-                    isThinkingOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="text-xs text-muted-foreground mb-2">
-                  <MarkdownRenderer content={reasoning} />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-          {toolData && toolData.toolCalls.length > 0 && (
-            <div className="space-y-2 mb-3">
-              {toolData.toolCalls.map((tc) => {
-                const result = toolData.toolResults.find(
-                  (tr) => tr.toolCallId === tc.toolCallId,
-                );
-                return (
-                  <Collapsible key={tc.toolCallId}>
-                    <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                      <Wrench className="h-3.5 w-3.5" />
-                      <span>
-                        Used <strong>{tc.toolName}</strong>
-                      </span>
-                      <ChevronRight className="h-3.5 w-3.5 transition-transform [[data-state=open]>&]:rotate-90" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-1 ml-5 text-xs">
-                      <div className="rounded-lg bg-muted p-2 font-mono">
-                        <p className="font-semibold mb-1">Input:</p>
-                        <pre className="whitespace-pre-wrap">
-                          {JSON.stringify(tc.args, null, 2)}
-                        </pre>
-                        {result && (
-                          <>
-                            <p className="font-semibold mt-2 mb-1">Output:</p>
-                            <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto">
-                              {typeof result.result === "string"
-                                ? result.result
-                                : JSON.stringify(result.result, null, 2)}
-                            </pre>
-                          </>
-                        )}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
+
           {isUser && message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {message.attachments.map((att) => {
@@ -378,91 +298,17 @@ export function MessageBubble({
           )}
         </div>
 
-        <div className="flex items-center mt-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Branching Navigation */}
-          {siblings.length > 1 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                disabled={currentSiblingIndex === 0}
-                onClick={() =>
-                  onNavigateBranch(siblings[currentSiblingIndex - 1].id)
-                }
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              <span>
-                {currentSiblingIndex + 1} / {siblings.length}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                disabled={currentSiblingIndex === siblings.length - 1}
-                onClick={() =>
-                  onNavigateBranch(siblings[currentSiblingIndex + 1].id)
-                }
-              >
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <Check className="h-3 w-3 text-green-500" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy markdown</TooltipContent>
-          </Tooltip>
-
-          {isUser && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  onClick={() =>
-                    onEdit?.(
-                      message.id,
-                      promptMeta ? promptMeta.userContent : message.content,
-                    )
-                  }
-                >
-                  <Edit2 className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Edit message</TooltipContent>
-            </Tooltip>
-          )}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => onDelete(message.id)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete message</TooltipContent>
-          </Tooltip>
-        </div>
+        <MessageActions 
+          message={message}
+          isUser={isUser}
+          contentToCopy={message.content}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          siblings={siblings}
+          currentSiblingIndex={currentSiblingIndex}
+          onNavigateBranch={onNavigateBranch}
+          editContent={promptMeta ? promptMeta.userContent : undefined}
+        />
       </div>
     </div>
   );
