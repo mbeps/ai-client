@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Copy,
   Edit2,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +25,7 @@ interface MessageActionsProps {
   contentToCopy: string;
   onEdit?: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  onRegenerate?: (id: string) => void;
   // Branching props
   siblings: Message[];
   currentSiblingIndex: number;
@@ -37,6 +39,7 @@ export function MessageActions({
   contentToCopy,
   onEdit,
   onDelete,
+  onRegenerate,
   siblings,
   currentSiblingIndex,
   onNavigateBranch,
@@ -135,6 +138,22 @@ export function MessageActions({
         </TooltipTrigger>
         <TooltipContent>Delete message</TooltipContent>
       </Tooltip>
+
+      {!isUser && onRegenerate && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={() => onRegenerate(message.id)}
+            >
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Regenerate response</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 }

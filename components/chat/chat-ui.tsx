@@ -9,10 +9,11 @@ import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { SideView } from "./side-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from "uuid";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { DEFAULT_MODEL } from "@/models";
-import { Bot } from "lucide-react";
+import { Bot, RotateCcw } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
 /**
@@ -162,6 +163,39 @@ export function ChatUI({
     await streamResponse(uuidv4(), newContent, msg.parentId, []);
   };
 
+  const handleRegenerate = async (id: string) => {
+    const msg = chat.messages[id];
+    if (!msg || msg.role !== "assistant" || !msg.parentId) return;
+
+    const parentMsg = chat.messages[msg.parentId];
+    if (!parentMsg) return;
+
+    let promptId: string | undefined;
+    let userContent = parentMsg.content;
+
+    if (parentMsg.metadata) {
+      try {
+        const meta = JSON.parse(parentMsg.metadata);
+        if (meta.promptId) {
+          promptId = meta.promptId;
+          userContent = meta.userContent || parentMsg.content;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    await streamResponse(
+      uuidv4(),
+      userContent,
+      parentMsg.parentId,
+      parentMsg.attachments,
+      DEFAULT_MODEL,
+      [],
+      promptId,
+    );
+  };
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
@@ -211,6 +245,7 @@ export function ChatUI({
                       isLatest={index === thread.length - 1}
                       onDelete={handleDelete}
                       onEdit={handleEdit}
+                      onRegenerate={handleRegenerate}
                       siblings={siblings}
                       currentSiblingIndex={currentIndex}
                       onNavigateBranch={(siblingId) => {
@@ -269,6 +304,24 @@ export function ChatUI({
                   )}
                 </>
               )}
+              {thread.length > 0 &&
+                thread[thread.length - 1].role === "assistant" &&
+                !isLoading &&
+                streamingContent === null && (
+                  <div className="flex justify-center pt-2 pb-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 rounded-full px-4"
+                      onClick={() =>
+                        handleRegenerate(thread[thread.length - 1].id)
+                      }
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Regenerate
+                    </Button>
+                  </div>
+                )}
             </div>
           </div>
         </ScrollArea>

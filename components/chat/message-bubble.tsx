@@ -89,6 +89,8 @@ interface MessageBubbleProps {
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */
   onEdit: (id: string, newContent: string) => void;
+  /** Callback to regenerate an assistant response. */
+  onRegenerate?: (id: string) => void;
   // Branching props
   /** All sibling messages sharing the same parent; enables branch navigation. */
   siblings: Message[];
@@ -127,6 +129,7 @@ export function MessageBubble({
   onNavigateBranch,
   reasoning,
   isStreamingReasoning,
+  onRegenerate,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -307,6 +310,7 @@ export function MessageBubble({
           siblings={siblings}
           currentSiblingIndex={currentSiblingIndex}
           onNavigateBranch={onNavigateBranch}
+          onRegenerate={onRegenerate}
           editContent={promptMeta ? promptMeta.userContent : undefined}
         />
       </div>
