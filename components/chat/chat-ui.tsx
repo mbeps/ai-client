@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore, type Attachment } from "@/lib/store";
+import { uploadAttachment } from "@/lib/actions/attachments";
 import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./message-bubble";
@@ -199,15 +200,8 @@ export function ChatUI({
         formData.append("file", file);
         formData.append("messageId", userMsgId);
 
-        const uploadRes = await fetch("/api/attachments/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          uploadedAttachments.push({ ...att, id: data.id, key: data.key });
-        }
+        const data = await uploadAttachment(formData);
+        uploadedAttachments.push({ ...att, id: data.id, key: data.key });
       } catch {
         // Upload failed silently — attachment was already shown locally
       }

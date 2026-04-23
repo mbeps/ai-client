@@ -11,6 +11,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { type Attachment, Message, useAppStore } from "@/lib/store";
+import { getAttachmentUrl } from "@/lib/actions/attachments";
 import { ROUTES } from "@/lib/routes";
 import {
   Bot,
@@ -185,11 +186,8 @@ export function MessageBubble({
     Promise.all(
       unresolvedAtts.map(async (att) => {
         try {
-          const res = await fetch(`/api/attachments/${att.id}`);
-          if (res.ok) {
-            const data = await res.json();
-            return { id: att.id, url: data.url as string };
-          }
+          const data = await getAttachmentUrl(att.id);
+          return { id: att.id, url: data.url as string };
         } catch {
           // ignore
         }
