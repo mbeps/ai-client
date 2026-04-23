@@ -55,6 +55,7 @@ export function SessionManagement({
               size="sm"
               action={revokeOtherSessions}
             >
+              <Trash2 className="mr-2 h-4 w-4" />
               Revoke Other Sessions
             </BetterAuthActionButton>
           )}

@@ -19,6 +19,7 @@ import { ROUTES } from "@/lib/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PasskeyButton } from "../buttons/passkey-button";
+import { HelpCircle, LogIn } from "lucide-react";
 import { signInSchema, SignInForm } from "@/schemas/sign-in";
 
 /**
@@ -102,6 +103,7 @@ export function SignInTab({
                     size="sm"
                     className="text-sm font-normal underline"
                   >
+                    <HelpCircle className="mr-2 h-4 w-4" />
                     Forgot password?
                   </Button>
                 </div>
@@ -114,7 +116,12 @@ export function SignInTab({
           />
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            <LoadingSwap isLoading={isSubmitting}>Sign In</LoadingSwap>
+            <LoadingSwap isLoading={isSubmitting}>
+              <div className="flex items-center">
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </div>
+            </LoadingSwap>
           </Button>
         </form>
       </Form>

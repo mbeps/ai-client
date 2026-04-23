@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth/auth";
 import { ROUTES } from "@/lib/routes";
 import { TotpForm } from "./_components/totp-form";
 import { BackupCodeTab } from "./_components/backup-code-tab";
+import { LifeBuoy, Smartphone } from "lucide-react";
 
 const TAB_VALUES = {
   TOTP: "totp",
@@ -35,8 +36,14 @@ export default async function TwoFactorPage() {
         <CardContent>
           <Tabs defaultValue={TAB_VALUES.TOTP}>
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value={TAB_VALUES.TOTP}>Authenticator</TabsTrigger>
-              <TabsTrigger value={TAB_VALUES.BACKUP}>Backup Code</TabsTrigger>
+              <TabsTrigger value={TAB_VALUES.TOTP} className="flex items-center">
+                <Smartphone className="mr-2 h-4 w-4" />
+                Authenticator
+              </TabsTrigger>
+              <TabsTrigger value={TAB_VALUES.BACKUP} className="flex items-center">
+                <LifeBuoy className="mr-2 h-4 w-4" />
+                Backup Code
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value={TAB_VALUES.TOTP}>

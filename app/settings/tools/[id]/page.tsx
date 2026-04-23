@@ -9,7 +9,7 @@ import { ToolList } from "@/components/mcp/tool-list";
 import { EditServerForm } from "@/components/mcp/edit-server-form";
 import { ServerSettings } from "@/components/mcp/server-settings";
 import { Badge } from "@/components/ui/badge";
-import { Server } from "lucide-react";
+import { Server, Wrench, Settings, Shield } from "lucide-react";
 
 export default function McpServerPage() {
   const params = useParams();
@@ -36,9 +36,18 @@ export default function McpServerPage() {
 
       <Tabs defaultValue="tools" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="tools">Tools</TabsTrigger>
-          <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="tools" className="flex items-center">
+            <Wrench className="mr-2 h-4 w-4" />
+            Tools
+          </TabsTrigger>
+          <TabsTrigger value="config" className="flex items-center">
+            <Settings className="mr-2 h-4 w-4" />
+            Configuration
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center">
+            <Shield className="mr-2 h-4 w-4" />
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tools">

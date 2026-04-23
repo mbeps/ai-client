@@ -20,6 +20,8 @@ import {
   MessageSquare,
   MessageSquarePlus,
   Settings,
+  Save,
+  Trash2,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
@@ -219,7 +221,14 @@ export default function ProjectPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? "Saving..." : "Save Prompt"}
+                {savingSettings ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -246,7 +255,14 @@ export default function ProjectPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? "Saving..." : "Save Details"}
+                {savingSettings ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Details
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -268,6 +284,7 @@ export default function ProjectPage() {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
               >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Project
               </Button>
             </CardContent>

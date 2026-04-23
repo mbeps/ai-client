@@ -1,3 +1,5 @@
+import { FileQuestion } from "lucide-react";
+
 /**
  * Props for the NotFoundMessage component.
  *
@@ -16,5 +18,10 @@ interface NotFoundMessageProps {
  * @author Maruf Bepary
  */
 export function NotFoundMessage({ entity }: NotFoundMessageProps) {
-  return <div>{entity} not found</div>;
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed rounded-lg bg-muted/20">
+      <FileQuestion className="h-10 w-10 mb-4 opacity-20" />
+      <p className="text-lg font-medium">{entity} not found</p>
+    </div>
+  );
 }

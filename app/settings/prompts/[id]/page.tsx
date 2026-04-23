@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Trash2, Command } from "lucide-react";
+import { Loader2, Trash2, Command, Save } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
@@ -159,7 +159,14 @@ export default function PromptDetailPage() {
           </CardContent>
           <CardFooter>
             <Button onClick={handleSave} disabled={savingSettings}>
-              {savingSettings ? "Saving..." : "Save Changes"}
+              {savingSettings ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

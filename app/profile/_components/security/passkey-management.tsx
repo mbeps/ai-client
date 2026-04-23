@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { Trash2 } from "lucide-react";
+import { Fingerprint, Plus, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -124,7 +124,10 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
         }}
       >
         <DialogTrigger asChild>
-          <Button>New Passkey</Button>
+          <Button>
+            <Fingerprint className="mr-2 h-4 w-4" />
+            New Passkey
+          </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -154,7 +157,12 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
               />
 
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                <LoadingSwap isLoading={isSubmitting}>Add</LoadingSwap>
+                <LoadingSwap isLoading={isSubmitting}>
+                  <div className="flex items-center">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add
+                  </div>
+                </LoadingSwap>
               </Button>
             </form>
           </Form>

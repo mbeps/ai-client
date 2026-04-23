@@ -4,6 +4,7 @@ import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-ac
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 import { useRouter } from "next/navigation";
+import { Fingerprint } from "lucide-react";
 
 /**
  * Sign-in button that triggers the WebAuthn passkey flow.
@@ -33,6 +34,7 @@ export function PasskeyButton() {
         )
       }
     >
+      <Fingerprint className="mr-2 h-4 w-4" />
       Use Passkey
     </BetterAuthActionButton>
   );

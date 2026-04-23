@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Key } from "lucide-react";
 import {
   resetPasswordSchema,
   ResetPasswordForm,
@@ -89,7 +90,10 @@ export default function ResetPasswordClient() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <Link href={ROUTES.AUTH.LOGIN.path}>Back to Login</Link>
+              <Link href={ROUTES.AUTH.LOGIN.path}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Login
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -125,7 +129,10 @@ export default function ResetPasswordClient() {
 
               <Button type="submit" disabled={isSubmitting} className="flex-1">
                 <LoadingSwap isLoading={isSubmitting}>
-                  Reset Password
+                  <div className="flex items-center">
+                    <Key className="mr-2 h-4 w-4" />
+                    Reset Password
+                  </div>
                 </LoadingSwap>
               </Button>
             </form>

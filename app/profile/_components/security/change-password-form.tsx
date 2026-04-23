@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { Key } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -106,7 +107,12 @@ export function ChangePasswordForm() {
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          <LoadingSwap isLoading={isSubmitting}>Change Password</LoadingSwap>
+          <LoadingSwap isLoading={isSubmitting}>
+            <div className="flex items-center">
+              <Key className="mr-2 h-4 w-4" />
+              Change Password
+            </div>
+          </LoadingSwap>
         </Button>
       </form>
     </Form>

@@ -25,6 +25,8 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Settings,
+  Save,
+  Trash2,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -206,7 +208,14 @@ export default function AssistantPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Prompt"}
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -233,7 +242,14 @@ export default function AssistantPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Details"}
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Details
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -255,6 +271,7 @@ export default function AssistantPage() {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
               >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Assistant
               </Button>
             </CardContent>

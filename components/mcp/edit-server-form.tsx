@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { Save } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { McpServer } from "@/types/mcp-server";
 import {
@@ -209,7 +210,10 @@ export function EditServerForm({ server }: { server: McpServer }) {
           <CardFooter>
             <Button type="submit" disabled={isSubmitting}>
               <LoadingSwap isLoading={isSubmitting}>
-                Save Configuration
+                <div className="flex items-center">
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Configuration
+                </div>
               </LoadingSwap>
             </Button>
           </CardFooter>
