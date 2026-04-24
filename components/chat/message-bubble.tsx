@@ -15,9 +15,13 @@ import {
   Command,
   Download,
   FileText,
+  Save,
   User,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ToolCallDisplay } from "./message/tool-call-display";
 import { ThinkingDisplay } from "./message/thinking-display";
@@ -165,6 +169,28 @@ export function MessageBubble({
   }, [isUser, message.metadata]);
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(
+    promptMeta ? promptMeta.userContent : message.content,
+  );
+  const editRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isEditing && editRef.current) {
+      editRef.current.focus();
+      editRef.current.setSelectionRange(
+        editRef.current.value.length,
+        editRef.current.value.length,
+      );
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (editRef.current) {
+      editRef.current.style.height = "auto";
+      editRef.current.style.height = `${Math.min(editRef.current.scrollHeight, 300)}px`;
+    }
+  }, [editValue, isEditing]);
 
   useEffect(() => {
     if (!message.attachments || message.attachments.length === 0) return;
@@ -310,28 +336,66 @@ export function MessageBubble({
                   {promptEntry?.shortcut ?? promptMeta.promptId}
                 </Link>
               )}
-              <div className="whitespace-pre-wrap">
-                {promptMeta ? promptMeta.userContent : message.content}
-              </div>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <Textarea
+                    ref={editRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="min-h-[100px] bg-background/50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        onEdit(message.id, editValue);
+                        setIsEditing(false);
+                      }}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditValue(
+                          promptMeta ? promptMeta.userContent : message.content,
+                        );
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap">
+                  {promptMeta ? promptMeta.userContent : message.content}
+                </div>
+              )}
             </div>
           ) : (
             <MarkdownRenderer content={message.content} />
           )}
         </div>
 
-        <MessageActions 
-          message={message}
-          isUser={isUser}
-          contentToCopy={message.content}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          siblings={siblings}
-          currentSiblingIndex={currentSiblingIndex}
-          onNavigateBranch={onNavigateBranch}
-          onRegenerate={onRegenerate}
-          editContent={promptMeta ? promptMeta.userContent : undefined}
-          modelName={modelName}
-        />
+        {!isEditing && (
+          <MessageActions
+            message={message}
+            isUser={isUser}
+            contentToCopy={message.content}
+            onEdit={() => setIsEditing(true)}
+            onDelete={onDelete}
+            siblings={siblings}
+            currentSiblingIndex={currentSiblingIndex}
+            onNavigateBranch={onNavigateBranch}
+            onRegenerate={onRegenerate}
+            editContent={promptMeta ? promptMeta.userContent : undefined}
+            modelName={modelName}
+          />
+        )}
       </div>
     </div>
   );
