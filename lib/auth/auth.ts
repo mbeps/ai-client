@@ -68,7 +68,6 @@ export const auth = betterAuth({
       enabled: true,
       maxAge: 60 * 60 * 24 * 7, // 7 days cache duration
       strategy: "jwt", // JWT tokens for session validation
-      refreshCache: true, // Enable stateless refresh
     },
   },
   plugins: [nextCookies(), twoFactor(), passkey()],
