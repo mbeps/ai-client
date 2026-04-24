@@ -49,6 +49,8 @@ export function useStreamResponse(chatId: string, options?: { onDone?: (content:
     attachments: Attachment[] = [],
     model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
+    selectedTools: string[] = [],
+    selectedResources: string[] = [],
     selectedPromptId?: string,
   ) => {
     setIsLoading(true);
@@ -150,6 +152,8 @@ export function useStreamResponse(chatId: string, options?: { onDone?: (content:
           messages: history,
           model,
           selectedServerIds,
+          selectedTools,
+          selectedResources,
         }),
         signal: controller.signal,
       });

@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
+import { downloadAttachmentsToTemp } from "@/lib/mcp/file-bridge";
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     id: z.string().uuid(),
     name: z.string().min(1).max(255),
     mimeType: z.string().max(100).optional(),
-    type: z.enum(["image", "document"]).optional(),
+    type: z.enum(["image", "document", "spreadsheet"]).optional(),
     dataUrl: z.string().optional(),
     extractedText: z.string().optional(),
     key: z.string().max(1024).optional(),
@@ -70,6 +71,8 @@ export async function POST(req: Request) {
     model: z.string().min(1).max(100).optional(),
     messages: z.array(messageSchema).max(500),
     selectedServerIds: z.array(z.string().uuid()).max(20).optional(),
+    selectedTools: z.array(z.string()).max(100).optional(),
+    selectedResources: z.array(z.string()).max(100).optional(),
   });
 
   const body = await req.json();
@@ -91,6 +94,8 @@ export async function POST(req: Request) {
     messages: history,
     model: requestedModel,
     selectedServerIds,
+    selectedTools,
+    selectedResources,
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
@@ -158,14 +163,68 @@ export async function POST(req: Request) {
       ? servers.filter((s) => selectedServerIds.includes(s.id))
       : servers;
 
+  // FileBridge: download spreadsheet attachments to temp dir for MCP tools
+  const spreadsheetAtts = history
+    .flatMap((m) => m.attachments ?? [])
+    .filter((a) => a.type === "spreadsheet" && a.key);
+
+  let bridge: Awaited<ReturnType<typeof downloadAttachmentsToTemp>> | null =
+    null;
+  if (filteredServers.length > 0 && spreadsheetAtts.length > 0) {
+    try {
+      bridge = await downloadAttachmentsToTemp(spreadsheetAtts);
+    } catch (err) {
+      console.warn("[FileBridge] Failed to download attachments:", err);
+    }
+  }
+
+  // Inject EXCEL_MCP_ALLOWED_DIRS into stdio MCP server envs when FileBridge is active
+  const scopedServers = bridge
+    ? filteredServers.map((s) => {
+        if (s.type !== "stdio") return s;
+        const userEnv = s.env
+          ? (JSON.parse(s.env) as Record<string, string>)
+          : {};
+        return {
+          ...s,
+          env: JSON.stringify({
+            ...userEnv,
+            EXCEL_MCP_ALLOWED_DIRS: bridge!.tempDir,
+          }),
+        };
+      })
+    : filteredServers;
+
   let mcpTools: Record<string, any> = {};
   let mcpCleanup = async () => {};
-  if (filteredServers.length > 0) {
+  if (scopedServers.length > 0) {
     try {
       const result = await getMcpTools(
-        filteredServers as Parameters<typeof getMcpTools>[0],
+        scopedServers as Parameters<typeof getMcpTools>[0],
       );
-      mcpTools = result.tools;
+
+      // Filter tools if selectedTools is provided
+      if (selectedTools && selectedTools.length > 0) {
+        const filteredTools: Record<string, any> = {};
+        for (const [name, tool] of Object.entries(result.tools)) {
+          // tool names are unique across servers in mergedTools (with collision warning)
+          // But our client sends serverId:tool:toolName.
+          // However, getMcpTools already merges them into a flat object.
+          // To be precise, we should check if the tool name is in our selected list.
+          // The client sends IDs like "serverId:tool:toolName"
+          const isSelected = selectedTools.some((id) => {
+            const [sId, type, tName] = id.split(":");
+            return type === "tool" && tName === name;
+          });
+          if (isSelected) {
+            filteredTools[name] = tool;
+          }
+        }
+        mcpTools = filteredTools;
+      } else {
+        mcpTools = result.tools;
+      }
+
       mcpCleanup = result.cleanup;
     } catch (error) {
       console.warn("[MCP] Failed to load tools:", error);

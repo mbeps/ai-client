@@ -26,7 +26,7 @@ export function ToolList({ server }: { server: McpServer }) {
     setError(null);
     try {
       const result = await discoverMcpServerTools(server.id);
-      setTools(result);
+      setTools(result.tools);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to discover tools");
     } finally {

@@ -1,7 +1,7 @@
 import { validateFile } from "./validate-file";
 import { extractPdf, extractPlainText } from "./extract-document";
 import type { Attachment } from "@/types/attachment";
-import { ALLOWED_IMAGE_TYPES } from "./constants";
+import { ALLOWED_IMAGE_TYPES, ALLOWED_SPREADSHEET_TYPES } from "./constants";
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -24,6 +24,11 @@ export async function processAttachment(
 
   const id = crypto.randomUUID();
   const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
+  const isSpreadsheet =
+    ALLOWED_SPREADSHEET_TYPES.has(file.type) ||
+    file.name.toLowerCase().endsWith(".xlsx") ||
+    file.name.toLowerCase().endsWith(".xls") ||
+    file.name.toLowerCase().endsWith(".csv");
 
   if (isImage) {
     const dataUrl = await readAsDataUrl(file);
@@ -34,6 +39,17 @@ export async function processAttachment(
       mimeType: file.type,
       sizeBytes: file.size,
       dataUrl,
+    };
+  }
+
+  if (isSpreadsheet) {
+    return {
+      id,
+      type: "spreadsheet",
+      name: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      dataUrl: "",
     };
   }
 
