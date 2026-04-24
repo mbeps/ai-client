@@ -3,7 +3,7 @@
  */
 export type Attachment = {
   id: string;
-  type: "image" | "document";
+  type: "image" | "document" | "spreadsheet";
   name: string;
   mimeType: string;
   sizeBytes: number;

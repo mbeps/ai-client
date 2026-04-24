@@ -9,11 +9,18 @@ export type DiscoveredTool = {
   inputSchema: Record<string, unknown>;
 };
 
+export type DiscoveredResource = {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType?: string;
+};
+
 const DISCOVER_TIMEOUT_MS = 10_000;
 
-export async function discoverTools(
+export async function discoverToolsAndResources(
   server: McpServerConfig,
-): Promise<DiscoveredTool[]> {
+): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
   const transport = buildTransport(server);
   const client = await withTimeout(
     createMCPClient({ transport }),
@@ -22,30 +29,59 @@ export async function discoverTools(
   );
 
   try {
-    const allTools: DiscoveredTool[] = [];
-    let cursor: string | undefined;
-
+    const tools: DiscoveredTool[] = [];
+    const resources: DiscoveredResource[] = [];
+    
+    // Fetch Tools
+    let toolCursor: string | undefined;
     do {
       const result = await withTimeout(
         client.listTools({
-          params: cursor ? { cursor } : undefined,
+          params: toolCursor ? { cursor: toolCursor } : undefined,
         }),
         DISCOVER_TIMEOUT_MS,
         `discoverTools listTools: ${server.name}`,
       );
 
       for (const tool of result.tools) {
-        allTools.push({
+        tools.push({
           name: tool.name,
           description: tool.description ?? "",
           inputSchema: tool.inputSchema as Record<string, unknown>,
         });
       }
+      toolCursor = result.nextCursor;
+    } while (toolCursor);
 
-      cursor = result.nextCursor;
-    } while (cursor);
+    // Fetch Resources
+    try {
+      let resCursor: string | undefined;
+      do {
+        const result = await withTimeout(
+          client.listResources({
+            params: resCursor ? { cursor: resCursor } : undefined,
+          }),
+          DISCOVER_TIMEOUT_MS,
+          `discoverTools listResources: ${server.name}`,
+        );
 
-    return allTools;
+        if (result.resources) {
+          for (const res of result.resources) {
+            resources.push({
+              uri: res.uri,
+              name: res.name,
+              description: res.description ?? "",
+              mimeType: res.mimeType,
+            });
+          }
+        }
+        resCursor = result.nextCursor;
+      } while (resCursor);
+    } catch (e) {
+      console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
+    }
+
+    return { tools, resources };
   } finally {
     await client.close();
   }

@@ -47,6 +47,8 @@ interface ChatInputProps {
     attachments: Attachment[],
     model: string,
     selectedServerIds: string[],
+    selectedTools: string[],
+    selectedResources: string[],
     selectedPromptId?: string,
   ) => void;
   isLoading?: boolean;
@@ -67,7 +69,10 @@ export function ChatInput({
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
     new Set(),
   );
-  const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+  const [selectedResources, setSelectedResources] = useState<Set<string>>(
+    new Set(),
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +134,8 @@ export function ChatInput({
         attachments,
         model.value,
         Array.from(selectedServerIds),
+        Array.from(selectedTools),
+        Array.from(selectedResources),
         selectedPrompt?.id,
       );
       setInput("");
@@ -171,10 +178,83 @@ export function ChatInput({
   const toggleServer = (id: string) => {
     setSelectedServerIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        // Also remove all tools/resources for this server
+        setSelectedTools((prevTools) => {
+          const nextTools = new Set(prevTools);
+          nextTools.forEach((tId) => {
+            if (tId.startsWith(`${id}:`)) nextTools.delete(tId);
+          });
+          return nextTools;
+        });
+        setSelectedResources((prevRes) => {
+          const nextRes = new Set(prevRes);
+          nextRes.forEach((rId) => {
+            if (rId.startsWith(`${id}:`)) nextRes.delete(rId);
+          });
+          return nextRes;
+        });
+      } else {
+        next.add(id);
+      }
       return next;
     });
+  };
+
+  const toggleTool = (serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(toolId)) next.delete(toolId);
+      else {
+        next.add(toolId);
+        // Ensure server is selected
+        setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+      }
+      return next;
+    });
+  };
+
+  const toggleResource = (serverId: string, resourceUri: string) => {
+    const resourceId = `${serverId}:resource:${resourceUri}`;
+    setSelectedResources((prev) => {
+      const next = new Set(prev);
+      if (next.has(resourceId)) next.delete(resourceId);
+      else {
+        next.add(resourceId);
+        // Ensure server is selected
+        setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+      }
+      return next;
+    });
+  };
+  const handleBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+    if (select) {
+      setSelectedServerIds(prev => new Set(prev).add(serverId));
+      setSelectedTools(prev => {
+        const next = new Set(prev);
+        toolNames.forEach(name => next.add(`${serverId}:tool:${name}`));
+        return next;
+      });
+      setSelectedResources(prev => {
+        const next = new Set(prev);
+        resourceUris.forEach(uri => next.add(`${serverId}:resource:${uri}`));
+        return next;
+      });
+    } else {
+      setSelectedTools(prev => {
+        const next = new Set(prev);
+        toolNames.forEach(name => next.delete(`${serverId}:tool:${name}`));
+        return next;
+      });
+      setSelectedResources(prev => {
+        const next = new Set(prev);
+        resourceUris.forEach(uri => next.delete(`${serverId}:resource:${uri}`));
+        return next;
+      });
+      // Optionally deselect server if no tools/resources left, but let's keep it simple
+    }
   };
 
   return (
@@ -277,11 +357,7 @@ export function ChatInput({
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-1.5">
           {isMobile ? (
-            <Drawer
-              onOpenChange={(open) => {
-                if (!open) setShowToolsPanel(false);
-              }}
-            >
+            <Drawer>
               <DrawerTrigger asChild>
                 <Button
                   variant="ghost"
@@ -293,21 +369,20 @@ export function ChatInput({
               </DrawerTrigger>
               <DrawerContent>
                 <AttachmentsMenu
-                  showToolsPanel={showToolsPanel}
-                  setShowToolsPanel={setShowToolsPanel}
                   servers={servers}
                   selectedServerIds={selectedServerIds}
                   toggleServer={toggleServer}
                   fileInputRef={fileInputRef}
+                  selectedTools={selectedTools}
+                  selectedResources={selectedResources}
+                  onToggleTool={toggleTool}
+                  onToggleResource={toggleResource}
+                  onBulkSelect={handleBulkSelect}
                 />
               </DrawerContent>
             </Drawer>
           ) : (
-            <Popover
-              onOpenChange={(open) => {
-                if (!open) setShowToolsPanel(false);
-              }}
-            >
+            <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
@@ -319,12 +394,15 @@ export function ChatInput({
               </PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-56 p-1">
                 <AttachmentsMenu
-                  showToolsPanel={showToolsPanel}
-                  setShowToolsPanel={setShowToolsPanel}
                   servers={servers}
                   selectedServerIds={selectedServerIds}
                   toggleServer={toggleServer}
                   fileInputRef={fileInputRef}
+                  selectedTools={selectedTools}
+                  selectedResources={selectedResources}
+                  onToggleTool={toggleTool}
+                  onToggleResource={toggleResource}
+                  onBulkSelect={handleBulkSelect}
                 />
               </PopoverContent>
             </Popover>

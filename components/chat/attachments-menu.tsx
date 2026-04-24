@@ -1,89 +1,70 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ChevronLeft,
   Paperclip,
   Database,
   Wrench,
 } from "lucide-react";
 import type { McpServer } from "@/types/mcp-server";
+import { ToolPickerDialog } from "./tool-picker-dialog";
 
 interface AttachmentsMenuProps {
-  showToolsPanel: boolean;
-  setShowToolsPanel: (show: boolean) => void;
   servers?: McpServer[];
   selectedServerIds: Set<string>;
   toggleServer: (id: string) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  selectedTools: Set<string>;
+  selectedResources: Set<string>;
+  onToggleTool: (serverId: string, toolName: string) => void;
+  onToggleResource: (serverId: string, resourceUri: string) => void;
+  onBulkSelect: (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => void;
 }
 
 export const AttachmentsMenu = ({
-  showToolsPanel,
-  setShowToolsPanel,
   servers,
   selectedServerIds,
-  toggleServer,
   fileInputRef,
+  selectedTools,
+  selectedResources,
+  onToggleTool,
+  onToggleResource,
+  onBulkSelect,
 }: AttachmentsMenuProps) => (
   <div className="flex flex-col gap-0.5 p-1">
-    {showToolsPanel ? (
-      <>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="justify-start"
+      onClick={() => fileInputRef.current?.click()}
+    >
+      <Paperclip className="mr-2 h-4 w-4" /> Upload File
+    </Button>
+    <Button variant="ghost" size="sm" className="justify-start">
+      <Database className="mr-2 h-4 w-4" /> Add Knowledgebase
+    </Button>
+    
+    <ToolPickerDialog
+      servers={servers || []}
+      selectedTools={selectedTools}
+      selectedResources={selectedResources}
+      onToggleTool={onToggleTool}
+      onToggleResource={onToggleResource}
+      onBulkSelect={onBulkSelect}
+      trigger={
         <Button
           variant="ghost"
           size="sm"
-          className="justify-start"
-          onClick={() => setShowToolsPanel(false)}
-        >
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <div className="px-1 py-0.5">
-          {!servers || servers.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-1">
-              No tools available
-            </p>
-          ) : (
-            servers.map((server) => (
-              <label
-                key={server.id}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer hover:bg-accent text-sm"
-              >
-                <Checkbox
-                  checked={selectedServerIds.has(server.id)}
-                  onCheckedChange={() => toggleServer(server.id)}
-                />
-                <span className="truncate">{server.name}</span>
-              </label>
-            ))
-          )}
-        </div>
-      </>
-    ) : (
-      <>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className="mr-2 h-4 w-4" /> Upload File
-        </Button>
-        <Button variant="ghost" size="sm" className="justify-start">
-          <Database className="mr-2 h-4 w-4" /> Add Knowledgebase
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start"
+          className="justify-start w-full"
           disabled={!servers || servers.length === 0}
-          onClick={() => setShowToolsPanel(true)}
         >
           <Wrench className="mr-2 h-4 w-4" />
           Select Tools
-          {selectedServerIds.size > 0 ? ` (${selectedServerIds.size})` : ""}
+          {selectedTools.size > 0 || selectedResources.size > 0 ? (
+            ` (${selectedTools.size + selectedResources.size})`
+          ) : ""}
         </Button>
-      </>
-    )}
+      }
+    />
   </div>
 );

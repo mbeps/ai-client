@@ -4,11 +4,15 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { discoverTools, type DiscoveredTool } from "@/lib/mcp/discover-tools";
+import {
+  discoverToolsAndResources,
+  type DiscoveredTool,
+  type DiscoveredResource,
+} from "@/lib/mcp/discover-tools";
 
 export async function discoverMcpServerTools(
   serverId: string,
-): Promise<DiscoveredTool[]> {
+): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
   const session = await requireSession();
 
   const [row] = await db
@@ -20,7 +24,7 @@ export async function discoverMcpServerTools(
 
   if (!row) throw new Error("Not Found");
 
-  return discoverTools({
+  return discoverToolsAndResources({
     id: row.id,
     name: row.name,
     type: row.type,

@@ -2,10 +2,12 @@ import type { Attachment } from "@/types/attachment";
 import {
   ALLOWED_DOCUMENT_TYPES,
   ALLOWED_IMAGE_TYPES,
+  ALLOWED_SPREADSHEET_TYPES,
   MAX_ATTACHMENTS_PER_MESSAGE,
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_IMAGES_PER_MESSAGE,
   MAX_IMAGE_SIZE_BYTES,
+  MAX_SPREADSHEET_SIZE_BYTES,
 } from "./constants";
 
 type ValidationResult = { valid: true } | { valid: false; reason: string };
@@ -23,14 +25,22 @@ export function validateFile(
 
   const resolvedType =
     file.type ||
-    (file.name.toLowerCase().endsWith(".md") ? "text/markdown" : "");
+    (file.name.toLowerCase().endsWith(".md") ? "text/markdown" : "") ||
+    (file.name.toLowerCase().endsWith(".xlsx")
+      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : "") ||
+    (file.name.toLowerCase().endsWith(".xls")
+      ? "application/vnd.ms-excel"
+      : "") ||
+    (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "");
   const isImage = ALLOWED_IMAGE_TYPES.has(resolvedType);
   const isDocument = ALLOWED_DOCUMENT_TYPES.has(resolvedType);
+  const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(resolvedType);
 
-  if (!isImage && !isDocument) {
+  if (!isImage && !isDocument && !isSpreadsheet) {
     return {
       valid: false,
-      reason: `File type "${resolvedType || "unknown"}" is not supported. Allowed: PNG, JPG, GIF, WebP, PDF, TXT, MD.`,
+      reason: `File type "${resolvedType || "unknown"}" is not supported. Allowed: PNG, JPG, GIF, WebP, PDF, TXT, MD, XLSX, XLS, CSV.`,
     };
   }
 
@@ -38,6 +48,13 @@ export function validateFile(
     return {
       valid: false,
       reason: `Document "${file.name}" exceeds the 20 MB limit.`,
+    };
+  }
+
+  if (isSpreadsheet && file.size > MAX_SPREADSHEET_SIZE_BYTES) {
+    return {
+      valid: false,
+      reason: `Spreadsheet "${file.name}" exceeds the 50 MB limit.`,
     };
   }
 
