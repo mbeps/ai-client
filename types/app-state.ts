@@ -54,6 +54,11 @@ export type AppState = {
     messageId: string,
     attachments: Attachment[],
   ) => void;
+  updateMessageMetadataDb: (
+    chatId: string,
+    messageId: string,
+    metadata: string | null,
+  ) => Promise<void>;
 
   // DB-backed actions
   renameChatDb: (id: string, title: string) => Promise<void>;

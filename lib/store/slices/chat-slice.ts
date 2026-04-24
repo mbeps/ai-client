@@ -7,6 +7,7 @@ import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat"
 import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
 import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
+import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { messageMetadataSchema } from "@/schemas/chat";
 import { chatRowToStore } from "../mappers/chat";
 import type { AppState } from "@/types/app-state";
@@ -24,6 +25,7 @@ export type ChatSlice = Pick<
   | "setCurrentLeafDb"
   | "deleteChat"
   | "updateMessageAttachments"
+  | "updateMessageMetadataDb"
   | "loadChats"
   | "upsertChat"
   | "renameChatDb"
@@ -218,6 +220,35 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         },
       };
     });
+  },
+
+  updateMessageMetadataDb: async (chatId, messageId, metadata) => {
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      const msg = chat.messages[messageId];
+      if (!msg) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: {
+            ...chat,
+            messages: {
+              ...chat.messages,
+              [messageId]: {
+                ...msg,
+                metadata,
+              },
+            },
+          },
+        },
+      };
+    });
+    try {
+      await updateMessageMetadataAction(messageId, metadata);
+    } catch (err) {
+      console.error("Failed to update message metadata:", err);
+    }
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {

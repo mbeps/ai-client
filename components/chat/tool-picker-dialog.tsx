@@ -127,7 +127,8 @@ export function ToolPickerDialog({
   }, [servers, search, serverContent]);
 
   const allDiscoveredTools = useMemo(() => {
-    return servers.flatMap(s => (serverContent[s.id]?.tools || []).map(t => ({ serverId: s.id, name: t.name })));
+    const mcpTools = servers.flatMap(s => (serverContent[s.id]?.tools || []).map(t => ({ serverId: s.id, name: t.name })));
+    return [{ serverId: "internal", name: "manage_artifact" }, ...mcpTools];
   }, [servers, serverContent]);
 
   const allDiscoveredResources = useMemo(() => {
@@ -143,6 +144,7 @@ export function ToolPickerDialog({
 
   const toggleAll = () => {
     const shouldSelect = !isAllSelected;
+    onBulkSelect("internal", ["manage_artifact"], [], shouldSelect);
     servers.forEach(s => {
       const content = serverContent[s.id];
       if (content) {
@@ -194,7 +196,65 @@ export function ToolPickerDialog({
         
         <ScrollArea className="flex-1 px-6 py-4 min-h-0">
           <div className="space-y-4">
-            {filteredServers.length === 0 ? (
+            {(!search || "artifacts canvas manage_artifact".includes(search.toLowerCase())) && (
+              <div className="border rounded-lg overflow-hidden flex flex-col border-primary/20">
+                <div 
+                  className="flex items-center justify-between p-3 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors shrink-0"
+                  onClick={() => toggleExpand("internal")}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="flex items-center" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const isAllSelected = selectedTools.has("internal:tool:manage_artifact");
+                        onBulkSelect("internal", ["manage_artifact"], [], !isAllSelected);
+                      }}
+                    >
+                      <Checkbox 
+                        checked={selectedTools.has("internal:tool:manage_artifact")}
+                        className="h-4 w-4"
+                      />
+                    </div>
+                    {expandedServers.has("internal") || search.length > 0 ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-primary" />}
+                    <span className="font-medium text-primary">Internal Tools</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] uppercase bg-primary/10 text-primary">
+                      built-in
+                    </Badge>
+                  </div>
+                </div>
+
+                {(expandedServers.has("internal") || search.length > 0) && (
+                  <div className="p-3 space-y-4 border-t border-primary/20 bg-card/50">
+                    <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex flex-col gap-1">
+                          <label
+                            className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group"
+                          >
+                            <Checkbox
+                              checked={selectedTools.has("internal:tool:manage_artifact")}
+                              onCheckedChange={() => onToggleTool("internal", "manage_artifact")}
+                              className="mt-0.5"
+                            />
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-medium truncate">Artifacts / Canvas</span>
+                              <span className="text-[10px] text-muted-foreground line-clamp-2">
+                                Allows the AI to generate interactive Markdown, Spreadsheets, HTML UI, and Mermaid diagrams in a side panel.
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {filteredServers.length === 0 && (!search || !"artifacts canvas manage_artifact".includes(search.toLowerCase())) ? (
               <div className="text-center py-8 text-muted-foreground">
                 No servers or tools found matching &quot;{search}&quot;
               </div>

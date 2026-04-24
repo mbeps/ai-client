@@ -17,7 +17,17 @@ export interface ToolCallState {
   status: "calling" | "complete";
 }
 
-export function useStreamResponse(chatId: string, options?: { onDone?: (content: string) => void }) {
+export interface ArtifactData {
+  type: "markdown" | "spreadsheet" | "html" | "mermaid";
+  title: string;
+  content: string;
+  messageId?: string;
+}
+
+export function useStreamResponse(chatId: string, options?: { 
+  onDone?: (content: string) => void;
+  onArtifact?: (artifact: ArtifactData) => void;
+}) {
   const addMessage = useAppStore((state) => state.addMessage);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
@@ -137,6 +147,7 @@ export function useStreamResponse(chatId: string, options?: { onDone?: (content:
         extractedText: att.extractedText,
         key: att.key,
       })),
+      metadata: m.metadata,
     }));
 
     let accumulated = "";
@@ -213,6 +224,27 @@ export function useStreamResponse(chatId: string, options?: { onDone?: (content:
                   status: "calling",
                 },
               ]);
+              if (event.toolName === "manage_artifact" && event.args) {
+                try {
+                  const parsedArgs = typeof event.args === "string" ? JSON.parse(event.args) : (event.args || {});
+                  
+                  // Fallbacks for poor model compliance
+                  const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
+                  const artifactType = VALID_TYPES.includes(parsedArgs.type) ? parsedArgs.type : "markdown";
+                  const artifactTitle = parsedArgs.title || "Generated Artifact";
+                  const artifactContent = parsedArgs.content || parsedArgs.text || "";
+                  
+                  if (artifactContent || artifactType) {
+                    options?.onArtifact?.({
+                      type: artifactType,
+                      title: artifactTitle,
+                      content: artifactContent,
+                    } as ArtifactData);
+                  }
+                } catch (e) {
+                  console.error("Failed to parse manage_artifact args", e);
+                }
+              }
             } else if (event.type === "tool-result" && event.toolCallId) {
               setActiveToolCalls((prev) =>
                 prev.map((tc) =>
