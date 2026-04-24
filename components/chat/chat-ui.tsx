@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from "uuid";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { DEFAULT_MODEL } from "@/models";
-import { Bot, RotateCcw } from "lucide-react";
+import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
 /**
@@ -304,24 +304,7 @@ export function ChatUI({
                   )}
                 </>
               )}
-              {thread.length > 0 &&
-                thread[thread.length - 1].role === "assistant" &&
-                !isLoading &&
-                streamingContent === null && (
-                  <div className="flex justify-center pt-2 pb-6">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 rounded-full px-4"
-                      onClick={() =>
-                        handleRegenerate(thread[thread.length - 1].id)
-                      }
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Regenerate
-                    </Button>
-                  </div>
-                )}
+
             </div>
           </div>
         </ScrollArea>
