@@ -1,7 +1,6 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { isBlockedUrl } from "./url-guard";
-import { env as appEnv } from "@/lib/env";
 import { z } from "zod";
 
 export type TransportConfig = {
@@ -43,9 +42,9 @@ export function buildTransport(server: TransportConfig): MCPTransport {
 
     const SAFE_ENV_KEYS = ["PATH", "HOME", "LANG", "NODE_ENV"] as const;
     const baseEnv = Object.fromEntries(
-      SAFE_ENV_KEYS.filter((k) => (appEnv as any)[k] !== undefined).map((k) => [
+      SAFE_ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [
         k,
-        (appEnv as any)[k] as string,
+        process.env[k] as string,
       ]),
     );
 

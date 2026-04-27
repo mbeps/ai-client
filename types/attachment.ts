@@ -11,4 +11,5 @@ export type Attachment = {
   extractedText?: string;
   key?: string;
   url?: string;
+  rawFile?: File;
 };

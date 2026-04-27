@@ -50,6 +50,7 @@ export async function processAttachment(
       mimeType: file.type,
       sizeBytes: file.size,
       dataUrl: "",
+      rawFile: file,
     };
   }
 

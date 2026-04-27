@@ -15,6 +15,7 @@ import {
   Command,
   Download,
   FileText,
+  FileSpreadsheet,
   Save,
   User,
   X,
@@ -163,7 +164,7 @@ export function MessageBubble({
   const promptEntry = promptMeta
     ? prompts.find((p) => p.id === promptMeta.promptId)
     : null;
-    
+
   const modelName = useMemo(() => {
     if (isUser) return null;
     const modelId = parseModel(message.metadata);
@@ -174,7 +175,7 @@ export function MessageBubble({
   const hasArtifact = useMemo(() => {
     if (!toolData) return false;
     return toolData.toolResults.some(
-      (tr) => tr.toolName === "manage_artifact" && (tr.result as any)?.artifact
+      (tr) => tr.toolName === "manage_artifact" && (tr.result as any)?.artifact,
     );
   }, [toolData]);
 
@@ -267,16 +268,16 @@ export function MessageBubble({
         </div>
 
         <div className="text-sm">
-          <ThinkingDisplay 
-            reasoning={reasoning ?? ""} 
-            isStreaming={!isUser && isStreamingReasoning} 
+          <ThinkingDisplay
+            reasoning={reasoning ?? ""}
+            isStreaming={!isUser && isStreamingReasoning}
             initialOpen={isLatest && !!reasoning}
           />
-          
+
           {toolData && (
-            <ToolCallDisplay 
-              toolCalls={toolData.toolCalls} 
-              toolResults={toolData.toolResults} 
+            <ToolCallDisplay
+              toolCalls={toolData.toolCalls}
+              toolResults={toolData.toolResults}
             />
           )}
 
@@ -309,6 +310,8 @@ export function MessageBubble({
                   );
                 }
 
+                const AttIcon =
+                  att.type === "spreadsheet" ? FileSpreadsheet : FileText;
                 return displayUrl ? (
                   <a
                     key={att.id}
@@ -317,7 +320,7 @@ export function MessageBubble({
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs hover:bg-muted transition-colors"
                   >
-                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="max-w-[160px] truncate">{att.name}</span>
                     <Download className="h-3 w-3 text-muted-foreground shrink-0" />
                   </a>
@@ -326,7 +329,7 @@ export function MessageBubble({
                     key={att.id}
                     className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs animate-pulse"
                   >
-                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="max-w-[160px] truncate text-muted-foreground">
                       {att.name}
                     </span>
