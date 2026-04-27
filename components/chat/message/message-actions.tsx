@@ -14,6 +14,7 @@ import {
   Edit2,
   RotateCcw,
   Trash2,
+  Maximize2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -32,6 +33,8 @@ interface MessageActionsProps {
   onNavigateBranch: (siblingId: string) => void;
   editContent?: string;
   modelName?: string | null;
+  onShowArtifact?: () => void;
+  hasArtifact?: boolean;
 }
 
 export function MessageActions({
@@ -46,6 +49,8 @@ export function MessageActions({
   onNavigateBranch,
   editContent,
   modelName,
+  onShowArtifact,
+  hasArtifact,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
@@ -154,6 +159,22 @@ export function MessageActions({
             </Button>
           </TooltipTrigger>
           <TooltipContent>Regenerate response</TooltipContent>
+        </Tooltip>
+      )}
+
+      {!isUser && onShowArtifact && hasArtifact && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={onShowArtifact}
+            >
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Show artifact</TooltipContent>
         </Tooltip>
       )}
 

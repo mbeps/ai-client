@@ -117,6 +117,8 @@ interface MessageBubbleProps {
   reasoning?: string;
   /** True while the model is actively streaming its reasoning. */
   isStreamingReasoning?: boolean;
+  /** Callback to show the artifact associated with this message. */
+  onShowArtifact?: () => void;
 }
 
 /**
@@ -145,6 +147,7 @@ export function MessageBubble({
   reasoning,
   isStreamingReasoning,
   onRegenerate,
+  onShowArtifact,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -167,6 +170,13 @@ export function MessageBubble({
     if (!modelId) return null;
     return MODELS.find((m) => m.value === modelId)?.label || modelId;
   }, [isUser, message.metadata]);
+
+  const hasArtifact = useMemo(() => {
+    if (!toolData) return false;
+    return toolData.toolResults.some(
+      (tr) => tr.toolName === "manage_artifact" && (tr.result as any)?.artifact
+    );
+  }, [toolData]);
 
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
@@ -394,6 +404,8 @@ export function MessageBubble({
             onRegenerate={onRegenerate}
             editContent={promptMeta ? promptMeta.userContent : undefined}
             modelName={modelName}
+            onShowArtifact={onShowArtifact}
+            hasArtifact={hasArtifact}
           />
         )}
       </div>

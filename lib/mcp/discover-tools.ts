@@ -77,8 +77,12 @@ export async function discoverToolsAndResources(
         }
         resCursor = result.nextCursor;
       } while (resCursor);
-    } catch (e) {
-      console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
+    } catch (e: any) {
+      if (e?.message?.includes("Server does not support resources")) {
+        // Expected behavior for servers that only implement tools
+      } else {
+        console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
+      }
     }
 
     return { tools, resources };

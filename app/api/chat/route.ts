@@ -6,7 +6,7 @@ import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, stepCountIs, type ModelMessage } from "ai";
+import { streamText, stepCountIs, type ModelMessage, tool } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/file-bridge";
 
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     id: z.string().uuid().optional(),
     parentId: z.string().uuid().optional(),
     attachments: z.array(attachmentSchema).optional(),
+    metadata: z.string().nullable().optional(),
   });
 
   const chatRequestSchema = z.object({
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
     userMessageId: z.string().uuid().optional(),
     model: z.string().min(1).max(100).optional(),
     messages: z.array(messageSchema).max(500),
-    selectedServerIds: z.array(z.string().uuid()).max(20).optional(),
+    selectedServerIds: z.array(z.string()).max(20).optional(),
     selectedTools: z.array(z.string()).max(100).optional(),
     selectedResources: z.array(z.string()).max(100).optional(),
   });
@@ -231,9 +232,52 @@ export async function POST(req: Request) {
     }
   }
 
+  const isArtifactToolSelected = selectedTools?.includes(
+    "internal:tool:manage_artifact",
+  );
+
+  if (isArtifactToolSelected) {
+    mcpTools["manage_artifact"] = tool({
+      description:
+        "Manage and display an interactive artifact to the user. Use this when the user asks for a document, email, text, spreadsheet, HTML UI, or Mermaid diagram.\n\n" +
+        "WHAT TO DO:\n" +
+        "- Set the type to strictly one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'.\n" +
+        "- Use 'markdown' for emails, letters, code snippets, or general text.\n" +
+        "- Place the entire requested content inside the tool's 'content' parameter.\n" +
+        "- After calling the tool, respond to the user with a brief 1-2 sentence summary saying the artifact was created.\n\n" +
+        "WHAT NOT TO DO:\n" +
+        "- NEVER repeat the content of the artifact in your main chat response.\n" +
+        "- Do not provide a preview or copy of the content outside the artifact.\n" +
+        "- DO NOT use this tool to read an artifact. Past artifacts (including user edits) are already fully visible in your message history.\n\n" +
+        "SUCCESS CRITERIA:\n" +
+        "- The user sees the rich content exclusively in the artifact panel, and your chat message only contains a short confirmation.",
+      parameters: z.object({
+        type: z.string().describe("The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'"),
+        title: z.string().optional().describe("The title of the artifact"),
+        content: z.string().describe(
+          "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
+        ),
+      }),
+      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
+      execute: async (args: any) => {
+        const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
+        const normalizedArgs = {
+          type: VALID_TYPES.includes(args.type) ? args.type : "markdown",
+          title: args.title || "Generated Artifact",
+          content: args.content || args.text || "",
+        };
+        return {
+          success: true,
+          message: "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
+          artifact: normalizedArgs,
+        };
+      },
+    });
+  }
+
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-  const processedMessages = history.map((m) => {
+  const processedMessages = history.flatMap((m) => {
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
       const parts: Array<TextPart | ImagePart> = [];
 
@@ -263,15 +307,56 @@ export async function POST(req: Request) {
         }
       }
 
-      return {
+      return [{
         role: m.role,
         content:
           parts.length === 1 && parts[0].type === "text"
             ? (parts[0] as TextPart).text
             : parts,
-      };
+      }];
     }
-    return { role: m.role, content: m.content };
+
+    if (m.role === "assistant" && m.metadata) {
+      try {
+        const meta = JSON.parse(m.metadata);
+        if (Array.isArray(meta.toolCalls) && meta.toolCalls.length > 0) {
+          const parts: any[] = [];
+          if (m.content && typeof m.content === "string" && m.content.trim()) {
+            parts.push({ type: "text", text: m.content });
+          }
+          
+          for (const tc of meta.toolCalls) {
+            parts.push({
+              type: "tool-call",
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              args: typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args,
+            });
+          }
+
+          const msgs: any[] = [{ role: "assistant", content: parts }];
+
+          if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
+            const resultParts = meta.toolResults.map((tr: any) => {
+              const rawResult = typeof tr.result === "string" ? JSON.parse(tr.result) : tr.result;
+              return {
+                type: "tool-result",
+                toolCallId: tr.toolCallId,
+                toolName: tr.toolName,
+                output: { type: "json", value: rawResult },
+              };
+            });
+            msgs.push({ role: "tool", content: resultParts });
+          }
+
+          return msgs;
+        }
+      } catch (e) {
+        console.warn("[Chat API] Failed to parse metadata for history:", e);
+      }
+    }
+
+    return [{ role: m.role, content: m.content }];
   }) as ModelMessage[];
 
   // Prepend system messages: project global prompt then assistant prompt
