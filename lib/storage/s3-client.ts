@@ -74,3 +74,16 @@ export async function getPresignedUrl(key: string, expiresIn = 3600) {
     { expiresIn },
   );
 }
+
+export async function downloadObject(key: string): Promise<Buffer> {
+  const response = await s3Client.send(
+    new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }),
+  );
+  const stream = response.Body;
+  if (!stream) throw new Error(`Empty body for key "${key}"`);
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}

@@ -1,83 +1,137 @@
-/**
- * FileBridge — downloads spreadsheet attachments from S3 to a temporary local
- * directory so that stdio MCP servers (e.g. @negokaz/excel-mcp-server) can
- * access them via the filesystem.
- *
- * Usage per request:
- *   const bridge = await downloadAttachmentsToTemp(spreadsheetAtts);
- *   // inject bridge.tempDir into EXCEL_MCP_ALLOWED_DIRS
- *   // pass bridge.files[].localPath as tool arguments
- *   // await bridge.cleanup() in finally block
- */
+import { mkdir, writeFile, stat, rm, readFile } from "fs/promises";
+import { join, basename } from "path";
+import { tmpdir } from "os";
+import { randomUUID } from "crypto";
+import { downloadObject, uploadObject } from "@/lib/storage/s3-client";
+import { db } from "@/drizzle/db";
+import { attachment } from "@/drizzle/schema";
+import { spreadsheetMimeFromName } from "@/lib/attachments/spreadsheet-types";
 
-import fs from "fs/promises";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-
-export type BridgeFile = {
+export type BridgedFile = {
+  attachmentId: string;
   originalName: string;
   localPath: string;
+  originalSize: number;
+  originalMtimeMs: number;
 };
 
 export type FileBridgeResult = {
   tempDir: string;
-  files: BridgeFile[];
-  cleanup: () => Promise<void>;
+  files: BridgedFile[];
 };
 
-type SpreadsheetAtt = {
+export type ModifiedAttachment = {
+  attachmentId: string;
+  newAttachmentId: string;
+  newKey: string;
   name: string;
-  key?: string;
+  size: number;
+  mimeType: string;
 };
 
-/**
- * Downloads spreadsheet attachments from S3 to a per-request temp directory.
- * Returns the temp dir path, local file paths, and a cleanup function.
- */
-export async function downloadAttachmentsToTemp(
-  attachments: SpreadsheetAtt[],
-): Promise<FileBridgeResult> {
-  const tempDir = path.join("/tmp", "mcp-bridge", uuidv4());
-  await fs.mkdir(tempDir, { recursive: true });
+const BRIDGE_ROOT = "mcp-bridge";
 
-  const files: BridgeFile[] = [];
+export async function downloadAttachmentsToTemp(
+  attachments: { id: string; key: string; name: string }[],
+): Promise<FileBridgeResult> {
+  const tempDir = join(tmpdir(), BRIDGE_ROOT, randomUUID());
+  await mkdir(tempDir, { recursive: true });
+
+  const files: BridgedFile[] = [];
+  const errors: unknown[] = [];
 
   for (const att of attachments) {
-    if (!att.key) continue;
-
     try {
-      const cmd = new GetObjectCommand({ Bucket: S3_BUCKET, Key: att.key });
-      const response = await s3Client.send(cmd);
+      const safeName = basename(att.name);
+      const subdir = join(tempDir, att.id);
+      await mkdir(subdir, { recursive: true });
+      const localPath = join(subdir, safeName);
 
-      if (!response.Body) {
-        console.warn(`[FileBridge] Empty body for key: ${att.key}`);
-        continue;
-      }
+      const buffer = await downloadObject(att.key);
+      await writeFile(localPath, buffer);
+      const s = await stat(localPath);
 
-      // Stream body to buffer
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
-        chunks.push(chunk);
-      }
-      const buffer = Buffer.concat(chunks);
-
-      const localPath = path.join(tempDir, att.name);
-      await fs.writeFile(localPath, buffer);
-      files.push({ originalName: att.name, localPath });
+      files.push({
+        attachmentId: att.id,
+        originalName: safeName,
+        localPath,
+        originalSize: s.size,
+        originalMtimeMs: s.mtimeMs,
+      });
     } catch (err) {
-      console.warn(`[FileBridge] Failed to download ${att.key}:`, err);
+      errors.push(err);
+      console.warn(
+        `[FileBridge] Failed to download attachment ${att.id} (${att.name}):`,
+        err,
+      );
     }
   }
 
-  const cleanup = async () => {
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (err) {
-      console.warn(`[FileBridge] Failed to cleanup ${tempDir}:`, err);
-    }
-  };
+  if (files.length === 0 && errors.length > 0) {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    throw new Error("All file bridge downloads failed");
+  }
 
-  return { tempDir, files, cleanup };
+  return { tempDir, files };
+}
+
+export async function persistModifiedFiles(params: {
+  files: BridgedFile[];
+  userId: string;
+  assistantMessageId: string;
+}): Promise<ModifiedAttachment[]> {
+  const { files, userId, assistantMessageId } = params;
+  const results: ModifiedAttachment[] = [];
+
+  for (const f of files) {
+    let s;
+    try {
+      s = await stat(f.localPath);
+    } catch {
+      continue;
+    }
+
+    const changed =
+      s.size !== f.originalSize || s.mtimeMs !== f.originalMtimeMs;
+    if (!changed) continue;
+
+    try {
+      const buffer = await readFile(f.localPath);
+      const newAttachmentId = randomUUID();
+      const newKey = `attachments/${userId}/${newAttachmentId}-${f.originalName}`;
+      const mimeType = spreadsheetMimeFromName(f.originalName);
+
+      await uploadObject(newKey, buffer, mimeType);
+
+      await db.insert(attachment).values({
+        id: newAttachmentId,
+        messageId: assistantMessageId,
+        userId,
+        name: f.originalName,
+        mimeType,
+        size: s.size,
+        key: newKey,
+      });
+
+      results.push({
+        attachmentId: f.attachmentId,
+        newAttachmentId,
+        newKey,
+        name: f.originalName,
+        size: s.size,
+        mimeType,
+      });
+    } catch (err) {
+      console.warn(
+        `[FileBridge] Failed to persist modified file ${f.originalName}:`,
+        err,
+      );
+    }
+  }
+
+  return results;
+}
+
+export async function cleanupTempDir(tempDir: string): Promise<void> {
+  await rm(tempDir, { recursive: true, force: true });
 }

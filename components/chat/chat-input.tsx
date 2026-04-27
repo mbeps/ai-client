@@ -12,6 +12,7 @@ import {
   Square,
   X,
   FileText,
+  FileSpreadsheet,
   Image as ImageIcon,
   Command,
 } from "lucide-react";
@@ -210,7 +211,9 @@ export function ChatInput({
       else {
         next.add(toolId);
         // Ensure server is selected
-        setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+        setSelectedServerIds((prevServers) =>
+          new Set(prevServers).add(serverId),
+        );
       }
       return next;
     });
@@ -224,33 +227,42 @@ export function ChatInput({
       else {
         next.add(resourceId);
         // Ensure server is selected
-        setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+        setSelectedServerIds((prevServers) =>
+          new Set(prevServers).add(serverId),
+        );
       }
       return next;
     });
   };
-  const handleBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+  const handleBulkSelect = (
+    serverId: string,
+    toolNames: string[],
+    resourceUris: string[],
+    select: boolean,
+  ) => {
     if (select) {
-      setSelectedServerIds(prev => new Set(prev).add(serverId));
-      setSelectedTools(prev => {
+      setSelectedServerIds((prev) => new Set(prev).add(serverId));
+      setSelectedTools((prev) => {
         const next = new Set(prev);
-        toolNames.forEach(name => next.add(`${serverId}:tool:${name}`));
+        toolNames.forEach((name) => next.add(`${serverId}:tool:${name}`));
         return next;
       });
-      setSelectedResources(prev => {
+      setSelectedResources((prev) => {
         const next = new Set(prev);
-        resourceUris.forEach(uri => next.add(`${serverId}:resource:${uri}`));
+        resourceUris.forEach((uri) => next.add(`${serverId}:resource:${uri}`));
         return next;
       });
     } else {
-      setSelectedTools(prev => {
+      setSelectedTools((prev) => {
         const next = new Set(prev);
-        toolNames.forEach(name => next.delete(`${serverId}:tool:${name}`));
+        toolNames.forEach((name) => next.delete(`${serverId}:tool:${name}`));
         return next;
       });
-      setSelectedResources(prev => {
+      setSelectedResources((prev) => {
         const next = new Set(prev);
-        resourceUris.forEach(uri => next.delete(`${serverId}:resource:${uri}`));
+        resourceUris.forEach((uri) =>
+          next.delete(`${serverId}:resource:${uri}`),
+        );
         return next;
       });
       // Optionally deselect server if no tools/resources left, but let's keep it simple
@@ -279,7 +291,7 @@ export function ChatInput({
         type="file"
         className="hidden"
         multiple
-        accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/markdown,.md"
+        accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/markdown,.md,.xlsx,.xlsm,.xls,.csv"
         onChange={(e) => {
           if (e.target.files) addFiles(e.target.files);
           e.target.value = "";
@@ -328,6 +340,8 @@ export function ChatInput({
                 ) : (
                   <ImageIcon className="h-4 w-4 text-muted-foreground" />
                 )
+              ) : att.type === "spreadsheet" ? (
+                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
               ) : (
                 <FileText className="h-4 w-4 text-muted-foreground" />
               )}

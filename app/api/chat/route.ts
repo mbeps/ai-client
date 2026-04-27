@@ -8,7 +8,13 @@ import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, stepCountIs, type ModelMessage, tool } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
-import { downloadAttachmentsToTemp } from "@/lib/mcp/file-bridge";
+import { DEFAULT_MODEL } from "@/models";
+import {
+  downloadAttachmentsToTemp,
+  persistModifiedFiles,
+  cleanupTempDir,
+  type FileBridgeResult,
+} from "@/lib/mcp/file-bridge";
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
@@ -20,8 +26,6 @@ const openrouter = createOpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: env.OPENROUTER_API_KEY,
 });
-
-const DEFAULT_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free";
 
 /**
  * POST handler for the AI chat streaming pipeline.
@@ -164,18 +168,28 @@ export async function POST(req: Request) {
       ? servers.filter((s) => selectedServerIds.includes(s.id))
       : servers;
 
-  // FileBridge: download spreadsheet attachments to temp dir for MCP tools
-  const spreadsheetAtts = history
-    .flatMap((m) => m.attachments ?? [])
-    .filter((a) => a.type === "spreadsheet" && a.key);
+  // FileBridge: download spreadsheet attachments from the LATEST user message only.
+  // Re-bridging the entire history every turn would be wasteful and break
+  // the assumption that modified files become new attachments on later turns.
+  const lastUserMsg = [...history].reverse().find((m) => m.role === "user");
+  const spreadsheetAtts: { id: string; key: string; name: string }[] = [];
+  if (lastUserMsg?.attachments) {
+    for (const att of lastUserMsg.attachments) {
+      if (att.type === "spreadsheet" && att.key && att.id && att.name) {
+        spreadsheetAtts.push({ id: att.id, key: att.key, name: att.name });
+      }
+    }
+  }
 
-  let bridge: Awaited<ReturnType<typeof downloadAttachmentsToTemp>> | null =
-    null;
+  let bridge: FileBridgeResult | null = null;
   if (filteredServers.length > 0 && spreadsheetAtts.length > 0) {
     try {
       bridge = await downloadAttachmentsToTemp(spreadsheetAtts);
     } catch (err) {
-      console.warn("[FileBridge] Failed to download attachments:", err);
+      console.warn(
+        "[FileBridge] Failed to download attachments, continuing without bridge:",
+        err,
+      );
     }
   }
 
@@ -252,11 +266,17 @@ export async function POST(req: Request) {
         "SUCCESS CRITERIA:\n" +
         "- The user sees the rich content exclusively in the artifact panel, and your chat message only contains a short confirmation.",
       parameters: z.object({
-        type: z.string().describe("The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'"),
+        type: z
+          .string()
+          .describe(
+            "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
+          ),
         title: z.string().optional().describe("The title of the artifact"),
-        content: z.string().describe(
-          "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
-        ),
+        content: z
+          .string()
+          .describe(
+            "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
+          ),
       }),
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async (args: any) => {
@@ -268,7 +288,8 @@ export async function POST(req: Request) {
         };
         return {
           success: true,
-          message: "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
+          message:
+            "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
           artifact: normalizedArgs,
         };
       },
@@ -289,6 +310,15 @@ export async function POST(req: Request) {
             text: `[Document: ${att.name}]\n${att.extractedText}`,
           });
         }
+        if (att.type === "spreadsheet" && bridge) {
+          const f = bridge.files.find((b) => b.attachmentId === att.id);
+          if (f) {
+            parts.push({
+              type: "text",
+              text: `[Spreadsheet: ${att.name} — local path: ${f.localPath}]`,
+            });
+          }
+        }
       }
 
       // Add user message text
@@ -307,13 +337,15 @@ export async function POST(req: Request) {
         }
       }
 
-      return [{
-        role: m.role,
-        content:
-          parts.length === 1 && parts[0].type === "text"
-            ? (parts[0] as TextPart).text
-            : parts,
-      }];
+      return [
+        {
+          role: m.role,
+          content:
+            parts.length === 1 && parts[0].type === "text"
+              ? (parts[0] as TextPart).text
+              : parts,
+        },
+      ];
     }
 
     if (m.role === "assistant" && m.metadata) {
@@ -324,7 +356,7 @@ export async function POST(req: Request) {
           if (m.content && typeof m.content === "string" && m.content.trim()) {
             parts.push({ type: "text", text: m.content });
           }
-          
+
           for (const tc of meta.toolCalls) {
             parts.push({
               type: "tool-call",
@@ -338,7 +370,10 @@ export async function POST(req: Request) {
 
           if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
             const resultParts = meta.toolResults.map((tr: any) => {
-              const rawResult = typeof tr.result === "string" ? JSON.parse(tr.result) : tr.result;
+              const rawResult =
+                typeof tr.result === "string"
+                  ? JSON.parse(tr.result)
+                  : tr.result;
               return {
                 type: "tool-result",
                 toolCallId: tr.toolCallId,
@@ -366,6 +401,15 @@ export async function POST(req: Request) {
   }
   if (assistantRow?.prompt?.trim()) {
     systemMessages.push({ role: "system", content: assistantRow.prompt });
+  }
+  if (bridge && bridge.files.length > 0) {
+    const lines = bridge.files
+      .map((f) => `- ${f.originalName}: ${f.localPath}`)
+      .join("\n");
+    systemMessages.push({
+      role: "system",
+      content: `IMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
+    });
   }
   const finalMessages: ModelMessage[] = [
     ...systemMessages,
@@ -518,6 +562,37 @@ export async function POST(req: Request) {
           .set({ currentLeafId: assistantMessageId, updatedAt: new Date() })
           .where(eq(chat.id, chatId));
 
+        if (bridge) {
+          try {
+            const modified = await persistModifiedFiles({
+              files: bridge.files,
+              userId: session.user.id,
+              assistantMessageId,
+            });
+            for (const mod of modified) {
+              controller.enqueue(
+                encode({
+                  type: "file-modified",
+                  attachmentId: mod.newAttachmentId,
+                  messageId: assistantMessageId,
+                  name: mod.name,
+                  mimeType: mod.mimeType,
+                  size: mod.size,
+                }),
+              );
+            }
+          } catch (err) {
+            console.warn("[FileBridge] Failed to persist modified files:", err);
+            controller.enqueue(
+              encode({
+                type: "error",
+                message: "Failed to save modified spreadsheet(s)",
+                code: "BRIDGE_PERSIST_FAILED",
+              }),
+            );
+          }
+        }
+
         controller.enqueue(
           encode({
             type: "done",
@@ -528,6 +603,11 @@ export async function POST(req: Request) {
       } catch (_err) {
         controller.enqueue(encode({ type: "error", message: "Stream failed" }));
       } finally {
+        if (bridge) {
+          await cleanupTempDir(bridge.tempDir).catch((err) =>
+            console.warn("[FileBridge] Temp cleanup failed:", err),
+          );
+        }
         await mcpCleanup();
         controller.close();
       }

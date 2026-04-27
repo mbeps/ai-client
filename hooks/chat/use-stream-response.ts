@@ -24,10 +24,13 @@ export interface ArtifactData {
   messageId?: string;
 }
 
-export function useStreamResponse(chatId: string, options?: { 
-  onDone?: (content: string) => void;
-  onArtifact?: (artifact: ArtifactData) => void;
-}) {
+export function useStreamResponse(
+  chatId: string,
+  options?: {
+    onDone?: (content: string) => void;
+    onArtifact?: (artifact: ArtifactData) => void;
+  },
+) {
   const addMessage = useAppStore((state) => state.addMessage);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
@@ -70,7 +73,7 @@ export function useStreamResponse(chatId: string, options?: {
 
     let fullContent = content;
     let userMsgMetadata: string | null = null;
-    
+
     if (selectedPromptId) {
       const prompts = useAppStore.getState().prompts;
       const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
@@ -113,14 +116,21 @@ export function useStreamResponse(chatId: string, options?: {
     for (const att of attachments) {
       try {
         const formData = new FormData();
-        const response = await fetch(att.dataUrl);
-        const blob = await response.blob();
+        let blob: Blob;
+        if (att.rawFile) {
+          blob = att.rawFile;
+        } else {
+          const response = await fetch(att.dataUrl);
+          blob = await response.blob();
+        }
         const file = new File([blob], att.name, { type: att.mimeType });
         formData.append("file", file);
         formData.append("messageId", userMsgId);
+        formData.append("attachmentId", att.id);
 
         const data = await uploadAttachment(formData);
-        uploadedAttachments.push({ ...att, id: data.id, key: data.key });
+        // Keep the original client-side att.id so it matches the store entry.
+        uploadedAttachments.push({ ...att, key: data.key });
       } catch {
         // Upload failed silently
       }
@@ -134,7 +144,7 @@ export function useStreamResponse(chatId: string, options?: {
     const latestThread = latestChat?.currentLeafId
       ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
       : [];
-    
+
     const history = latestThread.map((m) => ({
       role: m.role,
       content: m.content,
@@ -152,6 +162,7 @@ export function useStreamResponse(chatId: string, options?: {
 
     let accumulated = "";
     let accumulatedReasoning = "";
+    const pendingNewAttachments: Attachment[] = [];
 
     try {
       const response = await fetch("/api/chat", {
@@ -197,7 +208,7 @@ export function useStreamResponse(chatId: string, options?: {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          
+
           try {
             const event = JSON.parse(trimmed.slice(6));
 
@@ -226,14 +237,26 @@ export function useStreamResponse(chatId: string, options?: {
               ]);
               if (event.toolName === "manage_artifact" && event.args) {
                 try {
-                  const parsedArgs = typeof event.args === "string" ? JSON.parse(event.args) : (event.args || {});
-                  
+                  const parsedArgs =
+                    typeof event.args === "string"
+                      ? JSON.parse(event.args)
+                      : event.args || {};
+
                   // Fallbacks for poor model compliance
-                  const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
-                  const artifactType = VALID_TYPES.includes(parsedArgs.type) ? parsedArgs.type : "markdown";
-                  const artifactTitle = parsedArgs.title || "Generated Artifact";
-                  const artifactContent = parsedArgs.content || parsedArgs.text || "";
-                  
+                  const VALID_TYPES = [
+                    "markdown",
+                    "spreadsheet",
+                    "html",
+                    "mermaid",
+                  ];
+                  const artifactType = VALID_TYPES.includes(parsedArgs.type)
+                    ? parsedArgs.type
+                    : "markdown";
+                  const artifactTitle =
+                    parsedArgs.title || "Generated Artifact";
+                  const artifactContent =
+                    parsedArgs.content || parsedArgs.text || "";
+
                   if (artifactContent || artifactType) {
                     options?.onArtifact?.({
                       type: artifactType,
@@ -249,10 +272,23 @@ export function useStreamResponse(chatId: string, options?: {
               setActiveToolCalls((prev) =>
                 prev.map((tc) =>
                   tc.toolCallId === event.toolCallId
-                    ? { ...tc, status: "complete" as const, result: event.result }
+                    ? {
+                        ...tc,
+                        status: "complete" as const,
+                        result: event.result,
+                      }
                     : tc,
                 ),
               );
+            } else if (event.type === "file-modified" && event.attachmentId) {
+              pendingNewAttachments.push({
+                id: event.attachmentId,
+                type: "spreadsheet" as const,
+                name: event.name ?? "modified_file",
+                mimeType: event.mimeType ?? "application/octet-stream",
+                sizeBytes: event.size ?? 0,
+                dataUrl: "",
+              });
             } else if (event.type === "done" && event.id) {
               const metadata = event.metadata
                 ? JSON.stringify(event.metadata)
@@ -267,23 +303,34 @@ export function useStreamResponse(chatId: string, options?: {
                 undefined,
                 accumulatedReasoning || undefined,
               );
-              
+
               // Reset streaming states
               setStreamingContent(null);
               setStreamingReasoning(null);
               setIsStreamingReasoning(false);
               setActiveToolCalls([]);
-              
+
+              if (pendingNewAttachments.length > 0) {
+                updateMessageAttachments(
+                  chatId,
+                  event.id,
+                  pendingNewAttachments,
+                );
+              }
+
               options?.onDone?.(accumulated);
               return accumulated; // Return the full content for any post-processing
             } else if (event.type === "error") {
               setStreamingContent(null);
               setActiveToolCalls([]);
-              toast.error(event.message || "An error occurred during generation");
+              toast.error(
+                event.message || "An error occurred during generation",
+              );
               addMessage(
                 chatId,
                 "assistant",
-                event.message || "Sorry, I couldn't generate a response. Please try again.",
+                event.message ||
+                  "Sorry, I couldn't generate a response. Please try again.",
                 userMsgId,
               );
             }
