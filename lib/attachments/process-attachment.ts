@@ -31,6 +31,14 @@ export async function processAttachment(
    * @throws {Error} When FileReader encounters read error
    */
   function readAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   const validation = validateFile(file, existingAttachments);
   if (!validation.valid) {
     throw new Error(validation.reason);

@@ -30,7 +30,7 @@ import type { Chat } from "./chat";
  * @see Assistant for AI persona configuration
  * @author Maruf Bepary
  */
-export type AppState = {"
+export type AppState = {
   /** All projects in the workspace. */
   projects: Project[];
   /** All custom AI assistants. */
@@ -143,6 +143,11 @@ export type AppState = {"
    * Pinned projects appear at the top of the project list.
    */
   toggleProjectPin: (id: string) => void;
+  /**
+   * Persists a project rename to the database.
+   */
+  renameProjectDb: (id: string, name: string) => Promise<void>;
+
 
   /**
    * Loads all projects from the database and populates the store.
