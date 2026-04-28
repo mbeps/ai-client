@@ -12,6 +12,7 @@ import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-tem
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
 import { DEFAULT_MODEL } from "@/models";
+import { chatRequestSchema, manageArtifactSchema } from "@/schemas/chat";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
 
 type TextPart = { type: "text"; text: string };
@@ -55,44 +56,6 @@ const openrouter = createOpenAI({
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
-
-  const attachmentSchema = z.object({
-    id: z.string().uuid(),
-    name: z.string().min(1).max(255),
-    mimeType: z.string().max(100).optional(),
-    type: z.enum(["image", "document", "spreadsheet"]).optional(),
-    dataUrl: z.string().optional(),
-    extractedText: z.string().optional(),
-    key: z.string().max(1024).optional(),
-  });
-
-  const contentPartSchema = z.union([
-    z.object({ type: z.literal("text"), text: z.string() }),
-    z.object({
-      type: z.literal("image"),
-      image: z.union([z.string().url(), z.string()]),
-      mimeType: z.string().optional(),
-    }),
-  ]);
-
-  const messageSchema = z.object({
-    role: z.enum(["user", "assistant", "system"]),
-    content: z.union([z.string(), z.array(contentPartSchema)]),
-    id: z.string().uuid().optional(),
-    parentId: z.string().uuid().optional(),
-    attachments: z.array(attachmentSchema).optional(),
-    metadata: z.string().nullable().optional(),
-  });
-
-  const chatRequestSchema = z.object({
-    chatId: z.string().uuid(),
-    userMessageId: z.string().uuid().optional(),
-    model: z.string().min(1).max(100).optional(),
-    messages: z.array(messageSchema).max(500),
-    selectedServerIds: z.array(z.string()).max(20).optional(),
-    selectedTools: z.array(z.string()).max(100).optional(),
-    selectedResources: z.array(z.string()).max(100).optional(),
-  });
 
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
@@ -279,19 +242,7 @@ export async function POST(req: Request) {
         "- DO NOT use this tool to read an artifact. Past artifacts (including user edits) are already fully visible in your message history.\n\n" +
         "SUCCESS CRITERIA:\n" +
         "- The user sees the rich content exclusively in the artifact panel, and your chat message only contains a short confirmation.",
-      parameters: z.object({
-        type: z
-          .string()
-          .describe(
-            "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
-          ),
-        title: z.string().optional().describe("The title of the artifact"),
-        content: z
-          .string()
-          .describe(
-            "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
-          ),
-      }),
+      parameters: manageArtifactSchema,
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async (args: any) => {
         const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];

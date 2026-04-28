@@ -84,3 +84,75 @@ export const messageMetadataSchema = z.object({
   reasoning: z.string().optional(),
   model: z.string().optional(),
 });
+
+/**
+ * Validates a file attachment in a chat request.
+ * Supports images, documents, and spreadsheets with metadata like mimeType and extraction results.
+ */
+export const chatAttachmentSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  mimeType: z.string().max(100).optional(),
+  type: z.enum(["image", "document", "spreadsheet"]).optional(),
+  dataUrl: z.string().optional(),
+  extractedText: z.string().optional(),
+  key: z.string().max(1024).optional(),
+});
+
+/**
+ * Validates a single content part of a message (text or image).
+ * Used in multimodal message history for the AI provider.
+ */
+export const chatContentPartSchema = z.union([
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({
+    type: z.literal("image"),
+    image: z.union([z.string().url(), z.string()]),
+    mimeType: z.string().optional(),
+  }),
+]);
+
+/**
+ * Validates a message object sent in a chat request.
+ * Supports complex content parts and optional file attachments.
+ */
+export const chatMessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.union([z.string(), z.array(chatContentPartSchema)]),
+  id: z.string().uuid().optional(),
+  parentId: z.string().uuid().optional(),
+  attachments: z.array(chatAttachmentSchema).optional(),
+  metadata: z.string().nullable().optional(),
+});
+
+/**
+ * Validates the full POST request body for the chat API endpoint.
+ * Includes chatId, message history, model selection, and MCP tool/resource selections.
+ */
+export const chatRequestSchema = z.object({
+  chatId: z.string().uuid(),
+  userMessageId: z.string().uuid().optional(),
+  model: z.string().min(1).max(100).optional(),
+  messages: z.array(chatMessageSchema).max(500),
+  selectedServerIds: z.array(z.string()).max(20).optional(),
+  selectedTools: z.array(z.string()).max(100).optional(),
+  selectedResources: z.array(z.string()).max(100).optional(),
+});
+
+/**
+ * Validates parameters for the internal manage_artifact tool.
+ * Ensures the AI provides a valid type, title, and content for the artifact panel.
+ */
+export const manageArtifactSchema = z.object({
+  type: z
+    .string()
+    .describe(
+      "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
+    ),
+  title: z.string().optional().describe("The title of the artifact"),
+  content: z
+    .string()
+    .describe(
+      "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
+    ),
+});
