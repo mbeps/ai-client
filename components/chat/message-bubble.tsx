@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment";
 import type { Message } from "@/types/message";
-import { getAttachmentUrl } from "@/lib/actions/attachments";
+import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import { ROUTES } from "@/lib/routes";
 import { MODELS } from "@/models";
 import {

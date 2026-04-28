@@ -1,4 +1,4 @@
-import { deletePrompt as deletePromptAction } from "@/lib/actions/prompts";
+import { deletePrompt as deletePromptAction } from "@/lib/actions/prompts/delete-prompt";
 import { EntitySet } from "../types";
 
 /**

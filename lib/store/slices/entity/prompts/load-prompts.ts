@@ -1,4 +1,4 @@
-import { listPrompts as listPromptsAction } from "@/lib/actions/prompts";
+import { listPrompts as listPromptsAction } from "@/lib/actions/prompts/list-prompts";
 import { promptRowToStore } from "../../../mappers/prompt";
 import { EntitySet } from "../types";
 

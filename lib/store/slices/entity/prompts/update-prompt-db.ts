@@ -1,4 +1,4 @@
-import { updatePrompt as updatePromptAction } from "@/lib/actions/prompts";
+import { updatePrompt as updatePromptAction } from "@/lib/actions/prompts/update-prompt";
 import { promptRowToStore } from "../../../mappers/prompt";
 import { EntitySet } from "../types";
 
