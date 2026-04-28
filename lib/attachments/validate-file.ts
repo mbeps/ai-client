@@ -10,8 +10,24 @@ import {
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "./constants";
 
+/**
+ * Result object indicating whether file validation passed or failed with reason.
+ */
 type ValidationResult = { valid: true } | { valid: false; reason: string };
 
+/**
+ * Validates a file before processing by checking type, size, and message-level quotas.
+ * Images (PNG, JPG, GIF, WebP) are limited to 2 MB each with max 3 per message.
+ * Documents (PDF, TXT, MD) are limited to 20 MB. Spreadsheets (XLSX, XLS, CSV) are limited to 50 MB.
+ * Maximum 5 total attachments per message. Resolves MIME type from file.type or extension fallback (e.g., .md, .xlsx).
+ * Returns detailed rejection reasons to display in UI.
+ *
+ * @param file - Browser File object to validate
+ * @param existingAttachments - Already-attached files in current message for quota enforcement
+ * @returns Validation result with valid=true on success or valid=false with detailed error reason
+ * @see {@link constants.ts} for allowed types and size limits
+ * @see {@link process-attachment.ts} for next processing step after validation passes
+ */
 export function validateFile(
   file: File,
   existingAttachments: Attachment[],

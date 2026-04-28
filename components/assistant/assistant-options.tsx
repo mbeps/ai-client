@@ -12,11 +12,14 @@ import { useCreateChat } from "@/hooks/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
- * Options menu for an assistant, providing Rename and Delete actions.
- * Shares logic between the AssistantCard and the global header.
- * Automatically handles navigation to the assistant list after deletion.
+ * Dropdown/Drawer menu with New Chat, Manage, Rename, and Delete options for assistants.
+ * Uses useEntityOptions hook to manage dialog state and handles store mutations via renameAssistantDb and deleteAssistantDb.
+ * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
- * @param props.assistant - The assistant entity to manage.
+ * @param props.assistant - Assistant entity with id and name.
+ * @returns Menu with action items, rename dialog, and delete confirmation dialog.
+ * @see useEntityOptions for shared dialog and action state management.
+ * @see ResponsiveMenu for desktop/mobile responsive menu wrapper.
  * @author Maruf Bepary
  */
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {

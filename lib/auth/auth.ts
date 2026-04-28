@@ -12,13 +12,14 @@ import { passkey } from "@better-auth/passkey";
 import { env } from "@/lib/env";
 
 /**
- * Better Auth server instance. SERVER-ONLY — do not import in client components.
- * Configured with email/password, GitHub and Discord OAuth, passkey, and two-factor plugins.
- * Sessions are stored as JWT-based encrypted HTTP-only cookies via the nextCookies plugin.
- * Transactional emails for verification, password reset, account deletion, and welcome
- * are dispatched via Postmark.
+ * Better Auth server instance for all authentication operations. **SERVER-ONLY** — never import in client components.
+ * Configured with email/password, GitHub and Discord OAuth, passkey, and two-factor authentication plugins.
+ * Sessions are JWT-based encrypted HTTP-only cookies (7-day expiration, refreshed daily) via the nextCookies plugin.
+ * Requires BETTER_AUTH_SECRET for HMAC signing and BETTER_AUTH_URL for callback routing.
+ * Transactional emails (verification, password reset, account deletion, welcome) dispatch via Postmark.
  *
- * @see https://better-auth.com/docs
+ * @see {@link https://better-auth.com/docs} for configuration options
+ * @see {@link lib/auth/auth-client.ts} for client-side usage
  * @author Maruf Bepary
  */
 export const auth = betterAuth({

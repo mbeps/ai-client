@@ -6,9 +6,12 @@ export const metadata = {
 };
 
 /**
- * Password reset page that wraps the client-side reset form in a Suspense boundary.
- * Route: /auth/reset-password. The inner form reads the reset token from search params.
+ * Password reset page with client-rendered form wrapped in Suspense boundary.
+ * Route: /auth/reset-password. Public route. Reads reset token from URL search params.
+ * User navigates here via password reset email link from Forgot Password flow.
  *
+ * @returns Reset form with token validation and new password confirmation.
+ * @see LoginPage for Forgot Password flow that sends reset email.
  * @author Maruf Bepary
  */
 export default function ResetPasswordPage() {

@@ -1,8 +1,14 @@
 import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
+import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
+import { user } from "./auth-schema";
+
 /**
- * Persisted user-created prompts for reuse via slash commands.
+ * Stores user-created reusable prompts triggered via slash commands (/shortcut) in chat UI.
+ * Many-to-one with user (CASCADE DELETE); title, shortcut, and content all required.
+ * shortcut becomes the command trigger; content is prepended to AI calls when command invoked (hidden from user message display).
+ * Enables rapid message templating and workflow shortcuts; auto-generated UUID primary key.
  *
  * @author Maruf Bepary
  */

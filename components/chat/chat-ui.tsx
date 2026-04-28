@@ -9,17 +9,43 @@ import { ChatInput } from "./chat-input";
 import { ArtifactPanel } from "./artifact-panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
-import { useStreamResponse, type ArtifactData } from "@/hooks/chat/use-stream-response";
+import {
+  useStreamResponse,
+  type ArtifactData,
+} from "@/hooks/chat/use-stream-response";
 import { DEFAULT_MODEL } from "@/models";
 import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
+/**
+ * Props for the ChatUI component.
+ * Controls the chat session display and interaction with optional initial messaging.
+ */
 interface ChatUIProps {
+  /** Unique identifier for the active chat session. */
   chatId: string;
+
+  /** Optional message to send on component mount. Typically from query parameters. */
   initialMessage?: string;
+
+  /** Callback invoked after the initial message is successfully sent. */
   onInitialMessageSent?: () => void;
 }
 
+/**
+ * Main chat interface component rendering messages, input, and artifacts.
+ * Handles message reconstruction from the branching tree, artifact collection,
+ * streaming response integration, and branch navigation via sibling arrows.
+ * Automatically detects and displays artifacts (Mermaid, Markdown, HTML, Spreadsheet)
+ * from manage_artifact tool calls or mermaid code blocks.
+ *
+ * @param props - Configuration for the chat session ID and optional auto-messaging.
+ * @returns Chat UI with ScrollArea, MessageBubbles, ChatInput, and ArtifactPanel.
+ * @see MessageBubble for individual message rendering.
+ * @see useStreamResponse for handling AI responses.
+ * @see ArtifactPanel for artifact display.
+ * @author Maruf Bepary
+ */
 export function ChatUI({
   chatId,
   initialMessage,
@@ -28,7 +54,9 @@ export function ChatUI({
   const chat = useAppStore((state) => state.chats[chatId]);
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
-  const updateMessageMetadataDb = useAppStore((state) => state.updateMessageMetadataDb);
+  const updateMessageMetadataDb = useAppStore(
+    (state) => state.updateMessageMetadataDb,
+  );
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
@@ -76,7 +104,8 @@ export function ChatUI({
     return artifacts;
   }, [thread]);
 
-  const activeArtifact = artifactIndex >= 0 ? allArtifacts[artifactIndex] : null;
+  const activeArtifact =
+    artifactIndex >= 0 ? allArtifacts[artifactIndex] : null;
 
   const {
     isLoading,
@@ -102,86 +131,100 @@ export function ChatUI({
     }
   }, [allArtifacts.length, isArtifactOpen, artifactIndex]);
 
-  const handleShowArtifact = useCallback((msgId: string) => {
-    // Find the artifact index for this specific message
-    let foundIndex = -1;
-    let artifactCounter = 0;
-    
-    for (const msg of thread) {
-      let msgArtifactsCount = 0;
-      if (msg.metadata) {
-        try {
-          const meta = JSON.parse(msg.metadata);
-          if (Array.isArray(meta.toolResults)) {
-            msgArtifactsCount = meta.toolResults.filter((tr: any) => tr.toolName === "manage_artifact").length;
-          }
-        } catch {}
-      }
-      if (msgArtifactsCount === 0 && msg.content.includes("```mermaid")) {
-        msgArtifactsCount = 1;
-      }
+  const handleShowArtifact = useCallback(
+    (msgId: string) => {
+      // Find the artifact index for this specific message
+      let foundIndex = -1;
+      let artifactCounter = 0;
 
-      if (msg.id === msgId) {
-        foundIndex = artifactCounter;
-        break;
-      }
-      artifactCounter += msgArtifactsCount;
-    }
+      for (const msg of thread) {
+        let msgArtifactsCount = 0;
+        if (msg.metadata) {
+          try {
+            const meta = JSON.parse(msg.metadata);
+            if (Array.isArray(meta.toolResults)) {
+              msgArtifactsCount = meta.toolResults.filter(
+                (tr: any) => tr.toolName === "manage_artifact",
+              ).length;
+            }
+          } catch {}
+        }
+        if (msgArtifactsCount === 0 && msg.content.includes("```mermaid")) {
+          msgArtifactsCount = 1;
+        }
 
-    if (foundIndex >= 0) {
-      setArtifactIndex(foundIndex);
-      setIsArtifactOpen(true);
-    }
-  }, [thread]);
-
-  const handleUpdateArtifact = useCallback((newContent: string) => {
-    if (!activeArtifact || !activeArtifact.messageId) return;
-
-    const msg = chat?.messages[activeArtifact.messageId];
-    if (!msg || !msg.metadata) return;
-
-    try {
-      const meta = JSON.parse(msg.metadata);
-      let updated = false;
-      
-      if (Array.isArray(meta.toolResults)) {
-        meta.toolResults.forEach((tr: any) => {
-          if (tr.toolName === "manage_artifact" && tr.result?.artifact?.content === activeArtifact.content) {
-            tr.result.artifact.content = newContent;
-            updated = true;
-          }
-        });
+        if (msg.id === msgId) {
+          foundIndex = artifactCounter;
+          break;
+        }
+        artifactCounter += msgArtifactsCount;
       }
 
-      if (updated) {
-        updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
+      if (foundIndex >= 0) {
+        setArtifactIndex(foundIndex);
+        setIsArtifactOpen(true);
       }
-    } catch (e) {
-      console.error("Failed to update artifact metadata", e);
-    }
-  }, [activeArtifact, chat, chatId, updateMessageMetadataDb]);
+    },
+    [thread],
+  );
 
-  const handleSend = useCallback(async (
-    content: string,
-    attachments: Attachment[] = [],
-    model = DEFAULT_MODEL,
-    selectedServerIds: string[] = [],
-    selectedTools: string[] = [],
-    selectedResources: string[] = [],
-    selectedPromptId?: string,
-  ) => {
-    await streamResponse(
-      uuidv4(),
-      content,
-      chat?.currentLeafId || null,
-      attachments,
-      model,
-      selectedServerIds,
-      selectedTools,
-      selectedResources,
-      selectedPromptId,
-    );
-  }, [chat?.currentLeafId, streamResponse]);
+  const handleUpdateArtifact = useCallback(
+    (newContent: string) => {
+      if (!activeArtifact || !activeArtifact.messageId) return;
+
+      const msg = chat?.messages[activeArtifact.messageId];
+      if (!msg || !msg.metadata) return;
+
+      try {
+        const meta = JSON.parse(msg.metadata);
+        let updated = false;
+
+        if (Array.isArray(meta.toolResults)) {
+          meta.toolResults.forEach((tr: any) => {
+            if (
+              tr.toolName === "manage_artifact" &&
+              tr.result?.artifact?.content === activeArtifact.content
+            ) {
+              tr.result.artifact.content = newContent;
+              updated = true;
+            }
+          });
+        }
+
+        if (updated) {
+          updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
+        }
+      } catch (e) {
+        console.error("Failed to update artifact metadata", e);
+      }
+    },
+    [activeArtifact, chat, chatId, updateMessageMetadataDb],
+  );
+
+  const handleSend = useCallback(
+    async (
+      content: string,
+      attachments: Attachment[] = [],
+      model = DEFAULT_MODEL,
+      selectedServerIds: string[] = [],
+      selectedTools: string[] = [],
+      selectedResources: string[] = [],
+      selectedPromptId?: string,
+    ) => {
+      await streamResponse(
+        uuidv4(),
+        content,
+        chat?.currentLeafId || null,
+        attachments,
+        model,
+        selectedServerIds,
+        selectedTools,
+        selectedResources,
+        selectedPromptId,
+      );
+    },
+    [chat?.currentLeafId, streamResponse],
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
@@ -203,7 +246,9 @@ export function ChatUI({
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]");
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      );
       if (viewport) {
         viewport.scrollTop = viewport.scrollHeight;
       } else {
@@ -214,9 +259,19 @@ export function ChatUI({
 
   useEffect(() => {
     scrollToBottom();
-  }, [chat?.currentLeafId, streamingContent, activeToolCalls.length, scrollToBottom]);
+  }, [
+    chat?.currentLeafId,
+    streamingContent,
+    activeToolCalls.length,
+    scrollToBottom,
+  ]);
 
-  if (!chat) return <div className="flex h-full items-center justify-center">Chat not found.</div>;
+  if (!chat)
+    return (
+      <div className="flex h-full items-center justify-center">
+        Chat not found.
+      </div>
+    );
 
   const handleDelete = (id: string) => {
     deleteMessageDb(chatId, id);
@@ -267,7 +322,9 @@ export function ChatUI({
         {currentAssistant && (
           <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 text-sm text-muted-foreground">
             <Bot className="h-4 w-4" />
-            <span>Chatting with <strong>{currentAssistant.name}</strong></span>
+            <span>
+              Chatting with <strong>{currentAssistant.name}</strong>
+            </span>
           </div>
         )}
         <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
@@ -275,15 +332,29 @@ export function ChatUI({
             <div className="max-w-4xl mx-auto space-y-6 pb-12">
               {thread.length === 0 ? (
                 <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-50">
-                  <h2 className="text-2xl font-bold mb-2">How can I help you today?</h2>
-                  <p>Try asking for a diagram, math formula, or standard text.</p>
+                  <h2 className="text-2xl font-bold mb-2">
+                    How can I help you today?
+                  </h2>
+                  <p>
+                    Try asking for a diagram, math formula, or standard text.
+                  </p>
                 </div>
               ) : (
                 thread.map((msg, index) => {
-                  const parent = msg.parentId ? chat.messages[msg.parentId] : null;
-                  const siblingsIds = parent ? parent.childrenIds : Object.values(chat.messages).filter((m) => !m.parentId).map((m) => m.id);
-                  const siblings = siblingsIds.map((id) => chat.messages[id]).filter(Boolean);
-                  const currentIndex = siblings.findIndex((s) => s.id === msg.id);
+                  const parent = msg.parentId
+                    ? chat.messages[msg.parentId]
+                    : null;
+                  const siblingsIds = parent
+                    ? parent.childrenIds
+                    : Object.values(chat.messages)
+                        .filter((m) => !m.parentId)
+                        .map((m) => m.id);
+                  const siblings = siblingsIds
+                    .map((id) => chat.messages[id])
+                    .filter(Boolean);
+                  const currentIndex = siblings.findIndex(
+                    (s) => s.id === msg.id,
+                  );
 
                   return (
                     <MessageBubble
@@ -296,7 +367,10 @@ export function ChatUI({
                       siblings={siblings}
                       currentSiblingIndex={currentIndex}
                       onNavigateBranch={(siblingId) => {
-                        setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
+                        setCurrentLeafDb(
+                          chatId,
+                          getDeepestLeaf(chat.messages, siblingId),
+                        );
                       }}
                       reasoning={msg.reasoning}
                       isStreamingReasoning={false}
@@ -305,19 +379,28 @@ export function ChatUI({
                   );
                 })
               )}
-              {(isLoading || streamingContent !== null || activeToolCalls.length > 0 || streamingReasoning !== null) && (
+              {(isLoading ||
+                streamingContent !== null ||
+                activeToolCalls.length > 0 ||
+                streamingReasoning !== null) && (
                 <>
-                  {isLoading && streamingContent === null && streamingReasoning === null && activeToolCalls.length === 0 && <StreamingPlaceholder />}
+                  {isLoading &&
+                    streamingContent === null &&
+                    streamingReasoning === null &&
+                    activeToolCalls.length === 0 && <StreamingPlaceholder />}
                   {activeToolCalls.length > 0 && (
                     <div className="text-muted-foreground text-sm space-y-1 ml-2">
                       {activeToolCalls.map((tc) => (
                         <div key={tc.toolCallId}>
-                          {tc.status === "calling" ? `🔧 Calling ${tc.toolName}…` : `✅ ${tc.toolName} complete`}
+                          {tc.status === "calling"
+                            ? `🔧 Calling ${tc.toolName}…`
+                            : `✅ ${tc.toolName} complete`}
                         </div>
                       ))}
                     </div>
                   )}
-                  {(streamingContent !== null || streamingReasoning !== null) && (
+                  {(streamingContent !== null ||
+                    streamingReasoning !== null) && (
                     <MessageBubble
                       message={{
                         id: "streaming",

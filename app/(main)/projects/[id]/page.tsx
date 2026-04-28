@@ -34,6 +34,14 @@ import { listChats } from "@/lib/actions/chats/list-chats";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
+/**
+ * Project detail page — client component for viewing and editing project configuration.
+ * Route parameter: `[id]` — Unique project identifier.
+ * Features: edit name/description/global system prompt, view related chats, delete project, create new chats.
+ * Shows 404 if project not found.
+ *
+ * @see ProjectChatPage for individual chat within a project
+ */
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();

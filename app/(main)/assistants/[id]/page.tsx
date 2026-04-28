@@ -34,6 +34,14 @@ import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { ChatCard } from "@/components/chat/chat-card";
 
+/**
+ * Assistant detail page — client component for viewing and editing assistant configuration.
+ * Route parameter: `[id]` — Unique assistant identifier.
+ * Features: edit name/description/system prompt, view related chats, delete assistant, create new chats.
+ * Shows 404 if assistant not found.
+ *
+ * @see AssistantChatPage for individual chat within an assistant
+ */
 export default function AssistantPage() {
   const params = useParams();
   const router = useRouter();

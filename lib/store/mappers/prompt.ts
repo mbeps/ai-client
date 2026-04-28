@@ -2,7 +2,14 @@ import type { PromptRow } from "@/types/prompt-row";
 import type { Prompt } from "@/types/prompt";
 
 /**
- * Maps a PromptRow from the DB to the Zustand Prompt shape.
+ * Converts a PromptRow database record to the Zustand Prompt store shape.
+ * Transforms database timestamp to JavaScript Date object for updatedAt field.
+ * Preserves all non-null fields as-is; used for slash-command palette hydration.
+ *
+ * @param row - Database PromptRow with full prompt metadata
+ * @returns Prompt object ready for store insertion
+ * @see loadPrompts in prompt-slice.ts for complete store hydration
+ * @author Maruf Bepary
  */
 export function promptRowToStore(row: PromptRow): Prompt {
   return {

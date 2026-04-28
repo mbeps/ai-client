@@ -20,8 +20,12 @@ import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * Sidebar for the Application Settings section.
- * Displays links to app-wide settings and tools.
+ * Sidebar for the /settings section.
+ * Provides navigation to General (app preferences), Tools (MCP server management), and Prompts (slash-command shortcuts).
+ * "Back to Home" button returns to main chat interface. Active route is highlighted based on `pathname`.
+ *
+ * @see ROUTES.SETTINGS for available settings page routes
+ * @author Maruf Bepary
  */
 export function SettingsSidebar({
   ...props

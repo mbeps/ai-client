@@ -10,11 +10,14 @@ import { ROUTES } from "@/lib/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
- * Options menu for a project, providing Rename, Pin/Unpin, and Delete actions.
- * Shares logic between the ProjectCard and the global header.
- * Automatically handles navigation to the project list after deletion.
+ * Dropdown/Drawer menu with Pin/Unpin, Rename, and Delete options for projects.
+ * Uses useEntityOptions hook for shared dialog state and toggleProjectPinDb from store for pin toggle.
+ * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
- * @param props.project - The project entity to manage.
+ * @param props.project - Project entity with id, name, and isPinned status.
+ * @returns Menu with action items, rename dialog, and delete confirmation dialog.
+ * @see useEntityOptions for dialog and action state management.
+ * @see ResponsiveMenu for responsive menu wrapper.
  * @author Maruf Bepary
  */
 export function ProjectOptions({ project }: { project: Project }) {

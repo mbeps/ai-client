@@ -31,10 +31,16 @@ import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * Sidebar for the Profile section.
- * Displays user info and links to various profile/account settings.
+ * Sidebar for the /profile section.
+ * Displays user avatar, name, and email; provides navigation to General, Security, Sessions, Linked Accounts,
+ * and Danger Zone (account deletion) pages. "Back to Home" button returns to main chat interface.
+ *
+ * @see ROUTES.PROFILE for available profile page routes
+ * @author Maruf Bepary
  */
-export function ProfileSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function ProfileSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = authClient.useSession();

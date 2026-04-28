@@ -49,12 +49,15 @@ import {
 import { ChatActionMenu } from "./chat-action-menu";
 
 /**
- * Main application sidebar used across all authenticated routes.
- * Displays a "New Chat" button, a Search button, navigation links (Projects,
- * Assistants, Knowledgebases), up to 20 recent chats from the Zustand store
- * (sorted by `updatedAt`), and a footer with the current user's avatar and
- * a dropdown for profile, settings, and sign-out.
+ * Main application sidebar for authenticated routes.
+ * Renders the "New Chat" button, navigation sections (Projects, Assistants, Knowledgebases),
+ * up to 20 recent chats (sorted by `updatedAt` from Zustand store), and user footer with avatar dropdown.
+ * Fetches chat history on mount via `listChats()` and handles optimistic UI with Zustand.
+ * Responsive: collapses on mobile via `useSidebar()` hook.
  *
+ * @see ChatActionMenu for per-chat action menu (rename, move, delete)
+ * @see useCreateChat for new chat initialization
+ * @see useAppStore for chat state management
  * @author Maruf Bepary
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -134,7 +137,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
           </SidebarMenu>
         </SidebarGroup>
 

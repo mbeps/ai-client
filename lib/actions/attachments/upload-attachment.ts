@@ -28,11 +28,20 @@ const MAX_DOCUMENT_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_SPREADSHEET_SIZE = MAX_SPREADSHEET_SIZE_BYTES; // 50 MB
 
 /**
- * Uploads an attachment to S3 and records it in the database.
- * Verifies message ownership before proceeding.
+ * Uploads a file to S3 and creates an attachment record linked to a message.
+ * Validates file type (images, PDFs, text, spreadsheets), enforces size limits (2/20/50 MB), verifies message ownership, and stores in S3 under user-scoped key.
+ * Runs on server only — receives multipart/form-data from client and returns attachment record for optimistic UI updates.
  *
- * @param formData - The multipart/form-data containing 'file' and 'messageId'.
- * @returns The created attachment record.
+ * @param formData - Multipart form data with keys: 'file' (required File), 'messageId' (required UUID), 'attachmentId' (optional UUID for client-side sync).
+ * @returns The created attachment record with S3 key, MIME type, and metadata.
+ * @throws Error if no file or messageId provided in formData.
+ * @throws Error if messageId format is invalid (not a valid UUID).
+ * @throws Error if user does not own the chat containing the message (ownership enforced via session).
+ * @throws Error if file MIME type is not in ALLOWED_TYPES (unsupported format).
+ * @throws Error if file exceeds size limit (2 MB images, 20 MB documents, 50 MB spreadsheets).
+ * @throws Error if S3 upload fails.
+ * @see MessageBubble component for rendering attachment chips.
+ * @see ChatInput for triggering file upload.
  * @author Maruf Bepary
  */
 export async function uploadAttachment(formData: FormData) {

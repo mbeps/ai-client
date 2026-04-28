@@ -13,16 +13,17 @@ import { ProjectOptions } from "./project-options";
  * @author Maruf Bepary
  */
 interface ProjectCardProps {
-  /** The project entity to display. */
+  /** The project entity containing id, name, description, and isPinned flag. */
   project: Project;
 }
 
 /**
- * Card representing a single project in the projects listing page.
- * Navigates to the project detail page on click and shows an options menu
- * with Pin/Unpin and Delete actions.
+ * Card displaying project name, description, folder icon, and pin indicator for projects listing page.
+ * Clicking the card navigates to project detail page; options menu provides Pin/Unpin, Rename, and Delete actions.
+ * Pin status is visually indicated with a small pin icon in the title row.
  *
- * @param props.project - The project to display.
+ * @param props.project - Project entity with metadata for display and interaction.
+ * @see ProjectOptions for menu actions including pin toggle.
  * @author Maruf Bepary
  */
 export function ProjectCard({ project }: ProjectCardProps) {

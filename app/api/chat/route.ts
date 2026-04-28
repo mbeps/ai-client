@@ -29,13 +29,29 @@ const openrouter = createOpenAI({
 
 /**
  * POST handler for the AI chat streaming pipeline.
+ * Authenticates via Better Auth session, validates the request schema, fetches Project/Assistant system prompts from the database,
+ * loads enabled MCP servers, downloads spreadsheet attachments to a temporary staging directory (via FileBridge),
+ * connects to MCP servers, and streams text responses using Vercel AI SDK's `streamText` with tool support.
+ * Returns a text/event-stream with content, tool calls, and file-modified events.
  *
- * OPTIMIZATION: Project and Assistant prompts are fetched from the database and prepended
- * on the server side. This avoids sending large system prompt strings over the network
- * from the client for every message, saving significant bandwidth.
+ * AUTHENTICATION: Requires valid Better Auth session (401 if missing).
+ * STREAMING: Responses are streamed via Server-Sent Events (SSE) for real-time content delivery.
+ * MCP INTEGRATION: Discovers tools from enabled MCP servers; supports tool selection via `selectedTools` and `selectedServerIds`.
+ * ARTIFACT SUPPORT: The internal `manage_artifact` tool is automatically added if selected; allows AI to create markdown, spreadsheet, HTML, or Mermaid artifacts.
+ * FILE BRIDGE: Spreadsheet attachments from the latest user message are staged to `/tmp` and their directory is injected into stdio MCP server envs via `EXCEL_MCP_ALLOWED_DIRS`.
  *
- * @param req - The incoming chat request containing history and model configuration.
- * @returns A streaming response (text/event-stream) with AI content and tool events.
+ * @param req - Incoming POST request containing chatId, history, model, MCP server/tool selections, and attachments
+ * @returns Streaming response (text/event-stream) with AI content, tool execution results, and file-modified events
+ * @throws Returns 401 Unauthorized if Better Auth session is invalid or missing.
+ * @throws Returns 400 Bad Request if request body fails schema validation (malformed JSON, missing chatId, invalid message format).
+ * @throws Returns 404 Not Found if chatId does not exist or user does not own the chat.
+ * @throws Returns error response if AI provider (OpenRouter) returns rate limit (429) or API error — sent as SSE error event.
+ * @throws Returns error response if MCP tool discovery or execution fails — sent as SSE error event with details.
+ * @throws Returns error response if message persistence to database fails — sent as SSE error event.
+ * @throws Returns error response if FileBridge (spreadsheet staging) fails — returned as error event but continues without bridge.
+ * @see getMcpTools for MCP tool discovery and connection management
+ * @see downloadAttachmentsToTemp for spreadsheet staging (FileBridge)
+ * @see persistModifiedFiles for tracking spreadsheet changes after MCP execution
  * @author Maruf Bepary
  */
 export async function POST(req: Request) {

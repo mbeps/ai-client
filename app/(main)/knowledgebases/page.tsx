@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 
+/**
+ * Knowledgebases listing page — client component displaying all user knowledgebases.
+ * Features: searchable grid of knowledgebase cards, filter by name/description, create new knowledgebase.
+ * Knowledgebases are document repositories attachable to projects or assistants.
+ */
 export default function KnowledgebasesPage() {
   const knowledgebases = useAppStore((state) => state.knowledgebases);
 

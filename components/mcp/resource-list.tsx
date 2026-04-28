@@ -20,7 +20,24 @@ import { AlertCircle, RefreshCw, FileText } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 
-export function ResourceList({ server }: { server: McpServer }) {
+/**
+ * Displays resources discovered from an MCP server in an expandable accordion.
+ * Auto-fetches resources on mount; supports manual refresh. Shows URI, description, and MIME type per resource.
+ * Handles loading, error, and empty states gracefully.
+ *
+ * @param server - MCP server to discover resources from; discovery is keyed by server.id
+ * @see {@link ToolList} for displaying server tools
+ * @see {@link ServerCard} for server overview
+ */
+export interface ResourceListProps {
+  /**
+   * The MCP server configuration to discover resources from.
+   * Used to trigger discovery via server.id.
+   */
+  server: McpServer;
+}
+
+export function ResourceList({ server }: ResourceListProps) {
   const [resources, setResources] = useState<DiscoveredResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

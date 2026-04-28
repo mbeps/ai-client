@@ -2,7 +2,15 @@ import type { AssistantRow } from "@/types/assistant-row";
 import type { Assistant } from "@/types/assistant";
 
 /**
- * Maps an AssistantRow from the DB to the Zustand Assistant shape.
+ * Converts an AssistantRow database record to the Zustand Assistant store shape.
+ * Transforms database null values to empty strings for optional text fields (description, prompt).
+ * Converts null avatar to undefined for optional string fields in TypeScript.
+ * Initialises empty tools and knowledgebases arrays (to be hydrated separately by store slice).
+ *
+ * @param row - Database AssistantRow with full assistant metadata
+ * @returns Assistant object ready for store insertion with empty tools and knowledgebases arrays
+ * @see loadAssistants in assistant-slice.ts for complete store hydration
+ * @author Maruf Bepary
  */
 export function assistantRowToStore(row: AssistantRow): Assistant {
   return {

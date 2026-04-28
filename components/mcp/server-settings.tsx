@@ -27,7 +27,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 
-export function ServerSettings({ serverId }: { serverId: string }) {
+/**
+ * Settings panel for an MCP server with permanent deletion option.
+ * Displays warning about deletion impact on assistants and chats.
+ * Shows confirmation dialog before allowing deletion; redirects to tools list after deletion.
+ *
+ * @param serverId - ID of the server to manage settings for; used in delete operation
+ * @see {@link EditServerForm} for editing server configuration
+ * @see {@link ServerOptions} for quick actions menu
+ */
+export interface ServerSettingsProps {
+  /**
+   * Unique identifier of the MCP server.
+   * Used to perform deletion and navigation after deletion.
+   */
+  serverId: string;
+}
+
+export function ServerSettings({ serverId }: ServerSettingsProps) {
   const router = useRouter();
   const removeMcpServer = useAppStore((s) => s.removeMcpServer);
   const [deleting, setDeleting] = useState(false);

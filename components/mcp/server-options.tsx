@@ -8,7 +8,25 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
-export function ServerOptions({ server }: { server: McpServer }) {
+/**
+ * Responsive menu for server actions: rename, enable/disable toggle, and delete.
+ * Adapts between dropdown (desktop) and drawer (mobile) UI. Fires optimistic updates to Zustand store.
+ * Shows delete confirmation dialog before permanent removal.
+ *
+ * @param server - MCP server to manage; used for rename, toggle, and delete operations
+ * @see {@link ServerCard} for server display
+ * @see {@link RenameDialog} for rename confirmation UI
+ * @see {@link DeleteConfirmDialog} for deletion confirmation UI
+ */
+export interface ServerOptionsProps {
+  /**
+   * The MCP server to manage.
+   * All operations (rename, toggle, delete) are scoped to this server.
+   */
+  server: McpServer;
+}
+
+export function ServerOptions({ server }: ServerOptionsProps) {
   const renameMcpServer = useAppStore((state) => state.renameMcpServer);
   const toggleMcpServer = useAppStore((state) => state.toggleMcpServer);
   const removeMcpServer = useAppStore((state) => state.removeMcpServer);

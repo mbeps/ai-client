@@ -9,11 +9,14 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
 /**
- * Client-side Mermaid diagram renderer.
- * Dynamically imports the Mermaid library to avoid SSR issues, renders the chart
- * to SVG, and displays a loading skeleton or an error message as appropriate.
+ * Client-side Mermaid diagram renderer component.
+ * Dynamically imports Mermaid to avoid SSR hydration mismatches, renders the diagram
+ * to SVG, and displays a loading skeleton or error message during render.
+ * Each render uses a unique ID to prevent conflicts in multi-diagram scenarios.
  *
- * @param props.chart - The raw Mermaid diagram definition string to render.
+ * @param props.chart - Raw Mermaid diagram definition string (e.g., "graph TD; A-->B").
+ * @returns Centered SVG container, loading skeleton, or error message.
+ * @author Maruf Bepary
  */
 const MermaidBlock = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>("");
@@ -61,11 +64,14 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
 
 /**
  * Renders assistant message content as rich Markdown.
- * Supports GFM tables and strikethrough, KaTeX math (inline `$…$` and block `$$…$$`),
- * raw HTML, and Mermaid fenced code blocks rendered via `MermaidBlock`.
- * Applies Tailwind `prose` styling and Shadcn-style overrides for tables and links.
+ * Supports GFM tables, strikethrough, KaTeX math expressions (inline `$…$` and block `$$…$$`),
+ * raw HTML, and Mermaid diagram fenced code blocks. Applies Tailwind prose styling
+ * with Shadcn-style overrides for tables, code blocks, and links.
+ * Mermaid diagrams are rendered client-side to SVG via dynamic import to avoid SSR issues.
  *
- * @param props.content - The raw Markdown string to render.
+ * @param props.content - Raw Markdown string to render with all supported extensions.
+ * @returns Prose container with React Markdown, KaTeX, and Mermaid integration.
+ * @see MermaidBlock for Mermaid diagram rendering details.
  * @author Maruf Bepary
  */
 export function MarkdownRenderer({ content }: { content: string }) {

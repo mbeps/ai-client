@@ -5,6 +5,9 @@ import type { McpServerConfig } from "@/types/mcp-server-config";
 
 const CONNECTION_TIMEOUT_MS = 10_000;
 
+/**
+ * Represents an active connection to an MCP server with its tools.
+ */
 type McpConnection = {
   serverId: string;
   serverName: string;
@@ -12,6 +15,16 @@ type McpConnection = {
   close: () => Promise<void>;
 };
 
+/**
+ * Connects to a single MCP server and retrieves its tools.
+ * Each connection enforces a 10-second timeout on both client creation and tool discovery.
+ *
+ * @param server - MCP server configuration
+ * @returns Active connection object with tools and cleanup function
+ * @throws {Error} When connection or tool discovery times out
+ * @see {@link build-transport.ts} for transport creation
+ * @see {@link timeout-utils.ts} for timeout enforcement
+ */
 async function connectServer(server: McpServerConfig): Promise<McpConnection> {
   const transport = buildTransport(server);
   const mcpClient = await withTimeout(
@@ -32,6 +45,17 @@ async function connectServer(server: McpServerConfig): Promise<McpConnection> {
   };
 }
 
+/**
+ * Connects to multiple MCP servers and merges their tools into a single registry.
+ * Uses Promise.allSettled to handle connection failures gracefully—successful servers contribute tools,
+ * failed servers are logged as warnings but do not block tool collection. Warns on tool name collisions,
+ * skipping the conflicting tool from the second server. Returns a cleanup function to close all connections.
+ *
+ * @param servers - Array of MCP server configurations to connect
+ * @returns Merged tool registry and async cleanup function to close all connections
+ * @throws Does not throw; failed connections are logged as warnings
+ * @see {@link discover-tools.ts} for discovering available tools before connection
+ */
 export async function getMcpTools(
   servers: McpServerConfig[],
 ): Promise<{ tools: Record<string, any>; cleanup: () => Promise<void> }> {

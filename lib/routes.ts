@@ -1,7 +1,14 @@
 /**
- * Centralised route definitions for the entire application.
- * Import `ROUTES` instead of writing path strings inline to prevent typos
- * and make refactoring a single-file change.
+ * Centralised typed route definitions for the entire application.
+ * Use ROUTES instead of hardcoding path strings to prevent typos, enable IDE autocomplete,
+ * and make refactoring a single-file change. Dynamic routes expose helper functions that
+ * return fully-typed path strings.
+ *
+ * @example
+ * import { ROUTES } from "@/lib/routes";
+ * const chatPath = ROUTES.CHATS.detail("chat-123");  // "/chats/chat-123"
+ * const settingsPath = ROUTES.SETTINGS.TOOLS.path;  // "/settings/tools"
+ * @author Maruf Bepary
  */
 
 /** Base path segment shared by all authentication routes. */

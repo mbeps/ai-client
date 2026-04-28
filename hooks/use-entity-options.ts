@@ -14,9 +14,17 @@ interface UseEntityOptionsProps {
 }
 
 /**
- * Shared hook for entity options components (Chat, Project, Assistant, etc.).
- * Manages state for rename and delete dialogs, handles toasts, and navigation.
+ * Manages rename and delete operations for entities with dialog state and error handling.
+ * Centralises toast notifications and conditional navigation for consistency across entity types.
+ * Integrates with Zustand store actions (renameDb, deleteDb) and supports optional redirect on delete.
  *
+ * @param props.id - Entity ID to manage.
+ * @param props.type - Human-readable entity type (e.g., 'Project', 'Assistant') for toast messages.
+ * @param props.onRename - Async callback for rename operation.
+ * @param props.onDelete - Async callback for delete operation.
+ * @param props.redirectPath - Optional path to navigate to after successful deletion.
+ * @returns Dialog state (showRename, showDelete, isDeleting) and handlers (handleRename, handleDelete).
+ * @see useCreateChat for chat creation flows.
  * @author Maruf Bepary
  */
 export function useEntityOptions({

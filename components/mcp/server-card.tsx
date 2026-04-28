@@ -8,7 +8,20 @@ import type { McpServer } from "@/types/mcp-server";
 import { Badge } from "@/components/ui/badge";
 import { ServerOptions } from "./server-options";
 
+/**
+ * Card component displaying an MCP server with name, type badge, and status indicator.
+ * Navigates to server detail page on click. Shows command/URL description as secondary text.
+ * Includes ServerOptions menu for rename, toggle, and delete actions.
+ *
+ * @see {@link ServerOptions} for available actions menu
+ * @see {@link ResourceList} for server resources view
+ * @see {@link ToolList} for server tools view
+ */
 interface ServerCardProps {
+  /**
+   * The MCP server to display.
+   * Type determines which description field is shown (command for stdio, url for http).
+   */
   server: McpServer;
 }
 

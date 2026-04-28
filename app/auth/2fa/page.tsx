@@ -14,10 +14,12 @@ const TAB_VALUES = {
 } as const;
 
 /**
- * Server-rendered interstitial that handles two-factor authentication challenges.
- * Route: /auth/2fa. Redirects fully authenticated sessions back to the home page.
+ * Two-factor authentication challenge page for users with 2FA enabled.
+ * Route: /auth/2fa. Server-rendered; redirects fully authenticated users to home.
+ * Requires intermediate auth session with pending 2FA verification.
  *
- * @returns Two-factor challenge page with TOTP and backup-code tabs.
+ * @returns Challenge page with TOTP authenticator and backup code tabs.
+ * @see LoginPage for initial email/password authentication flow.
  * @author Maruf Bepary
  */
 export default async function TwoFactorPage() {
@@ -36,11 +38,17 @@ export default async function TwoFactorPage() {
         <CardContent>
           <Tabs defaultValue={TAB_VALUES.TOTP}>
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value={TAB_VALUES.TOTP} className="flex items-center">
+              <TabsTrigger
+                value={TAB_VALUES.TOTP}
+                className="flex items-center"
+              >
                 <Smartphone className="mr-2 h-4 w-4" />
                 Authenticator
               </TabsTrigger>
-              <TabsTrigger value={TAB_VALUES.BACKUP} className="flex items-center">
+              <TabsTrigger
+                value={TAB_VALUES.BACKUP}
+                className="flex items-center"
+              >
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Backup Code
               </TabsTrigger>

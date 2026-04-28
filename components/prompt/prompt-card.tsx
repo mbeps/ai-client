@@ -14,15 +14,17 @@ import { Badge } from "@/components/ui/badge";
  * @author Maruf Bepary
  */
 interface PromptCardProps {
-  /** The prompt entity to display. */
+  /** The prompt entity containing id, title, shortcut, and content for display. */
   prompt: Prompt;
 }
 
 /**
- * Card representing a single prompt in the prompts listing page.
- * Navigates to the prompt detail page on click and shows an options menu.
+ * Card displaying prompt title, slash-command shortcut badge, and command icon for prompts listing page.
+ * Clicking the card navigates to prompt detail/edit page; options menu provides Edit, Rename, and Delete actions.
+ * Shortcut displayed as `/command` monospace badge for quick visual identification of command syntax.
  *
- * @param props.prompt - The prompt to display.
+ * @param props.prompt - Prompt entity with title, shortcut, and content metadata.
+ * @see PromptOptions for menu actions including rename and content editing.
  * @author Maruf Bepary
  */
 export function PromptCard({ prompt }: PromptCardProps) {
