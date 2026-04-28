@@ -1,3 +1,4 @@
+import { ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
 
 /**
@@ -10,5 +11,5 @@ import { redirect } from "next/navigation";
  * @author Maruf Bepary
  */
 export default function ProfilePage() {
-  redirect("/profile/general");
+  redirect(ROUTES.PROFILE.GENERAL.path);
 }
