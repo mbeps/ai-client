@@ -1,49 +1,6 @@
-import { createMCPClient } from "@ai-sdk/mcp";
-import { buildTransport } from "./build-transport";
-import { withTimeout } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
-
-const CONNECTION_TIMEOUT_MS = 10_000;
-
-/**
- * Represents an active connection to an MCP server with its tools.
- */
-type McpConnection = {
-  serverId: string;
-  serverName: string;
-  tools: Record<string, any>;
-  close: () => Promise<void>;
-};
-
-/**
- * Connects to a single MCP server and retrieves its tools.
- * Each connection enforces a 10-second timeout on both client creation and tool discovery.
- *
- * @param server - MCP server configuration
- * @returns Active connection object with tools and cleanup function
- * @throws {Error} When connection or tool discovery times out
- * @see {@link build-transport.ts} for transport creation
- * @see {@link timeout-utils.ts} for timeout enforcement
- */
-async function connectServer(server: McpServerConfig): Promise<McpConnection> {
-  const transport = buildTransport(server);
-  const mcpClient = await withTimeout(
-    createMCPClient({ transport }),
-    CONNECTION_TIMEOUT_MS,
-    server.name,
-  );
-  const tools = await withTimeout(
-    mcpClient.tools(),
-    CONNECTION_TIMEOUT_MS,
-    server.name,
-  );
-  return {
-    serverId: server.id,
-    serverName: server.name,
-    tools,
-    close: () => mcpClient.close(),
-  };
-}
+import type { McpConnection } from "@/types/mcp-connection";
+import { connectServer } from "./connect-server";
 
 /**
  * Connects to multiple MCP servers and merges their tools into a single registry.

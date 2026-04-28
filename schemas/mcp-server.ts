@@ -64,7 +64,7 @@ const commandSchema = z
  * Stdio servers require command (validated against path traversal); http servers require URL (validated against internal/blocked hosts).
  * Use with createMcpServer and updateMcpServer server actions to persist tool provider configurations.
  *
- * @see {@link lib/actions/mcp-servers/} for MCP server creation/update actions
+ * @see {@link lib/mcp/} for MCP server creation/update actions
  * @author Maruf Bepary
  */
 export const mcpServerSchema = z.discriminatedUnion("type", [
@@ -93,7 +93,7 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
  * Alias for mcpServerSchema used during new MCP server creation.
  * Validates complete server configuration before persistence.
  *
- * @see {@link lib/actions/mcp-servers/} for creation action
+ * @see {@link lib/mcp/} for creation action
  * @author Maruf Bepary
  */
 export const createMcpServerSchema = mcpServerSchema;
@@ -102,7 +102,7 @@ export const createMcpServerSchema = mcpServerSchema;
  * Alias for mcpServerSchema used during MCP server updates.
  * Validates complete server configuration before persistence (does not support partial updates).
  *
- * @see {@link lib/actions/mcp-servers/} for update action
+ * @see {@link lib/mcp/} for update action
  * @author Maruf Bepary
  */
 export const updateMcpServerSchema = mcpServerSchema;

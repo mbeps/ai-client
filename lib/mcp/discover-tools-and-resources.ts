@@ -2,27 +2,10 @@ import { createMCPClient } from "@ai-sdk/mcp";
 import { buildTransport } from "./build-transport";
 import { withTimeout } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
+import type { DiscoveredTool } from "@/types/discovered-tool";
+import type { DiscoveredResource } from "@/types/discovered-resource";
 
-/**
- * Discovered tool from an MCP server.
- */
-export type DiscoveredTool = {
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-};
-
-/**
- * Discovered resource from an MCP server.
- */
-export type DiscoveredResource = {
-  uri: string;
-  name: string;
-  description: string;
-  mimeType?: string;
-};
-
-const DISCOVER_TIMEOUT_MS = 10_000;
+export const DISCOVER_TIMEOUT_MS = 10_000;
 
 /**
  * Discovers all tools and resources available from an MCP server.

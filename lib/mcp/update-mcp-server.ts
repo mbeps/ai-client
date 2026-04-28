@@ -1,0 +1,61 @@
+"use server";
+
+import { requireSession } from "@/lib/actions/require-session";
+import { db } from "@/drizzle/db";
+import { mcpServer } from "@/drizzle/schema";
+import { and, eq } from "drizzle-orm";
+import { updateMcpServerSchema, type UpdateMcpServer } from "@/schemas/mcp-server";
+import type { McpServerRow } from "@/types/mcp-server-row";
+
+/**
+ * Updates an existing MCP server configuration for the authenticated user.
+ * Validates all configuration fields based on server type (stdio or HTTP).
+ *
+ * @param id - UUID of the MCP server to update; must be owned by the authenticated user.
+ * @param data - Updated server configuration validated against updateMcpServerSchema.
+ * @returns The updated MCP server row with all fields.
+ * @throws Error if session is not authenticated (requireSession call fails).
+ * @throws ZodError if data fails schema validation (invalid type, malformed URL/command, etc.).
+ * @throws Error if server does not exist or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @author Maruf Bepary
+ */
+export async function updateMcpServer(
+  id: string,
+  data: UpdateMcpServer,
+): Promise<McpServerRow> {
+  const session = await requireSession();
+
+  const parsed = updateMcpServerSchema.parse(data);
+
+  const values =
+    parsed.type === "stdio"
+      ? {
+          name: parsed.name,
+          type: parsed.type,
+          command: parsed.command,
+          args: parsed.args ?? null,
+          env: parsed.env ?? null,
+          url: null,
+          headers: null,
+        }
+      : {
+          name: parsed.name,
+          type: parsed.type,
+          url: parsed.url,
+          headers: parsed.headers ?? null,
+          command: null,
+          args: null,
+          env: null,
+        };
+
+  const [updated] = await db
+    .update(mcpServer)
+    .set({ ...values, updatedAt: new Date() })
+    .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
+    .returning();
+
+  if (!updated) throw new Error("Not Found");
+
+  return updated;
+}

@@ -17,14 +17,12 @@ import {
   updatePrompt as updatePromptAction,
   deletePrompt as deletePromptAction,
 } from "@/lib/actions/prompts";
-import {
-  listMcpServers as listMcpServersAction,
-  createMcpServer as createMcpServerAction,
-  deleteMcpServer as deleteMcpServerAction,
-  renameMcpServer as renameMcpServerAction,
-  toggleMcpServer as toggleMcpServerAction,
-  updateMcpServer as updateMcpServerAction,
-} from "@/lib/actions/mcp-servers";
+import { listMcpServers as listMcpServersAction } from "@/lib/mcp/list-mcp-servers";
+import { createMcpServer as createMcpServerAction } from "@/lib/mcp/create-mcp-server";
+import { deleteMcpServer as deleteMcpServerAction } from "@/lib/mcp/delete-mcp-server";
+import { renameMcpServer as renameMcpServerAction } from "@/lib/mcp/rename-mcp-server";
+import { toggleMcpServer as toggleMcpServerAction } from "@/lib/mcp/toggle-mcp-server";
+import { updateMcpServer as updateMcpServerAction } from "@/lib/mcp/update-mcp-server";
 import { projectRowToStore } from "../mappers/project";
 import { assistantRowToStore } from "../mappers/assistant";
 import { promptRowToStore } from "../mappers/prompt";

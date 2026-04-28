@@ -8,10 +8,10 @@ import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, stepCountIs, type ModelMessage, tool } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
-import { DEFAULT_MODEL } from "@/models";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
+import { DEFAULT_MODEL } from "@/models";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
 
 type TextPart = { type: "text"; text: string };
