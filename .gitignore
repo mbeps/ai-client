@@ -46,7 +46,7 @@ next-env.d.ts
 drizzle/migrations/**
 
 
-docs/SubAgent docs/**
+docs/**
 scripts/hash-password.js
 reports/**
 **.xlsx
