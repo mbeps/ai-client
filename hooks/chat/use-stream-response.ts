@@ -2,7 +2,7 @@
 
 import { uploadAttachment } from "@/lib/actions/attachments";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { reconstructThread } from "@/lib/chat/tree-utils";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
 import { DEFAULT_MODEL } from "@/models";
 import type { ArtifactData } from "@/types/artifact";
