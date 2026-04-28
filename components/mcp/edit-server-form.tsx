@@ -33,7 +33,24 @@ import {
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 
-export function EditServerForm({ server }: { server: McpServer }) {
+/**
+ * Form for editing an existing Model Context Protocol server configuration.
+ * Renders type-specific fields (stdio vs HTTP) based on server type.
+ * Displays connection type as read-only badge; persists changes via Zustand store.
+ *
+ * @param server - MCP server to edit; determines which fields are displayed
+ * @see {@link AddServerDialog} for creating new servers
+ * @see {@link ServerSettings} for server-specific settings and deletion
+ */
+export interface EditServerFormProps {
+  /**
+   * The MCP server configuration to edit.
+   * Type (stdio/http) determines which form fields are rendered.
+   */
+  server: McpServer;
+}
+
+export function EditServerForm({ server }: EditServerFormProps) {
   const updateMcpServer = useAppStore((s) => s.updateMcpServer);
 
   const defaultValues: UpdateMcpServer =

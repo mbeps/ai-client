@@ -45,6 +45,15 @@ type ToolData = {
   toolResults: ToolResult[];
 };
 
+/**
+ * Extracts prompt ID and original user content from message metadata.
+ * Used when a message was sent via a slash-command prompt to preserve
+ * the intent for regeneration or editing workflows.
+ *
+ * @param metadata - Stringified JSON metadata object from message.
+ * @returns Object with promptId and userContent, or null if format invalid.
+ * @author Maruf Bepary
+ */
 function parsePromptMeta(
   metadata: string | null | undefined,
 ): { promptId: string; userContent: string } | null {
@@ -63,6 +72,15 @@ function parsePromptMeta(
   }
 }
 
+/**
+ * Extracts tool calls and results from message metadata.
+ * Parses the structured metadata to retrieve MCP tool invocations
+ * and their responses for display in ToolCallDisplay component.
+ *
+ * @param metadata - Stringified JSON metadata with toolCalls and toolResults arrays.
+ * @returns Object with toolCalls and toolResults arrays, or null if metadata invalid.
+ * @author Maruf Bepary
+ */
 function parseToolData(metadata: string | null | undefined): ToolData | null {
   if (!metadata) return null;
   try {
@@ -81,6 +99,14 @@ function parseToolData(metadata: string | null | undefined): ToolData | null {
   }
 }
 
+/**
+ * Extracts model identifier from message metadata.
+ * Allows MessageBubble to display which model generated the assistant response.
+ *
+ * @param metadata - Stringified JSON metadata with model field.
+ * @returns Model value string (e.g., "gpt-4"), or null if not found.
+ * @author Maruf Bepary
+ */
 function parseModel(metadata: string | null | undefined): string | null {
   if (!metadata) return null;
   try {
@@ -93,8 +119,7 @@ function parseModel(metadata: string | null | undefined): string | null {
 
 /**
  * Props for the MessageBubble component.
- *
- * @author Maruf Bepary
+ * Defines message data, callbacks, and rendering context for conversation threads.
  */
 interface MessageBubbleProps {
   /** The message node from the conversation tree to render. */
@@ -119,11 +144,25 @@ interface MessageBubbleProps {
   /** True while the model is actively streaming its reasoning. */
   isStreamingReasoning?: boolean;
   /** Callback to show the artifact associated with this message. */
+  /** Callback to show the artifact associated with this message. */
   onShowArtifact?: () => void;
 }
 
 /**
  * Renders a single message within the conversation thread.
+ * User messages display as plain pre-wrapped text; assistant messages render via
+ * MarkdownRenderer with support for tool calls, reasoning tokens, and artifacts.
+ * Shows left/right navigation arrows on hover when siblings exist for branching.
+ * Supports inline editing (creates new sibling), deletion, and regeneration.
+ * Fetches and caches presigned URLs for attachments on mount.
+ *
+ * @param props - Message data, callbacks, and siblings for branch navigation.
+ * @returns Avatar, message content, optional thinking display, attachments, and actions.
+ * @see MarkdownRenderer for assistant message content rendering.
+ * @see ToolCallDisplay for visualizing tool invocations.
+ * @see ThinkingDisplay for streaming reasoning output.
+ * @see MessageActions for edit/delete/regenerate UI.
+ * @author Maruf Bepary
  * User messages are displayed as plain pre-wrapped text; assistant messages are
  * rendered via `MarkdownRenderer`. When a message has siblings (i.e. the parent
  * has multiple children due to edits), left/right navigation arrows are shown on

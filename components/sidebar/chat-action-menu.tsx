@@ -7,10 +7,12 @@ import { ChatOptions } from "@/components/chat/chat-options";
 import type { Chat } from "@/types/chat";
 
 /**
- * Internal action menu for a sidebar chat item.
- * Reuses the global ChatOptions component to provide Rename, Move, and Delete actions.
+ * Action menu for individual chat sidebar items.
+ * Displays a three-dot icon that opens a dropdown with Rename, Move (to project), and Delete actions.
+ * Visibility is conditional: opaque on hover (lg+) and always visible on mobile.
  *
- * @param props.chat - The chat object.
+ * @param props.chat - The chat object with id, title, and optional projectId
+ * @see ChatOptions for the underlying menu implementation
  * @author Maruf Bepary
  */
 export function ChatActionMenu({ chat }: { chat: Chat }) {

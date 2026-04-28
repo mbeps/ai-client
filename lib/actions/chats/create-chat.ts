@@ -9,12 +9,18 @@ import { createChatSchema } from "@/schemas/chat";
 import { z } from "zod";
 
 /**
- * Creates a new chat session for the current user.
+ * Creates a new chat session for the authenticated user.
+ * Validates all inputs against createChatSchema and inserts a new chat record with optional project and assistant bindings.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param title - Optional initial title for the chat.
- * @param projectId - Optional project ID to scope the chat.
- * @param assistantId - Optional assistant ID to bind to the chat.
- * @returns The newly created chat row.
+ * @param title - Optional initial title; defaults to "New Chat" if not provided.
+ * @param projectId - Optional project ID to scope chat within a specific project context.
+ * @param assistantId - Optional assistant ID to bind a persona to the chat.
+ * @returns The newly created chat row with all fields populated.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if any input fails schema validation.
+ * @see getChat to fetch a single chat with messages.
+ * @see deleteChat to remove a chat.
  * @author Maruf Bepary
  */
 export async function createChat(

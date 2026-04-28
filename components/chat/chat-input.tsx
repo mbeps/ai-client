@@ -42,7 +42,16 @@ import { Model } from "@/types/model";
 import { PromptCommands } from "./prompt-commands";
 import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";
 
+/**
+ * Props for the ChatInput component.
+ * Defines behavior callbacks and UI configuration for message input.
+ */
 interface ChatInputProps {
+  /**
+   * Callback invoked when user submits a message with content, attachments,
+   * model selection, and MCP server/tool/resource selections.
+   * Called after validation confirms non-empty content or attachments.
+   */
   onSend: (
     content: string,
     attachments: Attachment[],
@@ -52,11 +61,31 @@ interface ChatInputProps {
     selectedResources: string[],
     selectedPromptId?: string,
   ) => void;
+
+  /** If true, input is disabled and send button shows stop icon. */
   isLoading?: boolean;
+
+  /** Callback to stop an in-progress generation (e.g., from useStreamResponse). */
   onStop?: () => void;
+
+  /** Available MCP servers for tool selection; if omitted, tools section is hidden. */
   servers?: McpServer[];
 }
 
+/**
+ * Comprehensive message input component with file upload, model selection,
+ * and MCP tool/resource picker. Supports drag-and-drop file attachment,
+ * slash-command prompts, auto-expanding textarea, and multi-server tool selection.
+ * Validates file count (3 images, 5 total) and size limits (2/20/50 MB).
+ * Integrates with ToolPickerDialog for server/tool/resource management.
+ *
+ * @param props - Callbacks, loading state, and available MCP servers.
+ * @returns Input form with textarea, attachments menu, model picker, and send button.
+ * @see usePromptCommands for slash-command handling.
+ * @see processAttachment for file validation and metadata extraction.
+ * @see ToolPickerDialog for MCP server/tool UI.
+ * @author Maruf Bepary
+ */
 export function ChatInput({
   onSend,
   isLoading,

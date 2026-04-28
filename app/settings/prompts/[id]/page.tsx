@@ -21,6 +21,14 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 
+/**
+ * Prompt editor page — client component for viewing and editing a single prompt.
+ * Route parameter: `[id]` — Unique prompt identifier.
+ * Features: edit title/shortcut/content, save changes, delete prompt, validation and error handling.
+ * Shows 404 if prompt not found.
+ *
+ * @see PromptsPage for parent prompts list
+ */
 export default function PromptDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -72,7 +80,9 @@ export default function PromptDetailPage() {
     }
 
     if (!/^[a-zA-Z0-9._-]+$/.test(shortcut)) {
-      toast.error("Shortcut can only contain letters, numbers, '.', '-', and '_'");
+      toast.error(
+        "Shortcut can only contain letters, numbers, '.', '-', and '_'",
+      );
       return;
     }
 

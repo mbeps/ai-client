@@ -3,6 +3,15 @@ import type { Message } from "@/types/message";
 import type { Attachment } from "@/types/attachment";
 import type { ChatWithMessages } from "@/types/chat-with-messages";
 
+/**
+ * Reconstructs a message tree structure from flattened database rows.
+ * Builds parent-child relationships by linking messages via parentId and populating childrenIds arrays.
+ * Associates attachments with their corresponding messages based on messageId.
+ *
+ * @param row - Flat database row containing chat metadata, messages, and attachments
+ * @returns Fully structured Chat object with nested message tree and attachment associations
+ * @author Maruf Bepary
+ */
 export function buildChatFromRows(row: ChatWithMessages): Chat {
   const messages: Record<string, Message> = {};
 

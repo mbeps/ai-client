@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 /**
- * Zod schema for environment variable validation.
- * This ensures that the application fails fast if critical environment variables are missing
- * or misconfigured.
+ * Zod validation schema for required environment variables.
+ * Ensures the application fails at startup if critical config is missing or invalid.
+ * Validates database URL, authentication secrets, API keys, and storage configuration.
+ * Optional OAuth credentials (GitHub, Discord) allow graceful fallback if not configured.
  *
  * @author Maruf Bepary
  */
@@ -34,11 +35,18 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default("ai-client-uploads"),
 
   // App
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
 });
 
 /**
- * Validated environment variables.
- * Import this throughout the server-side code instead of accessing `process.env` directly.
+ * Validated environment variables parsed from process.env.
+ * Import this instead of accessing process.env directly to ensure type safety
+ * and runtime validation. Guaranteed to contain all required variables on server startup.
+ *
+ * @example
+ * import { env } from "@/lib/env";
+ * const dbUrl = env.DATABASE_URL;  // Typed as string | undefined (based on schema)
  */
 export const env = envSchema.parse(process.env);

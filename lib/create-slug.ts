@@ -1,10 +1,14 @@
 /**
- * Converts a string into a URL-friendly slug.
- * Trims whitespace, lowercases, and replaces runs of non-alphanumeric characters
- * with a single hyphen. Suitable for generating chat, project, and assistant IDs.
+ * Converts a string into a URL-friendly slug by lowercasing, trimming whitespace,
+ * and replacing runs of non-alphanumeric characters with single hyphens.
+ * Suitable for generating URL-safe identifiers or display names from user input.
  *
  * @param str - The input string to slugify.
- * @returns A lowercase hyphen-separated slug.
+ * @returns A lowercase hyphen-separated slug with leading/trailing hyphens removed.
+ * @example
+ * createSlug("Hello World!")  // "hello-world"
+ * createSlug("My Chat Room 123")  // "my-chat-room-123"
+ * createSlug("  Multi   Space  ")  // "multi-space"
  * @author Maruf Bepary
  */
 export function createSlug(str: string): string {

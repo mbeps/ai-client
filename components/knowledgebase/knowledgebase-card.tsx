@@ -14,16 +14,17 @@ import { KnowledgebaseOptions } from "./knowledgebase-options";
  * @author Maruf Bepary
  */
 interface KnowledgebaseCardProps {
-  /** The knowledgebase entity to display. */
+  /** The knowledgebase entity containing name, description, storage limits, and usage metrics. */
   knowledgebase: Knowledgebase;
 }
 
 /**
- * Card representing a single knowledgebase in the knowledgebases listing page.
- * Navigates to the knowledgebase detail page on click and shows a storage capacity
- * progress bar along with an options menu with a Delete action.
+ * Card displaying knowledgebase name, description, database icon, and storage capacity progress bar.
+ * Clicking the card navigates to knowledgebase detail page; options menu provides Delete action.
+ * Progress bar shows percentage used vs available storage, calculated from sizeBytes/maxSizeBytes.
  *
- * @param props.knowledgebase - The knowledgebase to display.
+ * @param props.knowledgebase - Knowledgebase entity with name, description, sizeBytes, and maxSizeBytes.
+ * @see KnowledgebaseOptions for menu actions.
  * @author Maruf Bepary
  */
 export function KnowledgebaseCard({

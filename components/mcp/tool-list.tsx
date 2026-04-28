@@ -20,7 +20,24 @@ import { AlertCircle, RefreshCw, Wrench } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 
-export function ToolList({ server }: { server: McpServer }) {
+/**
+ * Displays tools discovered from an MCP server in an expandable accordion.
+ * Auto-fetches tools on mount; supports manual refresh. Shows description and parameters per tool.
+ * Handles loading, error, and empty states with retry capability.
+ *
+ * @param server - MCP server to discover tools from; discovery is keyed by server.id
+ * @see {@link ResourceList} for displaying server resources
+ * @see {@link ServerCard} for server overview
+ */
+export interface ToolListProps {
+  /**
+   * The MCP server configuration to discover tools from.
+   * Used to trigger discovery via server.id.
+   */
+  server: McpServer;
+}
+
+export function ToolList({ server }: ToolListProps) {
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -12,15 +12,18 @@ import { AssistantOptions } from "./assistant-options";
  * @author Maruf Bepary
  */
 interface AssistantCardProps {
-  /** The assistant entity to display. */
+  /** The assistant entity to display with name and description. */
   assistant: Assistant;
 }
 
 /**
- * Card representing a single assistant in the assistants listing page.
- * Navigates to the assistant detail page on click and shows an options menu with a Delete action.
+ * Card displaying assistant name, description, and bot icon for assistants listing page.
+ * Clicking the card creates a new chat with the assistant context.
+ * Options menu in top-right corner (via AssistantOptions) provides Rename and Delete actions.
  *
- * @param props.assistant - The assistant to display.
+ * @param props.assistant - Assistant entity containing id, name, description, and avatar.
+ * @see AssistantOptions for menu actions.
+ * @see useCreateChat for chat creation on card click.
  * @author Maruf Bepary
  */
 export function AssistantCard({ assistant }: AssistantCardProps) {

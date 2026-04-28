@@ -13,6 +13,11 @@ import { z } from "zod";
  * @param chatId - The ID of the chat containing the message.
  * @param messageId - The ID of the message to delete.
  * @param newLeafId - The new leaf node ID to set as current for the chat.
+ * @returns void (no return value).
+ * @throws Error if session is not authenticated (requireSession call fails).
+ * @throws Error if chatId or messageId are not valid UUID format.
+ * @throws Error if chat does not exist or user does not own it (ownership check enforced via session).
+ * @throws Error if database deletion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
 export async function deleteMessage(

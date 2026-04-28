@@ -9,21 +9,58 @@ import type { Attachment } from "@/types/attachment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+/**
+ * State of a single tool invocation during streaming.
+ * Tracks the tool's execution lifecycle from "calling" to "complete".
+ */
 export interface ToolCallState {
+  /** Unique identifier for this tool invocation. */
   toolCallId: string;
+
+  /** Name of the MCP tool being invoked (e.g., "manage_artifact"). */
   toolName: string;
+
+  /** Arguments passed to the tool. */
   args: unknown;
+
+  /** Result returned by the tool (populated when status is "complete"). */
   result?: unknown;
+
+  /** Current execution status: "calling" while streaming, "complete" when done. */
   status: "calling" | "complete";
 }
 
+/**
+ * Data model for rendered artifacts (generated content from AI).
+ * Supports Markdown, Spreadsheet (JSON), HTML, and Mermaid diagram types.
+ */
 export interface ArtifactData {
+  /** Type of artifact: markdown, spreadsheet, html, or mermaid. */
   type: "markdown" | "spreadsheet" | "html" | "mermaid";
+
+  /** Display title for the artifact. */
   title: string;
+
+  /** Raw content string (Markdown, HTML, or stringified JSON for spreadsheet). */
   content: string;
+
+  /** ID of the message that generated this artifact. */
   messageId?: string;
 }
 
+/**
+ * Manages AI response streaming with tool integration and artifact generation.
+ * Handles message persistence, attachment uploads, AI stream parsing (SSE protocol),
+ * tool call tracking, reasoning token collection, and artifact detection.
+ * Automatically creates message tree nodes and updates store optimistically.
+ * Supports abort via stopStream() and integrates with useAppStore for state sync.
+ *
+ * @param chatId - Target chat session ID for message persistence.
+ * @param options - Optional callbacks for completion and artifact discovery.
+ * @returns Object with loading state, streaming content, tool calls, and streamResponse function.
+ * @see ToolCallState for tool invocation tracking.
+ * @author Maruf Bepary
+ */
 export function useStreamResponse(
   chatId: string,
   options?: {
@@ -55,6 +92,27 @@ export function useStreamResponse(
     };
   }, []);
 
+  /**
+   * Streams an AI response for a given user message and persists it to the store and database.
+   * Uploads attachments, reconstructs conversation thread, and streams response with tool calls and artifacts.
+   * Shows toast notifications for errors; catches and logs network and parsing errors gracefully.
+   *
+   * @param userMsgId - UUID of the user message triggering this stream.
+   * @param content - User's message content (plain text).
+   * @param parentId - Optional parent message ID for branching conversations.
+   * @param attachments - Optional array of file attachments (images, documents, spreadsheets).
+   * @param model - AI model to use (defaults to DEFAULT_MODEL).
+   * @param selectedServerIds - Optional array of MCP server IDs to enable for tools.
+   * @param selectedTools - Optional array of tool identifiers to make available to the AI.
+   * @param selectedResources - Optional array of resource identifiers (reserved for future use).
+   * @param selectedPromptId - Optional slash-command prompt ID to prepend to content.
+   * @returns The complete accumulated AI response text on successful stream completion, or accumulated partial text if aborted.
+   * @throws Error when fetch fails (rate limit 429, auth failure 401, or generic stream error) — shows toast and throws.
+   * @throws Error when message persistence fails (shows warning toast but continues streaming).
+   * @throws AbortError when stream is cancelled via stopStream() — returns accumulated content without error.
+   * @see uploadAttachment for file upload details and size limits.
+   * @author Maruf Bepary
+   */
   const streamResponse = async (
     userMsgId: string,
     content: string,

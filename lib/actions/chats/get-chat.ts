@@ -2,20 +2,27 @@
 
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
-import { chat, message, attachment, project, assistant } from "@/drizzle/schema";
+import {
+  chat,
+  message,
+  attachment,
+  project,
+  assistant,
+} from "@/drizzle/schema";
 import { eq, and, asc, inArray } from "drizzle-orm";
 import type { ChatWithMessages } from "@/types/chat-with-messages";
 
 /**
- * Fetches a single chat with its messages and attachments.
+ * Fetches a single chat with all messages and attachments for the authenticated user.
+ * Performs left joins to optionally include project and assistant names, but excludes large prompt fields to minimise network payload.
+ * Runs on server only; enforces ownership check via session validation.
  *
- * OPTIMIZATION: This query uses a left join to fetch related project and assistant names
- * but intentionally omits the large 'globalPrompt' and 'prompt' fields to keep the
- * network payload lean. Prompts are fetched only when needed for AI generation or settings.
- *
- * @param chatId - The ID of the chat to retrieve.
- * @returns The chat row extended with messages and attachments.
- * @throws Error if the chat is not found or the user does not own it.
+ * @param chatId - The UUID of the chat to retrieve; must be owned by the authenticated user.
+ * @returns Chat row with nested messages array and attachments array, plus optional project/assistant metadata.
+ * @throws Error if chat is not found or user does not own it (ownership check enforced via session).
+ * @throws Error if database query fails.
+ * @see createChat to create a new chat.
+ * @see deleteChat to remove a chat.
  * @author Maruf Bepary
  */
 export async function getChat(chatId: string): Promise<ChatWithMessages> {

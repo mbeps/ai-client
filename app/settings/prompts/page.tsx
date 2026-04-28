@@ -8,6 +8,11 @@ import { PromptCard } from "@/components/prompt/prompt-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { CreatePromptDialog } from "./_components/create-prompt-dialog";
 
+/**
+ * Prompts listing page — client component displaying all user-defined prompt shortcuts.
+ * Features: searchable grid of prompt cards (by title/shortcut/content), create new prompt.
+ * Prompts are reusable slash-commands (e.g., `/shortcut`) that prepend content to AI calls.
+ */
 export default function PromptsPage() {
   const prompts = useAppStore((state) => state.prompts);
   const loadPrompts = useAppStore((state) => state.loadPrompts);
@@ -25,7 +30,10 @@ export default function PromptsPage() {
         searchPlaceholder="Search prompts..."
         onMount={loadPrompts}
         action={
-          <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="w-full md:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Prompt
           </Button>

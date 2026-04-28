@@ -1,6 +1,11 @@
 /**
- * SSRF protection: checks if a URL points to a blocked/internal address.
- * Returns true if the URL should be blocked.
+ * SSRF protection: validates whether a URL should be blocked due to pointing to internal/private addresses.
+ * SECURITY-CRITICAL: Always call this before following user-provided URLs to prevent Server-Side Request Forgery attacks.
+ * Blocks: localhost, loopback (127.0.0.0/8), private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16),
+ * link-local (169.254.0.0/16), cloud metadata (AWS 169.254.169.254), IPv6 equivalent ranges, and unparseable URLs.
+ *
+ * @param rawUrl - URL string to validate (must be parseable as URL)
+ * @returns True if URL is blocked/internal and unsafe to access, false if URL is safe for external access
  */
 export function isBlockedUrl(rawUrl: string): boolean {
   let parsed: URL;
@@ -22,6 +27,14 @@ export function isBlockedUrl(rawUrl: string): boolean {
   return isBlockedIPv4(hostname);
 }
 
+/**
+ * Checks whether an IPv4 address is in a blocked/private range.
+ * SECURITY: Validates all RFC 1918 private ranges, loopback, link-local, and cloud metadata endpoints.
+ * Helper function for isBlockedUrl().
+ *
+ * @param ip - IPv4 address string to check (e.g., "192.168.1.1")
+ * @returns True if IP is in a blocked range (loopback, private, link-local, cloud metadata), false if public
+ */
 function isBlockedIPv4(ip: string): boolean {
   const parts = ip.split(".");
   if (parts.length !== 4) return false;
@@ -52,6 +65,14 @@ function isBlockedIPv4(ip: string): boolean {
   return false;
 }
 
+/**
+ * Checks whether an IPv6 address is in a blocked/private range.
+ * SECURITY: Validates loopback (::1), link-local (fe80::/10), ULA (fc00::/7), and IPv4-mapped IPv6.
+ * Helper function for isBlockedUrl().
+ *
+ * @param ip - IPv6 address string without brackets (e.g., "::1", "fe80::1")
+ * @returns True if IP is in a blocked range, false if public
+ */
 function isBlockedIPv6(ip: string): boolean {
   const normalized = ip.toLowerCase();
 

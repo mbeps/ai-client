@@ -3,12 +3,18 @@ import { buildTransport } from "./build-transport";
 import { withTimeout } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 
+/**
+ * Discovered tool from an MCP server.
+ */
 export type DiscoveredTool = {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
 };
 
+/**
+ * Discovered resource from an MCP server.
+ */
 export type DiscoveredResource = {
   uri: string;
   name: string;
@@ -18,6 +24,18 @@ export type DiscoveredResource = {
 
 const DISCOVER_TIMEOUT_MS = 10_000;
 
+/**
+ * Discovers all tools and resources available from an MCP server.
+ * Connects to the server (via buildTransport), lists tools via pagination, and attempts to list resources and resource templates.
+ * Gracefully handles servers that only implement tools by catching "Method not found" errors.
+ * All operations use 10-second timeouts to prevent hanging.
+ *
+ * @param server - MCP server configuration with connection details
+ * @returns Object containing arrays of discovered tools and resources, or empty arrays if discovery fails
+ * @throws {Error} When initial connection times out or all operations fail
+ * @see {@link build-transport.ts} for how transports are created
+ * @see {@link timeout-utils.ts} for timeout enforcement
+ */
 export async function discoverToolsAndResources(
   server: McpServerConfig,
 ): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
@@ -31,7 +49,7 @@ export async function discoverToolsAndResources(
   try {
     const tools: DiscoveredTool[] = [];
     const resources: DiscoveredResource[] = [];
-    
+
     // Fetch Tools
     let toolCursor: string | undefined;
     do {
@@ -78,7 +96,10 @@ export async function discoverToolsAndResources(
         resCursor = result.nextCursor;
       } while (resCursor);
     } catch (e: any) {
-      if (e?.message?.includes("Server does not support resources") || e?.message?.includes("Method not found")) {
+      if (
+        e?.message?.includes("Server does not support resources") ||
+        e?.message?.includes("Method not found")
+      ) {
         // Expected behavior for servers that only implement tools
       } else {
         console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
@@ -104,10 +125,16 @@ export async function discoverToolsAndResources(
         }
       }
     } catch (e: any) {
-      if (e?.message?.includes("Server does not support resources") || e?.message?.includes("Method not found")) {
+      if (
+        e?.message?.includes("Server does not support resources") ||
+        e?.message?.includes("Method not found")
+      ) {
         // Expected behavior
       } else {
-        console.warn(`[MCP] Failed to list resource templates for ${server.name}:`, e);
+        console.warn(
+          `[MCP] Failed to list resource templates for ${server.name}:`,
+          e,
+        );
       }
     }
 

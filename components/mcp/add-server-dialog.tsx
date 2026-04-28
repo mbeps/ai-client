@@ -38,6 +38,29 @@ import {
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 
+/**
+ * Dialog for adding a new Model Context Protocol server.
+ * Renders form with stdio/HTTP mode switching and auto-resets form state on close.
+ * Validates inputs against createMcpServerSchema before submission.
+ *
+ * @param open - Whether the dialog is visible
+ * @param onOpenChange - Callback invoked when dialog open state changes
+ * @see {@link EditServerForm} for editing existing servers
+ * @see {@link ServerCard} for server display
+ */
+export interface AddServerDialogProps {
+  /**
+   * Controls dialog visibility.
+   */
+  open: boolean;
+
+  /**
+   * Callback fired when user opens/closes the dialog.
+   * Used to manage parent component state.
+   */
+  onOpenChange: (open: boolean) => void;
+}
+
 const STDIO_DEFAULTS: CreateMcpServer = {
   type: "stdio",
   name: "",
@@ -56,10 +79,7 @@ const HTTP_DEFAULTS: CreateMcpServer = {
 export function AddServerDialog({
   open,
   onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
+}: AddServerDialogProps) {
   const addMcpServer = useAppStore((s) => s.addMcpServer);
 
   const form = useForm<CreateMcpServer>({

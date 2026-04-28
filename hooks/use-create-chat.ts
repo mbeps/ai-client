@@ -5,10 +5,13 @@ import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * Hook to handle new chat creation and navigation.
- * Centralises the logic for creating a chat and redirecting to its detail page.
+ * Creates new chats and navigates to the chat detail page.
+ * Integrates with Zustand store to persist chat to database before routing.
+ * Routes dynamically to project, assistant, or standalone chat views based on context.
  *
- * @returns A function to create a new chat.
+ * @returns Async function that creates chat with optional projectId/assistantId and returns the created chat ID.
+ * @throws When database creation fails or navigation fails.
+ * @see useEntityOptions for managing chat state mutations.
  * @author Maruf Bepary
  */
 export function useCreateChat() {

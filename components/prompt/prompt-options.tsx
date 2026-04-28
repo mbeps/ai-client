@@ -10,9 +10,14 @@ import { ROUTES } from "@/lib/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
- * Options menu for a prompt, providing Rename, Edit, and Delete actions.
+ * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.
+ * Uses useEntityOptions hook for shared dialog state and updatePromptDb/deletePromptDb from store for mutations.
+ * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
- * @param props.prompt - The prompt entity to manage.
+ * @param props.prompt - Prompt entity with id, title, and shortcut.
+ * @returns Menu with action items, rename dialog, and delete confirmation dialog.
+ * @see useEntityOptions for dialog and action state management.
+ * @see ResponsiveMenu for responsive menu wrapper.
  * @author Maruf Bepary
  */
 export function PromptOptions({ prompt }: { prompt: Prompt }) {

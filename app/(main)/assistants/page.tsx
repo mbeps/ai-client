@@ -8,6 +8,15 @@ import { AssistantCard } from "@/components/assistant/assistant-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { CreateAssistantDialog } from "./_components/create-assistant-dialog";
 
+/**
+ * Assistants list page for browsing and managing AI personas.
+ * Route: /assistants. Searchable grid with create dialog for custom AI personalities.
+ * Protected route — requires active authentication. Loads assistants on mount via Zustand.
+ *
+ * @returns Searchable list of assistant cards with creation and management options.
+ * @see ChatPageClient to use an assistant in a chat conversation.
+ * @author Maruf Bepary
+ */
 export default function AssistantsPage() {
   const assistants = useAppStore((state) => state.assistants);
   const loadAssistants = useAppStore((state) => state.loadAssistants);
@@ -25,7 +34,10 @@ export default function AssistantsPage() {
         searchPlaceholder="Search assistants..."
         onMount={loadAssistants}
         action={
-          <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="w-full md:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Assistant
           </Button>

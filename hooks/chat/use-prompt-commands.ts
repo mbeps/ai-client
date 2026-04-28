@@ -4,6 +4,20 @@ import { useAppStore } from "@/lib/store";
 import type { Prompt } from "@/types/prompt";
 import { useCallback, useMemo, useState, type RefObject } from "react";
 
+/**
+ * Manages slash-command prompt selection during message composition.
+ * Detects "/" trigger (start of line or after space), filters prompts by title/shortcut,
+ * and supports keyboard navigation (Arrow Up/Down, Enter, Escape).
+ * When a prompt is selected, removes the "/" from input and marks the prompt for injection
+ * into the user message. The selected prompt's content is prepended server-side in streamResponse.
+ *
+ * @param input - Current textarea value.
+ * @param setInput - Function to update textarea value.
+ * @param textareaRef - Reference to the input textarea element for cursor positioning.
+ * @returns Hook state: command open flag, filtered prompts, keyboard handlers, and selection callback.
+ * @see ChatInput for integration example.
+ * @author Maruf Bepary
+ */
 export function usePromptCommands(
   input: string,
   setInput: (value: string) => void,
@@ -27,85 +41,102 @@ export function usePromptCommands(
     );
   }, [commandQuery, prompts, isCommandOpen]);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const pos = e.target.selectionStart ?? 0;
-    setInput(value);
-    setCursorPosition(pos);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      const pos = e.target.selectionStart ?? 0;
+      setInput(value);
+      setCursorPosition(pos);
 
-    // Detect / trigger
-    const textBeforeCursor = value.slice(0, pos);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
+      // Detect / trigger
+      const textBeforeCursor = value.slice(0, pos);
+      const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
 
-    if (lastSlashIndex !== -1) {
-      const isStartOfLine = lastSlashIndex === 0;
-      const isAfterSpace = textBeforeCursor[lastSlashIndex - 1] === " ";
-      const hasNewlineAfterSlash = value
-        .slice(lastSlashIndex, pos)
-        .includes("\n");
+      if (lastSlashIndex !== -1) {
+        const isStartOfLine = lastSlashIndex === 0;
+        const isAfterSpace = textBeforeCursor[lastSlashIndex - 1] === " ";
+        const hasNewlineAfterSlash = value
+          .slice(lastSlashIndex, pos)
+          .includes("\n");
 
-      if ((isStartOfLine || isAfterSpace) && !hasNewlineAfterSlash && !selectedPrompt) {
-        setIsCommandOpen(true);
-        setCommandQuery(value.slice(lastSlashIndex + 1, pos));
-        setSelectedIndex(0);
+        if (
+          (isStartOfLine || isAfterSpace) &&
+          !hasNewlineAfterSlash &&
+          !selectedPrompt
+        ) {
+          setIsCommandOpen(true);
+          setCommandQuery(value.slice(lastSlashIndex + 1, pos));
+          setSelectedIndex(0);
+        } else {
+          setIsCommandOpen(false);
+        }
       } else {
         setIsCommandOpen(false);
       }
-    } else {
-      setIsCommandOpen(false);
-    }
-  }, [setInput, selectedPrompt]);
+    },
+    [setInput, selectedPrompt],
+  );
 
-  const handlePromptSelect = useCallback((prompt: Prompt) => {
-    const textBeforeCursor = input.slice(0, cursorPosition);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
+  const handlePromptSelect = useCallback(
+    (prompt: Prompt) => {
+      const textBeforeCursor = input.slice(0, cursorPosition);
+      const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
 
-    if (lastSlashIndex !== -1) {
-      const newInput =
-        input.slice(0, lastSlashIndex) + input.slice(cursorPosition);
+      if (lastSlashIndex !== -1) {
+        const newInput =
+          input.slice(0, lastSlashIndex) + input.slice(cursorPosition);
 
-      setInput(newInput);
-      setSelectedPrompt(prompt);
-      setIsCommandOpen(false);
+        setInput(newInput);
+        setSelectedPrompt(prompt);
+        setIsCommandOpen(false);
 
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(lastSlashIndex, lastSlashIndex);
-        }
-      }, 0);
-    }
-  }, [input, cursorPosition, setInput, textareaRef]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isCommandOpen) return false;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % filteredPrompts.length);
-      return true;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex(
-        (prev) => (prev - 1 + filteredPrompts.length) % filteredPrompts.length,
-      );
-      return true;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (filteredPrompts[selectedIndex]) {
-        handlePromptSelect(filteredPrompts[selectedIndex]);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(
+              lastSlashIndex,
+              lastSlashIndex,
+            );
+          }
+        }, 0);
       }
-      return true;
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setIsCommandOpen(false);
-      return true;
-    }
-    return false;
-  }, [isCommandOpen, filteredPrompts, selectedIndex, handlePromptSelect]);
+    },
+    [input, cursorPosition, setInput, textareaRef],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isCommandOpen) return false;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % filteredPrompts.length);
+        return true;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex(
+          (prev) =>
+            (prev - 1 + filteredPrompts.length) % filteredPrompts.length,
+        );
+        return true;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (filteredPrompts[selectedIndex]) {
+          handlePromptSelect(filteredPrompts[selectedIndex]);
+        }
+        return true;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsCommandOpen(false);
+        return true;
+      }
+      return false;
+    },
+    [isCommandOpen, filteredPrompts, selectedIndex, handlePromptSelect],
+  );
 
   return {
     isCommandOpen,

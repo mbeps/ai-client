@@ -1,8 +1,15 @@
 /**
- * Races a promise against a timeout.
- * Used to prevent hanging MCP connections and tool discovery.
+ * Races a promise against a timeout deadline.
+ * Used throughout MCP integration to prevent hanging connections and tool discovery operations.
+ * Automatically cleans up the timeout timer even if the promise resolves before the deadline.
  *
- * @author Maruf Bepary
+ * @param promise - Promise to race against timeout
+ * @param ms - Timeout duration in milliseconds
+ * @param label - Descriptive label included in timeout error message for debugging
+ * @returns Result of the promise if it resolves before timeout
+ * @throws {Error} When timeout expires before promise settles, with label and timeout duration in message
+ * @see {@link build-transport.ts} for transport connection timeouts
+ * @see {@link discover-tools.ts} for tool discovery timeouts
  */
 export function withTimeout<T>(
   promise: Promise<T>,

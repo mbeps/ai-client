@@ -15,6 +15,11 @@ import { z } from "zod";
  * @param chatId - The ID of the chat the message belongs to.
  * @param msg - The message data to persist.
  * @returns The persisted message row.
+ * @throws Error if session is not authenticated (requireSession call fails).
+ * @throws Error if chatId is not a valid UUID format.
+ * @throws ZodError if message data fails schema validation (invalid role, content, etc.).
+ * @throws Error if chat does not exist or user does not own it (ownership check enforced via session).
+ * @throws Error if database insertion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
 export async function persistMessage(

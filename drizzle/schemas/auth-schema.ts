@@ -10,7 +10,8 @@ import {
 
 /**
  * Stores core user account data and profile fields.
- * One-to-many with session, account, and passkey; one-to-one with twoFactor.
+ * Primary key for all auth relationships; one-to-many with session, account, and passkey; one-to-one with twoFactor.
+ * emailVerified and twoFactorEnabled control authentication flow; image stores avatar URL for profile display.
  *
  * @author Maruf Bepary
  */
@@ -29,8 +30,9 @@ export const user = pgTable("user", {
 });
 
 /**
- * Tracks active user sessions with device fingerprinting metadata.
- * Many-to-one with user (CASCADE DELETE). Stores ip_address and user_agent for session management and revocation.
+ * Tracks active user sessions with device fingerprinting metadata for session management and revocation.
+ * Many-to-one with user (CASCADE DELETE); expiresAt enforces session TTL; token is UNIQUE and used as session identifier.
+ * ipAddress and userAgent enable device tracking and suspicious activity detection; updated_at reflects last activity.
  *
  * @author Maruf Bepary
  */
@@ -54,8 +56,10 @@ export const session = pgTable(
 );
 
 /**
- * Persists OAuth account links and email/password credential hashes per user.
- * Many-to-one with user (CASCADE DELETE). providerId identifies the provider (e.g. "github", "credential").
+ * Persists OAuth provider links and email/password credential hashes per user.
+ * Many-to-one with user (CASCADE DELETE); providerId identifies provider (e.g., 'github', 'discord', 'credential').
+ * OAuth: accountId, accessToken, refreshToken, idToken, scope, and expiry timestamps for token lifecycle.
+ * Credential auth: password hash; unique constraint on (userId, providerId) enforces single provider per user.
  *
  * @author Maruf Bepary
  */
@@ -87,8 +91,9 @@ export const account = pgTable(
 );
 
 /**
- * Stores short-lived tokens for email verification and password resets.
- * identifier holds the email address; value holds the token or hash; expiresAt enforces TTL.
+ * Stores short-lived tokens for email verification and password reset workflows.
+ * identifier holds the email address; value holds token hash or code; expiresAt enforces TTL.
+ * No direct user foreign key; used by auth system to validate ownership before account mutations.
  *
  * @author Maruf Bepary
  */
@@ -106,7 +111,8 @@ export const verification = pgTable("verification", {
 
 /**
  * Holds TOTP shared secrets and encrypted backup codes for two-factor authentication.
- * One-to-one with user (CASCADE DELETE). backupCodes is a JSON-serialised array of one-time codes.
+ * One-to-one with user (CASCADE DELETE); secret used by authenticator apps (Google Authenticator, Authy, etc.).
+ * backupCodes stored as JSON array of one-time use codes for account recovery if authenticator lost.
  *
  * @author Maruf Bepary
  */
@@ -124,8 +130,10 @@ export const twoFactor = pgTable(
 );
 
 /**
- * Stores WebAuthn passkey credentials for passwordless authentication.
- * Many-to-one with user (CASCADE DELETE). counter increments on each use to prevent credential replay attacks.
+ * Stores WebAuthn passkey credentials for passwordless authentication (FIDO2/U2F).
+ * Many-to-one with user (CASCADE DELETE); counter increments on each use to prevent replay attacks.
+ * credentialID and publicKey enable cryptographic validation; deviceType (e.g., 'multiDevice', 'singleDevice') and backedUp track platform capabilities.
+ * transports (e.g., 'internal', 'usb') hint at expected authentication methods; aaguid identifies authenticator model.
  *
  * @author Maruf Bepary
  */

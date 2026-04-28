@@ -14,6 +14,11 @@ import type { ChatRow } from "@/types/chat-row";
  * @param chatId - The ID of the chat to rename.
  * @param title - The new title for the chat.
  * @returns The updated chat record.
+ * @throws Error if session is not authenticated (requireSession call fails).
+ * @throws Error if chatId is not a valid UUID format.
+ * @throws ZodError if title fails schema validation (empty or exceeds max length).
+ * @throws Error if chat does not exist or user does not own it (returns "Chat not found or unauthorized").
+ * @throws Error if database update fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
 export async function renameChat(

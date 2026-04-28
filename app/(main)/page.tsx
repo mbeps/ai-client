@@ -11,10 +11,12 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * Dashboard home page with a personalised greeting and quick-start chat input.
- * Route: /. Reads the session user name from Better Auth and creates a new
- * DB-backed chat before navigating to it.
+ * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
+ * Route: /. Reads session user via Better Auth and creates new chat on submission.
+ * Protected route — requires active authentication session.
  *
+ * @returns Home page with quick actions, recent chats, and chat input form.
+ * @see ChatPageClient for chat detail view after new chat creation.
  * @author Maruf Bepary
  */
 export default function HomePage() {

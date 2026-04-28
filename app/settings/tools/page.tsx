@@ -8,6 +8,11 @@ import { ServerCard } from "@/components/mcp/server-card";
 import { AddServerDialog } from "@/components/mcp/add-server-dialog";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 
+/**
+ * Tools/MCP servers listing page — client component displaying all configured MCP servers.
+ * Features: searchable grid of MCP server cards, add new server configuration, manage tool availability.
+ * MCP servers provide external tools and resources that can be used in chat interactions.
+ */
 export default function ToolsPage() {
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
@@ -24,7 +29,10 @@ export default function ToolsPage() {
         emptyStateMessage="No MCP servers yet. Add one to connect external tools to your chats."
         searchPlaceholder="Search servers..."
         action={
-          <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="w-full md:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Server
           </Button>

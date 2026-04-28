@@ -1,10 +1,13 @@
 import { sendEmail } from "./send-email";
 
 /**
- * Sends a welcome email to a newly registered user.
- * Triggered by the Better Auth `after` hook on user creation.
+ * Sends a welcome email to newly registered users.
+ * Triggered by the Better Auth `after` hook on successful user creation.
+ * Email contains a friendly greeting and confirmation of account setup.
  *
- * @param user - Name and email of the newly registered user.
+ * @param user - User object containing `name` and `email` from Better Auth registration
+ * @throws {ServerError} When Postmark fails to send the email
+ * @see sendEmail for underlying Postmark integration
  * @author Maruf Bepary
  */
 export async function sendWelcomeEmail(user: { name: string; email: string }) {

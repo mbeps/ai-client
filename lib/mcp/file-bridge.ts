@@ -7,6 +7,10 @@ import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { spreadsheetMimeFromName } from "@/lib/attachments/spreadsheet-types";
 
+/**
+ * File staged in temporary directory for MCP processing.
+ * Tracks original metadata to detect modifications after MCP tool execution.
+ */
 export type BridgedFile = {
   attachmentId: string;
   originalName: string;
@@ -15,11 +19,17 @@ export type BridgedFile = {
   originalMtimeMs: number;
 };
 
+/**
+ * Result of downloading attachments to temporary staging directory.
+ */
 export type FileBridgeResult = {
   tempDir: string;
   files: BridgedFile[];
 };
 
+/**
+ * New attachment created from a file modified by MCP tools.
+ */
 export type ModifiedAttachment = {
   attachmentId: string;
   newAttachmentId: string;
@@ -31,6 +41,17 @@ export type ModifiedAttachment = {
 
 const BRIDGE_ROOT = "mcp-bridge";
 
+/**
+ * Downloads attachments from S3 storage to a temporary staging directory for MCP tool access.
+ * Creates isolated subdirectories per attachment with original file metadata preserved for change detection.
+ * Continues on individual download failures but throws if all downloads fail.
+ *
+ * @param attachments - Array of S3 attachment references (id, key, name)
+ * @returns Staging directory path and array of bridged files with original metadata
+ * @throws {Error} When all attachments fail to download
+ * @see {@link s3-client.ts} for S3 download implementation
+ * @see {@link persistModifiedFiles} for processing modified files back to S3
+ */
 export async function downloadAttachmentsToTemp(
   attachments: { id: string; key: string; name: string }[],
 ): Promise<FileBridgeResult> {
@@ -75,6 +96,18 @@ export async function downloadAttachmentsToTemp(
   return { tempDir, files };
 }
 
+/**
+ * Re-uploads files modified by MCP tools back to S3 and persists new attachment records to database.
+ * Detects modifications by comparing file size and mtime against original metadata.
+ * Skips unchanged files, automatically determines MIME type from filename, and generates presigned URLs.
+ * Continues on individual persistence failures, collecting successfully processed files.
+ *
+ * @param params - Object containing staged files, user ID, and assistant message ID for DB linking
+ * @returns Array of newly created attachments that were modified and persisted
+ * @throws {Error} May log warnings for individual failures but completes even if some persist operations fail
+ * @see {@link s3-client.ts} for S3 upload and MIME type resolution
+ * @see {@link downloadAttachmentsToTemp} for initial staging process
+ */
 export async function persistModifiedFiles(params: {
   files: BridgedFile[];
   userId: string;
@@ -132,6 +165,13 @@ export async function persistModifiedFiles(params: {
   return results;
 }
 
+/**
+ * Removes temporary staging directory and all contents after MCP processing completes.
+ * Uses force flag to suppress errors if directory no longer exists.
+ *
+ * @param tempDir - Absolute path to temporary directory created by downloadAttachmentsToTemp()
+ * @see {@link downloadAttachmentsToTemp} for directory creation
+ */
 export async function cleanupTempDir(tempDir: string): Promise<void> {
   await rm(tempDir, { recursive: true, force: true });
 }

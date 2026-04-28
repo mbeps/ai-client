@@ -27,10 +27,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PopoverProvider } from "@/components/ui/popover";
 
 /**
- * Root layout that wires global fonts, theming, and toast providers.
+ * Root layout providing global fonts (Geist), CSS, and UI providers.
+ * Establishes the HTML scaffold, theme context, and toast notification system for all routes.
+ * Public route — no authentication required.
  *
- * @param children - Page content rendered within the layout shell.
- * @returns HTML scaffold shared across all routes.
+ * @param children - Page content rendered within the layout.
+ * @returns HTML document with font variables, tooltip/popover providers, and Sonner toaster.
+ * @see AuthenticatedLayout for auth-protected routes.
  * @author Maruf Bepary
  */
 export default function RootLayout({

@@ -1,30 +1,37 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { useShallow } from "zustand/react/shallow";
-import { useParams, useRouter } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EditServerForm } from "@/components/mcp/edit-server-form";
+import { ResourceList } from "@/components/mcp/resource-list";
+import { ServerSettings } from "@/components/mcp/server-settings";
+import { ToolList } from "@/components/mcp/tool-list";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { PageHeader } from "@/components/page-header";
-import { ToolList } from "@/components/mcp/tool-list";
-import { ResourceList } from "@/components/mcp/resource-list";
-import { EditServerForm } from "@/components/mcp/edit-server-form";
-import { ServerSettings } from "@/components/mcp/server-settings";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/lib/routes";
+import { useAppStore } from "@/lib/store";
 import {
-  Server,
-  Wrench,
-  Settings,
-  Shield,
   ChevronLeft,
   FileText,
+  Server,
+  Settings,
+  Shield,
+  Wrench,
 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 
+/**
+ * MCP server detail page — client component for configuring and managing a single MCP server.
+ * Route parameter: `[id]` — Unique MCP server identifier.
+ * Features: view server configuration, list available tools and resources, toggle server enabled state,
+ * edit server settings, view resource descriptions. Shows 404 if server not found.
+ *
+ * @see ToolsPage for parent MCP servers list
+ */
 export default function McpServerPage() {
   const params = useParams();
   const router = useRouter();
