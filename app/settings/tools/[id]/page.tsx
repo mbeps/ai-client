@@ -1,57 +1,125 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { useParams } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
+import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { PageHeader } from "@/components/page-header";
 import { ToolList } from "@/components/mcp/tool-list";
+import { ResourceList } from "@/components/mcp/resource-list";
 import { EditServerForm } from "@/components/mcp/edit-server-form";
 import { ServerSettings } from "@/components/mcp/server-settings";
 import { Badge } from "@/components/ui/badge";
-import { Server, Wrench, Settings, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ROUTES } from "@/lib/routes";
+import {
+  Server,
+  Wrench,
+  Settings,
+  Shield,
+  ChevronLeft,
+  FileText,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function McpServerPage() {
   const params = useParams();
+  const router = useRouter();
   const serverId = params.id as string;
 
-  const server = useAppStore((state) =>
-    state.mcpServers.find((s) => s.id === serverId),
+  const { server, toggleMcpServer } = useAppStore(
+    useShallow((state) => ({
+      server: state.mcpServers.find((s) => s.id === serverId),
+      toggleMcpServer: state.toggleMcpServer,
+    })),
   );
 
   if (!server) return <NotFoundMessage entity="MCP Server" />;
 
+  const handleToggle = async () => {
+    try {
+      await toggleMcpServer(server.id);
+      toast.success(
+        `${server.name} ${!server.enabled ? "enabled" : "disabled"}`,
+      );
+    } catch (error) {
+      toast.error("Failed to toggle server state");
+    }
+  };
+
   return (
-    <div className="page-container-detail">
+    <div className="page-container">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => router.push(ROUTES.TOOLS.path)}
+      >
+        <ChevronLeft className="mr-1 h-4 w-4" />
+        Back to Tools
+      </Button>
+
       <PageHeader
         icon={<Server className="h-8 w-8 text-primary" />}
         title={server.name}
         description={`${server.type.toUpperCase()} server`}
         action={
-          <Badge variant={server.enabled ? "default" : "secondary"}>
-            {server.enabled ? "Enabled" : "Disabled"}
-          </Badge>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="server-enabled"
+                checked={server.enabled}
+                onCheckedChange={handleToggle}
+              />
+              <Label htmlFor="server-enabled" className="cursor-pointer">
+                {server.enabled ? "Enabled" : "Disabled"}
+              </Label>
+            </div>
+          </div>
         }
       />
 
       <Tabs defaultValue="tools" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="tools" className="flex items-center">
-            <Wrench className="mr-2 h-4 w-4" />
+        <TabsList className="mb-4 h-auto w-full flex-wrap sm:flex-nowrap">
+          <TabsTrigger
+            value="tools"
+            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
+          >
+            <Wrench className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
             Tools
           </TabsTrigger>
-          <TabsTrigger value="config" className="flex items-center">
-            <Settings className="mr-2 h-4 w-4" />
+          <TabsTrigger
+            value="resources"
+            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
+          >
+            <FileText className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
+            Resources
+          </TabsTrigger>
+          <TabsTrigger
+            value="config"
+            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
+          >
+            <Settings className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
             Configuration
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center">
-            <Shield className="mr-2 h-4 w-4" />
-            Settings
+          <TabsTrigger
+            value="settings"
+            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
+          >
+            <Shield className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
+            Danger Zone
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tools">
           <ToolList server={server} />
+        </TabsContent>
+
+        <TabsContent value="resources">
+          <ResourceList server={server} />
         </TabsContent>
 
         <TabsContent value="config">

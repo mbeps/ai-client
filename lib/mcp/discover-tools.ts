@@ -78,10 +78,36 @@ export async function discoverToolsAndResources(
         resCursor = result.nextCursor;
       } while (resCursor);
     } catch (e: any) {
-      if (e?.message?.includes("Server does not support resources")) {
+      if (e?.message?.includes("Server does not support resources") || e?.message?.includes("Method not found")) {
         // Expected behavior for servers that only implement tools
       } else {
         console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
+      }
+    }
+
+    // Fetch Resource Templates
+    try {
+      const templateResult = await withTimeout(
+        client.listResourceTemplates(),
+        DISCOVER_TIMEOUT_MS,
+        `discoverTools listResourceTemplates: ${server.name}`,
+      );
+
+      if (templateResult.resourceTemplates) {
+        for (const tmpl of templateResult.resourceTemplates) {
+          resources.push({
+            uri: tmpl.uriTemplate,
+            name: tmpl.name,
+            description: tmpl.description ?? "Resource Template",
+            mimeType: tmpl.mimeType,
+          });
+        }
+      }
+    } catch (e: any) {
+      if (e?.message?.includes("Server does not support resources") || e?.message?.includes("Method not found")) {
+        // Expected behavior
+      } else {
+        console.warn(`[MCP] Failed to list resource templates for ${server.name}:`, e);
       }
     }
 

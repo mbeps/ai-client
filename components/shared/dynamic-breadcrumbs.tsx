@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 
 import { useAppStore } from "@/lib/store";
+import { useShallow } from "zustand/react/shallow";
 
 /**
  * Friendly labels for known route segments.
@@ -41,7 +42,29 @@ const ROUTE_LABELS: Record<string, string> = {
  */
 export function DynamicBreadcrumbs() {
   const pathname = usePathname();
-  const { chats, projects, assistants, knowledgebases, prompts, loadProjects, loadPrompts } = useAppStore();
+  const {
+    chats,
+    projects,
+    assistants,
+    knowledgebases,
+    prompts,
+    mcpServers,
+    loadProjects,
+    loadPrompts,
+    loadMcpServers,
+  } = useAppStore(
+    useShallow((state) => ({
+      chats: state.chats,
+      projects: state.projects,
+      assistants: state.assistants,
+      knowledgebases: state.knowledgebases,
+      prompts: state.prompts,
+      mcpServers: state.mcpServers,
+      loadProjects: state.loadProjects,
+      loadPrompts: state.loadPrompts,
+      loadMcpServers: state.loadMcpServers,
+    })),
+  );
   
   // Load projects if not available
   React.useEffect(() => {
@@ -56,6 +79,13 @@ export function DynamicBreadcrumbs() {
       loadPrompts().catch(() => {});
     }
   }, [prompts.length, loadPrompts]);
+
+  // Load MCP servers if not available
+  React.useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers().catch(() => {});
+    }
+  }, [mcpServers.length, loadMcpServers]);
 
   // Split pathname into segments and remove empty strings
   const segments = pathname.split("/").filter(Boolean);
@@ -78,6 +108,7 @@ export function DynamicBreadcrumbs() {
             assistants.find((a) => a.id === segment)?.name ||
             knowledgebases.find((kb) => kb.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
+            mcpServers.find((s) => s.id === segment)?.name ||
             // Fallback for project/assistant names from chat object
             (Object.values(chats).find(c => c.projectId === segment)?.projectName) ||
             (Object.values(chats).find(c => c.assistantId === segment)?.assistantName) ||
