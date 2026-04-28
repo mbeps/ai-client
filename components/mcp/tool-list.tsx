@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { discoverMcpServerTools } from "@/lib/actions/mcp-servers/discover-tools";
-import type { DiscoveredTool } from "@/lib/mcp/discover-tools";
+import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
+import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { McpServer } from "@/types/mcp-server";
 import { Button } from "@/components/ui/button";
 import {

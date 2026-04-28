@@ -1,52 +1,15 @@
 "use client";
 
-import { uploadAttachment } from "@/lib/actions/attachments";
+import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { reconstructThread } from "@/lib/chat/tree-utils";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
 import { DEFAULT_MODEL } from "@/models";
+import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
+import type { ToolCallState } from "@/types/tool-call";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-
-/**
- * State of a single tool invocation during streaming.
- * Tracks the tool's execution lifecycle from "calling" to "complete".
- */
-export interface ToolCallState {
-  /** Unique identifier for this tool invocation. */
-  toolCallId: string;
-
-  /** Name of the MCP tool being invoked (e.g., "manage_artifact"). */
-  toolName: string;
-
-  /** Arguments passed to the tool. */
-  args: unknown;
-
-  /** Result returned by the tool (populated when status is "complete"). */
-  result?: unknown;
-
-  /** Current execution status: "calling" while streaming, "complete" when done. */
-  status: "calling" | "complete";
-}
-
-/**
- * Data model for rendered artifacts (generated content from AI).
- * Supports Markdown, Spreadsheet (JSON), HTML, and Mermaid diagram types.
- */
-export interface ArtifactData {
-  /** Type of artifact: markdown, spreadsheet, html, or mermaid. */
-  type: "markdown" | "spreadsheet" | "html" | "mermaid";
-
-  /** Display title for the artifact. */
-  title: string;
-
-  /** Raw content string (Markdown, HTML, or stringified JSON for spreadsheet). */
-  content: string;
-
-  /** ID of the message that generated this artifact. */
-  messageId?: string;
-}
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.

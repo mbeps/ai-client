@@ -1,18 +1,18 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import type { Attachment } from "@/types/attachment";
-import { reconstructThread, getDeepestLeaf } from "@/lib/chat/tree-utils";
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { MessageBubble } from "./message-bubble";
-import { ChatInput } from "./chat-input";
-import { ArtifactPanel } from "./artifact-panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useStreamResponse } from "@/hooks/chat/use-stream-response";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
+import { useAppStore } from "@/lib/store";
+import type { ArtifactData } from "@/types/artifact";
+import type { Attachment } from "@/types/attachment";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import {
-  useStreamResponse,
-  type ArtifactData,
-} from "@/hooks/chat/use-stream-response";
+import { ArtifactPanel } from "./artifact-panel";
+import { ChatInput } from "./chat-input";
+import { MessageBubble } from "./message-bubble";
+
 import { DEFAULT_MODEL } from "@/models";
 import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";

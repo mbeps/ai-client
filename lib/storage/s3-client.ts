@@ -65,7 +65,7 @@ export async function ensureBucket() {
  * @param body - File data as Buffer or Uint8Array
  * @param contentType - MIME type for the object (e.g., image/png, application/pdf)
  * @throws {Error} When S3 upload fails (network, credentials, bucket permissions)
- * @see {@link file-bridge.ts} for MCP file re-upload after modification
+ * @see {@link persist-modified-files.ts} for MCP file re-upload after modification
  */
 export async function uploadObject(
   key: string,
@@ -141,7 +141,7 @@ export async function getPresignedUrl(key: string, expiresIn = 3600) {
  * @param key - S3 object key to download
  * @returns File data as Node.js Buffer
  * @throws {Error} When download fails, connection drops, or response body is empty
- * @see {@link file-bridge.ts} for file staging during MCP processing
+ * @see {@link download-attachments-to-temp.ts} for file staging during MCP processing
  */
 export async function downloadObject(key: string): Promise<Buffer> {
   const response = await s3Client.send(

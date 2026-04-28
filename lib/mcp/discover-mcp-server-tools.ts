@@ -4,11 +4,9 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import {
-  discoverToolsAndResources,
-  type DiscoveredTool,
-  type DiscoveredResource,
-} from "@/lib/mcp/discover-tools";
+import { discoverToolsAndResources } from "./discover-tools-and-resources";
+import type { DiscoveredTool } from "@/types/discovered-tool";
+import type { DiscoveredResource } from "@/types/discovered-resource";
 
 /**
  * Discovers available tools and resources exposed by an MCP server.

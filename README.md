@@ -92,6 +92,7 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 - **S3/MinIO** — S3-compatible object storage for file uploads and attachments (or AWS S3 in production)
 - **OpenRouter API** — LLM provider for AI conversation capabilities (account required; free tier available)
 - **Postmark** — Transactional email service for authentication and notifications (account required)
+- **Python, Java, Kotlin, Go, Rust, C++ (Optional)** — Required for running MCP servers locally but different languages. 
 
 > Docker/Podman can be used to run PostgreSQL and MinIO locally without cloud dependencies.
 

@@ -1,21 +1,21 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ArtifactData } from "@/types/artifact";
 import {
-  X,
-  Copy,
-  Download,
+  Check,
   ChevronLeft,
   ChevronRight,
-  Check,
+  Copy,
+  Download,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { MarkdownRenderer } from "./markdown-renderer";
 import dynamic from "next/dynamic";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ArtifactData } from "@/hooks/chat/use-stream-response";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as xlsx from "xlsx";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 const MarkdownView = dynamic(() => import("./artifacts/markdown-view"), {
   ssr: false,

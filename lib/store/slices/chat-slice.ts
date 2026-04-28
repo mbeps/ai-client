@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand";
 import { v4 as uuidv4 } from "uuid";
-import { getDeepestLeaf } from "@/lib/chat/tree-utils";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
