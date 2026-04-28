@@ -1,0 +1,7 @@
+import { StateCreator } from "zustand";
+import { AppState } from "@/types/app-state";
+
+/** Zustand state setter type for entity actions. */
+export type EntitySet = Parameters<StateCreator<AppState>>[0];
+/** Zustand state getter type for entity actions. */
+export type EntityGet = Parameters<StateCreator<AppState>>[1];

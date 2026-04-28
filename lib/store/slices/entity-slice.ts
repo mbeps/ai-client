@@ -1,32 +1,30 @@
 import { StateCreator } from "zustand";
-import { renameProject as renameProjectAction } from "@/lib/actions/projects/rename-project";
-import { listProjects as listProjectsAction } from "@/lib/actions/projects/list-projects";
-import { createProject as createProjectAction } from "@/lib/actions/projects/create-project";
-import { updateProject as updateProjectAction } from "@/lib/actions/projects/update-project";
-import { deleteProject as deleteProjectAction } from "@/lib/actions/projects/delete-project";
-import { togglePinProject as togglePinProjectAction } from "@/lib/actions/projects/toggle-pin-project";
-import { renameAssistant as renameAssistantAction } from "@/lib/actions/assistants/rename-assistant";
-import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
-import { createAssistant as createAssistantAction } from "@/lib/actions/assistants/create-assistant";
-import { updateAssistant as updateAssistantAction } from "@/lib/actions/assistants/update-assistant";
-import { deleteAssistant as deleteAssistantAction } from "@/lib/actions/assistants/delete-assistant";
-import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
-import {
-  listPrompts as listPromptsAction,
-  createPrompt as createPromptAction,
-  updatePrompt as updatePromptAction,
-  deletePrompt as deletePromptAction,
-} from "@/lib/actions/prompts";
-import { listMcpServers as listMcpServersAction } from "@/lib/mcp/list-mcp-servers";
-import { createMcpServer as createMcpServerAction } from "@/lib/mcp/create-mcp-server";
-import { deleteMcpServer as deleteMcpServerAction } from "@/lib/mcp/delete-mcp-server";
-import { renameMcpServer as renameMcpServerAction } from "@/lib/mcp/rename-mcp-server";
-import { toggleMcpServer as toggleMcpServerAction } from "@/lib/mcp/toggle-mcp-server";
-import { updateMcpServer as updateMcpServerAction } from "@/lib/mcp/update-mcp-server";
-import { projectRowToStore } from "../mappers/project";
-import { assistantRowToStore } from "../mappers/assistant";
-import { promptRowToStore } from "../mappers/prompt";
 import type { AppState } from "@/types/app-state";
+import { toggleProjectPin } from "./entity/projects/toggle-project-pin";
+import { renameProjectDb } from "./entity/projects/rename-project-db";
+import { loadProjectRows } from "./entity/projects/load-project-rows";
+import { loadProjects } from "./entity/projects/load-projects";
+import { createProjectDb } from "./entity/projects/create-project-db";
+import { updateProjectDb } from "./entity/projects/update-project-db";
+import { deleteProjectDb } from "./entity/projects/delete-project-db";
+import { toggleProjectPinDb } from "./entity/projects/toggle-project-pin-db";
+import { renameAssistantDb } from "./entity/assistants/rename-assistant-db";
+import { loadAssistantRows } from "./entity/assistants/load-assistant-rows";
+import { loadAssistants } from "./entity/assistants/load-assistants";
+import { createAssistantDb } from "./entity/assistants/create-assistant-db";
+import { updateAssistantDb } from "./entity/assistants/update-assistant-db";
+import { deleteAssistantDb } from "./entity/assistants/delete-assistant-db";
+import { loadPrompts } from "./entity/prompts/load-prompts";
+import { createPromptDb } from "./entity/prompts/create-prompt-db";
+import { updatePromptDb } from "./entity/prompts/update-prompt-db";
+import { deletePromptDb } from "./entity/prompts/delete-prompt-db";
+import { renameKnowledgebaseDb } from "./entity/knowledgebases/rename-knowledgebase-db";
+import { loadMcpServers } from "./entity/mcp-servers/load-mcp-servers";
+import { addMcpServer } from "./entity/mcp-servers/add-mcp-server";
+import { removeMcpServer } from "./entity/mcp-servers/remove-mcp-server";
+import { renameMcpServer } from "./entity/mcp-servers/rename-mcp-server";
+import { toggleMcpServer } from "./entity/mcp-servers/toggle-mcp-server";
+import { updateMcpServer } from "./entity/mcp-servers/update-mcp-server";
 
 export type EntitySlice = Pick<
   AppState,
@@ -72,268 +70,34 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   knowledgebases: [],
   mcpServers: [],
 
-  toggleProjectPin: (id) =>
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, isPinned: !p.isPinned } : p,
-      ),
-    })),
+  toggleProjectPin: toggleProjectPin(set),
+  renameProjectDb: renameProjectDb(set),
+  loadProjectRows: loadProjectRows(set),
+  loadProjects: loadProjects(set),
+  createProjectDb: createProjectDb(set),
+  updateProjectDb: updateProjectDb(set),
+  deleteProjectDb: deleteProjectDb(set),
+  toggleProjectPinDb: toggleProjectPinDb(set),
 
-  renameProjectDb: async (id, name) => {
-    const updated = await renameProjectAction(id, name);
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id
-          ? { ...p, name: updated.name, updatedAt: new Date(updated.updatedAt) }
-          : p,
-      ),
-    }));
-  },
+  renameAssistantDb: renameAssistantDb(set),
+  loadAssistantRows: loadAssistantRows(set),
+  loadAssistants: loadAssistants(set),
+  createAssistantDb: createAssistantDb(set),
+  updateAssistantDb: updateAssistantDb(set),
+  deleteAssistantDb: deleteAssistantDb(set),
 
-  loadProjectRows: (rows) => {
-    set({ projects: rows.map(projectRowToStore) });
-  },
+  loadPrompts: loadPrompts(set),
+  createPromptDb: createPromptDb(set),
+  updatePromptDb: updatePromptDb(set),
+  deletePromptDb: deletePromptDb(set),
 
-  loadProjects: async () => {
-    const rows = await listProjectsAction();
-    set({ projects: rows.map(projectRowToStore) });
-  },
+  renameKnowledgebaseDb: renameKnowledgebaseDb(set),
 
-  createProjectDb: async (data) => {
-    const row = await createProjectAction(data);
-    set((state) => ({ projects: [projectRowToStore(row), ...state.projects] }));
-    return row.id;
-  },
-
-  updateProjectDb: async (id, data) => {
-    const row = await updateProjectAction(id, data);
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, ...projectRowToStore(row) } : p,
-      ),
-    }));
-  },
-
-  deleteProjectDb: async (id) => {
-    await deleteProjectAction(id);
-    set((state) => ({
-      projects: state.projects.filter((p) => p.id !== id),
-      chats: Object.fromEntries(
-        Object.entries(state.chats).map(([chatId, chat]) =>
-          chat.projectId === id
-            ? [chatId, { ...chat, projectId: undefined }]
-            : [chatId, chat],
-        ),
-      ),
-    }));
-  },
-
-  toggleProjectPinDb: async (id) => {
-    const row = await togglePinProjectAction(id);
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id
-          ? { ...p, isPinned: row.isPinned, updatedAt: new Date(row.updatedAt) }
-          : p,
-      ),
-    }));
-  },
-
-  renameAssistantDb: async (id, name) => {
-    const updated = await renameAssistantAction(id, name);
-    set((state) => ({
-      assistants: state.assistants.map((a) =>
-        a.id === id
-          ? { ...a, name: updated.name, updatedAt: new Date(updated.updatedAt) }
-          : a,
-      ),
-    }));
-  },
-
-  loadAssistantRows: (rows) => {
-    set({ assistants: rows.map(assistantRowToStore) });
-  },
-
-  loadAssistants: async () => {
-    const rows = await listAssistantsAction();
-    set({ assistants: rows.map(assistantRowToStore) });
-  },
-
-  createAssistantDb: async (data) => {
-    const row = await createAssistantAction(data);
-    set((state) => ({
-      assistants: [assistantRowToStore(row), ...state.assistants],
-    }));
-    return row.id;
-  },
-
-  updateAssistantDb: async (id, data) => {
-    const row = await updateAssistantAction(id, data);
-    set((state) => ({
-      assistants: state.assistants.map((a) =>
-        a.id === id ? { ...a, ...assistantRowToStore(row) } : a,
-      ),
-    }));
-  },
-
-  deleteAssistantDb: async (id) => {
-    await deleteAssistantAction(id);
-    set((state) => ({
-      assistants: state.assistants.filter((a) => a.id !== id),
-      chats: Object.fromEntries(
-        Object.entries(state.chats).map(([chatId, chat]) =>
-          chat.assistantId === id
-            ? [chatId, { ...chat, assistantId: undefined }]
-            : [chatId, chat],
-        ),
-      ),
-    }));
-  },
-
-  loadPrompts: async () => {
-    const rows = await listPromptsAction();
-    set({ prompts: rows.map(promptRowToStore) });
-  },
-
-  createPromptDb: async (data) => {
-    const row = await createPromptAction(data);
-    set((state) => ({ prompts: [promptRowToStore(row), ...state.prompts] }));
-    return row.id;
-  },
-
-  updatePromptDb: async (id, data) => {
-    const row = await updatePromptAction(id, data);
-    set((state) => ({
-      prompts: state.prompts.map((p) =>
-        p.id === id ? { ...p, ...promptRowToStore(row) } : p,
-      ),
-    }));
-  },
-
-  deletePromptDb: async (id) => {
-    await deletePromptAction(id);
-    set((state) => ({
-      prompts: state.prompts.filter((p) => p.id !== id),
-    }));
-  },
-
-  renameKnowledgebaseDb: async (id, name) => {
-    const updated = await renameKnowledgebaseAction(id, name);
-    set((state) => ({
-      knowledgebases: state.knowledgebases.map((kb) =>
-        kb.id === id
-          ? {
-              ...kb,
-              name: updated.name,
-              updatedAt: new Date(updated.updatedAt),
-            }
-          : kb,
-      ),
-    }));
-  },
-
-  loadMcpServers: async () => {
-    const rows = await listMcpServersAction();
-    set({
-      mcpServers: rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        command: r.command,
-        args: r.args,
-        url: r.url,
-        headers: r.headers,
-        env: r.env,
-        enabled: r.enabled,
-        createdAt: new Date(r.createdAt),
-        updatedAt: new Date(r.updatedAt),
-      })),
-    });
-  },
-
-  addMcpServer: async (data) => {
-    const row = await createMcpServerAction(data);
-    set((state) => ({
-      mcpServers: [
-        {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          command: row.command,
-          args: row.args,
-          url: row.url,
-          headers: row.headers,
-          env: row.env,
-          enabled: row.enabled,
-          createdAt: new Date(row.createdAt),
-          updatedAt: new Date(row.updatedAt),
-        },
-        ...state.mcpServers,
-      ],
-    }));
-  },
-
-  removeMcpServer: async (id) => {
-    await deleteMcpServerAction(id);
-    set((state) => ({
-      mcpServers: state.mcpServers.filter((s) => s.id !== id),
-    }));
-  },
-
-  renameMcpServer: async (id, name) => {
-    const updated = await renameMcpServerAction(id, name);
-    set((state) => ({
-      mcpServers: state.mcpServers
-        .map((s) =>
-          s.id === id
-            ? {
-                ...s,
-                name: updated.name,
-                updatedAt: new Date(updated.updatedAt),
-              }
-            : s,
-        )
-        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
-    }));
-  },
-
-  toggleMcpServer: async (id) => {
-    const updated = await toggleMcpServerAction(id);
-    set((state) => ({
-      mcpServers: state.mcpServers.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              enabled: updated.enabled,
-              updatedAt: new Date(updated.updatedAt),
-            }
-          : s,
-      ),
-    }));
-  },
-
-  updateMcpServer: async (id, data) => {
-    const updated = await updateMcpServerAction(id, data);
-    set((state) => ({
-      mcpServers: state.mcpServers
-        .map((s) =>
-          s.id === id
-            ? {
-                id: updated.id,
-                name: updated.name,
-                type: updated.type,
-                command: updated.command,
-                args: updated.args,
-                url: updated.url,
-                headers: updated.headers,
-                env: updated.env,
-                enabled: updated.enabled,
-                createdAt: new Date(updated.createdAt),
-                updatedAt: new Date(updated.updatedAt),
-              }
-            : s,
-        )
-        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
-    }));
-  },
+  loadMcpServers: loadMcpServers(set),
+  addMcpServer: addMcpServer(set),
+  removeMcpServer: removeMcpServer(set),
+  renameMcpServer: renameMcpServer(set),
+  toggleMcpServer: toggleMcpServer(set),
+  updateMcpServer: updateMcpServer(set),
 });
+
