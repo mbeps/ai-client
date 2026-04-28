@@ -69,38 +69,34 @@ export function EditServerForm({ server }: { server: McpServer }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Server Configuration</CardTitle>
-        <CardDescription>
-          Edit the connection settings for this MCP server.
-        </CardDescription>
-      </CardHeader>
+    <Card className="border-none shadow-none bg-transparent">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Type</span>
-              <div>
-                <Badge variant="secondary" className="capitalize">
-                  {server.type}
-                </Badge>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <CardContent className="p-0 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Server Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="bg-background" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-2">
+                <FormLabel>Connection Type</FormLabel>
+                <div className="h-10 flex items-center">
+                  <Badge variant="secondary" className="capitalize px-3 py-1">
+                    {server.type}
+                  </Badge>
+                </div>
               </div>
             </div>
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {server.type === "stdio" && (
               <>
@@ -114,6 +110,7 @@ export function EditServerForm({ server }: { server: McpServer }) {
                         <Input
                           placeholder="npx, uvx, node, python..."
                           {...field}
+                          className="bg-background font-mono"
                         />
                       </FormControl>
                       <FormMessage />
@@ -131,10 +128,11 @@ export function EditServerForm({ server }: { server: McpServer }) {
                         <Input
                           placeholder='["-y", "@modelcontextprotocol/server-github"]'
                           {...field}
+                          className="bg-background font-mono"
                         />
                       </FormControl>
-                      <FormDescription>
-                        JSON array of arguments.
+                      <FormDescription className="text-xs">
+                        JSON array of arguments passed to the command.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -150,12 +148,12 @@ export function EditServerForm({ server }: { server: McpServer }) {
                       <FormControl>
                         <Textarea
                           placeholder={'{"API_KEY": "sk-..."}'}
-                          className="font-mono text-sm"
+                          className="font-mono text-sm bg-background min-h-[120px] resize-y"
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        JSON object of environment variables.
+                      <FormDescription className="text-xs">
+                        JSON object containing environment variables.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -171,11 +169,12 @@ export function EditServerForm({ server }: { server: McpServer }) {
                   name="url"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>URL</FormLabel>
+                      <FormLabel>Endpoint URL</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="https://mcp.example.com/sse"
                           {...field}
+                          className="bg-background font-mono"
                         />
                       </FormControl>
                       <FormMessage />
@@ -188,16 +187,17 @@ export function EditServerForm({ server }: { server: McpServer }) {
                   name="headers"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Headers</FormLabel>
+                      <FormLabel>Custom Headers</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder={'{"Authorization": "Bearer ..."}'}
-                          className="font-mono text-sm"
+                          className="font-mono text-sm bg-background min-h-[120px] resize-y"
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        JSON object of HTTP headers.
+                      <FormDescription className="text-xs">
+                        JSON object of HTTP headers for authentication or
+                        context.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -207,16 +207,16 @@ export function EditServerForm({ server }: { server: McpServer }) {
             )}
           </CardContent>
 
-          <CardFooter>
-            <Button type="submit" disabled={isSubmitting}>
+          <div className="flex justify-end pt-4 border-t">
+            <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
               <LoadingSwap isLoading={isSubmitting}>
                 <div className="flex items-center">
                   <Save className="mr-2 h-4 w-4" />
-                  Save Configuration
+                  Save Changes
                 </div>
               </LoadingSwap>
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
     </Card>
