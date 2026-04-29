@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { PROMPTS } from "@/constants/prompts";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
 import {
   Bot,

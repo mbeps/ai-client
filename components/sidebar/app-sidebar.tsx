@@ -34,7 +34,7 @@ import { listChats } from "@/lib/actions/chats/list-chats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import {
   DropdownMenu,

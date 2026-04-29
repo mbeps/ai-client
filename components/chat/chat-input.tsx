@@ -16,7 +16,7 @@ import {
   Image as ImageIcon,
   Command,
 } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import {
   Popover,
   PopoverContent,

@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import type { Knowledgebase } from "@/types/knowledgebase";
 import { Database } from "lucide-react";
 import { useRouter } from "next/navigation";

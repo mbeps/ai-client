@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import { useState } from "react";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

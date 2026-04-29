@@ -17,7 +17,7 @@ import { Settings, Wrench, ChevronLeft, LogOut, Command } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Sidebar for the /settings section.

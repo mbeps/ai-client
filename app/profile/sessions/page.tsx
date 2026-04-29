@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SessionsTab } from "../_components/session/sessions-tab";

@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorPage } from "@/components/shared/error-page";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { RotateCcw, Wrench } from "lucide-react";
 
 export default function ToolError({

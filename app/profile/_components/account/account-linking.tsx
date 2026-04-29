@@ -4,7 +4,7 @@ import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-ac
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth/auth";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import {
   SUPPORTED_OAUTH_PROVIDER_DETAILS,
   SUPPORTED_OAUTH_PROVIDERS,

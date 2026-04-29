@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Trash2, Command, Save } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useState, useEffect } from "react";

@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { useRouter } from "next/navigation";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";

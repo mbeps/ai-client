@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Bot, FolderOpen, Database, Sparkles, ArrowRight } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { ChatInput } from "@/components/chat/chat-input";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.

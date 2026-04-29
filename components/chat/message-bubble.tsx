@@ -5,7 +5,7 @@ import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import type { Message } from "@/types/message";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { MODELS } from "@/constants/models";
 import { Bot, Command, User } from "lucide-react";
 import { useMemo, useState } from "react";

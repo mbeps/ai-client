@@ -1,4 +1,4 @@
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { redirect } from "next/navigation";
 
 /**

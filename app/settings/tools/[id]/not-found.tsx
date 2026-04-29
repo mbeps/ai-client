@@ -1,5 +1,5 @@
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { Wrench } from "lucide-react";
 
 export default function ToolNotFound() {

@@ -6,10 +6,9 @@ import type { Chat } from "@/types/chat";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-
 
 /**
  * Options menu for a chat, providing Rename, Move, and Delete actions.
@@ -100,6 +99,5 @@ export function ChatOptions({
         currentProjectId={chat.projectId}
       />
     </>
-
   );
 }

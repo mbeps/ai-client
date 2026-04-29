@@ -25,7 +25,7 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
 import { ChatCard } from "@/components/chat/chat-card";

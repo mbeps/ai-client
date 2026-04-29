@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { TotpForm } from "./_components/totp-form";
 import { BackupCodeTab } from "./_components/backup-code-tab";
 import { LifeBuoy, Smartphone } from "lucide-react";

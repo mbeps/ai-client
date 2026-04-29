@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Sidebar for the /profile section.
