@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 
 describe("ROUTES — static paths", () => {
   it("HOME path is /", () => {
