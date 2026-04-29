@@ -30,7 +30,11 @@ import {
   Save,
   Trash2,
   Search,
+  FileText,
+  Shield,
 } from "lucide-react";
+
+
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -163,10 +167,20 @@ export default function AssistantPage() {
             <MessageSquare className="mr-2 h-4 w-4" />
             <span>Chats</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="prompt">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>Prompt</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="danger">
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Danger Zone</span>
+          </SidebarTabsTrigger>
+
+
         </SidebarTabsList>
 
         <SidebarTabsContent value="chats" className="space-y-4">
@@ -181,7 +195,8 @@ export default function AssistantPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
             {filteredChats.map((chat) => (
               <ChatCard key={chat.id} chat={chat} />
             ))}
@@ -197,48 +212,44 @@ export default function AssistantPage() {
           </div>
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="settings" className="space-y-6">
+        <SidebarTabsContent value="prompt" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">System Prompt</h3>
+            <p className="text-sm text-muted-foreground">
+              Customize the persona and capabilities of this assistant.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={12}
+              placeholder={
+                PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
+              }
+            />
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Prompt
+                </>
+              )}
+            </Button>
+          </div>
+        </SidebarTabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>System Prompt</CardTitle>
-              <CardDescription>
-                Customize the persona and capabilities of this assistant.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={8}
-                className="max-h-64"
-                placeholder={
-                  PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
-                }
-              />
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Prompt
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Assistant Details</CardTitle>
-              <CardDescription>
+        <SidebarTabsContent value="settings" className="space-y-10">
+          <section className="space-y-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Assistant Details</h3>
+              <p className="text-sm text-muted-foreground">
                 Manage the assistant name and description.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </p>
+            </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assistant Name</label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -248,10 +259,9 @@ export default function AssistantPage() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
                 />
               </div>
-            </CardContent>
-            <CardFooter>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
                   "Saving..."
@@ -262,9 +272,11 @@ export default function AssistantPage() {
                   </>
                 )}
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </section>
+        </SidebarTabsContent>
 
+        <SidebarTabsContent value="danger">
           <Card className="border-destructive/50">
             <CardHeader>
               <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -288,6 +300,8 @@ export default function AssistantPage() {
             </CardContent>
           </Card>
         </SidebarTabsContent>
+
+
       </SidebarTabs>
 
 
