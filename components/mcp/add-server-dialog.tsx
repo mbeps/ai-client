@@ -17,7 +17,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -27,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Plus, X } from "lucide-react";
@@ -37,6 +35,7 @@ import {
   type CreateMcpServer,
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
+import { ServerFormFields } from "@/components/mcp/server-form-fields";
 
 /**
  * Dialog for adding a new Model Context Protocol server.
@@ -76,10 +75,7 @@ const HTTP_DEFAULTS: CreateMcpServer = {
   headers: "",
 };
 
-export function AddServerDialog({
-  open,
-  onOpenChange,
-}: AddServerDialogProps) {
+export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
   const addMcpServer = useAppStore((s) => s.addMcpServer);
 
   const form = useForm<CreateMcpServer>({
@@ -166,109 +162,7 @@ export function AddServerDialog({
               )}
             />
 
-            {serverType === "stdio" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="command"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Command</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="npx, uvx, node, python..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="args"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Arguments</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder='["-y", "@modelcontextprotocol/server-github"]'
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        JSON array of arguments.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="env"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Environment Variables</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={'{"API_KEY": "sk-..."}'}
-                          className="font-mono text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        JSON object of environment variables.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-
-            {serverType === "http" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://mcp.example.com/sse"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="headers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Headers</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={'{"Authorization": "Bearer ..."}'}
-                          className="font-mono text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        JSON object of HTTP headers.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
+            <ServerFormFields form={form} serverType={serverType} />
 
             <DialogFooter>
               <Button

@@ -67,7 +67,6 @@ export function useStreamResponse(
    * @param model - AI model to use (defaults to DEFAULT_MODEL).
    * @param selectedServerIds - Optional array of MCP server IDs to enable for tools.
    * @param selectedTools - Optional array of tool identifiers to make available to the AI.
-   * @param selectedResources - Optional array of resource identifiers (reserved for future use).
    * @param selectedPromptId - Optional slash-command prompt ID to prepend to content.
    * @returns The complete accumulated AI response text on successful stream completion, or accumulated partial text if aborted.
    * @throws Error when fetch fails (rate limit 429, auth failure 401, or generic stream error) — shows toast and throws.
@@ -84,7 +83,6 @@ export function useStreamResponse(
     model = DEFAULT_MODEL,
     selectedServerIds: string[] = [],
     selectedTools: string[] = [],
-    selectedResources: string[] = [],
     selectedPromptId?: string,
   ) => {
     setIsLoading(true);
@@ -152,8 +150,11 @@ export function useStreamResponse(
         const data = await uploadAttachment(formData);
         // Keep the original client-side att.id so it matches the store entry.
         uploadedAttachments.push({ ...att, key: data.key });
-      } catch {
-        // Upload failed silently
+      } catch (err) {
+        console.error("[Chat] Attachment upload failed:", err);
+        toast.error(
+          `Failed to upload "${att.name}". It will not be sent to the AI.`,
+        );
       }
     }
 
@@ -196,7 +197,6 @@ export function useStreamResponse(
           model,
           selectedServerIds,
           selectedTools,
-          selectedResources,
         }),
         signal: controller.signal,
       });

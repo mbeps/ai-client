@@ -4,8 +4,12 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import { updateMcpServerSchema, type UpdateMcpServer } from "@/schemas/mcp-server";
+import {
+  updateMcpServerSchema,
+  type UpdateMcpServer,
+} from "@/schemas/mcp-server";
 import type { McpServerRow } from "@/types/mcp-server-row";
+import { buildServerConfig } from "./build-server-config";
 
 /**
  * Updates an existing MCP server configuration for the authenticated user.
@@ -28,26 +32,7 @@ export async function updateMcpServer(
 
   const parsed = updateMcpServerSchema.parse(data);
 
-  const values =
-    parsed.type === "stdio"
-      ? {
-          name: parsed.name,
-          type: parsed.type,
-          command: parsed.command,
-          args: parsed.args ?? null,
-          env: parsed.env ?? null,
-          url: null,
-          headers: null,
-        }
-      : {
-          name: parsed.name,
-          type: parsed.type,
-          url: parsed.url,
-          headers: parsed.headers ?? null,
-          command: null,
-          args: null,
-          env: null,
-        };
+  const values = buildServerConfig(parsed);
 
   const [updated] = await db
     .update(mcpServer)

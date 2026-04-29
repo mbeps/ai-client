@@ -353,7 +353,6 @@ describe("chatRequestSchema", () => {
       messages: [{ role: "user", content: "Hello" }],
       selectedServerIds: ["server-1"],
       selectedTools: ["search"],
-      selectedResources: ["resource-1"],
     });
     expect(result.success).toBe(true);
   });

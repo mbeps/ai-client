@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameField, descriptionField } from "./shared-fields";
+import { nameField, descriptionField, contentField } from "./shared-fields";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.
@@ -12,7 +12,7 @@ import { nameField, descriptionField } from "./shared-fields";
 export const createAssistantSchema = z.object({
   name: nameField,
   description: descriptionField,
-  prompt: z.string().max(10000).optional(),
+  prompt: contentField.optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 
@@ -27,7 +27,7 @@ export const createAssistantSchema = z.object({
 export const updateAssistantSchema = z.object({
   name: nameField.optional(),
   description: descriptionField,
-  prompt: z.string().max(10000).optional(),
+  prompt: contentField.optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 

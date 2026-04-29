@@ -208,7 +208,7 @@ export function ChatUI({
       model = DEFAULT_MODEL,
       selectedServerIds: string[] = [],
       selectedTools: string[] = [],
-      selectedResources: string[] = [],
+      _selectedResources: string[] = [],
       selectedPromptId?: string,
     ) => {
       await streamResponse(
@@ -219,7 +219,6 @@ export function ChatUI({
         model,
         selectedServerIds,
         selectedTools,
-        selectedResources,
         selectedPromptId,
       );
     },
@@ -309,7 +308,6 @@ export function ChatUI({
       parentMsg.parentId,
       parentMsg.attachments,
       DEFAULT_MODEL,
-      [],
       [],
       [],
       promptId,

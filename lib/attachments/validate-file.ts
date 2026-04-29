@@ -9,6 +9,7 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "./constants";
+import { resolveMimeType } from "./resolve-mime-type";
 
 /**
  * Result object indicating whether file validation passed or failed with reason.
@@ -39,16 +40,7 @@ export function validateFile(
     };
   }
 
-  const resolvedType =
-    file.type ||
-    (file.name.toLowerCase().endsWith(".md") ? "text/markdown" : "") ||
-    (file.name.toLowerCase().endsWith(".xlsx")
-      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      : "") ||
-    (file.name.toLowerCase().endsWith(".xls")
-      ? "application/vnd.ms-excel"
-      : "") ||
-    (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "");
+  const resolvedType = resolveMimeType(file);
   const isImage = ALLOWED_IMAGE_TYPES.has(resolvedType);
   const isDocument = ALLOWED_DOCUMENT_TYPES.has(resolvedType);
   const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(resolvedType);

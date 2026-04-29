@@ -1,10 +1,7 @@
 import { renameKnowledgebase as renameKnowledgebaseAction } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import { EntitySet } from "../types";
 
-/**
- * Renames knowledge base in DB and updates store.
- * @param set - Store setter.
- */
+/** Renames knowledge base in DB and updates store. */
 export const renameKnowledgebaseDb =
   (set: EntitySet) => async (id: string, name: string) => {
     const updated = await renameKnowledgebaseAction(id, name);

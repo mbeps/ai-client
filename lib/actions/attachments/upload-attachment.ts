@@ -11,6 +11,7 @@ import {
   ALLOWED_SPREADSHEET_TYPES,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/lib/attachments/constants";
+import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 
 const ALLOWED_TYPES = new Set([
   "image/png",
@@ -68,18 +69,7 @@ export async function uploadAttachment(formData: FormData) {
     throw new Error("Forbidden");
   }
 
-  const lowerName = file.name.toLowerCase();
-  const mimeType =
-    file.type ||
-    (lowerName.endsWith(".md")
-      ? "text/markdown"
-      : lowerName.endsWith(".xlsx")
-        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        : lowerName.endsWith(".xls")
-          ? "application/vnd.ms-excel"
-          : lowerName.endsWith(".csv")
-            ? "text/csv"
-            : "");
+  const mimeType = resolveMimeType(file);
 
   if (!ALLOWED_TYPES.has(mimeType)) {
     throw new Error(`File type "${mimeType || "unknown"}" is not supported.`);

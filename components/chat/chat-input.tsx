@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import { MODELS } from "@/models";
 import { Model } from "@/types/model";
 import { PromptCommands } from "./prompt-commands";
 import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";
+import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 
 /**
  * Props for the ChatInput component.
@@ -120,12 +121,7 @@ export function ChatInput({
     handlePromptSelect,
   } = usePromptCommands(input, setInput, textareaRef);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [input]);
+  useAutoExpandingTextarea(textareaRef, [input]);
 
   const addFiles = useCallback(
     async (files: FileList | File[]) => {

@@ -77,7 +77,6 @@ export async function POST(req: Request) {
     model: requestedModel,
     selectedServerIds,
     selectedTools,
-    selectedResources,
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
@@ -360,22 +359,25 @@ export async function POST(req: Request) {
   }) as ModelMessage[];
 
   // Prepend system messages: project global prompt then assistant prompt
-  const systemMessages: ModelMessage[] = [];
+  const systemParts: string[] = [];
   if (projectRow?.globalPrompt?.trim()) {
-    systemMessages.push({ role: "system", content: projectRow.globalPrompt });
+    systemParts.push(projectRow.globalPrompt.trim());
   }
   if (assistantRow?.prompt?.trim()) {
-    systemMessages.push({ role: "system", content: assistantRow.prompt });
+    systemParts.push(assistantRow.prompt.trim());
   }
   if (bridge && bridge.files.length > 0) {
     const lines = bridge.files
       .map((f) => `- ${f.originalName}: ${f.localPath}`)
       .join("\n");
-    systemMessages.push({
-      role: "system",
-      content: `IMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
-    });
+    systemParts.push(
+      `## File Access\nIMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
+    );
   }
+  const systemMessages: ModelMessage[] =
+    systemParts.length > 0
+      ? [{ role: "system", content: systemParts.join("\n\n") }]
+      : [];
   const finalMessages: ModelMessage[] = [
     ...systemMessages,
     ...processedMessages,
@@ -388,6 +390,7 @@ export async function POST(req: Request) {
     messages: finalMessages,
     tools: hasMcpTools ? mcpTools : undefined,
     stopWhen: hasMcpTools ? stepCountIs(10) : undefined,
+    abortSignal: req.signal,
   });
 
   const assistantMessageId = uuidv4();
@@ -487,7 +490,6 @@ export async function POST(req: Request) {
           }
 
           controller.enqueue(encode({ type: "error", message, code }));
-          controller.close();
           return;
         }
 
@@ -495,7 +497,6 @@ export async function POST(req: Request) {
           controller.enqueue(
             encode({ type: "error", message: "No response from model" }),
           );
-          controller.close();
           return;
         }
 

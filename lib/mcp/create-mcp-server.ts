@@ -3,8 +3,12 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { createMcpServerSchema, type CreateMcpServer } from "@/schemas/mcp-server";
+import {
+  createMcpServerSchema,
+  type CreateMcpServer,
+} from "@/schemas/mcp-server";
 import type { McpServerRow } from "@/types/mcp-server-row";
+import { buildServerConfig } from "./build-server-config";
 
 /**
  * Creates a new MCP server configuration for the authenticated user.
@@ -25,26 +29,7 @@ export async function createMcpServer(
 
   const parsed = createMcpServerSchema.parse(data);
 
-  const values =
-    parsed.type === "stdio"
-      ? {
-          name: parsed.name,
-          type: parsed.type,
-          command: parsed.command,
-          args: parsed.args ?? null,
-          env: parsed.env ?? null,
-          url: null,
-          headers: null,
-        }
-      : {
-          name: parsed.name,
-          type: parsed.type,
-          url: parsed.url,
-          headers: parsed.headers ?? null,
-          command: null,
-          args: null,
-          env: null,
-        };
+  const values = buildServerConfig(parsed);
 
   const [created] = await db
     .insert(mcpServer)

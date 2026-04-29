@@ -26,8 +26,9 @@ export type McpServer = {
   command: string | null;
 
   /**
-   * Arguments passed to the command for stdio servers (e.g., "script.py --debug").
-   * Stored as a single string and split during execution. Null for http servers.
+   * Arguments passed to the command for stdio servers as a JSON array string
+   * (e.g., '["script.py", "--debug"]'). Parsed as a JSON array during execution.
+   * Null for http servers.
    */
   args: string | null;
 

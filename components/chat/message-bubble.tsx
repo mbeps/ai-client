@@ -2,120 +2,20 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/auth-client";
-import Image from "next/image";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
-import type { Attachment } from "@/types/attachment";
 import type { Message } from "@/types/message";
-import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import { ROUTES } from "@/lib/routes";
 import { MODELS } from "@/models";
-import {
-  Bot,
-  Command,
-  Download,
-  FileText,
-  FileSpreadsheet,
-  Save,
-  User,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { Bot, Command, User } from "lucide-react";
+import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ToolCallDisplay } from "./message/tool-call-display";
 import { ThinkingDisplay } from "./message/thinking-display";
 import { MessageActions } from "./message/message-actions";
-
-type ToolCall = {
-  toolCallId: string;
-  toolName: string;
-  args: unknown;
-};
-
-type ToolResult = {
-  toolCallId: string;
-  toolName: string;
-  result: unknown;
-};
-
-type ToolData = {
-  toolCalls: ToolCall[];
-  toolResults: ToolResult[];
-};
-
-/**
- * Extracts prompt ID and original user content from message metadata.
- * Used when a message was sent via a slash-command prompt to preserve
- * the intent for regeneration or editing workflows.
- *
- * @param metadata - Stringified JSON metadata object from message.
- * @returns Object with promptId and userContent, or null if format invalid.
- * @author Maruf Bepary
- */
-function parsePromptMeta(
-  metadata: string | null | undefined,
-): { promptId: string; userContent: string } | null {
-  if (!metadata) return null;
-  try {
-    const parsed = JSON.parse(metadata);
-    if (
-      typeof parsed.promptId === "string" &&
-      typeof parsed.userContent === "string"
-    ) {
-      return { promptId: parsed.promptId, userContent: parsed.userContent };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extracts tool calls and results from message metadata.
- * Parses the structured metadata to retrieve MCP tool invocations
- * and their responses for display in ToolCallDisplay component.
- *
- * @param metadata - Stringified JSON metadata with toolCalls and toolResults arrays.
- * @returns Object with toolCalls and toolResults arrays, or null if metadata invalid.
- * @author Maruf Bepary
- */
-function parseToolData(metadata: string | null | undefined): ToolData | null {
-  if (!metadata) return null;
-  try {
-    const parsed = JSON.parse(metadata);
-    if (Array.isArray(parsed.toolCalls) && parsed.toolCalls.length > 0) {
-      return {
-        toolCalls: parsed.toolCalls,
-        toolResults: Array.isArray(parsed.toolResults)
-          ? parsed.toolResults
-          : [],
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extracts model identifier from message metadata.
- * Allows MessageBubble to display which model generated the assistant response.
- *
- * @param metadata - Stringified JSON metadata with model field.
- * @returns Model value string (e.g., "gpt-4"), or null if not found.
- * @author Maruf Bepary
- */
-function parseModel(metadata: string | null | undefined): string | null {
-  if (!metadata) return null;
-  try {
-    const parsed = JSON.parse(metadata);
-    return typeof parsed.model === "string" ? parsed.model : null;
-  } catch {
-    return null;
-  }
-}
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { AttachmentGallery } from "./message/attachment-gallery";
+import { MessageEditForm } from "./message/message-edit-form";
 
 /**
  * Props for the MessageBubble component.
@@ -144,7 +44,6 @@ interface MessageBubbleProps {
   /** True while the model is actively streaming its reasoning. */
   isStreamingReasoning?: boolean;
   /** Callback to show the artifact associated with this message. */
-  /** Callback to show the artifact associated with this message. */
   onShowArtifact?: () => void;
 }
 
@@ -163,18 +62,6 @@ interface MessageBubbleProps {
  * @see ThinkingDisplay for streaming reasoning output.
  * @see MessageActions for edit/delete/regenerate UI.
  * @author Maruf Bepary
- * User messages are displayed as plain pre-wrapped text; assistant messages are
- * rendered via `MarkdownRenderer`. When a message has siblings (i.e. the parent
- * has multiple children due to edits), left/right navigation arrows are shown on
- * hover. Edit and delete actions are also revealed on hover.
- *
- * @param props.message - The message node to render.
- * @param props.onDelete - Invoked with the message ID when Delete is clicked.
- * @param props.onEdit - Invoked with the message ID and new content on edit.
- * @param props.siblings - Sibling messages for branch navigation arrows.
- * @param props.currentSiblingIndex - Position of this message among its siblings.
- * @param props.onNavigateBranch - Invoked with the target sibling ID on navigation.
- * @author Maruf Bepary
  */
 export function MessageBubble({
   message,
@@ -192,24 +79,23 @@ export function MessageBubble({
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
-  const toolData = useMemo(
-    () => (!isUser ? parseToolData(message.metadata) : null),
-    [isUser, message.metadata],
-  );
-  const promptMeta = useMemo(
-    () => (isUser ? parsePromptMeta(message.metadata) : null),
-    [isUser, message.metadata],
-  );
+  const {
+    promptMeta: rawPromptMeta,
+    toolData: rawToolData,
+    modelId: parsedModelId,
+  } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
+  const promptMeta = isUser ? rawPromptMeta : null;
+  const toolData = isUser ? null : rawToolData;
   const promptEntry = promptMeta
     ? prompts.find((p) => p.id === promptMeta.promptId)
     : null;
 
   const modelName = useMemo(() => {
-    if (isUser) return null;
-    const modelId = parseModel(message.metadata);
-    if (!modelId) return null;
-    return MODELS.find((m) => m.value === modelId)?.label || modelId;
-  }, [isUser, message.metadata]);
+    if (isUser || !parsedModelId) return null;
+    return (
+      MODELS.find((m) => m.value === parsedModelId)?.label || parsedModelId
+    );
+  }, [isUser, parsedModelId]);
 
   const hasArtifact = useMemo(() => {
     if (!toolData) return false;
@@ -218,64 +104,10 @@ export function MessageBubble({
     );
   }, [toolData]);
 
-  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(
     promptMeta ? promptMeta.userContent : message.content,
   );
-  const editRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (isEditing && editRef.current) {
-      editRef.current.focus();
-      editRef.current.setSelectionRange(
-        editRef.current.value.length,
-        editRef.current.value.length,
-      );
-    }
-  }, [isEditing]);
-
-  useEffect(() => {
-    if (editRef.current) {
-      editRef.current.style.height = "auto";
-      editRef.current.style.height = `${Math.min(editRef.current.scrollHeight, 300)}px`;
-    }
-  }, [editValue, isEditing]);
-
-  useEffect(() => {
-    if (!message.attachments || message.attachments.length === 0) return;
-
-    const unresolvedAtts = message.attachments.filter(
-      (att) => att.key && !att.dataUrl && !att.url,
-    );
-    if (unresolvedAtts.length === 0) return;
-
-    let cancelled = false;
-    Promise.all(
-      unresolvedAtts.map(async (att) => {
-        try {
-          const data = await getAttachmentUrl(att.id);
-          return { id: att.id, url: data.url as string };
-        } catch {
-          // ignore
-        }
-        return null;
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-      const urls: Record<string, string> = {};
-      for (const r of results) {
-        if (r) urls[r.id] = r.url;
-      }
-      if (Object.keys(urls).length > 0) {
-        setResolvedUrls(urls);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [message.attachments]);
 
   return (
     <div
@@ -321,61 +153,7 @@ export function MessageBubble({
           )}
 
           {isUser && message.attachments && message.attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {message.attachments.map((att) => {
-                const displayUrl =
-                  att.url || att.dataUrl || resolvedUrls[att.id];
-
-                if (att.type === "image") {
-                  return displayUrl ? (
-                    <div key={att.id} className="relative group/att">
-                      <Image
-                        src={displayUrl}
-                        alt={att.name}
-                        width={256}
-                        height={192}
-                        className="max-h-48 max-w-64 rounded-lg border object-cover"
-                        unoptimized
-                      />
-                      <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white opacity-0 group-hover/att:opacity-100 transition-opacity">
-                        {att.name}
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      key={att.id}
-                      className="h-48 w-64 rounded-lg border bg-muted/50 animate-pulse"
-                    />
-                  );
-                }
-
-                const AttIcon =
-                  att.type === "spreadsheet" ? FileSpreadsheet : FileText;
-                return displayUrl ? (
-                  <a
-                    key={att.id}
-                    href={displayUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs hover:bg-muted transition-colors"
-                  >
-                    <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="max-w-[160px] truncate">{att.name}</span>
-                    <Download className="h-3 w-3 text-muted-foreground shrink-0" />
-                  </a>
-                ) : (
-                  <div
-                    key={att.id}
-                    className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs animate-pulse"
-                  >
-                    <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="max-w-[160px] truncate text-muted-foreground">
-                      {att.name}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <AttachmentGallery attachments={message.attachments} />
           )}
           {isUser ? (
             <div>
@@ -389,39 +167,20 @@ export function MessageBubble({
                 </Link>
               )}
               {isEditing ? (
-                <div className="space-y-3">
-                  <Textarea
-                    ref={editRef}
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="min-h-[100px] bg-background/50"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        onEdit(message.id, editValue);
-                        setIsEditing(false);
-                      }}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditValue(
-                          promptMeta ? promptMeta.userContent : message.content,
-                        );
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
+                <MessageEditForm
+                  value={editValue}
+                  onChange={setEditValue}
+                  onSave={() => {
+                    onEdit(message.id, editValue);
+                    setIsEditing(false);
+                  }}
+                  onCancel={() => {
+                    setIsEditing(false);
+                    setEditValue(
+                      promptMeta ? promptMeta.userContent : message.content,
+                    );
+                  }}
+                />
               ) : (
                 <div className="whitespace-pre-wrap">
                   {promptMeta ? promptMeta.userContent : message.content}
