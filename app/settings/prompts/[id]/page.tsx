@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
+import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
 import {
   Card,
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Trash2, Command, Save } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useState, useEffect } from "react";
@@ -163,7 +164,9 @@ export default function PromptDetailPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-[300px] max-h-[500px] overflow-y-auto"
-                placeholder="The instructions associated with this shortcut."
+                placeholder={
+                  PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
+                }
               />
             </div>
           </CardContent>

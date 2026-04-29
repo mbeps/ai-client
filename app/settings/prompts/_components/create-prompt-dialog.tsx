@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PROMPTS } from "@/constants/prompts";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
@@ -83,7 +84,8 @@ export function CreatePromptDialog({
         <DialogHeader>
           <DialogTitle>New Prompt</DialogTitle>
           <DialogDescription>
-            Create a custom prompt shortcut to quickly insert text into your chats.
+            Create a custom prompt shortcut to quickly insert text into your
+            chats.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -121,8 +123,8 @@ export function CreatePromptDialog({
                       </div>
                     </FormControl>
                     <FormDescription>
-                      The trigger command. Only letters, numbers, <code>.</code>,{" "}
-                      <code>-</code>, and <code>_</code> allowed.
+                      The trigger command. Only letters, numbers, <code>.</code>
+                      , <code>-</code>, and <code>_</code> allowed.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -137,7 +139,9 @@ export function CreatePromptDialog({
                   <FormLabel>Prompt Content</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="You are an expert at..."
+                      placeholder={
+                        PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_CREATE
+                      }
                       className="min-h-[200px] max-h-[400px] overflow-y-auto"
                       {...field}
                     />

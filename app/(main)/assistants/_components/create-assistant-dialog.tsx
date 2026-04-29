@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PROMPTS } from "@/constants/prompts";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
@@ -76,7 +77,8 @@ export function CreateAssistantDialog({
         <DialogHeader>
           <DialogTitle>Create Assistant</DialogTitle>
           <DialogDescription>
-            Configure a new AI assistant with a custom persona and system prompt.
+            Configure a new AI assistant with a custom persona and system
+            prompt.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -118,7 +120,10 @@ export function CreateAssistantDialog({
                   <FormLabel>System Prompt (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., You are a helpful code reviewer..."
+                      placeholder={
+                        PROMPTS.UI.EXAMPLES
+                          .ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_CREATE
+                      }
                       rows={4}
                       className="max-h-48"
                       {...field}

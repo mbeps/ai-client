@@ -11,20 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Trash2 } from "lucide-react";
 
 /**
@@ -48,6 +38,7 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
   const router = useRouter();
   const removeMcpServer = useAppStore((s) => s.removeMcpServer);
   const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
@@ -77,37 +68,25 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
             </p>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                disabled={deleting}
-                className="shrink-0"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Server
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete the <strong>MCP server</strong> and
-                  remove all its tool bindings. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete Permanently
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              className="shrink-0"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Server
+            </Button>
+            <DeleteConfirmDialog
+              isOpen={deleteOpen}
+              onClose={() => setDeleteOpen(false)}
+              onConfirm={handleDelete}
+              title="Are you sure?"
+              description="This will permanently delete the MCP server and remove all its tool bindings. This action cannot be undone."
+              loading={deleting}
+            />
+          </>
         </div>
       </div>
     </div>

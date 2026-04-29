@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { insertMessage, removeMessageSubtree } from "@/lib/chat/message-tree";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
@@ -108,14 +109,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         attachments: attachments ?? [],
       };
 
-      const updatedMessages = { ...chat.messages, [newMessageId]: newMessage };
-
-      if (parentId && updatedMessages[parentId]) {
-        updatedMessages[parentId] = {
-          ...updatedMessages[parentId],
-          childrenIds: [...updatedMessages[parentId].childrenIds, newMessageId],
-        };
-      }
+      const updatedMessages = insertMessage(chat.messages, newMessage);
 
       return {
         chats: {
@@ -136,28 +130,10 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       const chat = state.chats[chatId];
       if (!chat) return state;
 
-      const updatedMessages = { ...chat.messages };
+      const { updatedMessages, parentId: deletedParentId } =
+        removeMessageSubtree(chat.messages, messageId);
 
-      const deleteRecursive = (id: string) => {
-        const msg = updatedMessages[id];
-        if (!msg) return;
-        msg.childrenIds.forEach(deleteRecursive);
-        delete updatedMessages[id];
-      };
-
-      const msg = updatedMessages[messageId];
-      if (msg && msg.parentId && updatedMessages[msg.parentId]) {
-        updatedMessages[msg.parentId] = {
-          ...updatedMessages[msg.parentId],
-          childrenIds: updatedMessages[msg.parentId].childrenIds.filter(
-            (id) => id !== messageId,
-          ),
-        };
-      }
-
-      deleteRecursive(messageId);
-
-      let newLeaf = msg?.parentId || null;
+      let newLeaf = deletedParentId;
       if (newLeaf) {
         newLeaf = getDeepestLeaf(updatedMessages, newLeaf);
       }

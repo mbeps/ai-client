@@ -11,9 +11,10 @@ import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
-import { DEFAULT_MODEL } from "@/models";
+import { DEFAULT_MODEL } from "@/constants/models";
 import { chatRequestSchema, manageArtifactSchema } from "@/schemas/chat";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
+import { PROMPTS } from "@/constants/prompts";
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
@@ -77,7 +78,6 @@ export async function POST(req: Request) {
     model: requestedModel,
     selectedServerIds,
     selectedTools,
-    selectedResources,
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
@@ -229,32 +229,19 @@ export async function POST(req: Request) {
 
   if (isArtifactToolSelected) {
     mcpTools["manage_artifact"] = tool({
-      description:
-        "Manage and display an interactive artifact to the user. Use this when the user asks for a document, email, text, spreadsheet, HTML UI, or Mermaid diagram.\n\n" +
-        "WHAT TO DO:\n" +
-        "- Set the type to strictly one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'.\n" +
-        "- Use 'markdown' for emails, letters, code snippets, or general text.\n" +
-        "- Place the entire requested content inside the tool's 'content' parameter.\n" +
-        "- After calling the tool, respond to the user with a brief 1-2 sentence summary saying the artifact was created.\n\n" +
-        "WHAT NOT TO DO:\n" +
-        "- NEVER repeat the content of the artifact in your main chat response.\n" +
-        "- Do not provide a preview or copy of the content outside the artifact.\n" +
-        "- DO NOT use this tool to read an artifact. Past artifacts (including user edits) are already fully visible in your message history.\n\n" +
-        "SUCCESS CRITERIA:\n" +
-        "- The user sees the rich content exclusively in the artifact panel, and your chat message only contains a short confirmation.",
+      description: PROMPTS.TOOLS.MANAGE_ARTIFACT.DESCRIPTION,
       parameters: manageArtifactSchema,
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async (args: any) => {
         const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
         const normalizedArgs = {
           type: VALID_TYPES.includes(args.type) ? args.type : "markdown",
-          title: args.title || "Generated Artifact",
+          title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
           content: args.content || args.text || "",
         };
         return {
           success: true,
-          message:
-            "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
+          message: PROMPTS.TOOLS.MANAGE_ARTIFACT.SUCCESS_MESSAGE,
           artifact: normalizedArgs,
         };
       },
@@ -360,22 +347,25 @@ export async function POST(req: Request) {
   }) as ModelMessage[];
 
   // Prepend system messages: project global prompt then assistant prompt
-  const systemMessages: ModelMessage[] = [];
+  const systemParts: string[] = [];
   if (projectRow?.globalPrompt?.trim()) {
-    systemMessages.push({ role: "system", content: projectRow.globalPrompt });
+    systemParts.push(projectRow.globalPrompt.trim());
   }
   if (assistantRow?.prompt?.trim()) {
-    systemMessages.push({ role: "system", content: assistantRow.prompt });
+    systemParts.push(assistantRow.prompt.trim());
   }
   if (bridge && bridge.files.length > 0) {
     const lines = bridge.files
       .map((f) => `- ${f.originalName}: ${f.localPath}`)
       .join("\n");
-    systemMessages.push({
-      role: "system",
-      content: `IMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
-    });
+    systemParts.push(
+      PROMPTS.SYSTEM.FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE(lines),
+    );
   }
+  const systemMessages: ModelMessage[] =
+    systemParts.length > 0
+      ? [{ role: "system", content: systemParts.join("\n\n") }]
+      : [];
   const finalMessages: ModelMessage[] = [
     ...systemMessages,
     ...processedMessages,
@@ -388,6 +378,7 @@ export async function POST(req: Request) {
     messages: finalMessages,
     tools: hasMcpTools ? mcpTools : undefined,
     stopWhen: hasMcpTools ? stepCountIs(10) : undefined,
+    abortSignal: req.signal,
   });
 
   const assistantMessageId = uuidv4();
@@ -487,7 +478,6 @@ export async function POST(req: Request) {
           }
 
           controller.enqueue(encode({ type: "error", message, code }));
-          controller.close();
           return;
         }
 
@@ -495,7 +485,6 @@ export async function POST(req: Request) {
           controller.enqueue(
             encode({ type: "error", message: "No response from model" }),
           );
-          controller.close();
           return;
         }
 

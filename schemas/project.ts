@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameField, descriptionField } from "./shared-fields";
+import { nameField, descriptionField, contentField } from "./shared-fields";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.
@@ -12,7 +12,7 @@ import { nameField, descriptionField } from "./shared-fields";
 export const createProjectSchema = z.object({
   name: nameField,
   description: descriptionField,
-  globalPrompt: z.string().max(10000).optional(),
+  globalPrompt: contentField.optional(),
 });
 
 /**
@@ -26,7 +26,7 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   name: nameField.optional(),
   description: descriptionField,
-  globalPrompt: z.string().max(10000).optional(),
+  globalPrompt: contentField.optional(),
 });
 
 /**

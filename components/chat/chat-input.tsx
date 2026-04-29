@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   Image as ImageIcon,
   Command,
 } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import {
   Popover,
   PopoverContent,
@@ -37,10 +37,11 @@ import type { McpServer } from "@/types/mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
-import { MODELS } from "@/models";
+import { MODELS } from "@/constants/models";
 import { Model } from "@/types/model";
 import { PromptCommands } from "./prompt-commands";
 import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";
+import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 
 /**
  * Props for the ChatInput component.
@@ -120,12 +121,7 @@ export function ChatInput({
     handlePromptSelect,
   } = usePromptCommands(input, setInput, textareaRef);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [input]);
+  useAutoExpandingTextarea(textareaRef, [input]);
 
   const addFiles = useCallback(
     async (files: FileList | File[]) => {

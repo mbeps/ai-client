@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Creates new chats and navigates to the chat detail page.

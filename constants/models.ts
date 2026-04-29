@@ -1,4 +1,4 @@
-import { Model } from "./types/model";
+import { Model } from "../types/model";
 
 /**
  * Central store for all the models that are accessible to the app.

@@ -2,7 +2,7 @@
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
@@ -60,7 +60,9 @@ export function AuthenticatedLayout({
           </div>
           {headerExtra}
         </header>
-        <div className={`flex flex-col flex-1 min-h-0 ${contentClassName || "overflow-hidden"}`}>
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${contentClassName || "overflow-hidden"}`}
+        >
           {children}
         </div>
       </main>

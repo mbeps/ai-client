@@ -50,3 +50,4 @@ docs/**
 scripts/hash-password.js
 reports/**
 **.xlsx
+graphify-out/**

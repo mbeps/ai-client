@@ -1,30 +1,40 @@
 import { StateCreator } from "zustand";
 import type { AppState } from "@/types/app-state";
-import { toggleProjectPin } from "./entity/projects/toggle-project-pin";
-import { renameProjectDb } from "./entity/projects/rename-project-db";
-import { loadProjectRows } from "./entity/projects/load-project-rows";
-import { loadProjects } from "./entity/projects/load-projects";
-import { createProjectDb } from "./entity/projects/create-project-db";
-import { updateProjectDb } from "./entity/projects/update-project-db";
-import { deleteProjectDb } from "./entity/projects/delete-project-db";
-import { toggleProjectPinDb } from "./entity/projects/toggle-project-pin-db";
-import { renameAssistantDb } from "./entity/assistants/rename-assistant-db";
-import { loadAssistantRows } from "./entity/assistants/load-assistant-rows";
-import { loadAssistants } from "./entity/assistants/load-assistants";
-import { createAssistantDb } from "./entity/assistants/create-assistant-db";
-import { updateAssistantDb } from "./entity/assistants/update-assistant-db";
-import { deleteAssistantDb } from "./entity/assistants/delete-assistant-db";
-import { loadPrompts } from "./entity/prompts/load-prompts";
-import { createPromptDb } from "./entity/prompts/create-prompt-db";
-import { updatePromptDb } from "./entity/prompts/update-prompt-db";
-import { deletePromptDb } from "./entity/prompts/delete-prompt-db";
-import { renameKnowledgebaseDb } from "./entity/knowledgebases/rename-knowledgebase-db";
-import { loadMcpServers } from "./entity/mcp-servers/load-mcp-servers";
-import { addMcpServer } from "./entity/mcp-servers/add-mcp-server";
-import { removeMcpServer } from "./entity/mcp-servers/remove-mcp-server";
-import { renameMcpServer } from "./entity/mcp-servers/rename-mcp-server";
-import { toggleMcpServer } from "./entity/mcp-servers/toggle-mcp-server";
-import { updateMcpServer } from "./entity/mcp-servers/update-mcp-server";
+import {
+  toggleProjectPin,
+  loadProjectRows,
+} from "./entity/projects/project-actions";
+import {
+  loadProjects,
+  createProjectDb,
+  updateProjectDb,
+  deleteProjectDb,
+  renameProjectDb,
+  toggleProjectPinDb,
+} from "./entity/projects/project-db-actions";
+import { loadAssistantRows } from "./entity/assistants/assistant-actions";
+import {
+  loadAssistants,
+  createAssistantDb,
+  updateAssistantDb,
+  deleteAssistantDb,
+  renameAssistantDb,
+} from "./entity/assistants/assistant-db-actions";
+import {
+  loadPrompts,
+  createPromptDb,
+  updatePromptDb,
+  deletePromptDb,
+} from "./entity/prompts/prompt-db-actions";
+import { renameKnowledgebaseDb } from "./entity/knowledgebases/knowledgebase-db-actions";
+import {
+  loadMcpServers,
+  addMcpServer,
+  removeMcpServer,
+  renameMcpServer,
+  toggleMcpServer,
+  updateMcpServer,
+} from "./entity/mcp-servers/mcp-server-db-actions";
 
 export type EntitySlice = Pick<
   AppState,
@@ -100,4 +110,3 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   toggleMcpServer: toggleMcpServer(set),
   updateMcpServer: updateMcpServer(set),
 });
-

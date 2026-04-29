@@ -5,7 +5,7 @@ import {
   twoFactorClient,
 } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
-import { ROUTES } from "../routes";
+import { ROUTES } from "../../constants/routes";
 
 /**
  * Better Auth React client configured with passkey, two-factor, and field-inference plugins.

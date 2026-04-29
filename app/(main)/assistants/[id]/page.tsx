@@ -15,9 +15,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { PROMPTS } from "@/constants/prompts";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
 import {
   Bot,
@@ -214,7 +215,9 @@ export default function AssistantPage() {
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={8}
                 className="max-h-64"
-                placeholder="e.g., You are a friendly helpful assistant."
+                placeholder={
+                  PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
+                }
               />
             </CardContent>
             <CardFooter>

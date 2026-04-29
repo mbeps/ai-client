@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { FolderOpen, Pin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/constants/routes";
 import type { Project } from "@/types/project";
 import { ProjectOptions } from "./project-options";
 

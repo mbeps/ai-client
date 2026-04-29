@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROMPTS } from "@/constants/prompts";
 
 /**
  * Validates a message object for persistence to the database.
@@ -136,7 +137,6 @@ export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).max(500),
   selectedServerIds: z.array(z.string()).max(20).optional(),
   selectedTools: z.array(z.string()).max(100).optional(),
-  selectedResources: z.array(z.string()).max(100).optional(),
 });
 
 /**
@@ -144,15 +144,12 @@ export const chatRequestSchema = z.object({
  * Ensures the AI provides a valid type, title, and content for the artifact panel.
  */
 export const manageArtifactSchema = z.object({
-  type: z
+  type: z.string().describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
+  title: z
     .string()
-    .describe(
-      "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
-    ),
-  title: z.string().optional().describe("The title of the artifact"),
+    .optional()
+    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TITLE_DESCRIPTION),
   content: z
     .string()
-    .describe(
-      "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
-    ),
+    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.CONTENT_DESCRIPTION),
 });

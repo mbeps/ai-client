@@ -97,3 +97,14 @@ export const sixDigitCodeField = (label: string = "Code") =>
     .string()
     .length(6, `${label} must be exactly 6 digits`)
     .regex(/^\d{6}$/, `${label} must only contain digits`);
+
+/**
+ * Content field validator for long-form text (prompts, system messages, etc.).
+ * Enforces max 10,000 characters. Use `.optional()` at call sites that allow blank content,
+ * or chain `.min(1, "...")` where content is required.
+ *
+ * @author Maruf Bepary
+ */
+export const contentField = z
+  .string()
+  .max(10000, "Content must be less than 10,000 characters");

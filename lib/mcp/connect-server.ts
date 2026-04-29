@@ -16,22 +16,29 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
  * @see {@link build-transport.ts} for transport creation
  * @see {@link timeout-utils.ts} for timeout enforcement
  */
-export async function connectServer(server: McpServerConfig): Promise<McpConnection> {
+export async function connectServer(
+  server: McpServerConfig,
+): Promise<McpConnection> {
   const transport = buildTransport(server);
   const mcpClient = await withTimeout(
     createMCPClient({ transport }),
     CONNECTION_TIMEOUT_MS,
     server.name,
   );
-  const tools = await withTimeout(
-    mcpClient.tools(),
-    CONNECTION_TIMEOUT_MS,
-    server.name,
-  );
-  return {
-    serverId: server.id,
-    serverName: server.name,
-    tools,
-    close: () => mcpClient.close(),
-  };
+  try {
+    const tools = await withTimeout(
+      mcpClient.tools(),
+      CONNECTION_TIMEOUT_MS,
+      server.name,
+    );
+    return {
+      serverId: server.id,
+      serverName: server.name,
+      tools,
+      close: () => mcpClient.close(),
+    };
+  } catch (err) {
+    await mcpClient.close();
+    throw err;
+  }
 }
