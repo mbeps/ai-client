@@ -7,6 +7,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarGroupAction,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -27,6 +28,7 @@ import {
   ChevronsUpDown,
   LogOut,
   User,
+  ChevronRight,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/lib/store";
@@ -45,6 +47,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 import { ChatActionMenu } from "./chat-action-menu";
 
@@ -68,6 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
   const createNewChat = useCreateChat();
+  const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
   const recentChats = Object.values(chats)
     .filter((chat) => !chat.projectId)
@@ -152,24 +156,37 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               Recent Chats
             </Link>
           </SidebarGroupLabel>
-          <SidebarMenu>
-            {recentChats.map((chat) => {
-              const href = chat.projectId
-                ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
-                : ROUTES.CHATS.detail(chat.id);
-              return (
-                <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton asChild tooltip={chat.title}>
-                    <Link href={href}>
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="truncate">{chat.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  <ChatActionMenu chat={chat} />
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
+          <SidebarGroupAction
+            onClick={() => setIsChatsCollapsed(!isChatsCollapsed)}
+            title={isChatsCollapsed ? "Expand" : "Collapse"}
+          >
+            <ChevronRight
+              className={cn(
+                "transition-transform duration-200",
+                !isChatsCollapsed && "rotate-90"
+              )}
+            />
+          </SidebarGroupAction>
+          {!isChatsCollapsed && (
+            <SidebarMenu>
+              {recentChats.map((chat) => {
+                const href = chat.projectId
+                  ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
+                  : ROUTES.CHATS.detail(chat.id);
+                return (
+                  <SidebarMenuItem key={chat.id}>
+                    <SidebarMenuButton asChild tooltip={chat.title}>
+                      <Link href={href}>
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="truncate">{chat.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    <ChatActionMenu chat={chat} />
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          )}
         </SidebarGroup>
       </SidebarContent>
 
