@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
 import {
@@ -89,54 +90,47 @@ export default function McpServerPage() {
         }
       />
 
-      <Tabs defaultValue="tools" className="w-full">
-        <TabsList className="mb-4 h-auto w-full flex-wrap sm:flex-nowrap">
-          <TabsTrigger
-            value="tools"
-            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
-          >
-            <Wrench className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
-            Tools
-          </TabsTrigger>
-          <TabsTrigger
-            value="resources"
-            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
-          >
-            <FileText className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
-            Resources
-          </TabsTrigger>
-          <TabsTrigger
-            value="config"
-            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
-          >
-            <Settings className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
-            Configuration
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="flex-col md:flex-row h-auto py-2 md:py-1 whitespace-normal md:whitespace-nowrap"
-          >
-            <Shield className="mr-0 md:mr-2 mb-1 md:mb-0 h-4 w-4" />
-            Danger Zone
-          </TabsTrigger>
-        </TabsList>
+      <SidebarTabs defaultValue="tools" className="w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="tools">
+            <Wrench className="mr-2 h-4 w-4" />
+            <span>Tools</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="resources">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>Resources</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="config">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Configuration</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="settings">
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Danger Zone</span>
+          </SidebarTabsTrigger>
+        </SidebarTabsList>
 
-        <TabsContent value="tools">
+        <SidebarTabsContent value="tools">
+
           <ToolList server={server} />
-        </TabsContent>
+        </SidebarTabsContent>
 
-        <TabsContent value="resources">
+        <SidebarTabsContent value="resources">
+
           <ResourceList server={server} />
-        </TabsContent>
+        </SidebarTabsContent>
 
-        <TabsContent value="config">
+        <SidebarTabsContent value="config">
+
           <EditServerForm server={server} />
-        </TabsContent>
+        </SidebarTabsContent>
 
-        <TabsContent value="settings">
+        <SidebarTabsContent value="settings">
+
           <ServerSettings serverId={server.id} />
-        </TabsContent>
-      </Tabs>
+        </SidebarTabsContent>
+      </SidebarTabs>
+
     </div>
   );
 }

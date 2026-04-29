@@ -12,7 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { PROMPTS } from "@/constants/prompts";
@@ -156,25 +157,20 @@ export default function AssistantPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="mb-4 h-auto w-full flex-wrap md:w-fit">
-          <TabsTrigger
-            value="chats"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <MessageSquare className="size-4" />
+      <SidebarTabs defaultValue="settings" className="w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="chats">
+            <MessageSquare className="mr-2 h-4 w-4" />
             <span>Chats</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <Settings className="size-4" />
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="settings">
+            <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
-          </TabsTrigger>
-        </TabsList>
+          </SidebarTabsTrigger>
+        </SidebarTabsList>
 
-        <TabsContent value="chats" className="space-y-4">
+        <SidebarTabsContent value="chats" className="space-y-4">
+
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -199,9 +195,10 @@ export default function AssistantPage() {
               />
             )}
           </div>
-        </TabsContent>
+        </SidebarTabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
+        <SidebarTabsContent value="settings" className="space-y-6">
+
           <Card>
             <CardHeader>
               <CardTitle>System Prompt</CardTitle>
@@ -290,8 +287,9 @@ export default function AssistantPage() {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </SidebarTabsContent>
+      </SidebarTabs>
+
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
