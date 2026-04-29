@@ -4,6 +4,8 @@ import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+
 import {
   Card,
   CardContent,
@@ -24,7 +26,11 @@ import {
   Save,
   Trash2,
   Search,
+  FileText,
+  Shield,
 } from "lucide-react";
+
+
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
@@ -145,32 +151,34 @@ export default function ProjectPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="chats" className="w-full">
-        <TabsList className="mb-4 h-auto w-full flex-wrap md:w-fit">
-          <TabsTrigger
-            value="chats"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <MessageSquare className="size-4" />
+      <SidebarTabs defaultValue="chats" className="w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="chats">
+            <MessageSquare className="mr-2 h-4 w-4" />
             <span>Chats</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="knowledge"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <Library className="size-4" />
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="knowledge">
+            <Library className="mr-2 h-4 w-4" />
             <span>Knowledge</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="flex h-auto flex-1 flex-col gap-1.5 px-2 py-2 whitespace-normal text-center md:flex-row md:py-1.5 md:whitespace-nowrap md:px-3"
-          >
-            <Settings className="size-4" />
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="prompt">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>Prompt</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="settings">
+            <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
-          </TabsTrigger>
-        </TabsList>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="danger">
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Danger Zone</span>
+          </SidebarTabsTrigger>
 
-        <TabsContent value="chats" className="space-y-4">
+
+        </SidebarTabsList>
+
+        <SidebarTabsContent value="chats" className="space-y-4">
+
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -181,7 +189,7 @@ export default function ProjectPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredChats.map((chat) => (
               <ChatCard key={chat.id} chat={chat} />
             ))}
@@ -195,66 +203,62 @@ export default function ProjectPage() {
               />
             )}
           </div>
-        </TabsContent>
+        </SidebarTabsContent>
 
-        <TabsContent value="knowledge">
-          <Card>
-            <CardHeader>
-              <CardTitle>Knowledge</CardTitle>
-              <CardDescription>
-                Attach knowledge bases to provide context to the AI in this
-                project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Knowledge base support coming soon.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Global Prompt</CardTitle>
-              <CardDescription>
-                Instructions injected as system prompts for all new chats in
-                this project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={globalPrompt}
-                onChange={(e) => setGlobalPrompt(e.target.value)}
-                rows={8}
-                placeholder={
-                  PROMPTS.UI.EXAMPLES.PROJECT_GLOBAL_PROMPT_PLACEHOLDER_EDIT
-                }
-              />
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Prompt
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+        <SidebarTabsContent value="knowledge" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Knowledge</h3>
+            <p className="text-sm text-muted-foreground">
+              Attach knowledge bases to provide context to the AI in this
+              project.
+            </p>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Knowledge base support coming soon.
+          </p>
+        </SidebarTabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Details</CardTitle>
-              <CardDescription>
+
+        <SidebarTabsContent value="prompt" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Global Prompt</h3>
+            <p className="text-sm text-muted-foreground">
+              Instructions injected as system prompts for all new chats in
+              this project.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              value={globalPrompt}
+              onChange={(e) => setGlobalPrompt(e.target.value)}
+              rows={12}
+              placeholder={
+                PROMPTS.UI.EXAMPLES.PROJECT_GLOBAL_PROMPT_PLACEHOLDER_EDIT
+              }
+            />
+            <Button onClick={handleSaveSettings} disabled={savingSettings}>
+              {savingSettings ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Prompt
+                </>
+              )}
+            </Button>
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="settings" className="space-y-10">
+          <section className="space-y-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Project Details</h3>
+              <p className="text-sm text-muted-foreground">
                 Manage the project name and description.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </p>
+            </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Project Name</label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -264,10 +268,9 @@ export default function ProjectPage() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
                 />
               </div>
-            </CardContent>
-            <CardFooter>
               <Button onClick={handleSaveSettings} disabled={savingSettings}>
                 {savingSettings ? (
                   "Saving..."
@@ -278,9 +281,11 @@ export default function ProjectPage() {
                   </>
                 )}
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </section>
+        </SidebarTabsContent>
 
+        <SidebarTabsContent value="danger">
           <Card className="border-destructive/50">
             <CardHeader>
               <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -303,8 +308,11 @@ export default function ProjectPage() {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </SidebarTabsContent>
+
+
+      </SidebarTabs>
+
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
