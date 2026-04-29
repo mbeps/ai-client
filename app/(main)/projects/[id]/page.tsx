@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
+import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -227,7 +228,9 @@ export default function ProjectPage() {
                 value={globalPrompt}
                 onChange={(e) => setGlobalPrompt(e.target.value)}
                 rows={8}
-                placeholder="e.g., You are an expert code reviewer specializing in React."
+                placeholder={
+                  PROMPTS.UI.EXAMPLES.PROJECT_GLOBAL_PROMPT_PLACEHOLDER_EDIT
+                }
               />
             </CardContent>
             <CardFooter>

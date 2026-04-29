@@ -8,6 +8,7 @@ import { DEFAULT_MODEL } from "@/models";
 import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
 import type { ToolCallState } from "@/types/tool-call";
+import { PROMPTS } from "@/constants/prompts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -97,7 +98,10 @@ export function useStreamResponse(
       const prompts = useAppStore.getState().prompts;
       const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
       if (selectedPrompt) {
-        fullContent = selectedPrompt.content + "\n\n" + content;
+        fullContent =
+          selectedPrompt.content +
+          PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+          content;
         userMsgMetadata = JSON.stringify({
           promptId: selectedPromptId,
           userContent: content,

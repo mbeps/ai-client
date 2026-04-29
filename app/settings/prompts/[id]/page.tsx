@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
+import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
 import {
   Card,
@@ -163,7 +164,9 @@ export default function PromptDetailPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-[300px] max-h-[500px] overflow-y-auto"
-                placeholder="The instructions associated with this shortcut."
+                placeholder={
+                  PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
+                }
               />
             </div>
           </CardContent>
