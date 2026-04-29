@@ -14,6 +14,8 @@ export type ParsedMessageMetadata = {
   promptMeta: { promptId: string; userContent: string } | null;
   toolData: { toolCalls: ToolCall[]; toolResults: ToolResult[] } | null;
   modelId: string | null;
+  selectedServerIds: string[] | null;
+  selectedTools: string[] | null;
 };
 
 /**
@@ -32,6 +34,8 @@ export function parseMessageMetadata(
     promptMeta: null,
     toolData: null,
     modelId: null,
+    selectedServerIds: null,
+    selectedTools: null,
   };
   if (!metadata) return empty;
   try {
@@ -55,8 +59,26 @@ export function parseMessageMetadata(
 
     const modelId = typeof parsed.model === "string" ? parsed.model : null;
 
-    return { promptMeta, toolData, modelId };
+    const selectedServerIds = Array.isArray(parsed.selectedServerIds)
+      ? (parsed.selectedServerIds as string[])
+      : null;
+
+    const selectedTools = Array.isArray(parsed.selectedTools)
+      ? (parsed.selectedTools as string[])
+      : null;
+
+    return {
+      promptMeta,
+      toolData,
+      modelId,
+      selectedServerIds,
+      selectedTools,
+    };
   } catch {
-    return empty;
+    return {
+      ...empty,
+      selectedServerIds: null,
+      selectedTools: null,
+    };
   }
 }

@@ -11,6 +11,7 @@ import {
   Send,
   Square,
   X,
+  Save,
   FileText,
   FileSpreadsheet,
   Image as ImageIcon,
@@ -63,6 +64,9 @@ interface ChatInputProps {
     selectedPromptId?: string,
   ) => void;
 
+  /** Optional callback for cancellation (e.g., when used as an edit form). */
+  onCancel?: () => void;
+
   /** If true, input is disabled and send button shows stop icon. */
   isLoading?: boolean;
 
@@ -71,6 +75,30 @@ interface ChatInputProps {
 
   /** Available MCP servers for tool selection; if omitted, tools section is hidden. */
   servers?: McpServer[];
+
+  /** Initial content for the textarea. */
+  initialValue?: string;
+
+  /** Initial model ID to select. */
+  initialModelId?: string;
+
+  /** Initial attachments to display. */
+  initialAttachments?: Attachment[];
+
+  /** Initial MCP server IDs to select. */
+  initialSelectedServerIds?: string[];
+
+  /** Initial tool identifiers to select. */
+  initialSelectedTools?: string[];
+
+  /** Initial resource identifiers to select. */
+  initialSelectedResources?: string[];
+
+  /** Initial prompt ID if editing a slash-command message. */
+  initialSelectedPromptId?: string;
+
+  /** Custom label for the submit button (defaults to "Send" icon). */
+  submitLabel?: string;
 }
 
 /**
@@ -89,20 +117,37 @@ interface ChatInputProps {
  */
 export function ChatInput({
   onSend,
+  onCancel,
   isLoading,
   onStop,
   servers,
+  initialValue = "",
+  initialModelId,
+  initialAttachments = [],
+  initialSelectedServerIds = [],
+  initialSelectedTools = [],
+  initialSelectedResources = [],
+  initialSelectedPromptId,
+  submitLabel,
 }: ChatInputProps) {
-  const [input, setInput] = useState("");
-  const [model, setModel] = useState<Model>(MODELS[0]);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [input, setInput] = useState(initialValue);
+  const [model, setModel] = useState<Model>(
+    initialModelId
+      ? MODELS.find((m) => m.value === initialModelId) || MODELS[0]
+      : MODELS[0],
+  );
+  const [attachments, setAttachments] = useState<Attachment[]>(
+    initialAttachments,
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
-    new Set(),
+    new Set(initialSelectedServerIds),
   );
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(initialSelectedTools),
+  );
   const [selectedResources, setSelectedResources] = useState<Set<string>>(
-    new Set(),
+    new Set(initialSelectedResources),
   );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -119,7 +164,7 @@ export function ChatInput({
     handleInputChange,
     handleKeyDown: handleCommandKeyDown,
     handlePromptSelect,
-  } = usePromptCommands(input, setInput, textareaRef);
+  } = usePromptCommands(input, setInput, textareaRef, initialSelectedPromptId);
 
   useAutoExpandingTextarea(textareaRef, [input]);
 
@@ -472,6 +517,16 @@ export function ChatInput({
         </div>
 
         <div className="flex items-center gap-1">
+          {onCancel && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCancel}
+              className="h-7 w-7 rounded-full"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -497,7 +552,11 @@ export function ChatInput({
                 !input.trim() && attachments.length === 0 && !selectedPrompt
               }
             >
-              <Send className="h-3.5 w-3.5 ml-0.5" />
+              {submitLabel === "Save" ? (
+                <Save className="h-3.5 w-3.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5 ml-0.5" />
+              )}
             </Button>
           )}
         </div>

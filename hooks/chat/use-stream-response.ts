@@ -92,7 +92,11 @@ export function useStreamResponse(
     abortControllerRef.current = controller;
 
     let fullContent = content;
-    let userMsgMetadata: string | null = null;
+    const metadataObj: any = {
+      model,
+      selectedServerIds,
+      selectedTools,
+    };
 
     if (selectedPromptId) {
       const prompts = useAppStore.getState().prompts;
@@ -102,12 +106,12 @@ export function useStreamResponse(
           selectedPrompt.content +
           PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
           content;
-        userMsgMetadata = JSON.stringify({
-          promptId: selectedPromptId,
-          userContent: content,
-        });
+        metadataObj.promptId = selectedPromptId;
+        metadataObj.userContent = content;
       }
     }
+
+    const userMsgMetadata = JSON.stringify(metadataObj);
 
     addMessage(
       chatId,

@@ -5,6 +5,7 @@ import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import type { Message } from "@/types/message";
+import type { Attachment } from "@/types/attachment";
 import { ROUTES } from "@/constants/routes";
 import { MODELS } from "@/constants/models";
 import { Bot, Command, User } from "lucide-react";
@@ -15,7 +16,7 @@ import { ThinkingDisplay } from "./message/thinking-display";
 import { MessageActions } from "./message/message-actions";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { AttachmentGallery } from "./message/attachment-gallery";
-import { MessageEditForm } from "./message/message-edit-form";
+import { ChatInput } from "./chat-input";
 
 /**
  * Props for the MessageBubble component.
@@ -29,7 +30,15 @@ interface MessageBubbleProps {
   /** Callback to delete this message from the conversation tree. */
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */
-  onEdit: (id: string, newContent: string) => void;
+  onEdit: (
+    id: string,
+    newContent: string,
+    attachments: Attachment[],
+    model: string,
+    serverIds: string[],
+    toolIds: string[],
+    promptId?: string,
+  ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
   // Branching props
@@ -83,7 +92,10 @@ export function MessageBubble({
     promptMeta: rawPromptMeta,
     toolData: rawToolData,
     modelId: parsedModelId,
+    selectedServerIds: parsedServerIds,
+    selectedTools: parsedToolIds,
   } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
+  const mcpServers = useAppStore((state) => state.mcpServers);
   const promptMeta = isUser ? rawPromptMeta : null;
   const toolData = isUser ? null : rawToolData;
   const promptEntry = promptMeta
@@ -105,9 +117,6 @@ export function MessageBubble({
   }, [toolData]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(
-    promptMeta ? promptMeta.userContent : message.content,
-  );
 
   return (
     <div
@@ -167,19 +176,38 @@ export function MessageBubble({
                 </Link>
               )}
               {isEditing ? (
-                <MessageEditForm
-                  value={editValue}
-                  onChange={setEditValue}
-                  onSave={() => {
-                    onEdit(message.id, editValue);
-                    setIsEditing(false);
-                  }}
-                  onCancel={() => {
-                    setIsEditing(false);
-                    setEditValue(
-                      promptMeta ? promptMeta.userContent : message.content,
+                <ChatInput
+                  initialValue={
+                    promptMeta ? promptMeta.userContent : message.content
+                  }
+                  initialModelId={parsedModelId || undefined}
+                  initialAttachments={message.attachments || []}
+                  initialSelectedServerIds={parsedServerIds || []}
+                  initialSelectedTools={parsedToolIds || []}
+                  initialSelectedPromptId={promptMeta?.promptId}
+                  submitLabel="Save"
+                  onSend={(
+                    content,
+                    attachments,
+                    model,
+                    serverIds,
+                    toolIds,
+                    _resources,
+                    promptId,
+                  ) => {
+                    onEdit(
+                      message.id,
+                      content,
+                      attachments,
+                      model,
+                      serverIds,
+                      toolIds,
+                      promptId,
                     );
+                    setIsEditing(false);
                   }}
+                  onCancel={() => setIsEditing(false)}
+                  servers={mcpServers.filter((s) => s.enabled)}
                 />
               ) : (
                 <div className="whitespace-pre-wrap">
