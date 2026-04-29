@@ -11,7 +11,7 @@ import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
-import { DEFAULT_MODEL } from "@/models";
+import { DEFAULT_MODEL } from "@/constants/models";
 import { chatRequestSchema, manageArtifactSchema } from "@/schemas/chat";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { PROMPTS } from "@/constants/prompts";

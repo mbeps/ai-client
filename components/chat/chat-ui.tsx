@@ -13,7 +13,7 @@ import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
 
-import { DEFAULT_MODEL } from "@/models";
+import { DEFAULT_MODEL } from "@/constants/models";
 import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 

@@ -37,7 +37,7 @@ import type { McpServer } from "@/types/mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
-import { MODELS } from "@/models";
+import { MODELS } from "@/constants/models";
 import { Model } from "@/types/model";
 import { PromptCommands } from "./prompt-commands";
 import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";

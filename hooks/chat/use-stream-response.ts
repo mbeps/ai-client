@@ -4,7 +4,7 @@ import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
-import { DEFAULT_MODEL } from "@/models";
+import { DEFAULT_MODEL } from "@/constants/models";
 import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
 import type { ToolCallState } from "@/types/tool-call";
