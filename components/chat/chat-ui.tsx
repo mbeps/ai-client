@@ -210,6 +210,7 @@ export function ChatUI({
       selectedTools: string[] = [],
       _selectedResources: string[] = [],
       selectedPromptId?: string,
+      selectedAssistantId?: string,
     ) => {
       await streamResponse(
         uuidv4(),
@@ -220,6 +221,7 @@ export function ChatUI({
         selectedServerIds,
         selectedTools,
         selectedPromptId,
+        selectedAssistantId,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -284,6 +286,7 @@ export function ChatUI({
     serverIds: string[],
     toolIds: string[],
     promptId?: string,
+    assistantId?: string,
   ) => {
     const msg = chat.messages[id];
     if (!msg) return;
@@ -296,6 +299,7 @@ export function ChatUI({
       serverIds,
       toolIds,
       promptId,
+      assistantId,
     );
   };
 
@@ -307,6 +311,7 @@ export function ChatUI({
     if (!parentMsg) return;
 
     let promptId: string | undefined;
+    let assistantId: string | undefined;
     let userContent = parentMsg.content;
 
     if (parentMsg.metadata) {
@@ -315,6 +320,9 @@ export function ChatUI({
         if (meta.promptId) {
           promptId = meta.promptId;
           userContent = meta.userContent || parentMsg.content;
+        }
+        if (meta.assistantId) {
+          assistantId = meta.assistantId;
         }
       } catch {}
     }
@@ -328,6 +336,7 @@ export function ChatUI({
       [],
       [],
       promptId,
+      assistantId,
     );
   };
 
@@ -448,6 +457,7 @@ export function ChatUI({
               isLoading={isLoading}
               onStop={stopStream}
               servers={mcpServers.filter((s) => s.enabled)}
+              activeChatAssistantId={chat?.assistantId}
             />
           </div>
         </div>

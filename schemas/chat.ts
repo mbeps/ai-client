@@ -137,6 +137,7 @@ export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).max(500),
   selectedServerIds: z.array(z.string()).max(20).optional(),
   selectedTools: z.array(z.string()).max(100).optional(),
+  selectedAssistantId: z.string().uuid().optional(),
 });
 
 /**

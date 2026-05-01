@@ -16,7 +16,7 @@ interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
   /** The full list of items to display. */
   items: T[];
   /** Function to render each item as a card. */
-  renderCard: (item: T) => React.ReactNode;
+  renderCard?: (item: T) => React.ReactNode;
   /** Message to display when no items match the filters. */
   emptyStateMessage: string;
   /** Optional button or control placed in the header's action area. */
@@ -31,6 +31,8 @@ interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
   extraFilters?: React.ReactNode;
   /** Optional secondary filter function for custom logic. */
   customFilterFn?: (item: T) => boolean;
+  /** Optional custom list renderer to override the default grid. */
+  renderList?: (items: T[]) => React.ReactNode;
 }
 
 /**
@@ -52,6 +54,7 @@ export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
   filterFn,
   extraFilters,
   customFilterFn,
+  renderList,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
 
@@ -91,13 +94,19 @@ export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
         {extraFilters}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {sorted.length === 0 ? (
+      {sorted.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <EmptyState message={emptyStateMessage} />
-        ) : (
-          sorted.map((item) => <div key={item.id}>{renderCard(item)}</div>)
-        )}
-      </div>
+        </div>
+      ) : renderList ? (
+        renderList(sorted)
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {sorted.map((item) => (
+            <div key={item.id}>{renderCard?.(item)}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

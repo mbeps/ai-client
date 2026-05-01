@@ -85,6 +85,7 @@ export function useStreamResponse(
     selectedServerIds: string[] = [],
     selectedTools: string[] = [],
     selectedPromptId?: string,
+    selectedAssistantId?: string,
   ) => {
     setIsLoading(true);
     abortControllerRef.current?.abort();
@@ -97,6 +98,10 @@ export function useStreamResponse(
       selectedServerIds,
       selectedTools,
     };
+    
+    if (selectedAssistantId) {
+      metadataObj.assistantId = selectedAssistantId;
+    }
 
     if (selectedPromptId) {
       const prompts = useAppStore.getState().prompts;
@@ -205,6 +210,7 @@ export function useStreamResponse(
           model,
           selectedServerIds,
           selectedTools,
+          selectedAssistantId,
         }),
         signal: controller.signal,
       });

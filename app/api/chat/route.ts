@@ -78,6 +78,7 @@ export async function POST(req: Request) {
     model: requestedModel,
     selectedServerIds,
     selectedTools,
+    selectedAssistantId,
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
@@ -108,14 +109,16 @@ export async function POST(req: Request) {
         .then((rows) => rows[0] ?? null)
     : null;
 
-  // Fetch assistant prompt if this chat belongs to an assistant
-  const assistantRow = chatRow.assistantId
+  const effectiveAssistantId = chatRow.assistantId || selectedAssistantId;
+
+  // Fetch assistant prompt if this chat belongs to an assistant or an assistant was mentioned
+  const assistantRow = effectiveAssistantId
     ? await db
         .select({ prompt: assistant.prompt })
         .from(assistant)
         .where(
           and(
-            eq(assistant.id, chatRow.assistantId),
+            eq(assistant.id, effectiveAssistantId),
             eq(assistant.userId, session.user.id),
           ),
         )
