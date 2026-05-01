@@ -9,8 +9,12 @@ import { EntitySet } from "../types";
 
 /** Fetches all projects and loads them into store. */
 export const loadProjects = (set: EntitySet) => async () => {
-  const rows = await listProjectsAction();
-  set({ projects: rows.map(projectRowToStore) });
+  try {
+    const rows = await listProjectsAction();
+    set({ projects: rows.map(projectRowToStore) });
+  } catch (error) {
+    console.error("Failed to load projects:", error);
+  }
 };
 
 /** Creates project in DB and adds to store. Returns new project ID. */
@@ -26,7 +30,7 @@ export const updateProjectDb =
   (set: EntitySet) =>
   async (
     id: string,
-    data: { name?: string; description?: string; globalPrompt?: string },
+    data: { name?: string; description?: string; globalPrompt?: string; tools?: string[] },
   ) => {
     const row = await updateProjectAction(id, data);
     set((state) => ({

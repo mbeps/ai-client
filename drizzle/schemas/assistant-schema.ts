@@ -20,6 +20,7 @@ export const assistant = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     prompt: text("prompt"),
+    tools: text("tools").array(),
     avatar: text("avatar"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

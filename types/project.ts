@@ -31,6 +31,11 @@ export type Project = {
   globalPrompt: string;
 
   /**
+   * Array of MCP tool IDs enabled by default for this project.
+   */
+  tools: string[];
+
+  /**
    * Array of knowledge base IDs linked to this project.
    * Provides shared context for all chats within the workspace.
    */

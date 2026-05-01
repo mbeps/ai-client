@@ -32,7 +32,9 @@ import {
   Search,
   FileText,
   Shield,
+  Wrench,
 } from "lucide-react";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
 
 import { useParams, useRouter } from "next/navigation";
@@ -64,6 +66,8 @@ export default function AssistantPage() {
   const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
   const loadAssistants = useAppStore((state) => state.loadAssistants);
   const loadChats = useAppStore((state) => state.loadChats);
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const [loading, setLoading] = useState(assistants.length === 0);
   const [name, setName] = useState(assistant?.name ?? "");
@@ -73,6 +77,7 @@ export default function AssistantPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(assistant?.tools || []));
 
   const filteredChats = useMemo(() => {
     return chats
@@ -91,6 +96,9 @@ export default function AssistantPage() {
           .catch(() => {}),
       ]).finally(() => setLoading(false));
     }
+    if (mcpServers.length === 0) {
+      loadMcpServers().catch(() => {});
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -98,6 +106,7 @@ export default function AssistantPage() {
       setName(assistant.name);
       setDescription(assistant.description ?? "");
       setPrompt(assistant.prompt ?? "");
+      setSelectedTools(new Set(assistant.tools || []));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -119,10 +128,53 @@ export default function AssistantPage() {
 
   const handleNewChat = () => createNewChat("New Chat", undefined, assistantId);
 
+  const onToggleTool = (serverId: string, toolName: string) => {
+    const id = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onToggleResource = (serverId: string, uri: string) => {
+    const id = `${serverId}:resource:${uri}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+    if (select) {
+      setSelectedTools((prev) => {
+        const next = new Set(prev);
+        toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
+        resourceUris.forEach((u) => next.add(`${serverId}:resource:${u}`));
+        return next;
+      });
+    } else {
+      setSelectedTools((prev) => {
+        const next = new Set(prev);
+        toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
+        resourceUris.forEach((u) => next.delete(`${serverId}:resource:${u}`));
+        return next;
+      });
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateAssistantDb(assistantId, { name, description, prompt });
+      await updateAssistantDb(assistantId, { 
+        name, 
+        description, 
+        prompt,
+        tools: Array.from(selectedTools),
+      });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -174,6 +226,10 @@ export default function AssistantPage() {
           <SidebarTabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="tools">
+            <Wrench className="mr-2 h-4 w-4" />
+            <span>Tools</span>
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
             <Shield className="mr-2 h-4 w-4" />
@@ -274,6 +330,38 @@ export default function AssistantPage() {
               </Button>
             </div>
           </section>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="tools" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Default Tools</h3>
+            <p className="text-sm text-muted-foreground">
+              Select tools and resources that should be enabled by default for all new chats with this assistant.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="border rounded-md max-h-[500px] overflow-hidden flex flex-col">
+              <ToolPickerList
+                servers={mcpServers.filter((s) => s.enabled)}
+                selectedTools={selectedTools}
+                selectedResources={selectedTools}
+                onToggleTool={onToggleTool}
+                onToggleResource={onToggleResource}
+                onBulkSelect={onBulkSelect}
+              />
+            </div>
+            
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Tools
+                </>
+              )}
+            </Button>
+          </div>
         </SidebarTabsContent>
 
         <SidebarTabsContent value="danger">

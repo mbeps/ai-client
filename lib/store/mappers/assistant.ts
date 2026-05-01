@@ -18,7 +18,7 @@ export function assistantRowToStore(row: AssistantRow): Assistant {
     name: row.name,
     description: row.description ?? "",
     prompt: row.prompt ?? "",
-    tools: [],
+    tools: row.tools ?? [],
     knowledgebases: [],
     avatar: row.avatar ?? undefined,
     updatedAt: new Date(row.updatedAt),

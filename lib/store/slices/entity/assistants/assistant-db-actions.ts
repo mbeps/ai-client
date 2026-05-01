@@ -8,8 +8,12 @@ import { EntitySet } from "../types";
 
 /** Fetches all assistants and loads them into store. */
 export const loadAssistants = (set: EntitySet) => async () => {
-  const rows = await listAssistantsAction();
-  set({ assistants: rows.map(assistantRowToStore) });
+  try {
+    const rows = await listAssistantsAction();
+    set({ assistants: rows.map(assistantRowToStore) });
+  } catch (error) {
+    console.error("Failed to load assistants:", error);
+  }
 };
 
 /** Creates assistant in DB and adds to store. Returns new assistant ID. */
@@ -28,7 +32,7 @@ export const updateAssistantDb =
   (set: EntitySet) =>
   async (
     id: string,
-    data: { name?: string; description?: string; prompt?: string },
+    data: { name?: string; description?: string; prompt?: string; tools?: string[] },
   ) => {
     const row = await updateAssistantAction(id, data);
     set((state) => ({

@@ -63,6 +63,38 @@ export function ChatUI({
   const currentAssistant = chat?.assistantId
     ? assistants.find((a) => a.id === chat.assistantId)
     : undefined;
+  const projects = useAppStore((state) => state.projects);
+  const currentProject = chat?.projectId
+    ? projects.find((p) => p.id === chat.projectId)
+    : undefined;
+
+  const initialToolsAndResources = useMemo(() => {
+    const combined = new Set<string>();
+    if (currentProject?.tools) {
+      currentProject.tools.forEach((t) => combined.add(t));
+    }
+    if (currentAssistant?.tools) {
+      currentAssistant.tools.forEach((t) => combined.add(t));
+    }
+    return Array.from(combined);
+  }, [currentProject?.tools, currentAssistant?.tools]);
+
+  const initialServerIds = useMemo(() => {
+    const serverIds = new Set<string>();
+    initialToolsAndResources.forEach((t) => {
+      const serverId = t.split(":")[0];
+      if (serverId) serverIds.add(serverId);
+    });
+    return Array.from(serverIds);
+  }, [initialToolsAndResources]);
+
+  const initialSelectedTools = useMemo(() => {
+    return initialToolsAndResources.filter(t => t.includes(":tool:"));
+  }, [initialToolsAndResources]);
+
+  const initialSelectedResources = useMemo(() => {
+    return initialToolsAndResources.filter(t => t.includes(":resource:"));
+  }, [initialToolsAndResources]);
 
   const [artifactIndex, setArtifactIndex] = useState<number>(-1);
   const [isArtifactOpen, setIsArtifactOpen] = useState(false);
@@ -453,11 +485,15 @@ export function ChatUI({
         <div className="px-4 md:px-8 pb-4 shrink-0 bg-background/80 backdrop-blur-sm">
           <div className="max-w-4xl mx-auto">
             <ChatInput
+              key={chatId}
               onSend={handleSend}
               isLoading={isLoading}
               onStop={stopStream}
               servers={mcpServers.filter((s) => s.enabled)}
               activeChatAssistantId={chat?.assistantId}
+              initialSelectedServerIds={initialServerIds}
+              initialSelectedTools={initialSelectedTools}
+              initialSelectedResources={initialSelectedResources}
             />
           </div>
         </div>

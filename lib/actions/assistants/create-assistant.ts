@@ -34,6 +34,7 @@ export async function createAssistant(
       name: validated.name,
       description: validated.description ?? null,
       prompt: validated.prompt ?? null,
+      tools: validated.tools ?? [],
       avatar: validated.avatar ?? null,
       userId: session.user.id,
     })

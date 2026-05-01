@@ -175,7 +175,7 @@ export type AppState = {
    */
   updateProjectDb: (
     id: string,
-    data: { name?: string; description?: string; globalPrompt?: string },
+    data: { name?: string; description?: string; globalPrompt?: string; tools?: string[] },
   ) => Promise<void>;
 
   /**
@@ -221,7 +221,7 @@ export type AppState = {
    */
   updateAssistantDb: (
     id: string,
-    data: { name?: string; description?: string; prompt?: string },
+    data: { name?: string; description?: string; prompt?: string; tools?: string[] },
   ) => Promise<void>;
 
   /**
