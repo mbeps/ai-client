@@ -81,7 +81,7 @@ export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
         action={action}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center mb-6">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
