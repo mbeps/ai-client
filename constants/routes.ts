@@ -113,6 +113,7 @@ export const ROUTES = {
     },
     DANGER: { path: `${PROFILE_BASE}/danger` as const, name: "Danger Zone" },
   },
+  SEARCH: { path: "/search" as const, name: "Search" },
   API: {
     AUTH: { path: `${API_BASE}/auth` as const, name: "Auth API" },
   },

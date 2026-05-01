@@ -105,9 +105,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Search">
-              <Search className="h-4 w-4" />
-              Search
+            <SidebarMenuButton asChild tooltip="Search">
+              <Link href={ROUTES.SEARCH.path}>
+                <Search className="h-4 w-4" />
+                Search
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
