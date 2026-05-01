@@ -5,6 +5,7 @@ import { SetPasswordButton } from "./set-password-button";
 import { ChangePasswordForm } from "./change-password-form";
 import { TwoFactorAuth } from "./two-factor-auth";
 import { PasskeyManagement } from "./passkey-management";
+import { Separator } from "@/components/ui/separator";
 
 /**
  * Server component that aggregates password, 2FA, and passkey management data.
@@ -54,17 +55,21 @@ export async function SecurityTab({
       )}
 
       {hasPasswordAccount && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-lg font-medium">Two-Factor Authentication</h3>
-            <Badge variant={isTwoFactorEnabled ? "default" : "secondary"}>
-              {isTwoFactorEnabled ? "Enabled" : "Disabled"}
-            </Badge>
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-medium">Two-Factor Authentication</h3>
+              <Badge variant={isTwoFactorEnabled ? "default" : "secondary"}>
+                {isTwoFactorEnabled ? "Enabled" : "Disabled"}
+              </Badge>
+            </div>
+            <TwoFactorAuth isEnabled={isTwoFactorEnabled} />
           </div>
-          <TwoFactorAuth isEnabled={isTwoFactorEnabled} />
-        </div>
+        </>
       )}
 
+      <Separator />
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-medium">Passkeys</h3>
