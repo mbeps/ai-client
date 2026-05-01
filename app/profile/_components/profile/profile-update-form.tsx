@@ -21,6 +21,7 @@ import {
   profileUpdateSchema,
   ProfileUpdateFormData,
 } from "@/schemas/profile-update";
+import { Label } from "@/components/ui/label";
 
 /**
  * Form that updates profile metadata.
@@ -69,12 +70,12 @@ export function ProfileUpdateForm({
         className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(handleProfileUpdate)}
       >
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row items-start gap-4">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="flex-1">
+              <FormItem className="flex-1 w-full">
                 <FormLabel>Name</FormLabel>
                 <FormControl>
                   <Input placeholder="John Doe" {...field} />
@@ -84,8 +85,8 @@ export function ProfileUpdateForm({
             )}
           />
 
-          <div className="flex-1 space-y-2">
-            <FormLabel>Email</FormLabel>
+          <div className="flex-1 w-full grid gap-2">
+            <Label>Email</Label>
             <Input value={user.email} disabled />
             <p className="text-xs text-muted-foreground">
               Email address cannot be changed.
