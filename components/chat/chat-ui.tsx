@@ -276,10 +276,27 @@ export function ChatUI({
     deleteMessageDb(chatId, id);
   };
 
-  const handleEdit = async (id: string, newContent: string) => {
+  const handleEdit = async (
+    id: string,
+    newContent: string,
+    attachments: Attachment[],
+    model: string,
+    serverIds: string[],
+    toolIds: string[],
+    promptId?: string,
+  ) => {
     const msg = chat.messages[id];
     if (!msg) return;
-    await streamResponse(uuidv4(), newContent, msg.parentId, []);
+    await streamResponse(
+      uuidv4(),
+      newContent,
+      msg.parentId,
+      attachments,
+      model,
+      serverIds,
+      toolIds,
+      promptId,
+    );
   };
 
   const handleRegenerate = async (id: string) => {

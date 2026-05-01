@@ -22,14 +22,19 @@ export function usePromptCommands(
   input: string,
   setInput: (value: string) => void,
   textareaRef: RefObject<HTMLTextAreaElement | null>,
+  initialSelectedPromptId?: string,
 ) {
+  const prompts = useAppStore((state) => state.prompts);
+
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-
-  const prompts = useAppStore((state) => state.prompts);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(
+    initialSelectedPromptId
+      ? prompts.find((p) => p.id === initialSelectedPromptId) || null
+      : null,
+  );
 
   const filteredPrompts = useMemo(() => {
     if (!isCommandOpen) return [];
