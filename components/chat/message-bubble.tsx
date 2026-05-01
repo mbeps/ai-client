@@ -120,10 +120,10 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex gap-4 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
+      className={`flex flex-col gap-2 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
     >
-      <div className="shrink-0 mt-1">
-        <Avatar className="h-8 w-8">
+      <div className="flex items-center gap-2">
+        <Avatar className="h-6 w-6">
           {isUser ? (
             <>
               <AvatarImage
@@ -131,22 +131,21 @@ export function MessageBubble({
                 alt={session?.user?.name || ""}
               />
               <AvatarFallback className="bg-primary/10 text-primary">
-                <User className="h-4 w-4" />
+                <User className="h-3 w-3" />
               </AvatarFallback>
             </>
           ) : (
             <AvatarFallback className="bg-secondary text-secondary-foreground">
-              <Bot className="h-4 w-4" />
+              <Bot className="h-3 w-3" />
             </AvatarFallback>
           )}
         </Avatar>
+        <div className="font-semibold text-sm">
+          {isUser ? "You" : "Assistant"}
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className="font-semibold text-sm mb-1">
-          {isUser ? "You" : "Assistant"}
-        </div>
-
         <div className="text-sm">
           <ThinkingDisplay
             reasoning={reasoning ?? ""}
