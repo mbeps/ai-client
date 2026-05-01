@@ -66,32 +66,38 @@ export function ProfileUpdateForm({
   return (
     <Form {...form}>
       <form
-        className="space-y-4"
+        className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(handleProfileUpdate)}
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex flex-col md:flex-row gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="space-y-2">
-          <FormLabel>Email</FormLabel>
-          <Input value={user.email} disabled />
-          <p className="text-xs text-muted-foreground">
-            Email address cannot be changed.
-          </p>
+          <div className="flex-1 space-y-2">
+            <FormLabel>Email</FormLabel>
+            <Input value={user.email} disabled />
+            <p className="text-xs text-muted-foreground">
+              Email address cannot be changed.
+            </p>
+          </div>
         </div>
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full md:w-auto md:self-end"
+        >
           <LoadingSwap isLoading={isSubmitting}>
             <div className="flex items-center">
               <User className="mr-2 h-4 w-4" />
