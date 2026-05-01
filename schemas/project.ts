@@ -13,6 +13,7 @@ export const createProjectSchema = z.object({
   name: nameField,
   description: descriptionField,
   globalPrompt: contentField.optional(),
+  tools: z.array(z.string()).optional(),
 });
 
 /**
@@ -27,6 +28,7 @@ export const updateProjectSchema = z.object({
   name: nameField.optional(),
   description: descriptionField,
   globalPrompt: contentField.optional(),
+  tools: z.array(z.string()).optional(),
 });
 
 /**

@@ -34,6 +34,7 @@ export async function createProject(
       name: validated.name,
       description: validated.description ?? null,
       globalPrompt: validated.globalPrompt ?? null,
+      tools: validated.tools ?? [],
       userId: session.user.id,
     })
     .returning();

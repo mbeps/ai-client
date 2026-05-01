@@ -32,6 +32,7 @@ export async function updateProject(
       name: validatedData.name,
       description: validatedData.description ?? null,
       globalPrompt: validatedData.globalPrompt ?? null,
+      tools: validatedData.tools ?? [],
       updatedAt: new Date(),
     })
     .where(

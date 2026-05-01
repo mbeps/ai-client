@@ -20,6 +20,7 @@ export const project = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     globalPrompt: text("global_prompt"),
+    tools: text("tools").array(),
     isPinned: boolean("is_pinned").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

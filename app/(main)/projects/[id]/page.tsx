@@ -28,7 +28,9 @@ import {
   Search,
   FileText,
   Shield,
+  Wrench,
 } from "lucide-react";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
 
 import { ROUTES } from "@/constants/routes";
@@ -65,6 +67,8 @@ export default function ProjectPage() {
   const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
   const loadProjects = useAppStore((state) => state.loadProjects);
   const loadChats = useAppStore((state) => state.loadChats);
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const [loading, setLoading] = useState(projects.length === 0);
   const [name, setName] = useState(project?.name ?? "");
@@ -74,6 +78,7 @@ export default function ProjectPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(project?.tools || []));
 
   const filteredChats = useMemo(() => {
     return chats
@@ -92,6 +97,9 @@ export default function ProjectPage() {
           .catch(() => {}),
       ]).finally(() => setLoading(false));
     }
+    if (mcpServers.length === 0) {
+      loadMcpServers().catch(() => {});
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -99,6 +107,7 @@ export default function ProjectPage() {
       setName(project.name);
       setDescription(project.description ?? "");
       setGlobalPrompt(project.globalPrompt ?? "");
+      setSelectedTools(new Set(project.tools || []));
     }
   }, [project]);
 
@@ -114,10 +123,53 @@ export default function ProjectPage() {
 
   const handleNewChat = () => createNewChat("New Chat", projectId);
 
+  const onToggleTool = (serverId: string, toolName: string) => {
+    const id = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onToggleResource = (serverId: string, uri: string) => {
+    const id = `${serverId}:resource:${uri}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+    if (select) {
+      setSelectedTools((prev) => {
+        const next = new Set(prev);
+        toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
+        resourceUris.forEach((u) => next.add(`${serverId}:resource:${u}`));
+        return next;
+      });
+    } else {
+      setSelectedTools((prev) => {
+        const next = new Set(prev);
+        toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
+        resourceUris.forEach((u) => next.delete(`${serverId}:resource:${u}`));
+        return next;
+      });
+    }
+  };
+
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await updateProjectDb(projectId, { name, description, globalPrompt });
+      await updateProjectDb(projectId, { 
+        name, 
+        description, 
+        globalPrompt,
+        tools: Array.from(selectedTools),
+      });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -168,6 +220,10 @@ export default function ProjectPage() {
           <SidebarTabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="tools">
+            <Wrench className="mr-2 h-4 w-4" />
+            <span>Tools</span>
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
             <Shield className="mr-2 h-4 w-4" />
@@ -283,6 +339,38 @@ export default function ProjectPage() {
               </Button>
             </div>
           </section>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="tools" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Default Tools</h3>
+            <p className="text-sm text-muted-foreground">
+              Select tools and resources that should be enabled by default for all new chats in this project.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="border rounded-md max-h-[500px] overflow-hidden flex flex-col">
+              <ToolPickerList
+                servers={mcpServers.filter((s) => s.enabled)}
+                selectedTools={selectedTools}
+                selectedResources={selectedTools}
+                onToggleTool={onToggleTool}
+                onToggleResource={onToggleResource}
+                onBulkSelect={onBulkSelect}
+              />
+            </div>
+            
+            <Button onClick={handleSaveSettings} disabled={savingSettings}>
+              {savingSettings ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Tools
+                </>
+              )}
+            </Button>
+          </div>
         </SidebarTabsContent>
 
         <SidebarTabsContent value="danger">

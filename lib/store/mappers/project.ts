@@ -19,6 +19,7 @@ export function projectRowToStore(row: ProjectRow): Project {
     isPinned: row.isPinned,
     updatedAt: new Date(row.updatedAt),
     globalPrompt: row.globalPrompt ?? "",
+    tools: row.tools ?? [],
     knowledgebases: [],
   };
 }

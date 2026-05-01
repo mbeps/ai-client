@@ -32,6 +32,7 @@ export async function updateAssistant(
       name: validatedData.name,
       description: validatedData.description ?? null,
       prompt: validatedData.prompt ?? null,
+      tools: validatedData.tools ?? [],
       avatar: validatedData.avatar ?? null,
       updatedAt: new Date(),
     })

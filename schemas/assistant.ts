@@ -13,6 +13,7 @@ export const createAssistantSchema = z.object({
   name: nameField,
   description: descriptionField,
   prompt: contentField.optional(),
+  tools: z.array(z.string()).optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 
@@ -28,6 +29,7 @@ export const updateAssistantSchema = z.object({
   name: nameField.optional(),
   description: descriptionField,
   prompt: contentField.optional(),
+  tools: z.array(z.string()).optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 
