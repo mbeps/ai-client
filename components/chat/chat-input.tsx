@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   Image as ImageIcon,
   Command,
+  Bot,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -40,8 +41,8 @@ import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
 import { MODELS } from "@/constants/models";
 import { Model } from "@/types/model";
-import { PromptCommands } from "./prompt-commands";
-import { usePromptCommands } from "@/hooks/chat/use-prompt-commands";
+import { MentionCommands } from "./mention-commands";
+import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 
 /**
@@ -62,6 +63,7 @@ interface ChatInputProps {
     selectedTools: string[],
     selectedResources: string[],
     selectedPromptId?: string,
+    selectedAssistantId?: string,
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -97,6 +99,12 @@ interface ChatInputProps {
   /** Initial prompt ID if editing a slash-command message. */
   initialSelectedPromptId?: string;
 
+  /** Initial assistant ID if editing a message that used an assistant mention. */
+  initialSelectedAssistantId?: string;
+
+  /** Assistant ID bound to the chat, if any, to disable @ mentions. */
+  activeChatAssistantId?: string | null;
+
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
 }
@@ -128,6 +136,8 @@ export function ChatInput({
   initialSelectedTools = [],
   initialSelectedResources = [],
   initialSelectedPromptId,
+  initialSelectedAssistantId,
+  activeChatAssistantId,
   submitLabel,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
@@ -155,16 +165,25 @@ export function ChatInput({
   const isMobile = useIsMobile();
 
   const {
-    isCommandOpen,
-    setIsCommandOpen,
-    filteredPrompts,
+    openTrigger,
+    setOpenTrigger,
+    filteredItems,
     selectedIndex,
     selectedPrompt,
     setSelectedPrompt,
+    selectedAssistant,
+    setSelectedAssistant,
     handleInputChange,
     handleKeyDown: handleCommandKeyDown,
-    handlePromptSelect,
-  } = usePromptCommands(input, setInput, textareaRef, initialSelectedPromptId);
+    handleSelect: handleMentionSelect,
+  } = useMentionCommands(
+    input, 
+    setInput, 
+    textareaRef, 
+    activeChatAssistantId, 
+    initialSelectedPromptId,
+    initialSelectedAssistantId
+  );
 
   useAutoExpandingTextarea(textareaRef, [input]);
 
@@ -197,7 +216,7 @@ export function ChatInput({
 
   const handleSend = () => {
     if (
-      (input.trim() || attachments.length > 0 || selectedPrompt) &&
+      (input.trim() || attachments.length > 0 || selectedPrompt || selectedAssistant) &&
       !isLoading
     ) {
       onSend(
@@ -208,10 +227,12 @@ export function ChatInput({
         Array.from(selectedTools),
         Array.from(selectedResources),
         selectedPrompt?.id,
+        selectedAssistant?.id,
       );
       setInput("");
       setAttachments([]);
       setSelectedPrompt(null);
+      setSelectedAssistant(null);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -346,12 +367,13 @@ export function ChatInput({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {isCommandOpen && (
-        <PromptCommands
-          filteredPrompts={filteredPrompts}
+      {openTrigger && (
+        <MentionCommands
+          items={filteredItems}
+          trigger={openTrigger}
           selectedIndex={selectedIndex}
-          onSelect={handlePromptSelect}
-          onClose={() => setIsCommandOpen(false)}
+          onSelect={handleMentionSelect}
+          onClose={() => setOpenTrigger(null)}
           className="absolute bottom-full left-0 mb-2"
         />
       )}
@@ -368,25 +390,42 @@ export function ChatInput({
         }}
       />
 
-      {selectedPrompt && (
+      {(selectedPrompt || selectedAssistant) && (
         <div className="flex flex-wrap gap-2 pb-2">
-          <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
-            <Command className="h-3 w-3 text-muted-foreground" />
-            <Link
-              href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
-              className="truncate max-w-[160px] hover:underline"
-              target="_blank"
-            >
-              /{selectedPrompt.shortcut || selectedPrompt.title}
-            </Link>
-            <button
-              type="button"
-              onClick={() => setSelectedPrompt(null)}
-              className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
+          {selectedAssistant && (
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
+              <Bot className="h-3 w-3 text-muted-foreground" />
+              <span className="truncate max-w-[160px]">
+                @{selectedAssistant.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedAssistant(null)}
+                className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {selectedPrompt && (
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
+              <Command className="h-3 w-3 text-muted-foreground" />
+              <Link
+                href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
+                className="truncate max-w-[160px] hover:underline"
+                target="_blank"
+              >
+                /{selectedPrompt.shortcut || selectedPrompt.title}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSelectedPrompt(null)}
+                className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -549,7 +588,7 @@ export function ChatInput({
               className="h-7 w-7 rounded-full"
               onClick={handleSend}
               disabled={
-                !input.trim() && attachments.length === 0 && !selectedPrompt
+                !input.trim() && attachments.length === 0 && !selectedPrompt && !selectedAssistant
               }
             >
               {submitLabel === "Save" ? (
