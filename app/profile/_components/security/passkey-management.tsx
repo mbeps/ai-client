@@ -82,7 +82,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {passkeys.length === 0 ? (
         <Card>
           <CardHeader>
@@ -124,7 +124,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
         }}
       >
         <DialogTrigger asChild>
-          <Button>
+          <Button className="w-full md:w-auto md:self-end">
             <Fingerprint className="mr-2 h-4 w-4" />
             New Passkey
           </Button>
@@ -139,7 +139,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
 
           <Form {...form}>
             <form
-              className="space-y-4"
+              className="flex flex-col gap-4"
               onSubmit={form.handleSubmit(handleAddPasskey)}
             >
               <FormField
@@ -156,7 +156,11 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
                 )}
               />
 
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full md:w-auto md:self-end"
+              >
                 <LoadingSwap isLoading={isSubmitting}>
                   <div className="flex items-center">
                     <Plus className="mr-2 h-4 w-4" />

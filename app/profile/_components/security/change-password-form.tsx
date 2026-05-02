@@ -58,55 +58,63 @@ export function ChangePasswordForm() {
   return (
     <Form {...form}>
       <form
-        className="space-y-4"
+        className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(handlePasswordChange)}
       >
-        <FormField
-          control={form.control}
-          name="currentPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Current Password</FormLabel>
-              <FormControl>
-                <PasswordInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex flex-col md:flex-row items-start gap-4">
+          <FormField
+            control={form.control}
+            name="currentPassword"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Current Password</FormLabel>
+                <FormControl>
+                  <PasswordInput {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="newPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>New Password</FormLabel>
-              <FormControl>
-                <PasswordInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="newPassword"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>New Password</FormLabel>
+                <FormControl>
+                  <PasswordInput {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
           name="revokeOtherSessions"
           render={({ field }) => (
-            <FormItem className="flex">
+            <FormItem className="flex items-center space-x-2 space-y-0">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel>Log out other sessions</FormLabel>
+              <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Log out other sessions
+              </FormLabel>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full md:w-auto md:self-end"
+        >
           <LoadingSwap isLoading={isSubmitting}>
             <div className="flex items-center">
               <Key className="mr-2 h-4 w-4" />

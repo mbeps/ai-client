@@ -68,7 +68,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
       customFilterFn={customFilterFn}
       extraFilters={
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>

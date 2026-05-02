@@ -159,7 +159,7 @@ export function SearchClient({
           value={filterType}
           onValueChange={(val: any) => setFilterType(val)}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
           <SelectContent>

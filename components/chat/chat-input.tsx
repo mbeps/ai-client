@@ -146,9 +146,8 @@ export function ChatInput({
       ? MODELS.find((m) => m.value === initialModelId) || MODELS[0]
       : MODELS[0],
   );
-  const [attachments, setAttachments] = useState<Attachment[]>(
-    initialAttachments,
-  );
+  const [attachments, setAttachments] =
+    useState<Attachment[]>(initialAttachments);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
     new Set(initialSelectedServerIds),
@@ -177,12 +176,12 @@ export function ChatInput({
     handleKeyDown: handleCommandKeyDown,
     handleSelect: handleMentionSelect,
   } = useMentionCommands(
-    input, 
-    setInput, 
-    textareaRef, 
-    activeChatAssistantId, 
+    input,
+    setInput,
+    textareaRef,
+    activeChatAssistantId,
     initialSelectedPromptId,
-    initialSelectedAssistantId
+    initialSelectedAssistantId,
   );
 
   useAutoExpandingTextarea(textareaRef, [input]);
@@ -216,7 +215,10 @@ export function ChatInput({
 
   const handleSend = () => {
     if (
-      (input.trim() || attachments.length > 0 || selectedPrompt || selectedAssistant) &&
+      (input.trim() ||
+        attachments.length > 0 ||
+        selectedPrompt ||
+        selectedAssistant) &&
       !isLoading
     ) {
       onSend(
@@ -362,7 +364,7 @@ export function ChatInput({
 
   return (
     <div
-      className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border-t md:border md:rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors relative ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
+      className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors relative ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -472,7 +474,7 @@ export function ChatInput({
         value={input}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        placeholder="Ask anything... Use / for commands, @ for tools"
+        placeholder="Ask anything... Use / for commands, @ for assistant"
         className="min-h-[40px] resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent p-0 overflow-y-auto"
         rows={1}
       />
@@ -588,7 +590,10 @@ export function ChatInput({
               className="h-7 w-7 rounded-full"
               onClick={handleSend}
               disabled={
-                !input.trim() && attachments.length === 0 && !selectedPrompt && !selectedAssistant
+                !input.trim() &&
+                attachments.length === 0 &&
+                !selectedPrompt &&
+                !selectedAssistant
               }
             >
               {submitLabel === "Save" ? (

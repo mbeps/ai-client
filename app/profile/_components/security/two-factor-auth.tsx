@@ -102,7 +102,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   return (
     <Form {...form}>
       <form
-        className="space-y-4"
+        className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(
           isEnabled ? handleDisableTwoFactorAuth : handleEnableTwoFactorAuth,
         )}
@@ -124,7 +124,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full"
+          className="w-full md:w-auto md:self-end"
           variant={isEnabled ? "destructive" : "default"}
         >
           <LoadingSwap isLoading={isSubmitting}>
@@ -219,7 +219,10 @@ function QRCodeVerify({
       </p>
 
       <Form {...form}>
-        <form className="space-y-4" onSubmit={form.handleSubmit(handleQrCode)}>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={form.handleSubmit(handleQrCode)}
+        >
           <FormField
             control={form.control}
             name="token"
@@ -234,7 +237,11 @@ function QRCodeVerify({
             )}
           />
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full md:w-auto md:self-end"
+          >
             <LoadingSwap isLoading={isSubmitting}>
               <div className="flex items-center">
                 <Check className="mr-2 h-4 w-4" />

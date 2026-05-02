@@ -53,41 +53,48 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <div className="flex flex-col items-center justify-center min-h-full px-4 py-12">
-        {/* Welcome heading */}
-        <div className="text-center mb-10 space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Sparkles className="h-6 w-6 text-primary" />
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col items-center justify-between md:justify-center h-full px-4 py-6 md:py-12 overflow-y-auto">
+        {/* Welcome heading and Quick Actions */}
+        <div className="flex flex-col items-center justify-center w-full flex-1 md:flex-initial">
+          <div className="text-center mb-8 md:mb-10 space-y-2">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Hello, {session?.user?.name?.split(" ")[0] || "there"}
+            </h1>
+            <p className="text-muted-foreground text-base md:text-lg">
+              How can I help you today?
+            </p>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">
-            Hello, {session?.user?.name?.split(" ")[0] || "there"}
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            How can I help you today?
-          </p>
-        </div>
 
-        {/* Quick navigation */}
-        <div className="flex gap-3 mb-8 flex-wrap justify-center">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href}>
-              <Button variant="outline" className="gap-2 h-auto py-2 px-4">
-                <action.icon className="h-4 w-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">{action.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {action.description}
+          {/* Quick navigation */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-8 w-full sm:w-auto justify-center">
+            {quickActions.map((action) => (
+              <Link key={action.href} href={action.href} className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="gap-3 h-auto py-3 px-4 w-full sm:w-auto justify-between sm:justify-start"
+                >
+                  <div className="flex items-center gap-3">
+                    <action.icon className="h-5 w-5 text-primary/80" />
+                    <div className="text-left">
+                      <div className="text-sm font-semibold">{action.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {action.description}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <ArrowRight className="h-3 w-3 ml-1 text-muted-foreground" />
-              </Button>
-            </Link>
-          ))}
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
+                </Button>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Chat input */}
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-3xl mt-auto md:mt-0 pb-2 md:pb-0">
           <ChatInput onSend={handleStart} />
         </div>
       </div>
