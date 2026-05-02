@@ -48,4 +48,12 @@ export const PROMPTS = {
         "The instructions associated with this shortcut.",
     },
   },
+  WORKFLOWS: {
+    TRANSLATE: (
+      sourceDesc: string,
+      targetLanguage: string,
+      text: string,
+    ): string =>
+      `Translate the following text from ${sourceDesc} to ${targetLanguage}. \nOnly return the translated text. Do not include any explanations or extra text.\n\nText to translate:\n${text}`,
+  },
 } as const;
