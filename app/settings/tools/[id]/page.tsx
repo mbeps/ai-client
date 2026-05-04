@@ -9,7 +9,12 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+import {
+  SidebarTabs,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+  SidebarTabsContent,
+} from "@/components/shared/sidebar-tabs";
 
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
@@ -21,6 +26,7 @@ import {
   Shield,
   Wrench,
 } from "lucide-react";
+import { toggleMcpServer } from "@/lib/mcp/toggle-mcp-server";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
@@ -38,10 +44,9 @@ export default function McpServerPage() {
   const router = useRouter();
   const serverId = params.id as string;
 
-  const { server, toggleMcpServer } = useAppStore(
+  const { server } = useAppStore(
     useShallow((state) => ({
       server: state.mcpServers.find((s) => s.id === serverId),
-      toggleMcpServer: state.toggleMcpServer,
     })),
   );
 
@@ -53,6 +58,7 @@ export default function McpServerPage() {
       toast.success(
         `${server.name} ${!server.enabled ? "enabled" : "disabled"}`,
       );
+      router.refresh();
     } catch (error) {
       toast.error("Failed to toggle server state");
     }
@@ -111,26 +117,21 @@ export default function McpServerPage() {
         </SidebarTabsList>
 
         <SidebarTabsContent value="tools">
-
           <ToolList server={server} />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="resources">
-
           <ResourceList server={server} />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="config">
-
           <EditServerForm server={server} />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="settings">
-
           <ServerSettings serverId={server.id} />
         </SidebarTabsContent>
       </SidebarTabs>
-
     </div>
   );
 }

@@ -1,112 +1,73 @@
 import { StateCreator } from "zustand";
 import type { AppState } from "@/types/app-state";
-import {
-  toggleProjectPin,
-  loadProjectRows,
-} from "./entity/projects/project-actions";
-import {
-  loadProjects,
-  createProjectDb,
-  updateProjectDb,
-  deleteProjectDb,
-  renameProjectDb,
-  toggleProjectPinDb,
-} from "./entity/projects/project-db-actions";
-import { loadAssistantRows } from "./entity/assistants/assistant-actions";
-import {
-  loadAssistants,
-  createAssistantDb,
-  updateAssistantDb,
-  deleteAssistantDb,
-  renameAssistantDb,
-} from "./entity/assistants/assistant-db-actions";
-import {
-  loadPrompts,
-  createPromptDb,
-  updatePromptDb,
-  deletePromptDb,
-} from "./entity/prompts/prompt-db-actions";
-import { renameKnowledgebaseDb } from "./entity/knowledgebases/knowledgebase-db-actions";
-import {
-  loadMcpServers,
-  addMcpServer,
-  removeMcpServer,
-  renameMcpServer,
-  toggleMcpServer,
-  updateMcpServer,
-} from "./entity/mcp-servers/mcp-server-db-actions";
+import { listProjects } from "@/lib/actions/projects/list-projects";
+import { listAssistants } from "@/lib/actions/assistants/list-assistants";
+import { listPrompts } from "@/lib/actions/prompts/list-prompts";
+import { listMcpServers } from "@/lib/mcp/list-mcp-servers";
+import { projectRowToStore } from "../mappers/project";
+import { assistantRowToStore } from "../mappers/assistant";
+import { promptRowToStore } from "../mappers/prompt";
+
+type EntitySet = Parameters<StateCreator<AppState>>[0];
 
 export type EntitySlice = Pick<
   AppState,
   | "projects"
   | "assistants"
   | "prompts"
-  | "knowledgebases"
   | "mcpServers"
-  | "toggleProjectPin"
-  | "renameProjectDb"
+  | "knowledgebases"
   | "loadProjects"
-  | "loadProjectRows"
-  | "createProjectDb"
-  | "updateProjectDb"
-  | "deleteProjectDb"
-  | "toggleProjectPinDb"
-  | "renameAssistantDb"
   | "loadAssistants"
-  | "loadAssistantRows"
-  | "createAssistantDb"
-  | "updateAssistantDb"
-  | "deleteAssistantDb"
   | "loadPrompts"
-  | "createPromptDb"
-  | "updatePromptDb"
-  | "deletePromptDb"
-  | "renameKnowledgebaseDb"
   | "loadMcpServers"
-  | "addMcpServer"
-  | "removeMcpServer"
-  | "renameMcpServer"
-  | "toggleMcpServer"
-  | "updateMcpServer"
 >;
+
+const makeLoadProjects = (set: EntitySet) => async () => {
+  const rows = await listProjects();
+  set({ projects: rows.map(projectRowToStore) });
+};
+
+const makeLoadAssistants = (set: EntitySet) => async () => {
+  const rows = await listAssistants();
+  set({ assistants: rows.map(assistantRowToStore) });
+};
+
+const makeLoadPrompts = (set: EntitySet) => async () => {
+  const rows = await listPrompts();
+  set({ prompts: rows.map(promptRowToStore) });
+};
+
+const makeLoadMcpServers = (set: EntitySet) => async () => {
+  const rows = await listMcpServers();
+  set({
+    mcpServers: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      command: r.command,
+      args: r.args,
+      url: r.url,
+      headers: r.headers,
+      env: r.env,
+      enabled: r.enabled,
+      createdAt: new Date(r.createdAt),
+      updatedAt: new Date(r.updatedAt),
+    })),
+  });
+};
 
 export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   set,
-  get,
 ) => ({
   projects: [],
   assistants: [],
   prompts: [],
-  knowledgebases: [],
   mcpServers: [],
+  knowledgebases: [],
 
-  toggleProjectPin: toggleProjectPin(set),
-  renameProjectDb: renameProjectDb(set),
-  loadProjectRows: loadProjectRows(set),
-  loadProjects: loadProjects(set),
-  createProjectDb: createProjectDb(set),
-  updateProjectDb: updateProjectDb(set),
-  deleteProjectDb: deleteProjectDb(set),
-  toggleProjectPinDb: toggleProjectPinDb(set),
-
-  renameAssistantDb: renameAssistantDb(set),
-  loadAssistantRows: loadAssistantRows(set),
-  loadAssistants: loadAssistants(set),
-  createAssistantDb: createAssistantDb(set),
-  updateAssistantDb: updateAssistantDb(set),
-  deleteAssistantDb: deleteAssistantDb(set),
-
-  loadPrompts: loadPrompts(set),
-  createPromptDb: createPromptDb(set),
-  updatePromptDb: updatePromptDb(set),
-  deletePromptDb: deletePromptDb(set),
-
-  renameKnowledgebaseDb: renameKnowledgebaseDb(set),
-
-  loadMcpServers: loadMcpServers(set),
-  addMcpServer: addMcpServer(set),
-  removeMcpServer: removeMcpServer(set),
-  renameMcpServer: renameMcpServer(set),
-  toggleMcpServer: toggleMcpServer(set),
-  updateMcpServer: updateMcpServer(set),
+  loadProjects: makeLoadProjects(set),
+  loadAssistants: makeLoadAssistants(set),
+  loadPrompts: makeLoadPrompts(set),
+  loadMcpServers: makeLoadMcpServers(set),
 });

@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Save } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { McpServer } from "@/types/mcp-server";
 import {
   updateMcpServerSchema,
@@ -24,11 +23,13 @@ import {
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
+import { updateMcpServer as updateMcpServerAction } from "@/lib/mcp/update-mcp-server";
+import { useRouter } from "next/navigation";
 
 /**
  * Form for editing an existing Model Context Protocol server configuration.
  * Renders type-specific fields (stdio vs HTTP) based on server type.
- * Displays connection type as read-only badge; persists changes via Zustand store.
+ * Displays connection type as read-only badge; persists changes via direct Server Action.
  *
  * @param server - MCP server to edit; determines which fields are displayed
  * @see {@link AddServerDialog} for creating new servers
@@ -43,7 +44,7 @@ export interface EditServerFormProps {
 }
 
 export function EditServerForm({ server }: EditServerFormProps) {
-  const updateMcpServer = useAppStore((s) => s.updateMcpServer);
+  const router = useRouter();
 
   const defaultValues: UpdateMcpServer =
     server.type === "stdio"
@@ -70,8 +71,9 @@ export function EditServerForm({ server }: EditServerFormProps) {
 
   async function onSubmit(data: UpdateMcpServer) {
     try {
-      await updateMcpServer(server.id, data);
+      await updateMcpServerAction(server.id, data);
       toast.success("Server configuration updated");
+      router.refresh();
     } catch {
       toast.error("Failed to update server");
     }

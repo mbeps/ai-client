@@ -152,13 +152,20 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   deleteMessageDb: async (chatId, messageId) => {
-    get().deleteMessage(chatId, messageId);
-    const newLeafId = get().chats[chatId]?.currentLeafId ?? null;
-    try {
-      await deleteMessageAction(chatId, messageId, newLeafId);
-    } catch (err) {
-      console.error("Failed to delete message from DB:", err);
+    const chat = get().chats[chatId];
+    if (!chat) return;
+
+    const { updatedMessages, parentId: deletedParentId } = removeMessageSubtree(
+      chat.messages,
+      messageId,
+    );
+    let newLeafId: string | null = deletedParentId ?? null;
+    if (newLeafId) {
+      newLeafId = getDeepestLeaf(updatedMessages, newLeafId);
     }
+
+    await deleteMessageAction(chatId, messageId, newLeafId);
+    get().deleteMessage(chatId, messageId);
   },
 
   setCurrentLeaf: (chatId, leafId) => {
@@ -366,10 +373,6 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   deleteChatDb: async (chatId) => {
     await deleteChat(chatId);
-    set((state) => {
-      const next = { ...state.chats };
-      delete next[chatId];
-      return { chats: next };
-    });
+    get().deleteChat(chatId);
   },
 });

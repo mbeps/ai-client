@@ -10,12 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import { useState } from "react";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Trash2 } from "lucide-react";
+import { deleteMcpServer } from "@/lib/mcp/delete-mcp-server";
 
 /**
  * Settings panel for an MCP server with permanent deletion option.
@@ -36,15 +36,15 @@ export interface ServerSettingsProps {
 
 export function ServerSettings({ serverId }: ServerSettingsProps) {
   const router = useRouter();
-  const removeMcpServer = useAppStore((s) => s.removeMcpServer);
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
     try {
-      await removeMcpServer(serverId);
+      await deleteMcpServer(serverId);
       toast.success("MCP server deleted");
+      router.refresh();
       router.push(ROUTES.TOOLS.path);
     } catch {
       toast.error("Failed to delete MCP server");

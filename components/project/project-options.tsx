@@ -1,6 +1,5 @@
 "use client";
 import { Trash2, Pin, PinOff, Edit2 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { Project } from "@/types/project";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
@@ -8,10 +7,15 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { renameProject } from "@/lib/actions/projects/rename-project";
+import { deleteProject } from "@/lib/actions/projects/delete-project";
+import { togglePinProject } from "@/lib/actions/projects/toggle-pin-project";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dropdown/Drawer menu with Pin/Unpin, Rename, and Delete options for projects.
- * Uses useEntityOptions hook for shared dialog state and toggleProjectPinDb from store for pin toggle.
+ * Uses useEntityOptions hook for shared dialog state and direct Server Actions for mutations.
  * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
  * @param props.project - Project entity with id, name, and isPinned status.
@@ -21,9 +25,8 @@ import { useEntityOptions } from "@/hooks/use-entity-options";
  * @author Maruf Bepary
  */
 export function ProjectOptions({ project }: { project: Project }) {
-  const toggleProjectPinDb = useAppStore((state) => state.toggleProjectPinDb);
-  const renameProjectDb = useAppStore((state) => state.renameProjectDb);
-  const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
+  const router = useRouter();
+  const loadProjects = useAppStore((state) => state.loadProjects);
 
   const {
     isMobile,
@@ -37,14 +40,17 @@ export function ProjectOptions({ project }: { project: Project }) {
   } = useEntityOptions({
     id: project.id,
     type: "Project",
-    onRename: (id, name) => renameProjectDb(id, name),
-    onDelete: (id) => deleteProjectDb(id),
+    onRename: (id, name) => renameProject(id, name),
+    onDelete: (id) => deleteProject(id),
     redirectPath: ROUTES.PROJECTS.path,
+    useRouterRefresh: true,
+    onAfterMutation: loadProjects,
   });
 
   const handleTogglePin = async () => {
     try {
-      await toggleProjectPinDb(project.id);
+      await togglePinProject(project.id);
+      router.refresh();
     } catch {
       toast.error("Failed to update pin");
     }

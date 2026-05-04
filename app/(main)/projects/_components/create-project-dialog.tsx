@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { createProject } from "@/lib/actions/projects/create-project";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -43,8 +45,9 @@ export function CreateProjectDialog({
   open,
   onOpenChange,
 }: CreateProjectDialogProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createProjectDb = useAppStore((state) => state.createProjectDb);
+  const loadProjects = useAppStore((state) => state.loadProjects);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -54,13 +57,15 @@ export function CreateProjectDialog({
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      await createProjectDb({
+      await createProject({
         name: values.name,
         description: values.description || undefined,
       });
       toast.success("Project created");
       form.reset();
       onOpenChange(false);
+      router.refresh();
+      await loadProjects();
     } catch {
       toast.error("Failed to create project");
     } finally {
