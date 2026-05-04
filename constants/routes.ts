@@ -35,6 +35,9 @@ const PROFILE_BASE = "/profile" as const;
 /** Base path segment for API routes. */
 const API_BASE = "/api" as const;
 
+/** Base path segment for workflows. */
+const WORKFLOWS_BASE = "/workflows" as const;
+
 /**
  * Typed route map for every page in the application.
  * Static routes expose a `.path` string; dynamic routes expose helper functions
@@ -116,5 +119,13 @@ export const ROUTES = {
   SEARCH: { path: "/search" as const, name: "Search" },
   API: {
     AUTH: { path: `${API_BASE}/auth` as const, name: "Auth API" },
+  },
+  WORKFLOWS: {
+    path: WORKFLOWS_BASE,
+    name: "Workflows",
+    TRANSLATION: {
+      path: `${WORKFLOWS_BASE}/translation` as const,
+      name: "Translation",
+    },
   },
 } as const;

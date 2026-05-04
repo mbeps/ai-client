@@ -29,6 +29,7 @@ import {
   LogOut,
   User,
   ChevronRight,
+  Workflow,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/lib/store";
@@ -140,6 +141,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Link href={ROUTES.KNOWLEDGEBASES.path}>
                   <Database className="h-4 w-4" />
                   <span>Knowledgebases</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Workflows">
+                <Link href={ROUTES.WORKFLOWS.path}>
+                  <Workflow className="h-4 w-4" />
+                  <span>Workflows</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

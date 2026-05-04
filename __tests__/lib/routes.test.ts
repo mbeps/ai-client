@@ -79,6 +79,16 @@ describe("ROUTES — static paths", () => {
   });
 });
 
+describe("ROUTES — Workflows", () => {
+  it("WORKFLOWS path", () => {
+    expect(ROUTES.WORKFLOWS.path).toBe("/workflows");
+  });
+
+  it("WORKFLOWS.TRANSLATION path", () => {
+    expect(ROUTES.WORKFLOWS.TRANSLATION.path).toBe("/workflows/translation");
+  });
+});
+
 describe("ROUTES — dynamic helpers", () => {
   it("CHATS.detail returns correct path", () => {
     expect(ROUTES.CHATS.detail("chat-123")).toBe("/chats/chat-123");
