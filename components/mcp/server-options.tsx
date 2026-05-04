@@ -1,16 +1,20 @@
 "use client";
 import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { McpServer } from "@/types/mcp-server";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { renameMcpServer } from "@/lib/mcp/rename-mcp-server";
+import { toggleMcpServer } from "@/lib/mcp/toggle-mcp-server";
+import { deleteMcpServer } from "@/lib/mcp/delete-mcp-server";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Responsive menu for server actions: rename, enable/disable toggle, and delete.
- * Adapts between dropdown (desktop) and drawer (mobile) UI. Fires optimistic updates to Zustand store.
+ * Adapts between dropdown (desktop) and drawer (mobile) UI. Uses direct Server Actions for mutations.
  * Shows delete confirmation dialog before permanent removal.
  *
  * @param server - MCP server to manage; used for rename, toggle, and delete operations
@@ -27,9 +31,8 @@ export interface ServerOptionsProps {
 }
 
 export function ServerOptions({ server }: ServerOptionsProps) {
-  const renameMcpServer = useAppStore((state) => state.renameMcpServer);
-  const toggleMcpServer = useAppStore((state) => state.toggleMcpServer);
-  const removeMcpServer = useAppStore((state) => state.removeMcpServer);
+  const router = useRouter();
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const {
     isMobile,
@@ -44,13 +47,17 @@ export function ServerOptions({ server }: ServerOptionsProps) {
     id: server.id,
     type: "Server",
     onRename: (id, name) => renameMcpServer(id, name),
-    onDelete: (id) => removeMcpServer(id),
+    onDelete: (id) => deleteMcpServer(id),
+    useRouterRefresh: true,
+    onAfterMutation: loadMcpServers,
   });
 
   const handleToggle = async () => {
     try {
       await toggleMcpServer(server.id);
       toast.success(server.enabled ? "Server disabled" : "Server enabled");
+      router.refresh();
+      loadMcpServers();
     } catch {
       toast.error("Failed to toggle server");
     }

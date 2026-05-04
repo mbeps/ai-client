@@ -1,7 +1,6 @@
 "use client";
 
 import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/types/assistant";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
@@ -10,10 +9,13 @@ import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
+import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dropdown/Drawer menu with New Chat, Manage, Rename, and Delete options for assistants.
- * Uses useEntityOptions hook to manage dialog state and handles store mutations via renameAssistantDb and deleteAssistantDb.
+ * Uses useEntityOptions hook to manage dialog state and handles mutations via direct Server Actions.
  * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
  * @param props.assistant - Assistant entity with id and name.
@@ -25,8 +27,7 @@ import { useEntityOptions } from "@/hooks/use-entity-options";
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   const router = useRouter();
   const createNewChat = useCreateChat();
-  const renameAssistantDb = useAppStore((state) => state.renameAssistantDb);
-  const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
+  const loadAssistants = useAppStore((state) => state.loadAssistants);
 
   const {
     isMobile,
@@ -40,9 +41,11 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   } = useEntityOptions({
     id: assistant.id,
     type: "Assistant",
-    onRename: (id, name) => renameAssistantDb(id, name),
-    onDelete: (id) => deleteAssistantDb(id),
+    onRename: (id, name) => renameAssistant(id, name),
+    onDelete: (id) => deleteAssistant(id),
     redirectPath: ROUTES.ASSISTANTS.path,
+    useRouterRefresh: true,
+    onAfterMutation: loadAssistants,
   });
 
   const items = [

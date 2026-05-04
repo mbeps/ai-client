@@ -1,5 +1,3 @@
-import type { ProjectRow } from "@/types/project-row";
-import type { AssistantRow } from "@/types/assistant-row";
 import type { PromptRow } from "@/types/prompt-row";
 import type { ChatRow } from "@/types/chat-row";
 import type { MessageRow } from "@/types/message-row";
@@ -8,11 +6,11 @@ import type { CreateMcpServer, UpdateMcpServer } from "@/schemas/mcp-server";
 import type { Prompt } from "./prompt";
 import type { Project } from "./project";
 import type { Assistant } from "./assistant";
-import type { Knowledgebase } from "./knowledgebase";
 import type { McpServer } from "./mcp-server";
 import type { Attachment } from "./attachment";
 import type { Message } from "./message";
 import type { Chat } from "./chat";
+import type { Knowledgebase } from "./knowledgebase";
 
 /**
  * Global application state shape for the Zustand store.
@@ -37,12 +35,12 @@ export type AppState = {
   assistants: Assistant[];
   /** All quick-insert prompts. */
   prompts: Prompt[];
-  /** All knowledge bases. */
-  knowledgebases: Knowledgebase[];
   /** All chats keyed by their ID. */
   chats: Record<string, Chat>;
   /** All configured MCP servers. */
   mcpServers: McpServer[];
+  /** All knowledge bases (UI-only; no DB table yet). */
+  knowledgebases: Knowledgebase[];
 
   // Chat Actions (Optimistic + Optional DB Sync)
   /**
@@ -139,95 +137,18 @@ export type AppState = {
 
   // Project Actions
   /**
-   * Toggles a project's pin status in the sidebar (optimistic then persisted).
-   * Pinned projects appear at the top of the project list.
-   */
-  toggleProjectPin: (id: string) => void;
-  /**
-   * Persists a project rename to the database.
-   */
-  renameProjectDb: (id: string, name: string) => Promise<void>;
-
-
-  /**
    * Loads all projects from the database and populates the store.
    * Typically called once on app initialization via useEffect.
    */
   loadProjects: () => Promise<void>;
 
-  /**
-   * Populates projects in the store from database rows (internal use).
-   * Called by loadProjects after fetching database records.
-   */
-  loadProjectRows: (rows: ProjectRow[]) => void;
-
-  /**
-   * Creates a new project and persists to database.
-   * @returns ID of the newly created project
-   */
-  createProjectDb: (data: {
-    name: string;
-    description?: string;
-  }) => Promise<string>;
-
-  /**
-   * Updates project properties (name, description, globalPrompt) in database.
-   */
-  updateProjectDb: (
-    id: string,
-    data: { name?: string; description?: string; globalPrompt?: string; tools?: string[] },
-  ) => Promise<void>;
-
-  /**
-   * Deletes a project and all its associated chats from the database.
-   */
-  deleteProjectDb: (id: string) => Promise<void>;
-
-  /**
-   * Persists a project's pin status to the database.
-   */
-  toggleProjectPinDb: (id: string) => Promise<void>;
-
   // Assistant Actions
-  /**
-   * Persists an assistant rename to the database.
-   */
-  renameAssistantDb: (id: string, name: string) => Promise<void>;
 
   /**
    * Loads all assistants from the database and populates the store.
    * Typically called once on app initialization via useEffect.
    */
   loadAssistants: () => Promise<void>;
-
-  /**
-   * Populates assistants in the store from database rows (internal use).
-   * Called by loadAssistants after fetching database records.
-   */
-  loadAssistantRows: (rows: AssistantRow[]) => void;
-
-  /**
-   * Creates a new assistant and persists to database.
-   * @returns ID of the newly created assistant
-   */
-  createAssistantDb: (data: {
-    name: string;
-    description?: string;
-    prompt?: string;
-  }) => Promise<string>;
-
-  /**
-   * Updates assistant properties (name, description, prompt) in database.
-   */
-  updateAssistantDb: (
-    id: string,
-    data: { name?: string; description?: string; prompt?: string; tools?: string[] },
-  ) => Promise<void>;
-
-  /**
-   * Deletes an assistant from the database.
-   */
-  deleteAssistantDb: (id: string) => Promise<void>;
 
   // Prompt Actions
   /**
@@ -236,34 +157,7 @@ export type AppState = {
    */
   loadPrompts: () => Promise<void>;
 
-  /**
-   * Creates a new prompt (slash-command snippet) and persists to database.
-   * @returns ID of the newly created prompt
-   */
-  createPromptDb: (data: {
-    title: string;
-    shortcut: string;
-    content: string;
-  }) => Promise<string>;
-
-  /**
-   * Updates prompt properties (title, shortcut, content) in database.
-   */
-  updatePromptDb: (
-    id: string,
-    data: { title?: string; shortcut?: string; content?: string },
-  ) => Promise<void>;
-
-  /**
-   * Deletes a prompt from the database.
-   */
-  deletePromptDb: (id: string) => Promise<void>;
-
   // Knowledge Base Actions
-  /**
-   * Persists a knowledge base rename to the database.
-   */
-  renameKnowledgebaseDb: (id: string, name: string) => Promise<void>;
 
   // MCP Server Actions
   /**
@@ -271,31 +165,6 @@ export type AppState = {
    * Typically called once on app initialization via useEffect.
    */
   loadMcpServers: () => Promise<void>;
-
-  /**
-   * Creates a new MCP server configuration and persists to database.
-   */
-  addMcpServer: (data: CreateMcpServer) => Promise<void>;
-
-  /**
-   * Removes an MCP server from the database.
-   */
-  removeMcpServer: (id: string) => Promise<void>;
-
-  /**
-   * Persists an MCP server rename to the database.
-   */
-  renameMcpServer: (id: string, name: string) => Promise<void>;
-
-  /**
-   * Toggles an MCP server's enabled/disabled status in the database.
-   */
-  toggleMcpServer: (id: string) => Promise<void>;
-
-  /**
-   * Updates MCP server configuration (command, url, headers, env) in database.
-   */
-  updateMcpServer: (id: string, data: UpdateMcpServer) => Promise<void>;
 
   // Chat Loading Actions
   /**

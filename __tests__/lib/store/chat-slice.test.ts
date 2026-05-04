@@ -388,21 +388,19 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   // ── loadChats ───────────────────────────────────────────────────────────
   describe("loadChats", () => {
     it("hydrates chats from rows", () => {
-      useAppStore
-        .getState()
-        .loadChats(
-          [
-            {
-              id: "c1",
-              title: "Chat 1",
-              projectId: null,
-              assistantId: null,
-              currentLeafId: null,
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-          [],
-        );
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: "c1",
+            title: "Chat 1",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: null,
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        [],
+      );
       expect(useAppStore.getState().chats["c1"]).toBeDefined();
       expect(useAppStore.getState().chats["c1"].title).toBe("Chat 1");
     });
@@ -447,21 +445,19 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
 
     it("replaces existing chat state with new rows", () => {
       const chatId = useAppStore.getState().createChat();
-      useAppStore
-        .getState()
-        .loadChats(
-          [
-            {
-              id: "fresh",
-              title: "Fresh",
-              projectId: null,
-              assistantId: null,
-              currentLeafId: null,
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-          [],
-        );
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: "fresh",
+            title: "Fresh",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: null,
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        [],
+      );
       // original chat gone
       expect(useAppStore.getState().chats[chatId]).toBeUndefined();
       expect(useAppStore.getState().chats["fresh"]).toBeDefined();
@@ -568,7 +564,7 @@ describe("ChatSlice — DB actions", () => {
       ).toBeUndefined();
     });
 
-    it("swallows errors from the server action", async () => {
+    it("rejects and does not update store when the server action fails", async () => {
       const { deleteMessage: deleteMsgAction } =
         await import("@/lib/actions/chats/delete-message");
       vi.mocked(deleteMsgAction).mockRejectedValueOnce(new Error("DB error"));
@@ -576,7 +572,10 @@ describe("ChatSlice — DB actions", () => {
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       await expect(
         useAppStore.getState().deleteMessageDb(chatId, "msg-1"),
-      ).resolves.toBeUndefined();
+      ).rejects.toThrow("DB error");
+      expect(
+        useAppStore.getState().chats[chatId].messages["msg-1"],
+      ).toBeDefined();
     });
   });
 
@@ -653,62 +652,58 @@ describe("ChatSlice — loadChats branch coverage", () => {
   });
 
   it("skips messages whose chatId does not match any loaded chat", () => {
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        [
-          {
-            id: "orphan",
-            chatId: "c999",
-            role: "user",
-            content: "Lost",
-            parentId: null,
-            metadata: null,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "orphan",
+          chatId: "c999",
+          role: "user",
+          content: "Lost",
+          parentId: null,
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    );
     const chat = useAppStore.getState().chats["c1"];
     expect(Object.keys(chat.messages)).toHaveLength(0);
   });
 
   it("gracefully handles invalid JSON in message metadata (catch branch)", () => {
     const now = new Date().toISOString();
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "Hello",
-            parentId: null,
-            metadata: "NOT_JSON",
-            createdAt: now,
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "Hello",
+          parentId: null,
+          metadata: "NOT_JSON",
+          createdAt: now,
+        },
+      ],
+    );
     const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
     expect(msg).toBeDefined();
     expect(msg.reasoning).toBeUndefined();
@@ -718,72 +713,68 @@ describe("ChatSlice — loadChats branch coverage", () => {
     const now = new Date().toISOString();
     // Valid JSON but does not match messageMetadataSchema (e.g. wrong shape)
     const badMetadata = JSON.stringify({ toolCalls: "not-an-array" });
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "Hello",
-            parentId: null,
-            metadata: badMetadata,
-            createdAt: now,
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "Hello",
+          parentId: null,
+          metadata: badMetadata,
+          createdAt: now,
+        },
+      ],
+    );
     const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
     expect(msg.reasoning).toBeUndefined();
   });
 
   it("attaches image attachments to messages", () => {
     const now = new Date().toISOString();
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "Photo",
-            parentId: null,
-            metadata: null,
-            createdAt: now,
-          },
-        ],
-        [
-          {
-            id: "att-1",
-            messageId: "msg-1",
-            name: "photo.png",
-            mimeType: "image/png",
-            size: 1024,
-            key: "uploads/photo.png",
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "Photo",
+          parentId: null,
+          metadata: null,
+          createdAt: now,
+        },
+      ],
+      [
+        {
+          id: "att-1",
+          messageId: "msg-1",
+          name: "photo.png",
+          mimeType: "image/png",
+          size: 1024,
+          key: "uploads/photo.png",
+        },
+      ],
+    );
     const attachments =
       useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
     expect(attachments).toHaveLength(1);
@@ -793,41 +784,39 @@ describe("ChatSlice — loadChats branch coverage", () => {
 
   it("attaches document attachments with type 'document'", () => {
     const now = new Date().toISOString();
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "File",
-            parentId: null,
-            metadata: null,
-            createdAt: now,
-          },
-        ],
-        [
-          {
-            id: "att-1",
-            messageId: "msg-1",
-            name: "report.pdf",
-            mimeType: "application/pdf",
-            size: 5000,
-            key: "uploads/report.pdf",
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "File",
+          parentId: null,
+          metadata: null,
+          createdAt: now,
+        },
+      ],
+      [
+        {
+          id: "att-1",
+          messageId: "msg-1",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          size: 5000,
+          key: "uploads/report.pdf",
+        },
+      ],
+    );
     const attachments =
       useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
     expect(attachments[0].type).toBe("document");
@@ -835,41 +824,39 @@ describe("ChatSlice — loadChats branch coverage", () => {
 
   it("skips attachments whose messageId does not exist in any chat", () => {
     const now = new Date().toISOString();
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "Hello",
-            parentId: null,
-            metadata: null,
-            createdAt: now,
-          },
-        ],
-        [
-          {
-            id: "att-1",
-            messageId: "ghost-msg",
-            name: "file.png",
-            mimeType: "image/png",
-            size: 100,
-            key: "uploads/file.png",
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "Hello",
+          parentId: null,
+          metadata: null,
+          createdAt: now,
+        },
+      ],
+      [
+        {
+          id: "att-1",
+          messageId: "ghost-msg",
+          name: "file.png",
+          mimeType: "image/png",
+          size: 100,
+          key: "uploads/file.png",
+        },
+      ],
+    );
     const attachments =
       useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
     expect(attachments).toHaveLength(0);
@@ -877,31 +864,29 @@ describe("ChatSlice — loadChats branch coverage", () => {
 
   it("does not build childrenIds for orphaned parent references", () => {
     const now = new Date().toISOString();
-    useAppStore
-      .getState()
-      .loadChats(
-        [
-          {
-            id: "c1",
-            title: "Chat",
-            projectId: null,
-            assistantId: null,
-            currentLeafId: null,
-            updatedAt: now,
-          },
-        ],
-        [
-          {
-            id: "msg-1",
-            chatId: "c1",
-            role: "user",
-            content: "Hello",
-            parentId: "does-not-exist",
-            metadata: null,
-            createdAt: now,
-          },
-        ],
-      );
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          updatedAt: now,
+        },
+      ],
+      [
+        {
+          id: "msg-1",
+          chatId: "c1",
+          role: "user",
+          content: "Hello",
+          parentId: "does-not-exist",
+          metadata: null,
+          createdAt: now,
+        },
+      ],
+    );
     const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
     expect(msg.childrenIds).toHaveLength(0);
   });

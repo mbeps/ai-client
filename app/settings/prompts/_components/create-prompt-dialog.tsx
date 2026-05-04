@@ -25,9 +25,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/constants/prompts";
-import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { createPrompt } from "@/lib/actions/prompts/create-prompt";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -52,8 +54,9 @@ export function CreatePromptDialog({
   open,
   onOpenChange,
 }: CreatePromptDialogProps) {
+  const router = useRouter();
+  const loadPrompts = useAppStore((state) => state.loadPrompts);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createPromptDb = useAppStore((state) => state.createPromptDb);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -63,12 +66,14 @@ export function CreatePromptDialog({
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      await createPromptDb({
+      await createPrompt({
         title: values.title,
         shortcut: values.shortcut,
         content: values.content,
       });
       toast.success("Prompt created");
+      router.refresh();
+      loadPrompts();
       form.reset();
       onOpenChange(false);
     } catch {

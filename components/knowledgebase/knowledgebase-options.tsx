@@ -1,21 +1,18 @@
 "use client";
 import { Edit2 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import type { Knowledgebase } from "@/types/knowledgebase";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
-  const renameKnowledgebaseDb = useAppStore(
-    (state) => state.renameKnowledgebaseDb,
-  );
-
   const { isMobile, showRename, setShowRename, handleRename } =
     useEntityOptions({
       id: kb.id,
       type: "Knowledgebase",
-      onRename: (id, name) => renameKnowledgebaseDb(id, name),
+      onRename: renameKnowledgebase,
+      useRouterRefresh: true,
     });
 
   const items = [

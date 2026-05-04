@@ -21,6 +21,8 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
+import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
 
 /**
  * Prompt editor page — client component for viewing and editing a single prompt.
@@ -38,8 +40,6 @@ export default function PromptDetailPage() {
   const prompts = useAppStore((state) => state.prompts);
   const prompt = prompts.find((p) => p.id === promptId);
 
-  const updatePromptDb = useAppStore((state) => state.updatePromptDb);
-  const deletePromptDb = useAppStore((state) => state.deletePromptDb);
   const loadPrompts = useAppStore((state) => state.loadPrompts);
 
   const [loading, setLoading] = useState(prompts.length === 0);
@@ -89,12 +89,13 @@ export default function PromptDetailPage() {
 
     setSavingSettings(true);
     try {
-      await updatePromptDb(promptId, {
+      await updatePrompt(promptId, {
         title,
         shortcut,
         content,
       });
       toast.success("Prompt saved");
+      router.refresh();
     } catch {
       toast.error("Failed to save prompt");
     } finally {
@@ -105,8 +106,9 @@ export default function PromptDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deletePromptDb(promptId);
+      await deletePrompt(promptId);
       toast.success("Prompt deleted");
+      router.refresh();
       router.push(ROUTES.SETTINGS.PROMPTS.path);
     } catch {
       toast.error("Failed to delete prompt");

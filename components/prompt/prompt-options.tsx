@@ -1,6 +1,5 @@
 "use client";
 import { Trash2, Edit2, ExternalLink } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import type { Prompt } from "@/types/prompt";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
@@ -8,10 +7,13 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
+import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.
- * Uses useEntityOptions hook for shared dialog state and updatePromptDb/deletePromptDb from store for mutations.
+ * Uses useEntityOptions hook for shared dialog state and direct Server Actions for mutations.
  * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
  * @param props.prompt - Prompt entity with id, title, and shortcut.
@@ -22,8 +24,7 @@ import { useEntityOptions } from "@/hooks/use-entity-options";
  */
 export function PromptOptions({ prompt }: { prompt: Prompt }) {
   const router = useRouter();
-  const updatePromptDb = useAppStore((state) => state.updatePromptDb);
-  const deletePromptDb = useAppStore((state) => state.deletePromptDb);
+  const loadPrompts = useAppStore((state) => state.loadPrompts);
 
   const {
     isMobile,
@@ -37,9 +38,11 @@ export function PromptOptions({ prompt }: { prompt: Prompt }) {
   } = useEntityOptions({
     id: prompt.id,
     type: "Prompt",
-    onRename: (id, name) => updatePromptDb(id, { title: name }),
-    onDelete: (id) => deletePromptDb(id),
+    onRename: (id, name) => updatePrompt(id, { title: name }),
+    onDelete: (id) => deletePrompt(id),
     redirectPath: ROUTES.SETTINGS.PROMPTS.path,
+    useRouterRefresh: true,
+    onAfterMutation: loadPrompts,
   });
 
   const items = [

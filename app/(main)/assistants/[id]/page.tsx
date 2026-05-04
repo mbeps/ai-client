@@ -12,7 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+import {
+  SidebarTabs,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+  SidebarTabsContent,
+} from "@/components/shared/sidebar-tabs";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -36,11 +41,12 @@ import {
 } from "lucide-react";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
-
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { ChatCard } from "@/components/chat/chat-card";
+import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
+import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
 
 /**
  * Assistant detail page — client component for viewing and editing assistant configuration.
@@ -62,8 +68,6 @@ export default function AssistantPage() {
     (c) => c.assistantId === assistantId,
   );
   const createNewChat = useCreateChat();
-  const updateAssistantDb = useAppStore((state) => state.updateAssistantDb);
-  const deleteAssistantDb = useAppStore((state) => state.deleteAssistantDb);
   const loadAssistants = useAppStore((state) => state.loadAssistants);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
@@ -77,7 +81,9 @@ export default function AssistantPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(assistant?.tools || []));
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(assistant?.tools || []),
+  );
 
   const filteredChats = useMemo(() => {
     return chats
@@ -148,7 +154,12 @@ export default function AssistantPage() {
     });
   };
 
-  const onBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+  const onBulkSelect = (
+    serverId: string,
+    toolNames: string[],
+    resourceUris: string[],
+    select: boolean,
+  ) => {
     if (select) {
       setSelectedTools((prev) => {
         const next = new Set(prev);
@@ -169,12 +180,13 @@ export default function AssistantPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateAssistantDb(assistantId, { 
-        name, 
-        description, 
+      await updateAssistant(assistantId, {
+        name,
+        description,
         prompt,
         tools: Array.from(selectedTools),
       });
+      router.refresh();
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -186,7 +198,8 @@ export default function AssistantPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteAssistantDb(assistantId);
+      await deleteAssistant(assistantId);
+      router.refresh();
       toast.success("Assistant deleted");
       router.push(ROUTES.ASSISTANTS.path);
     } catch {
@@ -235,12 +248,9 @@ export default function AssistantPage() {
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
           </SidebarTabsTrigger>
-
-
         </SidebarTabsList>
 
         <SidebarTabsContent value="chats" className="space-y-4">
-
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -252,7 +262,6 @@ export default function AssistantPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
             {filteredChats.map((chat) => (
               <ChatCard key={chat.id} chat={chat} />
             ))}
@@ -336,7 +345,8 @@ export default function AssistantPage() {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Default Tools</h3>
             <p className="text-sm text-muted-foreground">
-              Select tools and resources that should be enabled by default for all new chats with this assistant.
+              Select tools and resources that should be enabled by default for
+              all new chats with this assistant.
             </p>
           </div>
           <div className="space-y-4">
@@ -350,7 +360,7 @@ export default function AssistantPage() {
                 onBulkSelect={onBulkSelect}
               />
             </div>
-            
+
             <Button onClick={handleSave} disabled={saving}>
               {saving ? (
                 "Saving..."
@@ -388,10 +398,7 @@ export default function AssistantPage() {
             </CardContent>
           </Card>
         </SidebarTabsContent>
-
-
       </SidebarTabs>
-
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}

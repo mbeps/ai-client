@@ -24,9 +24,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/constants/prompts";
+import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -45,8 +47,9 @@ export function CreateAssistantDialog({
   open,
   onOpenChange,
 }: CreateAssistantDialogProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const createAssistantDb = useAppStore((state) => state.createAssistantDb);
+  const loadAssistants = useAppStore((state) => state.loadAssistants);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -56,7 +59,7 @@ export function CreateAssistantDialog({
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      await createAssistantDb({
+      await createAssistant({
         name: values.name,
         description: values.description || undefined,
         prompt: values.prompt || undefined,
@@ -64,6 +67,8 @@ export function CreateAssistantDialog({
       toast.success("Assistant created");
       form.reset();
       onOpenChange(false);
+      router.refresh();
+      await loadAssistants();
     } catch {
       toast.error("Failed to create assistant");
     } finally {

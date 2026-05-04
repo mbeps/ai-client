@@ -29,13 +29,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Plus, X } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import {
   createMcpServerSchema,
   type CreateMcpServer,
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
+import { createMcpServer } from "@/lib/mcp/create-mcp-server";
+import { useRouter } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dialog for adding a new Model Context Protocol server.
@@ -76,7 +78,8 @@ const HTTP_DEFAULTS: CreateMcpServer = {
 };
 
 export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
-  const addMcpServer = useAppStore((s) => s.addMcpServer);
+  const router = useRouter();
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const form = useForm<CreateMcpServer>({
     resolver: zodResolver(createMcpServerSchema),
@@ -92,8 +95,10 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
 
   async function onSubmit(data: CreateMcpServer) {
     try {
-      await addMcpServer(data);
+      await createMcpServer(data);
       toast.success("MCP server added");
+      router.refresh();
+      loadMcpServers();
       onOpenChange(false);
       form.reset(STDIO_DEFAULTS);
     } catch {

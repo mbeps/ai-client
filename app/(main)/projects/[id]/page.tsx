@@ -4,7 +4,12 @@ import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SidebarTabs, SidebarTabsList, SidebarTabsTrigger, SidebarTabsContent } from "@/components/shared/sidebar-tabs";
+import {
+  SidebarTabs,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+  SidebarTabsContent,
+} from "@/components/shared/sidebar-tabs";
 
 import {
   Card,
@@ -32,7 +37,6 @@ import {
 } from "lucide-react";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
-
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
@@ -40,6 +44,8 @@ import { ChatCard } from "@/components/chat/chat-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useCreateChat } from "@/hooks/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
+import { deleteProject } from "@/lib/actions/projects/delete-project";
+import { updateProject } from "@/lib/actions/projects/update-project";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
@@ -63,8 +69,6 @@ export default function ProjectPage() {
     (c) => c.projectId === projectId,
   );
   const createNewChat = useCreateChat();
-  const updateProjectDb = useAppStore((state) => state.updateProjectDb);
-  const deleteProjectDb = useAppStore((state) => state.deleteProjectDb);
   const loadProjects = useAppStore((state) => state.loadProjects);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
@@ -78,7 +82,9 @@ export default function ProjectPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(project?.tools || []));
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(project?.tools || []),
+  );
 
   const filteredChats = useMemo(() => {
     return chats
@@ -143,7 +149,12 @@ export default function ProjectPage() {
     });
   };
 
-  const onBulkSelect = (serverId: string, toolNames: string[], resourceUris: string[], select: boolean) => {
+  const onBulkSelect = (
+    serverId: string,
+    toolNames: string[],
+    resourceUris: string[],
+    select: boolean,
+  ) => {
     if (select) {
       setSelectedTools((prev) => {
         const next = new Set(prev);
@@ -164,12 +175,13 @@ export default function ProjectPage() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await updateProjectDb(projectId, { 
-        name, 
-        description, 
+      await updateProject(projectId, {
+        name,
+        description,
         globalPrompt,
         tools: Array.from(selectedTools),
       });
+      router.refresh();
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -181,7 +193,8 @@ export default function ProjectPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteProjectDb(projectId);
+      await deleteProject(projectId);
+      router.refresh();
       toast.success("Project deleted");
       router.push(ROUTES.PROJECTS.path);
     } catch {
@@ -229,12 +242,9 @@ export default function ProjectPage() {
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
           </SidebarTabsTrigger>
-
-
         </SidebarTabsList>
 
         <SidebarTabsContent value="chats" className="space-y-4">
-
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -261,7 +271,6 @@ export default function ProjectPage() {
           </div>
         </SidebarTabsContent>
 
-
         <SidebarTabsContent value="knowledge" className="space-y-6">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Knowledge</h3>
@@ -275,13 +284,12 @@ export default function ProjectPage() {
           </p>
         </SidebarTabsContent>
 
-
         <SidebarTabsContent value="prompt" className="space-y-6">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Global Prompt</h3>
             <p className="text-sm text-muted-foreground">
-              Instructions injected as system prompts for all new chats in
-              this project.
+              Instructions injected as system prompts for all new chats in this
+              project.
             </p>
           </div>
           <div className="space-y-4">
@@ -345,7 +353,8 @@ export default function ProjectPage() {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Default Tools</h3>
             <p className="text-sm text-muted-foreground">
-              Select tools and resources that should be enabled by default for all new chats in this project.
+              Select tools and resources that should be enabled by default for
+              all new chats in this project.
             </p>
           </div>
           <div className="space-y-4">
@@ -359,7 +368,7 @@ export default function ProjectPage() {
                 onBulkSelect={onBulkSelect}
               />
             </div>
-            
+
             <Button onClick={handleSaveSettings} disabled={savingSettings}>
               {savingSettings ? (
                 "Saving..."
@@ -397,10 +406,7 @@ export default function ProjectPage() {
             </CardContent>
           </Card>
         </SidebarTabsContent>
-
-
       </SidebarTabs>
-
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
