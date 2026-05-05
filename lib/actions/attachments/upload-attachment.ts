@@ -8,25 +8,20 @@ import { eq, and } from "drizzle-orm";
 import { uploadObject, ensureBucket } from "@/lib/storage/s3-client";
 import { z } from "zod";
 import {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_DOCUMENT_TYPES,
   ALLOWED_SPREADSHEET_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_DOCUMENT_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/lib/attachments/constants";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 
 const ALLOWED_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "text/markdown",
+  ...ALLOWED_IMAGE_TYPES,
+  ...ALLOWED_DOCUMENT_TYPES,
   ...ALLOWED_SPREADSHEET_TYPES,
 ]);
-
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
-const MAX_DOCUMENT_SIZE = 20 * 1024 * 1024; // 20 MB
-const MAX_SPREADSHEET_SIZE = MAX_SPREADSHEET_SIZE_BYTES; // 50 MB
 
 /**
  * Uploads a file to S3 and creates an attachment record linked to a message.
@@ -78,10 +73,10 @@ export async function uploadAttachment(formData: FormData) {
   const isImage = mimeType.startsWith("image/");
   const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(mimeType);
   const maxSize = isImage
-    ? MAX_IMAGE_SIZE
+    ? MAX_IMAGE_SIZE_BYTES
     : isSpreadsheet
-      ? MAX_SPREADSHEET_SIZE
-      : MAX_DOCUMENT_SIZE;
+      ? MAX_SPREADSHEET_SIZE_BYTES
+      : MAX_DOCUMENT_SIZE_BYTES;
   const sizeLimitLabel = isImage ? "2 MB" : isSpreadsheet ? "50 MB" : "20 MB";
   if (file.size > maxSize) {
     throw new Error(`File exceeds the ${sizeLimitLabel} size limit.`);

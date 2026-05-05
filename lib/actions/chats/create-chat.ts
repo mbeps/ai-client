@@ -3,7 +3,6 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
-import { v4 as uuidv4 } from "uuid";
 import type { ChatRow } from "@/types/chat-row";
 import { createChatSchema } from "@/schemas/chat";
 import { z } from "zod";
@@ -36,7 +35,7 @@ export async function createChat(
   const [newChat] = await db
     .insert(chat)
     .values({
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       title: validated.title ?? "New Chat",
       userId: session.user.id,
       projectId: validated.projectId ?? null,

@@ -325,10 +325,7 @@ describe("getProject", () => {
 describe("togglePinProject", () => {
   const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
-  it("fetches current state then updates pin and returns updated row", async () => {
-    // First query: select current project (terminal: .where())
-    chainable.where.mockResolvedValueOnce([PROJECT_ROW]);
-    // Second query: update with toggled pin (terminal: .returning())
+  it("updates pin status atomically and returns the updated row", async () => {
     const pinned = { ...PROJECT_ROW, isPinned: true };
     chainable.returning.mockResolvedValueOnce([pinned]);
 
@@ -336,12 +333,12 @@ describe("togglePinProject", () => {
     expect(result).toEqual(pinned);
     expect(chainable.update).toHaveBeenCalledOnce();
     expect(chainable.set).toHaveBeenCalledWith(
-      expect.objectContaining({ isPinned: true }),
+      expect.objectContaining({ updatedAt: expect.any(Date) }),
     );
   });
 
   it("throws 'Not Found' when project does not exist or is not owned", async () => {
-    chainable.where.mockResolvedValueOnce([]); // no current row
+    chainable.returning.mockResolvedValueOnce([]); // no matching row
     await expect(togglePinProject(VALID_UUID)).rejects.toThrow("Not Found");
   });
 

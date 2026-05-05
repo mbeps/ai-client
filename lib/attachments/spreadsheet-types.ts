@@ -22,7 +22,7 @@ export const SPREADSHEET_EXTENSIONS = new Set([
   ".csv",
 ]);
 
-const MIME_BY_EXT: Record<string, string> = {
+export const MIME_BY_EXT: Record<string, string> = {
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
   ".xls": "application/vnd.ms-excel",

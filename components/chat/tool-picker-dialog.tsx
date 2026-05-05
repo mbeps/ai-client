@@ -1,8 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Database,
-  Check,
-  Wrench,
-  X,
-} from "lucide-react";
+import { Database, Check, Wrench, X } from "lucide-react";
 import type { McpServer } from "@/types/mcp-server";
 import { useState } from "react";
 import { ToolPickerList } from "./tool-picker-list";
@@ -62,7 +53,7 @@ export function ToolPickerDialog({
         <DialogHeader className="sr-only">
           <DialogTitle>Select Tools & Resources</DialogTitle>
         </DialogHeader>
-        
+
         {open && (
           <ToolPickerList
             servers={servers}

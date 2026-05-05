@@ -10,7 +10,7 @@ import { promptRowToStore } from "../mappers/prompt";
 
 type EntitySet = Parameters<StateCreator<AppState>>[0];
 
-export type EntitySlice = Pick<
+type EntitySlice = Pick<
   AppState,
   | "projects"
   | "assistants"

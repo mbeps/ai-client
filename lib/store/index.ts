@@ -25,9 +25,6 @@ import { createChatSlice } from "./slices/chat-slice";
 import { createEntitySlice } from "./slices/entity-slice";
 import type { AppState } from "@/types/app-state";
 
-// Re-export specific types if needed, or let components import from @/types directly.
-export type { AppState };
-
 /**
  * Global Zustand store hook for the AI chat client.
  * Manages projects, assistants, knowledge bases, chats, and messages entirely in-memory.

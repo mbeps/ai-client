@@ -1,5 +1,4 @@
 import { StateCreator } from "zustand";
-import { v4 as uuidv4 } from "uuid";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { insertMessage, removeMessageSubtree } from "@/lib/chat/message-tree";
 import { createChat } from "@/lib/actions/chats/create-chat";
@@ -22,7 +21,7 @@ import type { Chat } from "@/types/chat";
  *
  * @see createChatSlice for the implementation
  */
-export type ChatSlice = Pick<
+type ChatSlice = Pick<
   AppState,
   | "chats"
   | "createChat"
@@ -64,7 +63,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   chats: {},
 
   createChat: (projectId, assistantId) => {
-    const newChatId = uuidv4();
+    const newChatId = crypto.randomUUID();
     set((state) => ({
       chats: {
         ...state.chats,
@@ -92,7 +91,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     attachments,
     reasoning,
   ) => {
-    const newMessageId = id ?? uuidv4();
+    const newMessageId = id ?? crypto.randomUUID();
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -165,7 +164,20 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
 
     await deleteMessageAction(chatId, messageId, newLeafId);
-    get().deleteMessage(chatId, messageId);
+    set((state) => {
+      const c = state.chats[chatId];
+      if (!c) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: {
+            ...c,
+            messages: updatedMessages,
+            currentLeafId: newLeafId,
+          },
+        },
+      };
+    });
   },
 
   setCurrentLeaf: (chatId, leafId) => {
@@ -261,6 +273,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
     for (const row of rows) {
       chats[row.id] = chatRowToStore(row);
+    }
+
+    if (messageRows.length === 0) {
+      set({ chats });
+      return;
     }
 
     for (const m of messageRows) {

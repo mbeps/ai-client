@@ -18,7 +18,6 @@ import { PROMPTS } from "@/constants/prompts";
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
-import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 60;
 
@@ -384,7 +383,7 @@ export async function POST(req: Request) {
     abortSignal: req.signal,
   });
 
-  const assistantMessageId = uuidv4();
+  const assistantMessageId = crypto.randomUUID();
   let fullText = "";
   let fullReasoning = "";
 
