@@ -63,8 +63,8 @@ vi.mock("@/lib/actions/projects/rename-project", () => ({
 vi.mock("@/lib/actions/projects/update-project", () => ({
   updateProject: vi.fn(),
 }));
-vi.mock("@/lib/actions/projects/toggle-project-pin", () => ({
-  toggleProjectPin: vi.fn(),
+vi.mock("@/lib/actions/projects/toggle-pin-project", () => ({
+  togglePinProject: vi.fn(),
 }));
 vi.mock("@/lib/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),

@@ -10,6 +10,7 @@ import {
   SidebarGroupAction,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -29,6 +30,7 @@ import {
   LogOut,
   User,
   ChevronRight,
+  MoreHorizontal,
   Workflow,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,7 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-import { ChatActionMenu } from "./chat-action-menu";
+import { ChatOptions } from "@/components/chat/chat-options";
 
 /**
  * Main application sidebar for authenticated routes.
@@ -174,7 +176,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <ChevronRight
               className={cn(
                 "transition-transform duration-200",
-                !isChatsCollapsed && "rotate-90"
+                !isChatsCollapsed && "rotate-90",
               )}
             />
           </SidebarGroupAction>
@@ -192,7 +194,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <span className="truncate">{chat.title}</span>
                       </Link>
                     </SidebarMenuButton>
-                    <ChatActionMenu chat={chat} />
+                    <ChatOptions
+                      chat={chat}
+                      trigger={
+                        <SidebarMenuAction className="lg:opacity-0 lg:group-hover/menu-item:opacity-100">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">More</span>
+                        </SidebarMenuAction>
+                      }
+                    />
                   </SidebarMenuItem>
                 );
               })}

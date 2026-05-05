@@ -1,8 +1,6 @@
-import type { PromptRow } from "@/types/prompt-row";
 import type { ChatRow } from "@/types/chat-row";
 import type { MessageRow } from "@/types/message-row";
 import type { AttachmentRow } from "@/types/attachment-row";
-import type { CreateMcpServer, UpdateMcpServer } from "@/schemas/mcp-server";
 import type { Prompt } from "./prompt";
 import type { Project } from "./project";
 import type { Assistant } from "./assistant";

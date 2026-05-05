@@ -8,7 +8,6 @@ import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
@@ -89,11 +88,11 @@ export function ChatUI({
   }, [initialToolsAndResources]);
 
   const initialSelectedTools = useMemo(() => {
-    return initialToolsAndResources.filter(t => t.includes(":tool:"));
+    return initialToolsAndResources.filter((t) => t.includes(":tool:"));
   }, [initialToolsAndResources]);
 
   const initialSelectedResources = useMemo(() => {
-    return initialToolsAndResources.filter(t => t.includes(":resource:"));
+    return initialToolsAndResources.filter((t) => t.includes(":resource:"));
   }, [initialToolsAndResources]);
 
   const [artifactIndex, setArtifactIndex] = useState<number>(-1);
@@ -245,7 +244,7 @@ export function ChatUI({
       selectedAssistantId?: string,
     ) => {
       await streamResponse(
-        uuidv4(),
+        crypto.randomUUID(),
         content,
         chat?.currentLeafId || null,
         attachments,
@@ -323,7 +322,7 @@ export function ChatUI({
     const msg = chat.messages[id];
     if (!msg) return;
     await streamResponse(
-      uuidv4(),
+      crypto.randomUUID(),
       newContent,
       msg.parentId,
       attachments,
@@ -360,7 +359,7 @@ export function ChatUI({
     }
 
     await streamResponse(
-      uuidv4(),
+      crypto.randomUUID(),
       userContent,
       parentMsg.parentId,
       parentMsg.attachments,

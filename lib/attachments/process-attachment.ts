@@ -1,7 +1,8 @@
 import { validateFile } from "./validate-file";
 import { extractPdf, extractPlainText } from "./extract-document";
 import type { Attachment } from "@/types/attachment";
-import { ALLOWED_IMAGE_TYPES, ALLOWED_SPREADSHEET_TYPES } from "./constants";
+import { ALLOWED_IMAGE_TYPES } from "./constants";
+import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/spreadsheet-types";
 
 /**
  * Converts a browser File to a structured Attachment object.
@@ -46,11 +47,7 @@ export async function processAttachment(
 
   const id = crypto.randomUUID();
   const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
-  const isSpreadsheet =
-    ALLOWED_SPREADSHEET_TYPES.has(file.type) ||
-    file.name.toLowerCase().endsWith(".xlsx") ||
-    file.name.toLowerCase().endsWith(".xls") ||
-    file.name.toLowerCase().endsWith(".csv");
+  const isSpreadsheet = checkIsSpreadsheet(file.name, file.type);
 
   if (isImage) {
     const dataUrl = await readAsDataUrl(file);

@@ -495,8 +495,6 @@ export function ChatInput({
               <DrawerContent>
                 <AttachmentsMenu
                   servers={servers}
-                  selectedServerIds={selectedServerIds}
-                  toggleServer={toggleServer}
                   fileInputRef={fileInputRef}
                   selectedTools={selectedTools}
                   selectedResources={selectedResources}
@@ -520,8 +518,6 @@ export function ChatInput({
               <PopoverContent side="top" align="start" className="w-56 p-1">
                 <AttachmentsMenu
                   servers={servers}
-                  selectedServerIds={selectedServerIds}
-                  toggleServer={toggleServer}
                   fileInputRef={fileInputRef}
                   selectedTools={selectedTools}
                   selectedResources={selectedResources}
