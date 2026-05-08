@@ -129,7 +129,7 @@ export const ROUTES = {
     },
     TRANSFORM: {
       path: `${WORKFLOWS_BASE}/transform` as const,
-      name: "FloQast Transform",
+      name: "SheetFlow",
       new: `${WORKFLOWS_BASE}/transform/new` as const,
       detail: (id: string) => `${WORKFLOWS_BASE}/transform/${id}` as const,
       runs: (id: string) => `${WORKFLOWS_BASE}/transform/runs/${id}` as const,

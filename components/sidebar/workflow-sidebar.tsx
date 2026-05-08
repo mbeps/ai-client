@@ -65,7 +65,7 @@ export function WorkflowSidebar({
       icon: Languages,
     },
     {
-      name: "FloQast Transform",
+      name: "SheetFlow",
       href: ROUTES.WORKFLOWS.TRANSFORM.path,
       icon: Zap,
     },

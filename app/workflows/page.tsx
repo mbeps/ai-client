@@ -19,7 +19,7 @@ const WORKFLOWS = [
     color: "text-blue-500",
   },
   {
-    name: "FloQast Transform",
+    name: "SheetFlow",
     description:
       "Automate multi-step spreadsheet transformations with AI and human review gates.",
     href: ROUTES.WORKFLOWS.TRANSFORM.path,
