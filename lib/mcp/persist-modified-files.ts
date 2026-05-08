@@ -22,9 +22,10 @@ import { ModifiedAttachment } from "@/types/modified-attachment";
 export async function persistModifiedFiles(params: {
   files: BridgedFile[];
   userId: string;
-  assistantMessageId: string;
+  messageId?: string;
+  transformRunId?: string;
 }): Promise<ModifiedAttachment[]> {
-  const { files, userId, assistantMessageId } = params;
+  const { files, userId } = params;
   const results: ModifiedAttachment[] = [];
 
   for (const f of files) {
@@ -49,7 +50,8 @@ export async function persistModifiedFiles(params: {
 
       await db.insert(attachment).values({
         id: newAttachmentId,
-        messageId: assistantMessageId,
+        messageId: params.messageId ?? null,
+        transformRunId: params.transformRunId ?? null,
         userId,
         name: f.originalName,
         mimeType,

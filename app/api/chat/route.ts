@@ -523,7 +523,7 @@ export async function POST(req: Request) {
             const modified = await persistModifiedFiles({
               files: bridge.files,
               userId: session.user.id,
-              assistantMessageId,
+              messageId: assistantMessageId,
             });
             for (const mod of modified) {
               controller.enqueue(

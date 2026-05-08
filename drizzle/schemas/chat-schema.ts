@@ -72,9 +72,10 @@ export const attachment = pgTable(
   "attachment",
   {
     id: text("id").primaryKey(),
-    messageId: text("message_id")
-      .notNull()
-      .references(() => message.id, { onDelete: "cascade" }),
+    messageId: text("message_id").references(() => message.id, {
+      onDelete: "cascade",
+    }),
+    transformRunId: text("transform_run_id"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

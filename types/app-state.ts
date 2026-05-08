@@ -9,6 +9,7 @@ import type { Attachment } from "./attachment";
 import type { Message } from "./message";
 import type { Chat } from "./chat";
 import type { Knowledgebase } from "./knowledgebase";
+import type { TransformAgent } from "./transform-agent";
 
 /**
  * Global application state shape for the Zustand store.
@@ -39,6 +40,9 @@ export type AppState = {
   mcpServers: McpServer[];
   /** All knowledge bases (UI-only; no DB table yet). */
   knowledgebases: Knowledgebase[];
+  /** All transform agents. */
+  transformAgents: TransformAgent[];
+  loadTransformAgents: () => Promise<void>;
 
   // Chat Actions (Optimistic + Optional DB Sync)
   /**

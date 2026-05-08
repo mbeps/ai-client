@@ -4,9 +4,11 @@ import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { listMcpServers } from "@/lib/mcp/list-mcp-servers";
+import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { projectRowToStore } from "../mappers/project";
 import { assistantRowToStore } from "../mappers/assistant";
 import { promptRowToStore } from "../mappers/prompt";
+import { transformAgentRowToStore } from "../mappers/transform-agent";
 
 type EntitySet = Parameters<StateCreator<AppState>>[0];
 
@@ -17,6 +19,8 @@ type EntitySlice = Pick<
   | "prompts"
   | "mcpServers"
   | "knowledgebases"
+  | "transformAgents"
+  | "loadTransformAgents"
   | "loadProjects"
   | "loadAssistants"
   | "loadPrompts"
@@ -57,6 +61,11 @@ const makeLoadMcpServers = (set: EntitySet) => async () => {
   });
 };
 
+const makeLoadTransformAgents = (set: EntitySet) => async () => {
+  const rows = await listTransformAgents();
+  set({ transformAgents: rows.map(transformAgentRowToStore) });
+};
+
 export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   set,
 ) => ({
@@ -65,8 +74,10 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   prompts: [],
   mcpServers: [],
   knowledgebases: [],
+  transformAgents: [],
 
   loadProjects: makeLoadProjects(set),
+  loadTransformAgents: makeLoadTransformAgents(set),
   loadAssistants: makeLoadAssistants(set),
   loadPrompts: makeLoadPrompts(set),
   loadMcpServers: makeLoadMcpServers(set),

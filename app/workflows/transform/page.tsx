@@ -8,12 +8,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MOCK_AGENTS } from "@/lib/mocks/transform-data";
-import { Plus, Settings2, PlayCircle, History, Zap } from "lucide-react";
+import { Plus, Settings2, PlayCircle, Zap } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
+import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
+import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 
-export default function TransformAgentsPage() {
+export default async function TransformAgentsPage() {
+  const rows = await listTransformAgents();
+  const agents = rows.map(transformAgentRowToStore);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -31,7 +35,7 @@ export default function TransformAgentsPage() {
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {MOCK_AGENTS.map((agent) => (
+        {agents.map((agent) => (
           <Card key={agent.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="text-xl">{agent.name}</CardTitle>
@@ -53,14 +57,12 @@ export default function TransformAgentsPage() {
             <CardFooter className="grid grid-cols-2 gap-2 border-t pt-4">
               <Button variant="outline" size="sm" asChild>
                 <Link href={ROUTES.WORKFLOWS.TRANSFORM.detail(agent.id)}>
-                  <Settings2 className="mr-2 h-3.5 w-3.5" />
-                  Configure
+                  <Settings2 className="mr-2 h-3.5 w-3.5" /> Configure
                 </Link>
               </Button>
               <Button size="sm" asChild>
                 <Link href={ROUTES.WORKFLOWS.TRANSFORM.detail(agent.id)}>
-                  <PlayCircle className="mr-2 h-3.5 w-3.5" />
-                  Run
+                  <PlayCircle className="mr-2 h-3.5 w-3.5" /> Run
                 </Link>
               </Button>
             </CardFooter>
@@ -68,7 +70,7 @@ export default function TransformAgentsPage() {
         ))}
       </div>
 
-      {MOCK_AGENTS.length === 0 && (
+      {agents.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
           <div className="rounded-full bg-muted p-4">
             <Settings2 className="h-8 w-8 text-muted-foreground" />
@@ -79,8 +81,7 @@ export default function TransformAgentsPage() {
           </p>
           <Button className="mt-6" asChild>
             <Link href={ROUTES.WORKFLOWS.TRANSFORM.new}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Agent
+              <Plus className="mr-2 h-4 w-4" /> Create Agent
             </Link>
           </Button>
         </div>
