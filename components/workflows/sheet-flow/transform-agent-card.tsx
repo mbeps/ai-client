@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { TransformAgent } from "@/types/transform-agent";
+import { TransformAgentOptions } from "./transform-agent-options";
 
 interface TransformAgentCardProps {
   agent: TransformAgent;
@@ -61,6 +62,8 @@ export function TransformAgentCard({ agent }: TransformAgentCardProps) {
           </TooltipTrigger>
           <TooltipContent>Run Agent</TooltipContent>
         </Tooltip>
+
+        <TransformAgentOptions agent={agent} />
       </div>
     </Card>
   );

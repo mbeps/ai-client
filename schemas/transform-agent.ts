@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { nameField, descriptionField } from "./shared-fields";
+import { nameField, descriptionField, renameSchema } from "./shared-fields";
+
+export const renameTransformAgentSchema = renameSchema;
 
 export const transformStepSchema = z.object({
   id: z.string().uuid(),

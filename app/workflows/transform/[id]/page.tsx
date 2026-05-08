@@ -28,6 +28,9 @@ import {
   Loader2,
   Settings,
   List,
+  Edit2,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -78,6 +81,10 @@ export default function AgentEditorPage() {
   const [runFiles, setRunFiles] = useState<File[]>([]);
   const [dryRun, setDryRun] = useState(false);
   const [isStartingRun, setIsStartingRun] = useState(false);
+
+  // Step rename state
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [tempStepName, setTempStepName] = useState("");
 
   useEffect(() => {
     if (isNew) return;
@@ -141,6 +148,24 @@ export default function AgentEditorPage() {
     const updated = [...steps];
     updated[index] = { ...updated[index], ...updates };
     setSteps(updated);
+  };
+
+  const startEditing = (index: number) => {
+    setEditingStepIndex(index);
+    setTempStepName(steps[index].name);
+  };
+
+  const cancelEditing = () => {
+    setEditingStepIndex(null);
+    setTempStepName("");
+  };
+
+  const applyEditing = () => {
+    if (editingStepIndex !== null && tempStepName.trim()) {
+      updateStep(editingStepIndex, { name: tempStepName.trim() });
+    }
+    setEditingStepIndex(null);
+    setTempStepName("");
   };
 
   const removeStep = (index: number) => {
@@ -307,24 +332,62 @@ export default function AgentEditorPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1">
-                    <Input
-                      value={step.name}
-                      onChange={(e) =>
-                        updateStep(index, { name: e.target.value })
-                      }
-                      className="h-8 font-semibold border-none focus-visible:ring-0 px-0"
-                    />
+                    {editingStepIndex === index ? (
+                      <Input
+                        value={tempStepName}
+                        onChange={(e) => setTempStepName(e.target.value)}
+                        className="h-8 font-semibold"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") applyEditing();
+                          if (e.key === "Escape") cancelEditing();
+                        }}
+                      />
+                    ) : (
+                      <h4 className="font-semibold">{step.name}</h4>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeStep(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                    {editingStepIndex === index ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={applyEditing}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={cancelEditing}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => startEditing(index)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeStep(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      </>
+                    )}
                   </div>
                 </CardHeader>
                 <Separator />
@@ -434,6 +497,7 @@ export default function AgentEditorPage() {
           </div>
         </SidebarTabsContent>
       </SidebarTabs>
+
     </div>
   );
 }
