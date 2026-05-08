@@ -129,10 +129,11 @@ export const ROUTES = {
     },
     TRANSFORM: {
       path: `${WORKFLOWS_BASE}/transform` as const,
-      name: "SheetFlow",
+      name: "Spreadsheets Automation",
       new: `${WORKFLOWS_BASE}/transform/new` as const,
       detail: (id: string) => `${WORKFLOWS_BASE}/transform/${id}` as const,
-      runs: (agentId: string, runId: string) => `${WORKFLOWS_BASE}/transform/${agentId}/${runId}` as const,
+      runs: (agentId: string, runId: string) =>
+        `${WORKFLOWS_BASE}/transform/${agentId}/${runId}` as const,
     },
   },
 } as const;
