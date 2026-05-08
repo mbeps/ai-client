@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +33,7 @@ import {
   Edit2,
   Check,
   X,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -52,6 +55,8 @@ import { createTransformAgent } from "@/lib/actions/transform-agents/create-tran
 import { updateTransformAgent } from "@/lib/actions/transform-agents/update-transform-agent";
 import { uploadRunInput } from "@/lib/actions/transform-runs/upload-run-input";
 import { createTransformRun } from "@/lib/actions/transform-runs/create-transform-run";
+import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
@@ -85,6 +90,10 @@ export default function AgentEditorPage() {
   // Step rename state
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [tempStepName, setTempStepName] = useState("");
+
+  // Delete state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -205,6 +214,19 @@ export default function AgentEditorPage() {
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteTransformAgent(id);
+      toast.success("Agent deleted");
+      router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
+    } catch {
+      toast.error("Failed to delete agent");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -313,6 +335,12 @@ export default function AgentEditorPage() {
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuration</span>
           </SidebarTabsTrigger>
+          {!isNew && (
+            <SidebarTabsTrigger value="danger">
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Danger Zone</span>
+            </SidebarTabsTrigger>
+          )}
         </SidebarTabsList>
 
         <SidebarTabsContent value="steps" className="space-y-4">
@@ -496,7 +524,51 @@ export default function AgentEditorPage() {
             </div>
           </div>
         </SidebarTabsContent>
+
+        {!isNew && (
+          <SidebarTabsContent value="danger">
+            <Card className="border-destructive/50">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="h-5 w-5 text-destructive" />
+                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                </div>
+                <CardDescription>
+                  Irreversible actions for this transform agent.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Deleting this agent will permanently remove its configuration
+                  and steps. Past runs will be preserved but dissociated. This
+                  action cannot be undone.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete Agent
+                </Button>
+              </CardContent>
+            </Card>
+          </SidebarTabsContent>
+        )}
       </SidebarTabs>
+
+      <DeleteConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title={`Delete "${name}"?`}
+        description="This will permanently delete the transform agent and its configuration. This cannot be undone."
+        loading={isDeleting}
+      />
 
     </div>
   );
