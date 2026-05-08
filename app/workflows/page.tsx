@@ -18,6 +18,14 @@ const WORKFLOWS = [
     icon: Languages,
     color: "text-blue-500",
   },
+  {
+    name: "FloQast Transform",
+    description:
+      "Automate multi-step spreadsheet transformations with AI and human review gates.",
+    href: ROUTES.WORKFLOWS.TRANSFORM.path,
+    icon: Zap,
+    color: "text-amber-500",
+  },
 ];
 
 export default function WorkflowsPage() {
