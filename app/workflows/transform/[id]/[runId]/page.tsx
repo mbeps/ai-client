@@ -53,7 +53,8 @@ function mapRunRowToRun(row: TransformRunRow): TransformRun {
 
 export default function TransformRunDetailPage() {
   const params = useParams();
-  const id = params.id as string;
+  const agentId = params.id as string;
+  const runId = params.runId as string;
 
   const [run, setRun] = useState<TransformRun | null>(null);
   const [agent, setAgent] = useState<TransformAgent | null>(null);
@@ -68,7 +69,7 @@ export default function TransformRunDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const runRow = await getTransformRun(id);
+      const runRow = await getTransformRun(runId);
       if (!runRow) {
         setIsLoading(false);
         return;
@@ -122,7 +123,7 @@ export default function TransformRunDetailPage() {
       }
     }
     load();
-  }, [id]);
+  }, [runId]);
 
   useEffect(() => {
     if (!run || !agent || hasStartedStream.current) return;
@@ -315,7 +316,7 @@ export default function TransformRunDetailPage() {
     <div className="space-y-6 pb-12">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={ROUTES.WORKFLOWS.TRANSFORM.path}>
+          <Link href={ROUTES.WORKFLOWS.TRANSFORM.detail(agentId)}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>

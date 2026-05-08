@@ -132,7 +132,7 @@ export const ROUTES = {
       name: "SheetFlow",
       new: `${WORKFLOWS_BASE}/transform/new` as const,
       detail: (id: string) => `${WORKFLOWS_BASE}/transform/${id}` as const,
-      runs: (id: string) => `${WORKFLOWS_BASE}/transform/runs/${id}` as const,
+      runs: (agentId: string, runId: string) => `${WORKFLOWS_BASE}/transform/${agentId}/${runId}` as const,
     },
   },
 } as const;

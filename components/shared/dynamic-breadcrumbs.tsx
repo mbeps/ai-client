@@ -32,6 +32,9 @@ const ROUTE_LABELS: Record<string, string> = {
   general: "General",
   settings: "Settings",
   prompts: "Prompts",
+  workflows: "Workflows",
+  translation: "Translation",
+  transform: "SheetFlow",
 };
 
 /**

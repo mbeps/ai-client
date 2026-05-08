@@ -34,6 +34,7 @@ import {
   Check,
   X,
   Shield,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -55,7 +56,9 @@ import { createTransformAgent } from "@/lib/actions/transform-agents/create-tran
 import { updateTransformAgent } from "@/lib/actions/transform-agents/update-transform-agent";
 import { uploadRunInput } from "@/lib/actions/transform-runs/upload-run-input";
 import { createTransformRun } from "@/lib/actions/transform-runs/create-transform-run";
+import { listTransformRuns } from "@/lib/actions/transform-runs/list-transform-runs";
 import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
+import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-run-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
@@ -67,6 +70,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { TransformRunRow } from "@/types/transform-run-row";
 
 export default function AgentEditorPage() {
   const params = useParams();
@@ -80,6 +84,9 @@ export default function AgentEditorPage() {
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [runs, setRuns] = useState<TransformRunRow[]>([]);
+  const [isLoadingRuns, setIsLoadingRuns] = useState(false);
+  const [activeTab, setActiveTab] = useState("steps");
 
   // Run dialog state
   const [runDialogOpen, setRunDialogOpen] = useState(false);
@@ -112,6 +119,14 @@ export default function AgentEditorPage() {
       })
       .finally(() => setIsLoading(false));
   }, [id, isNew, router]);
+
+  useEffect(() => {
+    if (isNew || activeTab !== "runs") return;
+    setIsLoadingRuns(true);
+    listTransformRuns(id)
+      .then(setRuns)
+      .finally(() => setIsLoadingRuns(false));
+  }, [id, isNew, activeTab]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -206,7 +221,7 @@ export default function AgentEditorPage() {
       });
 
       setRunDialogOpen(false);
-      router.push(ROUTES.WORKFLOWS.TRANSFORM.runs(run.id));
+      router.push(ROUTES.WORKFLOWS.TRANSFORM.runs(id, run.id));
     } catch {
       toast.error("Failed to start run");
     } finally {
@@ -325,7 +340,11 @@ export default function AgentEditorPage() {
         </div>
       </div>
 
-      <SidebarTabs defaultValue="steps" className="w-full">
+      <SidebarTabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
         <SidebarTabsList>
           <SidebarTabsTrigger value="steps">
             <List className="mr-2 h-4 w-4" />
@@ -335,6 +354,12 @@ export default function AgentEditorPage() {
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuration</span>
           </SidebarTabsTrigger>
+          {!isNew && (
+            <SidebarTabsTrigger value="runs">
+              <History className="mr-2 h-4 w-4" />
+              <span>Runs</span>
+            </SidebarTabsTrigger>
+          )}
           {!isNew && (
             <SidebarTabsTrigger value="danger">
               <Shield className="mr-2 h-4 w-4" />
@@ -478,6 +503,31 @@ export default function AgentEditorPage() {
             )}
           </div>
         </SidebarTabsContent>
+        {!isNew && (
+          <SidebarTabsContent value="runs" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Run History</h3>
+              <p className="text-sm text-muted-foreground">
+                History of transformations executed by this agent.
+              </p>
+            </div>
+            {isLoadingRuns ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : runs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+                <p>No runs yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {runs.map((run) => (
+                  <TransformRunCard key={run.id} run={run} agentId={id} />
+                ))}
+              </div>
+            )}
+          </SidebarTabsContent>
+        )}
 
         <SidebarTabsContent value="config" className="space-y-8">
           <div className="space-y-1">
@@ -531,7 +581,9 @@ export default function AgentEditorPage() {
               <CardHeader>
                 <div className="flex items-center gap-2 mb-1">
                   <Shield className="h-5 w-5 text-destructive" />
-                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                  <CardTitle className="text-destructive">
+                    Danger Zone
+                  </CardTitle>
                 </div>
                 <CardDescription>
                   Irreversible actions for this transform agent.
@@ -569,7 +621,6 @@ export default function AgentEditorPage() {
         description="This will permanently delete the transform agent and its configuration. This cannot be undone."
         loading={isDeleting}
       />
-
     </div>
   );
 }
