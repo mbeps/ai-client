@@ -24,22 +24,17 @@ import {
   Plus,
   Save,
   Trash2,
-  GripVertical,
   Zap,
   Play,
   Loader2,
   Settings,
   List,
-  Edit2,
-  Check,
-  X,
   Shield,
   History,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -59,6 +54,7 @@ import { createTransformRun } from "@/lib/actions/transform-runs/create-transfor
 import { listTransformRuns } from "@/lib/actions/transform-runs/list-transform-runs";
 import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
 import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-run-card";
+import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
@@ -93,10 +89,6 @@ export default function AgentEditorPage() {
   const [runFiles, setRunFiles] = useState<File[]>([]);
   const [dryRun, setDryRun] = useState(false);
   const [isStartingRun, setIsStartingRun] = useState(false);
-
-  // Step rename state
-  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
-  const [tempStepName, setTempStepName] = useState("");
 
   // Delete state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -172,24 +164,6 @@ export default function AgentEditorPage() {
     const updated = [...steps];
     updated[index] = { ...updated[index], ...updates };
     setSteps(updated);
-  };
-
-  const startEditing = (index: number) => {
-    setEditingStepIndex(index);
-    setTempStepName(steps[index].name);
-  };
-
-  const cancelEditing = () => {
-    setEditingStepIndex(null);
-    setTempStepName("");
-  };
-
-  const applyEditing = () => {
-    if (editingStepIndex !== null && tempStepName.trim()) {
-      updateStep(editingStepIndex, { name: tempStepName.trim() });
-    }
-    setEditingStepIndex(null);
-    setTempStepName("");
   };
 
   const removeStep = (index: number) => {
@@ -373,119 +347,13 @@ export default function AgentEditorPage() {
 
           <div className="space-y-4">
             {steps.map((step, index) => (
-              <Card key={step.id} className="relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-                <CardHeader className="py-4 flex flex-row items-center gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    {editingStepIndex === index ? (
-                      <Input
-                        value={tempStepName}
-                        onChange={(e) => setTempStepName(e.target.value)}
-                        className="h-8 font-semibold"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") applyEditing();
-                          if (e.key === "Escape") cancelEditing();
-                        }}
-                      />
-                    ) : (
-                      <h4 className="font-semibold">{step.name}</h4>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {editingStepIndex === index ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={applyEditing}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={cancelEditing}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground"
-                          onClick={() => startEditing(index)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeStep(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                      </>
-                    )}
-                  </div>
-                </CardHeader>
-                <Separator />
-                <CardContent className="py-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                      AI Prompt
-                    </Label>
-                    <Textarea
-                      value={step.prompt}
-                      onChange={(e) =>
-                        updateStep(index, { prompt: e.target.value })
-                      }
-                      placeholder="Instruct the AI on what to do in this step..."
-                      rows={3}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                      Context (optional)
-                    </Label>
-                    <Textarea
-                      value={step.context ?? ""}
-                      onChange={(e) =>
-                        updateStep(index, {
-                          context: e.target.value || undefined,
-                        })
-                      }
-                      placeholder="Optional background context for the AI..."
-                      rows={2}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                        Human Review
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Pause pipeline after this step for review.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={step.requiresReview}
-                      onCheckedChange={(checked) =>
-                        updateStep(index, { requiresReview: checked })
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <TransformStepCard
+                key={step.id}
+                step={step}
+                index={index}
+                onUpdate={(updates) => updateStep(index, updates)}
+                onRemove={() => removeStep(index)}
+              />
             ))}
 
             {steps.length === 0 && (
