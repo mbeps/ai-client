@@ -50,6 +50,9 @@ export interface ArtifactPanelProps {
 
   /** Callback to persist updates to artifact content (e.g., edited spreadsheet). */
   onUpdate?: (newContent: string) => void;
+
+  /** Whether the panel should fill the full width of its container. */
+  isFullWidth?: boolean;
 }
 
 /**
@@ -75,6 +78,7 @@ export function ArtifactPanel({
   currentIndex = 0,
   onNavigate,
   onUpdate,
+  isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
 
@@ -131,7 +135,13 @@ export function ArtifactPanel({
   };
 
   return (
-    <div className="w-full md:w-[60%] lg:w-[55%] xl:w-[50%] h-full border-l bg-card flex flex-col shadow-xl md:shadow-none absolute right-0 top-0 z-50 md:relative overflow-hidden transition-all duration-300 animate-in slide-in-from-right">
+    <div
+      className={`h-full border-l bg-card flex flex-col shadow-xl md:shadow-none overflow-hidden transition-all duration-300 animate-in slide-in-from-right ${
+        isFullWidth
+          ? "w-full relative"
+          : "w-full md:w-[60%] lg:w-[55%] xl:w-[50%] absolute right-0 top-0 z-50 md:relative"
+      }`}
+    >
       <div className="flex items-center justify-between p-3 border-b bg-muted/30 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           {artifacts.length > 1 && onNavigate && (

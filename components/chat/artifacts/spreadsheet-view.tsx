@@ -23,7 +23,7 @@ export default function SpreadsheetView({ content }: SpreadsheetViewProps) {
     try {
       // First try parsing as JSON
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     } catch {
@@ -34,24 +34,46 @@ export default function SpreadsheetView({ content }: SpreadsheetViewProps) {
       // Try to parse as CSV
       const workbook = xlsx.read(content, { type: "string" });
       const firstSheet = workbook.SheetNames[0];
-      return xlsx.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+      return xlsx.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1 });
     } catch (err) {
       console.error("Failed to parse spreadsheet content:", err);
       return [];
     }
   }, [content]);
 
+  const isAOA = data.length > 0 && Array.isArray(data[0]);
+
   const headers = useMemo(() => {
     if (data.length === 0) return [];
-    // Collect all unique keys from all objects
-    const keySet = new Set<string>();
-    data.forEach((row: any) => {
-      Object.keys(row).forEach((key) => keySet.add(key));
-    });
-    return Array.from(keySet);
-  }, [data]);
+    if (isAOA) {
+      // Array of Arrays: first row is headers
+      return (data[0] as any[]).map(String);
+    } else {
+      // Array of Objects: collect all unique keys
+      const keySet = new Set<string>();
+      data.forEach((row: any) => {
+        Object.keys(row).forEach((key) => keySet.add(key));
+      });
+      return Array.from(keySet);
+    }
+  }, [data, isAOA]);
 
-  if (data.length === 0) {
+  const rows = useMemo(() => {
+    if (isAOA) {
+      // Array of Arrays: skip first row (headers)
+      return data.slice(1).map((row: any[]) => {
+        const obj: Record<string, any> = {};
+        headers.forEach((h, i) => {
+          obj[h] = row[i];
+        });
+        return obj;
+      });
+    }
+    // Array of Objects: already correct
+    return data;
+  }, [data, isAOA, headers]);
+
+  if (headers.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-6 text-center text-muted-foreground gap-2">
         <AlertCircle className="h-8 w-8" />
@@ -76,18 +98,29 @@ export default function SpreadsheetView({ content }: SpreadsheetViewProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((row: any, i: number) => (
-                <TableRow key={i}>
-                  <TableCell className="border-r text-center text-xs text-muted-foreground bg-muted/10 font-medium">
-                    {i + 1}
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={headers.length + 1}
+                    className="text-center text-muted-foreground py-8"
+                  >
+                    No data rows found.
                   </TableCell>
-                  {headers.map((header) => (
-                    <TableCell key={`${i}-${header}`} className="border-r whitespace-nowrap px-4 py-2">
-                      {row[header] !== undefined && row[header] !== null ? String(row[header]) : ""}
-                    </TableCell>
-                  ))}
                 </TableRow>
-              ))}
+              ) : (
+                rows.map((row: any, i: number) => (
+                  <TableRow key={i}>
+                    <TableCell className="border-r text-center text-xs text-muted-foreground bg-muted/10 font-medium">
+                      {i + 1}
+                    </TableCell>
+                    {headers.map((header) => (
+                      <TableCell key={`${i}-${header}`} className="border-r whitespace-nowrap px-4 py-2">
+                        {row[header] !== undefined && row[header] !== null ? String(row[header]) : ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

@@ -16,6 +16,7 @@ import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
 import { env } from "@/lib/env";
 import { DEFAULT_MODEL } from "@/constants/models";
+import * as xlsx from "xlsx";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,
@@ -403,11 +404,29 @@ export async function POST(req: Request) {
             }
           }
 
+          // Read current state of files for live preview
+          const stepData: Record<string, any[]> = {};
+          if (bridge) {
+            for (const f of bridge.files) {
+              try {
+                const fs = await import("fs/promises");
+                const buffer = await fs.readFile(f.localPath);
+                const workbook = xlsx.read(buffer, { type: "buffer" });
+                const firstSheet = workbook.SheetNames[0];
+                const data = xlsx.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1 });
+                stepData[f.originalName] = data as any[];
+              } catch (err) {
+                console.warn(`[SSE] Failed to read ${f.originalName}:`, err);
+              }
+            }
+          }
+
           emit({
             type: "transform-step-complete",
             runId: runRow.id,
             stepIndex: i,
             summary: stepSummary,
+            stepData,
           });
 
           // Human review gate: pause after this step
