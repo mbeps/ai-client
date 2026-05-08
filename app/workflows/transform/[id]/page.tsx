@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
 import { ROUTES } from "@/constants/routes";
 import {
   ArrowLeft,
@@ -22,6 +26,8 @@ import {
   Zap,
   Play,
   Loader2,
+  Settings,
+  List,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -272,57 +278,19 @@ export default function AgentEditorPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left panel: details */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Details</CardTitle>
-              <CardDescription>
-                Basic information about this agent.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Agent Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Monthly Expense Report"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What does this agent do?"
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model">Model</Label>
-                <Select value={modelId} onValueChange={setModelId}>
-                  <SelectTrigger id="model">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MODELS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <SidebarTabs defaultValue="steps" className="w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="steps">
+            <List className="mr-2 h-4 w-4" />
+            <span>Steps</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="config">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Configuration</span>
+          </SidebarTabsTrigger>
+        </SidebarTabsList>
 
-        {/* Right panel: steps */}
-        <div className="lg:col-span-2 space-y-4">
+        <SidebarTabsContent value="steps" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Steps</h3>
             <Button size="sm" variant="outline" onClick={addStep}>
@@ -418,8 +386,54 @@ export default function AgentEditorPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="config" className="space-y-8">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Agent Details</h3>
+            <p className="text-sm text-muted-foreground">
+              Basic configuration and metadata for this transform agent.
+            </p>
+          </div>
+
+          <div className="space-y-6 max-w-2xl">
+            <div className="space-y-2">
+              <Label htmlFor="name">Agent Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Monthly Expense Report"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What does this agent do?"
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="model">Model</Label>
+              <Select value={modelId} onValueChange={setModelId}>
+                <SelectTrigger id="model">
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODELS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SidebarTabsContent>
+      </SidebarTabs>
     </div>
   );
 }
