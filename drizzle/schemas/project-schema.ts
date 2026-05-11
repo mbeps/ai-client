@@ -21,7 +21,7 @@ export const project = pgTable(
     description: text("description"),
     globalPrompt: text("global_prompt"),
     tools: text("tools").array(),
-    knowledgebases: text("knowledgebases").array(),
+    knowledgebaseId: text("knowledgebase_id"),
     isPinned: boolean("is_pinned").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

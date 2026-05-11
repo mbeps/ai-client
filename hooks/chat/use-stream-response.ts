@@ -86,6 +86,7 @@ export function useStreamResponse(
     selectedTools: string[] = [],
     selectedPromptId?: string,
     selectedAssistantId?: string,
+    selectedKbIds: string[] = [],
   ) => {
     setIsLoading(true);
     abortControllerRef.current?.abort();
@@ -98,7 +99,7 @@ export function useStreamResponse(
       selectedServerIds,
       selectedTools,
     };
-    
+
     if (selectedAssistantId) {
       metadataObj.assistantId = selectedAssistantId;
     }
@@ -211,6 +212,7 @@ export function useStreamResponse(
           selectedServerIds,
           selectedTools,
           selectedAssistantId,
+          selectedKbIds,
         }),
         signal: controller.signal,
       });

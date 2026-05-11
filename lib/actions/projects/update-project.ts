@@ -34,8 +34,8 @@ export async function updateProject(
   if (validatedData.globalPrompt !== undefined)
     updateData.globalPrompt = validatedData.globalPrompt ?? null;
   if (validatedData.tools !== undefined) updateData.tools = validatedData.tools;
-  if (validatedData.knowledgebases !== undefined)
-    updateData.knowledgebases = validatedData.knowledgebases;
+  if (validatedData.knowledgebaseId !== undefined)
+    updateData.knowledgebaseId = validatedData.knowledgebaseId ?? null;
 
   const [row] = await db
     .update(project)

@@ -24,6 +24,9 @@ export type Chat = {
   /** Optional reference to the AI assistant (persona) for this chat. */
   assistantId?: string;
 
+  /** Optional reference to a knowledge base attached to this chat for RAG retrieval. */
+  knowledgebaseId?: string | null;
+
   /** Cached project name for optimistic UI rendering without additional lookups. */
   projectName?: string;
 

@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17.0
+    image: pgvector/pgvector:pg17
     hostname: ${DB_HOST}
     ports:
       - "5432:${DB_PORT}"

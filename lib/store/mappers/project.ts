@@ -4,10 +4,9 @@ import type { Project } from "@/types/project";
 /**
  * Converts a ProjectRow database record to the Zustand Project store shape.
  * Transforms database null values to empty strings for optional text fields (description, globalPrompt).
- * Maps the array of linked knowledgebase IDs from the DB row.
  *
  * @param row - Database ProjectRow with full project metadata
- * @returns Project object ready for store insertion with empty knowledgebases array
+ * @returns Project object ready for store insertion
  * @see loadProjects in project-slice.ts for complete store hydration
  * @author Maruf Bepary
  */
@@ -20,6 +19,6 @@ export function projectRowToStore(row: ProjectRow): Project {
     updatedAt: new Date(row.updatedAt),
     globalPrompt: row.globalPrompt ?? "",
     tools: row.tools ?? [],
-    knowledgebases: row.knowledgebases ?? [],
+    knowledgebaseId: row.knowledgebaseId ?? null,
   };
 }

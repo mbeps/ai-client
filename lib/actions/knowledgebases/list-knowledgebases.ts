@@ -3,14 +3,28 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
 
-export async function listKnowledgebases(): Promise<KnowledgebaseRow[]> {
+export type KnowledgebaseWithCount = KnowledgebaseRow & {
+  documentCount: number;
+};
+
+export async function listKnowledgebases(): Promise<KnowledgebaseWithCount[]> {
   const session = await requireSession();
 
   return db
-    .select()
+    .select({
+      id: knowledgebase.id,
+      userId: knowledgebase.userId,
+      name: knowledgebase.name,
+      description: knowledgebase.description,
+      createdAt: knowledgebase.createdAt,
+      updatedAt: knowledgebase.updatedAt,
+      documentCount: sql<number>`(
+        SELECT COUNT(*)::int FROM kb_document WHERE kb_document.kb_id = ${knowledgebase.id}
+      )`.mapWith(Number),
+    })
     .from(knowledgebase)
     .where(eq(knowledgebase.userId, session.user.id))
     .orderBy(desc(knowledgebase.updatedAt));

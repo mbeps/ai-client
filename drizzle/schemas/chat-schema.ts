@@ -25,6 +25,7 @@ export const chat = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     projectId: text("project_id"),
     assistantId: text("assistant_id"),
+    knowledgebaseId: text("knowledgebase_id"),
     currentLeafId: text("current_leaf_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

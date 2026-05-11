@@ -242,7 +242,7 @@ export function ChatUI({
       _selectedResources: string[] = [],
       selectedPromptId?: string,
       selectedAssistantId?: string,
-      _selectedKnowledgebases: string[] = [],
+      selectedKbIds: string[] = [],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -254,6 +254,7 @@ export function ChatUI({
         selectedTools,
         selectedPromptId,
         selectedAssistantId,
+        selectedKbIds,
       );
     },
     [chat?.currentLeafId, streamResponse],

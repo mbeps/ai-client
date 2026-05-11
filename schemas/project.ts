@@ -14,7 +14,7 @@ export const createProjectSchema = z.object({
   description: descriptionField,
   globalPrompt: contentField.optional(),
   tools: z.array(z.string()).optional(),
-  knowledgebases: z.array(z.string()).optional(),
+  knowledgebaseId: z.string().nullable().optional(),
 });
 
 /**
@@ -30,7 +30,7 @@ export const updateProjectSchema = z.object({
   description: descriptionField,
   globalPrompt: contentField.optional(),
   tools: z.array(z.string()).optional(),
-  knowledgebases: z.array(z.string()).optional(),
+  knowledgebaseId: z.string().nullable().optional(),
 });
 
 /**
