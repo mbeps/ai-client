@@ -26,15 +26,20 @@ export async function updateProject(
   const validatedId = z.string().uuid().parse(id);
   const validatedData = updateProjectSchema.parse(data);
 
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+  if (validatedData.name !== undefined) updateData.name = validatedData.name;
+  if (validatedData.description !== undefined)
+    updateData.description = validatedData.description ?? null;
+  if (validatedData.globalPrompt !== undefined)
+    updateData.globalPrompt = validatedData.globalPrompt ?? null;
+  if (validatedData.tools !== undefined) updateData.tools = validatedData.tools;
+  if (validatedData.knowledgebases !== undefined)
+    updateData.knowledgebases = validatedData.knowledgebases;
+
   const [row] = await db
     .update(project)
-    .set({
-      name: validatedData.name,
-      description: validatedData.description ?? null,
-      globalPrompt: validatedData.globalPrompt ?? null,
-      tools: validatedData.tools ?? [],
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(
       and(eq(project.id, validatedId), eq(project.userId, session.user.id)),
     )

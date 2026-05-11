@@ -1,7 +1,6 @@
 "use client";
 
 import { NotFoundMessage } from "@/components/not-found-message";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,67 +9,68 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAppStore } from "@/lib/store";
-import { Upload } from "lucide-react";
-
+import { Database, FileText, Calendar } from "lucide-react";
 import { useParams } from "next/navigation";
+import { format } from "date-fns";
+import { useEffect } from "react";
 
-/**
- * Knowledge base detail page showing storage usage.
- * Route: /knowledgebases/[id]. Reads the knowledge base from the Zustand store.
- *
- * @author Maruf Bepary
- */
 export default function KnowledgebasePage() {
   const params = useParams();
   const kbId = params.id as string;
-  const kb = useAppStore((state) =>
-    state.knowledgebases.find((k) => k.id === kbId),
-  );
+  const knowledgebases = useAppStore((state) => state.knowledgebases);
+  const kb = knowledgebases.find((k) => k.id === kbId);
+  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+
+  useEffect(() => {
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases().catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!kb) return <NotFoundMessage entity="Knowledgebase" />;
 
-  const usagePercentage = Math.min(100, (kb.sizeBytes / kb.maxSizeBytes) * 100);
-
   return (
     <div className="page-container-detail">
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
-        <div>
-          <h1 className="text-3xl font-bold">{kb.name}</h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold">{kb.name}</h1>
+        {kb.description && (
           <p className="text-muted-foreground">{kb.description}</p>
-        </div>
-        <Button className="w-full md:w-auto">
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Document
-        </Button>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Storage Usage</CardTitle>
-          <CardDescription>
-            Capacity available for this knowledgebase.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm font-medium">
-              <span>
-                {((kb.sizeBytes / kb.maxSizeBytes) * 100).toFixed(1)}% Used
-              </span>
-              <span className="text-muted-foreground">
-                {((1 - kb.sizeBytes / kb.maxSizeBytes) * 100).toFixed(1)}%
-                Available
-              </span>
-            </div>
-            <div className="h-4 bg-secondary rounded-full overflow-hidden">
-              <div
-                className={`h-full ${usagePercentage > 90 ? "bg-destructive" : "bg-primary"}`}
-                style={{ width: `${usagePercentage}%` }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Documents
+            </CardDescription>
+            <CardTitle className="text-2xl">{kb.documentCount}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              No documents have been uploaded yet.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Created
+            </CardDescription>
+            <CardTitle className="text-base font-medium">
+              {format(kb.createdAt, "PPP")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              Last updated {format(kb.updatedAt, "PPP")}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

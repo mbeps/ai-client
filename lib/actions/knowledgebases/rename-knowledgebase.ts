@@ -2,20 +2,31 @@
 
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
+import { knowledgebase } from "@/drizzle/schema";
+import { and, eq } from "drizzle-orm";
+import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
+import { renameKnowledgebaseSchema } from "@/schemas/knowledgebase";
 
-/**
- * Renames a knowledgebase in the database.
- * Currently mocked; future implementation will persist to database.
- *
- * @param kbId - Unique identifier of the knowledgebase.
- * @param name - The new name for the knowledgebase.
- * @returns The updated knowledgebase record with new name and timestamp.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @author Maruf Bepary
- */
-export async function renameKnowledgebase(kbId: string, name: string) {
+export async function renameKnowledgebase(
+  kbId: string,
+  name: string,
+): Promise<KnowledgebaseRow> {
   const session = await requireSession();
 
-  console.log(`Renaming knowledgebase ${kbId} to ${name}`);
-  return { id: kbId, name, updatedAt: new Date() };
+  const validated = renameKnowledgebaseSchema.parse({ name });
+
+  const [row] = await db
+    .update(knowledgebase)
+    .set({ name: validated.name, updatedAt: new Date() })
+    .where(
+      and(
+        eq(knowledgebase.id, kbId),
+        eq(knowledgebase.userId, session.user.id),
+      ),
+    )
+    .returning();
+
+  if (!row) throw new Error("Not Found");
+
+  return row;
 }

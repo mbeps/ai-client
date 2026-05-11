@@ -23,3 +23,7 @@ export const createKnowledgebaseSchema = z.object({
   name: nameField,
   description: descriptionField,
 });
+
+export const deleteKnowledgebaseSchema = z.object({
+  id: z.string().uuid(),
+});

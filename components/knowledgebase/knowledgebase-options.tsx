@@ -1,25 +1,48 @@
 "use client";
-import { Edit2 } from "lucide-react";
+import { Edit2, Trash2 } from "lucide-react";
 import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
+import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
 import type { Knowledgebase } from "@/types/knowledgebase";
 import { RenameDialog } from "@/components/shared/rename-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
 
 export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
-  const { isMobile, showRename, setShowRename, handleRename } =
-    useEntityOptions({
-      id: kb.id,
-      type: "Knowledgebase",
-      onRename: renameKnowledgebase,
-      useRouterRefresh: true,
-    });
+  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+
+  const {
+    isMobile,
+    showRename,
+    setShowRename,
+    showDelete,
+    setShowDelete,
+    isDeleting,
+    handleRename,
+    handleDelete,
+  } = useEntityOptions({
+    id: kb.id,
+    type: "Knowledgebase",
+    onRename: renameKnowledgebase,
+    onDelete: (id) => deleteKnowledgebase(id),
+    redirectPath: ROUTES.KNOWLEDGEBASES.path,
+    useRouterRefresh: true,
+    onAfterMutation: loadKnowledgebases,
+  });
 
   const items = [
     {
       label: "Rename Knowledgebase",
       icon: <Edit2 className="mr-2 h-4 w-4" />,
       onClick: () => setShowRename(true),
+    },
+    {
+      label: "Delete Knowledgebase",
+      icon: <Trash2 className="mr-2 h-4 w-4" />,
+      onClick: () => setShowDelete(true),
+      isDestructive: true,
     },
   ];
 
@@ -32,6 +55,14 @@ export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
         initialValue={kb.name}
         onConfirm={handleRename}
         title="Rename Knowledgebase"
+      />
+      <DeleteConfirmDialog
+        isOpen={showDelete}
+        onClose={() => setShowDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete Knowledgebase"
+        description={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
+        loading={isDeleting}
       />
     </>
   );

@@ -38,7 +38,7 @@ export type AppState = {
   chats: Record<string, Chat>;
   /** All configured MCP servers. */
   mcpServers: McpServer[];
-  /** All knowledge bases (UI-only; no DB table yet). */
+  /** All knowledge bases. */
   knowledgebases: Knowledgebase[];
   /** All transform agents. */
   transformAgents: TransformAgent[];
@@ -160,6 +160,11 @@ export type AppState = {
   loadPrompts: () => Promise<void>;
 
   // Knowledge Base Actions
+  /**
+   * Loads all knowledge bases from the database and populates the store.
+   * Typically called once on app initialization via useEffect.
+   */
+  loadKnowledgebases: () => Promise<void>;
 
   // MCP Server Actions
   /**

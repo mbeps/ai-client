@@ -27,6 +27,7 @@ import {
   Loader2,
   MessageSquare,
   MessageSquarePlus,
+  Plus,
   Settings,
   Save,
   Trash2,
@@ -46,8 +47,29 @@ import { useCreateChat } from "@/hooks/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
+import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowledgebase";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase";
 import { useState, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 /**
  * Project detail page — client component for viewing and editing project configuration.
@@ -73,6 +95,8 @@ export default function ProjectPage() {
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
+  const knowledgebases = useAppStore((state) => state.knowledgebases);
+  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
 
   const [loading, setLoading] = useState(projects.length === 0);
   const [name, setName] = useState(project?.name ?? "");
@@ -85,6 +109,17 @@ export default function ProjectPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(project?.tools || []),
   );
+  const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
+    new Set(project?.knowledgebases || []),
+  );
+  const [savingKbs, setSavingKbs] = useState(false);
+  const [showCreateKbDialog, setShowCreateKbDialog] = useState(false);
+  const [creatingKb, setCreatingKb] = useState(false);
+
+  const createKbForm = useForm<z.infer<typeof createKnowledgebaseSchema>>({
+    resolver: zodResolver(createKnowledgebaseSchema),
+    defaultValues: { name: "", description: "" },
+  });
 
   const filteredChats = useMemo(() => {
     return chats
@@ -106,6 +141,9 @@ export default function ProjectPage() {
     if (mcpServers.length === 0) {
       loadMcpServers().catch(() => {});
     }
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases().catch(() => {});
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -114,6 +152,7 @@ export default function ProjectPage() {
       setDescription(project.description ?? "");
       setGlobalPrompt(project.globalPrompt ?? "");
       setSelectedTools(new Set(project.tools || []));
+      setSelectedKbs(new Set(project.knowledgebases || []));
     }
   }, [project]);
 
@@ -187,6 +226,33 @@ export default function ProjectPage() {
       toast.error("Failed to save settings");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleCreateAndLinkKb = async (
+    values: z.infer<typeof createKnowledgebaseSchema>,
+  ) => {
+    setCreatingKb(true);
+    try {
+      const newKb = await createKnowledgebase({
+        name: values.name,
+        description: values.description || undefined,
+      });
+      const newSet = new Set(selectedKbs);
+      newSet.add(newKb.id);
+      setSelectedKbs(newSet);
+      await updateProject(projectId, {
+        knowledgebases: Array.from(newSet),
+      });
+      await loadKnowledgebases();
+      router.refresh();
+      toast.success(`"${newKb.name}" created and linked`);
+      createKbForm.reset();
+      setShowCreateKbDialog(false);
+    } catch {
+      toast.error("Failed to create knowledgebase");
+    } finally {
+      setCreatingKb(false);
     }
   };
 
@@ -272,16 +338,161 @@ export default function ProjectPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="knowledge" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Knowledge</h3>
-            <p className="text-sm text-muted-foreground">
-              Attach knowledge bases to provide context to the AI in this
-              project.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Knowledge Bases</h3>
+              <p className="text-sm text-muted-foreground">
+                Attach knowledge bases to provide context to the AI in this
+                project.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCreateKbDialog(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Knowledgebase
+            </Button>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Knowledge base support coming soon.
-          </p>
+
+          <Dialog
+            open={showCreateKbDialog}
+            onOpenChange={(open) => {
+              setShowCreateKbDialog(open);
+              if (!open) createKbForm.reset();
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Knowledgebase</DialogTitle>
+                <DialogDescription>
+                  Create a new knowledgebase and automatically link it to this
+                  project.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...createKbForm}>
+                <form
+                  onSubmit={createKbForm.handleSubmit(handleCreateAndLinkKb)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={createKbForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="My Knowledgebase" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createKbForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Optional description..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateKbDialog(false)}
+                      disabled={creatingKb}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={creatingKb}>
+                      {creatingKb ? "Creating..." : "Create & Link"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          {knowledgebases.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No knowledge bases available yet. Use the button above to create
+              one.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="border rounded-md divide-y">
+                {knowledgebases.map((kb) => {
+                  const isSelected = selectedKbs.has(kb.id);
+                  return (
+                    <div
+                      key={kb.id}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-muted/50"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium">{kb.name}</span>
+                        {kb.description && (
+                          <span className="text-xs text-muted-foreground">
+                            {kb.description}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => {
+                          setSelectedKbs((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(kb.id)) next.delete(kb.id);
+                            else next.add(kb.id);
+                            return next;
+                          });
+                        }}
+                      >
+                        {isSelected ? "Linked" : "Link"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+              <Button
+                onClick={async () => {
+                  setSavingKbs(true);
+                  try {
+                    await updateProject(projectId, {
+                      knowledgebases: Array.from(selectedKbs),
+                    });
+                    router.refresh();
+                    toast.success("Knowledge bases saved");
+                  } catch {
+                    toast.error("Failed to save knowledge bases");
+                  } finally {
+                    setSavingKbs(false);
+                  }
+                }}
+                disabled={savingKbs}
+              >
+                {savingKbs ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Knowledge Bases
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </SidebarTabsContent>
 
         <SidebarTabsContent value="prompt" className="space-y-6">
