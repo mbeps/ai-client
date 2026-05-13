@@ -12,7 +12,12 @@ import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-tem
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
 import { DEFAULT_MODEL } from "@/constants/models";
-import { chatRequestSchema, manageArtifactSchema } from "@/schemas/chat";
+import {
+  chatRequestSchema,
+  manageArtifactSchema,
+  searchKnowledgeBaseSchema,
+} from "@/schemas/chat";
+import { hybridSearch } from "@/lib/rag/retrieve";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { PROMPTS } from "@/constants/prompts";
 
@@ -78,6 +83,7 @@ export async function POST(req: Request) {
     selectedServerIds,
     selectedTools,
     selectedAssistantId,
+    selectedKbIds,
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
@@ -87,6 +93,7 @@ export async function POST(req: Request) {
       id: chat.id,
       projectId: chat.projectId,
       assistantId: chat.assistantId,
+      knowledgebaseId: chat.knowledgebaseId,
     })
     .from(chat)
     .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)));
@@ -96,7 +103,10 @@ export async function POST(req: Request) {
   // Fetch project globalPrompt if this chat belongs to a project
   const projectRow = chatRow.projectId
     ? await db
-        .select({ globalPrompt: project.globalPrompt })
+        .select({
+          globalPrompt: project.globalPrompt,
+          knowledgebaseId: project.knowledgebaseId,
+        })
         .from(project)
         .where(
           and(
@@ -107,6 +117,12 @@ export async function POST(req: Request) {
         .limit(1)
         .then((rows) => rows[0] ?? null)
     : null;
+
+  const activeKbId =
+    selectedKbIds?.[0] ??
+    chatRow.knowledgebaseId ??
+    projectRow?.knowledgebaseId ??
+    null;
 
   const effectiveAssistantId = chatRow.assistantId || selectedAssistantId;
 
@@ -250,6 +266,25 @@ export async function POST(req: Request) {
     });
   }
 
+  if (activeKbId) {
+    const kbId = activeKbId;
+    mcpTools["search_knowledge_base"] = tool({
+      description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
+      parameters: searchKnowledgeBaseSchema,
+      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
+      execute: async ({ query }: { query: string }) => {
+        const results = await hybridSearch(kbId, query, 5);
+        return {
+          results: results.map((r) => ({
+            content: r.content,
+            relevanceScore: r.score,
+          })),
+          resultCount: results.length,
+        };
+      },
+    });
+  }
+
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
   const processedMessages = history.flatMap((m) => {
@@ -363,6 +398,9 @@ export async function POST(req: Request) {
     systemParts.push(
       PROMPTS.SYSTEM.FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE(lines),
     );
+  }
+  if (activeKbId) {
+    systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
   }
   const systemMessages: ModelMessage[] =
     systemParts.length > 0

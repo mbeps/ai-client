@@ -2,6 +2,8 @@ export const PROMPTS = {
   SYSTEM: {
     FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE: (lines: string): string =>
       `## File Access\nIMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
+    KNOWLEDGE_BASE_TOOL_INSTRUCTION:
+      "A knowledge base is attached to this conversation. Use the `search_knowledge_base` tool to retrieve relevant information when answering questions about the user's documents or when you need domain-specific context. Formulate precise search queries. Do not call the tool for conversational or general-knowledge questions.",
   },
   TOOLS: {
     MANAGE_ARTIFACT: {
@@ -21,6 +23,10 @@ export const PROMPTS = {
       SUCCESS_MESSAGE:
         "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
       DEFAULT_TITLE: "Generated Artifact",
+    },
+    SEARCH_KNOWLEDGE_BASE: {
+      DESCRIPTION:
+        "Search the knowledge base for relevant information. Call this when the user asks about their documents, references specific topics that may be in the knowledge base, or when you need domain-specific context not already in the conversation. Formulate a focused, specific search query — avoid overly broad queries. After retrieving results, synthesise the information into your response. Do not call this tool for general knowledge questions.",
     },
   },
   SCHEMA: {

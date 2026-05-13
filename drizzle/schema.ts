@@ -13,3 +13,6 @@ export * from "./schemas/project-schema";
 export * from "./schemas/assistant-schema";
 export * from "./schemas/prompt-schema";
 export * from "./schemas/transform-agent-schema";
+export * from "./schemas/knowledgebase-schema";
+export * from "./schemas/kb-document-schema";
+export * from "./schemas/kb-chunk-schema";

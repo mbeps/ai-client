@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,9 @@ import {
   Image as ImageIcon,
   Command,
   Bot,
+  Database,
 } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/constants/routes";
 import {
   Popover,
@@ -64,6 +66,7 @@ interface ChatInputProps {
     selectedResources: string[],
     selectedPromptId?: string,
     selectedAssistantId?: string,
+    selectedKnowledgebases?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -102,6 +105,9 @@ interface ChatInputProps {
   /** Initial assistant ID if editing a message that used an assistant mention. */
   initialSelectedAssistantId?: string;
 
+  /** Initial knowledgebase IDs to select. */
+  initialSelectedKbs?: string[];
+
   /** Assistant ID bound to the chat, if any, to disable @ mentions. */
   activeChatAssistantId?: string | null;
 
@@ -137,6 +143,7 @@ export function ChatInput({
   initialSelectedResources = [],
   initialSelectedPromptId,
   initialSelectedAssistantId,
+  initialSelectedKbs = [],
   activeChatAssistantId,
   submitLabel,
 }: ChatInputProps) {
@@ -158,6 +165,19 @@ export function ChatInput({
   const [selectedResources, setSelectedResources] = useState<Set<string>>(
     new Set(initialSelectedResources),
   );
+  const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
+    new Set(initialSelectedKbs),
+  );
+
+  const knowledgebases = useAppStore((state) => state.knowledgebases);
+  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+
+  useEffect(() => {
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -230,11 +250,13 @@ export function ChatInput({
         Array.from(selectedResources),
         selectedPrompt?.id,
         selectedAssistant?.id,
+        Array.from(selectedKbs),
       );
       setInput("");
       setAttachments([]);
       setSelectedPrompt(null);
       setSelectedAssistant(null);
+      setSelectedKbs(new Set());
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -392,7 +414,7 @@ export function ChatInput({
         }}
       />
 
-      {(selectedPrompt || selectedAssistant) && (
+      {(selectedPrompt || selectedAssistant || selectedKbs.size > 0) && (
         <div className="flex flex-wrap gap-2 pb-2">
           {selectedAssistant && (
             <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
@@ -428,6 +450,33 @@ export function ChatInput({
               </button>
             </div>
           )}
+          {Array.from(selectedKbs).map((kbId) => {
+            const kb = knowledgebases.find((k) => k.id === kbId);
+            return (
+              <div
+                key={kbId}
+                className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+              >
+                <Database className="h-3 w-3 text-muted-foreground" />
+                <span className="truncate max-w-[160px]">
+                  {kb?.name ?? kbId}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedKbs((prev) => {
+                      const next = new Set(prev);
+                      next.delete(kbId);
+                      return next;
+                    })
+                  }
+                  className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -501,6 +550,15 @@ export function ChatInput({
                   onToggleTool={toggleTool}
                   onToggleResource={toggleResource}
                   onBulkSelect={handleBulkSelect}
+                  knowledgebases={knowledgebases}
+                  selectedKbs={selectedKbs}
+                  onToggleKb={(id) =>
+                    setSelectedKbs((prev) => {
+                      const next = new Set(prev);
+                      next.has(id) ? next.delete(id) : next.add(id);
+                      return next;
+                    })
+                  }
                 />
               </DrawerContent>
             </Drawer>
@@ -524,6 +582,15 @@ export function ChatInput({
                   onToggleTool={toggleTool}
                   onToggleResource={toggleResource}
                   onBulkSelect={handleBulkSelect}
+                  knowledgebases={knowledgebases}
+                  selectedKbs={selectedKbs}
+                  onToggleKb={(id) =>
+                    setSelectedKbs((prev) => {
+                      const next = new Set(prev);
+                      next.has(id) ? next.delete(id) : next.add(id);
+                      return next;
+                    })
+                  }
                 />
               </PopoverContent>
             </Popover>
@@ -589,7 +656,8 @@ export function ChatInput({
                 !input.trim() &&
                 attachments.length === 0 &&
                 !selectedPrompt &&
-                !selectedAssistant
+                !selectedAssistant &&
+                selectedKbs.size === 0
               }
             >
               {submitLabel === "Save" ? (

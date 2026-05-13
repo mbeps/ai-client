@@ -3,7 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Paperclip, Database, Wrench } from "lucide-react";
 import type { McpServer } from "@/types/mcp-server";
+import type { Knowledgebase } from "@/types/knowledgebase";
 import { ToolPickerDialog } from "./tool-picker-dialog";
+import { KnowledgebasePickerDialog } from "./knowledgebase-picker-dialog";
 
 interface AttachmentsMenuProps {
   servers?: McpServer[];
@@ -18,6 +20,9 @@ interface AttachmentsMenuProps {
     resourceUris: string[],
     select: boolean,
   ) => void;
+  knowledgebases?: Knowledgebase[];
+  selectedKbs: Set<string>;
+  onToggleKb: (id: string) => void;
 }
 
 export const AttachmentsMenu = ({
@@ -28,6 +33,9 @@ export const AttachmentsMenu = ({
   onToggleTool,
   onToggleResource,
   onBulkSelect,
+  knowledgebases,
+  selectedKbs,
+  onToggleKb,
 }: AttachmentsMenuProps) => (
   <div className="flex flex-col gap-0.5 p-1">
     <Button
@@ -38,9 +46,19 @@ export const AttachmentsMenu = ({
     >
       <Paperclip className="mr-2 h-4 w-4" /> Upload File
     </Button>
-    <Button variant="ghost" size="sm" className="justify-start">
-      <Database className="mr-2 h-4 w-4" /> Add Knowledgebase
-    </Button>
+
+    <KnowledgebasePickerDialog
+      knowledgebases={knowledgebases || []}
+      selectedKbs={selectedKbs}
+      onToggleKb={onToggleKb}
+      trigger={
+        <Button variant="ghost" size="sm" className="justify-start w-full">
+          <Database className="mr-2 h-4 w-4" />
+          Add Knowledgebase
+          {selectedKbs.size > 0 ? ` (${selectedKbs.size})` : ""}
+        </Button>
+      }
+    />
 
     <ToolPickerDialog
       servers={servers || []}

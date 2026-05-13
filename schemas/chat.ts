@@ -138,6 +138,7 @@ export const chatRequestSchema = z.object({
   selectedServerIds: z.array(z.string()).max(20).optional(),
   selectedTools: z.array(z.string()).max(100).optional(),
   selectedAssistantId: z.string().uuid().optional(),
+  selectedKbIds: z.array(z.string().uuid()).max(5).optional(),
 });
 
 /**
@@ -153,4 +154,14 @@ export const manageArtifactSchema = z.object({
   content: z
     .string()
     .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.CONTENT_DESCRIPTION),
+});
+
+export const searchKnowledgeBaseSchema = z.object({
+  query: z
+    .string()
+    .min(1)
+    .max(500)
+    .describe(
+      "Search query to find relevant information in the knowledge base. Be specific and focused.",
+    ),
 });

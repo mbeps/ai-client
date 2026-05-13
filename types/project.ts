@@ -36,8 +36,8 @@ export type Project = {
   tools: string[];
 
   /**
-   * Array of knowledge base IDs linked to this project.
-   * Provides shared context for all chats within the workspace.
+   * Optional knowledge base linked to this project.
+   * When set, the search_knowledge_base tool is available in all chats within this project.
    */
-  knowledgebases: string[];
+  knowledgebaseId: string | null;
 };

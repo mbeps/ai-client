@@ -1,12 +1,12 @@
 /**
- * A named document collection that provides AI context for projects and assistants.
+ * A named document collection providing AI context for projects and assistants.
  */
 export type Knowledgebase = {
   id: string;
+  userId: string;
   name: string;
   description: string;
-  sizeBytes: number;
-  maxSizeBytes: number;
   documentCount: number;
+  createdAt: Date;
   updatedAt: Date;
 };

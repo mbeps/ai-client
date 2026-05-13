@@ -1,0 +1,81 @@
+import { db } from "@/drizzle/db";
+import { kbDocument, kbChunk } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
+import { extractTextFromBuffer } from "./extract-text-server";
+import { chunkText } from "./chunk";
+import { embedDocuments } from "./embed";
+
+export async function ingestDocument(documentId: string): Promise<void> {
+  const [doc] = await db
+    .select()
+    .from(kbDocument)
+    .where(eq(kbDocument.id, documentId));
+
+  if (!doc) throw new Error(`Document not found: ${documentId}`);
+
+  // Mark as processing
+  await db
+    .update(kbDocument)
+    .set({ status: "processing", updatedAt: new Date() })
+    .where(eq(kbDocument.id, documentId));
+
+  try {
+    // Fetch file from S3
+    const s3Res = await s3Client.send(
+      new GetObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
+    );
+    const buffer = Buffer.from(await s3Res.Body!.transformToByteArray());
+
+    // Extract text
+    const text = await extractTextFromBuffer(buffer, doc.mimeType);
+    if (!text.trim()) {
+      await db
+        .update(kbDocument)
+        .set({ status: "ready", chunkCount: 0, updatedAt: new Date() })
+        .where(eq(kbDocument.id, documentId));
+      return;
+    }
+
+    // Chunk
+    const chunks = chunkText(text);
+
+    // Batch embed
+    const embeddings = await embedDocuments(chunks);
+
+    // Delete any existing chunks (safe re-ingest)
+    await db.delete(kbChunk).where(eq(kbChunk.documentId, documentId));
+
+    // Insert chunks
+    // searchVector is a GENERATED ALWAYS column — do NOT include it in INSERT
+    await db.insert(kbChunk).values(
+      chunks.map((content, i) => ({
+        id: crypto.randomUUID(),
+        documentId,
+        kbId: doc.kbId,
+        content,
+        embedding: embeddings[i],
+        chunkIndex: i,
+        tokenCount: Math.round(content.length / 4),
+      })),
+    );
+
+    // Update document: ready
+    await db
+      .update(kbDocument)
+      .set({
+        status: "ready",
+        chunkCount: chunks.length,
+        tokenCount: chunks.reduce((s, c) => s + Math.round(c.length / 4), 0),
+        updatedAt: new Date(),
+      })
+      .where(eq(kbDocument.id, documentId));
+  } catch (err) {
+    await db
+      .update(kbDocument)
+      .set({ status: "failed", updatedAt: new Date() })
+      .where(eq(kbDocument.id, documentId));
+    throw err;
+  }
+}

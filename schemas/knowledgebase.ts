@@ -23,3 +23,19 @@ export const createKnowledgebaseSchema = z.object({
   name: nameField,
   description: descriptionField,
 });
+
+export const deleteKnowledgebaseSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const addDocumentSchema = z.object({
+  kbId: z.string().min(1),
+  name: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
+  size: z.number().int().positive().max(50_000_000),
+  s3Key: z.string().min(1).max(1024),
+});
+
+export const deleteDocumentSchema = z.object({
+  documentId: z.string().min(1),
+});

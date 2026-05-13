@@ -48,6 +48,13 @@ import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * Project detail page — client component for viewing and editing project configuration.
@@ -73,6 +80,8 @@ export default function ProjectPage() {
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
+  const knowledgebases = useAppStore((state) => state.knowledgebases);
+  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
 
   const [loading, setLoading] = useState(projects.length === 0);
   const [name, setName] = useState(project?.name ?? "");
@@ -85,6 +94,10 @@ export default function ProjectPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(project?.tools || []),
   );
+  const [selectedKbId, setSelectedKbId] = useState<string | null>(
+    project?.knowledgebaseId ?? null,
+  );
+  const [savingKb, setSavingKb] = useState(false);
 
   const filteredChats = useMemo(() => {
     return chats
@@ -106,6 +119,9 @@ export default function ProjectPage() {
     if (mcpServers.length === 0) {
       loadMcpServers().catch(() => {});
     }
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases().catch(() => {});
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -114,6 +130,7 @@ export default function ProjectPage() {
       setDescription(project.description ?? "");
       setGlobalPrompt(project.globalPrompt ?? "");
       setSelectedTools(new Set(project.tools || []));
+      setSelectedKbId(project.knowledgebaseId ?? null);
     }
   }, [project]);
 
@@ -187,6 +204,19 @@ export default function ProjectPage() {
       toast.error("Failed to save settings");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleSaveKb = async () => {
+    setSavingKb(true);
+    try {
+      await updateProject(projectId, { knowledgebaseId: selectedKbId });
+      router.refresh();
+      toast.success("Knowledge base saved");
+    } catch {
+      toast.error("Failed to save knowledge base");
+    } finally {
+      setSavingKb(false);
     }
   };
 
@@ -273,15 +303,42 @@ export default function ProjectPage() {
 
         <SidebarTabsContent value="knowledge" className="space-y-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Knowledge</h3>
+            <h3 className="text-lg font-semibold">Knowledge Base</h3>
             <p className="text-sm text-muted-foreground">
-              Attach knowledge bases to provide context to the AI in this
-              project.
+              Attach a knowledge base to provide context to the AI in all chats
+              within this project.
             </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Knowledge base support coming soon.
-          </p>
+
+          <div className="space-y-4">
+            <Select
+              value={selectedKbId ?? "none"}
+              onValueChange={(v) => setSelectedKbId(v === "none" ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No knowledge base selected" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {knowledgebases.map((kb) => (
+                  <SelectItem key={kb.id} value={kb.id}>
+                    {kb.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button onClick={handleSaveKb} disabled={savingKb}>
+              {savingKb ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Knowledge Base
+                </>
+              )}
+            </Button>
+          </div>
         </SidebarTabsContent>
 
         <SidebarTabsContent value="prompt" className="space-y-6">
