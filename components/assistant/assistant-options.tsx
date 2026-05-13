@@ -7,7 +7,7 @@ import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
-import { useCreateChat } from "@/hooks/use-create-chat";
+import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";

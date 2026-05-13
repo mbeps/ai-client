@@ -8,6 +8,7 @@ import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
 import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
+import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 import { messageMetadataSchema } from "@/schemas/chat";
 import { chatRowToStore } from "../mappers/chat";
 import type { AppState } from "@/types/app-state";
@@ -39,6 +40,7 @@ type ChatSlice = Pick<
   | "moveChatDb"
   | "createChatDb"
   | "deleteChatDb"
+  | "setKnowledgebase"
 >;
 
 /**
@@ -392,5 +394,19 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   deleteChatDb: async (chatId) => {
     await deleteChat(chatId);
     get().deleteChat(chatId);
+  },
+
+  setKnowledgebase: async (chatId, kbId) => {
+    await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: { ...chat, knowledgebaseId: kbId },
+        },
+      };
+    });
   },
 });

@@ -205,4 +205,10 @@ export type AppState = {
    * Used for synchronizing server-side state changes back to the UI.
    */
   upsertChat: (chat: Chat) => void;
+
+  /**
+   * Sets the knowledge base bound to a chat and persists to database.
+   * Updates the store and calls the update-chat-knowledgebase server action.
+   */
+  setKnowledgebase: (chatId: string, kbId: string | null) => Promise<void>;
 };

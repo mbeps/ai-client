@@ -108,6 +108,9 @@ interface ChatInputProps {
   /** Initial knowledgebase IDs to select. */
   initialSelectedKbs?: string[];
 
+  /** Callback invoked when the user toggles a knowledge base selection. */
+  onKnowledgebaseChange?: (kbIds: string[]) => void;
+
   /** Assistant ID bound to the chat, if any, to disable @ mentions. */
   activeChatAssistantId?: string | null;
 
@@ -144,6 +147,7 @@ export function ChatInput({
   initialSelectedPromptId,
   initialSelectedAssistantId,
   initialSelectedKbs = [],
+  onKnowledgebaseChange,
   activeChatAssistantId,
   submitLabel,
 }: ChatInputProps) {
@@ -173,9 +177,7 @@ export function ChatInput({
   const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
 
   useEffect(() => {
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases().catch(() => {});
-    }
+    loadKnowledgebases().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -256,7 +258,6 @@ export function ChatInput({
       setAttachments([]);
       setSelectedPrompt(null);
       setSelectedAssistant(null);
-      setSelectedKbs(new Set());
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -349,6 +350,30 @@ export function ChatInput({
       return next;
     });
   };
+  const handleToggleKb = useCallback(
+    (id: string) => {
+      setSelectedKbs((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        onKnowledgebaseChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onKnowledgebaseChange],
+  );
+
+  const handleRemoveKb = useCallback(
+    (id: string) => {
+      setSelectedKbs((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        onKnowledgebaseChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onKnowledgebaseChange],
+  );
+
   const handleBulkSelect = (
     serverId: string,
     toolNames: string[],
@@ -463,13 +488,7 @@ export function ChatInput({
                 </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    setSelectedKbs((prev) => {
-                      const next = new Set(prev);
-                      next.delete(kbId);
-                      return next;
-                    })
-                  }
+                  onClick={() => handleRemoveKb(kbId)}
                   className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
                   <X className="h-3 w-3" />
@@ -552,13 +571,7 @@ export function ChatInput({
                   onBulkSelect={handleBulkSelect}
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
-                  onToggleKb={(id) =>
-                    setSelectedKbs((prev) => {
-                      const next = new Set(prev);
-                      next.has(id) ? next.delete(id) : next.add(id);
-                      return next;
-                    })
-                  }
+                  onToggleKb={handleToggleKb}
                 />
               </DrawerContent>
             </Drawer>
@@ -584,13 +597,7 @@ export function ChatInput({
                   onBulkSelect={handleBulkSelect}
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
-                  onToggleKb={(id) =>
-                    setSelectedKbs((prev) => {
-                      const next = new Set(prev);
-                      next.has(id) ? next.delete(id) : next.add(id);
-                      return next;
-                    })
-                  }
+                  onToggleKb={handleToggleKb}
                 />
               </PopoverContent>
             </Popover>

@@ -23,7 +23,7 @@ import {
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
-import { updateMcpServer as updateMcpServerAction } from "@/lib/mcp/update-mcp-server";
+import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";
 import { useRouter } from "next/navigation";
 
 /**

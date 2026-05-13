@@ -5,6 +5,7 @@ import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { discoverToolsAndResources } from "./discover-tools-and-resources";
+import { mcpServerRowToConfig } from "./mappers";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { DiscoveredResource } from "@/types/discovered-resource";
 
@@ -35,14 +36,5 @@ export async function discoverMcpServerTools(
 
   if (!row) throw new Error("Not Found");
 
-  return discoverToolsAndResources({
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    command: row.command,
-    args: row.args,
-    url: row.url,
-    headers: row.headers,
-    env: row.env,
-  });
+  return discoverToolsAndResources(mcpServerRowToConfig(row));
 }

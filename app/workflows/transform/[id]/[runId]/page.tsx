@@ -20,7 +20,7 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -145,55 +145,7 @@ export default function TransformRunDetailPage() {
     load();
   }, [runId]);
 
-  useEffect(() => {
-    if (!run || !agent || hasStartedStream.current) return;
-    if (run.status !== "pending" && run.status !== "running") return;
-
-    hasStartedStream.current = true;
-    startStream({ type: "start", runId: run.id });
-  }, [run, agent]);
-
-  function startStream(body: object) {
-    fetch("/api/transform/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-      .then((res) => {
-        if (!res.body) return;
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-
-        function read() {
-          reader
-            .read()
-            .then(({ done, value }) => {
-              if (done) return;
-              const text = decoder.decode(value, { stream: true });
-              const lines = text.split("\n");
-              for (const line of lines) {
-                if (!line.startsWith("data: ")) continue;
-                try {
-                  const event = JSON.parse(line.slice(6));
-                  handleSseEvent(event);
-                } catch {
-                  // skip malformed events
-                }
-              }
-              read();
-            })
-            .catch(() => {
-              setStreamError("Connection error");
-            });
-        }
-        read();
-      })
-      .catch(() => {
-        setStreamError("Failed to connect to run engine");
-      });
-  }
-
-  function handleSseEvent(event: Record<string, unknown>) {
+  const handleSseEvent = useCallback((event: Record<string, unknown>) => {
     switch (event.type) {
       case "transform-start":
         setRun((prev) => (prev ? { ...prev, status: "running" } : prev));
@@ -281,7 +233,58 @@ export default function TransformRunDetailPage() {
         toast.error(event.message as string);
         break;
     }
-  }
+  }, []);
+
+  const startStream = useCallback(
+    (body: object) => {
+      fetch("/api/transform/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+        .then((res) => {
+          if (!res.body) return;
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+
+          function read() {
+            reader
+              .read()
+              .then(({ done, value }) => {
+                if (done) return;
+                const text = decoder.decode(value, { stream: true });
+                const lines = text.split("\n");
+                for (const line of lines) {
+                  if (!line.startsWith("data: ")) continue;
+                  try {
+                    const event = JSON.parse(line.slice(6));
+                    handleSseEvent(event);
+                  } catch {
+                    // skip malformed events
+                  }
+                }
+                read();
+              })
+              .catch(() => {
+                setStreamError("Connection error");
+              });
+          }
+          read();
+        })
+        .catch(() => {
+          setStreamError("Failed to connect to run engine");
+        });
+    },
+    [handleSseEvent],
+  );
+
+  useEffect(() => {
+    if (!run || !agent || hasStartedStream.current) return;
+    if (run.status !== "pending" && run.status !== "running") return;
+
+    hasStartedStream.current = true;
+    startStream({ type: "start", runId: run.id });
+  }, [run, agent, startStream]);
 
   const handleApprove = async () => {
     if (!run) return;

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ChatCard } from "@/components/chat/chat-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
-import { useCreateChat } from "@/hooks/use-create-chat";
+import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import type { Chat } from "@/types/chat";
 
 interface ChatsClientProps {

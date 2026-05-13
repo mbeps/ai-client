@@ -1,10 +1,10 @@
-import { createMCPClient } from "@ai-sdk/mcp";
-import { buildTransport } from "./build-transport";
-import { withTimeout } from "./timeout-utils";
+import {
+  withTimeout,
+  MCP_TIMEOUT_MS,
+  createConnectedClient,
+} from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { McpConnection } from "@/types/mcp-connection";
-
-export const CONNECTION_TIMEOUT_MS = 10_000;
 
 /**
  * Connects to a single MCP server and retrieves its tools.
@@ -19,16 +19,11 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
 export async function connectServer(
   server: McpServerConfig,
 ): Promise<McpConnection> {
-  const transport = buildTransport(server);
-  const mcpClient = await withTimeout(
-    createMCPClient({ transport }),
-    CONNECTION_TIMEOUT_MS,
-    server.name,
-  );
+  const mcpClient = await createConnectedClient(server, server.name);
   try {
     const tools = await withTimeout(
       mcpClient.tools(),
-      CONNECTION_TIMEOUT_MS,
+      MCP_TIMEOUT_MS,
       server.name,
     );
     return {

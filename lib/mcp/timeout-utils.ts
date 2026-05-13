@@ -1,3 +1,9 @@
+import { createMCPClient } from "@ai-sdk/mcp";
+import { buildTransport } from "./build-transport";
+import type { McpServerConfig } from "@/types/mcp-server-config";
+
+export const MCP_TIMEOUT_MS = 10_000;
+
 /**
  * Races a promise against a timeout deadline.
  * Used throughout MCP integration to prevent hanging connections and tool discovery operations.
@@ -29,4 +35,21 @@ export function withTimeout<T>(
   return Promise.race([promise, timeout]).finally(() =>
     clearTimeout(timeoutId!),
   );
+}
+
+/**
+ * Creates a connected MCP client for the given server configuration.
+ * Builds the appropriate transport, then creates the client with a shared timeout.
+ *
+ * @param server - MCP server configuration
+ * @param label - Descriptive label used in timeout error messages
+ * @returns Connected MCP client ready for tool/resource discovery
+ * @throws {Error} When connection times out or transport creation fails
+ */
+export async function createConnectedClient(
+  server: McpServerConfig,
+  label: string,
+): Promise<Awaited<ReturnType<typeof createMCPClient>>> {
+  const transport = buildTransport(server);
+  return withTimeout(createMCPClient({ transport }), MCP_TIMEOUT_MS, label);
 }

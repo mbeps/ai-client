@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Trash2 } from "lucide-react";
-import { deleteMcpServer } from "@/lib/mcp/delete-mcp-server";
+import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 
 /**
  * Settings panel for an MCP server with permanent deletion option.

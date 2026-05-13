@@ -42,6 +42,12 @@ export function TransformStepCard({
 }: TransformStepCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(step.name);
+  const [prevStepId, setPrevStepId] = useState(step.id);
+
+  if (step.id !== prevStepId) {
+    setPrevStepId(step.id);
+    setTempName(step.name);
+  }
 
   const form = useForm<TransformStepInput>({
     resolver: zodResolver(transformStepSchema),
@@ -52,7 +58,6 @@ export function TransformStepCard({
   // Sync form with step prop changes (e.g. reordering)
   useEffect(() => {
     form.reset(step);
-    setTempName(step.name);
   }, [step, form]);
 
   const handleApplyName = () => {

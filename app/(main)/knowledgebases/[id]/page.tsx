@@ -38,7 +38,7 @@ export default function KnowledgebasePage() {
     listDocuments(kbId)
       .then(setDocuments)
       .catch(() => {});
-  }, [kbId]);
+  }, [kbId, setDocuments]);
 
   useEffect(() => {
     fetchDocuments();

@@ -1,3 +1,4 @@
+import { rm } from "fs/promises";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { auth } from "@/lib/auth/auth";
@@ -6,23 +7,15 @@ import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, stepCountIs, type ModelMessage, tool } from "ai";
-import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
+import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
-import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
 import { DEFAULT_MODEL } from "@/constants/models";
-import {
-  chatRequestSchema,
-  manageArtifactSchema,
-  searchKnowledgeBaseSchema,
-} from "@/schemas/chat";
-import { hybridSearch } from "@/lib/rag/retrieve";
+import { chatRequestSchema } from "@/schemas/chat";
 import type { FileBridgeResult } from "@/types/file-bridge-result";
-import { PROMPTS } from "@/constants/prompts";
-
-type TextPart = { type: "text"; text: string };
-type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
+import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
+import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 
 export const maxDuration = 60;
 
@@ -205,207 +198,27 @@ export async function POST(req: Request) {
       })
     : filteredServers;
 
-  let mcpTools: Record<string, any> = {};
-  let mcpCleanup = async () => {};
-  if (scopedServers.length > 0) {
-    try {
-      const result = await getMcpTools(
-        scopedServers as Parameters<typeof getMcpTools>[0],
-      );
-
-      // Filter tools if selectedTools is provided
-      if (selectedTools && selectedTools.length > 0) {
-        const filteredTools: Record<string, any> = {};
-        for (const [name, tool] of Object.entries(result.tools)) {
-          // tool names are unique across servers in mergedTools (with collision warning)
-          // But our client sends serverId:tool:toolName.
-          // However, getMcpTools already merges them into a flat object.
-          // To be precise, we should check if the tool name is in our selected list.
-          // The client sends IDs like "serverId:tool:toolName"
-          const isSelected = selectedTools.some((id) => {
-            const [sId, type, tName] = id.split(":");
-            return type === "tool" && tName === name;
-          });
-          if (isSelected) {
-            filteredTools[name] = tool;
-          }
-        }
-        mcpTools = filteredTools;
-      } else {
-        mcpTools = result.tools;
-      }
-
-      mcpCleanup = result.cleanup;
-    } catch (error) {
-      console.warn("[MCP] Failed to load tools:", error);
-    }
-  }
-
   const isArtifactToolSelected = selectedTools?.includes(
     "internal:tool:manage_artifact",
   );
 
-  if (isArtifactToolSelected) {
-    mcpTools["manage_artifact"] = tool({
-      description: PROMPTS.TOOLS.MANAGE_ARTIFACT.DESCRIPTION,
-      parameters: manageArtifactSchema,
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async (args: any) => {
-        const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
-        const normalizedArgs = {
-          type: VALID_TYPES.includes(args.type) ? args.type : "markdown",
-          title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
-          content: args.content || args.text || "",
-        };
-        return {
-          success: true,
-          message: PROMPTS.TOOLS.MANAGE_ARTIFACT.SUCCESS_MESSAGE,
-          artifact: normalizedArgs,
-        };
-      },
-    });
-  }
-
-  if (activeKbId) {
-    const kbId = activeKbId;
-    mcpTools["search_knowledge_base"] = tool({
-      description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
-      parameters: searchKnowledgeBaseSchema,
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async ({ query }: { query: string }) => {
-        const results = await hybridSearch(kbId, query, 5);
-        return {
-          results: results.map((r) => ({
-            content: r.content,
-            relevanceScore: r.score,
-          })),
-          resultCount: results.length,
-        };
-      },
-    });
-  }
+  const { mcpTools, mcpCleanup } = await registerMcpTools(
+    scopedServers as any,
+    selectedTools,
+    !!isArtifactToolSelected,
+    activeKbId,
+  );
 
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-  const processedMessages = history.flatMap((m) => {
-    if (m.role === "user" && m.attachments && m.attachments.length > 0) {
-      const parts: Array<TextPart | ImagePart> = [];
+  const processedMessages = assembleModelMessages(history, bridge);
 
-      // Add extracted document text as context
-      for (const att of m.attachments) {
-        if (att.type === "document" && att.extractedText) {
-          parts.push({
-            type: "text",
-            text: `[Document: ${att.name}]\n${att.extractedText}`,
-          });
-        }
-        if (att.type === "spreadsheet" && bridge) {
-          const f = bridge.files.find((b) => b.attachmentId === att.id);
-          if (f) {
-            parts.push({
-              type: "text",
-              text: `[Spreadsheet: ${att.name} — local path: ${f.localPath}]`,
-            });
-          }
-        }
-      }
-
-      // Add user message text
-      if (typeof m.content === "string" && m.content.trim()) {
-        parts.push({ type: "text", text: m.content });
-      }
-
-      // Add images
-      for (const att of m.attachments) {
-        if (att.type === "image" && att.dataUrl) {
-          parts.push({
-            type: "image",
-            image: att.dataUrl,
-            mimeType: att.mimeType,
-          });
-        }
-      }
-
-      return [
-        {
-          role: m.role,
-          content:
-            parts.length === 1 && parts[0].type === "text"
-              ? (parts[0] as TextPart).text
-              : parts,
-        },
-      ];
-    }
-
-    if (m.role === "assistant" && m.metadata) {
-      try {
-        const meta = JSON.parse(m.metadata);
-        if (Array.isArray(meta.toolCalls) && meta.toolCalls.length > 0) {
-          const parts: any[] = [];
-          if (m.content && typeof m.content === "string" && m.content.trim()) {
-            parts.push({ type: "text", text: m.content });
-          }
-
-          for (const tc of meta.toolCalls) {
-            parts.push({
-              type: "tool-call",
-              toolCallId: tc.toolCallId,
-              toolName: tc.toolName,
-              args: typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args,
-            });
-          }
-
-          const msgs: any[] = [{ role: "assistant", content: parts }];
-
-          if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
-            const resultParts = meta.toolResults.map((tr: any) => {
-              const rawResult =
-                typeof tr.result === "string"
-                  ? JSON.parse(tr.result)
-                  : tr.result;
-              return {
-                type: "tool-result",
-                toolCallId: tr.toolCallId,
-                toolName: tr.toolName,
-                output: { type: "json", value: rawResult },
-              };
-            });
-            msgs.push({ role: "tool", content: resultParts });
-          }
-
-          return msgs;
-        }
-      } catch (e) {
-        console.warn("[Chat API] Failed to parse metadata for history:", e);
-      }
-    }
-
-    return [{ role: m.role, content: m.content }];
-  }) as ModelMessage[];
-
-  // Prepend system messages: project global prompt then assistant prompt
-  const systemParts: string[] = [];
-  if (projectRow?.globalPrompt?.trim()) {
-    systemParts.push(projectRow.globalPrompt.trim());
-  }
-  if (assistantRow?.prompt?.trim()) {
-    systemParts.push(assistantRow.prompt.trim());
-  }
-  if (bridge && bridge.files.length > 0) {
-    const lines = bridge.files
-      .map((f) => `- ${f.originalName}: ${f.localPath}`)
-      .join("\n");
-    systemParts.push(
-      PROMPTS.SYSTEM.FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE(lines),
-    );
-  }
-  if (activeKbId) {
-    systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
-  }
-  const systemMessages: ModelMessage[] =
-    systemParts.length > 0
-      ? [{ role: "system", content: systemParts.join("\n\n") }]
-      : [];
+  const systemMessages = buildSystemPrompt(
+    projectRow?.globalPrompt,
+    assistantRow?.prompt,
+    bridge,
+    !!activeKbId,
+  );
   const finalMessages: ModelMessage[] = [
     ...systemMessages,
     ...processedMessages,
@@ -598,8 +411,8 @@ export async function POST(req: Request) {
         controller.enqueue(encode({ type: "error", message: "Stream failed" }));
       } finally {
         if (bridge) {
-          await cleanupTempDir(bridge.tempDir).catch((err) =>
-            console.warn("[FileBridge] Temp cleanup failed:", err),
+          await rm(bridge.tempDir, { recursive: true, force: true }).catch(
+            (err) => console.warn("[FileBridge] Temp cleanup failed:", err),
           );
         }
         await mcpCleanup();

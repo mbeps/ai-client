@@ -8,7 +8,7 @@ import {
   type CreateMcpServer,
 } from "@/schemas/mcp-server";
 import type { McpServerRow } from "@/types/mcp-server-row";
-import { buildServerConfig } from "./build-server-config";
+import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**
  * Creates a new MCP server configuration for the authenticated user.

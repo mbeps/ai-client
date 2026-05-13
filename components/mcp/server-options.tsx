@@ -6,9 +6,9 @@ import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { toast } from "sonner";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameMcpServer } from "@/lib/mcp/rename-mcp-server";
-import { toggleMcpServer } from "@/lib/mcp/toggle-mcp-server";
-import { deleteMcpServer } from "@/lib/mcp/delete-mcp-server";
+import { renameMcpServer } from "@/lib/actions/mcp-servers/rename-mcp-server";
+import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
+import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 

@@ -26,7 +26,7 @@ import {
   Shield,
   Wrench,
 } from "lucide-react";
-import { toggleMcpServer } from "@/lib/mcp/toggle-mcp-server";
+import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
