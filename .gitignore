@@ -52,3 +52,6 @@ reports/**
 **.xlsx
 graphify-out/**
 wiki/**
+GEMINI.md
+CLAUDE.md
+AGENT.md

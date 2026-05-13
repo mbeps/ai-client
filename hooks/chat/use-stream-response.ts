@@ -3,9 +3,9 @@
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
+import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { useAppStore } from "@/lib/store";
 import { DEFAULT_MODEL } from "@/constants/models";
-import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
 import type { ToolCallState } from "@/types/tool-call";
 import { PROMPTS } from "@/constants/prompts";
@@ -29,7 +29,6 @@ export function useStreamResponse(
   chatId: string,
   options?: {
     onDone?: (content: string) => void;
-    onArtifact?: (artifact: ArtifactData) => void;
   },
 ) {
   const addMessage = useAppStore((state) => state.addMessage);
@@ -230,150 +229,89 @@ export function useStreamResponse(
         throw new Error(errorData.error || "Stream request failed");
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-          try {
-            const event = JSON.parse(trimmed.slice(6));
-
-            if (event.type === "reasoning" && event.delta) {
-              accumulatedReasoning += event.delta;
-              setStreamingReasoning(accumulatedReasoning);
-              setIsStreamingReasoning(true);
-            } else if (event.type === "text" && event.delta) {
-              setIsStreamingReasoning(false);
-              accumulated += event.delta;
-              setStreamingContent(accumulated);
-            } else if (
-              event.type === "tool-call" &&
-              event.toolCallId &&
-              event.toolName
-            ) {
-              setIsStreamingReasoning(false);
-              setActiveToolCalls((prev) => [
-                ...prev,
-                {
-                  toolCallId: event.toolCallId!,
-                  toolName: event.toolName!,
-                  args: event.args,
-                  status: "calling",
-                },
-              ]);
-              if (event.toolName === "manage_artifact" && event.args) {
-                try {
-                  const parsedArgs =
-                    typeof event.args === "string"
-                      ? JSON.parse(event.args)
-                      : event.args || {};
-
-                  // Fallbacks for poor model compliance
-                  const VALID_TYPES = [
-                    "markdown",
-                    "spreadsheet",
-                    "html",
-                    "mermaid",
-                  ];
-                  const artifactType = VALID_TYPES.includes(parsedArgs.type)
-                    ? parsedArgs.type
-                    : "markdown";
-                  const artifactTitle =
-                    parsedArgs.title || "Generated Artifact";
-                  const artifactContent =
-                    parsedArgs.content || parsedArgs.text || "";
-
-                  if (artifactContent || artifactType) {
-                    options?.onArtifact?.({
-                      type: artifactType,
-                      title: artifactTitle,
-                      content: artifactContent,
-                    } as ArtifactData);
+      for await (const event of parseSseStream(response.body)) {
+        if (event.type === "reasoning" && event.delta) {
+          accumulatedReasoning += event.delta;
+          setStreamingReasoning(accumulatedReasoning);
+          setIsStreamingReasoning(true);
+        } else if (event.type === "text" && event.delta) {
+          setIsStreamingReasoning(false);
+          accumulated += event.delta;
+          setStreamingContent(accumulated);
+        } else if (
+          event.type === "tool-call" &&
+          event.toolCallId &&
+          event.toolName
+        ) {
+          setIsStreamingReasoning(false);
+          setActiveToolCalls((prev) => [
+            ...prev,
+            {
+              toolCallId: event.toolCallId!,
+              toolName: event.toolName!,
+              args: event.args,
+              status: "calling",
+            },
+          ]);
+        } else if (event.type === "tool-result" && event.toolCallId) {
+          setActiveToolCalls((prev) =>
+            prev.map((tc) =>
+              tc.toolCallId === event.toolCallId
+                ? {
+                    ...tc,
+                    status: "complete" as const,
+                    result: event.result,
                   }
-                } catch (e) {
-                  console.error("Failed to parse manage_artifact args", e);
-                }
-              }
-            } else if (event.type === "tool-result" && event.toolCallId) {
-              setActiveToolCalls((prev) =>
-                prev.map((tc) =>
-                  tc.toolCallId === event.toolCallId
-                    ? {
-                        ...tc,
-                        status: "complete" as const,
-                        result: event.result,
-                      }
-                    : tc,
-                ),
-              );
-            } else if (event.type === "file-modified" && event.attachmentId) {
-              pendingNewAttachments.push({
-                id: event.attachmentId,
-                type: "spreadsheet" as const,
-                name: event.name ?? "modified_file",
-                mimeType: event.mimeType ?? "application/octet-stream",
-                sizeBytes: event.size ?? 0,
-                dataUrl: "",
-              });
-            } else if (event.type === "done" && event.id) {
-              const metadata = event.metadata
-                ? JSON.stringify(event.metadata)
-                : null;
-              addMessage(
-                chatId,
-                "assistant",
-                accumulated,
-                userMsgId,
-                event.id,
-                metadata,
-                undefined,
-                accumulatedReasoning || undefined,
-              );
+                : tc,
+            ),
+          );
+        } else if (event.type === "file-modified" && event.attachmentId) {
+          pendingNewAttachments.push({
+            id: event.attachmentId,
+            type: "spreadsheet" as const,
+            name: event.name ?? "modified_file",
+            mimeType: event.mimeType ?? "application/octet-stream",
+            sizeBytes: event.size ?? 0,
+            dataUrl: "",
+          });
+        } else if (event.type === "done" && event.id) {
+          const metadata = event.metadata
+            ? JSON.stringify(event.metadata)
+            : null;
+          addMessage(
+            chatId,
+            "assistant",
+            accumulated,
+            userMsgId,
+            event.id,
+            metadata,
+            undefined,
+            accumulatedReasoning || undefined,
+          );
 
-              // Reset streaming states
-              setStreamingContent(null);
-              setStreamingReasoning(null);
-              setIsStreamingReasoning(false);
-              setActiveToolCalls([]);
+          // Reset streaming states
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setIsStreamingReasoning(false);
+          setActiveToolCalls([]);
 
-              if (pendingNewAttachments.length > 0) {
-                updateMessageAttachments(
-                  chatId,
-                  event.id,
-                  pendingNewAttachments,
-                );
-              }
-
-              options?.onDone?.(accumulated);
-              return accumulated; // Return the full content for any post-processing
-            } else if (event.type === "error") {
-              setStreamingContent(null);
-              setActiveToolCalls([]);
-              toast.error(
-                event.message || "An error occurred during generation",
-              );
-              addMessage(
-                chatId,
-                "assistant",
-                event.message ||
-                  "Sorry, I couldn't generate a response. Please try again.",
-                userMsgId,
-              );
-            }
-          } catch (e) {
-            console.error("Failed to parse event:", e, trimmed);
+          if (pendingNewAttachments.length > 0) {
+            updateMessageAttachments(chatId, event.id, pendingNewAttachments);
           }
+
+          options?.onDone?.(accumulated);
+          return accumulated; // Return the full content for any post-processing
+        } else if (event.type === "error") {
+          setStreamingContent(null);
+          setActiveToolCalls([]);
+          toast.error(event.message || "An error occurred during generation");
+          addMessage(
+            chatId,
+            "assistant",
+            event.message ||
+              "Sorry, I couldn't generate a response. Please try again.",
+            userMsgId,
+          );
         }
       }
     } catch (err: any) {

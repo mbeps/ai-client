@@ -42,7 +42,7 @@ import { NotFoundMessage } from "@/components/not-found-message";
 import { EmptyState } from "@/components/empty-state";
 import { ChatCard } from "@/components/chat/chat-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { useCreateChat } from "@/hooks/use-create-chat";
+import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";

@@ -1,3 +1,4 @@
+import { rm } from "fs/promises";
 import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import { db } from "@/drizzle/db";
@@ -13,7 +14,6 @@ import { generateText, stepCountIs } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
-import { cleanupTempDir } from "@/lib/mcp/cleanup-temp-dir";
 import { env } from "@/lib/env";
 import { DEFAULT_MODEL } from "@/constants/models";
 import * as xlsx from "xlsx";
@@ -413,7 +413,10 @@ export async function POST(req: Request) {
                 const buffer = await fs.readFile(f.localPath);
                 const workbook = xlsx.read(buffer, { type: "buffer" });
                 const firstSheet = workbook.SheetNames[0];
-                const data = xlsx.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1 });
+                const data = xlsx.utils.sheet_to_json(
+                  workbook.Sheets[firstSheet],
+                  { header: 1 },
+                );
                 stepData[f.originalName] = data as any[];
               } catch (err) {
                 console.warn(`[SSE] Failed to read ${f.originalName}:`, err);
@@ -462,7 +465,7 @@ export async function POST(req: Request) {
         emit({ type: "error", message: msg });
       } finally {
         if (bridge) {
-          await cleanupTempDir(bridge.tempDir);
+          await rm(bridge.tempDir, { recursive: true, force: true });
         }
         try {
           controller.close();

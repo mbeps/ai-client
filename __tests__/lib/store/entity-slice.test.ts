@@ -73,14 +73,24 @@ vi.mock("@/lib/actions/prompts/update-prompt", () => ({
 }));
 
 // MCP Servers
-vi.mock("@/lib/mcp/list-mcp-servers", () => ({ listMcpServers: vi.fn() }));
-vi.mock("@/lib/mcp/create-mcp-server", () => ({ createMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/delete-mcp-server", () => ({
+vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+  listMcpServers: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/create-mcp-server", () => ({
+  createMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/delete-mcp-server", () => ({
   deleteMcpServer: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/mcp/toggle-mcp-server", () => ({ toggleMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/rename-mcp-server", () => ({ renameMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/update-mcp-server", () => ({ updateMcpServer: vi.fn() }));
+vi.mock("@/lib/actions/mcp-servers/toggle-mcp-server", () => ({
+  toggleMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/rename-mcp-server", () => ({
+  renameMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/update-mcp-server", () => ({
+  updateMcpServer: vi.fn(),
+}));
 
 // Knowledgebases (not tested but imported by entity-slice)
 vi.mock("@/lib/actions/knowledgebases/rename-knowledgebase", () => ({
@@ -91,7 +101,7 @@ vi.mock("@/lib/actions/knowledgebases/rename-knowledgebase", () => ({
 import { listProjects as listProjectsAction } from "@/lib/actions/projects/list-projects";
 import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
 import { listPrompts as listPromptsAction } from "@/lib/actions/prompts/list-prompts";
-import { listMcpServers as listMcpServersAction } from "@/lib/mcp/list-mcp-servers";
+import { listMcpServers as listMcpServersAction } from "@/lib/actions/mcp-servers/list-mcp-servers";
 
 // ─── Chat slice mocks (needed because entity-slice modifies chats too) ─────
 vi.mock("@/lib/actions/chats/create-chat", () => ({ createChat: vi.fn() }));

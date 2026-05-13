@@ -1,11 +1,11 @@
-import { createMCPClient } from "@ai-sdk/mcp";
-import { buildTransport } from "./build-transport";
-import { withTimeout } from "./timeout-utils";
+import {
+  withTimeout,
+  MCP_TIMEOUT_MS,
+  createConnectedClient,
+} from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { DiscoveredResource } from "@/types/discovered-resource";
-
-export const DISCOVER_TIMEOUT_MS = 10_000;
 
 /**
  * Discovers all tools and resources available from an MCP server.
@@ -22,10 +22,8 @@ export const DISCOVER_TIMEOUT_MS = 10_000;
 export async function discoverToolsAndResources(
   server: McpServerConfig,
 ): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
-  const transport = buildTransport(server);
-  const client = await withTimeout(
-    createMCPClient({ transport }),
-    DISCOVER_TIMEOUT_MS,
+  const client = await createConnectedClient(
+    server,
     `discoverTools connect: ${server.name}`,
   );
 
@@ -40,7 +38,7 @@ export async function discoverToolsAndResources(
         client.listTools({
           params: toolCursor ? { cursor: toolCursor } : undefined,
         }),
-        DISCOVER_TIMEOUT_MS,
+        MCP_TIMEOUT_MS,
         `discoverTools listTools: ${server.name}`,
       );
 
@@ -62,7 +60,7 @@ export async function discoverToolsAndResources(
           client.listResources({
             params: resCursor ? { cursor: resCursor } : undefined,
           }),
-          DISCOVER_TIMEOUT_MS,
+          MCP_TIMEOUT_MS,
           `discoverTools listResources: ${server.name}`,
         );
 
@@ -93,7 +91,7 @@ export async function discoverToolsAndResources(
     try {
       const templateResult = await withTimeout(
         client.listResourceTemplates(),
-        DISCOVER_TIMEOUT_MS,
+        MCP_TIMEOUT_MS,
         `discoverTools listResourceTemplates: ${server.name}`,
       );
 

@@ -9,7 +9,7 @@ import {
   type UpdateMcpServer,
 } from "@/schemas/mcp-server";
 import type { McpServerRow } from "@/types/mcp-server-row";
-import { buildServerConfig } from "./build-server-config";
+import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**
  * Updates an existing MCP server configuration for the authenticated user.

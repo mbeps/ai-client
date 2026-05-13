@@ -5,12 +5,12 @@ import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
-import type { ArtifactData } from "@/types/artifact";
 import type { Attachment } from "@/types/attachment";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
+import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
 
 import { DEFAULT_MODEL } from "@/constants/models";
 import { Bot } from "lucide-react";
@@ -53,9 +53,7 @@ export function ChatUI({
   const chat = useAppStore((state) => state.chats[chatId]);
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
-  const updateMessageMetadataDb = useAppStore(
-    (state) => state.updateMessageMetadataDb,
-  );
+  const setKnowledgebase = useAppStore((state) => state.setKnowledgebase);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
@@ -95,49 +93,36 @@ export function ChatUI({
     return initialToolsAndResources.filter((t) => t.includes(":resource:"));
   }, [initialToolsAndResources]);
 
-  const [artifactIndex, setArtifactIndex] = useState<number>(-1);
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
+  const initialKbIds = useMemo(() => {
+    return chat?.knowledgebaseId ? [chat.knowledgebaseId] : [];
+  }, [chat?.knowledgebaseId]);
 
-  // Extract all artifacts from the thread
   const thread = useMemo(() => {
     return chat?.currentLeafId
       ? reconstructThread(chat.messages, chat.currentLeafId)
       : [];
   }, [chat?.currentLeafId, chat?.messages]);
 
-  const allArtifacts = useMemo(() => {
-    const artifacts: ArtifactData[] = [];
-    thread.forEach((msg) => {
-      // 1. Check for manage_artifact tool calls in results
-      if (msg.metadata) {
-        try {
-          const meta = JSON.parse(msg.metadata);
-          if (Array.isArray(meta.toolResults)) {
-            meta.toolResults.forEach((tr: any) => {
-              if (tr.toolName === "manage_artifact" && tr.result?.artifact) {
-                artifacts.push({ ...tr.result.artifact, messageId: msg.id });
-              }
-            });
-          }
-        } catch {}
-      }
-      // 2. Check for mermaid blocks in content
-      const mermaidMatch = msg.content.match(/```mermaid\n([\s\S]*?)```/);
-      if (mermaidMatch) {
-        artifacts.push({
-          type: "mermaid",
-          title: "Mermaid Diagram",
-          content: mermaidMatch[1].trim(),
-          messageId: msg.id,
-        });
-      }
-    });
-    return artifacts;
-  }, [thread]);
+  const {
+    allArtifacts,
+    activeArtifact,
+    artifactIndex,
+    setArtifactIndex,
+    isArtifactOpen,
+    setIsArtifactOpen,
+    handleShowArtifact,
+    handleUpdateArtifact,
+  } = useArtifactPanel(chatId, thread);
 
-  const activeArtifact =
-    artifactIndex >= 0 ? allArtifacts[artifactIndex] : null;
+  const handleKbChange = useCallback(
+    (kbIds: string[]) => {
+      const kbId = kbIds[0] ?? null;
+      setKnowledgebase(chatId, kbId);
+    },
+    [chatId, setKnowledgebase],
+  );
 
+  // Extract all artifacts from the thread
   const {
     isLoading,
     streamingContent,
@@ -146,91 +131,7 @@ export function ChatUI({
     activeToolCalls,
     streamResponse,
     stopStream,
-  } = useStreamResponse(chatId, {
-    onArtifact: () => {
-      // Automatic pick up via allArtifacts
-    },
-  });
-
-  // Auto-open new artifacts
-  useEffect(() => {
-    if (allArtifacts.length > 0 && !isArtifactOpen && artifactIndex === -1) {
-      setArtifactIndex(allArtifacts.length - 1);
-      setIsArtifactOpen(true);
-    } else if (allArtifacts.length > 0 && artifactIndex === -1) {
-      setArtifactIndex(allArtifacts.length - 1);
-    }
-  }, [allArtifacts.length, isArtifactOpen, artifactIndex]);
-
-  const handleShowArtifact = useCallback(
-    (msgId: string) => {
-      // Find the artifact index for this specific message
-      let foundIndex = -1;
-      let artifactCounter = 0;
-
-      for (const msg of thread) {
-        let msgArtifactsCount = 0;
-        if (msg.metadata) {
-          try {
-            const meta = JSON.parse(msg.metadata);
-            if (Array.isArray(meta.toolResults)) {
-              msgArtifactsCount = meta.toolResults.filter(
-                (tr: any) => tr.toolName === "manage_artifact",
-              ).length;
-            }
-          } catch {}
-        }
-        if (msgArtifactsCount === 0 && msg.content.includes("```mermaid")) {
-          msgArtifactsCount = 1;
-        }
-
-        if (msg.id === msgId) {
-          foundIndex = artifactCounter;
-          break;
-        }
-        artifactCounter += msgArtifactsCount;
-      }
-
-      if (foundIndex >= 0) {
-        setArtifactIndex(foundIndex);
-        setIsArtifactOpen(true);
-      }
-    },
-    [thread],
-  );
-
-  const handleUpdateArtifact = useCallback(
-    (newContent: string) => {
-      if (!activeArtifact || !activeArtifact.messageId) return;
-
-      const msg = chat?.messages[activeArtifact.messageId];
-      if (!msg || !msg.metadata) return;
-
-      try {
-        const meta = JSON.parse(msg.metadata);
-        let updated = false;
-
-        if (Array.isArray(meta.toolResults)) {
-          meta.toolResults.forEach((tr: any) => {
-            if (
-              tr.toolName === "manage_artifact" &&
-              tr.result?.artifact?.content === activeArtifact.content
-            ) {
-              tr.result.artifact.content = newContent;
-              updated = true;
-            }
-          });
-        }
-
-        if (updated) {
-          updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
-        }
-      } catch (e) {
-        console.error("Failed to update artifact metadata", e);
-      }
-    },
-    [activeArtifact, chat, chatId, updateMessageMetadataDb],
-  );
+  } = useStreamResponse(chatId);
 
   const handleSend = useCallback(
     async (
@@ -495,6 +396,8 @@ export function ChatUI({
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedResources={initialSelectedResources}
+              initialSelectedKbs={initialKbIds}
+              onKnowledgebaseChange={handleKbChange}
             />
           </div>
         </div>

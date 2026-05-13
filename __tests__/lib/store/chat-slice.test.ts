@@ -91,12 +91,24 @@ vi.mock("@/lib/actions/prompts/delete-prompt", () => ({
 vi.mock("@/lib/actions/prompts/update-prompt", () => ({
   updatePrompt: vi.fn(),
 }));
-vi.mock("@/lib/mcp/list-mcp-servers", () => ({ listMcpServers: vi.fn() }));
-vi.mock("@/lib/mcp/create-mcp-server", () => ({ createMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/delete-mcp-server", () => ({ deleteMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/toggle-mcp-server", () => ({ toggleMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/rename-mcp-server", () => ({ renameMcpServer: vi.fn() }));
-vi.mock("@/lib/mcp/update-mcp-server", () => ({ updateMcpServer: vi.fn() }));
+vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+  listMcpServers: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/create-mcp-server", () => ({
+  createMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/delete-mcp-server", () => ({
+  deleteMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/toggle-mcp-server", () => ({
+  toggleMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/rename-mcp-server", () => ({
+  renameMcpServer: vi.fn(),
+}));
+vi.mock("@/lib/actions/mcp-servers/update-mcp-server", () => ({
+  updateMcpServer: vi.fn(),
+}));
 vi.mock("@/lib/actions/knowledgebases/rename-knowledgebase", () => ({
   renameKnowledgebase: vi.fn(),
 }));

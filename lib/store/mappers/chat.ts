@@ -21,6 +21,7 @@ export function chatRowToStore(row: ChatRow): Chat {
     title: row.title,
     projectId: row.projectId ?? undefined,
     assistantId: row.assistantId ?? undefined,
+    knowledgebaseId: row.knowledgebaseId ?? null,
     updatedAt: new Date(row.updatedAt),
     messages: {},
     currentLeafId: row.currentLeafId ?? null,

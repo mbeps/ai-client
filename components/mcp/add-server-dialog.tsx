@@ -35,7 +35,7 @@ import {
 } from "@/schemas/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
-import { createMcpServer } from "@/lib/mcp/create-mcp-server";
+import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
