@@ -12,3 +12,4 @@ export * from "./schemas/mcp-server-schema";
 export * from "./schemas/project-schema";
 export * from "./schemas/assistant-schema";
 export * from "./schemas/prompt-schema";
+export * from "./schemas/transform-agent-schema";

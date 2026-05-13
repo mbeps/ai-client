@@ -316,6 +316,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
     if (attachmentRows) {
       for (const att of attachmentRows) {
+        if (!att.messageId) continue;
         for (const chatEntry of Object.values(chats)) {
           const msg = chatEntry.messages[att.messageId];
           if (msg) {

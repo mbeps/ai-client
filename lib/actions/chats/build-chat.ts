@@ -35,6 +35,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
   }
 
   for (const att of row.attachments) {
+    if (!att.messageId) continue;
     const msg = messages[att.messageId];
     if (msg) {
       const isImage = att.mimeType.startsWith("image/");

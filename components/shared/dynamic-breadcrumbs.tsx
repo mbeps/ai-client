@@ -32,6 +32,9 @@ const ROUTE_LABELS: Record<string, string> = {
   general: "General",
   settings: "Settings",
   prompts: "Prompts",
+  workflows: "Workflows",
+  translation: "Translation",
+  transform: "Spreadsheets Automation",
 };
 
 /**
@@ -65,7 +68,7 @@ export function DynamicBreadcrumbs() {
       loadMcpServers: state.loadMcpServers,
     })),
   );
-  
+
   // Load projects if not available
   React.useEffect(() => {
     if (projects.length === 0) {
@@ -98,11 +101,11 @@ export function DynamicBreadcrumbs() {
         {segments.map((segment, index) => {
           const href = `/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
-          
+
           const currentChat = chats[segment];
-          
+
           // Map segment to label or capitalise it
-          const label = 
+          const label =
             currentChat?.title ||
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
@@ -110,10 +113,13 @@ export function DynamicBreadcrumbs() {
             prompts.find((p) => p.id === segment)?.title ||
             mcpServers.find((s) => s.id === segment)?.name ||
             // Fallback for project/assistant names from chat object
-            (Object.values(chats).find(c => c.projectId === segment)?.projectName) ||
-            (Object.values(chats).find(c => c.assistantId === segment)?.assistantName) ||
-            ROUTE_LABELS[segment.toLowerCase()] || 
-            segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
+            Object.values(chats).find((c) => c.projectId === segment)
+              ?.projectName ||
+            Object.values(chats).find((c) => c.assistantId === segment)
+              ?.assistantName ||
+            ROUTE_LABELS[segment.toLowerCase()] ||
+            segment.charAt(0).toUpperCase() +
+              segment.slice(1).replace(/-/g, " ");
 
           return (
             <React.Fragment key={href}>

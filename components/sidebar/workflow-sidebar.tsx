@@ -32,6 +32,7 @@ import {
   LogOut,
   Settings,
   User,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -62,6 +63,11 @@ export function WorkflowSidebar({
       name: "Translation",
       href: ROUTES.WORKFLOWS.TRANSLATION.path,
       icon: Languages,
+    },
+    {
+      name: "Spreadsheets Automation",
+      href: ROUTES.WORKFLOWS.TRANSFORM.path,
+      icon: Zap,
     },
   ];
 
