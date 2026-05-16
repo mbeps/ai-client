@@ -14,6 +14,7 @@ export function useMentionCommands(
   activeChatAssistantId?: string | null,
   initialSelectedPromptId?: string,
   initialSelectedAssistantId?: string,
+  canMentionAssistant: boolean = true,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
@@ -28,7 +29,7 @@ export function useMentionCommands(
       ? prompts.find((p) => p.id === initialSelectedPromptId) || null
       : null,
   );
-  
+
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
     initialSelectedAssistantId
       ? assistants.find((a) => a.id === initialSelectedAssistantId) || null
@@ -38,7 +39,7 @@ export function useMentionCommands(
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];
     const q = commandQuery.toLowerCase();
-    
+
     if (openTrigger === "/") {
       return prompts.filter(
         (p) =>
@@ -46,7 +47,7 @@ export function useMentionCommands(
           p.title.toLowerCase().includes(q),
       );
     }
-    
+
     if (openTrigger === "@") {
       return assistants.filter(
         (a) =>
@@ -54,7 +55,7 @@ export function useMentionCommands(
           (a.description && a.description.toLowerCase().includes(q)),
       );
     }
-    
+
     return [];
   }, [commandQuery, prompts, assistants, openTrigger]);
 
@@ -66,24 +67,31 @@ export function useMentionCommands(
       setCursorPosition(pos);
 
       const textBeforeCursor = value.slice(0, pos);
-      
+
       const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
       const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-      
+
       let triggerIndex = -1;
       let activeTrigger: MentionTrigger = null;
-      
+
       if (lastSlashIndex > lastAtIndex && !selectedPrompt) {
         triggerIndex = lastSlashIndex;
         activeTrigger = "/";
-      } else if (lastAtIndex > lastSlashIndex && !selectedAssistant && !activeChatAssistantId) {
+      } else if (
+        lastAtIndex > lastSlashIndex &&
+        !selectedAssistant &&
+        !activeChatAssistantId &&
+        canMentionAssistant
+      ) {
         triggerIndex = lastAtIndex;
         activeTrigger = "@";
       }
 
       if (triggerIndex !== -1) {
         const isStartOfLine = triggerIndex === 0;
-        const isAfterSpace = textBeforeCursor[triggerIndex - 1] === " " || textBeforeCursor[triggerIndex - 1] === "\n";
+        const isAfterSpace =
+          textBeforeCursor[triggerIndex - 1] === " " ||
+          textBeforeCursor[triggerIndex - 1] === "\n";
         const hasNewlineAfterTrigger = value
           .slice(triggerIndex, pos)
           .includes("\n");
@@ -99,13 +107,19 @@ export function useMentionCommands(
         setOpenTrigger(null);
       }
     },
-    [setInput, selectedPrompt, selectedAssistant, activeChatAssistantId],
+    [
+      setInput,
+      selectedPrompt,
+      selectedAssistant,
+      activeChatAssistantId,
+      canMentionAssistant,
+    ],
   );
 
   const handleSelect = useCallback(
     (item: Prompt | Assistant) => {
       if (!openTrigger) return;
-      
+
       const textBeforeCursor = input.slice(0, cursorPosition);
       const triggerIndex = textBeforeCursor.lastIndexOf(openTrigger);
 
@@ -114,22 +128,19 @@ export function useMentionCommands(
           input.slice(0, triggerIndex) + input.slice(cursorPosition);
 
         setInput(newInput);
-        
+
         if (openTrigger === "/") {
           setSelectedPrompt(item as Prompt);
         } else if (openTrigger === "@") {
           setSelectedAssistant(item as Assistant);
         }
-        
+
         setOpenTrigger(null);
 
         setTimeout(() => {
           if (textareaRef.current) {
             textareaRef.current.focus();
-            textareaRef.current.setSelectionRange(
-              triggerIndex,
-              triggerIndex,
-            );
+            textareaRef.current.setSelectionRange(triggerIndex, triggerIndex);
           }
         }, 0);
       }
@@ -149,8 +160,7 @@ export function useMentionCommands(
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex(
-          (prev) =>
-            (prev - 1 + filteredItems.length) % filteredItems.length,
+          (prev) => (prev - 1 + filteredItems.length) % filteredItems.length,
         );
         return true;
       }

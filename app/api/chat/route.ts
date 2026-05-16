@@ -117,7 +117,24 @@ export async function POST(req: Request) {
     projectRow?.knowledgebaseId ??
     null;
 
-  const effectiveAssistantId = chatRow.assistantId || selectedAssistantId;
+  // Validation: Prevent assistant mentions if chat is already bound or has history
+  let finalSelectedAssistantId = selectedAssistantId;
+  if (selectedAssistantId) {
+    const isBoundToDifferent =
+      chatRow.assistantId && chatRow.assistantId !== selectedAssistantId;
+    const hasHistory = history.length > 0;
+
+    if (isBoundToDifferent || hasHistory) {
+      console.warn(
+        `[Chat API] Ignoring assistant mention ${selectedAssistantId} due to ${
+          isBoundToDifferent ? "bound assistant" : "existing history"
+        }`,
+      );
+      finalSelectedAssistantId = undefined;
+    }
+  }
+
+  const effectiveAssistantId = chatRow.assistantId || finalSelectedAssistantId;
 
   // Fetch assistant prompt if this chat belongs to an assistant or an assistant was mentioned
   const assistantRow = effectiveAssistantId
