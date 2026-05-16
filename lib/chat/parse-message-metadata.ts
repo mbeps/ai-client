@@ -1,10 +1,10 @@
-type ToolCall = {
+export type ToolCall = {
   toolCallId: string;
   toolName: string;
   args: unknown;
 };
 
-type ToolResult = {
+export type ToolResult = {
   toolCallId: string;
   toolName: string;
   result: unknown;

@@ -11,8 +11,7 @@ import { MODELS } from "@/constants/models";
 import { Bot, Command, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
-import { ToolCallDisplay } from "./message/tool-call-display";
-import { ThinkingDisplay } from "./message/thinking-display";
+import { ResponseTimeline } from "./message/response-timeline";
 import { MessageActions } from "./message/message-actions";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { AttachmentGallery } from "./message/attachment-gallery";
@@ -147,16 +146,13 @@ export function MessageBubble({
 
       <div className="flex-1 overflow-hidden">
         <div className="text-sm">
-          <ThinkingDisplay
-            reasoning={reasoning ?? ""}
-            isStreaming={!isUser && isStreamingReasoning}
-            initialOpen={isLatest && !!reasoning}
-          />
-
-          {toolData && (
-            <ToolCallDisplay
-              toolCalls={toolData.toolCalls}
-              toolResults={toolData.toolResults}
+          {!isUser && (
+            <ResponseTimeline
+              reasoning={reasoning}
+              isStreamingReasoning={isStreamingReasoning}
+              toolCalls={toolData?.toolCalls}
+              toolResults={toolData?.toolResults}
+              isLatest={isLatest}
             />
           )}
 
@@ -209,9 +205,11 @@ export function MessageBubble({
                   servers={mcpServers.filter((s) => s.enabled)}
                 />
               ) : (
-                <div className="whitespace-pre-wrap">
-                  {promptMeta ? promptMeta.userContent : message.content}
-                </div>
+                <MarkdownRenderer
+                  content={
+                    promptMeta ? promptMeta.userContent : message.content
+                  }
+                />
               )}
             </div>
           ) : (
