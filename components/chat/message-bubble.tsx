@@ -157,7 +157,6 @@ export function MessageBubble({
           )}
 
           {isUser && message.attachments && message.attachments.length > 0 && (
-
             <AttachmentGallery attachments={message.attachments} />
           )}
           {isUser ? (
@@ -206,9 +205,11 @@ export function MessageBubble({
                   servers={mcpServers.filter((s) => s.enabled)}
                 />
               ) : (
-                <div className="whitespace-pre-wrap">
-                  {promptMeta ? promptMeta.userContent : message.content}
-                </div>
+                <MarkdownRenderer
+                  content={
+                    promptMeta ? promptMeta.userContent : message.content
+                  }
+                />
               )}
             </div>
           ) : (
