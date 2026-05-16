@@ -5,6 +5,7 @@ import type { Prompt } from "./prompt";
 import type { Project } from "./project";
 import type { Assistant } from "./assistant";
 import type { McpServer } from "./mcp-server";
+import type { PublicMcpServer } from "./public-mcp-server";
 import type { Attachment } from "./attachment";
 import type { Message } from "./message";
 import type { Chat } from "./chat";
@@ -38,6 +39,8 @@ export type AppState = {
   chats: Record<string, Chat>;
   /** All configured MCP servers. */
   mcpServers: McpServer[];
+  /** All publicly shared MCP servers from the community. */
+  publicMcpServers: PublicMcpServer[];
   /** All knowledge bases. */
   knowledgebases: Knowledgebase[];
   /** All transform agents. */
@@ -172,6 +175,12 @@ export type AppState = {
    * Typically called once on app initialization via useEffect.
    */
   loadMcpServers: () => Promise<void>;
+
+  /**
+   * Loads all public MCP servers from the community and populates the store.
+   * Typically called once on app initialization via useEffect.
+   */
+  loadPublicMcpServers: () => Promise<void>;
 
   // Chat Loading Actions
   /**

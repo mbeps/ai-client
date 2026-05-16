@@ -4,6 +4,7 @@ import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
+import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { projectRowToStore } from "../mappers/project";
@@ -18,6 +19,7 @@ type EntitySlice = Pick<
   | "assistants"
   | "prompts"
   | "mcpServers"
+  | "publicMcpServers"
   | "knowledgebases"
   | "transformAgents"
   | "loadTransformAgents"
@@ -25,6 +27,7 @@ type EntitySlice = Pick<
   | "loadAssistants"
   | "loadPrompts"
   | "loadMcpServers"
+  | "loadPublicMcpServers"
   | "loadKnowledgebases"
 >;
 
@@ -35,6 +38,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   assistants: [],
   prompts: [],
   mcpServers: [],
+  publicMcpServers: [],
   knowledgebases: [],
   transformAgents: [],
 
@@ -67,6 +71,17 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         headers: r.headers,
         env: r.env,
         enabled: r.enabled,
+        isPublic: r.isPublic,
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      })),
+    });
+  },
+  loadPublicMcpServers: async () => {
+    const rows = await listPublicMcpServers();
+    set({
+      publicMcpServers: rows.map((r) => ({
+        ...r,
         createdAt: new Date(r.createdAt),
         updatedAt: new Date(r.updatedAt),
       })),

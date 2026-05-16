@@ -74,6 +74,7 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
     command: commandSchema,
     args: jsonArraySchema.optional(),
     env: jsonObjectSchema.optional(),
+    isPublic: z.boolean(),
   }),
   z.object({
     type: z.literal("http"),
@@ -86,6 +87,7 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
         message: "URL points to a blocked or internal address",
       }),
     headers: jsonObjectSchema.optional(),
+    isPublic: z.boolean(),
   }),
 ]);
 

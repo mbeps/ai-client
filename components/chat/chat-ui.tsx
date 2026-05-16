@@ -55,6 +55,7 @@ export function ChatUI({
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
   const setKnowledgebase = useAppStore((state) => state.setKnowledgebase);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
   const currentAssistant = chat?.assistantId
@@ -96,6 +97,12 @@ export function ChatUI({
   const initialKbIds = useMemo(() => {
     return chat?.knowledgebaseId ? [chat.knowledgebaseId] : [];
   }, [chat?.knowledgebaseId]);
+
+  const allEnabledServers = useMemo(() => {
+    const personalEnabled = mcpServers.filter((s) => s.enabled);
+    const publicEnabled = publicMcpServers.filter((s) => s.enabled);
+    return [...personalEnabled, ...publicEnabled];
+  }, [mcpServers, publicMcpServers]);
 
   const thread = useMemo(() => {
     return chat?.currentLeafId
@@ -391,7 +398,7 @@ export function ChatUI({
               onSend={handleSend}
               isLoading={isLoading}
               onStop={stopStream}
-              servers={mcpServers.filter((s) => s.enabled)}
+              servers={allEnabledServers}
               activeChatAssistantId={chat?.assistantId}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}

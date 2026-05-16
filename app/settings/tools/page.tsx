@@ -2,11 +2,14 @@
 
 import { useAppStore } from "@/lib/store";
 import { useState } from "react";
-import { Wrench, Plus } from "lucide-react";
+import { Wrench, Plus, Globe, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServerCard } from "@/components/mcp/server-card";
 import { AddServerDialog } from "@/components/mcp/add-server-dialog";
+import { DiscoverCommunityToolsDialog } from "@/components/mcp/discover-community-tools-dialog";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { ResponsiveMenu, MenuItem } from "@/components/shared/responsive-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Tools/MCP servers listing page — client component displaying all configured MCP servers.
@@ -17,6 +20,21 @@ export default function ToolsPage() {
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  const addMenu: MenuItem[] = [
+    {
+      label: "Manual Configuration",
+      icon: <Plus className="h-4 w-4 mr-2" />,
+      onClick: () => setDialogOpen(true),
+    },
+    {
+      label: "Discover Community Tools",
+      icon: <Globe className="h-4 w-4 mr-2" />,
+      onClick: () => setDiscoverOpen(true),
+    },
+  ];
 
   return (
     <>
@@ -29,18 +47,27 @@ export default function ToolsPage() {
         emptyStateMessage="No MCP servers yet. Add one to connect external tools to your chats."
         searchPlaceholder="Search servers..."
         action={
-          <Button
-            onClick={() => setDialogOpen(true)}
-            className="w-full md:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Server
-          </Button>
+          <ResponsiveMenu
+            isMobile={isMobile}
+            title="Add Server"
+            items={addMenu}
+            trigger={
+              <Button className="w-full md:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Server
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            }
+          />
         }
         filterFn={(s, q) => s.name.toLowerCase().includes(q.toLowerCase())}
         onMount={loadMcpServers}
       />
       <AddServerDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <DiscoverCommunityToolsDialog
+        open={discoverOpen}
+        onOpenChange={setDiscoverOpen}
+      />
     </>
   );
 }

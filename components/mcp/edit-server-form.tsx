@@ -54,12 +54,14 @@ export function EditServerForm({ server }: EditServerFormProps) {
           command: server.command ?? "",
           args: server.args ?? "",
           env: server.env ?? "",
+          isPublic: server.isPublic,
         }
       : {
           type: "http",
           name: server.name,
           url: server.url ?? "",
           headers: server.headers ?? "",
+          isPublic: server.isPublic,
         };
 
   const form = useForm<UpdateMcpServer>({

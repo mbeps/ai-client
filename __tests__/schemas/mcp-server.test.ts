@@ -28,6 +28,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "My MCP",
       command: "python",
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });
@@ -39,6 +40,7 @@ describe("mcpServerSchema — stdio", () => {
       command: "node",
       args: '["server.js", "--port", "3000"]',
       env: '{"NODE_ENV": "production"}',
+      isPublic: true,
     });
     expect(result.success).toBe(true);
   });
@@ -48,6 +50,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "",
       command: "python",
+      isPublic: false,
     });
     expect(result.success).toBe(false);
   });
@@ -57,6 +60,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "n".repeat(101),
       command: "python",
+      isPublic: false,
     });
     expect(result.success).toBe(false);
   });
@@ -102,6 +106,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "Valid",
       command: "python",
+      isPublic: false,
       args: '{"key": "value"}',
     });
     expect(result.success).toBe(false);
@@ -112,6 +117,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "Valid",
       command: "python",
+      isPublic: false,
       args: "not json",
     });
     expect(result.success).toBe(false);
@@ -122,6 +128,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "Valid",
       command: "python",
+      isPublic: false,
       env: '["a", "b"]',
     });
     expect(result.success).toBe(false);
@@ -132,6 +139,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "Valid",
       command: "python",
+      isPublic: false,
       env: "invalid",
     });
     expect(result.success).toBe(false);
@@ -142,6 +150,7 @@ describe("mcpServerSchema — stdio", () => {
       type: "stdio",
       name: "Valid",
       command: "scripts/run.py",
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });
@@ -156,6 +165,7 @@ describe("mcpServerSchema — http", () => {
       type: "http",
       name: "Remote MCP",
       url: "https://api.example.com/mcp",
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });
@@ -165,7 +175,9 @@ describe("mcpServerSchema — http", () => {
       type: "http",
       name: "Remote MCP",
       url: "https://api.example.com/mcp",
+      isPublic: false,
       headers: '{"Authorization": "Bearer token"}',
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });
@@ -175,6 +187,7 @@ describe("mcpServerSchema — http", () => {
       type: "http",
       name: "",
       url: "https://api.example.com/mcp",
+      isPublic: false,
     });
     expect(result.success).toBe(false);
   });
@@ -220,6 +233,7 @@ describe("mcpServerSchema — http", () => {
       type: "http",
       name: "Remote",
       url: "https://api.example.com/mcp",
+      isPublic: false,
       headers: "not-json",
     });
     expect(result.success).toBe(false);
@@ -230,6 +244,7 @@ describe("mcpServerSchema — http", () => {
       type: "http",
       name: "Remote",
       url: "https://api.example.com/mcp",
+      isPublic: false,
       headers: '["x"]',
     });
     expect(result.success).toBe(false);
@@ -258,6 +273,7 @@ describe("createMcpServerSchema / updateMcpServerSchema", () => {
       type: "stdio",
       name: "Test",
       command: "python",
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });
@@ -267,6 +283,8 @@ describe("createMcpServerSchema / updateMcpServerSchema", () => {
       type: "http",
       name: "Test",
       url: "https://example.com/mcp",
+      isPublic: false,
+      isPublic: false,
     });
     expect(result.success).toBe(true);
   });

@@ -55,6 +55,7 @@ export function DynamicBreadcrumbs() {
     loadProjects,
     loadPrompts,
     loadMcpServers,
+    loadPublicMcpServers,
   } = useAppStore(
     useShallow((state) => ({
       chats: state.chats,
@@ -66,6 +67,7 @@ export function DynamicBreadcrumbs() {
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
       loadMcpServers: state.loadMcpServers,
+      loadPublicMcpServers: state.loadPublicMcpServers,
     })),
   );
 
@@ -89,6 +91,11 @@ export function DynamicBreadcrumbs() {
       loadMcpServers().catch(() => {});
     }
   }, [mcpServers.length, loadMcpServers]);
+
+  // Load Public MCP servers
+  React.useEffect(() => {
+    loadPublicMcpServers().catch(() => {});
+  }, [loadPublicMcpServers]);
 
   // Split pathname into segments and remove empty strings
   const segments = pathname.split("/").filter(Boolean);

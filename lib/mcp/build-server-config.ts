@@ -17,6 +17,7 @@ export function buildServerConfig(parsed: CreateMcpServer) {
         env: parsed.env ?? null,
         url: null as null,
         headers: null as null,
+        isPublic: parsed.isPublic ?? false,
       }
     : {
         name: parsed.name,
@@ -26,5 +27,6 @@ export function buildServerConfig(parsed: CreateMcpServer) {
         command: null as null,
         args: null as null,
         env: null as null,
+        isPublic: parsed.isPublic ?? false,
       };
 }
