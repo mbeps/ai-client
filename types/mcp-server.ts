@@ -53,6 +53,9 @@ export type McpServer = {
   /** Whether this server is active and available for tool discovery and invocation. */
   enabled: boolean;
 
+  /** Whether this server is publicly shared with the community. */
+  isPublic: boolean;
+
   /** Timestamp of server creation. */
   createdAt: Date;
 

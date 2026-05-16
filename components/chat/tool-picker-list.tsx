@@ -9,6 +9,7 @@ import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import type { DiscoveredResource } from "@/types/discovered-resource";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { McpServer } from "@/types/mcp-server";
+import type { PublicMcpServer } from "@/types/public-mcp-server";
 import {
   AlertCircle,
   CheckSquare,
@@ -25,7 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ToolPickerListProps {
-  servers: McpServer[];
+  servers: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
   selectedResources: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
@@ -63,7 +64,7 @@ export function ToolPickerList({
     new Set(),
   );
 
-  const fetchServerContent = async (server: McpServer) => {
+  const fetchServerContent = async (server: McpServer | PublicMcpServer) => {
     setServerContent((prev) => ({
       ...prev,
       [server.id]: { ...prev[server.id], loading: true, error: null },
@@ -326,8 +327,7 @@ export function ToolPickerList({
                   selectedResources.has(`${server.id}:resource:${r.uri}`),
                 ).length;
 
-              const totalInServer =
-                serverTools.length + serverResources.length;
+              const totalInServer = serverTools.length + serverResources.length;
               const isServerAllSelected =
                 totalInServer > 0 && selectedInServer === totalInServer;
 
@@ -433,8 +433,7 @@ export function ToolPickerList({
                                   )
                                   .map((tool) => {
                                     const toolId = `${server.id}:tool:${tool.name}`;
-                                    const isChecked =
-                                      selectedTools.has(toolId);
+                                    const isChecked = selectedTools.has(toolId);
                                     return (
                                       <label
                                         key={tool.name}
@@ -494,10 +493,7 @@ export function ToolPickerList({
                                         <Checkbox
                                           checked={isChecked}
                                           onCheckedChange={() =>
-                                            onToggleResource(
-                                              server.id,
-                                              res.uri,
-                                            )
+                                            onToggleResource(server.id, res.uri)
                                           }
                                           className="mt-0.5"
                                         />

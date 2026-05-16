@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
 import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
@@ -148,7 +148,10 @@ export async function POST(req: Request) {
     })
     .from(mcpServer)
     .where(
-      and(eq(mcpServer.userId, session.user.id), eq(mcpServer.enabled, true)),
+      and(
+        or(eq(mcpServer.userId, session.user.id), eq(mcpServer.isPublic, true)),
+        eq(mcpServer.enabled, true),
+      ),
     );
 
   const filteredServers =

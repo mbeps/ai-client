@@ -10,11 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Database, Check, Wrench, X } from "lucide-react";
 import type { McpServer } from "@/types/mcp-server";
+import type { PublicMcpServer } from "@/types/public-mcp-server";
 import { useState } from "react";
 import { ToolPickerList } from "./tool-picker-list";
+import { useAppStore } from "@/lib/store";
 
 interface ToolPickerDialogProps {
-  servers: McpServer[];
+  servers: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
   selectedResources: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;

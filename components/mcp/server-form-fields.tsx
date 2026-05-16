@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import type { UseFormReturn, FieldValues, Path } from "react-hook-form";
 
 interface ServerFormFieldsProps<T extends FieldValues> {
@@ -146,6 +147,29 @@ export function ServerFormFields<T extends FieldValues>({
           />
         </>
       )}
+
+      <div className="pt-4 border-t mt-6">
+        <FormField
+          control={form.control}
+          name={"isPublic" as Path<T>}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+              <div className="space-y-0.5">
+                <FormLabel>Public Server</FormLabel>
+                <FormDescription>
+                  Share this server configuration with the community.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
     </>
   );
 }

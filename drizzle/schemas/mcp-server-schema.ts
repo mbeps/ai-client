@@ -26,6 +26,7 @@ export const mcpServer = pgTable(
     headers: text("headers"), // JSON object string for http headers
     env: text("env"), // JSON object string for env vars (stdio)
     enabled: boolean("enabled").notNull().default(true),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

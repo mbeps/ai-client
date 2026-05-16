@@ -68,6 +68,7 @@ const STDIO_DEFAULTS: CreateMcpServer = {
   command: "",
   args: "",
   env: "",
+  isPublic: false,
 };
 
 const HTTP_DEFAULTS: CreateMcpServer = {
@@ -75,6 +76,7 @@ const HTTP_DEFAULTS: CreateMcpServer = {
   name: "",
   url: "",
   headers: "",
+  isPublic: false,
 };
 
 export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
