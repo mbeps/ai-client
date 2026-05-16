@@ -5,6 +5,7 @@ import {
 } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { McpConnection } from "@/types/mcp-connection";
+import { logger } from "@/lib/logger";
 
 /**
  * Connects to a single MCP server and retrieves its tools.
@@ -26,6 +27,10 @@ export async function connectServer(
       MCP_TIMEOUT_MS,
       server.name,
     );
+    logger.info(`[MCP] Connected to server: ${server.name}`, {
+      serverId: server.id,
+      toolCount: Object.keys(tools).length,
+    });
     return {
       serverId: server.id,
       serverName: server.name,
@@ -33,6 +38,13 @@ export async function connectServer(
       close: () => mcpClient.close(),
     };
   } catch (err) {
+    logger.error(
+      `[MCP] Failed to connect or fetch tools for ${server.name}`,
+      err,
+      {
+        serverId: server.id,
+      },
+    );
     await mcpClient.close();
     throw err;
   }

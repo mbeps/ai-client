@@ -6,6 +6,7 @@ import { project } from "@/drizzle/schema";
 import type { ProjectRow } from "@/types/project-row";
 import { createProjectSchema } from "@/schemas/project";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * Creates a new project for the authenticated user.
@@ -38,6 +39,12 @@ export async function createProject(
       userId: session.user.id,
     })
     .returning();
+
+  logger.audit("Create Project", {
+    userId: session.user.id,
+    projectId: row.id,
+    name: row.name,
+  });
 
   return row;
 }

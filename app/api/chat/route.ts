@@ -16,6 +16,7 @@ import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 60;
 
@@ -80,6 +81,18 @@ export async function POST(req: Request) {
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
+
+  logger.info(
+    "[Chat API] Request initialized",
+    {
+      chatId,
+      userMessageId,
+      model,
+      selectedServerIds,
+      selectedAssistantId,
+    },
+    session.user.id,
+  );
 
   const [chatRow] = await db
     .select({
@@ -289,6 +302,16 @@ export async function POST(req: Request) {
                   toolName: chunk.toolName,
                   args: chunk.input,
                 });
+                logger.info(
+                  "[Chat API] Tool call initiated",
+                  {
+                    chatId,
+                    toolCallId: chunk.toolCallId,
+                    toolName: chunk.toolName,
+                    args: chunk.input,
+                  },
+                  session.user.id,
+                );
                 controller.enqueue(
                   encode({
                     type: "tool-call",
@@ -305,6 +328,15 @@ export async function POST(req: Request) {
                   toolName: chunk.toolName,
                   result: chunk.output,
                 });
+                logger.info(
+                  "[Chat API] Tool result received",
+                  {
+                    chatId,
+                    toolCallId: chunk.toolCallId,
+                    toolName: chunk.toolName,
+                  },
+                  session.user.id,
+                );
                 controller.enqueue(
                   encode({
                     type: "tool-result",
@@ -330,7 +362,7 @@ export async function POST(req: Request) {
             }
           }
         } catch (error: any) {
-          console.error("[Chat API Error]:", error);
+          logger.error("[Chat API Error]", error, { chatId }, session.user.id);
           let message = "An error occurred during generation";
           let code = "ERROR";
 
@@ -388,6 +420,17 @@ export async function POST(req: Request) {
           .update(chat)
           .set({ currentLeafId: assistantMessageId, updatedAt: new Date() })
           .where(eq(chat.id, chatId));
+
+        logger.info(
+          "[Chat API] Response completed",
+          {
+            chatId,
+            assistantMessageId,
+            textLength: fullText.length,
+            toolCallsCount: toolCalls.length,
+          },
+          session.user.id,
+        );
 
         if (bridge) {
           try {
