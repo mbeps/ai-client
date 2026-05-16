@@ -6,6 +6,7 @@ import { chat } from "@/drizzle/schema";
 import type { ChatRow } from "@/types/chat-row";
 import { createChatSchema } from "@/schemas/chat";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * Creates a new chat session for the authenticated user.
@@ -42,6 +43,13 @@ export async function createChat(
       assistantId: validated.assistantId ?? null,
     })
     .returning();
+
+  logger.audit("Create Chat", {
+    userId: session.user.id,
+    chatId: newChat.id,
+    projectId: newChat.projectId,
+    assistantId: newChat.assistantId,
+  });
 
   return newChat;
 }

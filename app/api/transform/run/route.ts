@@ -25,6 +25,7 @@ import {
 import type { FileBridgeResult } from "@/types/file-bridge-result";
 import type { TransformStep } from "@/types/transform-agent";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 300;
 
@@ -117,6 +118,16 @@ export async function POST(req: Request) {
           runRow = created;
           startFromStep = 0;
 
+          logger.info(
+            "[Transform AI] New run initialized",
+            {
+              runId: runRow.id,
+              agentId: parsed.data.agentId,
+              dryRun: runRow.dryRun,
+            },
+            session.user.id,
+          );
+
           emit({ type: "transform-start", runId: runRow.id });
         } else if (parsed.data.type === "start") {
           // Start an existing pending run from step 0
@@ -159,6 +170,15 @@ export async function POST(req: Request) {
           }
 
           startFromStep = 0;
+
+          logger.info(
+            "[Transform AI] Run started",
+            {
+              runId: runRow.id,
+              agentId: runRow.agentId,
+            },
+            session.user.id,
+          );
 
           // Update status to running
           await db
@@ -208,6 +228,16 @@ export async function POST(req: Request) {
           }
 
           startFromStep = (runRow.currentStepIndex ?? -1) + 1;
+
+          logger.info(
+            "[Transform AI] Run resumed",
+            {
+              runId: runRow.id,
+              agentId: runRow.agentId,
+              startFromStep,
+            },
+            session.user.id,
+          );
 
           // Update status to running
           await db
@@ -309,6 +339,16 @@ export async function POST(req: Request) {
             stepName: step.name,
             total: steps.length,
           });
+
+          logger.info(
+            "[Transform AI] Step started",
+            {
+              runId: runRow.id,
+              stepIndex: i,
+              stepName: step.name,
+            },
+            session.user.id,
+          );
 
           // Filter servers by step config
           const stepServers =
@@ -432,6 +472,16 @@ export async function POST(req: Request) {
             stepData,
           });
 
+          logger.info(
+            "[Transform AI] Step completed",
+            {
+              runId: runRow.id,
+              stepIndex: i,
+              stepName: step.name,
+            },
+            session.user.id,
+          );
+
           // Human review gate: pause after this step
           if (step.requiresReview) {
             await db
@@ -460,8 +510,23 @@ export async function POST(req: Request) {
           runId: runRow.id,
           outputAttachmentIds: currentOutputAttachmentIds,
         });
+
+        logger.info(
+          "[Transform AI] Run completed",
+          {
+            runId: runRow.id,
+            outputCount: currentOutputAttachmentIds.length,
+          },
+          session.user.id,
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Unexpected error";
+        logger.error(
+          "[Transform AI Error]",
+          err,
+          { runId: parsed.data.type !== "new" ? parsed.data.runId : undefined },
+          session.user.id,
+        );
         emit({ type: "error", message: msg });
       } finally {
         if (bridge) {

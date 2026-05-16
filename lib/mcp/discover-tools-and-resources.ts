@@ -6,6 +6,7 @@ import {
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { DiscoveredResource } from "@/types/discovered-resource";
+import { logger } from "@/lib/logger";
 
 /**
  * Discovers all tools and resources available from an MCP server.
@@ -83,7 +84,9 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior for servers that only implement tools
       } else {
-        console.warn(`[MCP] Failed to list resources for ${server.name}:`, e);
+        logger.error(`[MCP] Failed to list resources for ${server.name}`, e, {
+          serverId: server.id,
+        });
       }
     }
 
@@ -112,12 +115,22 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior
       } else {
-        console.warn(
-          `[MCP] Failed to list resource templates for ${server.name}:`,
+        logger.error(
+          `[MCP] Failed to list resource templates for ${server.name}`,
           e,
+          { serverId: server.id },
         );
       }
     }
+
+    logger.info(
+      `[MCP] Discovered ${tools.length} tools and ${resources.length} resources for ${server.name}`,
+      {
+        serverId: server.id,
+        toolCount: tools.length,
+        resourceCount: resources.length,
+      },
+    );
 
     return { tools, resources };
   } finally {

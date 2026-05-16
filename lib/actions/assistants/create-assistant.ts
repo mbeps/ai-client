@@ -6,6 +6,7 @@ import { assistant } from "@/drizzle/schema";
 import type { AssistantRow } from "@/types/assistant-row";
 import { createAssistantSchema } from "@/schemas/assistant";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 /**
  * Creates a new AI assistant persona for the authenticated user.
@@ -39,6 +40,12 @@ export async function createAssistant(
       userId: session.user.id,
     })
     .returning();
+
+  logger.audit("Create Assistant", {
+    userId: session.user.id,
+    assistantId: row.id,
+    name: row.name,
+  });
 
   return row;
 }
