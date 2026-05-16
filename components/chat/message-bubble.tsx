@@ -26,6 +26,10 @@ interface MessageBubbleProps {
   message: Message;
   /** Whether this message is the last one in the current thread. */
   isLatest: boolean;
+  /** Whether this message is the first one in the thread. */
+  isFirst?: boolean;
+  /** Assistant ID bound to the chat. */
+  assistantId?: string | null;
   /** Callback to delete this message from the conversation tree. */
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */
@@ -74,6 +78,8 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   isLatest,
+  isFirst,
+  assistantId,
   onDelete,
   onEdit,
   siblings,
@@ -203,6 +209,7 @@ export function MessageBubble({
                   }}
                   onCancel={() => setIsEditing(false)}
                   servers={mcpServers.filter((s) => s.enabled)}
+                  canMentionAssistant={isFirst && !assistantId}
                 />
               ) : (
                 <MarkdownRenderer

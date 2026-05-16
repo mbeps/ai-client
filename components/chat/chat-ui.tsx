@@ -326,6 +326,8 @@ export function ChatUI({
                       key={msg.id}
                       message={msg}
                       isLatest={index === thread.length - 1}
+                      isFirst={index === 0}
+                      assistantId={chat?.assistantId}
                       onDelete={handleDelete}
                       onEdit={handleEdit}
                       onRegenerate={handleRegenerate}
@@ -400,6 +402,7 @@ export function ChatUI({
               onStop={stopStream}
               servers={allEnabledServers}
               activeChatAssistantId={chat?.assistantId}
+              canMentionAssistant={thread.length === 0 && !chat?.assistantId}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedResources={initialSelectedResources}

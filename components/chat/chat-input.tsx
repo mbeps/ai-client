@@ -115,6 +115,9 @@ interface ChatInputProps {
   /** Assistant ID bound to the chat, if any, to disable @ mentions. */
   activeChatAssistantId?: string | null;
 
+  /** If true, allows triggering assistant mentions (@). */
+  canMentionAssistant?: boolean;
+
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
 }
@@ -150,6 +153,7 @@ export function ChatInput({
   initialSelectedKbs = [],
   onKnowledgebaseChange,
   activeChatAssistantId,
+  canMentionAssistant = true,
   submitLabel,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
@@ -205,6 +209,7 @@ export function ChatInput({
     activeChatAssistantId,
     initialSelectedPromptId,
     initialSelectedAssistantId,
+    canMentionAssistant,
   );
 
   useAutoExpandingTextarea(textareaRef, [input]);
