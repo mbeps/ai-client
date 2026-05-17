@@ -18,6 +18,7 @@ import {
 
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
+import { useTabState } from "@/hooks/use-tab-state";
 import {
   ChevronLeft,
   FileText,
@@ -49,6 +50,8 @@ export default function McpServerPage() {
       server: state.mcpServers.find((s) => s.id === serverId),
     })),
   );
+
+  const [activeTab, setActiveTab] = useTabState("tab", "tools");
 
   if (!server) return <NotFoundMessage entity="MCP Server" />;
 
@@ -96,7 +99,11 @@ export default function McpServerPage() {
         }
       />
 
-      <SidebarTabs defaultValue="tools" className="w-full">
+      <SidebarTabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
         <SidebarTabsList>
           <SidebarTabsTrigger value="tools">
             <Wrench className="mr-2 h-4 w-4" />

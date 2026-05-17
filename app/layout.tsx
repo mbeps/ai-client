@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PopoverProvider } from "@/components/ui/popover";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 /**
  * Root layout providing global fonts (Geist), CSS, and UI providers.
@@ -48,8 +49,10 @@ export default function RootLayout({
       >
         <TooltipProvider>
           <PopoverProvider>
+            <NuqsAdapter>
             {children}
             <Toaster position="bottom-right" />
+          </NuqsAdapter>
           </PopoverProvider>
         </TooltipProvider>
       </body>
