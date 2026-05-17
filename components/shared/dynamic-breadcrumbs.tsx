@@ -14,6 +14,10 @@ import {
 
 import { useAppStore } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
+import { format } from "date-fns";
+import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
+import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Friendly labels for known route segments.
@@ -35,7 +39,14 @@ const ROUTE_LABELS: Record<string, string> = {
   workflows: "Workflows",
   translation: "Translation",
   transform: "Spreadsheets Automation",
+  new: "New",
 };
+
+/**
+ * UUID regex for identifying entity IDs in path segments.
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Dynamic breadcrumb component that generates navigation links based on the current URL.
@@ -52,10 +63,14 @@ export function DynamicBreadcrumbs() {
     knowledgebases,
     prompts,
     mcpServers,
+    transformAgents,
     loadProjects,
     loadPrompts,
+    loadAssistants,
+    loadKnowledgebases,
     loadMcpServers,
     loadPublicMcpServers,
+    loadTransformAgents,
   } = useAppStore(
     useShallow((state) => ({
       chats: state.chats,
@@ -64,12 +79,20 @@ export function DynamicBreadcrumbs() {
       knowledgebases: state.knowledgebases,
       prompts: state.prompts,
       mcpServers: state.mcpServers,
+      transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
+      loadAssistants: state.loadAssistants,
+      loadKnowledgebases: state.loadKnowledgebases,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
+      loadTransformAgents: state.loadTransformAgents,
     })),
   );
+
+  const [resolvedLabels, setResolvedLabels] = React.useState<
+    Record<string, string>
+  >({});
 
   // Load projects if not available
   React.useEffect(() => {
@@ -77,6 +100,20 @@ export function DynamicBreadcrumbs() {
       loadProjects().catch(() => {});
     }
   }, [projects.length, loadProjects]);
+
+  // Load assistants if not available
+  React.useEffect(() => {
+    if (assistants.length === 0) {
+      loadAssistants().catch(() => {});
+    }
+  }, [assistants.length, loadAssistants]);
+
+  // Load knowledge bases if not available
+  React.useEffect(() => {
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases().catch(() => {});
+    }
+  }, [knowledgebases.length, loadKnowledgebases]);
 
   // Load prompts if not available
   React.useEffect(() => {
@@ -96,6 +133,97 @@ export function DynamicBreadcrumbs() {
   React.useEffect(() => {
     loadPublicMcpServers().catch(() => {});
   }, [loadPublicMcpServers]);
+
+  // Load transform agents if on a transform workflow path
+  React.useEffect(() => {
+    if (
+      pathname.includes(ROUTES.WORKFLOWS.TRANSFORM.path) &&
+      transformAgents.length === 0
+    ) {
+      loadTransformAgents().catch(() => {});
+    }
+  }, [pathname, transformAgents.length, loadTransformAgents]);
+
+  // Resolve IDs that aren't in state
+  React.useEffect(() => {
+    let ignore = false;
+    const segments = pathname.split("/").filter(Boolean);
+
+    const resolveAll = async () => {
+      const updates: Record<string, string> = {};
+
+      await Promise.all(
+        segments.map(async (segment, index) => {
+          // Check if it's already in our store to avoid redundant fetches
+          const inStore =
+            projects.some((p) => p.id === segment) ||
+            assistants.some((a) => a.id === segment) ||
+            knowledgebases.some((kb) => kb.id === segment) ||
+            prompts.some((p) => p.id === segment) ||
+            mcpServers.some((s) => s.id === segment) ||
+            transformAgents.some((a) => a.id === segment) ||
+            chats[segment];
+
+          if (
+            UUID_REGEX.test(segment) &&
+            !resolvedLabels[segment] &&
+            !inStore
+          ) {
+            const prevSegment = segments[index - 1];
+
+            // 1. Check if it's a Run segment (URL: /workflows/transform/[agentId]/[runId])
+            if (prevSegment && UUID_REGEX.test(prevSegment)) {
+              try {
+                const run = await getTransformRun(segment);
+                if (run) {
+                  const agent = await getTransformAgent(run.agentId);
+                  const dateStr = format(
+                    new Date(run.createdAt),
+                    "dd/MM/yyyy HH:mm",
+                  );
+                  const label = dateStr;
+
+                  updates[segment] = label;
+                }
+              } catch (err) {
+                console.error("Failed to resolve run label:", err);
+              }
+            }
+            // 2. Check if it's a Transform Agent segment (URL: /workflows/transform/[agentId])
+            else if (prevSegment === "transform") {
+              try {
+                const agent = await getTransformAgent(segment);
+                if (agent) {
+                  updates[segment] = agent.name;
+                }
+              } catch (err) {
+                console.error("Failed to resolve transform agent label:", err);
+              }
+            }
+          }
+        }),
+      );
+
+      if (!ignore && Object.keys(updates).length > 0) {
+        setResolvedLabels((prev) => ({ ...prev, ...updates }));
+      }
+    };
+
+    resolveAll();
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    pathname,
+    projects,
+    assistants,
+    knowledgebases,
+    prompts,
+    mcpServers,
+    transformAgents,
+    chats,
+  ]);
 
   // Split pathname into segments and remove empty strings
   const segments = pathname.split("/").filter(Boolean);
@@ -119,6 +247,8 @@ export function DynamicBreadcrumbs() {
             knowledgebases.find((kb) => kb.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
             mcpServers.find((s) => s.id === segment)?.name ||
+            transformAgents.find((a) => a.id === segment)?.name ||
+            resolvedLabels[segment] ||
             // Fallback for project/assistant names from chat object
             Object.values(chats).find((c) => c.projectId === segment)
               ?.projectName ||
