@@ -13,8 +13,13 @@ import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ResponseTimeline } from "./message/response-timeline";
 import { MessageActions } from "./message/message-actions";
-import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import {
+  parseMessageMetadata,
+  extractCitations,
+  type Citation,
+} from "@/lib/chat/parse-message-metadata";
 import { AttachmentGallery } from "./message/attachment-gallery";
+import { CitationsList } from "./message/citations-list";
 import { ChatInput } from "./chat-input";
 
 /**
@@ -57,6 +62,8 @@ interface MessageBubbleProps {
   isStreamingReasoning?: boolean;
   /** Callback to show the artifact associated with this message. */
   onShowArtifact?: () => void;
+  /** Optional citations to show during streaming before they are persisted in metadata. */
+  streamingCitations?: Citation[];
 }
 
 /**
@@ -89,6 +96,7 @@ export function MessageBubble({
   isStreamingReasoning,
   onRegenerate,
   onShowArtifact,
+  streamingCitations,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -100,6 +108,13 @@ export function MessageBubble({
     selectedServerIds: parsedServerIds,
     selectedTools: parsedToolIds,
   } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
+
+  const citations = useMemo(() => {
+    if (streamingCitations && streamingCitations.length > 0)
+      return streamingCitations;
+    if (!rawToolData) return [];
+    return extractCitations(rawToolData.toolResults);
+  }, [rawToolData, streamingCitations]);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const promptMeta = isUser ? rawPromptMeta : null;
   const toolData = isUser ? null : rawToolData;
@@ -222,6 +237,7 @@ export function MessageBubble({
           ) : (
             <MarkdownRenderer content={message.content} />
           )}
+          <CitationsList citations={citations} />
         </div>
 
         {!isEditing && (

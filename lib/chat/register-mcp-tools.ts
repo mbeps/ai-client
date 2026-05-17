@@ -78,6 +78,9 @@ export async function registerMcpTools(
           results: results.map((r) => ({
             content: r.content,
             relevanceScore: r.score,
+            documentId: r.documentId,
+            documentName: r.documentName,
+            s3Key: r.s3Key,
           })),
           resultCount: results.length,
         };

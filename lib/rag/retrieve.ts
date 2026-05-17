@@ -8,6 +8,8 @@ export type ChunkResult = {
   id: string;
   content: string;
   documentId: string;
+  documentName: string;
+  s3Key: string;
   chunkIndex: number;
   score: number;
 };
@@ -17,6 +19,8 @@ type RawChunkRow = {
   content: string;
   document_id: string;
   chunk_index: number;
+  document_name: string;
+  s3_key: string;
 };
 
 export function applyRRF(
@@ -47,6 +51,8 @@ export function applyRRF(
       id: row.id,
       content: row.content,
       documentId: row.document_id,
+      documentName: row.document_name,
+      s3Key: row.s3_key,
       chunkIndex: row.chunk_index,
       score,
     }));
@@ -71,11 +77,18 @@ export async function hybridSearch(
 
   const vectorRows = (
     await db.execute(sql`
-      SELECT id, content, document_id, chunk_index
-      FROM kb_chunk
-      WHERE kb_id = ${kbId}
-        AND embedding IS NOT NULL
-      ORDER BY embedding <=> ${embeddingLiteral}::vector
+      SELECT 
+        c.id, 
+        c.content, 
+        c.document_id, 
+        c.chunk_index,
+        d.name as document_name,
+        d.s3_key
+      FROM kb_chunk c
+      JOIN kb_document d ON c.document_id = d.id
+      WHERE c.kb_id = ${kbId}
+        AND c.embedding IS NOT NULL
+      ORDER BY c.embedding <=> ${embeddingLiteral}::vector
       LIMIT 20
     `)
   ).rows as RawChunkRow[];
@@ -84,11 +97,18 @@ export async function hybridSearch(
   try {
     ftsRows = (
       await db.execute(sql`
-        SELECT id, content, document_id, chunk_index
-        FROM kb_chunk
-        WHERE kb_id = ${kbId}
-          AND search_vector @@ plainto_tsquery('english', ${query})
-        ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', ${query})) DESC
+        SELECT 
+          c.id, 
+          c.content, 
+          c.document_id, 
+          c.chunk_index,
+          d.name as document_name,
+          d.s3_key
+        FROM kb_chunk c
+        JOIN kb_document d ON c.document_id = d.id
+        WHERE c.kb_id = ${kbId}
+          AND c.search_vector @@ plainto_tsquery('english', ${query})
+        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${query})) DESC
         LIMIT 20
       `)
     ).rows as RawChunkRow[];
