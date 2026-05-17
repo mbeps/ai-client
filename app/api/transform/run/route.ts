@@ -102,6 +102,14 @@ export async function POST(req: Request) {
           }
 
           // Create a new run record
+          const inputAttachmentIdsValue = Array.isArray(
+            parsed.data.inputAttachmentIds,
+          )
+            ? parsed.data.inputAttachmentIds
+            : typeof parsed.data.inputAttachmentIds === "string"
+              ? JSON.parse(parsed.data.inputAttachmentIds)
+              : [];
+
           const [created] = await db
             .insert(transformRun)
             .values({
@@ -109,9 +117,7 @@ export async function POST(req: Request) {
               userId: session.user.id,
               status: "running",
               dryRun: parsed.data.dryRun ?? false,
-              inputAttachmentIds: JSON.stringify(
-                parsed.data.inputAttachmentIds,
-              ),
+              inputAttachmentIds: JSON.stringify(inputAttachmentIdsValue),
               outputAttachmentIds: "[]",
             })
             .returning();
@@ -272,37 +278,42 @@ export async function POST(req: Request) {
         }
 
         // Determine which files to stage
-        const currentOutputIds: string[] = JSON.parse(
-          runRow.outputAttachmentIds || "[]",
-        );
-        const inputIds: string[] = JSON.parse(
-          runRow.inputAttachmentIds || "[]",
-        );
-        const stageIds =
-          startFromStep > 0 && currentOutputIds.length > 0
-            ? currentOutputIds
-            : inputIds;
+        let stageIds: string[] = [];
+        let attachmentRows: (typeof attachment.$inferSelect)[] = [];
 
-        // Fetch attachment records
-        const attachmentRows = await db
-          .select()
-          .from(attachment)
-          .where(inArray(attachment.id, stageIds));
+        if (agentRow.requiresFileUpload) {
+          const currentOutputIds: string[] = JSON.parse(
+            runRow.outputAttachmentIds || "[]",
+          );
+          const inputIds: string[] = JSON.parse(
+            runRow.inputAttachmentIds || "[]",
+          );
+          stageIds =
+            startFromStep > 0 && currentOutputIds.length > 0
+              ? currentOutputIds
+              : inputIds;
 
-        if (attachmentRows.length === 0) {
-          await db
-            .update(transformRun)
-            .set({ status: "failed", errorMessage: "Input files not found" })
-            .where(eq(transformRun.id, runRow.id));
-          emit({ type: "error", message: "Input files not found" });
-          controller.close();
-          return;
+          // Fetch attachment records
+          attachmentRows = await db
+            .select()
+            .from(attachment)
+            .where(inArray(attachment.id, stageIds));
+
+          if (attachmentRows.length === 0) {
+            await db
+              .update(transformRun)
+              .set({ status: "failed", errorMessage: "Input files not found" })
+              .where(eq(transformRun.id, runRow.id));
+            emit({ type: "error", message: "Input files not found" });
+            controller.close();
+            return;
+          }
+
+          // Stage files to temp directory
+          bridge = await downloadAttachmentsToTemp(
+            attachmentRows.map((a) => ({ id: a.id, key: a.key, name: a.name })),
+          );
         }
-
-        // Stage files to temp directory
-        bridge = await downloadAttachmentsToTemp(
-          attachmentRows.map((a) => ({ id: a.id, key: a.key, name: a.name })),
-        );
 
         // Fetch all enabled MCP servers for the user
         const allServers = await db
@@ -320,7 +331,7 @@ export async function POST(req: Request) {
           agentRow.modelId ??
           DEFAULT_MODEL;
 
-        let currentOutputAttachmentIds: string[] = [...stageIds];
+        let currentOutputAttachmentIds: string[] = stageIds;
 
         // Run each step
         for (let i = startFromStep; i < steps.length; i++) {
@@ -356,41 +367,56 @@ export async function POST(req: Request) {
               ? allServers.filter((s) => step.mcpServerIds.includes(s.id))
               : allServers;
 
-          // Inject EXCEL_MCP_ALLOWED_DIRS into stdio server envs
+          // Inject EXCEL_MCP_ALLOWED_DIRS into stdio server envs if bridge exists
           const serversWithBridge = stepServers.map((s) => {
-            if (s.type !== "stdio") return s;
+            if (s.type !== "stdio" || !bridge) return s;
             let envObj: Record<string, string> = {};
             try {
               envObj = s.env ? JSON.parse(s.env) : {};
             } catch {
               envObj = {};
             }
-            envObj.EXCEL_MCP_ALLOWED_DIRS = bridge!.tempDir;
+            envObj.EXCEL_MCP_ALLOWED_DIRS = bridge.tempDir;
             return { ...s, env: JSON.stringify(envObj) };
           });
 
           const { tools, cleanup: mcpCleanup } =
             await getMcpTools(serversWithBridge);
 
-          // Filter tools by step config
+          // Combine agent tools and step tools
+          const allowedToolIds = new Set([
+            ...(agentRow.tools || []),
+            ...(step.toolIds || []),
+          ]);
+
+          // Filter tools by config
           const filteredTools =
-            step.toolIds.length > 0
+            allowedToolIds.size > 0
               ? Object.fromEntries(
-                  Object.entries(tools).filter(([name]) =>
-                    step.toolIds.includes(name),
-                  ),
+                  Object.entries(tools).filter(([name]) => {
+                    return Array.from(allowedToolIds).some((id) => {
+                      // Handle structured IDs: serverId:tool:toolName
+                      if (id.includes(":tool:")) {
+                        const parts = id.split(":");
+                        return parts[parts.length - 1] === name;
+                      }
+                      // fallback to exact match (e.g. manage_artifact)
+                      return id === name;
+                    });
+                  }),
                 )
               : tools;
 
           // Build system prompt
-          const filePaths = bridge!.files.map((f) => f.localPath).join("\n");
           const systemPrompt = [
             agentRow.globalContext
               ? `Context:\n${agentRow.globalContext}`
               : null,
-            `You are an Excel transformation agent. The following files are available for transformation:\n${filePaths}`,
+            bridge
+              ? `You are an Excel transformation agent. The following files are available for transformation:\n${bridge.files.map((f) => f.localPath).join("\n")}`
+              : "You are a helpful AI assistant performing a task.",
             `Instructions for this step:\n${step.prompt}`,
-            `Use only the provided MCP tools. After completing the transformation, briefly summarise what you changed.`,
+            `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
           ]
             .filter(Boolean)
             .join("\n\n");
@@ -424,10 +450,10 @@ export async function POST(req: Request) {
 
           await mcpCleanup();
 
-          // Persist modified files after this step (skip if dry run)
-          if (!runRow.dryRun) {
+          // Persist modified files after this step (skip if dry run or no bridge)
+          if (!runRow.dryRun && bridge) {
             const modified = await persistModifiedFiles({
-              files: bridge!.files,
+              files: bridge.files,
               userId: session.user.id,
               transformRunId: runRow.id,
             });

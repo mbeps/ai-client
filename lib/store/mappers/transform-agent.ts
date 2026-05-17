@@ -17,6 +17,8 @@ export function transformAgentRowToStore(
     description: row.description ?? "",
     globalContext: row.globalContext ?? undefined,
     modelId: row.modelId ?? undefined,
+    tools: row.tools,
+    requiresFileUpload: row.requiresFileUpload,
     steps,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),

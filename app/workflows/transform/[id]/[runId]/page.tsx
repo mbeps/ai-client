@@ -323,6 +323,12 @@ export default function TransformRunDetailPage() {
     };
   }, [selectedStepIndex, stepStates, agent]);
 
+  const hasAnyArtifact = useMemo(() => {
+    return Object.values(stepStates).some(
+      (state) => state.stepData && Object.keys(state.stepData).length > 0,
+    );
+  }, [stepStates]);
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -524,7 +530,7 @@ export default function TransformRunDetailPage() {
                               : isCompleted
                                 ? "Step completed successfully."
                                 : isCurrent
-                                  ? "AI is working on your spreadsheet..."
+                                  ? "AI is working on your request..."
                                   : isAwaiting
                                     ? "Waiting for your review..."
                                     : "Scheduled for execution."}
@@ -606,38 +612,42 @@ export default function TransformRunDetailPage() {
             </div>
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          {(agent.tools?.includes("manage_artifact") || hasAnyArtifact) && (
+            <>
+              <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={60} minSize={30} className="bg-card">
-            <div className="h-full relative overflow-hidden">
-              {currentArtifact ? (
-                <ArtifactPanel
-                  artifact={currentArtifact}
-                  isOpen={isArtifactOpen}
-                  onClose={() => setIsArtifactOpen(false)}
-                  isFullWidth={true}
-                />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 text-center gap-6 bg-muted/5">
-                  <div className="relative">
-                    <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-                    <div className="h-20 w-20 rounded-2xl bg-card border shadow-xl flex items-center justify-center relative">
-                      <Play className="h-10 w-10 text-primary/40" />
+              <ResizablePanel defaultSize={60} minSize={30} className="bg-card">
+                <div className="h-full relative overflow-hidden">
+                  {currentArtifact ? (
+                    <ArtifactPanel
+                      artifact={currentArtifact}
+                      isOpen={isArtifactOpen}
+                      onClose={() => setIsArtifactOpen(false)}
+                      isFullWidth={true}
+                    />
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 text-center gap-6 bg-muted/5">
+                      <div className="relative">
+                        <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse" />
+                        <div className="h-20 w-20 rounded-2xl bg-card border shadow-xl flex items-center justify-center relative">
+                          <Play className="h-10 w-10 text-primary/40" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 max-w-sm">
+                        <p className="text-lg font-bold text-foreground">
+                          Step Preview
+                        </p>
+                        <p className="text-sm leading-relaxed">
+                          Select a completed step from the timeline to inspect
+                          the output at that stage of the process.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2 max-w-sm">
-                    <p className="text-lg font-bold text-foreground">
-                      Spreadsheet Preview
-                    </p>
-                    <p className="text-sm leading-relaxed">
-                      Select a completed step from the timeline to inspect the
-                      data state at that stage of the process.
-                    </p>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </ResizablePanel>
+              </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
     </div>

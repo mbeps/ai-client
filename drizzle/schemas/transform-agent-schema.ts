@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -21,6 +22,11 @@ export const transformAgent = pgTable(
     description: text("description"),
     globalContext: text("global_context"),
     modelId: text("model_id"),
+    tools: text("tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    requiresFileUpload: boolean("requires_file_upload").notNull().default(true),
     steps: text("steps").notNull().default("[]"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

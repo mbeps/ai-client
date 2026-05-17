@@ -20,6 +20,8 @@ export async function createTransformAgent(
       description: validated.description ?? null,
       globalContext: validated.globalContext ?? null,
       modelId: validated.modelId ?? null,
+      tools: validated.tools,
+      requiresFileUpload: validated.requiresFileUpload,
       steps: JSON.stringify(validated.steps ?? []),
       userId: session.user.id,
     })

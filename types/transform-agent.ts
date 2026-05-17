@@ -21,6 +21,8 @@ export type TransformAgent = {
   description: string;
   globalContext?: string;
   modelId: string | undefined;
+  tools: string[];
+  requiresFileUpload: boolean;
   steps: TransformStep[];
   createdAt: Date;
   updatedAt: Date;

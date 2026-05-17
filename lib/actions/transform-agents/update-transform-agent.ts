@@ -23,6 +23,9 @@ export async function updateTransformAgent(
     values.globalContext = validated.globalContext ?? null;
   if (validated.modelId !== undefined)
     values.modelId = validated.modelId ?? null;
+  if (validated.tools !== undefined) values.tools = validated.tools;
+  if (validated.requiresFileUpload !== undefined)
+    values.requiresFileUpload = validated.requiresFileUpload;
   if (validated.steps !== undefined)
     values.steps = JSON.stringify(validated.steps);
 

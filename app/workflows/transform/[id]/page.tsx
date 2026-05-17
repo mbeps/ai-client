@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,6 +61,7 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import {
   Select,
   SelectContent,
@@ -75,10 +77,14 @@ export default function AgentEditorPage() {
   const id = params.id as string;
   const isNew = id === "new";
 
+  const { mcpServers, loadMcpServers } = useAppStore();
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
+  const [tools, setTools] = useState<Set<string>>(new Set());
+  const [requiresFileUpload, setRequiresFileUpload] = useState(true);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -97,6 +103,12 @@ export default function AgentEditorPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers();
+    }
+  }, [mcpServers.length, loadMcpServers]);
+
+  useEffect(() => {
     if (isNew) return;
     getTransformAgent(id)
       .then((row) => {
@@ -110,6 +122,8 @@ export default function AgentEditorPage() {
         setDescription(agent.description);
         setGlobalContext(agent.globalContext ?? "");
         setModelId(agent.modelId ?? DEFAULT_MODEL);
+        setTools(new Set(agent.tools ?? []));
+        setRequiresFileUpload(agent.requiresFileUpload ?? true);
         setSteps(agent.steps);
       })
       .finally(() => setIsLoading(false));
@@ -136,6 +150,8 @@ export default function AgentEditorPage() {
           description,
           globalContext,
           modelId,
+          tools: Array.from(tools),
+          requiresFileUpload,
           steps,
         });
         toast.success("Agent created");
@@ -146,6 +162,8 @@ export default function AgentEditorPage() {
           description,
           globalContext,
           modelId,
+          tools: Array.from(tools),
+          requiresFileUpload,
           steps,
         });
         toast.success("Agent saved");
@@ -183,8 +201,62 @@ export default function AgentEditorPage() {
     setSteps(updated);
   };
 
+  const toggleTool = (serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(toolId)) {
+        next.delete(toolId);
+      } else {
+        next.add(toolId);
+      }
+      return next;
+    });
+  };
+
+  const toggleResource = (serverId: string, uri: string) => {
+    const resourceId = `${serverId}:resource:${uri}`;
+    setTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(resourceId)) {
+        next.delete(resourceId);
+      } else {
+        next.add(resourceId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllTools = (
+    serverId: string,
+    toolNames: string[],
+    resourceUris: string[],
+    enabled: boolean,
+  ) => {
+    setTools((prev) => {
+      const next = new Set(prev);
+      toolNames.forEach((name) => {
+        const toolId = `${serverId}:tool:${name}`;
+        if (enabled) {
+          next.add(toolId);
+        } else {
+          next.delete(toolId);
+        }
+      });
+      resourceUris.forEach((uri) => {
+        const resourceId = `${serverId}:resource:${uri}`;
+        if (enabled) {
+          next.add(resourceId);
+        } else {
+          next.delete(resourceId);
+        }
+      });
+      return next;
+    });
+  };
+
   const handleStartRun = async () => {
-    if (runFiles.length === 0) {
+    if (requiresFileUpload && runFiles.length === 0) {
       toast.error("Please select at least one file");
       return;
     }
@@ -258,24 +330,26 @@ export default function AgentEditorPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label>Input Files</Label>
-                    <input
-                      type="file"
-                      multiple
-                      accept=".xlsx,.xls,.csv"
-                      onChange={(e) =>
-                        setRunFiles(Array.from(e.target.files ?? []))
-                      }
-                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
-                    />
-                    {runFiles.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {runFiles.length} file{runFiles.length !== 1 ? "s" : ""}{" "}
-                        selected
-                      </p>
-                    )}
-                  </div>
+                  {requiresFileUpload && (
+                    <div className="space-y-2">
+                      <Label>Input Files</Label>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".xlsx,.xls,.csv"
+                        onChange={(e) =>
+                          setRunFiles(Array.from(e.target.files ?? []))
+                        }
+                        className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
+                      />
+                      {runFiles.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {runFiles.length} file
+                          {runFiles.length !== 1 ? "s" : ""} selected
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Dry Run Mode</Label>
@@ -295,7 +369,10 @@ export default function AgentEditorPage() {
                   </Button>
                   <Button
                     onClick={handleStartRun}
-                    disabled={isStartingRun || runFiles.length === 0}
+                    disabled={
+                      isStartingRun ||
+                      (requiresFileUpload && runFiles.length === 0)
+                    }
                   >
                     {isStartingRun ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -333,9 +410,13 @@ export default function AgentEditorPage() {
             <Edit2 className="mr-2 h-4 w-4" />
             <span>Prompt</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="tools">
+            <Zap className="mr-2 h-4 w-4" />
+            <span>Tools</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="config">
             <Settings className="mr-2 h-4 w-4" />
-            <span>Configuration</span>
+            <span>Settings</span>
           </SidebarTabsTrigger>
           {!isNew && (
             <SidebarTabsTrigger value="runs">
@@ -401,6 +482,26 @@ export default function AgentEditorPage() {
                 rows={10}
               />
             </div>
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="tools" className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Default Tools</h3>
+            <p className="text-sm text-muted-foreground">
+              These tools will be automatically enabled for all steps in this
+              transformation.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <ToolPickerList
+              servers={mcpServers}
+              selectedTools={tools}
+              selectedResources={tools}
+              onToggleTool={toggleTool}
+              onToggleResource={toggleResource}
+              onBulkSelect={toggleAllTools}
+            />
           </div>
         </SidebarTabsContent>
 
@@ -472,6 +573,20 @@ export default function AgentEditorPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label>Require File Upload</Label>
+                <p className="text-sm text-muted-foreground">
+                  If enabled, users will be prompted to upload spreadsheet files
+                  before running the agent.
+                </p>
+              </div>
+              <Switch
+                checked={requiresFileUpload}
+                onCheckedChange={setRequiresFileUpload}
+              />
             </div>
           </div>
         </SidebarTabsContent>
