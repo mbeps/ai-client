@@ -103,6 +103,10 @@ export function useStreamResponse(
       metadataObj.assistantId = selectedAssistantId;
     }
 
+    if (selectedKbIds.length > 0) {
+      metadataObj.selectedKbIds = selectedKbIds;
+    }
+
     if (selectedPromptId) {
       const prompts = useAppStore.getState().prompts;
       const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);

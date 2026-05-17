@@ -24,6 +24,7 @@ export type ParsedMessageMetadata = {
   modelId: string | null;
   selectedServerIds: string[] | null;
   selectedTools: string[] | null;
+  selectedKbIds: string[] | null;
 };
 
 /**
@@ -44,6 +45,7 @@ export function parseMessageMetadata(
     modelId: null,
     selectedServerIds: null,
     selectedTools: null,
+    selectedKbIds: null,
   };
   if (!metadata) return empty;
   try {
@@ -75,18 +77,24 @@ export function parseMessageMetadata(
       ? (parsed.selectedTools as string[])
       : null;
 
+    const selectedKbIds = Array.isArray(parsed.selectedKbIds)
+      ? (parsed.selectedKbIds as string[])
+      : null;
+
     return {
       promptMeta,
       toolData,
       modelId,
       selectedServerIds,
       selectedTools,
+      selectedKbIds,
     };
   } catch {
     return {
       ...empty,
       selectedServerIds: null,
       selectedTools: null,
+      selectedKbIds: null,
     };
   }
 }
