@@ -8,7 +8,7 @@ import type { Message } from "@/types/message";
 import type { Attachment } from "@/types/attachment";
 import { ROUTES } from "@/constants/routes";
 import { MODELS } from "@/constants/models";
-import { Bot, Command, User } from "lucide-react";
+import { Bot, Command, Database, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ResponseTimeline } from "./message/response-timeline";
@@ -107,6 +107,7 @@ export function MessageBubble({
     modelId: parsedModelId,
     selectedServerIds: parsedServerIds,
     selectedTools: parsedToolIds,
+    selectedKbIds: parsedKbIds,
   } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
 
   const citations = useMemo(() => {
@@ -116,7 +117,9 @@ export function MessageBubble({
     return extractCitations(rawToolData.toolResults);
   }, [rawToolData, streamingCitations]);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  const knowledgebases = useAppStore((state) => state.knowledgebases);
   const promptMeta = isUser ? rawPromptMeta : null;
+  const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
   const toolData = isUser ? null : rawToolData;
   const promptEntry = promptMeta
     ? prompts.find((p) => p.id === promptMeta.promptId)
@@ -182,14 +185,31 @@ export function MessageBubble({
           )}
           {isUser ? (
             <div>
-              {promptMeta && (
-                <Link
-                  href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
-                  className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 mb-2 hover:bg-primary/20 transition-colors cursor-pointer"
-                >
-                  <Command className="h-3 w-3" />/
-                  {promptEntry?.shortcut ?? promptMeta.promptId}
-                </Link>
+              {(promptMeta || selectedKbIds.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  {promptMeta && (
+                    <Link
+                      href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
+                      className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                      <Command className="h-3 w-3" />/
+                      {promptEntry?.shortcut ?? promptMeta.promptId}
+                    </Link>
+                  )}
+                  {selectedKbIds.map((kbId) => {
+                    const kb = knowledgebases.find((k) => k.id === kbId);
+                    return (
+                      <Link
+                        key={kbId}
+                        href={ROUTES.KNOWLEDGEBASES.detail(kbId)}
+                        className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+                      >
+                        <Database className="h-3 w-3" />
+                        {kb?.name ?? kbId}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
               {isEditing ? (
                 <ChatInput
