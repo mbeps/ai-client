@@ -10,6 +10,14 @@ export type ToolResult = {
   result: unknown;
 };
 
+export type Citation = {
+  content: string;
+  relevanceScore: number;
+  documentId: string;
+  documentName: string;
+  s3Key: string;
+};
+
 export type ParsedMessageMetadata = {
   promptMeta: { promptId: string; userContent: string } | null;
   toolData: { toolCalls: ToolCall[]; toolResults: ToolResult[] } | null;
@@ -81,4 +89,26 @@ export function parseMessageMetadata(
       selectedTools: null,
     };
   }
+}
+
+/**
+ * Extracts RAG citations from tool results.
+ * Identifies "search_knowledge_base" tool outputs and formats them.
+ *
+ * @param toolResults - Array of tool results from message metadata.
+ * @returns Flattened array of Citation objects.
+ */
+export function extractCitations(toolResults: ToolResult[]): Citation[] {
+  const citations: Citation[] = [];
+
+  for (const tr of toolResults) {
+    if (tr.toolName === "search_knowledge_base") {
+      const data = tr.result as { results?: Citation[] };
+      if (Array.isArray(data?.results)) {
+        citations.push(...data.results);
+      }
+    }
+  }
+
+  return citations;
 }

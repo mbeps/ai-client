@@ -11,6 +11,7 @@ import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
 import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
+import { extractCitations } from "@/lib/chat/parse-message-metadata";
 
 import { DEFAULT_MODEL } from "@/constants/models";
 import { Bot } from "lucide-react";
@@ -139,6 +140,26 @@ export function ChatUI({
     streamResponse,
     stopStream,
   } = useStreamResponse(chatId);
+
+  const streamingCitations = useMemo(() => {
+    if (activeToolCalls.length === 0) return [];
+
+    // Map ActiveToolCalls to ToolResult-like objects for extractCitations
+    const completedSearchToolResults = activeToolCalls
+      .filter(
+        (tc) =>
+          tc.status === "complete" &&
+          tc.toolName === "search_knowledge_base" &&
+          tc.result,
+      )
+      .map((tc) => ({
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        result: tc.result,
+      }));
+
+    return extractCitations(completedSearchToolResults);
+  }, [activeToolCalls]);
 
   const handleSend = useCallback(
     async (
@@ -367,7 +388,8 @@ export function ChatUI({
                     </div>
                   )}
                   {(streamingContent !== null ||
-                    streamingReasoning !== null) && (
+                    streamingReasoning !== null ||
+                    streamingCitations.length > 0) && (
                     <MessageBubble
                       message={{
                         id: "streaming",
@@ -385,6 +407,7 @@ export function ChatUI({
                       onNavigateBranch={() => {}}
                       reasoning={streamingReasoning ?? undefined}
                       isStreamingReasoning={isStreamingReasoning}
+                      streamingCitations={streamingCitations}
                     />
                   )}
                 </>
