@@ -385,7 +385,9 @@ export async function POST(req: Request) {
           // Build system prompt
           const filePaths = bridge!.files.map((f) => f.localPath).join("\n");
           const systemPrompt = [
-            step.context ? `Context:\n${step.context}` : null,
+            agentRow.globalContext
+              ? `Context:\n${agentRow.globalContext}`
+              : null,
             `You are an Excel transformation agent. The following files are available for transformation:\n${filePaths}`,
             `Instructions for this step:\n${step.prompt}`,
             `Use only the provided MCP tools. After completing the transformation, briefly summarise what you changed.`,

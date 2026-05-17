@@ -19,6 +19,8 @@ export async function updateTransformAgent(
   if (validated.name !== undefined) values.name = validated.name;
   if (validated.description !== undefined)
     values.description = validated.description ?? null;
+  if (validated.globalContext !== undefined)
+    values.globalContext = validated.globalContext ?? null;
   if (validated.modelId !== undefined)
     values.modelId = validated.modelId ?? null;
   if (validated.steps !== undefined)

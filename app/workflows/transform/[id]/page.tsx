@@ -31,6 +31,7 @@ import {
   List,
   Shield,
   History,
+  Edit2,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -76,6 +77,7 @@ export default function AgentEditorPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -106,6 +108,7 @@ export default function AgentEditorPage() {
         const agent = transformAgentRowToStore(row);
         setName(agent.name);
         setDescription(agent.description);
+        setGlobalContext(agent.globalContext ?? "");
         setModelId(agent.modelId ?? DEFAULT_MODEL);
         setSteps(agent.steps);
       })
@@ -131,13 +134,20 @@ export default function AgentEditorPage() {
         const row = await createTransformAgent({
           name,
           description,
+          globalContext,
           modelId,
           steps,
         });
         toast.success("Agent created");
         router.push(ROUTES.WORKFLOWS.TRANSFORM.detail(row.id));
       } else {
-        await updateTransformAgent(id, { name, description, modelId, steps });
+        await updateTransformAgent(id, {
+          name,
+          description,
+          globalContext,
+          modelId,
+          steps,
+        });
         toast.success("Agent saved");
       }
     } catch {
@@ -319,6 +329,10 @@ export default function AgentEditorPage() {
             <List className="mr-2 h-4 w-4" />
             <span>Steps</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="prompt">
+            <Edit2 className="mr-2 h-4 w-4" />
+            <span>Prompt</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="config">
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuration</span>
@@ -366,6 +380,30 @@ export default function AgentEditorPage() {
             )}
           </div>
         </SidebarTabsContent>
+
+        <SidebarTabsContent value="prompt" className="space-y-8">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Global Context</h3>
+            <p className="text-sm text-muted-foreground">
+              Provide background information that applies to all steps in this
+              transformation.
+            </p>
+          </div>
+
+          <div className="space-y-4 max-w-2xl">
+            <div className="space-y-2">
+              <Label htmlFor="globalContext">Background Context</Label>
+              <Textarea
+                id="globalContext"
+                value={globalContext}
+                onChange={(e) => setGlobalContext(e.target.value)}
+                placeholder="e.g. This agent handles monthly financial reports. All currency values should be in USD..."
+                rows={10}
+              />
+            </div>
+          </div>
+        </SidebarTabsContent>
+
         {!isNew && (
           <SidebarTabsContent value="runs" className="space-y-4">
             <div className="flex items-center justify-between">

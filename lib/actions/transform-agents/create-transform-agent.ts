@@ -18,6 +18,7 @@ export async function createTransformAgent(
     .values({
       name: validated.name,
       description: validated.description ?? null,
+      globalContext: validated.globalContext ?? null,
       modelId: validated.modelId ?? null,
       steps: JSON.stringify(validated.steps ?? []),
       userId: session.user.id,

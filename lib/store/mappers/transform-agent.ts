@@ -15,6 +15,7 @@ export function transformAgentRowToStore(
     userId: row.userId,
     name: row.name,
     description: row.description ?? "",
+    globalContext: row.globalContext ?? undefined,
     modelId: row.modelId ?? undefined,
     steps,
     createdAt: new Date(row.createdAt),

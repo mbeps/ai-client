@@ -19,6 +19,7 @@ export const transformAgent = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
+    globalContext: text("global_context"),
     modelId: text("model_id"),
     steps: text("steps").notNull().default("[]"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
