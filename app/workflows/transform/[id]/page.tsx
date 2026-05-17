@@ -64,7 +64,7 @@ import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
-import { KBPicker } from "@/components/workflows/sheet-flow/kb-picker";
+import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import {
   Select,
   SelectContent,
@@ -528,10 +528,12 @@ export default function AgentEditorPage() {
             </p>
           </div>
           <div className="rounded-lg border bg-card p-4">
-            <KBPicker
+            <KnowledgeBasePicker
               knowledgebases={knowledgebases}
               selectedIds={knowledgeBaseIds}
-              onToggle={toggleKnowledgeBase}
+              onSelect={setKnowledgeBaseIds}
+              mode="multiple"
+              allowEmpty={false}
             />
           </div>
         </SidebarTabsContent>

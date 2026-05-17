@@ -49,6 +49,7 @@ import { updateProject } from "@/lib/actions/projects/update-project";
 import { useState, useEffect, useMemo } from "react";
 import { useTabState } from "@/hooks/use-tab-state";
 import { toast } from "sonner";
+import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import {
   Select,
   SelectContent,
@@ -312,22 +313,15 @@ export default function ProjectPage() {
           </div>
 
           <div className="space-y-4">
-            <Select
-              value={selectedKbId ?? "none"}
-              onValueChange={(v) => setSelectedKbId(v === "none" ? null : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="No knowledge base selected" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {knowledgebases.map((kb) => (
-                  <SelectItem key={kb.id} value={kb.id}>
-                    {kb.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <KnowledgeBasePicker
+              knowledgebases={knowledgebases}
+              mode="single"
+              selectedIds={new Set(selectedKbId ? [selectedKbId] : [])}
+              onSelect={(ids) => setSelectedKbId(Array.from(ids)[0] || null)}
+              className="max-w-2xl"
+              allowEmpty
+              emptyLabel="Do not use a knowledge base (None)"
+            />
 
             <Button onClick={handleSaveKb} disabled={savingKb}>
               {savingKb ? (
