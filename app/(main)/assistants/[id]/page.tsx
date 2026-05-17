@@ -43,6 +43,7 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
+import { useTabState } from "@/hooks/use-tab-state";
 import { toast } from "sonner";
 import { ChatCard } from "@/components/chat/chat-card";
 import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
@@ -84,6 +85,7 @@ export default function AssistantPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(assistant?.tools || []),
   );
+  const [tab, setTab] = useTabState("tab", "settings");
 
   const filteredChats = useMemo(() => {
     return chats
@@ -225,8 +227,7 @@ export default function AssistantPage() {
           Chat with Assistant
         </Button>
       </div>
-
-      <SidebarTabs defaultValue="settings" className="w-full">
+      <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="chats">
             <MessageSquare className="mr-2 h-4 w-4" />

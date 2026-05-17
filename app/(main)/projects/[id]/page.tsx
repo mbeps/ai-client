@@ -47,6 +47,7 @@ import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
 import { useState, useEffect, useMemo } from "react";
+import { useTabState } from "@/hooks/use-tab-state";
 import { toast } from "sonner";
 import {
   Select,
@@ -98,6 +99,7 @@ export default function ProjectPage() {
     project?.knowledgebaseId ?? null,
   );
   const [savingKb, setSavingKb] = useState(false);
+  const [tab, setTab] = useTabState("tab", "chats");
 
   const filteredChats = useMemo(() => {
     return chats
@@ -245,8 +247,7 @@ export default function ProjectPage() {
           New Chat
         </Button>
       </div>
-
-      <SidebarTabs defaultValue="chats" className="w-full">
+      <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="chats">
             <MessageSquare className="mr-2 h-4 w-4" />
