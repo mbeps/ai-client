@@ -29,6 +29,7 @@ import {
   Play,
   Loader2,
   Settings,
+  Database,
   List,
   Shield,
   History,
@@ -62,6 +63,7 @@ import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { KBPicker } from "@/components/workflows/sheet-flow/kb-picker";
 import {
   Select,
   SelectContent,
@@ -77,13 +79,17 @@ export default function AgentEditorPage() {
   const id = params.id as string;
   const isNew = id === "new";
 
-  const { mcpServers, loadMcpServers } = useAppStore();
+  const { mcpServers, loadMcpServers, knowledgebases, loadKnowledgebases } =
+    useAppStore();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
   const [tools, setTools] = useState<Set<string>>(new Set());
+  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [requiresFileUpload, setRequiresFileUpload] = useState(true);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -106,7 +112,15 @@ export default function AgentEditorPage() {
     if (mcpServers.length === 0) {
       loadMcpServers();
     }
-  }, [mcpServers.length, loadMcpServers]);
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases();
+    }
+  }, [
+    mcpServers.length,
+    loadMcpServers,
+    knowledgebases.length,
+    loadKnowledgebases,
+  ]);
 
   useEffect(() => {
     if (isNew) return;
@@ -123,6 +137,7 @@ export default function AgentEditorPage() {
         setGlobalContext(agent.globalContext ?? "");
         setModelId(agent.modelId ?? DEFAULT_MODEL);
         setTools(new Set(agent.tools ?? []));
+        setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
         setRequiresFileUpload(agent.requiresFileUpload ?? true);
         setSteps(agent.steps);
       })
@@ -151,6 +166,7 @@ export default function AgentEditorPage() {
           globalContext,
           modelId,
           tools: Array.from(tools),
+          knowledgeBaseIds: Array.from(knowledgeBaseIds),
           requiresFileUpload,
           steps,
         });
@@ -163,6 +179,7 @@ export default function AgentEditorPage() {
           globalContext,
           modelId,
           tools: Array.from(tools),
+          knowledgeBaseIds: Array.from(knowledgeBaseIds),
           requiresFileUpload,
           steps,
         });
@@ -222,6 +239,18 @@ export default function AgentEditorPage() {
         next.delete(resourceId);
       } else {
         next.add(resourceId);
+      }
+      return next;
+    });
+  };
+
+  const toggleKnowledgeBase = (kbId: string) => {
+    setKnowledgeBaseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(kbId)) {
+        next.delete(kbId);
+      } else {
+        next.add(kbId);
       }
       return next;
     });
@@ -410,6 +439,10 @@ export default function AgentEditorPage() {
             <Edit2 className="mr-2 h-4 w-4" />
             <span>Prompt</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="knowledge">
+            <Database className="mr-2 h-4 w-4" />
+            <span>Knowledge</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="tools">
             <Zap className="mr-2 h-4 w-4" />
             <span>Tools</span>
@@ -482,6 +515,23 @@ export default function AgentEditorPage() {
                 rows={10}
               />
             </div>
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="knowledge" className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Knowledge Bases</h3>
+            <p className="text-sm text-muted-foreground">
+              Select knowledge bases to provide additional context for this
+              transformation agent.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <KBPicker
+              knowledgebases={knowledgebases}
+              selectedIds={knowledgeBaseIds}
+              onToggle={toggleKnowledgeBase}
+            />
           </div>
         </SidebarTabsContent>
 

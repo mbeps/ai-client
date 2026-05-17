@@ -26,12 +26,16 @@ export const transformAgent = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    knowledgeBaseIds: text("knowledge_base_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     requiresFileUpload: boolean("requires_file_upload").notNull().default(true),
     steps: text("steps").notNull().default("[]"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$onUpdate(() => new Date())
+      .$defaultFn(() => new Date())
       .notNull(),
   },
   (table) => [index("transform_agent_user_id_idx").on(table.userId)],
@@ -49,10 +53,9 @@ export const transformRun = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    status: text("status")
-      .$type<
-        "pending" | "running" | "awaiting_review" | "completed" | "failed"
-      >()
+    status: text("status", {
+      enum: ["pending", "running", "awaiting_review", "completed", "failed"],
+    })
       .notNull()
       .default("pending"),
     currentStepIndex: integer("current_step_index"),
@@ -63,7 +66,7 @@ export const transformRun = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$onUpdate(() => new Date())
+      .$defaultFn(() => new Date())
       .notNull(),
   },
   (table) => [

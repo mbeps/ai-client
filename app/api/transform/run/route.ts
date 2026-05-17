@@ -13,6 +13,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, stepCountIs } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
+import { hybridSearch } from "@/lib/rag/retrieve";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { env } from "@/lib/env";
 import { DEFAULT_MODEL } from "@/constants/models";
@@ -331,6 +332,37 @@ export async function POST(req: Request) {
           agentRow.modelId ??
           DEFAULT_MODEL;
 
+        // Perform global KB context retrieval if agent has knowledge bases
+        let kbContext = "";
+        if (agentRow.knowledgeBaseIds && agentRow.knowledgeBaseIds.length > 0) {
+          try {
+            const kbIds = agentRow.knowledgeBaseIds;
+            const results = await Promise.all(
+              kbIds.map((id) =>
+                hybridSearch(
+                  id,
+                  agentRow.globalContext ||
+                    agentRow.description ||
+                    agentRow.name,
+                  3,
+                ),
+              ),
+            );
+            const allChunks = results.flat();
+            if (allChunks.length > 0) {
+              kbContext =
+                "\n\nKnowledge Base Context:\n" +
+                allChunks.map((c) => c.content).join("\n---\n");
+            }
+          } catch (err) {
+            logger.warn(
+              "[Transform AI] KB retrieval failed",
+              { err },
+              session.user.id,
+            );
+          }
+        }
+
         let currentOutputAttachmentIds: string[] = stageIds;
 
         // Run each step
@@ -412,6 +444,7 @@ export async function POST(req: Request) {
             agentRow.globalContext
               ? `Context:\n${agentRow.globalContext}`
               : null,
+            kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
             bridge
               ? `You are an Excel transformation agent. The following files are available for transformation:\n${bridge.files.map((f) => f.localPath).join("\n")}`
               : "You are a helpful AI assistant performing a task.",
