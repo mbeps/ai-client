@@ -171,31 +171,6 @@ export function TransformStepCard({
 
             <FormField
               control={form.control}
-              name="context"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                    Context (optional)
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        onUpdate({ context: e.target.value || undefined });
-                      }}
-                      placeholder="Optional background context for the AI..."
-                      rows={2}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="requiresReview"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3">

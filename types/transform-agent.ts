@@ -5,7 +5,6 @@ export type TransformStep = {
   id: string;
   name: string;
   prompt: string;
-  context?: string;
   mcpServerIds: string[];
   toolIds: string[];
   order: number;
@@ -20,7 +19,11 @@ export type TransformAgent = {
   userId: string;
   name: string;
   description: string;
+  globalContext?: string;
   modelId: string | undefined;
+  tools: string[];
+  knowledgeBaseIds: string[];
+  requiresFileUpload: boolean;
   steps: TransformStep[];
   createdAt: Date;
   updatedAt: Date;

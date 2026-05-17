@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,9 +29,11 @@ import {
   Play,
   Loader2,
   Settings,
+  Database,
   List,
   Shield,
   History,
+  Edit2,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -59,6 +62,8 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { KBPicker } from "@/components/workflows/sheet-flow/kb-picker";
 import {
   Select,
   SelectContent,
@@ -74,9 +79,18 @@ export default function AgentEditorPage() {
   const id = params.id as string;
   const isNew = id === "new";
 
+  const { mcpServers, loadMcpServers, knowledgebases, loadKnowledgebases } =
+    useAppStore();
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
+  const [tools, setTools] = useState<Set<string>>(new Set());
+  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [requiresFileUpload, setRequiresFileUpload] = useState(true);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -95,6 +109,20 @@ export default function AgentEditorPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers();
+    }
+    if (knowledgebases.length === 0) {
+      loadKnowledgebases();
+    }
+  }, [
+    mcpServers.length,
+    loadMcpServers,
+    knowledgebases.length,
+    loadKnowledgebases,
+  ]);
+
+  useEffect(() => {
     if (isNew) return;
     getTransformAgent(id)
       .then((row) => {
@@ -106,7 +134,11 @@ export default function AgentEditorPage() {
         const agent = transformAgentRowToStore(row);
         setName(agent.name);
         setDescription(agent.description);
+        setGlobalContext(agent.globalContext ?? "");
         setModelId(agent.modelId ?? DEFAULT_MODEL);
+        setTools(new Set(agent.tools ?? []));
+        setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
+        setRequiresFileUpload(agent.requiresFileUpload ?? true);
         setSteps(agent.steps);
       })
       .finally(() => setIsLoading(false));
@@ -131,13 +163,26 @@ export default function AgentEditorPage() {
         const row = await createTransformAgent({
           name,
           description,
+          globalContext,
           modelId,
+          tools: Array.from(tools),
+          knowledgeBaseIds: Array.from(knowledgeBaseIds),
+          requiresFileUpload,
           steps,
         });
         toast.success("Agent created");
         router.push(ROUTES.WORKFLOWS.TRANSFORM.detail(row.id));
       } else {
-        await updateTransformAgent(id, { name, description, modelId, steps });
+        await updateTransformAgent(id, {
+          name,
+          description,
+          globalContext,
+          modelId,
+          tools: Array.from(tools),
+          knowledgeBaseIds: Array.from(knowledgeBaseIds),
+          requiresFileUpload,
+          steps,
+        });
         toast.success("Agent saved");
       }
     } catch {
@@ -173,8 +218,74 @@ export default function AgentEditorPage() {
     setSteps(updated);
   };
 
+  const toggleTool = (serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(toolId)) {
+        next.delete(toolId);
+      } else {
+        next.add(toolId);
+      }
+      return next;
+    });
+  };
+
+  const toggleResource = (serverId: string, uri: string) => {
+    const resourceId = `${serverId}:resource:${uri}`;
+    setTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(resourceId)) {
+        next.delete(resourceId);
+      } else {
+        next.add(resourceId);
+      }
+      return next;
+    });
+  };
+
+  const toggleKnowledgeBase = (kbId: string) => {
+    setKnowledgeBaseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(kbId)) {
+        next.delete(kbId);
+      } else {
+        next.add(kbId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllTools = (
+    serverId: string,
+    toolNames: string[],
+    resourceUris: string[],
+    enabled: boolean,
+  ) => {
+    setTools((prev) => {
+      const next = new Set(prev);
+      toolNames.forEach((name) => {
+        const toolId = `${serverId}:tool:${name}`;
+        if (enabled) {
+          next.add(toolId);
+        } else {
+          next.delete(toolId);
+        }
+      });
+      resourceUris.forEach((uri) => {
+        const resourceId = `${serverId}:resource:${uri}`;
+        if (enabled) {
+          next.add(resourceId);
+        } else {
+          next.delete(resourceId);
+        }
+      });
+      return next;
+    });
+  };
+
   const handleStartRun = async () => {
-    if (runFiles.length === 0) {
+    if (requiresFileUpload && runFiles.length === 0) {
       toast.error("Please select at least one file");
       return;
     }
@@ -248,24 +359,26 @@ export default function AgentEditorPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label>Input Files</Label>
-                    <input
-                      type="file"
-                      multiple
-                      accept=".xlsx,.xls,.csv"
-                      onChange={(e) =>
-                        setRunFiles(Array.from(e.target.files ?? []))
-                      }
-                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
-                    />
-                    {runFiles.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {runFiles.length} file{runFiles.length !== 1 ? "s" : ""}{" "}
-                        selected
-                      </p>
-                    )}
-                  </div>
+                  {requiresFileUpload && (
+                    <div className="space-y-2">
+                      <Label>Input Files</Label>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".xlsx,.xls,.csv"
+                        onChange={(e) =>
+                          setRunFiles(Array.from(e.target.files ?? []))
+                        }
+                        className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
+                      />
+                      {runFiles.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {runFiles.length} file
+                          {runFiles.length !== 1 ? "s" : ""} selected
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Dry Run Mode</Label>
@@ -285,7 +398,10 @@ export default function AgentEditorPage() {
                   </Button>
                   <Button
                     onClick={handleStartRun}
-                    disabled={isStartingRun || runFiles.length === 0}
+                    disabled={
+                      isStartingRun ||
+                      (requiresFileUpload && runFiles.length === 0)
+                    }
                   >
                     {isStartingRun ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -319,9 +435,21 @@ export default function AgentEditorPage() {
             <List className="mr-2 h-4 w-4" />
             <span>Steps</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="prompt">
+            <Edit2 className="mr-2 h-4 w-4" />
+            <span>Prompt</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="knowledge">
+            <Database className="mr-2 h-4 w-4" />
+            <span>Knowledge</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="tools">
+            <Zap className="mr-2 h-4 w-4" />
+            <span>Tools</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="config">
             <Settings className="mr-2 h-4 w-4" />
-            <span>Configuration</span>
+            <span>Settings</span>
           </SidebarTabsTrigger>
           {!isNew && (
             <SidebarTabsTrigger value="runs">
@@ -366,6 +494,67 @@ export default function AgentEditorPage() {
             )}
           </div>
         </SidebarTabsContent>
+
+        <SidebarTabsContent value="prompt" className="space-y-8">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Global Context</h3>
+            <p className="text-sm text-muted-foreground">
+              Provide background information that applies to all steps in this
+              transformation.
+            </p>
+          </div>
+
+          <div className="space-y-4 max-w-2xl">
+            <div className="space-y-2">
+              <Label htmlFor="globalContext">Background Context</Label>
+              <Textarea
+                id="globalContext"
+                value={globalContext}
+                onChange={(e) => setGlobalContext(e.target.value)}
+                placeholder="e.g. This agent handles monthly financial reports. All currency values should be in USD..."
+                rows={10}
+              />
+            </div>
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="knowledge" className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Knowledge Bases</h3>
+            <p className="text-sm text-muted-foreground">
+              Select knowledge bases to provide additional context for this
+              transformation agent.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <KBPicker
+              knowledgebases={knowledgebases}
+              selectedIds={knowledgeBaseIds}
+              onToggle={toggleKnowledgeBase}
+            />
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="tools" className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Default Tools</h3>
+            <p className="text-sm text-muted-foreground">
+              These tools will be automatically enabled for all steps in this
+              transformation.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <ToolPickerList
+              servers={mcpServers}
+              selectedTools={tools}
+              selectedResources={tools}
+              onToggleTool={toggleTool}
+              onToggleResource={toggleResource}
+              onBulkSelect={toggleAllTools}
+            />
+          </div>
+        </SidebarTabsContent>
+
         {!isNew && (
           <SidebarTabsContent value="runs" className="space-y-4">
             <div className="flex items-center justify-between">
@@ -434,6 +623,20 @@ export default function AgentEditorPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label>Require File Upload</Label>
+                <p className="text-sm text-muted-foreground">
+                  If enabled, users will be prompted to upload spreadsheet files
+                  before running the agent.
+                </p>
+              </div>
+              <Switch
+                checked={requiresFileUpload}
+                onCheckedChange={setRequiresFileUpload}
+              />
             </div>
           </div>
         </SidebarTabsContent>

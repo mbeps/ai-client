@@ -19,8 +19,15 @@ export async function updateTransformAgent(
   if (validated.name !== undefined) values.name = validated.name;
   if (validated.description !== undefined)
     values.description = validated.description ?? null;
+  if (validated.globalContext !== undefined)
+    values.globalContext = validated.globalContext ?? null;
   if (validated.modelId !== undefined)
     values.modelId = validated.modelId ?? null;
+  if (validated.tools !== undefined) values.tools = validated.tools;
+  if (validated.knowledgeBaseIds !== undefined)
+    values.knowledgeBaseIds = validated.knowledgeBaseIds;
+  if (validated.requiresFileUpload !== undefined)
+    values.requiresFileUpload = validated.requiresFileUpload;
   if (validated.steps !== undefined)
     values.steps = JSON.stringify(validated.steps);
 
