@@ -3,12 +3,17 @@ import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { PROMPTS } from "@/constants/prompts";
 
 export function buildSystemPrompt(
+  globalPrompt: string | null | undefined,
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
   bridge: FileBridgeResult | null,
   hasKnowledgeBase: boolean,
 ): ModelMessage[] {
   const systemParts: string[] = [];
+
+  if (globalPrompt?.trim()) {
+    systemParts.push(globalPrompt.trim());
+  }
 
   if (projectPrompt?.trim()) {
     systemParts.push(projectPrompt.trim());
