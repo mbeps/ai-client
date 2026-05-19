@@ -16,6 +16,7 @@ import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { logger } from "@/lib/logger";
 
 export const maxDuration = 60;
@@ -55,6 +56,10 @@ const openrouter = createOpenAI({
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
+
+  // Fetch user settings for global prompt
+  const userSettings = await getUserSettings().catch(() => null);
+  const globalSystemPrompt = userSettings?.globalSystemPrompt;
 
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
@@ -247,6 +252,7 @@ export async function POST(req: Request) {
   const processedMessages = assembleModelMessages(history, bridge);
 
   const systemMessages = buildSystemPrompt(
+    globalSystemPrompt,
     projectRow?.globalPrompt,
     assistantRow?.prompt,
     bridge,
