@@ -9,17 +9,18 @@ export const PROMPTS = {
     MANAGE_ARTIFACT: {
       DESCRIPTION:
         "Manage and display an interactive artifact to the user. Use this when the user asks for a document, email, text, spreadsheet, HTML UI, or Mermaid diagram.\n\n" +
-        "WHAT TO DO:\n" +
-        "- Set the type to strictly one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'.\n" +
-        "- Use 'markdown' for emails, letters, code snippets, or general text.\n" +
-        "- Place the entire requested content inside the tool's 'content' parameter.\n" +
-        "- After calling the tool, respond to the user with a brief 1-2 sentence summary saying the artifact was created.\n\n" +
-        "WHAT NOT TO DO:\n" +
-        "- NEVER repeat the content of the artifact in your main chat response.\n" +
-        "- Do not provide a preview or copy of the content outside the artifact.\n" +
-        "- DO NOT use this tool to read an artifact. Past artifacts (including user edits) are already fully visible in your message history.\n\n" +
-        "SUCCESS CRITERIA:\n" +
-        "- The user sees the rich content exclusively in the artifact panel, and your chat message only contains a short confirmation.",
+        "TYPE GUIDELINES:\n" +
+        "- 'markdown': Use for text, reports, emails, or code. Supports GitHub Flavored Markdown (tables, lists, etc).\n" +
+        '- \'spreadsheet\': Use for rich tabular data. Pass the full multi-sheet JSON via the `sheets` argument: [{ "name": "SheetName", "data": [[values]] }]. Values can be primitives or objects { "v": value, "s": { "bold": boolean, "italic": boolean, "textAlign": \'left\'|\'center\'|\'right\', "backgroundColor": string, "color": string } }.\n' +
+        "- 'html': Use for interactive designs, custom layouts, or web-like dashboards. Provide standalone HTML snippets.\n" +
+        "- 'mermaid': Strictly for diagrams (flowcharts, sequence, etc). Provide raw Mermaid.js markup.\n\n" +
+        "SPREADSHEET UPDATES — IMPORTANT:\n" +
+        "There is NO 'update' action and NO partial-update mechanism. To add, remove, or modify sheets, you MUST call this tool again with the COMPLETE set of all sheets (existing + new/modified). Do NOT use action='update', artifact_id, or updates fields — they are not supported and will be ignored. Always re-emit the full spreadsheet.\n\n" +
+        "CONSTRAINTS:\n" +
+        "- NEVER repeat artifact content in your main chat response.\n" +
+        "- Provide a brief confirmation: 'I've created/updated the [Title] artifact for you.'\n" +
+        "- DO NOT use this tool to read artifacts; they are already visible in history.\n" +
+        "- CRITICAL: Do NOT wrap arguments in an 'artifact' or 'updates' key. Pass all arguments at the top level of the tool call.",
       SUCCESS_MESSAGE:
         "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
       DEFAULT_TITLE: "Generated Artifact",
@@ -35,7 +36,7 @@ export const PROMPTS = {
         "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
       TITLE_DESCRIPTION: "The title of the artifact",
       CONTENT_DESCRIPTION:
-        "The content of the artifact. For spreadsheet, provide a JSON array of objects. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide the mermaid diagram code.",
+        'The content of the artifact. For spreadsheet, provide a multi-sheet JSON object like { "sheets": [{ "name": "Sheet1", "data": [["A1", "B1"], ["A2", "B2"]] }] }. Values in data can be simple types or objects { "v": value, "s": { "bold": true } }. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code.',
     },
   },
   COMPOSITION: {
