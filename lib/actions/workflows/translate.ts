@@ -29,16 +29,48 @@ export async function translateText(input: unknown) {
     throw new Error("Invalid translation request: " + parsed.error.message);
   }
 
-  const { text, sourceLanguage, targetLanguage, modelId = DEFAULT_MODEL } = parsed.data;
+  const {
+    text: originalText,
+    sourceLanguage,
+    targetLanguage,
+    modelId = DEFAULT_MODEL,
+    attachment,
+  } = parsed.data;
 
-  const sourceDesc = sourceLanguage === "auto" ? "automatically detected language" : sourceLanguage;
-  
-  const prompt = PROMPTS.WORKFLOWS.TRANSLATE(sourceDesc, targetLanguage, text);
+  const sourceDesc =
+    sourceLanguage === "auto" || sourceLanguage === "Auto Detect"
+      ? "automatically detected language"
+      : sourceLanguage;
+
+  const isImage = attachment?.type === "image";
+  const sourceText = attachment?.extractedText || originalText || "";
+
+  const prompt = PROMPTS.WORKFLOWS.TRANSLATE(
+    sourceDesc,
+    targetLanguage,
+    sourceText,
+    isImage,
+  );
 
   try {
     const { text: translatedText } = await generateText({
       model: openrouter.chat(modelId),
-      prompt,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            ...(isImage && attachment?.dataUrl
+              ? [
+                  {
+                    type: "image" as const,
+                    image: attachment.dataUrl,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
     });
 
     return translatedText.trim();
