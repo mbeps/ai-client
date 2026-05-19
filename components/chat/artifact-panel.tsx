@@ -102,13 +102,31 @@ export function ArtifactPanel({
     if (artifact.type === "spreadsheet") {
       try {
         const parsed = JSON.parse(artifact.content);
-        if (Array.isArray(parsed)) {
+        const workbook = xlsx.utils.book_new();
+
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray(parsed.sheets)
+        ) {
+          // Multi-sheet format
+          parsed.sheets.forEach((sheet: any) => {
+            const flatData = sheet.data.map((row: any) =>
+              row.map((cell: any) =>
+                cell && typeof cell === "object" && "v" in cell ? cell.v : cell,
+              ),
+            );
+            const worksheet = xlsx.utils.aoa_to_sheet(flatData);
+            xlsx.utils.book_append_sheet(workbook, worksheet, sheet.name);
+          });
+        } else if (Array.isArray(parsed)) {
+          // Legacy array format
           const worksheet = xlsx.utils.json_to_sheet(parsed);
-          const workbook = xlsx.utils.book_new();
           xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-          xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
-          return;
         }
+
+        xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
+        return;
       } catch (err) {
         console.error("Failed to export spreadsheet:", err);
       }

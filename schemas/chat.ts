@@ -142,10 +142,9 @@ export const chatRequestSchema = z.object({
 });
 
 /**
- * Validates parameters for the internal manage_artifact tool.
- * Ensures the AI provides a valid type, title, and content for the artifact panel.
+ * Base fields for manage_artifact tool to avoid code duplication in the union schema.
  */
-export const manageArtifactSchema = z.object({
+const manageArtifactBaseFields = {
   type: z.string().describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
   title: z
     .string()
@@ -153,8 +152,43 @@ export const manageArtifactSchema = z.object({
     .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TITLE_DESCRIPTION),
   content: z
     .string()
-    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.CONTENT_DESCRIPTION),
-});
+    .optional()
+    .describe(
+      "The content of the artifact. " +
+        "For spreadsheet type, you may EITHER pass a JSON string in this field OR pass a top-level 'sheets' argument. " +
+        'Format: { "sheets": [{ "name": "Sheet1", "data": [["A1", "B1"], ["A2", "B2"]] }] }. ' +
+        'Values in data can be simple types or objects { "v": value, "s": { "bold": true, "italic": true, "textAlign": "center", "backgroundColor": "#...", "color": "#..." } }. ' +
+        "For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code.",
+    ),
+  sheets: z
+    .array(
+      z.object({
+        name: z.string(),
+        data: z.array(z.array(z.unknown())),
+        columns: z
+          .array(z.object({ header: z.string(), width: z.number().optional() }))
+          .optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Alternative to content for spreadsheet type. Pass sheets directly as a structured array instead of a JSON string.",
+    ),
+};
+
+/**
+ * Validates parameters for the internal manage_artifact tool.
+ * Accepts both flat and nested 'artifact' key structures to support various AI models.
+ * Normalizes to flat structure via transform.
+ */
+export const manageArtifactSchema = z.union([
+  z.object(manageArtifactBaseFields),
+  z
+    .object({
+      artifact: z.object(manageArtifactBaseFields),
+    })
+    .transform((val) => val.artifact),
+]);
 
 export const searchKnowledgeBaseSchema = z.object({
   query: z

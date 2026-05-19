@@ -51,17 +51,38 @@ export async function registerMcpTools(
       parameters: manageArtifactSchema,
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async (args: any) => {
-        const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
-        const normalizedArgs = {
-          type: VALID_TYPES.includes(args.type) ? args.type : "markdown",
-          title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
-          content: args.content || args.text || "",
-        };
-        return {
-          success: true,
-          message: PROMPTS.TOOLS.MANAGE_ARTIFACT.SUCCESS_MESSAGE,
-          artifact: normalizedArgs,
-        };
+        try {
+          const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
+          // For spreadsheets the AI may pass `sheets` as a top-level arg instead of
+          // embedding the JSON in `content`. Serialize it so the viewer can parse it.
+          let content = args.content || args.text || "";
+          if (!content && args.sheets) {
+            content = JSON.stringify({ sheets: args.sheets });
+          }
+          // If no type is given but sheets are present, infer spreadsheet.
+          const inferredType = VALID_TYPES.includes(args.type)
+            ? args.type
+            : args.sheets
+              ? "spreadsheet"
+              : "markdown";
+          const normalizedArgs = {
+            type: inferredType,
+            title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
+            content,
+          };
+          return {
+            success: true,
+            message: PROMPTS.TOOLS.MANAGE_ARTIFACT.SUCCESS_MESSAGE,
+            artifact: normalizedArgs,
+          };
+        } catch (error) {
+          console.error("[Artifact] Failed to process tool call:", error);
+          return {
+            success: false,
+            message:
+              error instanceof Error ? error.message : "Unknown error occurred",
+          };
+        }
       },
     });
   }

@@ -17,18 +17,23 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 ## File Support
 - **Attachment handling** — Upload images, PDFs, text, and Excel spreadsheets directly in messages
 - **S3/MinIO storage** — Secure cloud storage with presigned URLs for access control
-- **File bridges** — MCP-powered file operations including Excel staging and auto-re-upload
+- **File bridges** — MCP-powered file operations including Excel staging, mutation detection, and auto-re-upload
 
 ## AI & Responses
 - **Streaming via OpenRouter** — Access multiple LLMs (GPT-4, Claude, Mistral, etc.)
 - **Reasoning tokens** — Support for extended thinking models with collapsible output
 - **Tool-call integration** — Automatic tool invocation and result handling
-- **Artifacts & canvas** — Multi-view rendering (Markdown, HTML, XLSX, Mermaid) with persistent edits and export
+- **Artifacts & canvas** — Multi-view rendering (Markdown, HTML, XLSX, Mermaid) with persistent edits, AI-driven updates, and export
 
 ## Model Context Protocol (MCP)
 - **Stdio and HTTP transports** — Configure local executables or remote HTTP servers
 - **Per-message tool selection** — Choose which tools to expose for each AI request
-- **Custom tool integration** — Add application-specific capabilities (e.g., Excel via MCP)
+- **Custom tool integration** — Add application-specific capabilities via MCP (stdio/HTTP)
+
+## Advanced Logic
+- **Workflows** — Specialized AI pipelines for Translation and complex Spreadsheet Transformations
+- **Knowledge Bases (RAG)** — Full document processing pipeline with vector search (pgvector)
+- **Slash-commands** — Expandable `/shortcut` palette for prompt templating
 
 ## Collaboration
 - **Projects** — Group related chats and share custom system prompts
