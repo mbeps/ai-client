@@ -164,7 +164,6 @@ BETTER_AUTH_SECRET=your-secure-random-string-here
 BETTER_AUTH_URL=http://localhost:3000
 
 # AI & Language Models
-OPENROUTER_API_KEY=sk-or-...
 
 # Storage (MinIO/S3)
 S3_ENDPOINT=http://localhost:9000
@@ -196,8 +195,6 @@ CLIENT_SECRET_DISCORD=your-discord-oauth-secret
 - **`BETTER_AUTH_URL`** (required) — Auth callback URL (`http://localhost:3000` for dev)
 
 **AI & Language Models**
-- **`OPENROUTER_API_KEY`** (required) — API key from https://openrouter.ai
-  - Free account allows testing; paid usage scales with LLM calls
 
 **Storage**
 - **`S3_ENDPOINT`** — MinIO/S3 endpoint URL (default: `http://localhost:9000`)

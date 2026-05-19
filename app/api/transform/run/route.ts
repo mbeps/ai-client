@@ -9,13 +9,12 @@ import {
   attachment,
 } from "@/drizzle/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { createOpenAI } from "@ai-sdk/openai";
+import { getAiProvider } from "@/lib/chat/get-ai-provider";
 import { generateText, stepCountIs } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { hybridSearch } from "@/lib/rag/retrieve";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
-import { env } from "@/lib/env";
 import { DEFAULT_MODEL } from "@/constants/models";
 import * as xlsx from "xlsx";
 import {
@@ -30,10 +29,6 @@ import { logger } from "@/lib/logger";
 
 export const maxDuration = 300;
 
-const openrouter = createOpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: env.OPENROUTER_API_KEY,
-});
 
 const encode = (data: object): Uint8Array =>
   new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
@@ -344,6 +339,7 @@ export async function POST(req: Request) {
                   agentRow.globalContext ||
                     agentRow.description ||
                     agentRow.name,
+                  session.user.id,
                   3,
                 ),
               ),
@@ -440,6 +436,7 @@ export async function POST(req: Request) {
               : tools;
 
           // Build system prompt
+          const provider = await getAiProvider(session.user.id);
           const systemPrompt = [
             agentRow.globalContext
               ? `Context:\n${agentRow.globalContext}`
@@ -458,7 +455,7 @@ export async function POST(req: Request) {
 
           try {
             const result = await generateText({
-              model: openrouter.chat(model),
+              model: provider.chat(model),
               messages: [{ role: "user", content: systemPrompt }],
               tools: filteredTools,
               stopWhen: stepCountIs(10),

@@ -61,6 +61,7 @@ export function applyRRF(
 export async function hybridSearch(
   kbId: string,
   query: string,
+  userId: string,
   topK = 5,
 ): Promise<ChunkResult[]> {
   // SECURITY: kbId is always a server-resolved UUID from session-owned chat/project.
@@ -68,7 +69,7 @@ export async function hybridSearch(
 
   let embedding: number[];
   try {
-    embedding = await embedQuery(query);
+    embedding = await embedQuery(query, userId);
   } catch (err) {
     console.error("[RAG] embedQuery failed:", err);
     throw err;

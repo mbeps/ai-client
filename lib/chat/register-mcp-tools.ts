@@ -15,6 +15,7 @@ export async function registerMcpTools(
   selectedTools: string[] | undefined,
   isArtifactToolSelected: boolean,
   activeKbId: string | null,
+  userId: string,
 ): Promise<{ mcpTools: Record<string, any>; mcpCleanup: () => Promise<void> }> {
   let mcpTools: Record<string, any> = {};
   let mcpCleanup = async () => {};
@@ -94,7 +95,7 @@ export async function registerMcpTools(
       parameters: searchKnowledgeBaseSchema,
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async ({ query }: { query: string }) => {
-        const results = await hybridSearch(kbId, query, 5);
+        const results = await hybridSearch(kbId, query, userId, 5);
         return {
           results: results.map((r) => ({
             content: r.content,

@@ -19,6 +19,7 @@ export const userSettings = pgTable(
       .unique()
       .references(() => user.id, { onDelete: "cascade" }),
     globalSystemPrompt: text("global_system_prompt"),
+    openrouterKey: text("openrouter_key"), // Encrypted string at rest
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

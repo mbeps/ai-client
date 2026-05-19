@@ -21,11 +21,13 @@ const envSchema = z.object({
   CLIENT_SECRET_DISCORD: z.string().optional(),
 
   // AI
-  OPENROUTER_API_KEY: z.string().min(1),
 
   // Email
   POSTMARK_SERVER_TOKEN: z.string().min(1),
   POSTMARK_FROM_EMAIL: z.string().email(),
+
+  // Encryption
+  ENCRYPTION_SECRET: z.string().min(1),
 
   // Storage
   S3_ENDPOINT: z.string().url(),

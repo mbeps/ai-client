@@ -33,7 +33,7 @@ export async function POST(
   }
 
   try {
-    await ingestDocument(documentId);
+    await ingestDocument(documentId, session.user.id);
     return Response.json({ success: true });
   } catch {
     return Response.json({ error: "Ingestion failed" }, { status: 500 });
