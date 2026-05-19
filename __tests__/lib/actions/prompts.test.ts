@@ -5,7 +5,6 @@ vi.mock("@/lib/env", () => ({
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:3000",
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    OPENROUTER_API_KEY: "test-key",
     S3_ENDPOINT: "http://localhost:9000",
     S3_REGION: "us-east-1",
     S3_ACCESS_KEY: "test",

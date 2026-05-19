@@ -8,13 +8,14 @@ import { revalidatePath } from "next/cache";
 import type { UserSettingsRow } from "@/types/user-settings-row";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { encrypt } from "@/lib/utils/encryption";
+import { isMaskedKey } from "@/lib/utils/mask-key";
 
 /**
  * Updates or initializes application-wide settings for the authenticated user.
  * Specifically manages global preferences such as the global system prompt.
- * Uses an upsert pattern based on userId to ensure only one setting row exists 
-per user.
- * 
+ * Uses an upsert pattern based on userId to ensure only one setting row exists per user.
+ *
  * @param data - Setting values validated against userSettingsSchema
  * @returns The updated or newly created user settings record
  * @throws {Error} "Unauthorized" if no session exists
@@ -29,16 +30,33 @@ export async function updateUserSettings(
   // Validate input
   const validated = userSettingsSchema.parse(data);
 
+  // Handle encrypted key if provided
+  let filteredData: Record<string, any> = {
+    globalSystemPrompt: validated.globalSystemPrompt ?? null,
+  };
+
+  if (validated.openrouterKey) {
+    const isMasked = isMaskedKey(validated.openrouterKey);
+
+    // Only update if it's NOT a masked dummy value and looks like a raw key
+    if (!isMasked && validated.openrouterKey.startsWith("sk-or-")) {
+      filteredData.openrouterKey = encrypt(validated.openrouterKey);
+    }
+  } else if (validated.openrouterKey === null) {
+    // Explicit removal
+    filteredData.openrouterKey = null;
+  }
+
   const [row] = await db
     .insert(userSettings)
     .values({
       userId: session.user.id,
-      globalSystemPrompt: validated.globalSystemPrompt ?? null,
+      ...filteredData,
     })
     .onConflictDoUpdate({
       target: userSettings.userId,
       set: {
-        globalSystemPrompt: validated.globalSystemPrompt ?? null,
+        ...filteredData,
         updatedAt: new Date(),
       },
     })

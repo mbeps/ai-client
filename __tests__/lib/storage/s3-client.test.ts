@@ -8,7 +8,6 @@ vi.mock("@/lib/env", () => ({
     S3_SECRET_KEY: "test-secret-key",
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:3000",
-    OPENROUTER_API_KEY: "test-key",
     POSTMARK_SERVER_TOKEN: "test-token",
     POSTMARK_FROM_EMAIL: "noreply@example.com",
     NODE_ENV: "test",

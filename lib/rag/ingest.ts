@@ -7,7 +7,10 @@ import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk";
 import { embedDocuments } from "./embed";
 
-export async function ingestDocument(documentId: string): Promise<void> {
+export async function ingestDocument(
+  documentId: string,
+  userId: string,
+): Promise<void> {
   const [doc] = await db
     .select()
     .from(kbDocument)
@@ -42,7 +45,7 @@ export async function ingestDocument(documentId: string): Promise<void> {
     const chunks = chunkText(text);
 
     // Batch embed
-    const embeddings = await embedDocuments(chunks);
+    const embeddings = await embedDocuments(chunks, userId);
 
     // Delete any existing chunks (safe re-ingest)
     await db.delete(kbChunk).where(eq(kbChunk.documentId, documentId));

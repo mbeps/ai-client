@@ -11,6 +11,8 @@ import type { ToolCallState } from "@/types/tool-call";
 import { PROMPTS } from "@/constants/prompts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useApiError } from "@/hooks/use-api-error";
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.
@@ -31,6 +33,8 @@ export function useStreamResponse(
     onDone?: (content: string) => void;
   },
 ) {
+  const router = useRouter();
+  const { handleApiError } = useApiError();
   const addMessage = useAppStore((state) => state.addMessage);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
@@ -308,7 +312,11 @@ export function useStreamResponse(
         } else if (event.type === "error") {
           setStreamingContent(null);
           setActiveToolCalls([]);
-          toast.error(event.message || "An error occurred during generation");
+
+          if (!handleApiError(event.message)) {
+            toast.error(event.message || "An error occurred during generation");
+          }
+
           addMessage(
             chatId,
             "assistant",
@@ -335,7 +343,9 @@ export function useStreamResponse(
         }
       } else {
         console.error("Stream error:", err);
-        toast.error(err.message || "Failed to generate response");
+        if (!handleApiError(err)) {
+          toast.error(err.message || "Failed to generate response");
+        }
       }
     } finally {
       abortControllerRef.current = null;

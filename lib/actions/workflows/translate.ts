@@ -1,17 +1,11 @@
 "use server";
 
 import { generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { env } from "@/lib/env";
 import { requireSession } from "../require-session";
 import { DEFAULT_MODEL } from "@/constants/models";
 import { translateRequestSchema } from "@/schemas/workflows";
 import { PROMPTS } from "@/constants/prompts";
-
-const openrouter = createOpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: env.OPENROUTER_API_KEY,
-});
+import { getAiProvider } from "@/lib/chat/get-ai-provider";
 
 /**
  * Server action to translate text using AI.
@@ -22,7 +16,8 @@ const openrouter = createOpenAI({
  * @throws Error if validation fails.
  */
 export async function translateText(input: unknown) {
-  await requireSession();
+  const session = await requireSession();
+  const provider = await getAiProvider(session.user.id);
 
   const parsed = translateRequestSchema.safeParse(input);
   if (!parsed.success) {
@@ -54,7 +49,7 @@ export async function translateText(input: unknown) {
 
   try {
     const { text: translatedText } = await generateText({
-      model: openrouter.chat(modelId),
+      model: provider.chat(modelId),
       messages: [
         {
           role: "user",

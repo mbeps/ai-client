@@ -5,7 +5,6 @@ vi.mock("@/lib/env", () => ({
     DATABASE_URL: "postgresql://test",
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:3000",
-    OPENROUTER_API_KEY: "test-key",
     POSTMARK_SERVER_TOKEN: "test-token",
     POSTMARK_FROM_EMAIL: "test@example.com",
     S3_ENDPOINT: "http://localhost:9000",

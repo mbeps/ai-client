@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Languages,
   ArrowLeftRight,
@@ -42,6 +43,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { Attachment } from "@/types/attachment";
+import { useApiError } from "@/hooks/use-api-error";
 
 /**
  * Translation workflow page providing AI-powered text translation.
@@ -51,6 +53,8 @@ import { Attachment } from "@/types/attachment";
  * @author Antigravity
  */
 export default function TranslationWorkflowPage() {
+  const router = useRouter();
+  const { handleApiError } = useApiError();
   const [sourceText, setSourceText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [sourceLangValue, setSourceLangValue] = useState(
@@ -100,10 +104,12 @@ export default function TranslationWorkflowPage() {
           : undefined,
       });
       setTranslatedText(result);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Translation failed",
-      );
+    } catch (error: any) {
+      if (!handleApiError(error)) {
+        toast.error(
+          error instanceof Error ? error.message : "Translation failed",
+        );
+      }
     } finally {
       setIsLoading(false);
     }

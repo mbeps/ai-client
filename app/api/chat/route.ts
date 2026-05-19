@@ -1,12 +1,10 @@
 import { rm } from "fs/promises";
 import { z } from "zod";
-import { env } from "@/lib/env";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
 import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
-import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
@@ -17,14 +15,10 @@ import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { getAiProvider } from "@/lib/chat/get-ai-provider";
 import { logger } from "@/lib/logger";
 
 export const maxDuration = 60;
-
-const openrouter = createOpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: env.OPENROUTER_API_KEY,
-});
 
 /**
  * POST handler for the AI chat streaming pipeline.
@@ -86,6 +80,26 @@ export async function POST(req: Request) {
   } = parsed.data;
 
   const model = requestedModel ?? DEFAULT_MODEL;
+
+  let provider;
+  try {
+    provider = await getAiProvider(session.user.id);
+  } catch (error: any) {
+    logger.error(
+      "[Chat API] AI provider init failed",
+      error,
+      { chatId },
+      session.user.id,
+    );
+    return Response.json(
+      {
+        error:
+          error.message ||
+          "Failed to initialize AI provider. Check your API key in Settings.",
+      },
+      { status: 400 },
+    );
+  }
 
   logger.info(
     "[Chat API] Request initialized",
@@ -245,6 +259,7 @@ export async function POST(req: Request) {
     selectedTools,
     !!isArtifactToolSelected,
     activeKbId,
+    session.user.id,
   );
 
   const hasMcpTools = Object.keys(mcpTools).length > 0;
@@ -266,7 +281,7 @@ export async function POST(req: Request) {
   // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
   // rather than the OpenAI Responses API (/responses), which OpenRouter does not support.
   const result = streamText({
-    model: openrouter.chat(model),
+    model: provider.chat(model),
     messages: finalMessages,
     tools: hasMcpTools ? mcpTools : undefined,
     stopWhen: hasMcpTools ? stepCountIs(10) : undefined,

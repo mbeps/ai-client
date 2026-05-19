@@ -16,7 +16,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +36,7 @@ import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformAgent } from "@/types/transform-agent";
 import type { TransformRun, TransformRunStatus } from "@/types/transform-run";
 import type { TransformRunRow } from "@/types/transform-run-row";
+import { useApiError } from "@/hooks/use-api-error";
 
 type StepState = {
   status: "pending" | "running" | "completed" | "awaiting_review";
@@ -61,6 +62,8 @@ function mapRunRowToRun(row: TransformRunRow): TransformRun {
 
 export default function TransformRunDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { handleApiError } = useApiError();
   const agentId = params.id as string;
   const runId = params.runId as string;
 
@@ -145,71 +148,73 @@ export default function TransformRunDetailPage() {
     load();
   }, [runId]);
 
-  const handleSseEvent = useCallback((event: Record<string, unknown>) => {
-    switch (event.type) {
-      case "transform-start":
-        setRun((prev) => (prev ? { ...prev, status: "running" } : prev));
-        break;
+  const handleSseEvent = useCallback(
+    (event: Record<string, unknown>) => {
+      switch (event.type) {
+        case "transform-start":
+          setRun((prev) => (prev ? { ...prev, status: "running" } : prev));
+          break;
 
-      case "transform-step-start":
-        setStepStates((prev) => ({
-          ...prev,
-          [event.stepIndex as number]: { status: "running" },
-        }));
-        setRun((prev) =>
-          prev
-            ? { ...prev, currentStepIndex: event.stepIndex as number }
-            : prev,
-        );
-        break;
+        case "transform-step-start":
+          setStepStates((prev) => ({
+            ...prev,
+            [event.stepIndex as number]: { status: "running" },
+          }));
+          setRun((prev) =>
+            prev
+              ? { ...prev, currentStepIndex: event.stepIndex as number }
+              : prev,
+          );
+          break;
 
-      case "transform-step-complete":
-        setStepStates((prev) => ({
-          ...prev,
-          [event.stepIndex as number]: {
-            status: "completed",
-            summary: event.summary as string,
-            stepData: event.stepData as Record<string, any[]>,
-          },
-        }));
-        setSelectedStepIndex(event.stepIndex as number);
-        setIsArtifactOpen(true);
-        break;
+        case "transform-step-complete":
+          setStepStates((prev) => ({
+            ...prev,
+            [event.stepIndex as number]: {
+              status: "completed",
+              summary: event.summary as string,
+              stepData: event.stepData as Record<string, any[]>,
+            },
+          }));
+          setSelectedStepIndex(event.stepIndex as number);
+          setIsArtifactOpen(true);
+          break;
 
-      case "transform-review-required":
-        setStepStates((prev) => ({
-          ...prev,
-          [event.stepIndex as number]: {
-            ...prev[event.stepIndex as number],
-            status: "awaiting_review",
-          },
-        }));
-        setRun((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "awaiting_review",
-                currentStepIndex: event.stepIndex as number,
-              }
-            : prev,
-        );
-        break;
+        case "transform-review-required":
+          setStepStates((prev) => ({
+            ...prev,
+            [event.stepIndex as number]: {
+              ...prev[event.stepIndex as number],
+              status: "awaiting_review",
+            },
+          }));
+          setRun((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "awaiting_review",
+                  currentStepIndex: event.stepIndex as number,
+                }
+              : prev,
+          );
+          break;
 
-      case "transform-complete": {
-        const outputIds = (event.outputAttachmentIds as string[]) ?? [];
-        setRun((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "completed",
-                outputAttachmentIds: outputIds,
-              }
-            : prev,
-        );
-        toast.success("Transformation complete");
-        if (outputIds.length > 0) {
-          Promise.allSettled(outputIds.map((id) => getAttachmentUrl(id))).then(
-            (results) => {
+        case "transform-complete": {
+          const outputIds = (event.outputAttachmentIds as string[]) ?? [];
+          setRun((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "completed",
+                  outputAttachmentIds: outputIds,
+                }
+              : prev,
+          );
+          toast.success("Transformation complete");
+          if (outputIds.length > 0) {
+            Promise.allSettled(
+              outputIds.map((id) => getAttachmentUrl(id)),
+            ).then((results) => {
               setAttachmentMeta((prev) => {
                 const next = { ...prev };
                 results.forEach((r, i) => {
@@ -221,19 +226,23 @@ export default function TransformRunDetailPage() {
                 });
                 return next;
               });
-            },
-          );
+            });
+          }
+          break;
         }
-        break;
-      }
 
-      case "error":
-        setStreamError(event.message as string);
-        setRun((prev) => (prev ? { ...prev, status: "failed" } : prev));
-        toast.error(event.message as string);
-        break;
-    }
-  }, []);
+        case "error":
+          setStreamError(event.message as string);
+          setRun((prev) => (prev ? { ...prev, status: "failed" } : prev));
+
+          if (!handleApiError(event.message)) {
+            toast.error(event.message as string);
+          }
+          break;
+      }
+    },
+    [handleApiError],
+  );
 
   const startStream = useCallback(
     (body: object) => {

@@ -73,10 +73,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TransformRunRow } from "@/types/transform-run-row";
+import { useApiError } from "@/hooks/use-api-error";
 
 export default function AgentEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const { handleApiError } = useApiError();
   const id = params.id as string;
   const isNew = id === "new";
 
@@ -308,8 +310,10 @@ export default function AgentEditorPage() {
 
       setRunDialogOpen(false);
       router.push(ROUTES.WORKFLOWS.TRANSFORM.runs(id, run.id));
-    } catch {
-      toast.error("Failed to start run");
+    } catch (error: any) {
+      if (!handleApiError(error)) {
+        toast.error(error?.message || "Failed to start run");
+      }
     } finally {
       setIsStartingRun(false);
     }
