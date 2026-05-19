@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { 
-  Languages, 
-  ArrowLeftRight, 
-  Copy, 
-  RotateCcw, 
-  Loader2, 
+import { useState, useCallback, useMemo, useRef } from "react";
+import {
+  Languages,
+  ArrowLeftRight,
+  Copy,
+  RotateCcw,
+  Loader2,
   Check,
+  Paperclip,
+  FileText,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -27,11 +31,17 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { MODELS } from "@/constants/models";
-import { LANGUAGES, DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE } from "@/constants/languages";
+import {
+  LANGUAGES,
+  DEFAULT_SOURCE_LANGUAGE,
+  DEFAULT_TARGET_LANGUAGE,
+} from "@/constants/languages";
 import { translateText } from "@/lib/actions/workflows/translate";
 import { Model } from "@/types/model";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { processAttachment } from "@/lib/attachments/process-attachment";
+import { Attachment } from "@/types/attachment";
 
 /**
  * Translation workflow page providing AI-powered text translation.
@@ -43,24 +53,31 @@ import { cn } from "@/lib/utils";
 export default function TranslationWorkflowPage() {
   const [sourceText, setSourceText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
-  const [sourceLangValue, setSourceLangValue] = useState(DEFAULT_SOURCE_LANGUAGE);
-  const [targetLangValue, setTargetLangValue] = useState(DEFAULT_TARGET_LANGUAGE);
+  const [sourceLangValue, setSourceLangValue] = useState(
+    DEFAULT_SOURCE_LANGUAGE,
+  );
+  const [targetLangValue, setTargetLangValue] = useState(
+    DEFAULT_TARGET_LANGUAGE,
+  );
   const [modelId, setModelId] = useState(MODELS[0].value);
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sourceLang = useMemo(() => 
-    LANGUAGES.find(l => l.value === sourceLangValue) || LANGUAGES[0],
-    [sourceLangValue]
+  const sourceLang = useMemo(
+    () => LANGUAGES.find((l) => l.value === sourceLangValue) || LANGUAGES[0],
+    [sourceLangValue],
   );
 
-  const targetLang = useMemo(() => 
-    LANGUAGES.find(l => l.value === targetLangValue) || LANGUAGES[1],
-    [targetLangValue]
+  const targetLang = useMemo(
+    () => LANGUAGES.find((l) => l.value === targetLangValue) || LANGUAGES[1],
+    [targetLangValue],
   );
 
   const handleTranslate = useCallback(async () => {
-    if (!sourceText.trim()) {
+    if (!sourceText.trim() && !attachment) {
       setTranslatedText("");
       return;
     }
@@ -72,14 +89,25 @@ export default function TranslationWorkflowPage() {
         sourceLanguage: sourceLang.label,
         targetLanguage: targetLang.label,
         modelId: modelId,
+        attachment: attachment
+          ? {
+              name: attachment.name,
+              type: attachment.type as "image" | "document",
+              mimeType: attachment.mimeType,
+              dataUrl: attachment.dataUrl,
+              extractedText: attachment.extractedText,
+            }
+          : undefined,
       });
       setTranslatedText(result);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Translation failed");
+      toast.error(
+        error instanceof Error ? error.message : "Translation failed",
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [sourceText, sourceLang, targetLang, modelId]);
+  }, [sourceText, sourceLang, targetLang, modelId, attachment]);
 
   const swapLanguages = () => {
     if (sourceLangValue === "auto") return;
@@ -101,7 +129,45 @@ export default function TranslationWorkflowPage() {
   const handleReset = () => {
     setSourceText("");
     setTranslatedText("");
+    setAttachment(null);
   };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    try {
+      const processed = await processAttachment(file, []);
+      setAttachment(processed);
+
+      if (processed.type === "document" && processed.extractedText) {
+        // Truncate to 5000 characters to match schema limits
+        setSourceText(processed.extractedText.slice(0, 5000));
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to process file",
+      );
+    } finally {
+      setIsExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+  };
+
+  const isVisionModel = useMemo(() => {
+    const m = modelId.toLowerCase();
+    return (
+      m.includes("gpt-4o") ||
+      m.includes("claude-3-5") ||
+      m.includes("vl") ||
+      m.includes("vision")
+    );
+  }, [modelId]);
 
   return (
     <div className="flex flex-col space-y-3 h-full max-w-7xl mx-auto overflow-hidden">
@@ -112,7 +178,9 @@ export default function TranslationWorkflowPage() {
           <h1 className="text-lg font-semibold">Translation</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase">Model</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase">
+            Model
+          </span>
           <Select value={modelId} onValueChange={setModelId}>
             <SelectTrigger className="h-7 w-[140px] text-xs">
               <SelectValue />
@@ -134,8 +202,10 @@ export default function TranslationWorkflowPage() {
           <Combobox
             items={LANGUAGES}
             value={sourceLang}
-            onValueChange={(val) => val && setSourceLangValue((val as typeof LANGUAGES[0]).value)}
-            itemToStringValue={(l) => (l as typeof LANGUAGES[0]).label}
+            onValueChange={(val) =>
+              val && setSourceLangValue((val as (typeof LANGUAGES)[0]).value)
+            }
+            itemToStringValue={(l) => (l as (typeof LANGUAGES)[0]).label}
           >
             <ComboboxInput
               placeholder={sourceLang.label}
@@ -146,8 +216,12 @@ export default function TranslationWorkflowPage() {
               <ComboboxEmpty>No languages found.</ComboboxEmpty>
               <ComboboxList>
                 {(l) => (
-                  <ComboboxItem key={(l as typeof LANGUAGES[0]).value} value={l} className="text-xs">
-                    {(l as typeof LANGUAGES[0]).label}
+                  <ComboboxItem
+                    key={(l as (typeof LANGUAGES)[0]).value}
+                    value={l}
+                    className="text-xs"
+                  >
+                    {(l as (typeof LANGUAGES)[0]).label}
                   </ComboboxItem>
                 )}
               </ComboboxList>
@@ -168,10 +242,12 @@ export default function TranslationWorkflowPage() {
 
         <div className="flex-1 w-full">
           <Combobox
-            items={LANGUAGES.filter(l => l.value !== "auto")}
+            items={LANGUAGES.filter((l) => l.value !== "auto")}
             value={targetLang}
-            onValueChange={(val) => val && setTargetLangValue((val as typeof LANGUAGES[0]).value)}
-            itemToStringValue={(l) => (l as typeof LANGUAGES[0]).label}
+            onValueChange={(val) =>
+              val && setTargetLangValue((val as (typeof LANGUAGES)[0]).value)
+            }
+            itemToStringValue={(l) => (l as (typeof LANGUAGES)[0]).label}
           >
             <ComboboxInput
               placeholder={targetLang.label}
@@ -182,8 +258,12 @@ export default function TranslationWorkflowPage() {
               <ComboboxEmpty>No languages found.</ComboboxEmpty>
               <ComboboxList>
                 {(l) => (
-                  <ComboboxItem key={(l as typeof LANGUAGES[0]).value} value={l} className="text-xs">
-                    {(l as typeof LANGUAGES[0]).label}
+                  <ComboboxItem
+                    key={(l as (typeof LANGUAGES)[0]).value}
+                    value={l}
+                    className="text-xs"
+                  >
+                    {(l as (typeof LANGUAGES)[0]).label}
                   </ComboboxItem>
                 )}
               </ComboboxList>
@@ -196,17 +276,91 @@ export default function TranslationWorkflowPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 min-h-0 relative">
         {/* Source */}
         <div className="relative group flex flex-col border rounded-xl bg-card shadow-sm hover:border-primary/20 transition-colors">
-          <Textarea
-            value={sourceText}
-            onChange={(e) => setSourceText(e.target.value)}
-            placeholder="Type or paste text to translate..."
-            className="flex-1 min-h-0 border-0 resize-none focus-visible:ring-0 p-4 text-sm leading-relaxed scrollbar-thin"
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+            accept=".pdf,.txt,.md,image/*"
           />
+
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            <Textarea
+              value={sourceText}
+              onChange={(e) => setSourceText(e.target.value)}
+              placeholder={
+                attachment?.type === "image"
+                  ? "Vision mode: Image attached. Add notes if needed..."
+                  : "Type or paste text to translate..."
+              }
+              className="flex-1 min-h-0 border-0 resize-none focus-visible:ring-0 p-4 text-sm leading-relaxed scrollbar-thin"
+              disabled={isExtracting}
+            />
+
+            {attachment && (
+              <div className="px-4 pb-3">
+                <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30 group/attach">
+                  <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                    {attachment.type === "image" ? (
+                      <img
+                        src={attachment.dataUrl}
+                        className="h-full w-full object-cover rounded"
+                        alt="Preview"
+                      />
+                    ) : (
+                      <FileText className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {attachment.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase">
+                      {attachment.type}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={removeAttachment}
+                    className="h-7 w-7 opacity-0 group-hover/attach:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {attachment.type === "image" && !isVisionModel && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded border border-amber-200">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>
+                      Selected model might not support vision. OCR may fail.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between p-2 border-t bg-muted/10 shrink-0">
-            <span className="text-[10px] text-muted-foreground ml-2">
-              {sourceText.length} / 5000
-            </span>
-            {sourceText && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-muted-foreground ml-2">
+                {sourceText.length} / 5000
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isExtracting || !!attachment}
+                className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-full"
+                title="Attach file"
+              >
+                {isExtracting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Paperclip className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+            {(sourceText || attachment) && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -236,7 +390,11 @@ export default function TranslationWorkflowPage() {
                 className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-full"
                 title="Copy"
               >
-                {isCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                {isCopied ? (
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
               </Button>
             )}
           </div>
@@ -250,10 +408,12 @@ export default function TranslationWorkflowPage() {
 
       {/* Action Row - Small and Aligned */}
       <div className="flex justify-end pt-1 shrink-0">
-        <Button 
-          size="sm" 
-          onClick={handleTranslate} 
-          disabled={isLoading || !sourceText.trim()}
+        <Button
+          size="sm"
+          onClick={handleTranslate}
+          disabled={
+            isLoading || isExtracting || (!sourceText.trim() && !attachment)
+          }
           className="px-8 h-8 text-xs font-medium shadow-sm transition-all"
         >
           {isLoading ? (

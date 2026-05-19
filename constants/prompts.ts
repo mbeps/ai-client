@@ -59,8 +59,8 @@ export const PROMPTS = {
     TRANSLATE: (
       sourceDesc: string,
       targetLanguage: string,
-      text: string,
+      text: string, hasImage?: boolean,
     ): string =>
-      `Translate the following text from ${sourceDesc} to ${targetLanguage}. \nOnly return the translated text. Do not include any explanations or extra text.\n\nText to translate:\n${text}`,
+      hasImage ? `I have attached an image containing text. Please perform the following steps:\n1. OCR: Accurately identify and extract all text from the image.\n2. Translate: Translate the extracted text from ${sourceDesc} to ${targetLanguage}.\n3. Formatting: Maintain the original formatting as much as possible.\n\nOnly return the translated text. Do not include explanations, original text, or extra commentary.` : `Translate the following text from ${sourceDesc} to ${targetLanguage}. \nOnly return the translated text. Do not include any explanations or extra text.\n\nText to translate:\n${text}`,
   },
 } as const;
