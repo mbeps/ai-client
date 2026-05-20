@@ -3,7 +3,7 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { whereOwner, verifyOwnership } from "@/lib/utils/db-helpers";
 import type { AssistantRow } from "@/types/assistant-row";
 
 /**
@@ -22,9 +22,7 @@ export async function getAssistant(id: string): Promise<AssistantRow> {
   const [row] = await db
     .select()
     .from(assistant)
-    .where(and(eq(assistant.id, id), eq(assistant.userId, session.user.id)));
+    .where(whereOwner(assistant, id, session.user.id));
 
-  if (!row) throw new Error("Not Found");
-
-  return row;
+  return verifyOwnership(row);
 }

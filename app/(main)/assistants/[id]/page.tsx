@@ -44,6 +44,7 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useTabState } from "@/hooks/use-tab-state";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { toast } from "sonner";
 import { ChatCard } from "@/components/chat/chat-card";
 import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
@@ -74,7 +75,13 @@ export default function AssistantPage() {
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
-  const [loading, setLoading] = useState(assistants.length === 0);
+  // Centralised hydration for required entities
+  const { isLoading: hydrationLoading } = useResourceHydration([
+    "assistants",
+    "mcpServers",
+  ]);
+
+  const [loadingChats, setLoadingChats] = useState(false);
   const [name, setName] = useState(assistant?.name ?? "");
   const [description, setDescription] = useState(assistant?.description ?? "");
   const [prompt, setPrompt] = useState(assistant?.prompt ?? "");
@@ -95,19 +102,15 @@ export default function AssistantPage() {
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [chats, searchQuery]);
 
+  // Load assistant-specific chats on mount
   useEffect(() => {
-    if (assistants.length === 0) {
-      Promise.all([
-        loadAssistants(),
-        listChats()
-          .then((rows) => loadChats(rows, []))
-          .catch(() => {}),
-      ]).finally(() => setLoading(false));
+    if (chats.length === 0) {
+      setLoadingChats(true);
+      listChats()
+        .then((rows) => loadChats(rows, []))
+        .finally(() => setLoadingChats(false));
     }
-    if (mcpServers.length === 0) {
-      loadMcpServers().catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [assistantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (assistant) {
@@ -123,6 +126,8 @@ export default function AssistantPage() {
     assistant?.description,
     assistant?.prompt,
   ]);
+
+  const loading = hydrationLoading || (assistants.length === 0 && !assistant);
 
   if (loading) {
     return (

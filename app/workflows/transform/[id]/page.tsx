@@ -60,18 +60,12 @@ import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-tran
 import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-run-card";
 import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { ModelSelector } from "@/components/shared/model-selector";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
 import { DEFAULT_MODEL, MODELS } from "@/constants/models";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { TransformRunRow } from "@/types/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
 
@@ -618,18 +612,11 @@ export default function AgentEditorPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="model">Model</Label>
-              <Select value={modelId} onValueChange={setModelId}>
-                <SelectTrigger id="model">
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODELS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ModelSelector
+                value={modelId}
+                onValueChange={setModelId}
+                className="w-full border bg-card h-10 px-3"
+              />
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-4">

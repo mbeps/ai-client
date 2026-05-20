@@ -12,6 +12,23 @@ import { assistantRowToStore } from "../mappers/assistant";
 import { knowledgebaseRowToStore } from "../mappers/knowledgebase";
 import { promptRowToStore } from "../mappers/prompt";
 import { transformAgentRowToStore } from "../mappers/transform-agent";
+import { mcpServerRowToStore } from "../mappers/mcp-server";
+
+/**
+ * Helper to generate standard CRUD loader methods (fetch -> map -> set).
+ * Centralises the logic for loading database entries into the Zustand store.
+ */
+const createEntityLoader = <K extends keyof AppState, R>(
+  set: (state: Partial<AppState>) => void,
+  key: K,
+  listAction: () => Promise<R[]>,
+  mapper: (row: R) => AppState[K] extends (infer T)[] ? T : never,
+) => {
+  return async () => {
+    const rows = await listAction();
+    set({ [key]: rows.map(mapper) } as any);
+  };
+};
 
 type EntitySlice = Pick<
   AppState,
@@ -42,53 +59,57 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   knowledgebases: [],
   transformAgents: [],
 
-  loadProjects: async () => {
-    const rows = await listProjects();
-    set({ projects: rows.map(projectRowToStore) });
-  },
-  loadTransformAgents: async () => {
-    const rows = await listTransformAgents();
-    set({ transformAgents: rows.map(transformAgentRowToStore) });
-  },
-  loadAssistants: async () => {
-    const rows = await listAssistants();
-    set({ assistants: rows.map(assistantRowToStore) });
-  },
-  loadPrompts: async () => {
-    const rows = await listPrompts();
-    set({ prompts: rows.map(promptRowToStore) });
-  },
-  loadMcpServers: async () => {
-    const rows = await listMcpServers();
-    set({
-      mcpServers: rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        command: r.command,
-        args: r.args,
-        url: r.url,
-        headers: r.headers,
-        env: r.env,
-        enabled: r.enabled,
-        isPublic: r.isPublic,
-        createdAt: new Date(r.createdAt),
-        updatedAt: new Date(r.updatedAt),
-      })),
-    });
-  },
-  loadPublicMcpServers: async () => {
-    const rows = await listPublicMcpServers();
-    set({
-      publicMcpServers: rows.map((r) => ({
+  loadProjects: createEntityLoader(
+    set,
+    "projects",
+    listProjects,
+    projectRowToStore,
+  ),
+
+  loadTransformAgents: createEntityLoader(
+    set,
+    "transformAgents",
+    listTransformAgents,
+    transformAgentRowToStore,
+  ),
+
+  loadAssistants: createEntityLoader(
+    set,
+    "assistants",
+    listAssistants,
+    assistantRowToStore,
+  ),
+
+  loadPrompts: createEntityLoader(
+    set,
+    "prompts",
+    listPrompts,
+    promptRowToStore,
+  ),
+
+  loadMcpServers: createEntityLoader(
+    set,
+    "mcpServers",
+    listMcpServers,
+    mcpServerRowToStore,
+  ),
+
+  loadPublicMcpServers: createEntityLoader(
+    set,
+    "publicMcpServers",
+    listPublicMcpServers,
+    (r) =>
+      ({
         ...r,
         createdAt: new Date(r.createdAt),
         updatedAt: new Date(r.updatedAt),
-      })),
-    });
-  },
-  loadKnowledgebases: async () => {
-    const rows = await listKnowledgebases();
-    set({ knowledgebases: rows.map(knowledgebaseRowToStore) });
-  },
+      }) as any,
+  ),
+
+  loadKnowledgebases: createEntityLoader(
+    set,
+    "knowledgebases",
+    listKnowledgebases,
+    knowledgebaseRowToStore,
+  ),
 });

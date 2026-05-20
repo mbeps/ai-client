@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROMPTS } from "@/constants/prompts";
+import { idField } from "./shared-fields";
 
 /**
  * Validates a message object for persistence to the database.
@@ -10,10 +11,10 @@ import { PROMPTS } from "@/constants/prompts";
  * @author Maruf Bepary
  */
 export const persistMessageSchema = z.object({
-  id: z.string().uuid(),
+  id: idField,
   role: z.enum(["user", "assistant", "system"]),
   content: z.string().min(1),
-  parentId: z.string().uuid().nullable(),
+  parentId: idField.nullable(),
   metadata: z.string().nullable().optional(),
 });
 
@@ -27,8 +28,8 @@ export const persistMessageSchema = z.object({
  */
 export const createChatSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  projectId: z.string().uuid().nullable().optional(),
-  assistantId: z.string().uuid().nullable().optional(),
+  projectId: idField.nullable().optional(),
+  assistantId: idField.nullable().optional(),
 });
 
 /**
@@ -52,7 +53,7 @@ export const renameChatSchema = z.object({
  * @author Maruf Bepary
  */
 export const moveChatSchema = z.object({
-  projectId: z.string().uuid().nullable(),
+  projectId: idField.nullable(),
 });
 
 /**
@@ -91,7 +92,7 @@ export const messageMetadataSchema = z.object({
  * Supports images, documents, and spreadsheets with metadata like mimeType and extraction results.
  */
 export const chatAttachmentSchema = z.object({
-  id: z.string().uuid(),
+  id: idField,
   name: z.string().min(1).max(255),
   mimeType: z.string().max(100).optional(),
   type: z.enum(["image", "document", "spreadsheet"]).optional(),
@@ -120,8 +121,8 @@ export const chatContentPartSchema = z.union([
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
   content: z.union([z.string(), z.array(chatContentPartSchema)]),
-  id: z.string().uuid().optional(),
-  parentId: z.string().uuid().optional(),
+  id: idField.optional(),
+  parentId: idField.optional(),
   attachments: z.array(chatAttachmentSchema).optional(),
   metadata: z.string().nullable().optional(),
 });
@@ -131,14 +132,14 @@ export const chatMessageSchema = z.object({
  * Includes chatId, message history, model selection, and MCP tool/resource selections.
  */
 export const chatRequestSchema = z.object({
-  chatId: z.string().uuid(),
-  userMessageId: z.string().uuid().optional(),
+  chatId: idField,
+  userMessageId: idField.optional(),
   model: z.string().min(1).max(100).optional(),
   messages: z.array(chatMessageSchema).max(500),
   selectedServerIds: z.array(z.string()).max(20).optional(),
   selectedTools: z.array(z.string()).max(100).optional(),
-  selectedAssistantId: z.string().uuid().optional(),
-  selectedKbIds: z.array(z.string().uuid()).max(5).optional(),
+  selectedAssistantId: idField.optional(),
+  selectedKbIds: z.array(idField).max(5).optional(),
 });
 
 /**

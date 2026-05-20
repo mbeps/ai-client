@@ -3,7 +3,7 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { whereOwner } from "@/lib/utils/db-helpers";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
 
 export async function getKnowledgebase(
@@ -14,9 +14,7 @@ export async function getKnowledgebase(
   const [row] = await db
     .select()
     .from(knowledgebase)
-    .where(
-      and(eq(knowledgebase.id, id), eq(knowledgebase.userId, session.user.id)),
-    );
+    .where(whereOwner(knowledgebase, id, session.user.id));
 
   return row ?? null;
 }

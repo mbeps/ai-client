@@ -17,6 +17,7 @@ import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { getAiProvider } from "@/lib/chat/get-ai-provider";
 import { logger } from "@/lib/logger";
+import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 
 export const maxDuration = 60;
 
@@ -292,9 +293,6 @@ export async function POST(req: Request) {
   let fullText = "";
   let fullReasoning = "";
 
-  const encode = (data: object) =>
-    new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
-
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -314,7 +312,9 @@ export async function POST(req: Request) {
             switch (chunk.type) {
               case "text-delta":
                 fullText += chunk.text;
-                controller.enqueue(encode({ type: "text", delta: chunk.text }));
+                controller.enqueue(
+                  encodeSSE({ type: "text", delta: chunk.text }),
+                );
                 break;
 
               case "tool-call":
@@ -334,7 +334,7 @@ export async function POST(req: Request) {
                   session.user.id,
                 );
                 controller.enqueue(
-                  encode({
+                  encodeSSE({
                     type: "tool-call",
                     toolCallId: chunk.toolCallId,
                     toolName: chunk.toolName,
@@ -359,7 +359,7 @@ export async function POST(req: Request) {
                   session.user.id,
                 );
                 controller.enqueue(
-                  encode({
+                  encodeSSE({
                     type: "tool-result",
                     toolCallId: chunk.toolCallId,
                     toolName: chunk.toolName,
@@ -371,13 +371,13 @@ export async function POST(req: Request) {
               case "reasoning-delta":
                 fullReasoning += chunk.text;
                 controller.enqueue(
-                  encode({ type: "reasoning", delta: chunk.text }),
+                  encodeSSE({ type: "reasoning", delta: chunk.text }),
                 );
                 break;
 
               case "error":
                 controller.enqueue(
-                  encode({ type: "error", message: String(chunk.error) }),
+                  encodeSSE({ type: "error", message: String(chunk.error) }),
                 );
                 break;
             }
@@ -403,13 +403,13 @@ export async function POST(req: Request) {
             }
           }
 
-          controller.enqueue(encode({ type: "error", message, code }));
+          controller.enqueue(encodeSSE({ type: "error", message, code }));
           return;
         }
 
         if (!fullText && toolCalls.length === 0 && !fullReasoning) {
           controller.enqueue(
-            encode({ type: "error", message: "No response from model" }),
+            encodeSSE({ type: "error", message: "No response from model" }),
           );
           return;
         }
@@ -462,7 +462,7 @@ export async function POST(req: Request) {
             });
             for (const mod of modified) {
               controller.enqueue(
-                encode({
+                encodeSSE({
                   type: "file-modified",
                   attachmentId: mod.newAttachmentId,
                   messageId: assistantMessageId,
@@ -475,7 +475,7 @@ export async function POST(req: Request) {
           } catch (err) {
             console.warn("[FileBridge] Failed to persist modified files:", err);
             controller.enqueue(
-              encode({
+              encodeSSE({
                 type: "error",
                 message: "Failed to save modified spreadsheet(s)",
                 code: "BRIDGE_PERSIST_FAILED",
@@ -485,14 +485,16 @@ export async function POST(req: Request) {
         }
 
         controller.enqueue(
-          encode({
+          encodeSSE({
             type: "done",
             id: assistantMessageId,
             metadata: metadata ? JSON.parse(metadata) : undefined,
           }),
         );
       } catch (_err) {
-        controller.enqueue(encode({ type: "error", message: "Stream failed" }));
+        controller.enqueue(
+          encodeSSE({ type: "error", message: "Stream failed" }),
+        );
       } finally {
         if (bridge) {
           await rm(bridge.tempDir, { recursive: true, force: true }).catch(
@@ -506,10 +508,6 @@ export async function POST(req: Request) {
   });
 
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+    headers: SSE_HEADERS,
   });
 }

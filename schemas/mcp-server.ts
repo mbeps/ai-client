@@ -1,40 +1,6 @@
 import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
-
-/**
- * Validates JSON string as a valid JSON array (e.g., for MCP command arguments).
- * Rejects non-arrays, non-JSON, and strings — strict JSON array format required.
- *
- * @author Maruf Bepary
- */
-const jsonArraySchema = z.string().refine(
-  (val) => {
-    try {
-      return Array.isArray(JSON.parse(val));
-    } catch {
-      return false;
-    }
-  },
-  { message: "Must be a valid JSON array" },
-);
-
-/**
- * Validates JSON string as a valid JSON object (e.g., for environment variables or headers).
- * Rejects arrays, non-JSON, and non-objects — strict JSON object format required.
- *
- * @author Maruf Bepary
- */
-const jsonObjectSchema = z.string().refine(
-  (val) => {
-    try {
-      const p = JSON.parse(val);
-      return p !== null && typeof p === "object" && !Array.isArray(p);
-    } catch {
-      return false;
-    }
-  },
-  { message: "Must be a valid JSON object" },
-);
+import { jsonArraySchema, jsonObjectSchema } from "./shared-fields";
 
 /**
  * Validates MCP stdio command paths blocking absolute paths and traversal attacks.

@@ -26,12 +26,9 @@ import type { FileBridgeResult } from "@/types/file-bridge-result";
 import type { TransformStep } from "@/types/transform-agent";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 
 export const maxDuration = 300;
-
-
-const encode = (data: object): Uint8Array =>
-  new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
 
 const requestSchema = z.discriminatedUnion("type", [
   createTransformRunSchema.extend({ type: z.literal("new") }),
@@ -55,17 +52,11 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify(parsed.error.issues), { status: 400 });
   }
 
-  const sseHeaders = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  };
-
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (data: object) => {
         try {
-          controller.enqueue(encode(data));
+          controller.enqueue(encodeSSE(data));
         } catch {
           // stream may already be closed
         }
@@ -599,5 +590,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return new Response(stream, { headers: sseHeaders });
+  return new Response(stream, { headers: SSE_HEADERS });
 }
