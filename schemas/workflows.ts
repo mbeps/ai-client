@@ -25,5 +25,3 @@ export const translateRequestSchema = z
   .refine((data) => data.text || data.attachment, {
     message: "Either text or an attachment must be provided",
   });
-
-export type TranslateRequest = z.infer<typeof translateRequestSchema>;

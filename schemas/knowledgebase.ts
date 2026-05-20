@@ -24,10 +24,6 @@ export const createKnowledgebaseSchema = z.object({
   description: descriptionField,
 });
 
-export const deleteKnowledgebaseSchema = z.object({
-  id: z.string().uuid(),
-});
-
 export const addDocumentSchema = z.object({
   kbId: z.string().min(1),
   name: z.string().min(1).max(255),
