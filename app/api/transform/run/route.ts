@@ -89,24 +89,24 @@ export async function POST(req: Request) {
           }
 
           // Create a new run record
-          const inputAttachmentIdsValue = Array.isArray(
-            parsed.data.inputAttachmentIds,
-          )
-            ? parsed.data.inputAttachmentIds
-            : typeof parsed.data.inputAttachmentIds === "string"
-              ? JSON.parse(parsed.data.inputAttachmentIds)
-              : [];
-
           const [created] = await db
             .insert(transformRun)
-            .values({
-              agentId: parsed.data.agentId,
-              userId: session.user.id,
-              status: "running",
-              dryRun: parsed.data.dryRun ?? false,
-              inputAttachmentIds: JSON.stringify(inputAttachmentIdsValue),
-              outputAttachmentIds: "[]",
-            })
+            .values([
+              {
+                agentId: parsed.data.agentId,
+                userId: session.user.id,
+                status: "running",
+                dryRun: parsed.data.dryRun ?? false,
+                inputAttachmentIds: Array.isArray(
+                  parsed.data.inputAttachmentIds,
+                )
+                  ? parsed.data.inputAttachmentIds
+                  : parsed.data.inputAttachmentIds
+                    ? [parsed.data.inputAttachmentIds]
+                    : [],
+                outputAttachmentIds: [],
+              },
+            ])
             .returning();
           runRow = created;
           startFromStep = 0;
@@ -269,12 +269,8 @@ export async function POST(req: Request) {
         let attachmentRows: (typeof attachment.$inferSelect)[] = [];
 
         if (agentRow.requiresFileUpload) {
-          const currentOutputIds: string[] = JSON.parse(
-            runRow.outputAttachmentIds || "[]",
-          );
-          const inputIds: string[] = JSON.parse(
-            runRow.inputAttachmentIds || "[]",
-          );
+          const currentOutputIds: string[] = runRow.outputAttachmentIds;
+          const inputIds: string[] = runRow.inputAttachmentIds;
           stageIds =
             startFromStep > 0 && currentOutputIds.length > 0
               ? currentOutputIds
@@ -408,20 +404,13 @@ export async function POST(req: Request) {
             ...(step.toolIds || []),
           ]);
 
-          // Filter tools by config
           const filteredTools =
             allowedToolIds.size > 0
               ? Object.fromEntries(
                   Object.entries(tools).filter(([name]) => {
-                    return Array.from(allowedToolIds).some((id) => {
-                      // Handle structured IDs: serverId:tool:toolName
-                      if (id.includes(":tool:")) {
-                        const parts = id.split(":");
-                        return parts[parts.length - 1] === name;
-                      }
-                      // fallback to exact match (e.g. manage_artifact)
-                      return id === name;
-                    });
+                    return Array.from(allowedToolIds).some((id) =>
+                      id.endsWith(`:${name}`),
+                    );
                   }),
                 )
               : tools;
@@ -485,9 +474,7 @@ export async function POST(req: Request) {
               await db
                 .update(transformRun)
                 .set({
-                  outputAttachmentIds: JSON.stringify(
-                    currentOutputAttachmentIds,
-                  ),
+                  outputAttachmentIds: currentOutputAttachmentIds,
                 })
                 .where(eq(transformRun.id, runRow.id));
             }

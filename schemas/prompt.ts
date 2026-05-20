@@ -30,15 +30,3 @@ export const createPromptSchema = z.object({
  * @author Maruf Bepary
  */
 export const updatePromptSchema = createPromptSchema.partial();
-
-/**
- * Validates prompt rename operations with only the new title field.
- * Requires title to be non-empty and under 100 characters.
- * Use with renamePrompt server action for quick title updates.
- *
- * @see {@link lib/actions/prompts/rename-prompt.ts} for rename action
- * @author Maruf Bepary
- */
-export const renamePromptSchema = z.object({
-  title: z.string().min(1, "Title is required").max(100),
-});

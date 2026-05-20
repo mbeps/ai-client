@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  mcpServerSchema,
   createMcpServerSchema,
   updateMcpServerSchema,
 } from "@/schemas/mcp-server";
@@ -22,9 +21,9 @@ vi.mock("@/lib/mcp/url-guard", () => ({
 // ---------------------------------------------------------------------------
 // stdio variant
 // ---------------------------------------------------------------------------
-describe("mcpServerSchema — stdio", () => {
+describe("createMcpServerSchema — stdio", () => {
   it("accepts valid stdio config", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "My MCP",
       command: "python",
@@ -34,7 +33,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("accepts stdio with args and env", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "My MCP",
       command: "node",
@@ -46,7 +45,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects empty name", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "",
       command: "python",
@@ -56,7 +55,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects name longer than 100 characters", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "n".repeat(101),
       command: "python",
@@ -66,7 +65,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects empty command", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "",
@@ -75,7 +74,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects absolute command path", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "/usr/bin/python",
@@ -84,7 +83,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects path traversal in command", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "../etc/evil",
@@ -93,7 +92,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects command longer than 255 characters", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "a".repeat(256),
@@ -102,7 +101,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects args that is not a JSON array", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "python",
@@ -113,7 +112,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects args that is not valid JSON", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "python",
@@ -124,7 +123,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects env that is a JSON array instead of object", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "python",
@@ -135,7 +134,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("rejects env that is not valid JSON", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "python",
@@ -146,7 +145,7 @@ describe("mcpServerSchema — stdio", () => {
   });
 
   it("accepts command with forward-slash subdirectory (relative)", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Valid",
       command: "scripts/run.py",
@@ -159,9 +158,9 @@ describe("mcpServerSchema — stdio", () => {
 // ---------------------------------------------------------------------------
 // http variant
 // ---------------------------------------------------------------------------
-describe("mcpServerSchema — http", () => {
+describe("createMcpServerSchema — http", () => {
   it("accepts valid http config", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote MCP",
       url: "https://api.example.com/mcp",
@@ -171,7 +170,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("accepts http with headers", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote MCP",
       url: "https://api.example.com/mcp",
@@ -183,7 +182,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects empty name", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "",
       url: "https://api.example.com/mcp",
@@ -193,7 +192,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects invalid URL", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: "not-a-url",
@@ -202,7 +201,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects URL longer than 1024 characters", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: `https://example.com/${"a".repeat(1020)}`,
@@ -211,7 +210,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects localhost URL (blocked)", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: "http://localhost:3000/mcp",
@@ -220,7 +219,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects 127.0.0.1 URL (blocked)", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: "http://127.0.0.1:8080/mcp",
@@ -229,7 +228,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects invalid headers JSON", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: "https://api.example.com/mcp",
@@ -240,7 +239,7 @@ describe("mcpServerSchema — http", () => {
   });
 
   it("rejects headers that is a JSON array", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "http",
       name: "Remote",
       url: "https://api.example.com/mcp",
@@ -254,9 +253,9 @@ describe("mcpServerSchema — http", () => {
 // ---------------------------------------------------------------------------
 // discriminated union — wrong type
 // ---------------------------------------------------------------------------
-describe("mcpServerSchema — discriminated union", () => {
+describe("createMcpServerSchema — discriminated union", () => {
   it("rejects unknown type", () => {
-    const result = mcpServerSchema.safeParse({
+    const result = createMcpServerSchema.safeParse({
       type: "grpc",
       name: "Server",
     });
@@ -268,7 +267,7 @@ describe("mcpServerSchema — discriminated union", () => {
 // Alias exports
 // ---------------------------------------------------------------------------
 describe("createMcpServerSchema / updateMcpServerSchema", () => {
-  it("createMcpServerSchema is the same schema as mcpServerSchema", () => {
+  it("createMcpServerSchema accepts valid config", () => {
     const result = createMcpServerSchema.safeParse({
       type: "stdio",
       name: "Test",
@@ -278,7 +277,7 @@ describe("createMcpServerSchema / updateMcpServerSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("updateMcpServerSchema is the same schema as mcpServerSchema", () => {
+  it("updateMcpServerSchema accepts valid config", () => {
     const result = updateMcpServerSchema.safeParse({
       type: "http",
       name: "Test",

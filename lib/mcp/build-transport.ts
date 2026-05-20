@@ -2,21 +2,7 @@ import { createMCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { isBlockedUrl } from "./url-guard";
 import { z } from "zod";
-
-/**
- * Configuration for an MCP server transport.
- * Supports both stdio (local process) and HTTP (remote server) transports.
- * All JSON fields (args, env, headers) must be valid JSON strings.
- */
-export type TransportConfig = {
-  name?: string;
-  type: "stdio" | "http";
-  command?: string | null;
-  args?: string | null;
-  url?: string | null;
-  headers?: string | null;
-  env?: string | null;
-};
+import type { McpServerConfig } from "@/types/mcp-server-config";
 
 type MCPTransport = Parameters<typeof createMCPClient>[0]["transport"];
 
@@ -36,7 +22,7 @@ const headersSchema = z.record(z.string(), z.string());
  * @see {@link discover-tools.ts} for how this transport is used in tool discovery
  * @see {@link url-guard.ts} for blocked URL patterns
  */
-export function buildTransport(server: TransportConfig): MCPTransport {
+export function buildTransport(server: McpServerConfig): MCPTransport {
   const label = server.name ?? server.command ?? server.url ?? "unknown";
 
   if (server.type === "stdio") {

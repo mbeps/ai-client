@@ -88,42 +88,39 @@ export const messageMetadataSchema = z.object({
 });
 
 /**
- * Validates a file attachment in a chat request.
- * Supports images, documents, and spreadsheets with metadata like mimeType and extraction results.
- */
-export const chatAttachmentSchema = z.object({
-  id: idField,
-  name: z.string().min(1).max(255),
-  mimeType: z.string().max(100).optional(),
-  type: z.enum(["image", "document", "spreadsheet"]).optional(),
-  dataUrl: z.string().optional(),
-  extractedText: z.string().optional(),
-  key: z.string().max(1024).optional(),
-});
-
-/**
- * Validates a single content part of a message (text or image).
- * Used in multimodal message history for the AI provider.
- */
-export const chatContentPartSchema = z.union([
-  z.object({ type: z.literal("text"), text: z.string() }),
-  z.object({
-    type: z.literal("image"),
-    image: z.union([z.string().url(), z.string()]),
-    mimeType: z.string().optional(),
-  }),
-]);
-
-/**
  * Validates a message object sent in a chat request.
  * Supports complex content parts and optional file attachments.
  */
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
-  content: z.union([z.string(), z.array(chatContentPartSchema)]),
+  content: z.union([
+    z.string(),
+    z.array(
+      z.union([
+        z.object({ type: z.literal("text"), text: z.string() }),
+        z.object({
+          type: z.literal("image"),
+          image: z.union([z.string().url(), z.string()]),
+          mimeType: z.string().optional(),
+        }),
+      ]),
+    ),
+  ]),
   id: idField.optional(),
   parentId: idField.optional(),
-  attachments: z.array(chatAttachmentSchema).optional(),
+  attachments: z
+    .array(
+      z.object({
+        id: idField,
+        name: z.string().min(1).max(255),
+        mimeType: z.string().max(100).optional(),
+        type: z.enum(["image", "document", "spreadsheet"]).optional(),
+        dataUrl: z.string().optional(),
+        extractedText: z.string().optional(),
+        key: z.string().max(1024).optional(),
+      }),
+    )
+    .optional(),
   metadata: z.string().nullable().optional(),
 });
 

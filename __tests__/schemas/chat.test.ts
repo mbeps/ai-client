@@ -5,8 +5,6 @@ import {
   renameChatSchema,
   moveChatSchema,
   messageMetadataSchema,
-  chatAttachmentSchema,
-  chatContentPartSchema,
   chatMessageSchema,
   chatRequestSchema,
 } from "@/schemas/chat";
@@ -214,85 +212,6 @@ describe("messageMetadataSchema", () => {
     const result = messageMetadataSchema.safeParse({
       toolCalls: [{ toolName: "search", args: {} }],
     });
-    expect(result.success).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// chatAttachmentSchema
-// ---------------------------------------------------------------------------
-describe("chatAttachmentSchema", () => {
-  it("accepts minimal valid attachment", () => {
-    const result = chatAttachmentSchema.safeParse({
-      id: VALID_UUID,
-      name: "file.pdf",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts full attachment", () => {
-    const result = chatAttachmentSchema.safeParse({
-      id: VALID_UUID,
-      name: "image.png",
-      mimeType: "image/png",
-      type: "image",
-      dataUrl: "data:image/png;base64,abc",
-      extractedText: "some text",
-      key: "uploads/image.png",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects non-UUID id", () => {
-    const result = chatAttachmentSchema.safeParse({ id: "bad", name: "file" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects empty name", () => {
-    const result = chatAttachmentSchema.safeParse({ id: VALID_UUID, name: "" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects invalid type enum", () => {
-    const result = chatAttachmentSchema.safeParse({
-      id: VALID_UUID,
-      name: "file",
-      type: "audio",
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// chatContentPartSchema
-// ---------------------------------------------------------------------------
-describe("chatContentPartSchema", () => {
-  it("accepts text part", () => {
-    const result = chatContentPartSchema.safeParse({
-      type: "text",
-      text: "Hello",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts image part with URL", () => {
-    const result = chatContentPartSchema.safeParse({
-      type: "image",
-      image: "https://example.com/img.png",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts image part with base64 string", () => {
-    const result = chatContentPartSchema.safeParse({
-      type: "image",
-      image: "data:image/png;base64,abc123",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects unknown type", () => {
-    const result = chatContentPartSchema.safeParse({ type: "video", url: "x" });
     expect(result.success).toBe(false);
   });
 });

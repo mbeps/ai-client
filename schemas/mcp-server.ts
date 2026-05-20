@@ -33,7 +33,7 @@ const commandSchema = z
  * @see {@link lib/mcp/} for MCP server creation/update actions
  * @author Maruf Bepary
  */
-export const mcpServerSchema = z.discriminatedUnion("type", [
+const mcpServerBaseSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("stdio"),
     name: z.string().min(1, "Name is required").max(100),
@@ -58,22 +58,22 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
 ]);
 
 /**
- * Alias for mcpServerSchema used during new MCP server creation.
+ * Validates new MCP server creation.
  * Validates complete server configuration before persistence.
  *
  * @see {@link lib/mcp/} for creation action
  * @author Maruf Bepary
  */
-export const createMcpServerSchema = mcpServerSchema;
+export const createMcpServerSchema = mcpServerBaseSchema;
 
 /**
- * Alias for mcpServerSchema used during MCP server updates.
+ * Validates MCP server updates.
  * Validates complete server configuration before persistence (does not support partial updates).
  *
  * @see {@link lib/mcp/} for update action
  * @author Maruf Bepary
  */
-export const updateMcpServerSchema = mcpServerSchema;
+export const updateMcpServerSchema = mcpServerBaseSchema;
 
-export type CreateMcpServer = z.infer<typeof mcpServerSchema>;
-export type UpdateMcpServer = z.infer<typeof mcpServerSchema>;
+export type CreateMcpServer = z.infer<typeof createMcpServerSchema>;
+export type UpdateMcpServer = z.infer<typeof updateMcpServerSchema>;
