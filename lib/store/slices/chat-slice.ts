@@ -11,6 +11,11 @@ import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/acti
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 import { messageMetadataSchema } from "@/schemas/chat";
 import { chatRowToStore } from "../mappers/chat";
+import { withOptimisticUpdate } from "../with-optimistic-update";
+import {
+  mapMessageFromDb,
+  parseMessageMetadata,
+} from "../mappers/message-mapper";
 import type { AppState } from "@/types/app-state";
 import type { Message } from "@/types/message";
 import type { Chat } from "@/types/chat";
@@ -165,21 +170,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       newLeafId = getDeepestLeaf(updatedMessages, newLeafId);
     }
 
-    await deleteMessageAction(chatId, messageId, newLeafId);
-    set((state) => {
-      const c = state.chats[chatId];
-      if (!c) return state;
-      return {
-        chats: {
-          ...state.chats,
-          [chatId]: {
-            ...c,
-            messages: updatedMessages,
-            currentLeafId: newLeafId,
-          },
-        },
-      };
-    });
+    const previous = get();
+    await withOptimisticUpdate(
+      () => get().deleteMessage(chatId, messageId),
+      () => deleteMessageAction(chatId, messageId, newLeafId),
+      () => set(previous),
+    );
   },
 
   setCurrentLeaf: (chatId, leafId) => {
@@ -199,12 +195,13 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   setCurrentLeafDb: async (chatId, leafId) => {
-    get().setCurrentLeaf(chatId, leafId);
-    try {
-      await updateCurrentLeafAction(chatId, leafId);
-    } catch (err) {
-      console.error("Failed to update current leaf:", err);
-    }
+    const previous = get();
+    await withOptimisticUpdate(
+      () => get().setCurrentLeaf(chatId, leafId),
+      () => updateCurrentLeafAction(chatId, leafId),
+      () => set(previous),
+      { swallowError: true },
+    );
   },
 
   deleteChat: (chatId) => {
@@ -242,32 +239,31 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   updateMessageMetadataDb: async (chatId, messageId, metadata) => {
-    set((state) => {
-      const chat = state.chats[chatId];
-      if (!chat) return state;
-      const msg = chat.messages[messageId];
-      if (!msg) return state;
-      return {
-        chats: {
-          ...state.chats,
-          [chatId]: {
-            ...chat,
-            messages: {
-              ...chat.messages,
-              [messageId]: {
-                ...msg,
-                metadata,
+    const previous = get();
+    await withOptimisticUpdate(
+      () =>
+        set((state) => {
+          const chat = state.chats[chatId];
+          if (!chat) return state;
+          const msg = chat.messages[messageId];
+          if (!msg) return state;
+          return {
+            chats: {
+              ...state.chats,
+              [chatId]: {
+                ...chat,
+                messages: {
+                  ...chat.messages,
+                  [messageId]: { ...msg, metadata },
+                },
               },
             },
-          },
-        },
-      };
-    });
-    try {
-      await updateMessageMetadataAction(messageId, metadata);
-    } catch (err) {
-      console.error("Failed to update message metadata:", err);
-    }
+          };
+        }),
+      () => updateMessageMetadataAction(messageId, metadata),
+      () => set(previous),
+      { swallowError: true },
+    );
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {
@@ -282,61 +278,44 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       return;
     }
 
+    const safeAttachments = attachmentRows ?? [];
+
+    // Pass 1: Create message objects and attach attachments
     for (const m of messageRows) {
       const chatEntry = chats[m.chatId];
       if (!chatEntry) continue;
-      let parsedReasoning: string | undefined;
-      if (m.metadata) {
-        try {
-          const raw = JSON.parse(m.metadata);
-          const parsed = messageMetadataSchema.safeParse(raw);
-          parsedReasoning = parsed.success ? parsed.data.reasoning : undefined;
-        } catch {
-          parsedReasoning = undefined;
-        }
-      }
-      chatEntry.messages[m.id] = {
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: new Date(m.createdAt),
-        parentId: m.parentId,
-        childrenIds: [],
-        metadata: m.metadata ?? null,
-        reasoning: parsedReasoning,
-        attachments: [],
-      };
+
+      const attachmentsForMsg = safeAttachments
+        .filter((a) => a.messageId === m.id)
+        .map((att) => {
+          const isImage = att.mimeType.startsWith("image/");
+          return {
+            id: att.id,
+            type: isImage ? "image" : "document",
+            name: att.name,
+            mimeType: att.mimeType,
+            sizeBytes: att.size,
+            dataUrl: "",
+            key: att.key,
+          };
+        });
+
+      chatEntry.messages[m.id] = mapMessageFromDb(
+        {
+          ...m,
+          createdAt: (m as any).createdAt || (m as any).created_at || null,
+        } as any,
+        attachmentsForMsg as any,
+      );
     }
 
+    // Pass 2: Reconstruct tree children
     for (const m of messageRows) {
-      if (!m.parentId) continue;
-      const chatEntry = chats[m.chatId];
+      if (!(m as any).parentId) continue;
+      const chatEntry = chats[(m as any).chatId];
       if (!chatEntry) continue;
-      const parent = chatEntry.messages[m.parentId];
-      if (parent) parent.childrenIds.push(m.id);
-    }
-
-    if (attachmentRows) {
-      for (const att of attachmentRows) {
-        if (!att.messageId) continue;
-        for (const chatEntry of Object.values(chats)) {
-          const msg = chatEntry.messages[att.messageId];
-          if (msg) {
-            const isImage = att.mimeType.startsWith("image/");
-            msg.attachments = msg.attachments || [];
-            msg.attachments.push({
-              id: att.id,
-              type: isImage ? "image" : "document",
-              name: att.name,
-              mimeType: att.mimeType,
-              sizeBytes: att.size,
-              dataUrl: "",
-              key: att.key,
-            });
-            break;
-          }
-        }
-      }
+      const parent = chatEntry.messages[(m as any).parentId];
+      if (parent) parent.childrenIds.push((m as any).id);
     }
 
     set({ chats });
@@ -349,39 +328,49 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   renameChatDb: async (id, title) => {
-    const updated = await renameChatAction(id, title);
-    set((state) => {
-      const chat = state.chats[id];
-      if (!chat) return state;
-      return {
-        chats: {
-          ...state.chats,
-          [id]: {
-            ...chat,
-            title: updated.title,
-            updatedAt: new Date(updated.updatedAt),
-          },
-        },
-      };
-    });
+    const previous = get();
+    await withOptimisticUpdate(
+      () =>
+        set((state) => {
+          const chat = state.chats[id];
+          if (!chat) return state;
+          return {
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...chat,
+                title,
+                updatedAt: new Date(),
+              },
+            },
+          };
+        }),
+      () => renameChatAction(id, title),
+      () => set(previous),
+    );
   },
 
   moveChatDb: async (id, projectId) => {
-    const updated = await moveChatAction(id, projectId);
-    set((state) => {
-      const chat = state.chats[id];
-      if (!chat) return state;
-      return {
-        chats: {
-          ...state.chats,
-          [id]: {
-            ...chat,
-            projectId: updated.projectId ?? undefined,
-            updatedAt: new Date(updated.updatedAt),
-          },
-        },
-      };
-    });
+    const previous = get();
+    await withOptimisticUpdate(
+      () =>
+        set((state) => {
+          const chat = state.chats[id];
+          if (!chat) return state;
+          return {
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...chat,
+                projectId,
+                updatedAt: new Date(),
+              },
+            },
+          };
+        }),
+      () => moveChatAction(id, projectId),
+      () => set(previous),
+    );
   },
 
   createChatDb: async (title, projectId, assistantId) => {
@@ -392,21 +381,30 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   deleteChatDb: async (chatId) => {
-    await deleteChat(chatId);
-    get().deleteChat(chatId);
+    const previous = get();
+    await withOptimisticUpdate(
+      () => get().deleteChat(chatId),
+      () => deleteChat(chatId),
+      () => set(previous),
+    );
   },
 
   setKnowledgebase: async (chatId, kbId) => {
-    await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
-    set((state) => {
-      const chat = state.chats[chatId];
-      if (!chat) return state;
-      return {
-        chats: {
-          ...state.chats,
-          [chatId]: { ...chat, knowledgebaseId: kbId },
-        },
-      };
-    });
+    const previous = get();
+    await withOptimisticUpdate(
+      () =>
+        set((state) => {
+          const chat = state.chats[chatId];
+          if (!chat) return state;
+          return {
+            chats: {
+              ...state.chats,
+              [chatId]: { ...chat, knowledgebaseId: kbId },
+            },
+          };
+        }),
+      () => updateChatKnowledgebase({ chatId, knowledgebaseId: kbId }),
+      () => set(previous),
+    );
   },
 });

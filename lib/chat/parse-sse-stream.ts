@@ -16,6 +16,9 @@ export type SseEvent =
       mimeType?: string;
       size?: number;
     }
+  | { type: "transform-start"; runId: string }
+  | { type: "transform-step-start"; stepIndex: number; label: string }
+  | { type: "transform-complete"; runId: string; status: string }
   | { type: "done"; id: string; metadata?: Record<string, unknown> }
   | { type: "error"; message?: string; code?: string };
 

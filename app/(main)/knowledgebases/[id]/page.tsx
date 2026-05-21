@@ -17,6 +17,7 @@ import {
   Settings,
   Trash2,
   Library,
+  Loader2,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -35,6 +36,7 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { useTabState } from "@/hooks/use-tab-state";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import type { KbDocumentRow } from "@/types/kb-document-row";
@@ -48,6 +50,12 @@ export default function KnowledgebasePage() {
   const knowledgebases = useAppStore((state) => state.knowledgebases);
   const kb = knowledgebases.find((k) => k.id === kbId);
   const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+
+  // Centralised hydration
+  const { isLoading: hydrationLoading } = useResourceHydration([
+    "knowledgebases",
+  ]);
+
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -71,12 +79,6 @@ export default function KnowledgebasePage() {
     onAfterMutation: loadKnowledgebases,
   });
 
-  useEffect(() => {
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases().catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const fetchDocuments = useCallback(() => {
     listDocuments(kbId)
       .then(setDocuments)
@@ -86,6 +88,14 @@ export default function KnowledgebasePage() {
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
+
+  if (hydrationLoading && knowledgebases.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!kb) return <NotFoundMessage entity="Knowledgebase" />;
 

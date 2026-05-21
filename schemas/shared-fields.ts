@@ -108,3 +108,47 @@ export const sixDigitCodeField = (label: string = "Code") =>
 export const contentField = z
   .string()
   .max(10000, "Content must be less than 10,000 characters");
+
+/**
+ * Standard UUID field validator.
+ * Used for primary and foreign keys across all entities.
+ */
+export const idField = z.string().uuid("Invalid ID format");
+
+/**
+ * Standard date field validator. Handles both Date objects and ISO strings.
+ * Coerces strings to Date objects automatically.
+ */
+export const dateField = z.coerce.date();
+
+/**
+ * Validates a string as a valid JSON array.
+ * Used for MCP command arguments and other array-based JSON configurations.
+ */
+export const jsonArraySchema = z.string().refine(
+  (val) => {
+    try {
+      return Array.isArray(JSON.parse(val));
+    } catch {
+      return false;
+    }
+  },
+  { message: "Must be a valid JSON array" },
+);
+
+/**
+ * Validates a string as a valid JSON object.
+ * Rejects arrays and primitives; requires a non-null object.
+ * Used for environment variables, headers, and metadata.
+ */
+export const jsonObjectSchema = z.string().refine(
+  (val) => {
+    try {
+      const p = JSON.parse(val);
+      return p !== null && typeof p === "object" && !Array.isArray(p);
+    } catch {
+      return false;
+    }
+  },
+  { message: "Must be a valid JSON object" },
+);

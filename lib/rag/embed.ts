@@ -1,9 +1,6 @@
 import { embed, embedMany } from "ai";
 import { getAiProvider } from "@/lib/chat/get-ai-provider";
 
-/** Output dimensions for nvidia/llama-nemotron-embed-vl-1b-v2 */
-export const EMBEDDING_DIMENSIONS = 2048;
-
 const MODEL_ID = "nvidia/llama-nemotron-embed-vl-1b-v2:free";
 
 /**

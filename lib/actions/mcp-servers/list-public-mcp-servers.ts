@@ -44,5 +44,5 @@ export async function listPublicMcpServers(): Promise<PublicMcpServer[]> {
   return rows.map((row) => ({
     ...row,
     isPublic: true as const,
-  }));
+  })) as unknown as PublicMcpServer[];
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameField, descriptionField } from "./shared-fields";
+import { nameField, descriptionField, idField } from "./shared-fields";
 
 /**
  * Validates knowledgebase rename operations with only the new name field.
@@ -24,12 +24,8 @@ export const createKnowledgebaseSchema = z.object({
   description: descriptionField,
 });
 
-export const deleteKnowledgebaseSchema = z.object({
-  id: z.string().uuid(),
-});
-
 export const addDocumentSchema = z.object({
-  kbId: z.string().min(1),
+  kbId: idField,
   name: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(100),
   size: z.number().int().positive().max(50_000_000),
@@ -37,5 +33,18 @@ export const addDocumentSchema = z.object({
 });
 
 export const deleteDocumentSchema = z.object({
-  documentId: z.string().min(1),
+  documentId: idField,
+});
+
+/**
+ * Validates the full knowledgebase object as stored in the database.
+ */
+export const knowledgebaseSchema = z.object({
+  id: idField,
+  userId: z.string(),
+  name: nameField,
+  description: descriptionField,
+  documentCount: z.number().int().nonnegative(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });

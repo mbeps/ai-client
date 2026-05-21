@@ -26,12 +26,9 @@ import type { FileBridgeResult } from "@/types/file-bridge-result";
 import type { TransformStep } from "@/types/transform-agent";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 
 export const maxDuration = 300;
-
-
-const encode = (data: object): Uint8Array =>
-  new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
 
 const requestSchema = z.discriminatedUnion("type", [
   createTransformRunSchema.extend({ type: z.literal("new") }),
@@ -55,17 +52,11 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify(parsed.error.issues), { status: 400 });
   }
 
-  const sseHeaders = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  };
-
   const stream = new ReadableStream({
     async start(controller) {
       const emit = (data: object) => {
         try {
-          controller.enqueue(encode(data));
+          controller.enqueue(encodeSSE(data));
         } catch {
           // stream may already be closed
         }
@@ -98,24 +89,24 @@ export async function POST(req: Request) {
           }
 
           // Create a new run record
-          const inputAttachmentIdsValue = Array.isArray(
-            parsed.data.inputAttachmentIds,
-          )
-            ? parsed.data.inputAttachmentIds
-            : typeof parsed.data.inputAttachmentIds === "string"
-              ? JSON.parse(parsed.data.inputAttachmentIds)
-              : [];
-
           const [created] = await db
             .insert(transformRun)
-            .values({
-              agentId: parsed.data.agentId,
-              userId: session.user.id,
-              status: "running",
-              dryRun: parsed.data.dryRun ?? false,
-              inputAttachmentIds: JSON.stringify(inputAttachmentIdsValue),
-              outputAttachmentIds: "[]",
-            })
+            .values([
+              {
+                agentId: parsed.data.agentId,
+                userId: session.user.id,
+                status: "running",
+                dryRun: parsed.data.dryRun ?? false,
+                inputAttachmentIds: Array.isArray(
+                  parsed.data.inputAttachmentIds,
+                )
+                  ? parsed.data.inputAttachmentIds
+                  : parsed.data.inputAttachmentIds
+                    ? [parsed.data.inputAttachmentIds]
+                    : [],
+                outputAttachmentIds: [],
+              },
+            ])
             .returning();
           runRow = created;
           startFromStep = 0;
@@ -278,12 +269,8 @@ export async function POST(req: Request) {
         let attachmentRows: (typeof attachment.$inferSelect)[] = [];
 
         if (agentRow.requiresFileUpload) {
-          const currentOutputIds: string[] = JSON.parse(
-            runRow.outputAttachmentIds || "[]",
-          );
-          const inputIds: string[] = JSON.parse(
-            runRow.inputAttachmentIds || "[]",
-          );
+          const currentOutputIds: string[] = runRow.outputAttachmentIds;
+          const inputIds: string[] = runRow.inputAttachmentIds;
           stageIds =
             startFromStep > 0 && currentOutputIds.length > 0
               ? currentOutputIds
@@ -417,20 +404,13 @@ export async function POST(req: Request) {
             ...(step.toolIds || []),
           ]);
 
-          // Filter tools by config
           const filteredTools =
             allowedToolIds.size > 0
               ? Object.fromEntries(
                   Object.entries(tools).filter(([name]) => {
-                    return Array.from(allowedToolIds).some((id) => {
-                      // Handle structured IDs: serverId:tool:toolName
-                      if (id.includes(":tool:")) {
-                        const parts = id.split(":");
-                        return parts[parts.length - 1] === name;
-                      }
-                      // fallback to exact match (e.g. manage_artifact)
-                      return id === name;
-                    });
+                    return Array.from(allowedToolIds).some((id) =>
+                      id.endsWith(`:${name}`),
+                    );
                   }),
                 )
               : tools;
@@ -494,9 +474,7 @@ export async function POST(req: Request) {
               await db
                 .update(transformRun)
                 .set({
-                  outputAttachmentIds: JSON.stringify(
-                    currentOutputAttachmentIds,
-                  ),
+                  outputAttachmentIds: currentOutputAttachmentIds,
                 })
                 .where(eq(transformRun.id, runRow.id));
             }
@@ -599,5 +577,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return new Response(stream, { headers: sseHeaders });
+  return new Response(stream, { headers: SSE_HEADERS });
 }

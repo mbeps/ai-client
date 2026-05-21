@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { assistant, chat } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
 
 /**
  * Deletes an AI assistant persona and unbinds it from all chats for the authenticated user.
@@ -22,14 +21,8 @@ import { and, eq } from "drizzle-orm";
 export async function deleteAssistant(id: string): Promise<void> {
   const session = await requireSession();
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(chat)
-      .set({ assistantId: null })
-      .where(and(eq(chat.assistantId, id), eq(chat.userId, session.user.id)));
-
-    await tx
-      .delete(assistant)
-      .where(and(eq(assistant.id, id), eq(assistant.userId, session.user.id)));
+  await deleteResourceWithUnbind(assistant, id, session.user.id, {
+    table: chat,
+    field: chat.assistantId,
   });
 }

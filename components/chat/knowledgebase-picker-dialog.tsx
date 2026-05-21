@@ -36,7 +36,7 @@ export function KnowledgebasePickerDialog({
   const filtered = knowledgebases.filter(
     (kb) =>
       kb.name.toLowerCase().includes(search.toLowerCase()) ||
-      kb.description.toLowerCase().includes(search.toLowerCase()),
+      (kb.description || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -118,9 +118,7 @@ export function KnowledgebasePickerDialog({
             <div className="px-4 py-3 border-t flex items-center justify-between bg-muted/20 shrink-0">
               <p className="text-xs text-muted-foreground">
                 <strong>{selectedKbs.size}</strong>{" "}
-                {selectedKbs.size === 1
-                  ? "knowledge base"
-                  : "knowledge bases"}{" "}
+                {selectedKbs.size === 1 ? "knowledge base" : "knowledge bases"}{" "}
                 selected
               </p>
               <div className="flex items-center gap-2">

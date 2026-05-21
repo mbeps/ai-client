@@ -36,6 +36,7 @@ export async function createProject(
       description: validated.description ?? null,
       globalPrompt: validated.globalPrompt ?? null,
       tools: validated.tools ?? [],
+      knowledgebaseId: validated.knowledgebaseId ?? null,
       userId: session.user.id,
     })
     .returning();

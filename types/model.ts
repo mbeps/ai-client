@@ -14,4 +14,10 @@ export interface Model {
 
   /** Provider-specific model identifier (e.g., "gpt-4-turbo", "claude-3-opus-20240229"). */
   value: string;
+
+  /** Optional category for grouping models (e.g., "Standard", "Reasoning", "Vision"). */
+  category?: string;
+
+  /** Whether this is a 'thinking' model that supports reasoning tokens. */
+  isThinking?: boolean;
 }

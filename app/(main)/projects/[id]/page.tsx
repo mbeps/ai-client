@@ -48,6 +48,7 @@ import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
 import { useState, useEffect, useMemo } from "react";
 import { useTabState } from "@/hooks/use-tab-state";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { toast } from "sonner";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import {
@@ -85,7 +86,14 @@ export default function ProjectPage() {
   const knowledgebases = useAppStore((state) => state.knowledgebases);
   const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
 
-  const [loading, setLoading] = useState(projects.length === 0);
+  // Centralised hydration for all required entities
+  const { isLoading: hydrationLoading } = useResourceHydration([
+    "projects",
+    "mcpServers",
+    "knowledgebases",
+  ]);
+
+  const [loadingChats, setLoadingChats] = useState(false);
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [globalPrompt, setGlobalPrompt] = useState(project?.globalPrompt ?? "");
@@ -110,22 +118,16 @@ export default function ProjectPage() {
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [chats, searchQuery]);
 
+  // Load project-specific chats on mount if not already loaded into store
   useEffect(() => {
-    if (projects.length === 0) {
-      Promise.all([
-        loadProjects(),
-        listChats()
-          .then((rows) => loadChats(rows, []))
-          .catch(() => {}),
-      ]).finally(() => setLoading(false));
+    // Only load chats if they seem missing for this project in the global store
+    if (chats.length === 0) {
+      setLoadingChats(true);
+      listChats()
+        .then((rows) => loadChats(rows, []))
+        .finally(() => setLoadingChats(false));
     }
-    if (mcpServers.length === 0) {
-      loadMcpServers().catch(() => {});
-    }
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases().catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (project) {
@@ -136,6 +138,8 @@ export default function ProjectPage() {
       setSelectedKbId(project.knowledgebaseId ?? null);
     }
   }, [project]);
+
+  const loading = hydrationLoading || (projects.length === 0 && !project);
 
   if (loading) {
     return (

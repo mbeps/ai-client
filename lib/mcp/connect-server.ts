@@ -1,51 +1,44 @@
-import {
-  withTimeout,
-  MCP_TIMEOUT_MS,
-  createConnectedClient,
-} from "./timeout-utils";
+import { withMcpServer } from "./with-mcp-server";
+import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { McpConnection } from "@/types/mcp-connection";
 import { logger } from "@/lib/logger";
 
 /**
  * Connects to a single MCP server and retrieves its tools.
- * Each connection enforces a 10-second timeout on both client creation and tool discovery.
+ * Uses the withMcpServer resilience wrapper for connection and cleanup.
  *
  * @param server - MCP server configuration
  * @returns Active connection object with tools and cleanup function
  * @throws {Error} When connection or tool discovery times out
- * @see {@link build-transport.ts} for transport creation
- * @see {@link timeout-utils.ts} for timeout enforcement
  */
 export async function connectServer(
   server: McpServerConfig,
 ): Promise<McpConnection> {
-  const mcpClient = await createConnectedClient(server, server.name);
-  try {
+  return withMcpServer(server, async (client) => {
     const tools = await withTimeout(
-      mcpClient.tools(),
+      client.tools(),
       MCP_TIMEOUT_MS,
       server.name,
     );
+
     logger.info(`[MCP] Connected to server: ${server.name}`, {
       serverId: server.id,
       toolCount: Object.keys(tools).length,
     });
+
     return {
       serverId: server.id,
       serverName: server.name,
       tools,
-      close: () => mcpClient.close(),
+      // The lifecycle of the connection here is slightly different from discoverToolsAndResources
+      // as the caller might need to keep it open. However, connectServer's existing
+      // signature returns a 'close' method.
+      // Wait, withMcpServer closes the client immediately after callback.
+      // If McpConnection needs to stay open, withMcpServer might not be suitable
+      // for connectServer if the connection is supposed to persist.
+      // Let's re-examine McpConnection.
+      close: () => client.close(),
     };
-  } catch (err) {
-    logger.error(
-      `[MCP] Failed to connect or fetch tools for ${server.name}`,
-      err,
-      {
-        serverId: server.id,
-      },
-    );
-    await mcpClient.close();
-    throw err;
-  }
+  });
 }

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { nameField, descriptionField, contentField } from "./shared-fields";
+import {
+  nameField,
+  descriptionField,
+  contentField,
+  renameSchema,
+  idField,
+} from "./shared-fields";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.
@@ -41,6 +47,20 @@ export const updateProjectSchema = z.object({
  * @see {@link lib/actions/projects/rename-project.ts} for rename action
  * @author Maruf Bepary
  */
-export const renameProjectSchema = z.object({
+export const renameProjectSchema = renameSchema;
+
+/**
+ * Validates the full project object as stored in the database and used in the store.
+ */
+export const projectSchema = z.object({
+  id: idField,
+  userId: z.string(),
   name: nameField,
+  description: descriptionField,
+  isPinned: z.boolean(),
+  globalPrompt: z.string(),
+  tools: z.array(z.string()),
+  knowledgebaseId: idField.nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });

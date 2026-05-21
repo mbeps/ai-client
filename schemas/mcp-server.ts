@@ -1,40 +1,6 @@
 import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
-
-/**
- * Validates JSON string as a valid JSON array (e.g., for MCP command arguments).
- * Rejects non-arrays, non-JSON, and strings — strict JSON array format required.
- *
- * @author Maruf Bepary
- */
-const jsonArraySchema = z.string().refine(
-  (val) => {
-    try {
-      return Array.isArray(JSON.parse(val));
-    } catch {
-      return false;
-    }
-  },
-  { message: "Must be a valid JSON array" },
-);
-
-/**
- * Validates JSON string as a valid JSON object (e.g., for environment variables or headers).
- * Rejects arrays, non-JSON, and non-objects — strict JSON object format required.
- *
- * @author Maruf Bepary
- */
-const jsonObjectSchema = z.string().refine(
-  (val) => {
-    try {
-      const p = JSON.parse(val);
-      return p !== null && typeof p === "object" && !Array.isArray(p);
-    } catch {
-      return false;
-    }
-  },
-  { message: "Must be a valid JSON object" },
-);
+import { jsonArraySchema, jsonObjectSchema, idField } from "./shared-fields";
 
 /**
  * Validates MCP stdio command paths blocking absolute paths and traversal attacks.
@@ -67,7 +33,7 @@ const commandSchema = z
  * @see {@link lib/mcp/} for MCP server creation/update actions
  * @author Maruf Bepary
  */
-export const mcpServerSchema = z.discriminatedUnion("type", [
+const mcpServerBaseSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("stdio"),
     name: z.string().min(1, "Name is required").max(100),
@@ -92,22 +58,37 @@ export const mcpServerSchema = z.discriminatedUnion("type", [
 ]);
 
 /**
- * Alias for mcpServerSchema used during new MCP server creation.
+ * Validates new MCP server creation.
  * Validates complete server configuration before persistence.
  *
  * @see {@link lib/mcp/} for creation action
  * @author Maruf Bepary
  */
-export const createMcpServerSchema = mcpServerSchema;
+export const createMcpServerSchema = mcpServerBaseSchema;
 
 /**
- * Alias for mcpServerSchema used during MCP server updates.
+ * Validates MCP server updates.
  * Validates complete server configuration before persistence (does not support partial updates).
  *
  * @see {@link lib/mcp/} for update action
  * @author Maruf Bepary
  */
-export const updateMcpServerSchema = mcpServerSchema;
+export const updateMcpServerSchema = mcpServerBaseSchema;
 
-export type CreateMcpServer = z.infer<typeof mcpServerSchema>;
-export type UpdateMcpServer = z.infer<typeof mcpServerSchema>;
+/**
+ * Validates the full MCP server object as stored in the database.
+ */
+export const mcpServerSchema = z
+  .object({
+    id: idField,
+    userId: z.string(),
+    name: z.string(),
+    enabled: z.boolean(),
+    isPublic: z.boolean(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  })
+  .and(mcpServerBaseSchema);
+
+export type CreateMcpServer = z.infer<typeof createMcpServerSchema>;
+export type UpdateMcpServer = z.infer<typeof updateMcpServerSchema>;

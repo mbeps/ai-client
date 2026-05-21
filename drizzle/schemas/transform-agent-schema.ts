@@ -60,8 +60,14 @@ export const transformRun = pgTable(
       .default("pending"),
     currentStepIndex: integer("current_step_index"),
     dryRun: boolean("dry_run").notNull().default(false),
-    inputAttachmentIds: text("input_attachment_ids").notNull().default("[]"),
-    outputAttachmentIds: text("output_attachment_ids").notNull().default("[]"),
+    inputAttachmentIds: text("input_attachment_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    outputAttachmentIds: text("output_attachment_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

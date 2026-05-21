@@ -33,8 +33,12 @@ export async function createTransformRun(
       userId: session.user.id,
       status: "pending",
       dryRun: validated.dryRun ?? false,
-      inputAttachmentIds: JSON.stringify(validated.inputAttachmentIds),
-      outputAttachmentIds: "[]",
+      inputAttachmentIds: Array.isArray(validated.inputAttachmentIds)
+        ? validated.inputAttachmentIds
+        : validated.inputAttachmentIds
+          ? [validated.inputAttachmentIds]
+          : [],
+      outputAttachmentIds: [],
     })
     .returning();
 

@@ -42,10 +42,10 @@ import type { PublicMcpServer } from "@/types/public-mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
-import { MODELS } from "@/constants/models";
-import { Model } from "@/types/model";
+import { DEFAULT_MODEL } from "@/constants/models";
 import { MentionCommands } from "./mention-commands";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
+import { ModelSelector } from "@/components/shared/model-selector";
 import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 
 /**
@@ -157,10 +157,8 @@ export function ChatInput({
   submitLabel,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
-  const [model, setModel] = useState<Model>(
-    initialModelId
-      ? MODELS.find((m) => m.value === initialModelId) || MODELS[0]
-      : MODELS[0],
+  const [modelId, setModelId] = useState<string>(
+    initialModelId || DEFAULT_MODEL,
   );
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
@@ -252,7 +250,7 @@ export function ChatInput({
       onSend(
         input,
         attachments,
-        model.value,
+        modelId,
         Array.from(selectedServerIds),
         Array.from(selectedTools),
         Array.from(selectedResources),
@@ -609,28 +607,11 @@ export function ChatInput({
             </Popover>
           )}
 
-          <Combobox
-            items={MODELS}
-            value={model}
-            onValueChange={(val) => val && setModel(val as Model)}
-            itemToStringValue={(m) => (m as Model).label}
-          >
-            <ComboboxInput
-              placeholder={model.label}
-              className="h-7 w-[180px] border-none bg-transparent shadow-none text-xs text-muted-foreground"
-              showClear={false}
-            />
-            <ComboboxContent>
-              <ComboboxEmpty>No models found.</ComboboxEmpty>
-              <ComboboxList>
-                {(m) => (
-                  <ComboboxItem key={(m as Model).value} value={m}>
-                    {(m as Model).label}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+          <ModelSelector
+            value={modelId}
+            onValueChange={setModelId}
+            showTrigger={false}
+          />
         </div>
 
         <div className="flex items-center gap-1">
