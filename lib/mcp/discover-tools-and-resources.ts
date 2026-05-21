@@ -3,56 +3,76 @@ import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
 import type { McpServerConfig } from "@/types/mcp-server-config";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { DiscoveredResource } from "@/types/discovered-resource";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { logger } from "@/lib/logger";
 
 /**
- * Discovers all tools and resources available from an MCP server.
+ * Discovers all tools, resources, and prompts available from an MCP server.
  * Uses the withMcpServer resilience wrapper.
  * All operations use 10-second timeouts to prevent hanging.
  *
  * @param server - MCP server configuration with connection details
- * @returns Object containing arrays of discovered tools and resources, or empty arrays if discovery fails
+ * @returns Object containing arrays of discovered tools, resources, and prompts, or empty
+ arrays if discovery fails
  */
 export async function discoverToolsAndResources(
   server: McpServerConfig,
-): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
+): Promise<{ 
+  tools: DiscoveredTool[]; 
+  resources: DiscoveredResource[];
+  prompts: DiscoveredPrompt[];
+}> {
   return withMcpServer(server, async (client) => {
     try {
       const tools: DiscoveredTool[] = [];
       const resources: DiscoveredResource[] = [];
+      const prompts: DiscoveredPrompt[] = [];
 
       // Fetch Tools
-      let toolCursor: string | undefined;
-      do {
-        const result = await withTimeout(
-          client.listTools({
-            params: toolCursor ? { cursor: toolCursor } : undefined,
-          }),
-          MCP_TIMEOUT_MS,
-          `discoverTools listTools: ${server.name}`,
-        );
+      try {
+        let toolCursor: string | undefined;
+        do {
+          const result = (await withTimeout(
+            client.listTools({
+              params: toolCursor ? { cursor: toolCursor } : undefined,
+            }),
+            MCP_TIMEOUT_MS,
+            `discoverTools listTools: ${server.name}`,
+          )) as any;
 
-        for (const tool of result.tools) {
-          tools.push({
-            name: tool.name,
-            description: tool.description ?? "",
-            inputSchema: tool.inputSchema as Record<string, unknown>,
+          for (const tool of result.tools) {
+            tools.push({
+              name: tool.name,
+              description: tool.description ?? "",
+              inputSchema: tool.inputSchema as Record<string, unknown>,
+            });
+          }
+          toolCursor = result.nextCursor;
+        } while (toolCursor);
+      } catch (e: any) {
+        if (
+          e?.message?.includes("Server does not support tools") ||
+          e?.message?.includes("Method not found")
+        ) {
+          // Expected behavior
+        } else {
+          logger.error(`[MCP] Failed to list tools for ${server.name}`, e, {
+            serverId: server.id,
           });
         }
-        toolCursor = result.nextCursor;
-      } while (toolCursor);
+      }
 
       // Fetch Resources
       try {
         let resCursor: string | undefined;
         do {
-          const result = await withTimeout(
+          const result = (await withTimeout(
             client.listResources({
               params: resCursor ? { cursor: resCursor } : undefined,
             }),
             MCP_TIMEOUT_MS,
             `discoverTools listResources: ${server.name}`,
-          );
+          )) as any;
 
           if (result.resources) {
             for (const res of result.resources) {
@@ -71,7 +91,7 @@ export async function discoverToolsAndResources(
           e?.message?.includes("Server does not support resources") ||
           e?.message?.includes("Method not found")
         ) {
-          // Expected behavior for servers that only implement tools
+          // Expected behavior
         } else {
           logger.error(`[MCP] Failed to list resources for ${server.name}`, e, {
             serverId: server.id,
@@ -81,11 +101,11 @@ export async function discoverToolsAndResources(
 
       // Fetch Resource Templates
       try {
-        const templateResult = await withTimeout(
+        const templateResult = (await withTimeout(
           client.listResourceTemplates(),
           MCP_TIMEOUT_MS,
           `discoverTools listResourceTemplates: ${server.name}`,
-        );
+        )) as any;
 
         if (templateResult.resourceTemplates) {
           for (const tmpl of templateResult.resourceTemplates) {
@@ -112,16 +132,59 @@ export async function discoverToolsAndResources(
         }
       }
 
+      // Fetch Prompts
+      try {
+        let promptCursor: string | undefined;
+        do {
+          const result = (await withTimeout(
+            client.experimental_listPrompts({
+              params: promptCursor ? { cursor: promptCursor } : undefined,
+            }),
+            MCP_TIMEOUT_MS,
+            `discoverTools listPrompts: ${server.name}`,
+          )) as any;
+
+          if (result.prompts) {
+            for (const prompt of result.prompts) {
+              prompts.push({
+                name: prompt.name,
+                description: prompt.description ?? "",
+                arguments: prompt.arguments?.map((arg: any) => ({
+                  name: arg.name,
+                  description: arg.description ?? "",
+                  required: arg.required ?? false,
+                })),
+                serverId: server.id,
+                serverName: server.name,
+              });
+            }
+          }
+          promptCursor = result.nextCursor;
+        } while (promptCursor);
+      } catch (e: any) {
+        if (
+          e?.message?.includes("Server does not support prompts") ||
+          e?.message?.includes("Method not found")
+        ) {
+          // Expected behavior
+        } else {
+          logger.error(`[MCP] Failed to list prompts for ${server.name}`, e, {
+            serverId: server.id,
+          });
+        }
+      }
+
       logger.info(
-        `[MCP] Discovered ${tools.length} tools and ${resources.length} resources for ${server.name}`,
+        `[MCP] Discovered ${tools.length} tools, ${resources.length} resources, and ${prompts.length} prompts for ${server.name}`,
         {
           serverId: server.id,
           toolCount: tools.length,
           resourceCount: resources.length,
+          promptCount: prompts.length,
         },
       );
 
-      return { tools, resources };
+      return { tools, resources, prompts };
     } finally {
       await client.close();
     }

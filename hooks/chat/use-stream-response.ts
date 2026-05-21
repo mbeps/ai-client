@@ -112,15 +112,42 @@ export function useStreamResponse(
     }
 
     if (selectedPromptId) {
-      const prompts = useAppStore.getState().prompts;
-      const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
-      if (selectedPrompt) {
-        fullContent =
-          selectedPrompt.content +
-          PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
-          content;
-        metadataObj.promptId = selectedPromptId;
-        metadataObj.userContent = content;
+      if (selectedPromptId.startsWith("mcp:")) {
+        const parts = selectedPromptId.split(":");
+        const serverId = parts[1];
+        const promptName = parts.slice(2).join(":");
+
+        try {
+          const { getMcpPrompt } = await import("@/lib/actions/mcp/get-mcp-prompt");
+          const mcpPromptResult = await getMcpPrompt(serverId, promptName);
+          const mcpContent = (mcpPromptResult as any).messages
+            .map((m: any) => {
+              if (typeof m.content === "string") return m.content;
+              if (m.content?.type === "text") return m.content.text;
+              if (m.content?.text) return m.content.text;
+              return "";
+            })
+            .join("\n\n");
+
+          fullContent =
+            mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content;
+          metadataObj.promptId = selectedPromptId;
+          metadataObj.userContent = content;
+        } catch (err) {
+          console.error("Failed to load MCP prompt:", err);
+          toast.error("Failed to load MCP prompt. Sending message without it.");
+        }
+      } else {
+        const prompts = useAppStore.getState().prompts;
+        const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
+        if (selectedPrompt) {
+          fullContent =
+            selectedPrompt.content +
+            PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+            content;
+          metadataObj.promptId = selectedPromptId;
+          metadataObj.userContent = content;
+        }
       }
     }
 

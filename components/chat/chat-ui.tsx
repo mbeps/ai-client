@@ -11,6 +11,7 @@ import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
 import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { extractCitations } from "@/lib/store/mappers/message-mapper";
 
 import { DEFAULT_MODEL } from "@/constants/models";
@@ -59,6 +60,17 @@ export function ChatUI({
   const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
+
+  // Hydrate essential resources
+  useResourceHydration([
+    "mcpServers",
+    "publicMcpServers",
+    "assistants",
+    "projects",
+    "prompts",
+    "mcpPrompts",
+  ]);
+
   const currentAssistant = chat?.assistantId
     ? assistants.find((a) => a.id === chat.assistantId)
     : undefined;
