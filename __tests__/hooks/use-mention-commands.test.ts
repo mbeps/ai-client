@@ -363,4 +363,89 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBeNull();
     });
   });
+
+  describe("MCP prompt filtering", () => {
+    const SAMPLE_MCP_PROMPTS = [
+      {
+        serverId: "s1",
+        serverName: "Server 1",
+        name: "prompt1",
+        description: "Prompt 1",
+      },
+      {
+        serverId: "s2",
+        serverName: "Server 2",
+        name: "prompt2",
+        description: "Prompt 2",
+      },
+    ];
+
+    beforeEach(() => {
+      useAppStore.setState({ mcpPrompts: SAMPLE_MCP_PROMPTS as any });
+    });
+
+    it("filters MCP prompts by selectedServerIds", () => {
+      const setInput = vi.fn();
+      const selectedServerIds = new Set(["s1"]);
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          selectedServerIds,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      // Should show local prompts + MCP prompts from s1
+      const mcpItems = result.current.filteredItems.filter((i: any) => i.isMcp);
+      expect(mcpItems).toHaveLength(1);
+      expect(mcpItems[0].title).toBe("prompt1");
+    });
+
+    it("shows no MCP prompts if selectedServerIds is provided but empty", () => {
+      const setInput = vi.fn();
+      const selectedServerIds = new Set<string>();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          selectedServerIds,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      const mcpItems = result.current.filteredItems.filter((i: any) => i.isMcp);
+      expect(mcpItems).toHaveLength(0);
+    });
+
+    it("shows all MCP prompts if selectedServerIds is not provided (backward compatibility)", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      const mcpItems = result.current.filteredItems.filter((i: any) => i.isMcp);
+      expect(mcpItems).toHaveLength(SAMPLE_MCP_PROMPTS.length);
+    });
+  });
 });

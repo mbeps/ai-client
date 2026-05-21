@@ -18,6 +18,7 @@ import {
   Command,
   Bot,
   Database,
+  Zap,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/constants/routes";
@@ -208,6 +209,7 @@ export function ChatInput({
     initialSelectedPromptId,
     initialSelectedAssistantId,
     canMentionAssistant,
+    selectedServerIds,
   );
 
   useAutoExpandingTextarea(textareaRef, [input]);
@@ -462,14 +464,24 @@ export function ChatInput({
           )}
           {selectedPrompt && (
             <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
-              <Command className="h-3 w-3 text-muted-foreground" />
-              <Link
-                href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
-                className="truncate max-w-[160px] hover:underline"
-                target="_blank"
-              >
-                /{selectedPrompt.shortcut || selectedPrompt.title}
-              </Link>
+              {selectedPrompt.isMcp ? (
+                <Zap className="h-3 w-3 text-amber-500" />
+              ) : (
+                <Command className="h-3 w-3 text-muted-foreground" />
+              )}
+              {selectedPrompt.isMcp ? (
+                <span className="truncate max-w-[160px]">
+                  /{(selectedPrompt as any).title}
+                </span>
+              ) : (
+                <Link
+                  href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
+                  className="truncate max-w-[160px] hover:underline"
+                  target="_blank"
+                >
+                  /{(selectedPrompt as any).shortcut || (selectedPrompt as any).title}
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedPrompt(null)}

@@ -8,13 +8,14 @@ import { discoverToolsAndResources } from "./discover-tools-and-resources";
 import { mcpServerRowToConfig } from "./mappers";
 import type { DiscoveredTool } from "@/types/discovered-tool";
 import type { DiscoveredResource } from "@/types/discovered-resource";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 
 /**
- * Discovers available tools and resources exposed by an MCP server.
+ * Discovers available tools, resources, and prompts exposed by an MCP server.
  * Fetches the server configuration from the database and connects to it to retrieve tool metadata.
  *
  * @param serverId - UUID of the MCP server to discover tools for; must be owned by the authenticated user OR be public.
- * @returns Object with arrays of discovered tools and resources (tool names, descriptions, input schemas).
+ * @returns Object with arrays of discovered tools, resources, and prompts.
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if server does not exist or user does not own it and it is not public (returns "Not Found").
  * @throws Error if MCP server connection fails (network error, invalid configuration, timeout).
@@ -24,7 +25,11 @@ import type { DiscoveredResource } from "@/types/discovered-resource";
  */
 export async function discoverMcpServerTools(
   serverId: string,
-): Promise<{ tools: DiscoveredTool[]; resources: DiscoveredResource[] }> {
+): Promise<{ 
+  tools: DiscoveredTool[]; 
+  resources: DiscoveredResource[];
+  prompts: DiscoveredPrompt[];
+}> {
   const session = await requireSession();
 
   const [row] = await db
