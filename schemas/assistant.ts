@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { nameField, descriptionField, contentField } from "./shared-fields";
+import {
+  nameField,
+  descriptionField,
+  contentField,
+  renameSchema,
+} from "./shared-fields";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.
@@ -41,6 +46,19 @@ export const updateAssistantSchema = z.object({
  * @see {@link lib/actions/assistants/rename-assistant.ts} for rename action
  * @author Maruf Bepary
  */
-export const renameAssistantSchema = z.object({
+export const renameAssistantSchema = renameSchema;
+
+/**
+ * Validates the full assistant object as stored in the database.
+ */
+export const assistantSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
   name: nameField,
+  description: z.string(),
+  prompt: z.string(),
+  tools: z.array(z.string()),
+  avatar: z.string().url().max(1024).nullable().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });

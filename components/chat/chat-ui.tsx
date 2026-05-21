@@ -11,7 +11,7 @@ import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
 import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
-import { extractCitations } from "@/lib/chat/parse-message-metadata";
+import { extractCitations } from "@/lib/store/mappers/message-mapper";
 
 import { DEFAULT_MODEL } from "@/constants/models";
 import { Bot } from "lucide-react";
@@ -398,6 +398,7 @@ export function ChatUI({
                         createdAt: new Date(),
                         parentId: null,
                         childrenIds: [],
+                        metadata: null,
                       }}
                       isLatest={true}
                       onDelete={() => {}}

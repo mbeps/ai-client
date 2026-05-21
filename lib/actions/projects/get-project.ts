@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import { whereOwner, verifyOwnership } from "@/lib/utils/db-helpers";
+import { getOwnedResource } from "@/lib/utils/db-helpers";
 import type { ProjectRow } from "@/types/project-row";
 
 /**
@@ -19,11 +18,5 @@ import type { ProjectRow } from "@/types/project-row";
  */
 export async function getProject(id: string): Promise<ProjectRow> {
   const session = await requireSession();
-
-  const [row] = await db
-    .select()
-    .from(project)
-    .where(whereOwner(project, id, session.user.id));
-
-  return verifyOwnership(row);
+  return getOwnedResource<ProjectRow>(project, id, session.user.id);
 }

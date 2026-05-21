@@ -30,3 +30,16 @@ export const createPromptSchema = z.object({
  * @author Maruf Bepary
  */
 export const updatePromptSchema = createPromptSchema.partial();
+
+/**
+ * Validates the full prompt object as stored in the database.
+ */
+export const promptSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
+  title: z.string().min(1).max(100),
+  shortcut: z.string().min(1).max(50),
+  content: z.string().min(1),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});

@@ -1,3 +1,8 @@
+import { z } from "zod";
+import { persistMessageSchema } from "@/schemas/chat";
+import type { Message } from "@/types/message";
+import type { Attachment } from "@/types/attachment";
+
 export type ToolCall = {
   toolCallId: string;
   toolName: string;
@@ -25,16 +30,12 @@ export type ParsedMessageMetadata = {
   selectedServerIds: string[] | null;
   selectedTools: string[] | null;
   selectedKbIds: string[] | null;
+  reasoning: string | undefined;
 };
 
 /**
- * Parses message metadata JSON once and extracts all three concerns
- * (prompt shortcut info, tool calls, and model identifier) in a single pass.
- * Eliminates the triple JSON.parse that existed in the original three
- * standalone functions.
- *
- * @param metadata - Stringified JSON metadata from a message row.
- * @returns Object with promptMeta, toolData, and modelId (all nullable).
+ * Parses message metadata JSON once and extracts all concerns
+ * (prompt shortcut info, tool calls, model identifier, and reasoning) in a single pass.
  */
 export function parseMessageMetadata(
   metadata: string | null | undefined,
@@ -46,10 +47,14 @@ export function parseMessageMetadata(
     selectedServerIds: null,
     selectedTools: null,
     selectedKbIds: null,
+    reasoning: undefined,
   };
+
   if (!metadata) return empty;
+
   try {
-    const parsed = JSON.parse(metadata);
+    const parsed =
+      typeof metadata === "string" ? JSON.parse(metadata) : metadata;
 
     const promptMeta =
       typeof parsed.promptId === "string" &&
@@ -81,6 +86,9 @@ export function parseMessageMetadata(
       ? (parsed.selectedKbIds as string[])
       : null;
 
+    const reasoning =
+      typeof parsed.reasoning === "string" ? parsed.reasoning : undefined;
+
     return {
       promptMeta,
       toolData,
@@ -88,23 +96,17 @@ export function parseMessageMetadata(
       selectedServerIds,
       selectedTools,
       selectedKbIds,
+      reasoning,
     };
-  } catch {
-    return {
-      ...empty,
-      selectedServerIds: null,
-      selectedTools: null,
-      selectedKbIds: null,
-    };
+  } catch (e) {
+    console.error("[MessageMapper] Metadata parse error:", e);
+    return empty;
   }
 }
 
 /**
  * Extracts RAG citations from tool results.
  * Identifies "search_knowledge_base" tool outputs and formats them.
- *
- * @param toolResults - Array of tool results from message metadata.
- * @returns Flattened array of Citation objects.
  */
 export function extractCitations(toolResults: ToolResult[]): Citation[] {
   const citations: Citation[] = [];
@@ -119,4 +121,32 @@ export function extractCitations(toolResults: ToolResult[]): Citation[] {
   }
 
   return citations;
+}
+
+/**
+ * Maps a message row from the database (including attachments) to a store-compatible Message object.
+ */
+export function mapMessageFromDb(
+  m: z.infer<typeof persistMessageSchema> & {
+    createdAt: Date | string | null;
+    chatId: string;
+  },
+  attachments: Attachment[] = [],
+): Message {
+  const { reasoning } = parseMessageMetadata(m.metadata);
+
+  return {
+    id: m.id,
+    role: m.role as "user" | "assistant",
+    content: m.content,
+    createdAt:
+      m.createdAt instanceof Date
+        ? m.createdAt
+        : new Date(m.createdAt || Date.now()),
+    parentId: m.parentId,
+    childrenIds: [], // Populated during tree reconstruction
+    metadata: m.metadata || null,
+    reasoning,
+    attachments,
+  };
 }

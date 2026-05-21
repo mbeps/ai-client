@@ -17,13 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
@@ -31,13 +24,14 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { MODELS } from "@/constants/models";
 import {
   LANGUAGES,
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
 } from "@/constants/languages";
 import { translateText } from "@/lib/actions/workflows/translate";
+import { ModelSelector } from "@/components/shared/model-selector";
+import { MODELS } from "@/constants/models";
 import { Model } from "@/types/model";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -187,18 +181,11 @@ export default function TranslationWorkflowPage() {
           <span className="text-[10px] font-medium text-muted-foreground uppercase">
             Model
           </span>
-          <Select value={modelId} onValueChange={setModelId}>
-            <SelectTrigger className="h-7 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MODELS.map((m) => (
-                <SelectItem key={m.value} value={m.value} className="text-xs">
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ModelSelector
+            value={modelId}
+            onValueChange={setModelId}
+            className="w-[140px]"
+          />
         </div>
       </div>
 

@@ -37,15 +37,14 @@ export function MentionCommands({
     <div
       className={cn(
         "z-50 w-[300px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
-        className
+        className,
       )}
     >
-      <Command
-        className="h-auto"
-        value={items[selectedIndex]?.id}
-      >
+      <Command className="h-auto" value={items[selectedIndex]?.id}>
         <CommandList className="max-h-[200px]">
-          <CommandEmpty>No {trigger === "/" ? "prompts" : "assistants"} found.</CommandEmpty>
+          <CommandEmpty>
+            No {trigger === "/" ? "prompts" : "assistants"} found.
+          </CommandEmpty>
           <CommandGroup heading={trigger === "/" ? "Prompts" : "Assistants"}>
             {items.map((item, index) => {
               const isPrompt = trigger === "/";
@@ -59,12 +58,13 @@ export function MentionCommands({
                   onSelect={() => onSelect(item)}
                   className={cn(
                     "flex items-center gap-2 py-2 px-3",
-                    index === selectedIndex && "bg-accent text-accent-foreground"
+                    index === selectedIndex &&
+                      "bg-accent text-accent-foreground",
                   )}
                 >
                   {!isPrompt && (
                     <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage src={assistant.avatar} />
+                      <AvatarImage src={assistant.avatar ?? undefined} />
                       <AvatarFallback>
                         <Bot className="h-4 w-4" />
                       </AvatarFallback>

@@ -35,3 +35,16 @@ export const addDocumentSchema = z.object({
 export const deleteDocumentSchema = z.object({
   documentId: idField,
 });
+
+/**
+ * Validates the full knowledgebase object as stored in the database.
+ */
+export const knowledgebaseSchema = z.object({
+  id: idField,
+  userId: z.string(),
+  name: nameField,
+  description: descriptionField,
+  documentCount: z.number().int().nonnegative(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});

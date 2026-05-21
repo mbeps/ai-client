@@ -57,6 +57,21 @@ export const moveChatSchema = z.object({
 });
 
 /**
+ * Validates the full chat object for the store.
+ */
+export const chatSchema = z.object({
+  id: idField,
+  title: z.string(),
+  projectId: idField.nullable().optional(),
+  assistantId: idField.nullable().optional(),
+  knowledgebaseId: idField.nullable().optional(),
+  projectName: z.string().optional(),
+  assistantName: z.string().optional(),
+  updatedAt: z.date(),
+  currentLeafId: idField.nullable(),
+});
+
+/**
  * Validates message metadata capturing AI reasoning, tool invocations, and results.
  * Stores optional tool calls array (with ids, names, args), tool results array, reasoning text, and model identifier.
  * Use when persisting extended message context with tool execution traces and AI thinking process.

@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { chatSchema } from "@/schemas/chat";
 import type { Message } from "./message";
 
 /**
@@ -11,41 +13,10 @@ import type { Message } from "./message";
  * @see Assistant for AI persona configuration
  * @author Maruf Bepary
  */
-export type Chat = {
-  /** Unique identifier for this chat (UUID). */
-  id: string;
-
-  /** User-visible chat title, typically auto-generated or user-edited. */
-  title: string;
-
-  /** Optional reference to the parent project for shared system prompts. */
-  projectId?: string;
-
-  /** Optional reference to the AI assistant (persona) for this chat. */
-  assistantId?: string;
-
-  /** Optional reference to a knowledge base attached to this chat for RAG retrieval. */
-  knowledgebaseId?: string | null;
-
-  /** Cached project name for optimistic UI rendering without additional lookups. */
-  projectName?: string;
-
-  /** Cached assistant name for optimistic UI rendering without additional lookups. */
-  assistantName?: string;
-
-  /** Timestamp of the last chat interaction (message creation, edit, or deletion). */
-  updatedAt: Date;
-
+export type Chat = z.infer<typeof chatSchema> & {
   /**
    * All messages in this chat keyed by message ID, forming a branching tree.
    * Child messages maintain references to parent IDs, enabling multi-path conversations.
    */
   messages: Record<string, Message>;
-
-  /**
-   * ID of the currently displayed message path leaf.
-   * Tracks which branch is "active" for rendering and continuation.
-   * Null when chat is empty.
-   */
-  currentLeafId: string | null;
 };

@@ -14,9 +14,11 @@ import type { Prompt } from "@/types/prompt";
 export function promptRowToStore(row: PromptRow): Prompt {
   return {
     id: row.id,
+    userId: row.userId,
     title: row.title,
     shortcut: row.shortcut,
     content: row.content,
+    createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   };
 }

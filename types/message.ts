@@ -1,4 +1,6 @@
 import type { Attachment } from "./attachment";
+import { z } from "zod";
+import { persistMessageSchema } from "@/schemas/chat";
 
 /**
  * Represents a single node in a branching message tree.
@@ -10,24 +12,15 @@ import type { Attachment } from "./attachment";
  * @see Attachment for file structure
  * @author Maruf Bepary
  */
-export type Message = {
-  /** Unique identifier for this message node (UUID). */
-  id: string;
-
+export type Message = Omit<
+  z.infer<typeof persistMessageSchema>,
+  "role" | "metadata"
+> & {
   /** Sender role: "user" for user messages, "assistant" for AI responses. */
   role: "user" | "assistant";
 
-  /** The message content in Markdown format, supporting KaTeX and Mermaid syntax. */
-  content: string;
-
   /** Timestamp of message creation (immutable after creation). */
   createdAt: Date;
-
-  /**
-   * ID of the parent message in the tree, or null for root messages.
-   * Enables traversal up the conversation branch.
-   */
-  parentId: string | null;
 
   /**
    * IDs of all direct child messages (alternative responses).
@@ -40,7 +33,7 @@ export type Message = {
    * Parsed by messageMetadataSchema; contains reasoning tokens for streaming responses.
    * Null if no tools or reasoning data is present.
    */
-  metadata?: string | null;
+  metadata: string | null;
 
   /**
    * Extended thinking content from models that support reasoning tokens.

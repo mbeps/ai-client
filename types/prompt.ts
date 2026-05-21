@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { promptSchema } from "@/schemas/prompt";
+
 /**
  * Represents a reusable prompt snippet accessible via slash-commands in the chat input.
  * Prompts enable power users to quickly insert predefined content (system instructions,
@@ -6,19 +9,4 @@
  *
  * @author Maruf Bepary
  */
-export type Prompt = {
-  /** Unique identifier for this prompt (UUID). */
-  id: string;
-
-  /** Human-readable title displayed in the slash-command palette. */
-  title: string;
-
-  /** Trigger text for the slash-command (e.g., "debug" for /debug). */
-  shortcut: string;
-
-  /** Prompt content inserted into the AI request when the shortcut is invoked. */
-  content: string;
-
-  /** Timestamp of the last modification to this prompt. */
-  updatedAt: Date;
-};
+export type Prompt = z.infer<typeof promptSchema>;

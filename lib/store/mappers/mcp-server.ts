@@ -7,6 +7,7 @@
 export function mcpServerRowToStore(r: any) {
   return {
     id: r.id,
+    userId: r.userId,
     name: r.name,
     type: r.type,
     command: r.command,

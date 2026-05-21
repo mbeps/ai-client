@@ -44,7 +44,7 @@ export default function ProjectsPage() {
         }
         filterFn={(p, q) =>
           p.name.toLowerCase().includes(q.toLowerCase()) ||
-          p.description.toLowerCase().includes(q.toLowerCase())
+          (p.description?.toLowerCase().includes(q.toLowerCase()) ?? false)
         }
       />
       <CreateProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />

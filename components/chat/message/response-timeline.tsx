@@ -1,6 +1,6 @@
 "use client";
 
-import type { ToolCall, ToolResult } from "@/lib/chat/parse-message-metadata";
+import type { ToolCall, ToolResult } from "@/lib/store/mappers/message-mapper";
 import { ThinkingDisplay } from "./thinking-display";
 import { ToolCallDisplay } from "./tool-call-display";
 import { useMemo } from "react";
@@ -23,7 +23,7 @@ export function ResponseTimeline({
   // Currently, we don't have true interleaving from the backend yet,
   // so we'll group them: Thinking first, then Tool Calls.
   // This structure allows us to easily add interleaved support later if the backend emits sequential steps.
-  
+
   const steps = useMemo(() => {
     const items: React.ReactNode[] = [];
     let stepCount = 0;
@@ -38,7 +38,7 @@ export function ResponseTimeline({
           isStreaming={isStreamingReasoning}
           initialOpen={isLatest && !!reasoning}
           stepNumber={stepCount}
-        />
+        />,
       );
     }
 
@@ -49,7 +49,7 @@ export function ResponseTimeline({
           key="tools"
           toolCalls={toolCalls}
           toolResults={toolResults ?? []}
-        />
+        />,
       );
     }
 

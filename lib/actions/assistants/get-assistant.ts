@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import { whereOwner, verifyOwnership } from "@/lib/utils/db-helpers";
+import { getOwnedResource } from "@/lib/utils/db-helpers";
 import type { AssistantRow } from "@/types/assistant-row";
 
 /**
@@ -18,11 +17,5 @@ import type { AssistantRow } from "@/types/assistant-row";
  */
 export async function getAssistant(id: string): Promise<AssistantRow> {
   const session = await requireSession();
-
-  const [row] = await db
-    .select()
-    .from(assistant)
-    .where(whereOwner(assistant, id, session.user.id));
-
-  return verifyOwnership(row);
+  return getOwnedResource<AssistantRow>(assistant, id, session.user.id);
 }

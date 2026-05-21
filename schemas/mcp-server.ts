@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
-import { jsonArraySchema, jsonObjectSchema } from "./shared-fields";
+import { jsonArraySchema, jsonObjectSchema, idField } from "./shared-fields";
 
 /**
  * Validates MCP stdio command paths blocking absolute paths and traversal attacks.
@@ -74,6 +74,21 @@ export const createMcpServerSchema = mcpServerBaseSchema;
  * @author Maruf Bepary
  */
 export const updateMcpServerSchema = mcpServerBaseSchema;
+
+/**
+ * Validates the full MCP server object as stored in the database.
+ */
+export const mcpServerSchema = z
+  .object({
+    id: idField,
+    userId: z.string(),
+    name: z.string(),
+    enabled: z.boolean(),
+    isPublic: z.boolean(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  })
+  .and(mcpServerBaseSchema);
 
 export type CreateMcpServer = z.infer<typeof createMcpServerSchema>;
 export type UpdateMcpServer = z.infer<typeof updateMcpServerSchema>;

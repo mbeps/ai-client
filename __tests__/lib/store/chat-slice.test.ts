@@ -561,7 +561,7 @@ describe("ChatSlice — DB actions", () => {
         updatedAt: now,
       });
       await useAppStore.getState().moveChatDb(chatId, null);
-      expect(useAppStore.getState().chats[chatId].projectId).toBeUndefined();
+      expect(useAppStore.getState().chats[chatId].projectId).toBeNull();
     });
   });
 

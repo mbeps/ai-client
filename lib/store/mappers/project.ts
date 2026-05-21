@@ -13,12 +13,14 @@ import type { Project } from "@/types/project";
 export function projectRowToStore(row: ProjectRow): Project {
   return {
     id: row.id,
+    userId: row.userId,
     name: row.name,
     description: row.description ?? "",
     isPinned: row.isPinned,
-    updatedAt: new Date(row.updatedAt),
     globalPrompt: row.globalPrompt ?? "",
     tools: row.tools ?? [],
     knowledgebaseId: row.knowledgebaseId ?? null,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
   };
 }

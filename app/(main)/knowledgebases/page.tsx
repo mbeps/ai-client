@@ -40,7 +40,7 @@ export default function KnowledgebasesPage() {
         }
         filterFn={(k, q) =>
           k.name.toLowerCase().includes(q.toLowerCase()) ||
-          k.description.toLowerCase().includes(q.toLowerCase())
+          (k.description?.toLowerCase().includes(q.toLowerCase()) ?? false)
         }
       />
       <CreateKnowledgebaseDialog

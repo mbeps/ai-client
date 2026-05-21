@@ -21,7 +21,7 @@ interface MoveChatDialogProps {
   /** The ID of the chat to be moved. */
   chatId: string;
   /** The current project ID of the chat, if any. */
-  currentProjectId?: string;
+  currentProjectId?: string | null;
 }
 
 /**

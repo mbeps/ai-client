@@ -17,7 +17,7 @@ import {
   parseMessageMetadata,
   extractCitations,
   type Citation,
-} from "@/lib/chat/parse-message-metadata";
+} from "@/lib/store/mappers/message-mapper";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CitationsList } from "./message/citations-list";
 import { ChatInput } from "./chat-input";
