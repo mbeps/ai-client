@@ -7,12 +7,14 @@ export type ToolCall = {
   toolCallId: string;
   toolName: string;
   args: unknown;
+  serverName?: string;
 };
 
 export type ToolResult = {
   toolCallId: string;
   toolName: string;
   result: unknown;
+  serverName?: string;
 };
 
 export type Citation = {

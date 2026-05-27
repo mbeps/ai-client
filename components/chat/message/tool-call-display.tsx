@@ -5,18 +5,26 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Terminal, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  Terminal,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ToolCall = {
   toolCallId: string;
   toolName: string;
+  serverName?: string;
   args: unknown;
 };
 
 type ToolResult = {
   toolCallId: string;
   toolName: string;
+  serverName?: string;
   result: unknown;
 };
 
@@ -39,7 +47,7 @@ export function ToolCallDisplay({
         );
         const isCompleted = !!result;
         const isError = isCompleted && (result.result as any)?.error;
-        
+
         return (
           <div key={tc.toolCallId} className="group/tool">
             <Collapsible className="w-full rounded-lg border border-muted bg-muted/20 overflow-hidden">
@@ -54,7 +62,9 @@ export function ToolCallDisplay({
                     )}
                   </div>
                   <span className="text-xs font-mono">
-                    {tc.toolName}
+                    {tc.serverName
+                      ? `${tc.serverName} > ${tc.toolName}`
+                      : tc.toolName}
                   </span>
                   {isCompleted && (
                     <div className="flex items-center gap-1.5 ml-2">
@@ -63,10 +73,12 @@ export function ToolCallDisplay({
                       ) : (
                         <CheckCircle2 className="size-3.5 text-success" />
                       )}
-                      <span className={cn(
-                        "text-[10px] uppercase font-bold",
-                        isError ? "text-destructive" : "text-success"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[10px] uppercase font-bold",
+                          isError ? "text-destructive" : "text-success",
+                        )}
+                      >
                         {isError ? "Failed" : "Success"}
                       </span>
                     </div>
@@ -79,7 +91,9 @@ export function ToolCallDisplay({
                   <div className="mt-2 space-y-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Arguments</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                          Arguments
+                        </span>
                         <div className="h-px flex-1 bg-muted" />
                       </div>
                       <div className="max-h-60 overflow-y-auto overflow-x-hidden rounded-md bg-zinc-950/90 dark:bg-black/40 ring-1 ring-inset ring-white/5">
@@ -94,15 +108,19 @@ export function ToolCallDisplay({
                     {isCompleted && (
                       <div>
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Result</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                            Result
+                          </span>
                           <div className="h-px flex-1 bg-muted" />
                         </div>
-                        <div className={cn(
-                          "max-h-80 overflow-y-auto overflow-x-hidden rounded-md ring-1 ring-inset",
-                          isError 
-                            ? "bg-destructive/5 text-destructive ring-destructive/20" 
-                            : "bg-zinc-950/90 dark:bg-black/40 text-zinc-300 ring-white/5"
-                        )}>
+                        <div
+                          className={cn(
+                            "max-h-80 overflow-y-auto overflow-x-hidden rounded-md ring-1 ring-inset",
+                            isError
+                              ? "bg-destructive/5 text-destructive ring-destructive/20"
+                              : "bg-zinc-950/90 dark:bg-black/40 text-zinc-300 ring-white/5",
+                          )}
+                        >
                           <div className="p-2.5">
                             <pre className="text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-all">
                               {typeof result.result === "string"
@@ -123,4 +141,3 @@ export function ToolCallDisplay({
     </div>
   );
 }
-

@@ -370,9 +370,11 @@ export async function POST(req: Request) {
               ? allServers.filter((s) => step.mcpServerIds.includes(s.id))
               : allServers;
 
-          const { tools, cleanup: mcpCleanup } = await getMcpTools(
-            stepServers as any,
-          );
+          const {
+            tools,
+            toolSourceMap,
+            cleanup: mcpCleanup,
+          } = await getMcpTools(stepServers as any);
 
           // Combine agent tools and step tools
           const allowedToolIds = new Set([
@@ -415,6 +417,40 @@ export async function POST(req: Request) {
               stopWhen: stepCountIs(10),
               maxRetries: 1,
             });
+
+            // Capture and emit tool call/result events for the UI
+            if (result.steps) {
+              for (const stepInfo of result.steps) {
+                for (const tc of stepInfo.toolCalls) {
+                  const serverName = toolSourceMap[tc.toolName];
+                  emit({
+                    type: "tool-call",
+                    toolCallId: tc.toolCallId,
+                    toolName: tc.toolName,
+                    args: (tc as any).args || (tc as any).input,
+                    serverName,
+                  });
+                }
+                for (const tr of stepInfo.toolResults) {
+                  const serverName = toolSourceMap[tr.toolName];
+                  // Consistent formatting: serialize objects to JSON if necessary
+                  const formattedResult =
+                    typeof (tr as any).result === "object" &&
+                    (tr as any).result !== null
+                      ? JSON.stringify((tr as any).result, null, 2)
+                      : (tr as any).result || (tr as any).output;
+
+                  emit({
+                    type: "tool-result",
+                    toolCallId: tr.toolCallId,
+                    toolName: tr.toolName,
+                    result: formattedResult,
+                    serverName,
+                  });
+                }
+              }
+            }
+
             stepSummary = result.text || stepSummary;
           } catch (stepErr: unknown) {
             await mcpCleanup();

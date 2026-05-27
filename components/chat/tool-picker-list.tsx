@@ -186,7 +186,7 @@ export function ToolPickerList({
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="p-4 border-b shrink-0 flex items-center justify-between gap-4">
+      <div className="p-2 border-b shrink-0 flex items-center justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
