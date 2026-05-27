@@ -118,7 +118,8 @@ export function useStreamResponse(
         const promptName = parts.slice(2).join(":");
 
         try {
-          const { getMcpPrompt } = await import("@/lib/actions/mcp/get-mcp-prompt");
+          const { getMcpPrompt } =
+            await import("@/lib/actions/mcp/get-mcp-prompt");
           const mcpPromptResult = await getMcpPrompt(serverId, promptName);
           const mcpContent = (mcpPromptResult as any).messages
             .map((m: any) => {
@@ -300,15 +301,6 @@ export function useStreamResponse(
                 : tc,
             ),
           );
-        } else if (event.type === "file-modified" && event.attachmentId) {
-          pendingNewAttachments.push({
-            id: event.attachmentId,
-            type: "spreadsheet" as const,
-            name: event.name ?? "modified_file",
-            mimeType: event.mimeType ?? "application/octet-stream",
-            sizeBytes: event.size ?? 0,
-            dataUrl: "",
-          });
         } else if (event.type === "done" && event.id) {
           const metadata = event.metadata
             ? JSON.stringify(event.metadata)

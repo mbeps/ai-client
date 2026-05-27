@@ -41,7 +41,7 @@ import { useAppStore } from "@/lib/store";
 
 /**
  * Dialog for adding a new Model Context Protocol server.
- * Renders form with stdio/HTTP mode switching and auto-resets form state on close.
+ * Renders form for HTTP MCP server configuration and auto-resets form state on close.
  * Validates inputs against createMcpServerSchema before submission.
  *
  * @param open - Whether the dialog is visible
@@ -62,17 +62,7 @@ export interface AddServerDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const STDIO_DEFAULTS: CreateMcpServer = {
-  type: "stdio",
-  name: "",
-  command: "",
-  args: "",
-  env: "",
-  isPublic: false,
-};
-
-const HTTP_DEFAULTS: CreateMcpServer = {
-  type: "http",
+const DEFAULTS: CreateMcpServer = {
   name: "",
   url: "",
   headers: "",
@@ -85,15 +75,10 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
 
   const form = useForm<CreateMcpServer>({
     resolver: zodResolver(createMcpServerSchema),
-    defaultValues: STDIO_DEFAULTS,
+    defaultValues: DEFAULTS,
   });
 
   const { isSubmitting } = form.formState;
-  const serverType = useWatch({ control: form.control, name: "type" });
-
-  function handleTypeChange(value: "stdio" | "http") {
-    form.reset(value === "stdio" ? STDIO_DEFAULTS : HTTP_DEFAULTS);
-  }
 
   async function onSubmit(data: CreateMcpServer) {
     try {
@@ -102,7 +87,7 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
       router.refresh();
       loadMcpServers();
       onOpenChange(false);
-      form.reset(STDIO_DEFAULTS);
+      form.reset(DEFAULTS);
     } catch {
       toast.error("Failed to add MCP server");
     }
@@ -110,7 +95,7 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
 
   function handleOpenChange(next: boolean) {
     if (!next) {
-      form.reset(STDIO_DEFAULTS);
+      form.reset(DEFAULTS);
     }
     onOpenChange(next);
   }
@@ -127,49 +112,7 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={(v: "stdio" | "http") => {
-                      field.onChange(v);
-                      handleTypeChange(v);
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="stdio">Stdio</SelectItem>
-                      <SelectItem value="http">HTTP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="My MCP Server" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <ServerFormFields form={form} serverType={serverType} />
+            <ServerFormFields form={form} />
 
             <DialogFooter>
               <Button

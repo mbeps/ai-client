@@ -136,12 +136,11 @@ export async function getPresignedUrl(key: string, expiresIn = 3600) {
 /**
  * Downloads a complete file object from S3 into memory.
  * Collects all chunks from the response stream into a single Buffer.
- * Used during file bridge operations to stage attachments for MCP tool processing.
+ * Used for processing attachments or preparing data for tools.
  *
  * @param key - S3 object key to download
  * @returns File data as Node.js Buffer
  * @throws {Error} When download fails, connection drops, or response body is empty
- * @see {@link download-attachments-to-temp.ts} for file staging during MCP processing
  */
 export async function downloadObject(key: string): Promise<Buffer> {
   const response = await s3Client.send(

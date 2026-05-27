@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ServerOptions } from "./server-options";
 
 /**
- * Card component displaying an MCP server with name, type badge, and status indicator.
- * Navigates to server detail page on click. Shows command/URL description as secondary text.
+ * Card component displaying an MCP server with name and status indicator.
+ * Navigates to server detail page on click. Shows URL description as secondary text.
  * Includes ServerOptions menu for rename, toggle, and delete actions.
  *
  * @see {@link ServerOptions} for available actions menu
@@ -20,15 +20,12 @@ import { ServerOptions } from "./server-options";
 interface ServerCardProps {
   /**
    * The MCP server to display.
-   * Type determines which description field is shown (command for stdio, url for http).
    */
   server: McpServer;
 }
 
 export function ServerCard({ server }: ServerCardProps) {
   const router = useRouter();
-
-  const description = server.type === "stdio" ? server.command : server.url;
 
   return (
     <Card
@@ -45,16 +42,13 @@ export function ServerCard({ server }: ServerCardProps) {
               <h3 className="font-semibold leading-none truncate">
                 {server.name}
               </h3>
-              <Badge variant="secondary" className="shrink-0 text-xs">
-                {server.type}
-              </Badge>
               <span
                 className={`h-2 w-2 rounded-full shrink-0 ${server.enabled ? "bg-green-500" : "bg-muted-foreground/40"}`}
               />
             </div>
-            {description && (
+            {server.url && (
               <p className="text-sm text-muted-foreground line-clamp-2 font-mono">
-                {description}
+                {server.url}
               </p>
             )}
           </div>

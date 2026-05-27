@@ -17,7 +17,7 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 ## File Support
 - **Attachment handling** — Upload images, PDFs, text, and Excel spreadsheets directly in messages
 - **S3/MinIO storage** — Secure cloud storage with presigned URLs for access control
-- **File bridges** — MCP-powered file operations including Excel staging, mutation detection, and auto-re-upload
+- **Integrated AI access** — Spreadsheets are integrated into the AI context via presigned S3 URLs inserted directly into system prompts for tool-based processing
 
 ## AI & Responses
 - **Streaming via OpenRouter** — Access multiple LLMs (GPT-4, Claude, Mistral, etc.)
@@ -26,9 +26,9 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 - **Artifacts & canvas** — Multi-view rendering (Markdown, HTML, XLSX, Mermaid) with persistent edits, AI-driven updates, and export
 
 ## Model Context Protocol (MCP)
-- **Stdio and HTTP transports** — Configure local executables or remote HTTP servers
+- **HTTP transports** — Configure remote HTTP MCP servers providing custom toolsets
 - **Per-message tool selection** — Choose which tools to expose for each AI request
-- **Custom tool integration** — Add application-specific capabilities via MCP (stdio/HTTP)
+- **Custom tool integration** — Add application-specific capabilities via HTTP MCP servers
 
 ## Advanced Logic
 - **Workflows** — Specialized AI pipelines for Translation and complex Spreadsheet Transformations
@@ -54,6 +54,17 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 - **KaTeX rendering** — Mathematical notation with full LaTeX support
 - **Markdown processing** — Rich text with code highlighting and syntax support
 - **Responsive design** — Mobile-first UI with Tailwind CSS and shadcn/ui components
+
+# Database Schema
+
+The application uses PostgreSQL with Drizzle ORM. Core tables include:
+- **`user`** — Profiles, auth states, and preferences
+- **`chat`** — Conversation sessions tied to users, projects, or assistants
+- **`message`** — Tree-structured entries with `parent_id` for branching; stores content and tool metadata
+- **`mcp_server`** — Remote HTTP MCP configurations (`url`, `headers`)
+- **`attachment`** — S3 file metadata (`key`, `mime_type`) linked to messages or transform runs
+- **`project`** / **`assistant`** — Shared prompts and tool configurations for chats
+- **`knowledgebase`** — RAG metadata and document chunk tracking for semantic search
 
 # Tech Stack
 
@@ -97,7 +108,7 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 - **S3/MinIO** — S3-compatible object storage for file uploads and attachments (or AWS S3 in production)
 - **OpenRouter API** — LLM provider for AI conversation capabilities (account required; free tier available)
 - **Postmark** — Transactional email service for authentication and notifications (account required)
-- **Python, Java, Kotlin, Go, Rust, C++ (Optional)** — Required for running MCP servers locally but different languages. 
+- **HTTP MCP Servers (Optional)** — Required if you want to extend AI capabilities via remote toolsets
 
 > Docker/Podman can be used to run PostgreSQL and MinIO locally without cloud dependencies.
 
@@ -193,8 +204,7 @@ CLIENT_SECRET_DISCORD=your-discord-oauth-secret
   - Generate: `openssl rand -base64 32`
   - Keep secure; never commit to version control
 - **`BETTER_AUTH_URL`** (required) — Auth callback URL (`http://localhost:3000` for dev)
-
-**AI & Language Models**
+- **`NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP`** — Set to `true` to allow connecting to Localhost/Private MCP servers during development (bypasses SSRF guard)
 
 **Storage**
 - **`S3_ENDPOINT`** — MinIO/S3 endpoint URL (default: `http://localhost:9000`)
@@ -251,16 +261,6 @@ Alternatively, you can build and run the application:
 npm run build
 npm start
 ```
-
-# Design & Architecture
-
-The application is built on a modern, type-safe architecture centred on **reliable real-time communication**. The frontend (Next.js + React) uses a **Zustand store** for optimistic client-side state management; all mutations trigger **Server Actions** that persist to PostgreSQL via **Drizzle ORM**. This pattern delivers instant UI feedback while guaranteeing consistency. The API layer integrates the **Vercel AI SDK** for streaming responses from **OpenRouter**, handling tool calls transparently and re-injecting artifact edits into the AI context as tool-result history—ensuring the assistant always understands what users have modified.
-
-Conversations are structured as **message trees**: each message has an optional `parent_id`, enabling non-destructive branching when users edit. The `currentLeafId` on the chat tracks the active path, allowing exploration of alternative conversation threads. **Artifacts** (rendered outputs like Markdown, HTML, Excel, and Mermaid diagrams) are managed via an internal `manage_artifact` tool that the AI invokes automatically; user edits re-validate paths and update metadata in the database, then get re-injected so the AI sees the modified state. **File attachments** are stored in MinIO/S3 with presigned URLs, preserving access control and privacy. **Authentication** leverages **Better Auth** for multi-method login (email/password, OAuth, WebAuthn, TOTP), with session fingerprinting for security.
-
-**MCP Server integration** allows custom tools to be registered—either as local stdio executables or remote HTTP endpoints. When users send a message, they select which tools to expose; the SDK discovers capabilities, the AI calls them as needed, and results flow back into the conversation. **Projects** and **Assistants** provide reusable context: projects group chats and apply shared system prompts, whilst assistants define personas that persist across multiple chats. This layered design—from the database up through optimistic updates to real-time streaming—creates a responsive, scalable foundation suitable for both individual use and collaborative workflows.
-
-
 
 # References
 
@@ -320,7 +320,3 @@ Conversations are structured as **message trees**: each message has an optional 
 ## Development
 - [**Turbopack**](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
 - [**ESLint**](https://eslint.org) — JavaScript linter for code quality and consistency
-
-# License
-
-MIT

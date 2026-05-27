@@ -15,6 +15,13 @@ export function isBlockedUrl(rawUrl: string): boolean {
     return true; // unparseable URLs are blocked
   }
 
+  // If internal access is allowed via environment config, bypass guard checks
+  // SECURITY: Access process.env directly instead of importing @/lib/env to prevent
+  // leaking server-side environment variable validation to the client bundle.
+  if (process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP === "true") {
+    return false;
+  }
+
   const hostname = parsed.hostname.toLowerCase();
 
   if (hostname === "localhost") return true;

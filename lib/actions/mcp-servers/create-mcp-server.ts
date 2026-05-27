@@ -12,13 +12,13 @@ import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**
  * Creates a new MCP server configuration for the authenticated user.
- * Supports both stdio (command-based) and HTTP (URL-based) server types.
- * Validates all configuration fields based on server type.
+ * Supports HTTP (URL-based) server types.
+ * Validates all configuration fields.
  *
- * @param data - Server configuration object validated against createMcpServerSchema (name, type required; command/url and other fields conditional on type).
+ * @param data - Server configuration object validated against createMcpServerSchema (name, url required).
  * @returns The newly created MCP server row with all fields populated.
  * @throws Error if session is not authenticated (requireSession call fails).
- * @throws ZodError if data fails schema validation (missing required fields, invalid type, malformed URL/command).
+ * @throws ZodError if data fails schema validation (missing required fields, malformed URL).
  * @throws Error if database insertion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */

@@ -1,5 +1,4 @@
 import type { ModelMessage } from "ai";
-import type { FileBridgeResult } from "@/types/file-bridge-result";
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
@@ -24,7 +23,6 @@ type HistoryMessage = {
 
 export function assembleModelMessages(
   messages: HistoryMessage[],
-  bridge: FileBridgeResult | null,
 ): ModelMessage[] {
   return messages.flatMap((m) => {
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
@@ -36,15 +34,6 @@ export function assembleModelMessages(
             type: "text",
             text: `[Document: ${att.name}]\n${att.extractedText}`,
           });
-        }
-        if (att.type === "spreadsheet" && bridge) {
-          const f = bridge.files.find((b) => b.attachmentId === att.id);
-          if (f) {
-            parts.push({
-              type: "text",
-              text: `[Spreadsheet: ${att.name} — local path: ${f.localPath}]`,
-            });
-          }
         }
       }
 

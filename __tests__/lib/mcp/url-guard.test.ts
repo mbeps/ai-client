@@ -1,6 +1,17 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 
 describe("isBlockedUrl", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
   describe("unparseable / malformed URLs", () => {
     it("blocks empty string", () => {
       expect(isBlockedUrl("")).toBe(true);
@@ -186,6 +197,28 @@ describe("isBlockedUrl", () => {
 
     it("does NOT block [::ffff:127.0.0.1] (URL parser normalises to hex form)", () => {
       expect(isBlockedUrl("http://[::ffff:127.0.0.1]")).toBe(false);
+    });
+  });
+
+  describe("NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
+    it("blocks localhost by default (env=false)", () => {
+      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "false";
+      expect(isBlockedUrl("http://localhost")).toBe(true);
+    });
+
+    it("allows localhost when env is true", () => {
+      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      expect(isBlockedUrl("http://localhost")).toBe(false);
+    });
+
+    it("allows private IPv4 when env is true", () => {
+      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      expect(isBlockedUrl("http://192.168.1.1")).toBe(false);
+    });
+
+    it("still blocks unparseable URLs even when env is true", () => {
+      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      expect(isBlockedUrl("not-a-url")).toBe(true);
     });
   });
 

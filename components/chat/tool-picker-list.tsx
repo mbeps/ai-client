@@ -384,7 +384,7 @@ export function ToolPickerList({
                         variant="outline"
                         className="text-[10px] uppercase"
                       >
-                        {server.type}
+                        HTTP
                       </Badge>
                     </div>
                   </div>

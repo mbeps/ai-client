@@ -40,6 +40,10 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 /**
@@ -51,4 +55,7 @@ const envSchema = z.object({
  * import { env } from "@/lib/env";
  * const dbUrl = env.DATABASE_URL;  // Typed as string | undefined (based on schema)
  */
-export const env = envSchema.parse(process.env);
+export const env =
+  typeof window === "undefined"
+    ? envSchema.parse(process.env)
+    : ({} as z.infer<typeof envSchema>);

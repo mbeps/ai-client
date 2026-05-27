@@ -123,12 +123,6 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
                 Public servers are accessible to all users on the platform.
                 Ensure that your server does not expose sensitive data or
                 internal functions that should remain private.
-                {server.type === "stdio" && (
-                  <span className="block mt-1 text-amber-600 dark:text-amber-400">
-                    Warning: stdio servers typically run local binaries. Use
-                    caution when sharing.
-                  </span>
-                )}
               </p>
             </div>
           </div>

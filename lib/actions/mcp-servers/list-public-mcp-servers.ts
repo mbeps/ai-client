@@ -9,7 +9,7 @@ import type { PublicMcpServer } from "@/types/public-mcp-server";
 /**
  * Fetches all publically shared MCP servers that are enabled.
  * Excludes servers owned by the current user.
- * Strips sensitive credentials (headers for HTTP, env for stdio).
+ * Strips sensitive credentials (headers).
  *
  * @returns Array of PublicMcpServer configurations.
  * @throws Error if session is not authenticated.
@@ -23,9 +23,6 @@ export async function listPublicMcpServers(): Promise<PublicMcpServer[]> {
       id: mcpServer.id,
       userId: mcpServer.userId,
       name: mcpServer.name,
-      type: mcpServer.type,
-      command: mcpServer.command,
-      args: mcpServer.args,
       url: mcpServer.url,
       enabled: mcpServer.enabled,
       isPublic: mcpServer.isPublic,

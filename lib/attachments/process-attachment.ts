@@ -7,7 +7,7 @@ import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/spreadshe
 /**
  * Converts a browser File to a structured Attachment object.
  * Validates the file first, then routes to type-specific processing:
- * images are converted to base64 data URLs, spreadsheets are preserved for MCP bridge,
+ * images are converted to base64 data URLs, spreadsheets are preserved,
  * and documents (PDF, TXT, MD) are text-extracted with 50k character limit.
  * Generates random UUID for client-side tracking before S3 upload.
  *

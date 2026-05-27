@@ -5,11 +5,7 @@ export function mcpServerRowToConfig(row: McpServerRow): McpServerConfig {
   return {
     id: row.id,
     name: row.name,
-    type: row.type,
-    command: row.command,
-    args: row.args,
     url: row.url,
     headers: row.headers,
-    env: row.env,
   };
 }

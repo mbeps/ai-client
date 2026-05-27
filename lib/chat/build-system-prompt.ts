@@ -1,13 +1,12 @@
 import type { ModelMessage } from "ai";
-import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { PROMPTS } from "@/constants/prompts";
 
 export function buildSystemPrompt(
   globalPrompt: string | null | undefined,
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
-  bridge: FileBridgeResult | null,
   hasKnowledgeBase: boolean,
+  attachmentUrls?: { name: string; url: string }[],
 ): ModelMessage[] {
   const systemParts: string[] = [];
 
@@ -21,16 +20,17 @@ export function buildSystemPrompt(
   if (assistantPrompt?.trim()) {
     systemParts.push(assistantPrompt.trim());
   }
-  if (bridge && bridge.files.length > 0) {
-    const lines = bridge.files
-      .map((f) => `- ${f.originalName}: ${f.localPath}`)
-      .join("\n");
-    systemParts.push(
-      PROMPTS.SYSTEM.FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE(lines),
-    );
-  }
   if (hasKnowledgeBase) {
     systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
+  }
+
+  if (attachmentUrls && attachmentUrls.length > 0) {
+    const fileList = attachmentUrls
+      .map((a) => `[${a.name}]: ${a.url}`)
+      .join("\n");
+    systemParts.push(
+      `The user has attached spreadsheet files. Use the upload_file tool with the provided URL to load each file before processing:\n${fileList}`,
+    );
   }
 
   return systemParts.length > 0

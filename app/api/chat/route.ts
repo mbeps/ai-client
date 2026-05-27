@@ -1,20 +1,17 @@
-import { rm } from "fs/promises";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
 import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
-import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
-import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { DEFAULT_MODEL } from "@/constants/models";
 import { chatRequestSchema } from "@/schemas/chat";
-import type { FileBridgeResult } from "@/types/file-bridge-result";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { getAiProvider } from "@/lib/chat/get-ai-provider";
+import { getPresignedUrl } from "@/lib/storage/s3-client";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 
@@ -23,15 +20,13 @@ export const maxDuration = 60;
 /**
  * POST handler for the AI chat streaming pipeline.
  * Authenticates via Better Auth session, validates the request schema, fetches Project/Assistant system prompts from the database,
- * loads enabled MCP servers, downloads spreadsheet attachments to a temporary staging directory (via FileBridge),
- * connects to MCP servers, and streams text responses using Vercel AI SDK's `streamText` with tool support.
+ * loads enabled MCP servers, connects to them, and streams text responses using Vercel AI SDK's `streamText` with tool support.
  * Returns a text/event-stream with content, tool calls, and file-modified events.
  *
  * AUTHENTICATION: Requires valid Better Auth session (401 if missing).
  * STREAMING: Responses are streamed via Server-Sent Events (SSE) for real-time content delivery.
  * MCP INTEGRATION: Discovers tools from enabled MCP servers; supports tool selection via `selectedTools` and `selectedServerIds`.
  * ARTIFACT SUPPORT: The internal `manage_artifact` tool is automatically added if selected; allows AI to create markdown, spreadsheet, HTML, or Mermaid artifacts.
- * FILE BRIDGE: Spreadsheet attachments from the latest user message are staged to `/tmp` and their directory is injected into stdio MCP server envs via `EXCEL_MCP_ALLOWED_DIRS`.
  *
  * @param req - Incoming POST request containing chatId, history, model, MCP server/tool selections, and attachments
  * @returns Streaming response (text/event-stream) with AI content, tool execution results, and file-modified events
@@ -41,10 +36,7 @@ export const maxDuration = 60;
  * @throws Returns error response if AI provider (OpenRouter) returns rate limit (429) or API error — sent as SSE error event.
  * @throws Returns error response if MCP tool discovery or execution fails — sent as SSE error event with details.
  * @throws Returns error response if message persistence to database fails — sent as SSE error event.
- * @throws Returns error response if FileBridge (spreadsheet staging) fails — returned as error event but continues without bridge.
  * @see getMcpTools for MCP tool discovery and connection management
- * @see downloadAttachmentsToTemp for spreadsheet staging (FileBridge)
- * @see persistModifiedFiles for tracking spreadsheet changes after MCP execution
  * @author Maruf Bepary
  */
 export async function POST(req: Request) {
@@ -171,12 +163,8 @@ export async function POST(req: Request) {
     .select({
       id: mcpServer.id,
       name: mcpServer.name,
-      type: mcpServer.type,
-      command: mcpServer.command,
-      args: mcpServer.args,
       url: mcpServer.url,
       headers: mcpServer.headers,
-      env: mcpServer.env,
     })
     .from(mcpServer)
     .where(
@@ -186,52 +174,13 @@ export async function POST(req: Request) {
       ),
     );
 
+  // Filter servers by selection if provided
   const filteredServers =
     selectedServerIds && selectedServerIds.length > 0
       ? servers.filter((s) => selectedServerIds.includes(s.id))
       : servers;
 
-  // FileBridge: download spreadsheet attachments from the LATEST user message only.
-  // Re-bridging the entire history every turn would be wasteful and break
-  // the assumption that modified files become new attachments on later turns.
-  const lastUserMsg = [...history].reverse().find((m) => m.role === "user");
-  const spreadsheetAtts: { id: string; key: string; name: string }[] = [];
-  if (lastUserMsg?.attachments) {
-    for (const att of lastUserMsg.attachments) {
-      if (att.type === "spreadsheet" && att.key && att.id && att.name) {
-        spreadsheetAtts.push({ id: att.id, key: att.key, name: att.name });
-      }
-    }
-  }
-
-  let bridge: FileBridgeResult | null = null;
-  if (filteredServers.length > 0 && spreadsheetAtts.length > 0) {
-    try {
-      bridge = await downloadAttachmentsToTemp(spreadsheetAtts);
-    } catch (err) {
-      console.warn(
-        "[FileBridge] Failed to download attachments, continuing without bridge:",
-        err,
-      );
-    }
-  }
-
-  // Inject EXCEL_MCP_ALLOWED_DIRS into stdio MCP server envs when FileBridge is active
-  const scopedServers = bridge
-    ? filteredServers.map((s) => {
-        if (s.type !== "stdio") return s;
-        const userEnv = s.env
-          ? (JSON.parse(s.env) as Record<string, string>)
-          : {};
-        return {
-          ...s,
-          env: JSON.stringify({
-            ...userEnv,
-            EXCEL_MCP_ALLOWED_DIRS: bridge!.tempDir,
-          }),
-        };
-      })
-    : filteredServers;
+  const scopedServers = filteredServers;
 
   const isArtifactToolSelected = selectedTools?.includes(
     "internal:tool:manage_artifact",
@@ -247,14 +196,29 @@ export async function POST(req: Request) {
 
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-  const processedMessages = assembleModelMessages(history, bridge);
+  const processedMessages = assembleModelMessages(history);
+
+  // Identify spreadsheet attachments in the latest user message for HTTP-only tool access
+  const lastUserMessage = history.filter((m) => m.role === "user").pop();
+  const spreadsheetAttachments =
+    lastUserMessage?.attachments?.filter(
+      (a) => a.type === "spreadsheet" && a.key,
+    ) ?? [];
+
+  // Generate presigned S3 URLs for spreadsheet files to enable Tool/Model-based access
+  const attachmentUrls = await Promise.all(
+    spreadsheetAttachments.map(async (a) => {
+      const url = await getPresignedUrl(a.key!);
+      return { name: a.name, url };
+    }),
+  );
 
   const systemMessages = buildSystemPrompt(
     globalSystemPrompt,
     projectRow?.globalPrompt,
     assistantRow?.prompt,
-    bridge,
     !!activeKbId,
+    attachmentUrls,
   );
   const finalMessages: ModelMessage[] = [
     ...systemMessages,
@@ -435,37 +399,6 @@ export async function POST(req: Request) {
           session.user.id,
         );
 
-        if (bridge) {
-          try {
-            const modified = await persistModifiedFiles({
-              files: bridge.files,
-              userId: session.user.id,
-              messageId: assistantMessageId,
-            });
-            for (const mod of modified) {
-              controller.enqueue(
-                encodeSSE({
-                  type: "file-modified",
-                  attachmentId: mod.newAttachmentId,
-                  messageId: assistantMessageId,
-                  name: mod.name,
-                  mimeType: mod.mimeType,
-                  size: mod.size,
-                }),
-              );
-            }
-          } catch (err) {
-            console.warn("[FileBridge] Failed to persist modified files:", err);
-            controller.enqueue(
-              encodeSSE({
-                type: "error",
-                message: "Failed to save modified spreadsheet(s)",
-                code: "BRIDGE_PERSIST_FAILED",
-              }),
-            );
-          }
-        }
-
         controller.enqueue(
           encodeSSE({
             type: "done",
@@ -478,11 +411,6 @@ export async function POST(req: Request) {
           encodeSSE({ type: "error", message: "Stream failed" }),
         );
       } finally {
-        if (bridge) {
-          await rm(bridge.tempDir, { recursive: true, force: true }).catch(
-            (err) => console.warn("[FileBridge] Temp cleanup failed:", err),
-          );
-        }
         await mcpCleanup();
         controller.close();
       }
