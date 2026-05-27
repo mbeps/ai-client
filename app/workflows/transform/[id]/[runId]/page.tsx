@@ -27,6 +27,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
+import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import type { ArtifactData } from "@/types/artifact";
 import { toast } from "sonner";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
@@ -38,10 +39,26 @@ import type { TransformRun, TransformRunStatus } from "@/types/transform-run";
 import type { TransformRunRow } from "@/types/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
 
+type ToolCall = {
+  toolCallId: string;
+  toolName: string;
+  serverName?: string;
+  args: unknown;
+};
+
+type ToolResult = {
+  toolCallId: string;
+  toolName: string;
+  serverName?: string;
+  result: unknown;
+};
+
 type StepState = {
   status: "pending" | "running" | "completed" | "awaiting_review";
   summary?: string;
   stepData?: Record<string, any[]>;
+  toolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
 };
 
 function mapRunRowToRun(row: TransformRunRow): TransformRun {
@@ -82,6 +99,7 @@ export default function TransformRunDetailPage() {
   >({});
   const [isMobile, setIsMobile] = useState(false);
   const hasStartedStream = useRef(false);
+  const activeStepIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -156,9 +174,14 @@ export default function TransformRunDetailPage() {
           break;
 
         case "transform-step-start":
+          activeStepIndexRef.current = event.stepIndex as number;
           setStepStates((prev) => ({
             ...prev,
-            [event.stepIndex as number]: { status: "running" },
+            [event.stepIndex as number]: {
+              status: "running",
+              toolCalls: [],
+              toolResults: [],
+            },
           }));
           setRun((prev) =>
             prev
@@ -167,10 +190,59 @@ export default function TransformRunDetailPage() {
           );
           break;
 
+        case "tool-call":
+          if (activeStepIndexRef.current !== null) {
+            const stepIdx = activeStepIndexRef.current;
+            setStepStates((prev) => {
+              const current = prev[stepIdx] || { status: "running" };
+              return {
+                ...prev,
+                [stepIdx]: {
+                  ...current,
+                  toolCalls: [
+                    ...(current.toolCalls || []),
+                    {
+                      toolCallId: event.toolCallId as string,
+                      toolName: event.toolName as string,
+                      args: event.args,
+                      serverName: event.serverName as string,
+                    },
+                  ],
+                },
+              };
+            });
+          }
+          break;
+
+        case "tool-result":
+          if (activeStepIndexRef.current !== null) {
+            const stepIdx = activeStepIndexRef.current;
+            setStepStates((prev) => {
+              const current = prev[stepIdx] || { status: "running" };
+              return {
+                ...prev,
+                [stepIdx]: {
+                  ...current,
+                  toolResults: [
+                    ...(current.toolResults || []),
+                    {
+                      toolCallId: event.toolCallId as string,
+                      toolName: event.toolName as string,
+                      result: event.result,
+                      serverName: event.serverName as string,
+                    },
+                  ],
+                },
+              };
+            });
+          }
+          break;
+
         case "transform-step-complete":
           setStepStates((prev) => ({
             ...prev,
             [event.stepIndex as number]: {
+              ...prev[event.stepIndex as number],
               status: "completed",
               summary: event.summary as string,
               stepData: event.stepData as Record<string, any[]>,
@@ -533,6 +605,20 @@ export default function TransformRunDetailPage() {
                               </Badge>
                             )}
                           </div>
+
+                          {/* Tool Calls */}
+                          {state.toolCalls && state.toolCalls.length > 0 && (
+                            <div
+                              className="mt-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ToolCallDisplay
+                                toolCalls={state.toolCalls}
+                                toolResults={state.toolResults || []}
+                              />
+                            </div>
+                          )}
+
                           <p className="text-xs text-muted-foreground line-clamp-2">
                             {isCompleted && state.summary
                               ? state.summary
