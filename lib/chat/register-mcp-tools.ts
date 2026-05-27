@@ -16,8 +16,13 @@ export async function registerMcpTools(
   isArtifactToolSelected: boolean,
   activeKbId: string | null,
   userId: string,
-): Promise<{ mcpTools: Record<string, any>; mcpCleanup: () => Promise<void> }> {
+): Promise<{
+  mcpTools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  mcpCleanup: () => Promise<void>;
+}> {
   let mcpTools: Record<string, any> = {};
+  let toolSourceMap: Record<string, string> = {};
   let mcpCleanup = async () => {};
 
   if (scopedServers.length > 0) {
@@ -33,11 +38,13 @@ export async function registerMcpTools(
           });
           if (isSelected) {
             filteredTools[name] = toolDef;
+            toolSourceMap[name] = result.toolSourceMap[name];
           }
         }
         mcpTools = filteredTools;
       } else {
         mcpTools = result.tools;
+        toolSourceMap = { ...result.toolSourceMap };
       }
 
       mcpCleanup = result.cleanup;
@@ -47,6 +54,7 @@ export async function registerMcpTools(
   }
 
   if (isArtifactToolSelected) {
+    toolSourceMap["manage_artifact"] = "Internal";
     mcpTools["manage_artifact"] = tool({
       description: PROMPTS.TOOLS.MANAGE_ARTIFACT.DESCRIPTION,
       parameters: manageArtifactSchema,
@@ -90,6 +98,7 @@ export async function registerMcpTools(
 
   if (activeKbId) {
     const kbId = activeKbId;
+    toolSourceMap["search_knowledge_base"] = "System";
     mcpTools["search_knowledge_base"] = tool({
       description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
       parameters: searchKnowledgeBaseSchema,
@@ -110,5 +119,5 @@ export async function registerMcpTools(
     });
   }
 
-  return { mcpTools, mcpCleanup };
+  return { mcpTools, toolSourceMap, mcpCleanup };
 }

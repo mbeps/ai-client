@@ -13,9 +13,11 @@ import { connectServer } from "./connect-server";
  * @throws Does not throw; failed connections are logged as warnings
  * @see {@link discover-tools.ts} for discovering available tools before connection
  */
-export async function getMcpTools(
-  servers: McpServerConfig[],
-): Promise<{ tools: Record<string, any>; cleanup: () => Promise<void> }> {
+export async function getMcpTools(servers: McpServerConfig[]): Promise<{
+  tools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  cleanup: () => Promise<void>;
+}> {
   const results = await Promise.allSettled(
     servers.map((server) => connectServer(server)),
   );
@@ -33,6 +35,8 @@ export async function getMcpTools(
   }
 
   const mergedTools: Record<string, any> = {};
+  const toolSourceMap: Record<string, string> = {};
+
   for (const conn of connections) {
     for (const [name, tool] of Object.entries(conn.tools)) {
       if (name in mergedTools) {
@@ -41,6 +45,7 @@ export async function getMcpTools(
         );
       } else {
         mergedTools[name] = tool;
+        toolSourceMap[name] = conn.serverName;
       }
     }
   }
@@ -49,5 +54,5 @@ export async function getMcpTools(
     await Promise.allSettled(connections.map((c) => c.close()));
   };
 
-  return { tools: mergedTools, cleanup };
+  return { tools: mergedTools, toolSourceMap, cleanup };
 }

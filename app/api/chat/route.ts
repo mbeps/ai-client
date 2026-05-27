@@ -186,7 +186,7 @@ export async function POST(req: Request) {
     "internal:tool:manage_artifact",
   );
 
-  const { mcpTools, mcpCleanup } = await registerMcpTools(
+  const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
     scopedServers as any,
     selectedTools,
     !!isArtifactToolSelected,
@@ -246,6 +246,7 @@ export async function POST(req: Request) {
           toolCallId: string;
           toolName: string;
           args: unknown;
+          serverName?: string;
         }[] = [];
         const toolResults: {
           toolCallId: string;
@@ -263,11 +264,13 @@ export async function POST(req: Request) {
                 );
                 break;
 
-              case "tool-call":
+              case "tool-call": {
+                const serverName = toolSourceMap[chunk.toolName];
                 toolCalls.push({
                   toolCallId: chunk.toolCallId,
                   toolName: chunk.toolName,
                   args: chunk.input,
+                  serverName,
                 });
                 logger.info(
                   "[Chat API] Tool call initiated",
@@ -276,6 +279,7 @@ export async function POST(req: Request) {
                     toolCallId: chunk.toolCallId,
                     toolName: chunk.toolName,
                     args: chunk.input,
+                    serverName,
                   },
                   session.user.id,
                 );
@@ -285,9 +289,11 @@ export async function POST(req: Request) {
                     toolCallId: chunk.toolCallId,
                     toolName: chunk.toolName,
                     args: chunk.input,
+                    serverName,
                   }),
                 );
                 break;
+              }
 
               case "tool-result":
                 toolResults.push({
