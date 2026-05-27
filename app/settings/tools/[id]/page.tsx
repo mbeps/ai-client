@@ -82,7 +82,7 @@ export default function McpServerPage() {
       <PageHeader
         icon={<Server className="h-8 w-8 text-primary" />}
         title={server.name}
-        description={`${server.type.toUpperCase()} server`}
+        description="HTTP MCP server"
         action={
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">

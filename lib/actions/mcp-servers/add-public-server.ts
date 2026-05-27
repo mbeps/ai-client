@@ -9,8 +9,8 @@ import { and, eq } from "drizzle-orm";
  * Adds a public MCP server to the current user's personal server list.
  * Fetches the source server, verifies it's public and enabled, and creates a copy for the user.
  *
- * IMPORTANT: Sensitive data (headers and env) are stripped during the copy process to ensure security.
- * Only core configuration (name, type, command, args, url) is duplicated.
+ * IMPORTANT: Sensitive data (headers) are stripped during the copy process to ensure security.
+ * Only core configuration (name, url) is duplicated.
  *
  * @param publicServerId - The source public MCP server ID to clone.
  * @returns The ID of the newly created personal MCP server.
@@ -45,17 +45,14 @@ export async function addPublicServer(publicServerId: string): Promise<string> {
   }
 
   // 3. Create a NEW mcp_server row for the CURRENT user
-  // (SECURITY): Explicitly copy only non-sensitive fields. Headers and env are stripped.
+  // (SECURITY): Explicitly copy only non-sensitive fields. Headers are stripped.
   const [created] = await db
     .insert(mcpServer)
     .values({
       userId: session.user.id,
       name: source.name,
-      type: source.type,
-      command: source.command,
-      args: source.args,
       url: source.url,
-      // Stripping sensitive fields: headers and env are NOT included here.
+      // Stripping sensitive fields: headers are NOT included here.
       enabled: true,
       isPublic: false,
     })

@@ -9,13 +9,6 @@ export type SseEvent =
       toolName: string;
       result?: unknown;
     }
-  | {
-      type: "file-modified";
-      attachmentId: string;
-      name?: string;
-      mimeType?: string;
-      size?: number;
-    }
   | { type: "transform-start"; runId: string }
   | { type: "transform-step-start"; stepIndex: number; label: string }
   | { type: "transform-complete"; runId: string; status: string }

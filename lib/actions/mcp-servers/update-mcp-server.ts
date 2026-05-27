@@ -13,13 +13,13 @@ import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**
  * Updates an existing MCP server configuration for the authenticated user.
- * Validates all configuration fields based on server type (stdio or HTTP).
+ * Validates all configuration fields.
  *
  * @param id - UUID of the MCP server to update; must be owned by the authenticated user.
  * @param data - Updated server configuration validated against updateMcpServerSchema.
  * @returns The updated MCP server row with all fields.
  * @throws Error if session is not authenticated (requireSession call fails).
- * @throws ZodError if data fails schema validation (invalid type, malformed URL/command, etc.).
+ * @throws ZodError if data fails schema validation (malformed URL, etc.).
  * @throws Error if server does not exist or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
  * @author Maruf Bepary

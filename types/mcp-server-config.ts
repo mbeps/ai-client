@@ -1,10 +1,6 @@
 export type McpServerConfig = {
   id: string;
   name: string;
-  type: "stdio" | "http";
-  command?: string | null;
-  args?: string | null;
-  url?: string | null;
+  url: string;
   headers?: string | null;
-  env?: string | null;
 };

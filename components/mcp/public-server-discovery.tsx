@@ -132,8 +132,7 @@ export function PublicServerDiscovery({
             ))
           ) : filteredServers.length > 0 ? (
             filteredServers.map((server) => {
-              const info =
-                server.type === "stdio" ? server.command : server.url;
+              const info = server.url;
               const isAdding = addingId === server.id;
               // Check if already in personal list by name (simple check)
               const isAlreadyAdded = mcpServers.some(
@@ -159,7 +158,7 @@ export function PublicServerDiscovery({
                             variant="secondary"
                             className="text-[10px] h-4 uppercase"
                           >
-                            {server.type}
+                            HTTP
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground truncate font-mono">

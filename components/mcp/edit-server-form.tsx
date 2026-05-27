@@ -28,8 +28,7 @@ import { useRouter } from "next/navigation";
 
 /**
  * Form for editing an existing Model Context Protocol server configuration.
- * Renders type-specific fields (stdio vs HTTP) based on server type.
- * Displays connection type as read-only badge; persists changes via direct Server Action.
+ * Displays configuration fields and persists changes via direct Server Action.
  *
  * @param server - MCP server to edit; determines which fields are displayed
  * @see {@link AddServerDialog} for creating new servers
@@ -38,7 +37,6 @@ import { useRouter } from "next/navigation";
 export interface EditServerFormProps {
   /**
    * The MCP server configuration to edit.
-   * Type (stdio/http) determines which form fields are rendered.
    */
   server: McpServer;
 }
@@ -46,23 +44,12 @@ export interface EditServerFormProps {
 export function EditServerForm({ server }: EditServerFormProps) {
   const router = useRouter();
 
-  const defaultValues: UpdateMcpServer =
-    server.type === "stdio"
-      ? {
-          type: "stdio",
-          name: server.name,
-          command: server.command ?? "",
-          args: server.args ?? "",
-          env: server.env ?? "",
-          isPublic: server.isPublic,
-        }
-      : {
-          type: "http",
-          name: server.name,
-          url: server.url ?? "",
-          headers: server.headers ?? "",
-          isPublic: server.isPublic,
-        };
+  const defaultValues: UpdateMcpServer = {
+    name: server.name,
+    url: server.url ?? "",
+    headers: server.headers ?? "",
+    isPublic: server.isPublic,
+  };
 
   const form = useForm<UpdateMcpServer>({
     resolver: zodResolver(updateMcpServerSchema),
@@ -86,32 +73,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardContent className="p-0 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Server Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} className="bg-background" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-2">
-                <FormLabel>Connection Type</FormLabel>
-                <div className="h-10 flex items-center">
-                  <Badge variant="secondary" className="capitalize px-3 py-1">
-                    {server.type}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <ServerFormFields form={form} serverType={server.type} styled />
+            <ServerFormFields form={form} styled />
           </CardContent>
 
           <div className="flex justify-end pt-4 border-t">

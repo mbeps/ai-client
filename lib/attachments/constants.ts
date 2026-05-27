@@ -29,7 +29,6 @@ export const ALLOWED_DOCUMENT_TYPES = new Set([
 
 /**
  * Allowed MIME types for spreadsheet attachments: XLSX, XLS, and CSV formats.
- * Processed via MCP Excel bridge for local staging and formula preservation.
  */
 export const ALLOWED_SPREADSHEET_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
@@ -52,7 +51,7 @@ export const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 /**
  * Maximum file size for spreadsheets: 50 MB.
- * Applies to XLSX, XLS, and CSV files for MCP bridge processing.
+ * Applies to XLSX, XLS, and CSV files.
  */
 export const MAX_SPREADSHEET_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 

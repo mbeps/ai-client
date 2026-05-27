@@ -1,4 +1,3 @@
-import { rm } from "fs/promises";
 import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import { db } from "@/drizzle/db";
@@ -12,17 +11,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { getAiProvider } from "@/lib/chat/get-ai-provider";
 import { generateText, stepCountIs } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
-import { downloadAttachmentsToTemp } from "@/lib/mcp/download-attachments-to-temp";
 import { hybridSearch } from "@/lib/rag/retrieve";
-import { persistModifiedFiles } from "@/lib/mcp/persist-modified-files";
 import { DEFAULT_MODEL } from "@/constants/models";
-import * as xlsx from "xlsx";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,
   startTransformRunSchema,
 } from "@/schemas/transform-agent";
-import type { FileBridgeResult } from "@/types/file-bridge-result";
 import type { TransformStep } from "@/types/transform-agent";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
@@ -61,8 +56,6 @@ export async function POST(req: Request) {
           // stream may already be closed
         }
       };
-
-      let bridge: FileBridgeResult | null = null;
 
       try {
         let runRow: typeof transformRun.$inferSelect;
@@ -291,11 +284,6 @@ export async function POST(req: Request) {
             controller.close();
             return;
           }
-
-          // Stage files to temp directory
-          bridge = await downloadAttachmentsToTemp(
-            attachmentRows.map((a) => ({ id: a.id, key: a.key, name: a.name })),
-          );
         }
 
         // Fetch all enabled MCP servers for the user
@@ -382,21 +370,9 @@ export async function POST(req: Request) {
               ? allServers.filter((s) => step.mcpServerIds.includes(s.id))
               : allServers;
 
-          // Inject EXCEL_MCP_ALLOWED_DIRS into stdio server envs if bridge exists
-          const serversWithBridge = stepServers.map((s) => {
-            if (s.type !== "stdio" || !bridge) return s;
-            let envObj: Record<string, string> = {};
-            try {
-              envObj = s.env ? JSON.parse(s.env) : {};
-            } catch {
-              envObj = {};
-            }
-            envObj.EXCEL_MCP_ALLOWED_DIRS = bridge.tempDir;
-            return { ...s, env: JSON.stringify(envObj) };
-          });
-
-          const { tools, cleanup: mcpCleanup } =
-            await getMcpTools(serversWithBridge);
+          const { tools, cleanup: mcpCleanup } = await getMcpTools(
+            stepServers as any,
+          );
 
           // Combine agent tools and step tools
           const allowedToolIds = new Set([
@@ -422,9 +398,7 @@ export async function POST(req: Request) {
               ? `Context:\n${agentRow.globalContext}`
               : null,
             kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
-            bridge
-              ? `You are an Excel transformation agent. The following files are available for transformation:\n${bridge.files.map((f) => f.localPath).join("\n")}`
-              : "You are a helpful AI assistant performing a task.",
+            "You are a helpful AI assistant performing a task.",
             `Instructions for this step:\n${step.prompt}`,
             `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
           ]
@@ -460,45 +434,8 @@ export async function POST(req: Request) {
 
           await mcpCleanup();
 
-          // Persist modified files after this step (skip if dry run or no bridge)
-          if (!runRow.dryRun && bridge) {
-            const modified = await persistModifiedFiles({
-              files: bridge.files,
-              userId: session.user.id,
-              transformRunId: runRow.id,
-            });
-            if (modified.length > 0) {
-              currentOutputAttachmentIds = modified.map(
-                (m) => m.newAttachmentId,
-              );
-              await db
-                .update(transformRun)
-                .set({
-                  outputAttachmentIds: currentOutputAttachmentIds,
-                })
-                .where(eq(transformRun.id, runRow.id));
-            }
-          }
-
           // Read current state of files for live preview
           const stepData: Record<string, any[]> = {};
-          if (bridge) {
-            for (const f of bridge.files) {
-              try {
-                const fs = await import("fs/promises");
-                const buffer = await fs.readFile(f.localPath);
-                const workbook = xlsx.read(buffer, { type: "buffer" });
-                const firstSheet = workbook.SheetNames[0];
-                const data = xlsx.utils.sheet_to_json(
-                  workbook.Sheets[firstSheet],
-                  { header: 1 },
-                );
-                stepData[f.originalName] = data as any[];
-              } catch (err) {
-                console.warn(`[SSE] Failed to read ${f.originalName}:`, err);
-              }
-            }
-          }
 
           emit({
             type: "transform-step-complete",
@@ -565,9 +502,6 @@ export async function POST(req: Request) {
         );
         emit({ type: "error", message: msg });
       } finally {
-        if (bridge) {
-          await rm(bridge.tempDir, { recursive: true, force: true });
-        }
         try {
           controller.close();
         } catch {
