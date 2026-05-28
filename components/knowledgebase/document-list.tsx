@@ -74,33 +74,37 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
           STATUS_CONFIG.pending;
         const Icon = cfg.icon;
         return (
-          <li key={doc.id} className="flex items-center gap-3 px-4 py-3">
-            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <li key={doc.id} className="group flex items-center gap-2 px-3 py-2">
+            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{doc.name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] font-medium truncate leading-tight">
+                {doc.name}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
                 {doc.chunkCount} chunks &middot; {(doc.size / 1024).toFixed(1)}{" "}
                 KB
               </p>
             </div>
-            <Badge
-              variant={cfg.variant}
-              className="flex items-center gap-1 shrink-0"
-            >
-              <Icon
-                className={`h-3 w-3${doc.status === "processing" ? " animate-spin" : ""}`}
-              />
-              {cfg.label}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              disabled={isPending}
-              onClick={() => handleDelete(doc.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Badge
+                variant={cfg.variant}
+                className="flex items-center gap-1 shrink-0 text-[10px] px-1.5 py-0 h-5 font-normal"
+              >
+                <Icon
+                  className={`h-2.5 w-2.5${doc.status === "processing" ? " animate-spin" : ""}`}
+                />
+                {cfg.label}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                disabled={isPending}
+                onClick={() => handleDelete(doc.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </li>
         );
       })}
