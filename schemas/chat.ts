@@ -201,6 +201,17 @@ export const manageArtifactSchema = z.union([
       artifact: z.object(manageArtifactBaseFields),
     })
     .transform((val) => val.artifact),
+  // Some models pass the entire artifact spec as a JSON string; parse and validate it.
+  z
+    .string()
+    .transform((str) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        return null;
+      }
+    })
+    .pipe(z.object(manageArtifactBaseFields)),
 ]);
 
 export const searchKnowledgeBaseSchema = z.object({

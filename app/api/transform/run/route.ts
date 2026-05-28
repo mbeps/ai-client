@@ -10,7 +10,10 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import { getAiProvider } from "@/lib/chat/get-ai-provider";
 import { generateText, stepCountIs } from "ai";
-import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
+import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { getPresignedUrl, uploadObject } from "@/lib/storage/s3-client";
+import * as XLSX from "xlsx";
+import { v4 as uuidv4 } from "uuid";
 import { hybridSearch } from "@/lib/rag/retrieve";
 import { DEFAULT_MODEL } from "@/constants/models";
 import {
@@ -31,6 +34,153 @@ const requestSchema = z.discriminatedUnion("type", [
   startTransformRunSchema.extend({ type: z.literal("start") }),
 ]);
 
+function extractUploadedFilePath(result: unknown): string | null {
+  if (!result) return null;
+
+  if (typeof result === "string") {
+    try {
+      const parsed = JSON.parse(result);
+      return typeof parsed?.file_path === "string" ? parsed.file_path : null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof result !== "object") return null;
+
+  const resultObj = result as {
+    file_path?: unknown;
+    content?: Array<{ text?: unknown }>;
+  };
+
+  if (typeof resultObj.file_path === "string") {
+    return resultObj.file_path;
+  }
+
+  if (!Array.isArray(resultObj.content)) return null;
+
+  for (const item of resultObj.content) {
+    if (typeof item?.text !== "string") continue;
+    try {
+      const parsed = JSON.parse(item.text);
+      if (typeof parsed?.file_path === "string") {
+        return parsed.file_path;
+      }
+    } catch {
+      // ignore non-JSON tool payloads
+    }
+  }
+
+  return null;
+}
+
+function tryParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function normaliseToolPayload(payload: unknown): unknown {
+  if (typeof payload === "string") {
+    return tryParseJson(payload);
+  }
+
+  return payload;
+}
+
+function extractArtifactFromToolPayload(
+  payload: unknown,
+): Record<string, unknown> | null {
+  const normalised = normaliseToolPayload(payload);
+  if (!normalised || typeof normalised !== "object") return null;
+
+  const record = normalised as Record<string, unknown>;
+  const rawArtifact =
+    "artifact" in record
+      ? normaliseToolPayload(record.artifact)
+      : normaliseToolPayload(normalised);
+
+  if (!rawArtifact || typeof rawArtifact !== "object") return null;
+
+  const artifact = { ...(rawArtifact as Record<string, unknown>) };
+
+  if (
+    typeof artifact.type !== "string" &&
+    typeof artifact.artifact_type === "string"
+  ) {
+    artifact.type = artifact.artifact_type;
+  }
+
+  if (typeof artifact.content !== "string" && Array.isArray(artifact.sheets)) {
+    artifact.content = JSON.stringify({ sheets: artifact.sheets });
+  }
+
+  if (typeof artifact.title !== "string") {
+    artifact.title = "Artifact";
+  }
+
+  const hasStructuredArtifact =
+    typeof artifact.type === "string" && typeof artifact.content === "string";
+
+  return hasStructuredArtifact ? artifact : null;
+}
+
+function extractDownloadFilePayload(payload: unknown): {
+  fileContent: string;
+  filename: string;
+} | null {
+  const normalised = normaliseToolPayload(payload);
+  if (!normalised || typeof normalised !== "object") return null;
+
+  const obj = normalised as {
+    file_content?: unknown;
+    filename?: unknown;
+    structuredContent?: unknown;
+    content?: Array<{ text?: unknown }>;
+  };
+
+  const candidateObjects: unknown[] = [obj, obj.structuredContent];
+
+  if (Array.isArray(obj.content)) {
+    for (const item of obj.content) {
+      if (typeof item?.text === "string") {
+        candidateObjects.push(normaliseToolPayload(item.text));
+      }
+    }
+  }
+
+  for (const candidate of candidateObjects) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const entry = candidate as { file_content?: unknown; filename?: unknown };
+    if (
+      typeof entry.file_content === "string" &&
+      typeof entry.filename === "string"
+    ) {
+      return {
+        fileContent: entry.file_content,
+        filename: entry.filename,
+      };
+    }
+  }
+
+  return null;
+}
+
+const SPREADSHEET_MUTATION_TOOL_NAMES = new Set([
+  "write_cells",
+  "write_multi_sheet",
+]);
+
+function isSpreadsheetMutationTool(toolName: string): boolean {
+  if (SPREADSHEET_MUTATION_TOOL_NAMES.has(toolName)) {
+    return true;
+  }
+
+  return toolName.startsWith("write_");
+}
+
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
@@ -49,6 +199,8 @@ export async function POST(req: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let runMcpCleanup: () => Promise<void> = async () => {};
+
       const emit = (data: object) => {
         try {
           controller.enqueue(encodeSSE(data));
@@ -286,6 +438,11 @@ export async function POST(req: Request) {
           }
         }
 
+        // fileContext and currentAttachmentRows are regenerated per-step inside the loop
+        let fileContext = "";
+        let currentAttachmentRows = [...attachmentRows];
+        let activeWorkbookFilePath: string | null = null;
+
         // Fetch all enabled MCP servers for the user
         const allServers = await db
           .select()
@@ -336,9 +493,32 @@ export async function POST(req: Request) {
 
         let currentOutputAttachmentIds: string[] = stageIds;
 
+        // Keep one MCP connection registry for the run request to avoid resetting
+        // MCP-local workbook state between steps.
+        const anyArtifactToolSelected =
+          (agentRow.tools || []).includes("internal:tool:manage_artifact") ||
+          steps.some((s) =>
+            (s.toolIds || []).includes("internal:tool:manage_artifact"),
+          );
+
+        const {
+          mcpTools: runMcpTools,
+          toolSourceMap: runToolSourceMap,
+          mcpCleanup,
+        } = await registerMcpTools(
+          allServers as any,
+          undefined,
+          anyArtifactToolSelected,
+          null,
+          session.user.id,
+        );
+        runMcpCleanup = mcpCleanup;
+
         // Run each step
         for (let i = startFromStep; i < steps.length; i++) {
           const step = steps[i];
+          let stepHasSpreadsheetMutations = false;
+          let stepPersistedSpreadsheetOutput = false;
 
           // Update current step index
           await db
@@ -369,12 +549,7 @@ export async function POST(req: Request) {
             step.mcpServerIds.length > 0
               ? allServers.filter((s) => step.mcpServerIds.includes(s.id))
               : allServers;
-
-          const {
-            tools,
-            toolSourceMap,
-            cleanup: mcpCleanup,
-          } = await getMcpTools(stepServers as any);
+          const stepServerNames = new Set(stepServers.map((s) => s.name));
 
           // Combine agent tools and step tools
           const allowedToolIds = new Set([
@@ -382,16 +557,69 @@ export async function POST(req: Request) {
             ...(step.toolIds || []),
           ]);
 
-          const filteredTools =
-            allowedToolIds.size > 0
-              ? Object.fromEntries(
-                  Object.entries(tools).filter(([name]) => {
-                    return Array.from(allowedToolIds).some((id) =>
-                      id.endsWith(`:${name}`),
-                    );
-                  }),
-                )
-              : tools;
+          const filteredEntries = Object.entries(runMcpTools).filter(
+            ([toolName]) => {
+              const source = runToolSourceMap[toolName];
+              const isInternal = source === "Internal" || source === "System";
+              const fromAllowedServer =
+                isInternal || stepServerNames.has(source);
+
+              if (!fromAllowedServer) return false;
+
+              if (allowedToolIds.size === 0) return true;
+
+              return Array.from(allowedToolIds).some((id) => {
+                const [, type, name] = id.split(":");
+                return type === "tool" && name === toolName;
+              });
+            },
+          );
+
+          const filteredTools = Object.fromEntries(filteredEntries);
+          const toolSourceMap = Object.fromEntries(
+            filteredEntries.map(([toolName]) => [
+              toolName,
+              runToolSourceMap[toolName],
+            ]),
+          ) as Record<string, string>;
+
+          const isSingleWorkbookFlow = currentAttachmentRows.length <= 1;
+          if (
+            agentRow.requiresFileUpload &&
+            activeWorkbookFilePath &&
+            isSingleWorkbookFlow &&
+            "upload_file" in filteredTools
+          ) {
+            delete filteredTools.upload_file;
+            delete toolSourceMap.upload_file;
+          }
+
+          // Regenerate file context for this step using the current workbook state
+          fileContext = "";
+          if (activeWorkbookFilePath) {
+            fileContext = `A workbook is already loaded in the MCP session for this run. Reuse this exact file path for spreadsheet tools: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
+          } else if (currentAttachmentRows.length > 0) {
+            const stepUrlResults = await Promise.allSettled(
+              currentAttachmentRows.map((row) => getPresignedUrl(row.key)),
+            );
+            const fileLines: string[] = [];
+            currentAttachmentRows.forEach((row, idx) => {
+              const result = stepUrlResults[idx];
+              if (result.status === "fulfilled") {
+                const isOutput = row.key.includes("transform-outputs/");
+                const prefix = isOutput ? "[Current workbook]" : "[Input]";
+                fileLines.push(`${prefix} ${row.name}: ${result.value}`);
+              }
+            });
+            if (fileLines.length > 0) {
+              const hasOutputWorkbook = currentAttachmentRows.some((row) =>
+                row.key.includes("transform-outputs/"),
+              );
+              fileContext = hasOutputWorkbook
+                ? `The current workbook is the [Current workbook] file below. Use the upload_file tool with that URL before processing. Do not treat the original input as an equal candidate now that a current workbook exists:\n${fileLines.join("\n")}`
+                : `The user has attached spreadsheet files. Use the upload_file tool with the provided URL to load a file before processing:\n${fileLines.join("\n")}`;
+            }
+          }
 
           // Build system prompt
           const provider = await getAiProvider(session.user.id);
@@ -403,16 +631,21 @@ export async function POST(req: Request) {
             "You are a helpful AI assistant performing a task.",
             `Instructions for this step:\n${step.prompt}`,
             `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
+            fileContext || null,
           ]
             .filter(Boolean)
             .join("\n\n");
 
           let stepSummary = "Step completed.";
+          let stepArtifact: Record<string, unknown> | null = null;
 
           try {
             const result = await generateText({
               model: provider.chat(model),
-              messages: [{ role: "user", content: systemPrompt }],
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: "Please execute the task." },
+              ],
               tools: filteredTools,
               stopWhen: stepCountIs(10),
               maxRetries: 1,
@@ -433,12 +666,57 @@ export async function POST(req: Request) {
                 }
                 for (const tr of stepInfo.toolResults) {
                   const serverName = toolSourceMap[tr.toolName];
+                  const toolResultPayload =
+                    (tr as { result?: unknown; output?: unknown }).result ??
+                    (tr as { result?: unknown; output?: unknown }).output;
+
+                  if (isSpreadsheetMutationTool(tr.toolName)) {
+                    stepHasSpreadsheetMutations = true;
+                  }
+
+                  if (tr.toolName === "upload_file") {
+                    const uploadedPath =
+                      extractUploadedFilePath(toolResultPayload);
+                    if (uploadedPath) {
+                      activeWorkbookFilePath = uploadedPath;
+                      logger.info(
+                        "[Transform AI] Active workbook file_path captured",
+                        {
+                          runId: runRow.id,
+                          stepIndex: i,
+                          activeWorkbookFilePath,
+                        },
+                        session.user.id,
+                      );
+                    }
+                  }
+
                   // Consistent formatting: serialize objects to JSON if necessary
                   const formattedResult =
-                    typeof (tr as any).result === "object" &&
-                    (tr as any).result !== null
-                      ? JSON.stringify((tr as any).result, null, 2)
-                      : (tr as any).result || (tr as any).output;
+                    typeof toolResultPayload === "object" &&
+                    toolResultPayload !== null
+                      ? JSON.stringify(toolResultPayload, null, 2)
+                      : toolResultPayload;
+
+                  // Capture manage_artifact result for the artifact panel
+                  if (tr.toolName === "manage_artifact") {
+                    const extractedArtifact =
+                      extractArtifactFromToolPayload(toolResultPayload);
+
+                    if (extractedArtifact) {
+                      stepArtifact = extractedArtifact;
+                    } else {
+                      logger.warn(
+                        "[Transform AI] manage_artifact result had no extractable artifact",
+                        {
+                          runId: runRow.id,
+                          stepIndex: i,
+                          payloadType: typeof toolResultPayload,
+                        },
+                        session.user.id,
+                      );
+                    }
+                  }
 
                   emit({
                     type: "tool-result",
@@ -453,7 +731,6 @@ export async function POST(req: Request) {
 
             stepSummary = result.text || stepSummary;
           } catch (stepErr: unknown) {
-            await mcpCleanup();
             const msg =
               stepErr instanceof Error ? stepErr.message : "Step failed";
             await db
@@ -468,7 +745,224 @@ export async function POST(req: Request) {
             return;
           }
 
-          await mcpCleanup();
+          // If the step produced a spreadsheet artifact, save it to S3 so subsequent steps
+          // receive the modified file instead of re-uploading the original input.
+          if (
+            stepArtifact &&
+            typeof (stepArtifact as any).type === "string" &&
+            (stepArtifact as any).type.toLowerCase() === "spreadsheet" &&
+            typeof (stepArtifact as any).content === "string"
+          ) {
+            try {
+              const parsed = JSON.parse(
+                (stepArtifact as any).content as string,
+              );
+              const workbook = XLSX.utils.book_new();
+              for (const sheet of (parsed.sheets ?? []) as Array<{
+                name?: string;
+                data?: unknown[][];
+              }>) {
+                const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
+                XLSX.utils.book_append_sheet(
+                  workbook,
+                  ws,
+                  sheet.name ?? "Sheet1",
+                );
+              }
+              const xlsxBuffer = Buffer.from(
+                XLSX.write(workbook, {
+                  type: "array",
+                  bookType: "xlsx",
+                }) as ArrayBuffer,
+              );
+              const outputName = `step-${i + 1}-output.xlsx`;
+              const outputAttachmentId = uuidv4();
+              const s3Key = `transform-outputs/${session.user.id}/${outputAttachmentId}-${outputName}`;
+              await uploadObject(
+                s3Key,
+                xlsxBuffer,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              );
+              await db.insert(attachment).values({
+                id: outputAttachmentId,
+                userId: session.user.id,
+                transformRunId: runRow.id,
+                name: outputName,
+                mimeType:
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                size: xlsxBuffer.length,
+                key: s3Key,
+              });
+              currentOutputAttachmentIds = [outputAttachmentId];
+              stepPersistedSpreadsheetOutput = true;
+              // Replace the active workbook with the new output so the next step
+              // continues from the latest spreadsheet state instead of the original input.
+              currentAttachmentRows = [
+                {
+                  id: outputAttachmentId,
+                  messageId: null,
+                  transformRunId: runRow.id,
+                  userId: session.user.id,
+                  name: outputName,
+                  mimeType:
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  size: xlsxBuffer.length,
+                  key: s3Key,
+                  createdAt: new Date(),
+                },
+              ];
+              logger.info(
+                "[Transform AI] Active workbook replaced with step output",
+                {
+                  runId: runRow.id,
+                  stepIndex: i,
+                  activeWorkbookAttachmentId: outputAttachmentId,
+                  activeWorkbookName: outputName,
+                },
+                session.user.id,
+              );
+              // Persist so resume logic picks up the latest workbook only
+              await db
+                .update(transformRun)
+                .set({ outputAttachmentIds: currentOutputAttachmentIds })
+                .where(eq(transformRun.id, runRow.id));
+            } catch (xlsxErr) {
+              logger.warn(
+                "[Transform AI] Failed to persist step output as xlsx",
+                { xlsxErr },
+                session.user.id,
+              );
+            }
+          }
+
+          if (
+            stepHasSpreadsheetMutations &&
+            activeWorkbookFilePath &&
+            !stepPersistedSpreadsheetOutput &&
+            "download_file" in runMcpTools
+          ) {
+            try {
+              const downloadToolSource = runToolSourceMap.download_file;
+              const canUseDownloadTool =
+                typeof downloadToolSource === "string" &&
+                stepServerNames.has(downloadToolSource);
+
+              if (canUseDownloadTool) {
+                const downloadTool = runMcpTools.download_file as {
+                  execute?: (args: { file_path: string }) => Promise<unknown>;
+                };
+
+                if (typeof downloadTool.execute === "function") {
+                  const downloaded = await downloadTool.execute({
+                    file_path: activeWorkbookFilePath,
+                  });
+                  const downloadPayload =
+                    extractDownloadFilePayload(downloaded);
+
+                  if (downloadPayload) {
+                    const xlsxBuffer = Buffer.from(
+                      downloadPayload.fileContent,
+                      "base64",
+                    );
+                    const outputAttachmentId = uuidv4();
+                    const outputName =
+                      downloadPayload.filename ||
+                      currentAttachmentRows[0]?.name ||
+                      `step-${i + 1}-output.xlsx`;
+                    const s3Key = `transform-outputs/${session.user.id}/${outputAttachmentId}-${outputName}`;
+
+                    await uploadObject(
+                      s3Key,
+                      xlsxBuffer,
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    );
+
+                    await db.insert(attachment).values({
+                      id: outputAttachmentId,
+                      userId: session.user.id,
+                      transformRunId: runRow.id,
+                      name: outputName,
+                      mimeType:
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      size: xlsxBuffer.length,
+                      key: s3Key,
+                    });
+
+                    currentOutputAttachmentIds = [outputAttachmentId];
+                    stepPersistedSpreadsheetOutput = true;
+                    currentAttachmentRows = [
+                      {
+                        id: outputAttachmentId,
+                        messageId: null,
+                        transformRunId: runRow.id,
+                        userId: session.user.id,
+                        name: outputName,
+                        mimeType:
+                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        size: xlsxBuffer.length,
+                        key: s3Key,
+                        createdAt: new Date(),
+                      },
+                    ];
+
+                    await db
+                      .update(transformRun)
+                      .set({ outputAttachmentIds: currentOutputAttachmentIds })
+                      .where(eq(transformRun.id, runRow.id));
+
+                    logger.info(
+                      "[Transform AI] Persisted step output from download_file fallback",
+                      {
+                        runId: runRow.id,
+                        stepIndex: i,
+                        outputAttachmentId,
+                        outputName,
+                      },
+                      session.user.id,
+                    );
+                  }
+                }
+              }
+            } catch (downloadErr) {
+              logger.warn(
+                "[Transform AI] download_file fallback persistence failed",
+                { downloadErr, runId: runRow.id, stepIndex: i },
+                session.user.id,
+              );
+            }
+          }
+
+          if (
+            stepHasSpreadsheetMutations &&
+            activeWorkbookFilePath &&
+            !stepPersistedSpreadsheetOutput
+          ) {
+            const errorMessage = `Step \"${step.name}\" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
+
+            logger.error(
+              "[Transform AI] Workbook was modified but no output attachment was persisted",
+              undefined,
+              {
+                runId: runRow.id,
+                stepIndex: i,
+                activeWorkbookFilePath,
+              },
+              session.user.id,
+            );
+
+            await db
+              .update(transformRun)
+              .set({ status: "failed", errorMessage })
+              .where(eq(transformRun.id, runRow.id));
+
+            emit({
+              type: "error",
+              message: errorMessage,
+            });
+
+            controller.close();
+            return;
+          }
 
           // Read current state of files for live preview
           const stepData: Record<string, any[]> = {};
@@ -479,6 +973,7 @@ export async function POST(req: Request) {
             stepIndex: i,
             summary: stepSummary,
             stepData,
+            artifact: stepArtifact,
           });
 
           logger.info(
@@ -511,7 +1006,11 @@ export async function POST(req: Request) {
         // All steps completed
         await db
           .update(transformRun)
-          .set({ status: "completed", currentStepIndex: steps.length - 1 })
+          .set({
+            status: "completed",
+            currentStepIndex: steps.length - 1,
+            outputAttachmentIds: currentOutputAttachmentIds,
+          })
           .where(eq(transformRun.id, runRow.id));
 
         emit({
@@ -538,6 +1037,7 @@ export async function POST(req: Request) {
         );
         emit({ type: "error", message: msg });
       } finally {
+        await runMcpCleanup();
         try {
           controller.close();
         } catch {
