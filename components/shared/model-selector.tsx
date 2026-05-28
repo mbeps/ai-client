@@ -11,9 +11,15 @@ import {
   ComboboxGroup,
   ComboboxLabel,
 } from "@/components/ui/combobox";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Badge } from "@/components/ui/badge";
 import { Model } from "@/types/model";
 import { MODELS } from "@/constants/models";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Info, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,15 +60,15 @@ export function ModelSelector({
     [value],
   );
 
-  // Group models by their defined category or fallback to the provider prefix in the value
+  // Group models by their defined provider or fallback to the prefix in the value
   const groupedModels = useMemo(() => {
     const groups: Record<string, Model[]> = {};
     MODELS.forEach((model) => {
-      const category = model.category || model.value.split("/")[0] || "Other";
-      if (!groups[category]) {
-        groups[category] = [];
+      const provider = model.provider || model.value.split("/")[0] || "Other";
+      if (!groups[provider]) {
+        groups[provider] = [];
       }
-      groups[category].push(model);
+      groups[provider].push(model);
     });
     return groups;
   }, []);
@@ -87,19 +93,89 @@ export function ModelSelector({
       <ComboboxContent className="min-w-[220px]">
         <ComboboxEmpty>No models found.</ComboboxEmpty>
         <ComboboxList>
-          {Object.entries(groupedModels).map(([category, models]) => (
-            <ComboboxGroup key={category}>
+          {Object.entries(groupedModels).map(([provider, models]) => (
+            <ComboboxGroup key={provider}>
               <ComboboxLabel className="capitalize text-[10px] font-semibold tracking-wider text-muted-foreground/70">
-                {category}
+                {provider}
               </ComboboxLabel>
               {models.map((m) => (
-                <ComboboxItem key={m.value} value={m} className="text-xs">
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span className="truncate">{m.label}</span>
-                    {m.isThinking && (
-                      <BrainCircuit className="h-3 w-3 text-amber-500 shrink-0" />
-                    )}
-                  </div>
+                <ComboboxItem key={m.value} value={m} className="text-xs p-0!">
+                  <HoverCard openDelay={200}>
+                    <HoverCardTrigger asChild>
+                      <div className="flex w-full items-center gap-2 px-2 py-1.5 cursor-default">
+                        <span className="truncate">{m.label}</span>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent
+                      side="right"
+                      align="start"
+                      className="w-64 p-3"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                            <span className="text-xs font-semibold">
+                              {m.label}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {m.provider}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                            Context Window
+                          </span>
+                          <span className="text-xs">
+                            {m.contextWindow?.toLocaleString() ?? "Unknown"}{" "}
+                            tokens (
+                            {m.contextWindow
+                              ? `${Math.round(m.contextWindow / 1000)}k`
+                              : "?"}
+                            )
+                          </span>
+                        </div>
+
+                        {m.capabilities && m.capabilities.length > 0 && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              Capabilities
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {m.capabilities.map((cap) => (
+                                <Badge
+                                  key={cap}
+                                  variant="secondary"
+                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                >
+                                  {cap.replace("-", " ")}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {m.isThinking && (
+                          <div className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5 mt-0.5">
+                            <div className="flex items-center gap-1.5 uppercase tracking-wider text-[10px] font-medium text-muted-foreground">
+                              <BrainCircuit className="h-3 w-3 text-amber-500" />
+                              Reasoning
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 h-4 border-amber-500/20 text-amber-600 bg-amber-500/5 font-medium"
+                              >
+                                Enabled
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
                 </ComboboxItem>
               ))}
             </ComboboxGroup>

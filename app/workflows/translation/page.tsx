@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { MODELS, hasCapability } from "@/constants/models";
 import {
   Languages,
   ArrowLeftRight,
@@ -31,7 +32,6 @@ import {
 } from "@/constants/languages";
 import { translateText } from "@/lib/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
-import { MODELS } from "@/constants/models";
 import { Model } from "@/types/model";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -160,13 +160,8 @@ export default function TranslationWorkflowPage() {
   };
 
   const isVisionModel = useMemo(() => {
-    const m = modelId.toLowerCase();
-    return (
-      m.includes("gpt-4o") ||
-      m.includes("claude-3-5") ||
-      m.includes("vl") ||
-      m.includes("vision")
-    );
+    const mObj = MODELS.find((m) => m.value === modelId);
+    return mObj ? hasCapability(mObj, "vision") : false;
   }, [modelId]);
 
   return (

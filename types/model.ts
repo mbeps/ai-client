@@ -8,6 +8,8 @@
  * @see AppState for the store managing selected model state
  * @author Maruf Bepary
  */
+export type ModelCapability = "vision" | "tool-calling" | "json-output";
+
 export interface Model {
   /** Human-readable display name for the model (e.g., "GPT-4 Turbo", "Claude 3 Opus"). */
   label: string;
@@ -15,8 +17,14 @@ export interface Model {
   /** Provider-specific model identifier (e.g., "gpt-4-turbo", "claude-3-opus-20240229"). */
   value: string;
 
-  /** Optional category for grouping models (e.g., "Standard", "Reasoning", "Vision"). */
-  category?: string;
+  /** Optional provider for grouping models (e.g., "OpenAI", "Google", "Anthropic"). */
+  provider?: string;
+
+  /** The maximum context window size in tokens for this model. */
+  contextWindow?: number;
+
+  /** List of advanced capabilities supported by the model. */
+  capabilities?: ModelCapability[];
 
   /** Whether this is a 'thinking' model that supports reasoning tokens. */
   isThinking?: boolean;
