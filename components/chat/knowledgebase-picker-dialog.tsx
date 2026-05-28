@@ -103,10 +103,6 @@ export function KnowledgebasePickerDialog({
                               {kb.description}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {kb.documentCount}{" "}
-                            {kb.documentCount === 1 ? "document" : "documents"}
-                          </p>
                         </div>
                       </button>
                     );
