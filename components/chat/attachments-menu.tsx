@@ -24,6 +24,8 @@ interface AttachmentsMenuProps {
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
+  supportsVision?: boolean;
+  supportsTools?: boolean;
 }
 
 export const AttachmentsMenu = ({
@@ -37,6 +39,8 @@ export const AttachmentsMenu = ({
   knowledgebases,
   selectedKbs,
   onToggleKb,
+  supportsVision = true,
+  supportsTools = true,
 }: AttachmentsMenuProps) => (
   <div className="flex flex-col gap-0.5 p-1">
     <Button
@@ -73,10 +77,10 @@ export const AttachmentsMenu = ({
           variant="ghost"
           size="sm"
           className="justify-start w-full"
-          disabled={!servers || servers.length === 0}
+          disabled={!servers || servers.length === 0 || !supportsTools}
         >
           <Wrench className="mr-2 h-4 w-4" />
-          Select Tools
+          {supportsTools ? "Select Tools" : "Tools Unsupported"}
           {selectedTools.size > 0 || selectedResources.size > 0
             ? ` (${selectedTools.size + selectedResources.size})`
             : ""}

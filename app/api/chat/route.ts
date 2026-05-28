@@ -4,7 +4,7 @@ import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
-import { DEFAULT_MODEL } from "@/constants/models";
+import { DEFAULT_MODEL, hasCapability } from "@/constants/models";
 import { chatRequestSchema } from "@/schemas/chat";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
@@ -196,10 +196,40 @@ export async function POST(req: Request) {
 
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-  const processedMessages = assembleModelMessages(history);
+  // Filter messages based on model capabilities (e.g., vision)
+  const isVisionModel = hasCapability(model, "vision");
+  const filteredHistory = isVisionModel
+    ? history
+    : history.map((msg) => {
+        if (msg.role !== "user") return msg;
+        return {
+          ...msg,
+          attachments: msg.attachments?.filter((att) => att.type !== "image"),
+          content: Array.isArray(msg.content)
+            ? msg.content.filter((part) => part.type !== "image")
+            : msg.content,
+        };
+      });
+
+  if (
+    !isVisionModel &&
+    history.some((m) => m.attachments?.some((a) => a.type === "image"))
+  ) {
+    logger.warn(
+      "[Chat API] Stripped images from history for non-vision model",
+      {
+        model,
+        chatId,
+      },
+    );
+  }
+
+  const processedMessages = assembleModelMessages(filteredHistory);
 
   // Identify spreadsheet attachments in the latest user message for HTTP-only tool access
-  const lastUserMessage = history.filter((m) => m.role === "user").pop();
+  const lastUserMessage = filteredHistory
+    .filter((m) => m.role === "user")
+    .pop();
   const spreadsheetAttachments =
     lastUserMessage?.attachments?.filter(
       (a) => a.type === "spreadsheet" && a.key,
@@ -225,13 +255,21 @@ export async function POST(req: Request) {
     ...processedMessages,
   ];
 
+  const isToolCallingModel = hasCapability(model, "tool-calling");
+  if (!isToolCallingModel && hasMcpTools) {
+    logger.warn("[Chat API] Stripped tools for non-tool-calling model", {
+      model,
+      chatId,
+    });
+  }
+
   // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
   // rather than the OpenAI Responses API (/responses), which OpenRouter does not support.
   const result = streamText({
     model: provider.chat(model),
     messages: finalMessages,
-    tools: hasMcpTools ? mcpTools : undefined,
-    stopWhen: hasMcpTools ? stepCountIs(10) : undefined,
+    tools: isToolCallingModel && hasMcpTools ? mcpTools : undefined,
+    stopWhen: isToolCallingModel && hasMcpTools ? stepCountIs(10) : undefined,
     abortSignal: req.signal,
   });
 
