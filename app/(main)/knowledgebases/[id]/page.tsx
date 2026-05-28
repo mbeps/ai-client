@@ -104,7 +104,7 @@ export default function KnowledgebasePage() {
   return (
     <div className="page-container-detail">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold">{kb.name}</h1>
+        <h1 className="text-2xl font-bold">{kb.name}</h1>
         {kb.description && (
           <p className="text-muted-foreground">{kb.description}</p>
         )}
@@ -126,49 +126,55 @@ export default function KnowledgebasePage() {
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
-        <SidebarTabsContent value="documents" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
+        <SidebarTabsContent value="documents" className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Card className="flex-1 min-w-[200px] shadow-none">
+              <CardHeader>
+                <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+                  <FileText className="h-3.5 w-3.5" />
                   Documents
                 </CardDescription>
-                <CardTitle className="text-2xl">{documents.length}</CardTitle>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <CardTitle className="text-xl font-bold">
+                    {documents.length}
+                  </CardTitle>
+                  <p className="text-[10px] text-muted-foreground">
+                    {documents.length === 0
+                      ? "Empty"
+                      : `${readyCount} of ${documents.length} ready`}
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  {documents.length === 0
-                    ? "No documents uploaded yet."
-                    : `${readyCount} of ${documents.length} ready`}
-                </p>
-              </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Created
+            <Card className="flex-1 min-w-[200px] shadow-none">
+              <CardHeader>
+                <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Stats
                 </CardDescription>
-                <CardTitle className="text-base font-medium">
-                  {format(kb.createdAt, "PPP")}
-                </CardTitle>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <CardTitle className="text-sm font-medium">
+                    Created {format(kb.createdAt, "PPP")}
+                  </CardTitle>
+                  <p className="text-[10px] text-muted-foreground">
+                    Updated {format(kb.updatedAt, "PP")}
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  Last updated {format(kb.updatedAt, "PPP")}
-                </p>
-              </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Documents</h2>
-              <Button size="sm" onClick={() => setShowUpload(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
+              <h2 className="text-base font-semibold">Documents</h2>
+              <Button
+                size="sm"
+                onClick={() => setShowUpload(true)}
+                className="h-8 px-3 text-xs"
+              >
+                <Upload className="mr-2 h-3.5 w-3.5" />
+                Upload
               </Button>
             </div>
             <DocumentList
@@ -180,23 +186,24 @@ export default function KnowledgebasePage() {
           </div>
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>
+        <SidebarTabsContent value="settings" className="space-y-4">
+          <Card className="shadow-none">
+            <CardHeader className="p-4">
+              <CardTitle className="text-base">General Settings</CardTitle>
+              <CardDescription className="text-xs">
                 Manage basic information for this knowledge base.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+            <CardContent className="px-4 pb-4 pt-0 space-y-3">
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="space-y-0.5">
-                  <div className="font-medium">Knowledgebase Name</div>
+                  <div className="text-xs font-medium">Knowledgebase Name</div>
                   <div className="text-sm text-muted-foreground">{kb.name}</div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-8 text-xs"
                   onClick={() => setShowRename(true)}
                 >
                   Rename
@@ -205,25 +212,27 @@ export default function KnowledgebasePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-destructive/20">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
+          <Card className="border-destructive/20 shadow-none">
+            <CardHeader className="p-4 text-destructive">
+              <CardTitle className="text-base">Danger Zone</CardTitle>
+              <CardDescription className="text-xs text-destructive/80">
                 Irreversible actions for this knowledge base.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
+            <CardContent className="px-4 pb-4 pt-0">
+              <p className="text-xs text-muted-foreground mb-3">
                 Deleting this knowledge base will permanently remove all
                 associated documents and vector embeddings. This action cannot
                 be undone.
               </p>
               <Button
                 variant="destructive"
+                size="sm"
+                className="h-8 text-xs"
                 onClick={() => setShowDelete(true)}
                 disabled={isDeleting}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
                 Delete Knowledgebase
               </Button>
             </CardContent>
