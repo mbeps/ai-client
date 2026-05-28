@@ -62,23 +62,42 @@ export async function registerMcpTools(
       execute: async (args: any) => {
         try {
           const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
+
           // For spreadsheets the AI may pass `sheets` as a top-level arg instead of
           // embedding the JSON in `content`. Serialize it so the viewer can parse it.
           let content = args.content || args.text || "";
-          if (!content && args.sheets) {
+
+          // If sheets are provided directly, use them to build the content
+          if (args.sheets && Array.isArray(args.sheets)) {
             content = JSON.stringify({ sheets: args.sheets });
+          } else if (args.sheets && typeof args.sheets === "string") {
+            // Some models might stringify the sheets array themselves
+            try {
+              const parsedSheets = JSON.parse(args.sheets);
+              if (Array.isArray(parsedSheets)) {
+                content = JSON.stringify({ sheets: parsedSheets });
+              } else if (parsedSheets.sheets) {
+                content = JSON.stringify(parsedSheets);
+              }
+            } catch {
+              // Fallback to raw string if it's not valid JSON
+              content = args.sheets;
+            }
           }
+
           // If no type is given but sheets are present, infer spreadsheet.
           const inferredType = VALID_TYPES.includes(args.type)
             ? args.type
-            : args.sheets
+            : args.sheets || content.includes('"sheets":')
               ? "spreadsheet"
               : "markdown";
+
           const normalizedArgs = {
             type: inferredType,
             title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
             content,
           };
+
           return {
             success: true,
             message: PROMPTS.TOOLS.MANAGE_ARTIFACT.SUCCESS_MESSAGE,

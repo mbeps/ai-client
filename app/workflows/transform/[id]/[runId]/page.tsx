@@ -57,6 +57,7 @@ type StepState = {
   status: "pending" | "running" | "completed" | "awaiting_review";
   summary?: string;
   stepData?: Record<string, any[]>;
+  artifact?: ArtifactData | null;
   toolCalls?: ToolCall[];
   toolResults?: ToolResult[];
 };
@@ -246,10 +247,11 @@ export default function TransformRunDetailPage() {
               status: "completed",
               summary: event.summary as string,
               stepData: event.stepData as Record<string, any[]>,
+              artifact: (event.artifact as ArtifactData | null) ?? null,
             },
           }));
           setSelectedStepIndex(event.stepIndex as number);
-          setIsArtifactOpen(true);
+          if (event.artifact) setIsArtifactOpen(true);
           break;
 
         case "transform-review-required":
@@ -382,14 +384,19 @@ export default function TransformRunDetailPage() {
   };
 
   const currentArtifact = useMemo(() => {
-    if (
-      selectedStepIndex === null ||
-      !stepStates[selectedStepIndex]?.stepData
-    ) {
+    if (selectedStepIndex === null) return null;
+    const stepState = stepStates[selectedStepIndex];
+    if (!stepState) return null;
+
+    // Direct artifact from manage_artifact tool call
+    if (stepState.artifact) return stepState.artifact;
+
+    // Legacy: spreadsheet built from stepData
+    if (!stepState.stepData || Object.keys(stepState.stepData).length === 0) {
       return null;
     }
     const step = agent?.steps[selectedStepIndex];
-    const dataMap = stepStates[selectedStepIndex].stepData!;
+    const dataMap = stepState.stepData;
     const filenames = Object.keys(dataMap);
     if (filenames.length === 0) return null;
 
@@ -406,7 +413,9 @@ export default function TransformRunDetailPage() {
 
   const hasAnyArtifact = useMemo(() => {
     return Object.values(stepStates).some(
-      (state) => state.stepData && Object.keys(state.stepData).length > 0,
+      (state) =>
+        state.artifact != null ||
+        (state.stepData && Object.keys(state.stepData).length > 0),
     );
   }, [stepStates]);
 
@@ -707,11 +716,17 @@ export default function TransformRunDetailPage() {
             </div>
           </ResizablePanel>
 
-          {(agent.tools?.includes("manage_artifact") || hasAnyArtifact) && (
+          {(agent.tools?.includes("manage_artifact") ||
+            hasAnyArtifact ||
+            selectedStepIndex !== null) && (
             <>
-              <ResizableHandle withHandle />
+              <ResizableHandle withHandle className="hidden lg:flex" />
 
-              <ResizablePanel defaultSize={60} minSize={30} className="bg-card">
+              <ResizablePanel
+                defaultSize={50}
+                minSize={30}
+                className="bg-card hidden lg:block"
+              >
                 <div className="h-full relative overflow-hidden">
                   {currentArtifact ? (
                     <ArtifactPanel
@@ -732,9 +747,10 @@ export default function TransformRunDetailPage() {
                         <p className="text-lg font-bold text-foreground">
                           Step Preview
                         </p>
-                        <p className="text-sm leading-relaxed">
-                          Select a completed step from the timeline to inspect
-                          the output at that stage of the process.
+                        <p className="text-sm leading-relaxed text-muted-foreground/80">
+                          {selectedStepIndex !== null
+                            ? "This step hasn't produced a preview yet. Pro-tip: select 'manage_artifact' in your agent tools to enable visual updates."
+                            : "Select a completed step from the timeline to inspect the output at that stage of the process."}
                         </p>
                       </div>
                     </div>
