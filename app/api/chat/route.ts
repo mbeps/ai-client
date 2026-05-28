@@ -255,6 +255,13 @@ export async function POST(req: Request) {
     ...processedMessages,
   ];
 
+  if (finalMessages.length === 0) {
+    finalMessages.push({
+      role: "system",
+      content: "You are a helpful AI assistant.",
+    });
+  }
+
   const isToolCallingModel = hasCapability(model, "tool-calling");
   if (!isToolCallingModel && hasMcpTools) {
     logger.warn("[Chat API] Stripped tools for non-tool-calling model", {

@@ -33,7 +33,9 @@ export function buildSystemPrompt(
     );
   }
 
-  return systemParts.length > 0
-    ? [{ role: "system", content: systemParts.join("\n\n") }]
-    : [];
+  if (systemParts.length === 0) {
+    systemParts.push("You are a helpful AI assistant.");
+  }
+
+  return [{ role: "system", content: systemParts.join("\n\n") }];
 }

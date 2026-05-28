@@ -215,9 +215,27 @@ export function ChatUI({
     if (initialMessage && chat && !sentInitial.current) {
       sentInitial.current = true;
       onInitialMessageSent?.();
-      handleSend(initialMessage);
+      handleSend(
+        initialMessage,
+        [],
+        DEFAULT_MODEL,
+        initialServerIds,
+        initialSelectedTools,
+        [],
+        undefined,
+        chat.assistantId || undefined,
+        initialKbIds,
+      );
     }
-  }, [chat, initialMessage, handleSend, onInitialMessageSent]);
+  }, [
+    chat,
+    initialMessage,
+    handleSend,
+    onInitialMessageSent,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds,
+  ]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {

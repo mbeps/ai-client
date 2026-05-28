@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,7 @@ import { Bot, FolderOpen, Database, Sparkles, ArrowRight } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ROUTES } from "@/constants/routes";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -23,6 +25,15 @@ export default function HomePage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const publicMcpServers = useAppStore((state) => state.publicMcpServers);
+
+  useResourceHydration(["mcpServers", "publicMcpServers"]);
+
+  const enabledServers = useMemo(() => {
+    return [...mcpServers, ...publicMcpServers].filter((s) => s.enabled);
+  }, [mcpServers, publicMcpServers]);
+
   const handleStart = async (content: string) => {
     if (!content.trim()) return;
     const chatId = await createChatDb(content.slice(0, 60));
@@ -72,7 +83,11 @@ export default function HomePage() {
           {/* Quick navigation */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8 w-full sm:w-auto justify-center">
             {quickActions.map((action) => (
-              <Link key={action.href} href={action.href} className="w-full sm:w-auto">
+              <Link
+                key={action.href}
+                href={action.href}
+                className="w-full sm:w-auto"
+              >
                 <Button
                   variant="outline"
                   className="gap-3 h-auto py-3 px-4 w-full sm:w-auto justify-between sm:justify-start"
@@ -80,7 +95,9 @@ export default function HomePage() {
                   <div className="flex items-center gap-3">
                     <action.icon className="h-5 w-5 text-primary/80" />
                     <div className="text-left">
-                      <div className="text-sm font-semibold">{action.label}</div>
+                      <div className="text-sm font-semibold">
+                        {action.label}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {action.description}
                       </div>
@@ -95,7 +112,7 @@ export default function HomePage() {
 
         {/* Chat input */}
         <div className="w-full max-w-3xl mt-auto md:mt-0 pb-2 md:pb-0">
-          <ChatInput onSend={handleStart} />
+          <ChatInput onSend={handleStart} servers={enabledServers} />
         </div>
       </div>
     </div>
