@@ -212,9 +212,24 @@ export function useStreamResponse(
     }
 
     const latestChat = useAppStore.getState().chats[chatId];
-    const latestThread = latestChat?.currentLeafId
+    let latestThread = latestChat?.currentLeafId
       ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
       : [];
+
+    // Fallback logic: Ensure the current user message is included in the history.
+    // This handles the race condition where addMessage hasn't fully updated the leaf ID
+    // or when starting a brand new chat.
+    if (!latestThread.some((m) => m.id === userMsgId)) {
+      const currentMsg = latestChat?.messages[userMsgId] || {
+        id: userMsgId,
+        role: "user" as const,
+        content: fullContent,
+        metadata: userMsgMetadata,
+        attachments: attachments,
+      };
+      // For a new chat, latestThread might be empty. For an edit/branch, it might have prefix history.
+      latestThread = [...latestThread, currentMsg as any];
+    }
 
     const history = latestThread.map((m) => ({
       role: m.role,
