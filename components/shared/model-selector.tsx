@@ -54,15 +54,15 @@ export function ModelSelector({
     [value],
   );
 
-  // Group models by their defined category or fallback to the provider prefix in the value
+  // Group models by their defined provider or fallback to the prefix in the value
   const groupedModels = useMemo(() => {
     const groups: Record<string, Model[]> = {};
     MODELS.forEach((model) => {
-      const category = model.category || model.value.split("/")[0] || "Other";
-      if (!groups[category]) {
-        groups[category] = [];
+      const provider = model.provider || model.value.split("/")[0] || "Other";
+      if (!groups[provider]) {
+        groups[provider] = [];
       }
-      groups[category].push(model);
+      groups[provider].push(model);
     });
     return groups;
   }, []);
@@ -87,10 +87,10 @@ export function ModelSelector({
       <ComboboxContent className="min-w-[220px]">
         <ComboboxEmpty>No models found.</ComboboxEmpty>
         <ComboboxList>
-          {Object.entries(groupedModels).map(([category, models]) => (
-            <ComboboxGroup key={category}>
+          {Object.entries(groupedModels).map(([provider, models]) => (
+            <ComboboxGroup key={provider}>
               <ComboboxLabel className="capitalize text-[10px] font-semibold tracking-wider text-muted-foreground/70">
-                {category}
+                {provider}
               </ComboboxLabel>
               {models.map((m) => (
                 <ComboboxItem key={m.value} value={m} className="text-xs">
