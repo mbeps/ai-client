@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Trash2, Command, Save } from "lucide-react";
+import { Loader2, Trash2, Command, Save, Settings } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
@@ -23,6 +23,13 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
+import { useTabState } from "@/hooks/use-tab-state";
+import {
+  SidebarTabs,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+  SidebarTabsContent,
+} from "@/components/shared/sidebar-tabs";
 
 /**
  * Prompt editor page — client component for viewing and editing a single prompt.
@@ -36,6 +43,8 @@ export default function PromptDetailPage() {
   const params = useParams();
   const router = useRouter();
   const promptId = params.id as string;
+
+  const [tab, setTab] = useTabState("tab", "general");
 
   const prompts = useAppStore((state) => state.prompts);
   const prompt = prompts.find((p) => p.id === promptId);
@@ -124,15 +133,27 @@ export default function PromptDetailPage() {
         description={`Edit shortcut: ${prompt.shortcut}`}
       />
 
-      <div className="space-y-6 mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Prompt Configuration</CardTitle>
-            <CardDescription>
+      <SidebarTabs value={tab} onValueChange={setTab} className="mt-6 w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="general">
+            <Settings className="w-4 h-4 mr-2" />
+            General
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="danger">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Danger Zone
+          </SidebarTabsTrigger>
+        </SidebarTabsList>
+
+        <SidebarTabsContent value="general" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Prompt Configuration</h3>
+            <p className="text-sm text-muted-foreground">
               Modify the prompt title, shortcut, and expansion text.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+
+          <div className="space-y-4">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Title</label>
@@ -171,8 +192,9 @@ export default function PromptDetailPage() {
                 }
               />
             </div>
-          </CardContent>
-          <CardFooter>
+          </div>
+
+          <div>
             <Button onClick={handleSave} disabled={savingSettings}>
               {savingSettings ? (
                 "Saving..."
@@ -183,32 +205,34 @@ export default function PromptDetailPage() {
                 </>
               )}
             </Button>
-          </CardFooter>
-        </Card>
+          </div>
+        </SidebarTabsContent>
 
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>
-              Irreversible actions for this prompt.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Deleting this prompt will permanently remove it from your
-              shortcuts. This action cannot be undone.
-            </p>
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={deleting}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Prompt
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+        <SidebarTabsContent value="danger">
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible actions for this prompt.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Deleting this prompt will permanently remove it from your
+                shortcuts. This action cannot be undone.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Prompt
+              </Button>
+            </CardContent>
+          </Card>
+        </SidebarTabsContent>
+      </SidebarTabs>
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
