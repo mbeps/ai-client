@@ -14,7 +14,6 @@ import type { ProjectRow } from "@/types/project-row";
  * @param id - Unique identifier of the project to toggle
  * @returns Updated project with inverted isPinned flag and current timestamp
  * @throws Error with message "Not Found" when project does not exist or is not owned by user
- * @see getProject for fetching project details without modification
  * @author Maruf Bepary
  */
 export async function togglePinProject(id: string): Promise<ProjectRow> {

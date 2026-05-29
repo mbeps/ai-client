@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { ChatOptions } from "@/components/chat/chat-options";
 import { ProjectOptions } from "@/components/project/project-options";
 import { AssistantOptions } from "@/components/assistant/assistant-options";
@@ -17,7 +18,8 @@ import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-o
  */
 export function EntityOptions() {
   const pathname = usePathname();
-  const { chats, projects, assistants, knowledgebases } = useAppStore();
+  const { chats, projects, assistants } = useAppStore();
+  const { normalizedKnowledgebases } = useKnowledgebases();
   
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) return null;
@@ -39,7 +41,7 @@ export function EntityOptions() {
     if (assistant) return <AssistantOptions assistant={assistant} />;
 
     // Check if the segment is a Knowledgebase ID
-    const kb = knowledgebases.find((kb) => kb.id === segment);
+    const kb = normalizedKnowledgebases.find((kb) => kb.id === segment);
     if (kb) return <KnowledgebaseOptions kb={kb} />;
   }
 

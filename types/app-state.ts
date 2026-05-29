@@ -32,8 +32,6 @@ export type AppState = {
   mcpServers: McpServer[];
   /** All publicly shared MCP servers from the community. */
   publicMcpServers: PublicMcpServer[];
-  /** All knowledge bases. */
-  knowledgebases: Knowledgebase[];
   /** All transform agents. */
   transformAgents: TransformAgent[];
   /** All discovered MCP prompts (ephemeral). */
@@ -83,9 +81,6 @@ export type AppState = {
 
   // Prompt Actions
   loadPrompts: () => Promise<void>;
-
-  // Knowledge Base Actions
-  loadKnowledgebases: () => Promise<void>;
 
   // MCP Server Actions
   loadMcpServers: () => Promise<void>;

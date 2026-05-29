@@ -6,11 +6,9 @@ import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
-import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
 import { projectRowToStore } from "../mappers/project";
 import { assistantRowToStore } from "../mappers/assistant";
-import { knowledgebaseRowToStore } from "../mappers/knowledgebase";
 import { promptRowToStore } from "../mappers/prompt";
 import { transformAgentRowToStore } from "../mappers/transform-agent";
 import { mcpServerRowToStore } from "../mappers/mcp-server";
@@ -39,7 +37,6 @@ type EntitySlice = Pick<
   | "prompts"
   | "mcpServers"
   | "publicMcpServers"
-  | "knowledgebases"
   | "transformAgents"
   | "mcpPrompts"
   | "loadTransformAgents"
@@ -48,7 +45,6 @@ type EntitySlice = Pick<
   | "loadPrompts"
   | "loadMcpServers"
   | "loadPublicMcpServers"
-  | "loadKnowledgebases"
   | "loadMcpPrompts"
 >;
 
@@ -60,7 +56,6 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   prompts: [],
   mcpServers: [],
   publicMcpServers: [],
-  knowledgebases: [],
   transformAgents: [],
   mcpPrompts: [],
 
@@ -114,12 +109,5 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         createdAt: new Date(r.createdAt),
         updatedAt: new Date(r.updatedAt),
       }) as any,
-  ),
-
-  loadKnowledgebases: createEntityLoader(
-    set,
-    "knowledgebases",
-    listKnowledgebases,
-    knowledgebaseRowToStore,
   ),
 });

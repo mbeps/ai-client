@@ -28,7 +28,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, theme: "default" });
         // Use a unique ID for each render to avoid conflicts
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
         const { svg: svgCode } = await mermaid.render(id, chart);
         setSvg(svgCode);
       } catch (e: any) {

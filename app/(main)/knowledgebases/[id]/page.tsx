@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/lib/store";
 import {
   FileText,
   Calendar,
@@ -23,6 +22,7 @@ import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { listDocuments } from "@/lib/actions/knowledgebases/list-documents";
+import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
 import { DocumentList } from "@/components/knowledgebase/document-list";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
@@ -36,30 +36,37 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { useTabState } from "@/hooks/use-tab-state";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import type { KbDocumentRow } from "@/types/kb-document-row";
 
 import { RenameDialog } from "@/components/shared/rename-dialog";
+import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
 
 export default function KnowledgebasePage() {
   const params = useParams();
   const router = useRouter();
   const kbId = params.id as string;
-  const knowledgebases = useAppStore((state) => state.knowledgebases);
-  const kb = knowledgebases.find((k) => k.id === kbId);
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
-
-  // Centralised hydration
-  const { isLoading: hydrationLoading } = useResourceHydration([
-    "knowledgebases",
-  ]);
-
+  
+  const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
 
   const [activeTab, setActiveTab] = useTabState("tab", "documents");
+
+  const fetchKb = useCallback(async () => {
+    try {
+      const data = await getKnowledgebase(kbId);
+      if (data) {
+        setKb(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch knowledgebase:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [kbId]);
 
   const {
     showRename,
@@ -72,11 +79,14 @@ export default function KnowledgebasePage() {
   } = useEntityOptions({
     id: kbId,
     type: "Knowledgebase",
-    onRename: renameKnowledgebase,
+    onRename: async (id, name) => {
+      const result = await renameKnowledgebase(id, name);
+      fetchKb();
+      return result;
+    },
     onDelete: (id) => deleteKnowledgebase(id),
     redirectPath: ROUTES.KNOWLEDGEBASES.path,
     useRouterRefresh: true,
-    onAfterMutation: loadKnowledgebases,
   });
 
   const fetchDocuments = useCallback(() => {
@@ -86,10 +96,11 @@ export default function KnowledgebasePage() {
   }, [kbId, setDocuments]);
 
   useEffect(() => {
+    fetchKb();
     fetchDocuments();
-  }, [fetchDocuments]);
+  }, [fetchKb, fetchDocuments]);
 
-  if (hydrationLoading && knowledgebases.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

@@ -1,23 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAppStore } from "@/lib/store";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import { Database, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
+import { listKnowledgebases, type KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 
 export default function KnowledgebasesPage() {
-  const knowledgebases = useAppStore((state) => state.knowledgebases);
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+  const [knowledgebases, setKnowledgebases] = useState<KnowledgebaseWithCount[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [, startTransition] = useTransition();
+
+  const fetchKbs = useCallback(async () => {
+    try {
+      const data = await listKnowledgebases();
+      startTransition(() => {
+        setKnowledgebases(data);
+      });
+    } catch (error) {
+      console.error("Failed to load knowledgebases:", error);
+    }
+  }, []);
 
   useEffect(() => {
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases().catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchKbs();
+  }, [fetchKbs]);
 
   return (
     <>
@@ -26,7 +35,15 @@ export default function KnowledgebasesPage() {
         title="Knowledgebases"
         description="Manage your documents and global context."
         items={knowledgebases}
-        renderCard={(kb) => <KnowledgebaseCard knowledgebase={kb} />}
+        renderCard={(kb) => (
+          <KnowledgebaseCard
+            knowledgebase={{
+              ...kb,
+              description: kb.description ?? undefined,
+            }}
+            onAfterMutation={fetchKbs}
+          />
+        )}
         emptyStateMessage="No knowledge bases yet. Create one to attach documents to projects or assistants."
         searchPlaceholder="Search knowledgebases..."
         action={
@@ -46,6 +63,7 @@ export default function KnowledgebasesPage() {
       <CreateKnowledgebaseDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        onSuccess={fetchKbs}
       />
     </>
   );

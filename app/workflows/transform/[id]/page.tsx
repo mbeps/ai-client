@@ -68,6 +68,9 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import type { TransformRunRow } from "@/types/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
+import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 
 export default function AgentEditorPage() {
   const params = useParams();
@@ -76,8 +79,8 @@ export default function AgentEditorPage() {
   const id = params.id as string;
   const isNew = id === "new";
 
-  const { mcpServers, loadMcpServers, knowledgebases, loadKnowledgebases } =
-    useAppStore();
+  const { mcpServers, loadMcpServers } = useAppStore();
+  const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -109,14 +112,9 @@ export default function AgentEditorPage() {
     if (mcpServers.length === 0) {
       loadMcpServers();
     }
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases();
-    }
   }, [
     mcpServers.length,
     loadMcpServers,
-    knowledgebases.length,
-    loadKnowledgebases,
   ]);
 
   useEffect(() => {
@@ -228,35 +226,9 @@ export default function AgentEditorPage() {
     });
   };
 
-  const toggleResource = (serverId: string, uri: string) => {
-    const resourceId = `${serverId}:resource:${uri}`;
-    setTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(resourceId)) {
-        next.delete(resourceId);
-      } else {
-        next.add(resourceId);
-      }
-      return next;
-    });
-  };
-
-  const toggleKnowledgeBase = (kbId: string) => {
-    setKnowledgeBaseIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(kbId)) {
-        next.delete(kbId);
-      } else {
-        next.add(kbId);
-      }
-      return next;
-    });
-  };
-
   const toggleAllTools = (
     serverId: string,
     toolNames: string[],
-    resourceUris: string[],
     enabled: boolean,
   ) => {
     setTools((prev) => {
@@ -267,14 +239,6 @@ export default function AgentEditorPage() {
           next.add(toolId);
         } else {
           next.delete(toolId);
-        }
-      });
-      resourceUris.forEach((uri) => {
-        const resourceId = `${serverId}:resource:${uri}`;
-        if (enabled) {
-          next.add(resourceId);
-        } else {
-          next.delete(resourceId);
         }
       });
       return next;
@@ -548,9 +512,7 @@ export default function AgentEditorPage() {
             <ToolPickerList
               servers={mcpServers}
               selectedTools={tools}
-              selectedResources={tools}
               onToggleTool={toggleTool}
-              onToggleResource={toggleResource}
               onBulkSelect={toggleAllTools}
             />
           </div>

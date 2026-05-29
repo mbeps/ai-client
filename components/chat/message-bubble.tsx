@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import type { Message } from "@/types/message";
 import type { Attachment } from "@/types/attachment";
 import { ROUTES } from "@/constants/routes";
@@ -117,7 +118,7 @@ export function MessageBubble({
     return extractCitations(rawToolData.toolResults);
   }, [rawToolData, streamingCitations]);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const knowledgebases = useAppStore((state) => state.knowledgebases);
+  const { knowledgebases } = useKnowledgebases();
   const promptMeta = isUser ? rawPromptMeta : null;
   const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
   const toolData = isUser ? null : rawToolData;

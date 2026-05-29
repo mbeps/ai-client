@@ -80,7 +80,7 @@ import { listProjects } from "@/lib/actions/projects/list-projects";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { renameProject } from "@/lib/actions/projects/rename-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
-import { getProject } from "@/lib/actions/projects/get-project";
+
 import { togglePinProject } from "@/lib/actions/projects/toggle-pin-project";
 
 const PROJECT_ROW = {
@@ -295,28 +295,6 @@ describe("updateProject", () => {
     await expect(
       updateProject(VALID_UUID, { name: "Updated" }),
     ).rejects.toThrow("Unauthorized");
-  });
-});
-
-// ── getProject ────────────────────────────────────────────────────────────────
-describe("getProject", () => {
-  const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-
-  it("returns the project row when found", async () => {
-    chainable.where.mockResolvedValueOnce([PROJECT_ROW]);
-    const result = await getProject(VALID_UUID);
-    expect(result).toEqual(PROJECT_ROW);
-    expect(chainable.select).toHaveBeenCalledOnce();
-  });
-
-  it("throws when project is not found", async () => {
-    chainable.where.mockResolvedValueOnce([]);
-    await expect(getProject(VALID_UUID)).rejects.toThrow();
-  });
-
-  it("throws when unauthenticated", async () => {
-    vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(getProject(VALID_UUID)).rejects.toThrow("Unauthorized");
   });
 });
 

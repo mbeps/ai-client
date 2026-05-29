@@ -13,7 +13,6 @@ import { and, eq } from "drizzle-orm";
  * @param id - Unique identifier of the prompt to delete
  * @returns void
  * @throws Error with message "Not Found" when prompt does not exist or is not owned by user
- * @see getPrompt for retrieving prompt details before deletion
  * @see listPrompts for viewing all prompts
  * @author Maruf Bepary
  */

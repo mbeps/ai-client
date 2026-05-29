@@ -9,7 +9,6 @@ export type HydratableResource =
   | "prompts"
   | "mcpServers"
   | "publicMcpServers"
-  | "knowledgebases"
   | "transformAgents"
   | "mcpPrompts";
 
