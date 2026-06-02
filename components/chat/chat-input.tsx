@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { ROUTES } from "@/constants/routes";
 import {
   Popover,
@@ -66,7 +67,6 @@ interface ChatInputProps {
     model: string,
     selectedServerIds: string[],
     selectedTools: string[],
-    selectedResources: string[],
     selectedPromptId?: string,
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
@@ -98,9 +98,6 @@ interface ChatInputProps {
 
   /** Initial tool identifiers to select. */
   initialSelectedTools?: string[];
-
-  /** Initial resource identifiers to select. */
-  initialSelectedResources?: string[];
 
   /** Initial prompt ID if editing a slash-command message. */
   initialSelectedPromptId?: string;
@@ -149,7 +146,6 @@ export function ChatInput({
   initialAttachments = [],
   initialSelectedServerIds = [],
   initialSelectedTools = [],
-  initialSelectedResources = [],
   initialSelectedPromptId,
   initialSelectedAssistantId,
   initialSelectedKbs = [],
@@ -171,15 +167,11 @@ export function ChatInput({
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(initialSelectedTools),
   );
-  const [selectedResources, setSelectedResources] = useState<Set<string>>(
-    new Set(initialSelectedResources),
-  );
   const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
     new Set(initialSelectedKbs),
   );
 
-  const knowledgebases = useAppStore((state) => state.knowledgebases);
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+  const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
 
   const selectedModelObj = useMemo(
     () => MODELS.find((m) => m.value === modelId) || MODELS[0],
@@ -195,11 +187,6 @@ export function ChatInput({
     () => hasCapability(selectedModelObj, "tool-calling"),
     [selectedModelObj],
   );
-
-  useEffect(() => {
-    loadKnowledgebases().catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -279,7 +266,6 @@ export function ChatInput({
         modelId,
         Array.from(selectedServerIds),
         Array.from(selectedTools),
-        Array.from(selectedResources),
         selectedPrompt?.id,
         selectedAssistant?.id,
         Array.from(selectedKbs),
@@ -327,20 +313,13 @@ export function ChatInput({
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-        // Also remove all tools/resources for this server
+        // Also remove all tools for this server
         setSelectedTools((prevTools) => {
           const nextTools = new Set(prevTools);
           nextTools.forEach((tId) => {
             if (tId.startsWith(`${id}:`)) nextTools.delete(tId);
           });
           return nextTools;
-        });
-        setSelectedResources((prevRes) => {
-          const nextRes = new Set(prevRes);
-          nextRes.forEach((rId) => {
-            if (rId.startsWith(`${id}:`)) nextRes.delete(rId);
-          });
-          return nextRes;
         });
       } else {
         next.add(id);
@@ -365,21 +344,6 @@ export function ChatInput({
     });
   };
 
-  const toggleResource = (serverId: string, resourceUri: string) => {
-    const resourceId = `${serverId}:resource:${resourceUri}`;
-    setSelectedResources((prev) => {
-      const next = new Set(prev);
-      if (next.has(resourceId)) next.delete(resourceId);
-      else {
-        next.add(resourceId);
-        // Ensure server is selected
-        setSelectedServerIds((prevServers) =>
-          new Set(prevServers).add(serverId),
-        );
-      }
-      return next;
-    });
-  };
   const handleToggleKb = useCallback(
     (id: string) => {
       setSelectedKbs((prev) => {
@@ -407,7 +371,6 @@ export function ChatInput({
   const handleBulkSelect = (
     serverId: string,
     toolNames: string[],
-    resourceUris: string[],
     select: boolean,
   ) => {
     if (select) {
@@ -417,25 +380,13 @@ export function ChatInput({
         toolNames.forEach((name) => next.add(`${serverId}:tool:${name}`));
         return next;
       });
-      setSelectedResources((prev) => {
-        const next = new Set(prev);
-        resourceUris.forEach((uri) => next.add(`${serverId}:resource:${uri}`));
-        return next;
-      });
     } else {
       setSelectedTools((prev) => {
         const next = new Set(prev);
         toolNames.forEach((name) => next.delete(`${serverId}:tool:${name}`));
         return next;
       });
-      setSelectedResources((prev) => {
-        const next = new Set(prev);
-        resourceUris.forEach((uri) =>
-          next.delete(`${serverId}:resource:${uri}`),
-        );
-        return next;
-      });
-      // Optionally deselect server if no tools/resources left, but let's keep it simple
+      // Optionally deselect server if no tools left, but let's keep it simple
     }
   };
 
@@ -626,9 +577,7 @@ export function ChatInput({
                   servers={servers}
                   fileInputRef={fileInputRef}
                   selectedTools={selectedTools}
-                  selectedResources={selectedResources}
                   onToggleTool={toggleTool}
-                  onToggleResource={toggleResource}
                   onBulkSelect={handleBulkSelect}
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
@@ -654,9 +603,7 @@ export function ChatInput({
                   servers={servers}
                   fileInputRef={fileInputRef}
                   selectedTools={selectedTools}
-                  selectedResources={selectedResources}
                   onToggleTool={toggleTool}
-                  onToggleResource={toggleResource}
                   onBulkSelect={handleBulkSelect}
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}

@@ -46,9 +46,11 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
+import { listKnowledgebases, type KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { useState, useEffect, useMemo } from "react";
 import { useTabState } from "@/hooks/use-tab-state";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { toast } from "sonner";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import {
@@ -83,14 +85,13 @@ export default function ProjectPage() {
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
-  const knowledgebases = useAppStore((state) => state.knowledgebases);
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
+
+  const { normalizedKnowledgebases, isLoading: loadingKbs, refresh: refreshKbs } = useKnowledgebases();
 
   // Centralised hydration for all required entities
   const { isLoading: hydrationLoading } = useResourceHydration([
     "projects",
     "mcpServers",
-    "knowledgebases",
   ]);
 
   const [loadingChats, setLoadingChats] = useState(false);
@@ -139,7 +140,7 @@ export default function ProjectPage() {
     }
   }, [project]);
 
-  const loading = hydrationLoading || (projects.length === 0 && !project);
+  const loading = hydrationLoading || loadingKbs || (projects.length === 0 && !project);
 
   if (loading) {
     return (
@@ -163,34 +164,21 @@ export default function ProjectPage() {
     });
   };
 
-  const onToggleResource = (serverId: string, uri: string) => {
-    const id = `${serverId}:resource:${uri}`;
-    setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const onBulkSelect = (
     serverId: string,
     toolNames: string[],
-    resourceUris: string[],
     select: boolean,
   ) => {
     if (select) {
       setSelectedTools((prev) => {
         const next = new Set(prev);
         toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
-        resourceUris.forEach((u) => next.add(`${serverId}:resource:${u}`));
         return next;
       });
     } else {
       setSelectedTools((prev) => {
         const next = new Set(prev);
         toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
-        resourceUris.forEach((u) => next.delete(`${serverId}:resource:${u}`));
         return next;
       });
     }
@@ -318,7 +306,7 @@ export default function ProjectPage() {
 
           <div className="space-y-4">
             <KnowledgeBasePicker
-              knowledgebases={knowledgebases}
+              knowledgebases={normalizedKnowledgebases}
               mode="single"
               selectedIds={new Set(selectedKbId ? [selectedKbId] : [])}
               onSelect={(ids) => setSelectedKbId(Array.from(ids)[0] || null)}
@@ -418,9 +406,7 @@ export default function ProjectPage() {
               <ToolPickerList
                 servers={mcpServers.filter((s) => s.enabled)}
                 selectedTools={selectedTools}
-                selectedResources={selectedTools}
                 onToggleTool={onToggleTool}
-                onToggleResource={onToggleResource}
                 onBulkSelect={onBulkSelect}
               />
             </div>

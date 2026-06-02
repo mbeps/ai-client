@@ -9,10 +9,12 @@ import { KnowledgebaseOptions } from "./knowledgebase-options";
 
 interface KnowledgebaseCardProps {
   knowledgebase: Knowledgebase;
+  onAfterMutation?: () => void;
 }
 
 export function KnowledgebaseCard({
   knowledgebase: kb,
+  onAfterMutation,
 }: KnowledgebaseCardProps) {
   const router = useRouter();
 
@@ -36,7 +38,7 @@ export function KnowledgebaseCard({
           </div>
         </div>
         <div onClick={(e) => e.stopPropagation()}>
-          <KnowledgebaseOptions kb={kb} />
+          <KnowledgebaseOptions kb={kb} onAfterMutation={onAfterMutation} />
         </div>
       </div>
     </Card>

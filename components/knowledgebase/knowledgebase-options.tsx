@@ -8,11 +8,14 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
-import { useAppStore } from "@/lib/store";
 
-export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
-
+export function KnowledgebaseOptions({
+  kb,
+  onAfterMutation,
+}: {
+  kb: Knowledgebase;
+  onAfterMutation?: () => void;
+}) {
   const {
     isMobile,
     showRename,
@@ -29,7 +32,7 @@ export function KnowledgebaseOptions({ kb }: { kb: Knowledgebase }) {
     onDelete: (id) => deleteKnowledgebase(id),
     redirectPath: ROUTES.KNOWLEDGEBASES.path,
     useRouterRefresh: true,
-    onAfterMutation: loadKnowledgebases,
+    onAfterMutation,
   });
 
   const items = [

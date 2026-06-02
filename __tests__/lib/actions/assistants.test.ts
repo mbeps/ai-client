@@ -77,7 +77,6 @@ vi.mock("@/lib/actions/require-session", () => ({
 import { requireSession } from "@/lib/actions/require-session";
 import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-import { getAssistant } from "@/lib/actions/assistants/get-assistant";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
 import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
@@ -207,28 +206,6 @@ describe("listAssistants", () => {
   it("throws when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
     await expect(listAssistants()).rejects.toThrow("Unauthorized");
-  });
-});
-
-// ── getAssistant ──────────────────────────────────────────────────────────────
-describe("getAssistant", () => {
-  const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-
-  it("returns the assistant row when found", async () => {
-    chainable.where.mockResolvedValueOnce([ASSISTANT_ROW]);
-    const result = await getAssistant(VALID_UUID);
-    expect(result).toEqual(ASSISTANT_ROW);
-    expect(chainable.select).toHaveBeenCalledOnce();
-  });
-
-  it("throws 'Not Found' when assistant does not exist or is not owned", async () => {
-    chainable.where.mockResolvedValueOnce([]);
-    await expect(getAssistant(VALID_UUID)).rejects.toThrow("Not Found");
-  });
-
-  it("throws when unauthenticated", async () => {
-    vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(getAssistant(VALID_UUID)).rejects.toThrow("Unauthorized");
   });
 });
 

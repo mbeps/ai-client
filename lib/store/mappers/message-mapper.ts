@@ -59,11 +59,10 @@ export function parseMessageMetadata(
       typeof metadata === "string" ? JSON.parse(metadata) : metadata;
 
     const promptMeta =
-      (typeof parsed.promptId === "string" ||
-        typeof parsed.mcpPromptId === "string") &&
+      typeof parsed.promptId === "string" &&
       typeof parsed.userContent === "string"
         ? {
-            promptId: (parsed.promptId || parsed.mcpPromptId) as string,
+            promptId: parsed.promptId,
             userContent: parsed.userContent,
           }
         : null;

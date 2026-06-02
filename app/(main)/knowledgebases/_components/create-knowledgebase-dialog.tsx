@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowledgebase";
-import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -35,15 +34,16 @@ type FormValues = z.infer<typeof createKnowledgebaseSchema>;
 interface CreateKnowledgebaseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export function CreateKnowledgebaseDialog({
   open,
   onOpenChange,
+  onSuccess,
 }: CreateKnowledgebaseDialogProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const loadKnowledgebases = useAppStore((state) => state.loadKnowledgebases);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createKnowledgebaseSchema),
@@ -61,7 +61,7 @@ export function CreateKnowledgebaseDialog({
       form.reset();
       onOpenChange(false);
       router.refresh();
-      await loadKnowledgebases();
+      onSuccess?.();
     } catch {
       toast.error("Failed to create knowledgebase");
     } finally {

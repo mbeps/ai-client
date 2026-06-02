@@ -77,7 +77,6 @@ vi.mock("@/lib/actions/require-session", () => ({
 import { requireSession } from "@/lib/actions/require-session";
 import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { listPrompts } from "@/lib/actions/prompts/list-prompts";
-import { getPrompt } from "@/lib/actions/prompts/get-prompt";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 
@@ -215,28 +214,6 @@ describe("listPrompts", () => {
   it("throws when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
     await expect(listPrompts()).rejects.toThrow("Unauthorized");
-  });
-});
-
-// ── getPrompt ─────────────────────────────────────────────────────────────────
-describe("getPrompt", () => {
-  const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-
-  it("returns the prompt row when found", async () => {
-    chainable.where.mockResolvedValueOnce([PROMPT_ROW]);
-    const result = await getPrompt(VALID_UUID);
-    expect(result).toEqual(PROMPT_ROW);
-    expect(chainable.select).toHaveBeenCalledOnce();
-  });
-
-  it("throws 'Not Found' when prompt does not exist or is not owned", async () => {
-    chainable.where.mockResolvedValueOnce([]);
-    await expect(getPrompt(VALID_UUID)).rejects.toThrow("Not Found");
-  });
-
-  it("throws when unauthenticated", async () => {
-    vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(getPrompt(VALID_UUID)).rejects.toThrow("Unauthorized");
   });
 });
 

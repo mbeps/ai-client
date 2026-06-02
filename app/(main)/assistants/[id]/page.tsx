@@ -151,34 +151,21 @@ export default function AssistantPage() {
     });
   };
 
-  const onToggleResource = (serverId: string, uri: string) => {
-    const id = `${serverId}:resource:${uri}`;
-    setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const onBulkSelect = (
     serverId: string,
     toolNames: string[],
-    resourceUris: string[],
     select: boolean,
   ) => {
     if (select) {
       setSelectedTools((prev) => {
         const next = new Set(prev);
         toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
-        resourceUris.forEach((u) => next.add(`${serverId}:resource:${u}`));
         return next;
       });
     } else {
       setSelectedTools((prev) => {
         const next = new Set(prev);
         toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
-        resourceUris.forEach((u) => next.delete(`${serverId}:resource:${u}`));
         return next;
       });
     }
@@ -360,9 +347,7 @@ export default function AssistantPage() {
               <ToolPickerList
                 servers={mcpServers.filter((s) => s.enabled)}
                 selectedTools={selectedTools}
-                selectedResources={selectedTools}
                 onToggleTool={onToggleTool}
-                onToggleResource={onToggleResource}
                 onBulkSelect={onBulkSelect}
               />
             </div>

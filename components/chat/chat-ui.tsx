@@ -103,10 +103,6 @@ export function ChatUI({
     return initialToolsAndResources.filter((t) => t.includes(":tool:"));
   }, [initialToolsAndResources]);
 
-  const initialSelectedResources = useMemo(() => {
-    return initialToolsAndResources.filter((t) => t.includes(":resource:"));
-  }, [initialToolsAndResources]);
-
   const initialKbIds = useMemo(() => {
     return chat?.knowledgebaseId ? [chat.knowledgebaseId] : [];
   }, [chat?.knowledgebaseId]);
@@ -180,7 +176,6 @@ export function ChatUI({
       model = DEFAULT_MODEL,
       selectedServerIds: string[] = [],
       selectedTools: string[] = [],
-      _selectedResources: string[] = [],
       selectedPromptId?: string,
       selectedAssistantId?: string,
       selectedKbIds: string[] = [],
@@ -221,7 +216,6 @@ export function ChatUI({
         DEFAULT_MODEL,
         initialServerIds,
         initialSelectedTools,
-        [],
         undefined,
         chat.assistantId || undefined,
         initialKbIds,
@@ -459,7 +453,7 @@ export function ChatUI({
               canMentionAssistant={thread.length === 0 && !chat?.assistantId}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
-              initialSelectedResources={initialSelectedResources}
+
               initialSelectedKbs={initialKbIds}
               onKnowledgebaseChange={handleKbChange}
             />

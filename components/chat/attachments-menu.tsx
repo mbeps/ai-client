@@ -12,15 +12,8 @@ interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   selectedTools: Set<string>;
-  selectedResources: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
-  onToggleResource: (serverId: string, resourceUri: string) => void;
-  onBulkSelect: (
-    serverId: string,
-    toolNames: string[],
-    resourceUris: string[],
-    select: boolean,
-  ) => void;
+  onBulkSelect: (serverId: string, toolNames: string[], select: boolean) => void;
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
@@ -32,9 +25,7 @@ export const AttachmentsMenu = ({
   servers,
   fileInputRef,
   selectedTools,
-  selectedResources,
   onToggleTool,
-  onToggleResource,
   onBulkSelect,
   knowledgebases,
   selectedKbs,
@@ -68,9 +59,7 @@ export const AttachmentsMenu = ({
     <ToolPickerDialog
       servers={servers || []}
       selectedTools={selectedTools}
-      selectedResources={selectedResources}
       onToggleTool={onToggleTool}
-      onToggleResource={onToggleResource}
       onBulkSelect={onBulkSelect}
       trigger={
         <Button
@@ -81,9 +70,7 @@ export const AttachmentsMenu = ({
         >
           <Wrench className="mr-2 h-4 w-4" />
           {supportsTools ? "Select Tools" : "Tools Unsupported"}
-          {selectedTools.size > 0 || selectedResources.size > 0
-            ? ` (${selectedTools.size + selectedResources.size})`
-            : ""}
+          {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
         </Button>
       }
     />

@@ -28,21 +28,13 @@ import { cn } from "@/lib/utils";
 export interface ToolPickerListProps {
   servers: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
-  selectedResources: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
-  onToggleResource: (serverId: string, resourceUri: string) => void;
-  onBulkSelect: (
-    serverId: string,
-    toolNames: string[],
-    resourceUris: string[],
-    select: boolean,
-  ) => void;
+  onBulkSelect: (serverId: string, toolNames: string[], select: boolean) => void;
   className?: string;
 }
 
 type ServerContent = {
   tools: DiscoveredTool[];
-  resources: DiscoveredResource[];
   loading: boolean;
   error: string | null;
 };
@@ -50,9 +42,7 @@ type ServerContent = {
 export function ToolPickerList({
   servers,
   selectedTools,
-  selectedResources,
   onToggleTool,
-  onToggleResource,
   onBulkSelect,
   className,
 }: ToolPickerListProps) {
@@ -76,7 +66,6 @@ export function ToolPickerList({
         ...prev,
         [server.id]: {
           tools: result.tools,
-          resources: result.resources,
           loading: false,
           error: null,
         },
@@ -86,7 +75,6 @@ export function ToolPickerList({
         ...prev,
         [server.id]: {
           tools: [],
-          resources: [],
           loading: false,
           error: err instanceof Error ? err.message : "Failed to load",
         },
@@ -123,12 +111,7 @@ export function ToolPickerList({
           t.name.toLowerCase().includes(lowerSearch) ||
           t.description.toLowerCase().includes(lowerSearch),
       );
-      const resourceMatch = content?.resources.some(
-        (r) =>
-          r.name.toLowerCase().includes(lowerSearch) ||
-          r.description.toLowerCase().includes(lowerSearch),
-      );
-      return nameMatch || toolMatch || resourceMatch;
+      return nameMatch || toolMatch;
     });
   }, [servers, search, serverContent]);
 
@@ -142,42 +125,22 @@ export function ToolPickerList({
     return [{ serverId: "internal", name: "manage_artifact" }, ...mcpTools];
   }, [servers, serverContent]);
 
-  const allDiscoveredResources = useMemo(() => {
-    return servers.flatMap((s) =>
-      (serverContent[s.id]?.resources || []).map((r) => ({
-        serverId: s.id,
-        uri: r.uri,
-      })),
-    );
-  }, [servers, serverContent]);
-
   const isAllSelected = useMemo(() => {
-    if (allDiscoveredTools.length === 0 && allDiscoveredResources.length === 0)
-      return false;
-    const toolsSelected = allDiscoveredTools.every((t) =>
+    if (allDiscoveredTools.length === 0) return false;
+    return allDiscoveredTools.every((t) =>
       selectedTools.has(`${t.serverId}:tool:${t.name}`),
     );
-    const resSelected = allDiscoveredResources.every((r) =>
-      selectedResources.has(`${r.serverId}:resource:${r.uri}`),
-    );
-    return toolsSelected && resSelected;
-  }, [
-    allDiscoveredTools,
-    allDiscoveredResources,
-    selectedTools,
-    selectedResources,
-  ]);
+  }, [allDiscoveredTools, selectedTools]);
 
   const toggleAll = () => {
     const shouldSelect = !isAllSelected;
-    onBulkSelect("internal", ["manage_artifact"], [], shouldSelect);
+    onBulkSelect("internal", ["manage_artifact"], shouldSelect);
     servers.forEach((s) => {
       const content = serverContent[s.id];
       if (content) {
         onBulkSelect(
           s.id,
           content.tools.map((t) => t.name),
-          content.resources.map((r) => r.uri),
           shouldSelect,
         );
       }
@@ -201,10 +164,7 @@ export function ToolPickerList({
           size="sm"
           className="h-9 gap-2 shrink-0"
           onClick={toggleAll}
-          disabled={
-            allDiscoveredTools.length === 0 &&
-            allDiscoveredResources.length === 0
-          }
+          disabled={allDiscoveredTools.length === 0}
         >
           {isAllSelected ? (
             <Square className="h-3.5 w-3.5" />
@@ -237,7 +197,6 @@ export function ToolPickerList({
                       onBulkSelect(
                         "internal",
                         ["manage_artifact"],
-                        [],
                         !isAllSelected,
                       );
                     }}
@@ -317,17 +276,12 @@ export function ToolPickerList({
                 expandedServers.has(server.id) || search.length > 0;
 
               const serverTools = content?.tools || [];
-              const serverResources = content?.resources || [];
 
-              const selectedInServer =
-                serverTools.filter((t) =>
-                  selectedTools.has(`${server.id}:tool:${t.name}`),
-                ).length +
-                serverResources.filter((r) =>
-                  selectedResources.has(`${server.id}:resource:${r.uri}`),
-                ).length;
+              const selectedInServer = serverTools.filter((t) =>
+                selectedTools.has(`${server.id}:tool:${t.name}`),
+              ).length;
 
-              const totalInServer = serverTools.length + serverResources.length;
+              const totalInServer = serverTools.length;
               const isServerAllSelected =
                 totalInServer > 0 && selectedInServer === totalInServer;
 
@@ -348,7 +302,6 @@ export function ToolPickerList({
                           onBulkSelect(
                             server.id,
                             serverTools.map((t) => t.name),
-                            serverResources.map((r) => r.uri),
                             !isServerAllSelected,
                           );
                         }}
@@ -463,61 +416,9 @@ export function ToolPickerList({
                             </div>
                           )}
 
-                          {/* Resources section */}
-                          {serverResources.length > 0 && (
-                            <div className="space-y-2 pt-2 border-t border-dashed">
-                              <h4 className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1.5 px-1 sticky top-0 bg-background/95 backdrop-blur py-1 z-10">
-                                <Database className="h-3 w-3" /> Resources
-                              </h4>
-                              <div className="flex flex-col gap-1">
-                                {serverResources
-                                  .filter(
-                                    (r) =>
-                                      !search ||
-                                      r.name
-                                        .toLowerCase()
-                                        .includes(search.toLowerCase()) ||
-                                      r.description
-                                        .toLowerCase()
-                                        .includes(search.toLowerCase()),
-                                  )
-                                  .map((res) => {
-                                    const resId = `${server.id}:resource:${res.uri}`;
-                                    const isChecked =
-                                      selectedResources.has(resId);
-                                    return (
-                                      <label
-                                        key={res.uri}
-                                        className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer"
-                                      >
-                                        <Checkbox
-                                          checked={isChecked}
-                                          onCheckedChange={() =>
-                                            onToggleResource(server.id, res.uri)
-                                          }
-                                          className="mt-0.5"
-                                        />
-                                        <div className="flex flex-col min-w-0">
-                                          <span className="text-xs font-medium truncate">
-                                            {res.name}
-                                          </span>
-                                          {res.description && (
-                                            <span className="text-[10px] text-muted-foreground line-clamp-1">
-                                              {res.description}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </label>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          )}
-
-                          {serverTools.length === 0 &&
-                            serverResources.length === 0 && (
-                              <div className="text-xs text-muted-foreground py-2 text-center">
-                                No tools or resources available
+                          {serverTools.length === 0 && (
+                            <div className="text-xs text-muted-foreground py-2 text-center">
+                              No tools available
                               </div>
                             )}
                         </div>

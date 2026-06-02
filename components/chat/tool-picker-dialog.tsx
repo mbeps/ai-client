@@ -18,24 +18,15 @@ import { useAppStore } from "@/lib/store";
 interface ToolPickerDialogProps {
   servers: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
-  selectedResources: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
-  onToggleResource: (serverId: string, resourceUri: string) => void;
-  onBulkSelect: (
-    serverId: string,
-    toolNames: string[],
-    resourceUris: string[],
-    select: boolean,
-  ) => void;
+  onBulkSelect: (serverId: string, toolNames: string[], select: boolean) => void;
   trigger?: React.ReactNode;
 }
 
 export function ToolPickerDialog({
   servers,
   selectedTools,
-  selectedResources,
   onToggleTool,
-  onToggleResource,
   onBulkSelect,
   trigger,
 }: ToolPickerDialogProps) {
@@ -53,16 +44,14 @@ export function ToolPickerDialog({
       </DialogTrigger>
       <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="sr-only">
-          <DialogTitle>Select Tools & Resources</DialogTitle>
+          <DialogTitle>Select Tools</DialogTitle>
         </DialogHeader>
 
         {open && (
           <ToolPickerList
             servers={servers}
             selectedTools={selectedTools}
-            selectedResources={selectedResources}
             onToggleTool={onToggleTool}
-            onToggleResource={onToggleResource}
             onBulkSelect={onBulkSelect}
           />
         )}
@@ -72,12 +61,6 @@ export function ToolPickerDialog({
               <Wrench className="h-3.5 w-3.5" />
               <span>
                 <strong>{selectedTools.size}</strong> tools selected
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Database className="h-3.5 w-3.5" />
-              <span>
-                <strong>{selectedResources.size}</strong> resources selected
               </span>
             </div>
           </div>

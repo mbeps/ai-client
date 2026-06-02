@@ -17,6 +17,7 @@ import { useShallow } from "zustand/react/shallow";
 import { format } from "date-fns";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
+import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -60,14 +61,12 @@ export function DynamicBreadcrumbs() {
     chats,
     projects,
     assistants,
-    knowledgebases,
     prompts,
     mcpServers,
     transformAgents,
     loadProjects,
     loadPrompts,
     loadAssistants,
-    loadKnowledgebases,
     loadMcpServers,
     loadPublicMcpServers,
     loadTransformAgents,
@@ -76,14 +75,12 @@ export function DynamicBreadcrumbs() {
       chats: state.chats,
       projects: state.projects,
       assistants: state.assistants,
-      knowledgebases: state.knowledgebases,
       prompts: state.prompts,
       mcpServers: state.mcpServers,
       transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
       loadAssistants: state.loadAssistants,
-      loadKnowledgebases: state.loadKnowledgebases,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
       loadTransformAgents: state.loadTransformAgents,
@@ -107,13 +104,6 @@ export function DynamicBreadcrumbs() {
       loadAssistants().catch(() => {});
     }
   }, [assistants.length, loadAssistants]);
-
-  // Load knowledge bases if not available
-  React.useEffect(() => {
-    if (knowledgebases.length === 0) {
-      loadKnowledgebases().catch(() => {});
-    }
-  }, [knowledgebases.length, loadKnowledgebases]);
 
   // Load prompts if not available
   React.useEffect(() => {
@@ -158,7 +148,6 @@ export function DynamicBreadcrumbs() {
           const inStore =
             projects.some((p) => p.id === segment) ||
             assistants.some((a) => a.id === segment) ||
-            knowledgebases.some((kb) => kb.id === segment) ||
             prompts.some((p) => p.id === segment) ||
             mcpServers.some((s) => s.id === segment) ||
             transformAgents.some((a) => a.id === segment) ||
@@ -200,6 +189,17 @@ export function DynamicBreadcrumbs() {
                 console.error("Failed to resolve transform agent label:", err);
               }
             }
+            // 3. Check if it's a Knowledge Base segment (URL: /knowledgebases/[id])
+            else if (prevSegment === "knowledgebases") {
+              try {
+                const kb = await getKnowledgebase(segment);
+                if (kb) {
+                  updates[segment] = kb.name;
+                }
+              } catch (err) {
+                console.error("Failed to resolve knowledgebase label:", err);
+              }
+            }
           }
         }),
       );
@@ -218,7 +218,6 @@ export function DynamicBreadcrumbs() {
     pathname,
     projects,
     assistants,
-    knowledgebases,
     prompts,
     mcpServers,
     transformAgents,
@@ -244,7 +243,6 @@ export function DynamicBreadcrumbs() {
             currentChat?.title ||
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
-            knowledgebases.find((kb) => kb.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
             mcpServers.find((s) => s.id === segment)?.name ||
             transformAgents.find((a) => a.id === segment)?.name ||
