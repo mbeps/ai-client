@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
+import { env } from "@/lib/env";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
@@ -64,59 +65,70 @@ export function SignUpTab({
   }
 
   return (
-    <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(handleSignUp)}>
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <div className="space-y-4">
+      {env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD ? (
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit(handleSignUp)}
+          >
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <PasswordInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <PasswordInput {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          <LoadingSwap isLoading={isSubmitting}>
-            <div className="flex items-center">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Sign Up
-            </div>
-          </LoadingSwap>
-        </Button>
-      </form>
-    </Form>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              <LoadingSwap isLoading={isSubmitting}>
+                <div className="flex items-center">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Sign Up
+                </div>
+              </LoadingSwap>
+            </Button>
+          </form>
+        </Form>
+      ) : (
+        <div className="p-4 text-center text-sm text-muted-foreground">
+          Email registration is currently disabled.
+        </div>
+      )}
+    </div>
   );
 }
