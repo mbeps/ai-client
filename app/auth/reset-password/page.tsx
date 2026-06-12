@@ -1,4 +1,6 @@
 import React, { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { env } from "@/lib/env";
 import ResetPasswordForm from "./_components/reset-password-form";
 
 export const metadata = {
@@ -15,6 +17,10 @@ export const metadata = {
  * @author Maruf Bepary
  */
 export default function ResetPasswordPage() {
+  if (!env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD) {
+    redirect("/auth/login");
+  }
+
   return (
     <main>
       <Suspense>

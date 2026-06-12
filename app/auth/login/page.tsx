@@ -15,6 +15,7 @@ import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
+import { env } from "@/lib/env";
 import { useRouter } from "next/navigation";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";
@@ -66,18 +67,25 @@ export default function LoginPage() {
       className="max-w-4xl mx-auto my-6 px-4"
     >
       {(selectedTab === TAB_VALUES.SIGN_IN ||
-        selectedTab === TAB_VALUES.SIGN_UP) && (
-        <TabsList>
-          <TabsTrigger value={TAB_VALUES.SIGN_IN} className="flex items-center">
-            <LogIn className="mr-2 h-4 w-4" />
-            Sign In
-          </TabsTrigger>
-          <TabsTrigger value={TAB_VALUES.SIGN_UP} className="flex items-center">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Sign Up
-          </TabsTrigger>
-        </TabsList>
-      )}
+        selectedTab === TAB_VALUES.SIGN_UP) &&
+        env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD && (
+          <TabsList>
+            <TabsTrigger
+              value={TAB_VALUES.SIGN_IN}
+              className="flex items-center"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger
+              value={TAB_VALUES.SIGN_UP}
+              className="flex items-center"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Sign Up
+            </TabsTrigger>
+          </TabsList>
+        )}
       <TabsContent value={TAB_VALUES.SIGN_IN}>
         <Card>
           <CardHeader className="text-2xl font-bold">

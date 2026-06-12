@@ -6,6 +6,7 @@ import { ChangePasswordForm } from "./change-password-form";
 import { TwoFactorAuth } from "./two-factor-auth";
 import { PasskeyManagement } from "./passkey-management";
 import { Separator } from "@/components/ui/separator";
+import { env } from "@/lib/env";
 
 /**
  * Server component that aggregates password, 2FA, and passkey management data.
@@ -32,29 +33,33 @@ export async function SecurityTab({
 
   return (
     <div className="space-y-8">
-      {hasPasswordAccount ? (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Change Password</h3>
-            <p className="text-sm text-muted-foreground">
-              Update your password for improved security.
-            </p>
-          </div>
-          <ChangePasswordForm />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Set Password</h3>
-            <p className="text-sm text-muted-foreground">
-              We will send you a password reset email to set up a password.
-            </p>
-          </div>
-          <SetPasswordButton email={email} />
-        </div>
+      {env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD && (
+        <>
+          {hasPasswordAccount ? (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">Change Password</h3>
+                <p className="text-sm text-muted-foreground">
+                  Update your password for improved security.
+                </p>
+              </div>
+              <ChangePasswordForm />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">Set Password</h3>
+                <p className="text-sm text-muted-foreground">
+                  We will send you a password reset email to set up a password.
+                </p>
+              </div>
+              <SetPasswordButton email={email} />
+            </div>
+          )}
+        </>
       )}
 
-      {hasPasswordAccount && (
+      {hasPasswordAccount && env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD && (
         <>
           <Separator />
           <div className="space-y-4">

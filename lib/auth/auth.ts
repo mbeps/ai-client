@@ -38,7 +38,7 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
-    enabled: true,
+    enabled: env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await sendPasswordResetEmail({ user, url });

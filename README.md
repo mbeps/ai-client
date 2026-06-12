@@ -167,6 +167,7 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/better_auth_tutorial
 # Authentication
 BETTER_AUTH_SECRET=your-secure-random-string-here
 BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=true
 
 # AI & Language Models
 
@@ -198,6 +199,7 @@ CLIENT_SECRET_DISCORD=your-discord-oauth-secret
   - Generate: `openssl rand -base64 32`
   - Keep secure; never commit to version control
 - **`BETTER_AUTH_URL`** (required) — Auth callback URL (`http://localhost:3000` for dev)
+- **`NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD`** — Set to `false` to disable email/password credential authentication; defaults to `true`
 - **`NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP`** — Set to `true` to allow connecting to Localhost/Private MCP servers during development (bypasses SSRF guard)
 
 **Storage**

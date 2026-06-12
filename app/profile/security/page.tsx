@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SecurityTab } from "../_components/security/security-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
+import { env } from "@/lib/env";
 
 /**
  * Security settings page.
@@ -18,7 +19,9 @@ export default async function SecurityPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Security</h2>
         <p className="text-muted-foreground">
-          Manage your password, two-factor authentication, and account security.
+          {env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD
+            ? "Manage your password, two-factor authentication, and account security."
+            : "Manage your account security and authentication methods."}
         </p>
       </div>
       <LoadingSuspense>

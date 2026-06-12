@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
+import { env } from "@/lib/env";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PasskeyButton } from "../buttons/passkey-button";
@@ -73,58 +74,63 @@ export function SignInTab({
 
   return (
     <div className="space-y-4">
-      <Form {...form}>
-        <form className="space-y-4" onSubmit={form.handleSubmit(handleSignIn)}>
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" autoComplete="email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD && (
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit(handleSignIn)}
+          >
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" autoComplete="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex justify-between items-center">
-                  <FormLabel>Password</FormLabel>
-                  <Button
-                    onClick={openForgotPassword}
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="text-sm font-normal underline"
-                  >
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    Forgot password?
-                  </Button>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Password</FormLabel>
+                    <Button
+                      onClick={openForgotPassword}
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="text-sm font-normal underline"
+                    >
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Forgot password?
+                    </Button>
+                  </div>
+                  <FormControl>
+                    <PasswordInput autoComplete="current-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              <LoadingSwap isLoading={isSubmitting}>
+                <div className="flex items-center">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
                 </div>
-                <FormControl>
-                  <PasswordInput autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            <LoadingSwap isLoading={isSubmitting}>
-              <div className="flex items-center">
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
-              </div>
-            </LoadingSwap>
-          </Button>
-        </form>
-      </Form>
+              </LoadingSwap>
+            </Button>
+          </form>
+        </Form>
+      )}
       <PasskeyButton />
     </div>
   );

@@ -44,6 +44,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD: z
+    .string()
+    .optional()
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 /**
@@ -58,4 +63,9 @@ const envSchema = z.object({
 export const env =
   typeof window === "undefined"
     ? envSchema.parse(process.env)
-    : ({} as z.infer<typeof envSchema>);
+    : (envSchema.partial().parse({
+        NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP:
+          process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP,
+        NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
+          process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
+      }) as z.infer<typeof envSchema>);
