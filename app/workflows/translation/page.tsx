@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Languages,
   ArrowLeftRight,
@@ -115,7 +116,7 @@ export default function TranslationWorkflowPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [sourceText, sourceLang, targetLang, modelId, attachment]);
+  }, [sourceText, sourceLang, targetLang, modelId, attachment, handleApiError]);
 
   const swapLanguages = () => {
     if (sourceLangValue === "auto") return;
@@ -298,11 +299,15 @@ export default function TranslationWorkflowPage() {
                 <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30 group/attach">
                   <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center shrink-0">
                     {attachment.type === "image" ? (
-                      <img
-                        src={attachment.dataUrl}
-                        className="h-full w-full object-cover rounded"
-                        alt="Preview"
-                      />
+                      <div className="relative h-10 w-10">
+                        <Image
+                          src={attachment.dataUrl}
+                          fill
+                          className="object-cover rounded"
+                          alt="Preview"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <FileText className="h-5 w-5 text-primary" />
                     )}

@@ -222,6 +222,7 @@ export function DynamicBreadcrumbs() {
     mcpServers,
     transformAgents,
     chats,
+    resolvedLabels,
   ]);
 
   // Split pathname into segments and remove empty strings

@@ -34,7 +34,6 @@ export function useProviders(): UseProvidersResult {
     setError(null);
 
     let attempts = 0;
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const data = await fetchProviderRegistryWithCache(
@@ -74,11 +73,11 @@ export function useProviders(): UseProvidersResult {
         0) > 0;
 
     if (!hasCached || !isProviderRegistryCacheFresh("providers")) {
-      void loadProviders();
+      void Promise.resolve().then(() => loadProviders());
       return;
     }
 
-    setIsLoading(false);
+    Promise.resolve().then(() => setIsLoading(false));
   }, [loadProviders]);
 
   return {

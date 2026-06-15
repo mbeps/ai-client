@@ -34,12 +34,10 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const globalSystemPrompt = form.watch("globalSystemPrompt");
 
-  useAutoExpandingTextarea(
-    textareaRef,
-    [form.watch("globalSystemPrompt")],
-    600,
-  );
+  useAutoExpandingTextarea(textareaRef, [globalSystemPrompt], 600);
 
   return (
     <div className="space-y-4">

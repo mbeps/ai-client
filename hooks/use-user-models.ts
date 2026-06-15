@@ -59,7 +59,6 @@ export function useUserModels(
 
     let attempts = 0;
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         const models = await fetchProviderRegistryWithCache(
@@ -104,11 +103,11 @@ export function useUserModels(
         0) > 0;
 
     if (!hasCached || !isProviderRegistryCacheFresh("models")) {
-      void loadModels();
+      void Promise.resolve().then(() => loadModels());
       return;
     }
 
-    setIsLoading(false);
+    Promise.resolve().then(() => setIsLoading(false));
   }, [loadModels]);
 
   const models = useMemo(() => {

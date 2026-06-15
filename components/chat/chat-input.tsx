@@ -174,11 +174,13 @@ export function ChatInput({
 
   useEffect(() => {
     if (chatModels.length === 0) return;
-    setModelId((current) => {
-      if (current && chatModels.some((model) => model.modelId === current)) {
-        return current;
-      }
-      return chatModels[0].modelId;
+    Promise.resolve().then(() => {
+      setModelId((current) => {
+        if (current && chatModels.some((model) => model.modelId === current)) {
+          return current;
+        }
+        return chatModels[0].modelId;
+      });
     });
   }, [chatModels]);
 
