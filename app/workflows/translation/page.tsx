@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MODELS, hasCapability } from "@/constants/models";
 import {
   Languages,
   ArrowLeftRight,
@@ -38,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { Attachment } from "@/types/attachment";
 import { useApiError } from "@/hooks/use-api-error";
+import { useUserModels } from "@/hooks/use-user-models";
 
 /**
  * Translation workflow page providing AI-powered text translation.
@@ -57,12 +57,21 @@ export default function TranslationWorkflowPage() {
   const [targetLangValue, setTargetLangValue] = useState(
     DEFAULT_TARGET_LANGUAGE,
   );
-  const [modelId, setModelId] = useState(MODELS[0].value);
+  const { models: chatModels } = useUserModels("chat");
+  const [modelId, setModelId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (chatModels.length === 0) return;
+    if (modelId && chatModels.some((model) => model.modelId === modelId)) {
+      return;
+    }
+    setModelId(chatModels[0].modelId);
+  }, [chatModels, modelId]);
 
   const sourceLang = useMemo(
     () => LANGUAGES.find((l) => l.value === sourceLangValue) || LANGUAGES[0],
@@ -160,9 +169,9 @@ export default function TranslationWorkflowPage() {
   };
 
   const isVisionModel = useMemo(() => {
-    const mObj = MODELS.find((m) => m.value === modelId);
-    return mObj ? hasCapability(mObj, "vision") : false;
-  }, [modelId]);
+    const selected = chatModels.find((model) => model.modelId === modelId);
+    return selected?.capVision ?? false;
+  }, [chatModels, modelId]);
 
   return (
     <div className="flex flex-col space-y-3 h-full max-w-7xl mx-auto overflow-hidden">

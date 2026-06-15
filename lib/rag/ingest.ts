@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
-import { kbDocument, kbChunk } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { kbDocument, kbChunk, knowledgebase } from "@/drizzle/schema";
+import { and, eq, ne } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
@@ -74,6 +74,25 @@ export async function ingestDocument(
         updatedAt: new Date(),
       })
       .where(eq(kbDocument.id, documentId));
+
+    const staleDocuments = await db
+      .select({ id: kbDocument.id })
+      .from(kbDocument)
+      .where(and(eq(kbDocument.kbId, doc.kbId), ne(kbDocument.status, "ready")))
+      .limit(1);
+
+    await db
+      .update(knowledgebase)
+      .set({
+        needsReindex: staleDocuments.length === 0 ? "false" : "true",
+        reindexReason:
+          staleDocuments.length === 0
+            ? null
+            : "Knowledgebase has documents pending re-index",
+        lastIndexedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgebase.id, doc.kbId));
   } catch (err) {
     await db
       .update(kbDocument)

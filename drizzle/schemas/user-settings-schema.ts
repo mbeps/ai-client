@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
+import { aiModel } from "./ai-model-schema";
 
 /**
  * Stores application-wide user preferences and settings.
@@ -19,7 +20,14 @@ export const userSettings = pgTable(
       .unique()
       .references(() => user.id, { onDelete: "cascade" }),
     globalSystemPrompt: text("global_system_prompt"),
-    openrouterKey: text("openrouter_key"), // Encrypted string at rest
+    defaultChatModelId: text("default_chat_model_id").references(
+      () => aiModel.id,
+      { onDelete: "set null" },
+    ),
+    defaultEmbeddingModelId: text("default_embedding_model_id").references(
+      () => aiModel.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

@@ -13,7 +13,14 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Settings, Wrench, ChevronLeft, LogOut, Command } from "lucide-react";
+import {
+  Settings,
+  Wrench,
+  ChevronLeft,
+  LogOut,
+  Command,
+  Database,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
@@ -43,6 +50,11 @@ export function SettingsSidebar({
       name: "Tools",
       href: ROUTES.SETTINGS.TOOLS.path,
       icon: Wrench,
+    },
+    {
+      name: "Providers",
+      href: ROUTES.SETTINGS.PROVIDERS.path,
+      icon: Database,
     },
     {
       name: "Prompts",
@@ -86,6 +98,8 @@ export function SettingsSidebar({
                     pathname === item.href ||
                     (item.name === "Tools" &&
                       pathname.startsWith(ROUTES.SETTINGS.TOOLS.path)) ||
+                    (item.name === "Providers" &&
+                      pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
                     (item.name === "Prompts" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path))
                   }

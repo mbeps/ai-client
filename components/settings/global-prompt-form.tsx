@@ -8,7 +8,7 @@ import {
 } from "@/schemas/user-settings";
 import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
 import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import {
   Form,
   FormControl,
@@ -19,23 +19,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ActionButton } from "@/components/ui/action-button";
-import { Eye, EyeOff } from "lucide-react";
 
 interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;
 }
 
 export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
-  const [showKey, setShowKey] = useState(false);
   const form = useForm<UserSettings>({
     resolver: zodResolver(userSettingsSchema),
     defaultValues: {
       globalSystemPrompt: initialSettings.globalSystemPrompt ?? "",
-      openrouterKey: initialSettings.openrouterKey ?? "",
     },
   });
 
@@ -51,45 +45,6 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
     <div className="space-y-4">
       <Form {...form}>
         <form className="space-y-6">
-          <FormField
-            control={form.control}
-            name="openrouterKey"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>OpenRouter API Key</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      {...field}
-                      value={field.value ?? ""}
-                      type={showKey ? "text" : "password"}
-                      placeholder="sk-or-..."
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowKey(!showKey)}
-                    >
-                      {showKey ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormDescription>
-                  Required for AI features. Keys are encrypted and stored in our
-                  database.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="globalSystemPrompt"

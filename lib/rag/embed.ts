@@ -1,7 +1,9 @@
 import { embed, embedMany } from "ai";
-import { getAiProvider } from "@/lib/chat/get-ai-provider";
+import { resolveEmbeddingProvider } from "@/lib/chat/resolve-provider";
 
-const MODEL_ID = "nvidia/llama-nemotron-embed-vl-1b-v2:free";
+const PREFIXED_EMBEDDING_MODELS = new Set([
+  "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+]);
 
 /**
  * Embeds a search query using the required "query:" prefix.
@@ -10,12 +12,18 @@ export async function embedQuery(
   text: string,
   userId: string,
 ): Promise<number[]> {
-  const provider = await getAiProvider(userId);
-  const embeddingModel = provider.embedding(MODEL_ID);
+  const resolved = await resolveEmbeddingProvider(userId);
+  const embeddingModel = resolved.sdkProvider.textEmbeddingModel(
+    resolved.modelId,
+  );
+
+  const value = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId)
+    ? `query: ${text}`
+    : text;
 
   const { embedding } = await embed({
     model: embeddingModel,
-    value: `query: ${text}`,
+    value,
   });
   return embedding;
 }
@@ -29,12 +37,18 @@ export async function embedDocuments(
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
 
-  const provider = await getAiProvider(userId);
-  const embeddingModel = provider.embedding(MODEL_ID);
+  const resolved = await resolveEmbeddingProvider(userId);
+  const embeddingModel = resolved.sdkProvider.textEmbeddingModel(
+    resolved.modelId,
+  );
+
+  const values = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId)
+    ? texts.map((t) => `passage: ${t}`)
+    : texts;
 
   const { embeddings } = await embedMany({
     model: embeddingModel,
-    values: texts.map((t) => `passage: ${t}`),
+    values,
   });
   return embeddings;
 }

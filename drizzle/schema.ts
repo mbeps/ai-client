@@ -7,6 +7,8 @@
  * @author Maruf Bepary
  */
 export * from "./schemas/auth-schema";
+export * from "./schemas/ai-provider-schema";
+export * from "./schemas/ai-model-schema";
 export * from "./schemas/chat-schema";
 export * from "./schemas/mcp-server-schema";
 export * from "./schemas/project-schema";

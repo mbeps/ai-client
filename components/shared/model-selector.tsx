@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Combobox,
   ComboboxContent,
@@ -17,8 +17,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { Model } from "@/types/model";
-import { MODELS } from "@/constants/models";
+import { useUserModels, type UserModelOption } from "@/hooks/use-user-models";
 import { BrainCircuit, Info, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +35,8 @@ interface ModelSelectorProps {
   disabled?: boolean;
   /** Whether to show the selection trigger icon in the input. Defaults to true. */
   showTrigger?: boolean;
+  /** Filter model list by runtime type (chat by default). */
+  type?: "chat" | "embedding" | "both";
 }
 
 /**
@@ -53,33 +54,73 @@ export function ModelSelector({
   className,
   disabled,
   showTrigger = true,
+  type = "chat",
 }: ModelSelectorProps) {
+  const { models } = useUserModels(type);
+  const [query, setQuery] = useState("");
+
   // Find the currently selected model object or default to the first available model
   const selectedModel = useMemo(
-    () => MODELS.find((m) => m.value === value) || MODELS[0],
-    [value],
+    () => models.find((m) => m.modelId === value) ?? models[0] ?? null,
+    [models, value],
   );
 
-  // Group models by their defined provider or fallback to the prefix in the value
+  const filteredModels = useMemo(() => {
+    if (!query) return models;
+    const lowerQuery = query.toLowerCase();
+    return models.filter(
+      (m) =>
+        m.label.toLowerCase().includes(lowerQuery) ||
+        m.providerName.toLowerCase().includes(lowerQuery),
+    );
+  }, [models, query]);
+
+  // Group models by their defined provider
   const groupedModels = useMemo(() => {
-    const groups: Record<string, Model[]> = {};
-    MODELS.forEach((model) => {
-      const provider = model.provider || model.value.split("/")[0] || "Other";
+    const groups: Record<string, UserModelOption[]> = {};
+    filteredModels.forEach((model) => {
+      const provider = model.providerName;
       if (!groups[provider]) {
         groups[provider] = [];
       }
       groups[provider].push(model);
     });
     return groups;
-  }, []);
+  }, [filteredModels]);
+
+  if (!selectedModel) {
+    return (
+      <Combobox
+        items={[]}
+        value={null}
+        onValueChange={() => {}}
+        itemToStringValue={() => ""}
+        disabled
+      >
+        <ComboboxInput
+          placeholder="No models configured"
+          showTrigger={showTrigger}
+          className={cn(
+            "h-7 w-[200px] border-none bg-transparent shadow-none text-xs text-muted-foreground",
+            className,
+          )}
+          showClear={false}
+        />
+      </Combobox>
+    );
+  }
 
   return (
     <Combobox
-      items={MODELS}
+      items={filteredModels}
       value={selectedModel}
-      onValueChange={(val) => val && onValueChange((val as Model).value)}
-      itemToStringValue={(m) => (m as Model).label}
-      disabled={disabled}
+      inputValue={query}
+      onInputValueChange={setQuery}
+      onValueChange={(val) =>
+        val && onValueChange((val as UserModelOption).modelId)
+      }
+      itemToStringValue={(m) => (m as UserModelOption).label}
+      disabled={disabled || models.length === 0}
     >
       <ComboboxInput
         placeholder={selectedModel.label}
@@ -99,7 +140,7 @@ export function ModelSelector({
                 {provider}
               </ComboboxLabel>
               {models.map((m) => (
-                <ComboboxItem key={m.value} value={m} className="text-xs p-0!">
+                <ComboboxItem key={m.id} value={m} className="text-xs p-0!">
                   <HoverCard openDelay={200}>
                     <HoverCardTrigger asChild>
                       <div className="flex w-full items-center gap-2 px-2 py-1.5 cursor-default">
@@ -112,15 +153,15 @@ export function ModelSelector({
                       className="w-64 p-3"
                     >
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
                             <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                             <span className="text-xs font-semibold">
                               {m.label}
                             </span>
                           </div>
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            {m.provider}
+                          <span className="text-[10px] text-muted-foreground">
+                            {m.providerName}
                           </span>
                         </div>
 
@@ -129,7 +170,7 @@ export function ModelSelector({
                             Context Window
                           </span>
                           <span className="text-xs">
-                            {m.contextWindow?.toLocaleString() ?? "Unknown"}{" "}
+                            {m.contextWindow.toLocaleString() ?? "Unknown"}{" "}
                             tokens (
                             {m.contextWindow
                               ? `${Math.round(m.contextWindow / 1000)}k`
@@ -138,26 +179,52 @@ export function ModelSelector({
                           </span>
                         </div>
 
-                        {m.capabilities && m.capabilities.length > 0 && (
+                        {(m.capTools ||
+                          m.capVision ||
+                          m.capReasoning ||
+                          m.capStructuredOutput) && (
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                               Capabilities
                             </span>
                             <div className="flex flex-wrap gap-1">
-                              {m.capabilities.map((cap) => (
+                              {m.capTools ? (
                                 <Badge
-                                  key={cap}
                                   variant="secondary"
                                   className="text-[10px] px-1 py-0 h-4 capitalize"
                                 >
-                                  {cap.replace("-", " ")}
+                                  tools
                                 </Badge>
-                              ))}
+                              ) : null}
+                              {m.capVision ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                >
+                                  vision
+                                </Badge>
+                              ) : null}
+                              {m.capReasoning ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                >
+                                  reasoning
+                                </Badge>
+                              ) : null}
+                              {m.capStructuredOutput ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                >
+                                  structured output
+                                </Badge>
+                              ) : null}
                             </div>
                           </div>
                         )}
 
-                        {m.isThinking && (
+                        {m.capReasoning && (
                           <div className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5 mt-0.5">
                             <div className="flex items-center gap-1.5 uppercase tracking-wider text-[10px] font-medium text-muted-foreground">
                               <BrainCircuit className="h-3 w-3 text-amber-500" />

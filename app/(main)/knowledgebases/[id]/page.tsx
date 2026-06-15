@@ -23,6 +23,8 @@ import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { listDocuments } from "@/lib/actions/knowledgebases/list-documents";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { listModels } from "@/lib/actions/models/list-models";
 import { DocumentList } from "@/components/knowledgebase/document-list";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
@@ -42,13 +44,16 @@ import type { KbDocumentRow } from "@/types/kb-document-row";
 
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
+import { AlertTriangle } from "lucide-react";
 
 export default function KnowledgebasePage() {
   const params = useParams();
   const router = useRouter();
   const kbId = params.id as string;
-  
+
   const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
+  const [embeddingModelLabel, setEmbeddingModelLabel] =
+    useState<string>("Not configured");
   const [isLoading, setIsLoading] = useState(true);
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
@@ -61,6 +66,18 @@ export default function KnowledgebasePage() {
       if (data) {
         setKb(data);
       }
+
+      const [settings, embeddingModels] = await Promise.all([
+        getUserSettings(),
+        listModels({ type: "embedding", isEnabled: true }),
+      ]);
+
+      const activeEmbedding =
+        embeddingModels.find(
+          (model) => model.id === settings?.defaultEmbeddingModelId,
+        ) ?? embeddingModels[0];
+
+      setEmbeddingModelLabel(activeEmbedding?.label ?? "Not configured");
     } catch (error) {
       console.error("Failed to fetch knowledgebase:", error);
     } finally {
@@ -206,6 +223,27 @@ export default function KnowledgebasePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-3">
+              <div className="p-3 border rounded-lg bg-muted/20 space-y-1">
+                <div className="text-xs font-medium">
+                  Global Embedding Model
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {embeddingModelLabel}
+                </div>
+                {kb.needsReindex === "true" && (
+                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Re-index required
+                    </div>
+                    <p className="mt-1">
+                      {kb.reindexReason ?? "Embedding configuration changed."}{" "}
+                      Re-upload documents to re-index with the current model.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="space-y-0.5">
                   <div className="text-xs font-medium">Knowledgebase Name</div>
@@ -220,6 +258,17 @@ export default function KnowledgebasePage() {
                   Rename
                 </Button>
               </div>
+
+              {kb.needsReindex === "true" && (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setShowUpload(true)}
+                >
+                  <Upload className="mr-2 h-3.5 w-3.5" />
+                  Re-index documents
+                </Button>
+              )}
             </CardContent>
           </Card>
 

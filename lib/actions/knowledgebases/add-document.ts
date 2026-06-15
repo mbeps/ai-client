@@ -40,5 +40,14 @@ export async function addDocument(
     })
     .returning();
 
+  await db
+    .update(knowledgebase)
+    .set({
+      needsReindex: "true",
+      reindexReason: "New document pending ingestion",
+      updatedAt: new Date(),
+    })
+    .where(eq(knowledgebase.id, validated.kbId));
+
   return row;
 }

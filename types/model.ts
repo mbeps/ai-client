@@ -1,31 +1,44 @@
+import type { AiModelRow } from "@/types/ai-model-row";
+
 /**
- * Represents an available AI model for use in chat requests.
- * Each model is a provider-specific model ID with a human-readable label.
- * Models are configured externally (via environment or config) and used to select
- * which LLM receives the chat prompt (e.g., OpenAI gpt-4, Anthropic Claude).
- *
- * @see Chat for the chat context where models are selected
- * @see AppState for the store managing selected model state
- * @author Maruf Bepary
+ * Legacy capability labels used by static migration seed models.
  */
-export type ModelCapability = "vision" | "tool-calling" | "json-output";
+export type LegacyModelCapability = "vision" | "tool-calling" | "json-output";
 
-export interface Model {
-  /** Human-readable display name for the model (e.g., "GPT-4 Turbo", "Claude 3 Opus"). */
+/**
+ * Legacy static model shape used only by migration seed utilities.
+ */
+export interface LegacyModel {
   label: string;
-
-  /** Provider-specific model identifier (e.g., "gpt-4-turbo", "claude-3-opus-20240229"). */
   value: string;
-
-  /** Optional provider for grouping models (e.g., "OpenAI", "Google", "Anthropic"). */
   provider?: string;
-
-  /** The maximum context window size in tokens for this model. */
   contextWindow?: number;
-
-  /** List of advanced capabilities supported by the model. */
-  capabilities?: ModelCapability[];
-
-  /** Whether this is a 'thinking' model that supports reasoning tokens. */
+  capabilities?: LegacyModelCapability[];
   isThinking?: boolean;
+}
+
+// Backward-compatible aliases used by legacy runtime-seed modules.
+export type Model = LegacyModel;
+export type ModelCapability = LegacyModelCapability;
+
+/**
+ * Provider-registry model capability flags backed by ai_model booleans.
+ */
+export type ProviderModelCapability =
+  | "tools"
+  | "vision"
+  | "reasoning"
+  | "structured_output";
+
+/**
+ * Checks a capability directly from ai_model boolean flags.
+ */
+export function hasProviderCapability(
+  model: AiModelRow,
+  capability: ProviderModelCapability,
+): boolean {
+  if (capability === "tools") return model.capTools;
+  if (capability === "vision") return model.capVision;
+  if (capability === "reasoning") return model.capReasoning;
+  return model.capStructuredOutput;
 }

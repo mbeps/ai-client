@@ -1,6 +1,7 @@
 import { db } from "@/drizzle/db";
 import { sql } from "drizzle-orm";
 import { embedQuery } from "./embed";
+import { DimensionMismatchError } from "@/lib/constants/errors";
 
 const RRF_K = 60;
 
@@ -75,6 +76,21 @@ export async function hybridSearch(
     throw err;
   }
   const embeddingLiteral = `[${embedding.join(",")}]`;
+
+  const dimRows = await db.execute(sql`
+    SELECT vector_dims(c.embedding) AS dim
+    FROM kb_chunk c
+    WHERE c.kb_id = ${kbId}
+      AND c.embedding IS NOT NULL
+    LIMIT 1
+  `);
+
+  const currentDim = Number(dimRows.rows?.[0]?.dim ?? 0);
+  if (currentDim > 0 && currentDim !== embedding.length) {
+    throw new DimensionMismatchError(
+      `Knowledgebase embeddings use dimension ${currentDim}, but current model returned ${embedding.length}. Re-index required.`,
+    );
+  }
 
   const vectorRows = (
     await db.execute(sql`

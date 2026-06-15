@@ -8,8 +8,6 @@ import { revalidatePath } from "next/cache";
 import type { UserSettingsRow } from "@/types/user-settings-row";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { encrypt } from "@/lib/utils/encryption";
-import { isMaskedKey } from "@/lib/utils/mask-key";
 
 /**
  * Updates or initializes application-wide settings for the authenticated user.
@@ -30,22 +28,9 @@ export async function updateUserSettings(
   // Validate input
   const validated = userSettingsSchema.parse(data);
 
-  // Handle encrypted key if provided
-  let filteredData: Record<string, any> = {
+  const filteredData = {
     globalSystemPrompt: validated.globalSystemPrompt ?? null,
   };
-
-  if (validated.openrouterKey) {
-    const isMasked = isMaskedKey(validated.openrouterKey);
-
-    // Only update if it's NOT a masked dummy value and looks like a raw key
-    if (!isMasked && validated.openrouterKey.startsWith("sk-or-")) {
-      filteredData.openrouterKey = encrypt(validated.openrouterKey);
-    }
-  } else if (validated.openrouterKey === null) {
-    // Explicit removal
-    filteredData.openrouterKey = null;
-  }
 
   const [row] = await db
     .insert(userSettings)

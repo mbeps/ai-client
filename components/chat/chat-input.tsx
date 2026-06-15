@@ -45,11 +45,11 @@ import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DEFAULT_MODEL, MODELS, hasCapability } from "@/constants/models";
 import { MentionCommands } from "./mention-commands";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
+import { useUserModels } from "@/hooks/use-user-models";
 
 /**
  * Props for the ChatInput component.
@@ -155,9 +155,8 @@ export function ChatInput({
   submitLabel,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
-  const [modelId, setModelId] = useState<string>(
-    initialModelId || DEFAULT_MODEL,
-  );
+  const { models: chatModels } = useUserModels("chat");
+  const [modelId, setModelId] = useState<string>(initialModelId ?? "");
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
   const [isDragging, setIsDragging] = useState(false);
@@ -173,18 +172,28 @@ export function ChatInput({
 
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
 
+  useEffect(() => {
+    if (chatModels.length === 0) return;
+    setModelId((current) => {
+      if (current && chatModels.some((model) => model.modelId === current)) {
+        return current;
+      }
+      return chatModels[0].modelId;
+    });
+  }, [chatModels]);
+
   const selectedModelObj = useMemo(
-    () => MODELS.find((m) => m.value === modelId) || MODELS[0],
-    [modelId],
+    () => chatModels.find((model) => model.modelId === modelId) ?? null,
+    [chatModels, modelId],
   );
 
   const supportsVision = useMemo(
-    () => hasCapability(selectedModelObj, "vision"),
+    () => selectedModelObj?.capVision ?? false,
     [selectedModelObj],
   );
 
   const supportsTools = useMemo(
-    () => hasCapability(selectedModelObj, "tool-calling"),
+    () => selectedModelObj?.capTools ?? false,
     [selectedModelObj],
   );
 
