@@ -4,7 +4,6 @@ import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
-import { hasCapability as hasLegacyCapability } from "@/constants/models";
 import { chatRequestSchema } from "@/schemas/chat";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
@@ -221,9 +220,7 @@ export async function POST(req: Request) {
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
   // Filter messages based on model capabilities (e.g., vision)
-  const isVisionModel =
-    resolvedModelRow?.capVision ??
-    hasLegacyCapability(resolvedModelId, "vision");
+  const isVisionModel = !!resolvedModelRow?.capVision;
   const filteredHistory = isVisionModel
     ? history
     : history.map((msg) => {
@@ -288,9 +285,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const isToolCallingModel =
-    resolvedModelRow?.capTools ??
-    hasLegacyCapability(resolvedModelId, "tool-calling");
+  const isToolCallingModel = !!resolvedModelRow?.capTools;
   if (!isToolCallingModel && hasMcpTools) {
     logger.warn("[Chat API] Stripped tools for non-tool-calling model", {
       model,

@@ -27,15 +27,4 @@ describe("userSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
   });
-
-  it("strips legacy openrouterKey field", () => {
-    const result = userSettingsSchema.safeParse({
-      openrouterKey: "sk-or-legacy",
-    });
-
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect("openrouterKey" in result.data).toBe(false);
-    }
-  });
 });

@@ -8,7 +8,6 @@ import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import type { Message } from "@/types/message";
 import type { Attachment } from "@/types/attachment";
 import { ROUTES } from "@/constants/routes";
-import { MODELS } from "@/constants/models";
 import { Bot, Command, Database, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
@@ -128,9 +127,7 @@ export function MessageBubble({
 
   const modelName = useMemo(() => {
     if (isUser || !parsedModelId) return null;
-    return (
-      MODELS.find((m) => m.value === parsedModelId)?.label || parsedModelId
-    );
+    return parsedModelId;
   }, [isUser, parsedModelId]);
 
   const hasArtifact = useMemo(() => {

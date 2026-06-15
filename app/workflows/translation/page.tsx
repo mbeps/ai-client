@@ -31,7 +31,6 @@ import {
 } from "@/constants/languages";
 import { translateText } from "@/lib/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
-import { Model } from "@/types/model";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { processAttachment } from "@/lib/attachments/process-attachment";

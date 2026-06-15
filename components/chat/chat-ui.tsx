@@ -14,7 +14,6 @@ import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { extractCitations } from "@/lib/store/mappers/message-mapper";
 
-import { DEFAULT_MODEL } from "@/constants/models";
 import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
@@ -173,7 +172,7 @@ export function ChatUI({
     async (
       content: string,
       attachments: Attachment[] = [],
-      model = DEFAULT_MODEL,
+      model = "",
       selectedServerIds: string[] = [],
       selectedTools: string[] = [],
       selectedPromptId?: string,
@@ -213,7 +212,7 @@ export function ChatUI({
       handleSend(
         initialMessage,
         [],
-        DEFAULT_MODEL,
+        "",
         initialServerIds,
         initialSelectedTools,
         undefined,
@@ -318,7 +317,7 @@ export function ChatUI({
       userContent,
       parentMsg.parentId,
       parentMsg.attachments,
-      DEFAULT_MODEL,
+      "",
       [],
       [],
       promptId,
@@ -453,7 +452,6 @@ export function ChatUI({
               canMentionAssistant={thread.length === 0 && !chat?.assistantId}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
-
               initialSelectedKbs={initialKbIds}
               onKnowledgebaseChange={handleKbChange}
             />
