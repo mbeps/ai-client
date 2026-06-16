@@ -12,13 +12,15 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 
 ## AI & Artifacts
 - **Artifacts & Canvas** — Sidecar rendering for Markdown, HTML, Mermaid diagrams, and XLSX spreadsheets with persistent edits, AI-driven updates, and export capabilities.
-- **Streaming via OpenRouter** — Access multiple LLMs (GPT-4, Claude, Mistral, etc.) with configurable model selection per message.
+- **Multi-Provider Model Support** — Connect to any OpenAI-compatible provider (OpenRouter, Ollama, Groq, Azure, local models). Register multiple providers with encrypted credentials and select per-message model configuration.
+- **Automatic Model Discovery** — Dual-endpoint synchronisation discovers both chat and embedding models from any OpenAI-compatible provider via `/v1/models` and `/v1/embeddings/models` endpoints.
 - **Slash-commands** — Palette-based shortcuts (`/`) to inject pre-defined system or user prompts for rapid templating.
 - **KaTeX & Mermaid** — Full support for mathematical notation (KaTeX) and sophisticated diagramming (Mermaid) within the chat and artifact panels.
 
 ## Knowledge Bases (RAG)
 - **Agentic RAG implementation** — LLM-driven knowledge retrieval where the AI uses specialised tools to query context based on intent.
-- **Hybrid Semantic Search** — Combines 2048-dimensional vector embeddings (pgvector) with Postgres Full-Text Search using Reciprocal Rank Fusion (RRF).
+- **Flexible Embedding Models** — Select any embedding model from registered providers for knowledge base indexing. Dimensionless vector storage supports arbitrary embedding dimensions.
+- **Hybrid Semantic Search** — Combines vector embeddings (pgvector) with Postgres Full-Text Search using Reciprocal Rank Fusion (RRF) for precise semantic retrieval.
 - **Multi-format Ingestion** — Automated pipeline for extracting and indexing content from PDFs, Excel spreadsheets, and Markdown/Plain text files.
 - **Document Management** — Full lifecycle tracking for indexed documents including token counting and status monitoring.
 
@@ -53,6 +55,9 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 
 The application uses PostgreSQL with Drizzle ORM. Core tables include:
 - **`user`** — Profiles, auth states, and preferences
+- **`ai_provider`** — OpenAI-compatible provider registrations (base URL, API key, custom headers) with encryption
+- **`ai_model`** — Model catalogue per provider with capability flags (tools, vision, reasoning, structured output, embeddings)
+- **`user_settings`** — Per-user preferences including global system prompt and default chat/embedding model selection
 - **`chat`** — Conversation sessions tied to users, projects, or assistants
 - **`message`** — Tree-structured entries with `parent_id` for branching; stores content and tool metadata
 - **`mcp_server`** — Remote HTTP MCP configurations (`url`, `headers`)
@@ -87,8 +92,8 @@ The application uses PostgreSQL with Drizzle ORM. Core tables include:
 - [**Drizzle ORM**](https://orm.drizzle.team) — Type-safe SQL query builder and migrations
 
 ## AI & Language Models
-- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses and tool integration
-- [**OpenRouter API**](https://openrouter.ai) — Multi-model LLM provider
+- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses and tool integration with multi-provider support
+- [**OpenAI-Compatible API Providers**](https://platform.openai.com/docs/api-reference) — Support for OpenRouter, OpenAI, Ollama, Groq, Azure, and any OpenAI-compatible endpoint
 - [**@ai-sdk/mcp**](https://github.com/vercel/ai-sdk) — Model Context Protocol integration
 - [**@modelcontextprotocol/sdk**](https://modelcontextprotocol.io) — Official MCP TypeScript SDK
 
@@ -100,7 +105,7 @@ The application uses PostgreSQL with Drizzle ORM. Core tables include:
 - **npm**: 9.x or higher (bundled with Node.js)
 - **PostgreSQL 17.0** — Primary data store for users, chats, messages, and application state
 - **S3/MinIO** — S3-compatible object storage for file uploads and attachments (or AWS S3 in production)
-- **OpenRouter API** — LLM provider for AI conversation capabilities (account required; free tier available)
+- **OpenAI-Compatible AI Provider** — Any provider supporting OpenAI API standards (e.g., OpenRouter, OpenAI, Ollama, Groq, Azure, local models; account/deployment required)
 - **Postmark** — Transactional email service for authentication and notifications (account required)
 - **HTTP MCP Servers (Optional)** — Required if you want to extend AI capabilities via remote toolsets
 
@@ -274,8 +279,8 @@ npm start
 - [**Drizzle ORM**](https://orm.drizzle.team) — Type-safe SQL query builder with migrations and introspection
 
 ## AI & Language Models
-- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses, tool integration, and language model abstraction
-- [**OpenRouter API**](https://openrouter.ai) — Multi-model LLM provider with unified API
+- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses, tool integration, and multi-provider language model abstraction
+- [**OpenAI API Compatibility**](https://platform.openai.com/docs/api-reference) — Universal interface for chat and embedding model access across any OpenAI-compatible provider
 - [**Model Context Protocol**](https://modelcontextprotocol.io) — Protocol for AI tool and server integration
 
 ## UI & Styling
