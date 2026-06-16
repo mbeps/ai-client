@@ -68,13 +68,7 @@ export async function hybridSearch(
   // SECURITY: kbId is always a server-resolved UUID from session-owned chat/project.
   // Both queries filter by kbId to prevent cross-user data leakage.
 
-  let embedding: number[];
-  try {
-    embedding = await embedQuery(query, userId);
-  } catch (err) {
-    console.error("[RAG] embedQuery failed:", err);
-    throw err;
-  }
+  const embedding = await embedQuery(query, userId);
   const embeddingLiteral = `[${embedding.join(",")}]`;
 
   const dimRows = await db.execute(sql`

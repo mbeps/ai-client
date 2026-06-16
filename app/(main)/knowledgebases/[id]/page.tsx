@@ -44,12 +44,16 @@ import type { KbDocumentRow } from "@/types/kb-document-row";
 
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, AlertCircle } from "lucide-react";
+import { useUserModels } from "@/hooks/use-user-models";
 
 export default function KnowledgebasePage() {
   const params = useParams();
   const router = useRouter();
   const kbId = params.id as string;
+
+  const { models } = useUserModels("embedding");
+  const hasNoModels = models.length === 0;
 
   const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
   const [embeddingModelLabel, setEmbeddingModelLabel] =
@@ -138,6 +142,26 @@ export default function KnowledgebasePage() {
         )}
       </div>
 
+      {hasNoModels && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+              No embedding models configured. Please set up a provider with
+              embedding support to upload documents.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
+          >
+            Go to Settings
+          </Button>
+        </div>
+      )}
+
       <SidebarTabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -200,6 +224,7 @@ export default function KnowledgebasePage() {
                 size="sm"
                 onClick={() => setShowUpload(true)}
                 className="h-8 px-3 text-xs"
+                disabled={hasNoModels}
               >
                 <Upload className="mr-2 h-3.5 w-3.5" />
                 Upload

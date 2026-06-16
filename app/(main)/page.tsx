@@ -44,7 +44,7 @@ export default function HomePage() {
       toast.error("No AI models configured. Please set up a provider first.", {
         action: {
           label: "Settings",
-          onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS),
+          onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
         },
       });
       return;

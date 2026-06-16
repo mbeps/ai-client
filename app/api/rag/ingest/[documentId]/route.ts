@@ -7,6 +7,8 @@ import { ingestDocument } from "@/lib/rag/ingest";
 import {
   RagExtractionEmptyError,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
+  ProviderNotConfiguredError,
+  PROVIDER_NOT_CONFIGURED_ERROR_CODE,
 } from "@/lib/constants/errors";
 
 export const maxDuration = 120;
@@ -40,6 +42,13 @@ export async function POST(
     await ingestDocument(documentId, session.user.id);
     return Response.json({ success: true });
   } catch (err) {
+    if (err instanceof ProviderNotConfiguredError) {
+      return Response.json(
+        { error: err.message, code: PROVIDER_NOT_CONFIGURED_ERROR_CODE },
+        { status: 400 },
+      );
+    }
+
     // Handle RAG extraction empty error specifically
     if (err instanceof RagExtractionEmptyError) {
       const documentName = (err as any).documentName || "document";

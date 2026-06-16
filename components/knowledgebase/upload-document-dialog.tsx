@@ -10,10 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
 import type { KbDocumentRow } from "@/types/kb-document-row";
+import { useUserModels } from "@/hooks/use-user-models";
 
 const ACCEPTED_TYPES = ".pdf,.txt,.md";
 const MAX_SIZE_MB = 50;
@@ -45,6 +46,9 @@ export function UploadDocumentDialog({
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const { models } = useUserModels("embedding");
+  const hasNoModels = models.length === 0;
 
   const isLoading = phase === "uploading" || phase === "ingesting";
 
@@ -145,6 +149,15 @@ export function UploadDocumentDialog({
               {statusLabel}
             </div>
           )}
+
+          {hasNoModels && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
+                No embedding models configured. Please set up a provider first.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -157,7 +170,7 @@ export function UploadDocumentDialog({
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={!file || isLoading || !!error}
+            disabled={!file || isLoading || !!error || hasNoModels}
           >
             {isLoading ? (
               <>

@@ -30,6 +30,7 @@ import {
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
 } from "@/constants/languages";
+import { ROUTES } from "@/constants/routes";
 import { translateText } from "@/lib/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { toast } from "sonner";
@@ -208,7 +209,7 @@ export default function TranslationWorkflowPage() {
             size="sm"
             variant="outline"
             className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS)}
+            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
             Go to Settings
           </Button>
