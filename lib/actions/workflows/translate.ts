@@ -2,10 +2,12 @@
 
 import { generateText } from "ai";
 import { requireSession } from "../require-session";
-import { DEFAULT_MODEL } from "@/constants/models";
 import { translateRequestSchema } from "@/schemas/workflows";
 import { PROMPTS } from "@/constants/prompts";
-import { getAiProvider } from "@/lib/chat/get-ai-provider";
+import {
+  resolveDefaultChatProvider,
+  resolveProviderForModel,
+} from "@/lib/chat/resolve-provider";
 
 /**
  * Server action to translate text using AI.
@@ -17,7 +19,6 @@ import { getAiProvider } from "@/lib/chat/get-ai-provider";
  */
 export async function translateText(input: unknown) {
   const session = await requireSession();
-  const provider = await getAiProvider(session.user.id);
 
   const parsed = translateRequestSchema.safeParse(input);
   if (!parsed.success) {
@@ -28,9 +29,13 @@ export async function translateText(input: unknown) {
     text: originalText,
     sourceLanguage,
     targetLanguage,
-    modelId = DEFAULT_MODEL,
+    modelId,
     attachment,
   } = parsed.data;
+
+  const resolved = modelId
+    ? await resolveProviderForModel(session.user.id, modelId)
+    : await resolveDefaultChatProvider(session.user.id);
 
   const sourceDesc =
     sourceLanguage === "auto" || sourceLanguage === "Auto Detect"
@@ -49,7 +54,7 @@ export async function translateText(input: unknown) {
 
   try {
     const { text: translatedText } = await generateText({
-      model: provider.chat(modelId),
+      model: resolved.sdkProvider.chat(resolved.modelId),
       messages: [
         {
           role: "user",

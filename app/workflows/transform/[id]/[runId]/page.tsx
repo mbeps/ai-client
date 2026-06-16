@@ -171,12 +171,14 @@ export default function TransformRunDetailPage() {
     (event: Record<string, unknown>) => {
       switch (event.type) {
         case "transform-start":
-          setRun((prev) => (prev ? { ...prev, status: "running" } : prev));
+          setRun((prev: TransformRun | null) =>
+            prev ? { ...prev, status: "running" } : prev,
+          );
           break;
 
         case "transform-step-start":
           activeStepIndexRef.current = event.stepIndex as number;
-          setStepStates((prev) => ({
+          setStepStates((prev: Record<number, StepState>) => ({
             ...prev,
             [event.stepIndex as number]: {
               status: "running",
@@ -184,7 +186,7 @@ export default function TransformRunDetailPage() {
               toolResults: [],
             },
           }));
-          setRun((prev) =>
+          setRun((prev: TransformRun | null) =>
             prev
               ? { ...prev, currentStepIndex: event.stepIndex as number }
               : prev,
@@ -194,7 +196,7 @@ export default function TransformRunDetailPage() {
         case "tool-call":
           if (activeStepIndexRef.current !== null) {
             const stepIdx = activeStepIndexRef.current;
-            setStepStates((prev) => {
+            setStepStates((prev: Record<number, StepState>) => {
               const current = prev[stepIdx] || { status: "running" };
               return {
                 ...prev,
@@ -218,7 +220,7 @@ export default function TransformRunDetailPage() {
         case "tool-result":
           if (activeStepIndexRef.current !== null) {
             const stepIdx = activeStepIndexRef.current;
-            setStepStates((prev) => {
+            setStepStates((prev: Record<number, StepState>) => {
               const current = prev[stepIdx] || { status: "running" };
               return {
                 ...prev,
@@ -240,7 +242,7 @@ export default function TransformRunDetailPage() {
           break;
 
         case "transform-step-complete":
-          setStepStates((prev) => ({
+          setStepStates((prev: Record<number, StepState>) => ({
             ...prev,
             [event.stepIndex as number]: {
               ...prev[event.stepIndex as number],
@@ -255,14 +257,14 @@ export default function TransformRunDetailPage() {
           break;
 
         case "transform-review-required":
-          setStepStates((prev) => ({
+          setStepStates((prev: Record<number, StepState>) => ({
             ...prev,
             [event.stepIndex as number]: {
               ...prev[event.stepIndex as number],
               status: "awaiting_review",
             },
           }));
-          setRun((prev) =>
+          setRun((prev: TransformRun | null) =>
             prev
               ? {
                   ...prev,
@@ -275,7 +277,7 @@ export default function TransformRunDetailPage() {
 
         case "transform-complete": {
           const outputIds = (event.outputAttachmentIds as string[]) ?? [];
-          setRun((prev) =>
+          setRun((prev: TransformRun | null) =>
             prev
               ? {
                   ...prev,
@@ -289,17 +291,19 @@ export default function TransformRunDetailPage() {
             Promise.allSettled(
               outputIds.map((id) => getAttachmentUrl(id)),
             ).then((results) => {
-              setAttachmentMeta((prev) => {
-                const next = { ...prev };
-                results.forEach((r, i) => {
-                  if (r.status === "fulfilled")
-                    next[outputIds[i]] = {
-                      url: r.value.url,
-                      name: r.value.name,
-                    };
-                });
-                return next;
-              });
+              setAttachmentMeta(
+                (prev: Record<string, { url: string; name: string }>) => {
+                  const next = { ...prev };
+                  results.forEach((r, i) => {
+                    if (r.status === "fulfilled")
+                      next[outputIds[i]] = {
+                        url: r.value.url,
+                        name: r.value.name,
+                      };
+                  });
+                  return next;
+                },
+              );
             });
           }
           break;
@@ -307,7 +311,9 @@ export default function TransformRunDetailPage() {
 
         case "error":
           setStreamError(event.message as string);
-          setRun((prev) => (prev ? { ...prev, status: "failed" } : prev));
+          setRun((prev: TransformRun | null) =>
+            prev ? { ...prev, status: "failed" } : prev,
+          );
 
           if (!handleApiError(event.message)) {
             toast.error(event.message as string);
@@ -647,7 +653,7 @@ export default function TransformRunDetailPage() {
               </div>
 
               {/* Output Download Section */}
-              {run.status === "completed" &&
+              {run?.status === "completed" &&
                 run.outputAttachmentIds.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
@@ -655,7 +661,7 @@ export default function TransformRunDetailPage() {
                       Final Results
                     </h4>
                     <div className="grid gap-2">
-                      {run.outputAttachmentIds.map((id) => {
+                      {run.outputAttachmentIds.map((id: string) => {
                         const meta = attachmentMeta[id];
                         if (!meta) return null;
                         return (

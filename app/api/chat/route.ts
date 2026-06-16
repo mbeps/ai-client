@@ -4,16 +4,19 @@ import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
-import { DEFAULT_MODEL, hasCapability } from "@/constants/models";
 import { chatRequestSchema } from "@/schemas/chat";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import { getAiProvider } from "@/lib/chat/get-ai-provider";
+import {
+  resolveDefaultChatProvider,
+  resolveProviderForModel,
+} from "@/lib/chat/resolve-provider";
 import { getPresignedUrl } from "@/lib/storage/s3-client";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
+import { ProviderNotConfiguredError } from "@/lib/constants/errors";
 
 export const maxDuration = 60;
 
@@ -71,23 +74,43 @@ export async function POST(req: Request) {
     selectedKbIds,
   } = parsed.data;
 
-  const model = requestedModel ?? DEFAULT_MODEL;
+  const model = requestedModel;
 
   let provider;
+  let resolvedModelRow: { capVision: boolean; capTools: boolean } | null = null;
+  let resolvedModelId = "";
   try {
-    provider = await getAiProvider(session.user.id);
-  } catch (error: any) {
+    const resolved = model
+      ? await resolveProviderForModel(session.user.id, model)
+      : await resolveDefaultChatProvider(session.user.id);
+    provider = resolved.sdkProvider;
+    resolvedModelId = resolved.modelId;
+    resolvedModelRow = {
+      capVision: resolved.modelRow.capVision,
+      capTools: resolved.modelRow.capTools,
+    };
+  } catch (error: unknown) {
+    if (error instanceof ProviderNotConfiguredError) {
+      return Response.json(
+        {
+          error: error.message,
+          code: error.code,
+        },
+        { status: 412 },
+      );
+    }
+
+    const typedError =
+      error instanceof Error ? error : new Error(String(error));
     logger.error(
       "[Chat API] AI provider init failed",
-      error,
+      typedError,
       { chatId },
       session.user.id,
     );
     return Response.json(
       {
-        error:
-          error.message ||
-          "Failed to initialize AI provider. Check your API key in Settings.",
+        error: typedError.message || "Failed to initialize AI provider.",
       },
       { status: 400 },
     );
@@ -197,7 +220,7 @@ export async function POST(req: Request) {
   const hasMcpTools = Object.keys(mcpTools).length > 0;
 
   // Filter messages based on model capabilities (e.g., vision)
-  const isVisionModel = hasCapability(model, "vision");
+  const isVisionModel = !!resolvedModelRow?.capVision;
   const filteredHistory = isVisionModel
     ? history
     : history.map((msg) => {
@@ -218,7 +241,7 @@ export async function POST(req: Request) {
     logger.warn(
       "[Chat API] Stripped images from history for non-vision model",
       {
-        model,
+        model: resolvedModelId,
         chatId,
       },
     );
@@ -262,7 +285,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const isToolCallingModel = hasCapability(model, "tool-calling");
+  const isToolCallingModel = !!resolvedModelRow?.capTools;
   if (!isToolCallingModel && hasMcpTools) {
     logger.warn("[Chat API] Stripped tools for non-tool-calling model", {
       model,
@@ -273,7 +296,7 @@ export async function POST(req: Request) {
   // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
   // rather than the OpenAI Responses API (/responses), which OpenRouter does not support.
   const result = streamText({
-    model: provider.chat(model),
+    model: provider.chat(resolvedModelId),
     messages: finalMessages,
     tools: isToolCallingModel && hasMcpTools ? mcpTools : undefined,
     stopWhen: isToolCallingModel && hasMcpTools ? stepCountIs(10) : undefined,
@@ -419,7 +442,7 @@ export async function POST(req: Request) {
         if (fullReasoning) {
           metadataObj.reasoning = fullReasoning;
         }
-        metadataObj.model = model;
+        metadataObj.model = resolvedModelId;
         const metadata =
           Object.keys(metadataObj).length > 0
             ? JSON.stringify(metadataObj)

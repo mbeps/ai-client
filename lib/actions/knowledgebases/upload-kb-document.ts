@@ -78,5 +78,14 @@ export async function uploadKbDocument(
     })
     .returning();
 
+  await db
+    .update(knowledgebase)
+    .set({
+      needsReindex: "true",
+      reindexReason: "New document pending ingestion",
+      updatedAt: new Date(),
+    })
+    .where(eq(knowledgebase.id, kbId));
+
   return row;
 }

@@ -31,10 +31,10 @@ const envSchema = z.object({
 
   // Storage
   S3_ENDPOINT: z.string().url(),
-  S3_REGION: z.string().default("us-east-1"),
+  S3_REGION: z.string(),
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
-  S3_BUCKET: z.string().default("ai-client-uploads"),
+  S3_BUCKET: z.string(),
 
   // App
   NODE_ENV: z

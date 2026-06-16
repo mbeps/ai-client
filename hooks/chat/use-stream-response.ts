@@ -5,7 +5,6 @@ import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { useAppStore } from "@/lib/store";
-import { DEFAULT_MODEL } from "@/constants/models";
 import type { Attachment } from "@/types/attachment";
 import type { ToolCallState } from "@/types/tool-call";
 import { PROMPTS } from "@/constants/prompts";
@@ -68,7 +67,7 @@ export function useStreamResponse(
    * @param content - User's message content (plain text).
    * @param parentId - Optional parent message ID for branching conversations.
    * @param attachments - Optional array of file attachments (images, documents, spreadsheets).
-   * @param model - AI model to use (defaults to DEFAULT_MODEL).
+   * @param model - AI model to use (defaults to empty string, backend falls back to provider default).
    * @param selectedServerIds - Optional array of MCP server IDs to enable for tools.
    * @param selectedTools - Optional array of tool identifiers to make available to the AI.
    * @param selectedPromptId - Optional slash-command prompt ID to prepend to content.
@@ -84,7 +83,7 @@ export function useStreamResponse(
     content: string,
     parentId: string | null,
     attachments: Attachment[] = [],
-    model = DEFAULT_MODEL,
+    model = "",
     selectedServerIds: string[] = [],
     selectedTools: string[] = [],
     selectedPromptId?: string,

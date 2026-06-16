@@ -63,7 +63,6 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
 import type { TransformStep } from "@/types/transform-agent";
-import { DEFAULT_MODEL, MODELS } from "@/constants/models";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
 import type { TransformRunRow } from "@/types/transform-run-row";
@@ -71,6 +70,7 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
+import { useUserModels } from "@/hooks/use-user-models";
 
 export default function AgentEditorPage() {
   const params = useParams();
@@ -81,11 +81,12 @@ export default function AgentEditorPage() {
 
   const { mcpServers, loadMcpServers } = useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
+  const { models: chatModels } = useUserModels("chat");
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [globalContext, setGlobalContext] = useState("");
-  const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
+  const [modelId, setModelId] = useState<string>("");
   const [tools, setTools] = useState<Set<string>>(new Set());
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
     new Set(),
@@ -112,10 +113,17 @@ export default function AgentEditorPage() {
     if (mcpServers.length === 0) {
       loadMcpServers();
     }
-  }, [
-    mcpServers.length,
-    loadMcpServers,
-  ]);
+  }, [mcpServers.length, loadMcpServers]);
+
+  useEffect(() => {
+    if (chatModels.length === 0) return;
+    setModelId((current) => {
+      if (current && chatModels.some((model) => model.modelId === current)) {
+        return current;
+      }
+      return chatModels[0].modelId;
+    });
+  }, [chatModels]);
 
   useEffect(() => {
     if (isNew) return;
@@ -130,14 +138,14 @@ export default function AgentEditorPage() {
         setName(agent.name);
         setDescription(agent.description);
         setGlobalContext(agent.globalContext ?? "");
-        setModelId(agent.modelId ?? DEFAULT_MODEL);
+        setModelId(agent.modelId ?? chatModels[0]?.modelId ?? "");
         setTools(new Set(agent.tools ?? []));
         setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
         setRequiresFileUpload(agent.requiresFileUpload ?? true);
         setSteps(agent.steps);
       })
       .finally(() => setIsLoading(false));
-  }, [id, isNew, router]);
+  }, [chatModels, id, isNew, router]);
 
   useEffect(() => {
     if (isNew || activeTab !== "runs") return;

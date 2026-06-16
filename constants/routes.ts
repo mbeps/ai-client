@@ -88,6 +88,10 @@ export const ROUTES = {
     path: SETTINGS_BASE,
     name: "Settings",
     APP: { path: `${SETTINGS_BASE}/app` as const, name: "App Settings" },
+    PROVIDERS: {
+      path: `${SETTINGS_BASE}/providers` as const,
+      name: "Providers",
+    },
     TOOLS: {
       path: `${SETTINGS_BASE}/tools` as const,
       name: "Tools",

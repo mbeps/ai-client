@@ -120,10 +120,14 @@ export default function SpreadsheetView({
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const activeSheet = spreadsheetData.sheets[activeSheetIndex] || {
-    name: "N/A",
-    data: [],
-  };
+  const activeSheet = useMemo(() => {
+    return (
+      spreadsheetData.sheets[activeSheetIndex] || {
+        name: "N/A",
+        data: [],
+      }
+    );
+  }, [spreadsheetData.sheets, activeSheetIndex]);
 
   // Transform sheet data into a format TanStack Table likes
   // We handle both AOOs (Array of Objects) and AOAs (Array of Arrays)
@@ -194,6 +198,7 @@ export default function SpreadsheetView({
     ];
   }, [headers, columnHelper]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: rows,
     columns,

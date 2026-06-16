@@ -8,14 +8,16 @@ import {
   attachment,
 } from "@/drizzle/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { getAiProvider } from "@/lib/chat/get-ai-provider";
+import {
+  resolveDefaultChatProvider,
+  resolveProviderForModel,
+} from "@/lib/chat/resolve-provider";
 import { generateText, stepCountIs } from "ai";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getPresignedUrl, uploadObject } from "@/lib/storage/s3-client";
 import * as XLSX from "xlsx";
 import { v4 as uuidv4 } from "uuid";
 import { hybridSearch } from "@/lib/rag/retrieve";
-import { DEFAULT_MODEL } from "@/constants/models";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,
@@ -455,9 +457,11 @@ export async function POST(req: Request) {
           );
 
         const model =
-          (parsed.data as { model?: string }).model ??
-          agentRow.modelId ??
-          DEFAULT_MODEL;
+          (parsed.data as { model?: string }).model ?? agentRow.modelId ?? null;
+
+        const resolvedProvider = model
+          ? await resolveProviderForModel(session.user.id, model)
+          : await resolveDefaultChatProvider(session.user.id);
 
         // Perform global KB context retrieval if agent has knowledge bases
         let kbContext = "";
@@ -622,7 +626,6 @@ export async function POST(req: Request) {
           }
 
           // Build system prompt
-          const provider = await getAiProvider(session.user.id);
           const systemPrompt = [
             agentRow.globalContext
               ? `Context:\n${agentRow.globalContext}`
@@ -641,7 +644,9 @@ export async function POST(req: Request) {
 
           try {
             const result = await generateText({
-              model: provider.chat(model),
+              model: resolvedProvider.sdkProvider.chat(
+                resolvedProvider.modelId,
+              ),
               messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: "Please execute the task." },

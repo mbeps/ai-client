@@ -5,9 +5,6 @@ export type TransformRunStatus =
   | "completed"
   | "failed";
 
-/**
- * Normalized store representation of a single execution of a TransformAgent.
- */
 export type TransformRun = {
   id: string;
   agentId: string;

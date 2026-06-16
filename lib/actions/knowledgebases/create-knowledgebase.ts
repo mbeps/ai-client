@@ -20,6 +20,9 @@ export async function createKnowledgebase(
       name: validated.name,
       description: validated.description ?? null,
       userId: session.user.id,
+      needsReindex: "false",
+      lastIndexedAt: null,
+      reindexReason: null,
     })
     .returning();
 
