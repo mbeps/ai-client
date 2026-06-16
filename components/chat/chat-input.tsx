@@ -155,7 +155,8 @@ export function ChatInput({
   submitLabel,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
-  const { models: chatModels } = useUserModels("chat");
+  const { models: chatModels, isLoading: isModelsLoading } =
+    useUserModels("chat");
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
@@ -194,10 +195,12 @@ export function ChatInput({
     [selectedModelObj],
   );
 
-  const supportsTools = useMemo(
-    () => selectedModelObj?.capTools ?? false,
-    [selectedModelObj],
-  );
+  const supportsTools = useMemo(() => {
+    // Prevent flickering: assume tools supported while models are loading
+    // if we have a modelId set (likely from persistent state)
+    if (isModelsLoading && modelId && !selectedModelObj) return true;
+    return selectedModelObj?.capTools ?? false;
+  }, [selectedModelObj, isModelsLoading, modelId]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

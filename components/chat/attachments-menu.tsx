@@ -13,7 +13,11 @@ interface AttachmentsMenuProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   selectedTools: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
-  onBulkSelect: (serverId: string, toolNames: string[], select: boolean) => void;
+  onBulkSelect: (
+    serverId: string,
+    toolNames: string[],
+    select: boolean,
+  ) => void;
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
@@ -66,7 +70,7 @@ export const AttachmentsMenu = ({
           variant="ghost"
           size="sm"
           className="justify-start w-full"
-          disabled={!servers || servers.length === 0 || !supportsTools}
+          disabled={!servers || !supportsTools}
         >
           <Wrench className="mr-2 h-4 w-4" />
           {supportsTools ? "Select Tools" : "Tools Unsupported"}
