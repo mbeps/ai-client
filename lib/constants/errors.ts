@@ -42,6 +42,65 @@ export class DimensionMismatchError extends Error {
   }
 }
 
+export const MODEL_CAPABILITY_ERROR_CODE = "MODEL_CAPABILITY_ERROR" as const;
+export const VISION_NOT_SUPPORTED_ERROR_CODE = "VISION_NOT_SUPPORTED" as const;
+export const TOOLS_NOT_SUPPORTED_ERROR_CODE = "TOOLS_NOT_SUPPORTED" as const;
+export const REASONING_NOT_SUPPORTED_ERROR_CODE =
+  "REASONING_NOT_SUPPORTED" as const;
+export const STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE =
+  "STRUCTURED_OUTPUT_NOT_SUPPORTED" as const;
+
+export class ModelCapabilityError extends Error {
+  readonly code: string = MODEL_CAPABILITY_ERROR_CODE;
+
+  constructor(message = "The selected model lacks a required capability") {
+    super(message);
+    this.name = "ModelCapabilityError";
+  }
+}
+
+export class VisionNotSupportedError extends ModelCapabilityError {
+  override readonly code = VISION_NOT_SUPPORTED_ERROR_CODE;
+
+  constructor(
+    message = "The selected model does not support vision/image analysis.",
+  ) {
+    super(message);
+    this.name = "VisionNotSupportedError";
+  }
+}
+
+export class ToolsNotSupportedError extends ModelCapabilityError {
+  override readonly code = TOOLS_NOT_SUPPORTED_ERROR_CODE;
+
+  constructor(message = "The selected model does not support tool calling.") {
+    super(message);
+    this.name = "ToolsNotSupportedError";
+  }
+}
+
+export class ReasoningNotSupportedError extends ModelCapabilityError {
+  override readonly code = REASONING_NOT_SUPPORTED_ERROR_CODE;
+
+  constructor(
+    message = "The selected model does not support advanced reasoning tokens.",
+  ) {
+    super(message);
+    this.name = "ReasoningNotSupportedError";
+  }
+}
+
+export class StructuredOutputNotSupportedError extends ModelCapabilityError {
+  override readonly code = STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE;
+
+  constructor(
+    message = "The selected model does not support schema-based structured output.",
+  ) {
+    super(message);
+    this.name = "StructuredOutputNotSupportedError";
+  }
+}
+
 /**
  * Checks if a given error message corresponds to a missing API key.
  *

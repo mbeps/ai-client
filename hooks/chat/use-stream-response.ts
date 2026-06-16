@@ -276,7 +276,11 @@ export function useStreamResponse(
           throw new Error("Unauthorized");
         }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Stream request failed");
+        const err = new Error(
+          errorData.error || "Stream request failed",
+        ) as any;
+        err.code = errorData.code;
+        throw err;
       }
 
       for await (const event of parseSseStream(response.body)) {
@@ -346,7 +350,7 @@ export function useStreamResponse(
           setStreamingContent(null);
           setActiveToolCalls([]);
 
-          if (!handleApiError(event.message)) {
+          if (!handleApiError(event)) {
             toast.error(event.message || "An error occurred during generation");
           }
 

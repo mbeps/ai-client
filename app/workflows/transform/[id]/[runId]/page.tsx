@@ -315,7 +315,7 @@ export default function TransformRunDetailPage() {
             prev ? { ...prev, status: "failed" } : prev,
           );
 
-          if (!handleApiError(event.message)) {
+          if (!handleApiError(event)) {
             toast.error(event.message as string);
           }
           break;
