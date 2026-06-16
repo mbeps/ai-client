@@ -1,0 +1,1 @@
+ALTER TABLE "transform_agent" ADD COLUMN "knowledge_base_ids" text[] DEFAULT '{}'::text[] NOT NULL;

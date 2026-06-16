@@ -1,0 +1,2 @@
+ALTER TABLE "transform_agent" ADD COLUMN "tools" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "transform_agent" ADD COLUMN "requires_file_upload" boolean DEFAULT true NOT NULL;
