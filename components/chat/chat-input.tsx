@@ -19,6 +19,7 @@ import {
   Bot,
   Database,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
@@ -159,6 +160,7 @@ export function ChatInput({
   const [input, setInput] = useState(initialValue);
   const { models: chatModels, isLoading: isModelsLoading } =
     useUserModels("chat");
+  const hasNoModels = chatModels.length === 0 && !isModelsLoading;
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
@@ -509,6 +511,23 @@ export function ChatInput({
         </div>
       )}
 
+      {hasNoModels && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-destructive/5 border-b border-destructive/10 rounded-t-xl mb-2 -mx-3 -mt-2">
+          <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+            <AlertCircle className="h-4 w-4" />
+            <span>No AI models configured</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs border-destructive/20 hover:bg-destructive/10 text-destructive font-medium"
+            asChild
+          >
+            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>Configure</Link>
+          </Button>
+        </div>
+      )}
+
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 pb-2">
           {attachments.map((att) => (
@@ -571,9 +590,14 @@ export function ChatInput({
         value={input}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        placeholder="Ask anything... Use / for commands, @ for assistant"
+        placeholder={
+          hasNoModels
+            ? "Set up a provider to start chatting..."
+            : "Ask anything... Use / for commands, @ for assistant"
+        }
         className="min-h-[40px] resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent p-0 overflow-y-auto"
         rows={1}
+        disabled={hasNoModels}
       />
 
       <div className="flex items-center justify-between pt-1">
@@ -585,6 +609,7 @@ export function ChatInput({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 rounded-full"
+                  disabled={hasNoModels}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
@@ -611,6 +636,7 @@ export function ChatInput({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 rounded-full"
+                  disabled={hasNoModels}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
@@ -653,7 +679,9 @@ export function ChatInput({
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => {}} // TODO: Implement voice
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            disabled={hasNoModels}
           >
             <Mic className="h-3.5 w-3.5" />
           </Button>
@@ -672,11 +700,12 @@ export function ChatInput({
               className="h-7 w-7 rounded-full"
               onClick={handleSend}
               disabled={
-                !input.trim() &&
-                attachments.length === 0 &&
-                !selectedPrompt &&
-                !selectedAssistant &&
-                selectedKbs.size === 0
+                hasNoModels ||
+                (!input.trim() &&
+                  attachments.length === 0 &&
+                  !selectedPrompt &&
+                  !selectedAssistant &&
+                  selectedKbs.size === 0)
               }
             >
               {submitLabel === "Save" ? (

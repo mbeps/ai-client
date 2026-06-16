@@ -8,6 +8,7 @@ import {
   resolveDefaultChatProvider,
   resolveProviderForModel,
 } from "@/lib/chat/resolve-provider";
+import { ProviderNotConfiguredError } from "@/lib/constants/errors";
 
 /**
  * Server action to translate text using AI.
@@ -75,6 +76,7 @@ export async function translateText(input: unknown) {
 
     return translatedText.trim();
   } catch (error) {
+    if (error instanceof ProviderNotConfiguredError) throw error;
     console.error("[Translate Action Error]:", error);
     throw new Error("Failed to translate text. Please try again.");
   }

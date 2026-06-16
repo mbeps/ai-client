@@ -34,6 +34,7 @@ import {
   Shield,
   History,
   Edit2,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -82,6 +83,7 @@ export default function AgentEditorPage() {
   const { mcpServers, loadMcpServers } = useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
   const { models: chatModels } = useUserModels("chat");
+  const hasNoModels = chatModels.length === 0;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -318,7 +320,7 @@ export default function AgentEditorPage() {
           {!isNew && (
             <Dialog open={runDialogOpen} onOpenChange={setRunDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={hasNoModels}>
                   <Play className="mr-2 h-4 w-4" /> Run
                 </Button>
               </DialogTrigger>
@@ -385,7 +387,7 @@ export default function AgentEditorPage() {
               </DialogContent>
             </Dialog>
           )}
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || hasNoModels}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -395,6 +397,26 @@ export default function AgentEditorPage() {
           </Button>
         </div>
       </div>
+
+      {hasNoModels && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+              No AI models configured. Please set up a provider to use Transform
+              workflows.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS)}
+          >
+            Go to Settings
+          </Button>
+        </div>
+      )}
 
       <SidebarTabs
         value={activeTab}

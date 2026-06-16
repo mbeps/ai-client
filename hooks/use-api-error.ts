@@ -11,6 +11,7 @@ import {
   MODEL_DUPLICATE_IMPORT_ERROR_CODE,
   MODEL_MALFORMED_ID_ERROR_CODE,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
+  PROVIDER_NOT_CONFIGURED_ERROR_CODE,
 } from "@/lib/constants/errors";
 import { ROUTES } from "@/constants/routes";
 
@@ -120,6 +121,18 @@ export function useApiError() {
     if (code === RAG_EXTRACTION_EMPTY_ERROR_CODE) {
       toast.error("Empty Document", {
         description: message,
+      });
+      return true;
+    }
+
+    if (code === PROVIDER_NOT_CONFIGURED_ERROR_CODE) {
+      toast.error("No AI Providers Configured", {
+        description:
+          "Please set up an AI provider and enable at least one model to start chatting.",
+        action: {
+          label: "Set up Providers",
+          onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
+        },
       });
       return true;
     }
