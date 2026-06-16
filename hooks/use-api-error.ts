@@ -6,6 +6,11 @@ import {
   TOOLS_NOT_SUPPORTED_ERROR_CODE,
   REASONING_NOT_SUPPORTED_ERROR_CODE,
   STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE,
+  ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE,
+  MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE,
+  MODEL_DUPLICATE_IMPORT_ERROR_CODE,
+  MODEL_MALFORMED_ID_ERROR_CODE,
+  RAG_EXTRACTION_EMPTY_ERROR_CODE,
 } from "@/lib/constants/errors";
 import { ROUTES } from "@/constants/routes";
 
@@ -75,6 +80,46 @@ export function useApiError() {
       toast.error("Structured Output Not Supported", {
         description:
           "The selected model does not support schema-based structured output. Please use a different model.",
+      });
+      return true;
+    }
+
+    if (code === MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE) {
+      toast.warning("Model Limit Reached", {
+        description:
+          "Provider returned more than 1,000 models. Displaying the first 1,000 available models.",
+      });
+      return true;
+    }
+
+    if (code === MODEL_DUPLICATE_IMPORT_ERROR_CODE) {
+      const duplicateCount = (error as any).duplicateCount ?? "some";
+      toast.warning(`${duplicateCount} model(s) skipped (already exist)`, {
+        description: "These models will be skipped during import.",
+      });
+      return true;
+    }
+
+    if (code === MODEL_MALFORMED_ID_ERROR_CODE) {
+      const invalidCount = (error as any).invalidCount ?? "some";
+      toast.warning(`${invalidCount} model(s) skipped (malformed ID)`, {
+        description:
+          "Models with missing or invalid IDs were excluded from sync.",
+      });
+      return true;
+    }
+
+    if (code === ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE) {
+      toast.error("Image Upload Not Supported", {
+        description:
+          "The selected model does not support image analysis. Please switch to a vision-enabled model.",
+      });
+      return true;
+    }
+
+    if (code === RAG_EXTRACTION_EMPTY_ERROR_CODE) {
+      toast.error("Empty Document", {
+        description: message,
       });
       return true;
     }

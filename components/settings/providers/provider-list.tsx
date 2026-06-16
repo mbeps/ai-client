@@ -144,9 +144,15 @@ export function ProviderList({
                 onSync={() =>
                   void runAction(provider.id, async () => {
                     const result = await syncProviderModels(provider.id);
-                    toast.success(
-                      `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
-                    );
+                    if (result.limitExceeded) {
+                      toast.warning("Model Limit Reached", {
+                        description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
+                      });
+                    } else {
+                      toast.success(
+                        `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
+                      );
+                    }
                   })
                 }
               />

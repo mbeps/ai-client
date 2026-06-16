@@ -4,6 +4,10 @@ import { kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { ingestDocument } from "@/lib/rag/ingest";
+import {
+  RagExtractionEmptyError,
+  RAG_EXTRACTION_EMPTY_ERROR_CODE,
+} from "@/lib/constants/errors";
 
 export const maxDuration = 120;
 
@@ -35,7 +39,18 @@ export async function POST(
   try {
     await ingestDocument(documentId, session.user.id);
     return Response.json({ success: true });
-  } catch {
+  } catch (err) {
+    // Handle RAG extraction empty error specifically
+    if (err instanceof RagExtractionEmptyError) {
+      const documentName = (err as any).documentName || "document";
+      return Response.json(
+        {
+          error: `Document "${documentName}" contains no readable text.`,
+          code: RAG_EXTRACTION_EMPTY_ERROR_CODE,
+        },
+        { status: 422 },
+      );
+    }
     return Response.json({ error: "Ingestion failed" }, { status: 500 });
   }
 }

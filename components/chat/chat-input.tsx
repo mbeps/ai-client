@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useApiError } from "@/hooks/use-api-error";
+import { AttachmentVisionUnsupportedError } from "@/lib/constants/errors";
 import { ROUTES } from "@/constants/routes";
 import {
   Popover,
@@ -231,15 +233,16 @@ export function ChatInput({
 
   useAutoExpandingTextarea(textareaRef, [input]);
 
+  const { handleApiError } = useApiError();
+
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
       const localNew: Attachment[] = [];
       for (const file of Array.from(files)) {
         // Vision Check
         if (file.type.startsWith("image/") && !supportsVision) {
-          toast.error(
-            "The selected model does not support image analysis. Please switch to a vision-enabled model.",
-          );
+          const error = new AttachmentVisionUnsupportedError();
+          handleApiError(error);
           continue;
         }
 
@@ -259,7 +262,7 @@ export function ChatInput({
         setAttachments((prev) => [...prev, ...localNew]);
       }
     },
-    [attachments, supportsVision],
+    [attachments, supportsVision, handleApiError],
   );
 
   const removeAttachment = (id: string) => {

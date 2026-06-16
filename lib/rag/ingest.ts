@@ -6,6 +6,7 @@ import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk";
 import { embedDocuments } from "./embed";
+import { RagExtractionEmptyError } from "@/lib/constants/errors";
 
 export async function ingestDocument(
   documentId: string,
@@ -34,11 +35,13 @@ export async function ingestDocument(
     // Extract text
     const text = await extractTextFromBuffer(buffer, doc.mimeType);
     if (!text.trim()) {
-      await db
-        .update(kbDocument)
-        .set({ status: "ready", chunkCount: 0, updatedAt: new Date() })
-        .where(eq(kbDocument.id, documentId));
-      return;
+      // Throw error for empty documents instead of marking as ready
+      const error = new RagExtractionEmptyError(
+        `Document "${doc.name}" contains no readable text.`,
+      );
+      (error as any).documentName = doc.name;
+      (error as any).mimeType = doc.mimeType;
+      throw error;
     }
 
     // Chunk

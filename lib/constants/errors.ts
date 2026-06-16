@@ -13,12 +13,26 @@ export const PROVIDER_KEY_CORRUPTED_ERROR_CODE =
 
 export const DIMENSION_MISMATCH_ERROR_CODE = "DIMENSION_MISMATCH" as const;
 
+export const MODEL_MALFORMED_ID_ERROR_CODE = "MODEL_MALFORMED_ID" as const;
+
 export class ProviderNotConfiguredError extends Error {
   readonly code = PROVIDER_NOT_CONFIGURED_ERROR_CODE;
 
   constructor(message = "No AI provider/model configured for this request") {
     super(message);
     this.name = "ProviderNotConfiguredError";
+  }
+}
+
+export class ModelMalformedIdError extends Error {
+  readonly code = MODEL_MALFORMED_ID_ERROR_CODE;
+  readonly invalidCount: number;
+
+  constructor(invalidCount: number) {
+    const message = `${invalidCount} model(s) were skipped due to missing or invalid ID`;
+    super(message);
+    this.invalidCount = invalidCount;
+    this.name = "ModelMalformedIdError";
   }
 }
 
@@ -49,6 +63,9 @@ export const REASONING_NOT_SUPPORTED_ERROR_CODE =
   "REASONING_NOT_SUPPORTED" as const;
 export const STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE =
   "STRUCTURED_OUTPUT_NOT_SUPPORTED" as const;
+
+export const MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE =
+  "MODEL_SYNC_LIMIT_EXCEEDED" as const;
 
 export class ModelCapabilityError extends Error {
   readonly code: string = MODEL_CAPABILITY_ERROR_CODE;
@@ -98,6 +115,64 @@ export class StructuredOutputNotSupportedError extends ModelCapabilityError {
   ) {
     super(message);
     this.name = "StructuredOutputNotSupportedError";
+  }
+}
+
+export const ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE =
+  "ATTACHMENT_VISION_UNSUPPORTED" as const;
+
+export const MODEL_DUPLICATE_IMPORT_ERROR_CODE =
+  "MODEL_DUPLICATE_IMPORT" as const;
+
+export const RAG_EXTRACTION_EMPTY_ERROR_CODE = "RAG_EXTRACTION_EMPTY" as const;
+
+export class AttachmentVisionUnsupportedError extends Error {
+  readonly code = ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE;
+
+  constructor(
+    message = "The selected model does not support image analysis. Please switch to a vision-enabled model.",
+  ) {
+    super(message);
+    this.name = "AttachmentVisionUnsupportedError";
+  }
+}
+
+export class ModelSyncLimitExceededError extends Error {
+  readonly code = MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE;
+
+  constructor(
+    message = "The model sync operation has exceeded the maximum limit",
+  ) {
+    super(message);
+    this.name = "ModelSyncLimitExceededError";
+  }
+}
+
+export class ModelDuplicateImportError extends Error {
+  readonly code = MODEL_DUPLICATE_IMPORT_ERROR_CODE;
+  readonly duplicateCount: number;
+  readonly duplicateModelIds: string[];
+
+  constructor(
+    duplicateCount: number,
+    duplicateModelIds: string[],
+    message = `${duplicateCount} model(s) skipped (already exist). Force import to overwrite?`,
+  ) {
+    super(message);
+    this.name = "ModelDuplicateImportError";
+    this.duplicateCount = duplicateCount;
+    this.duplicateModelIds = duplicateModelIds;
+  }
+}
+
+export class RagExtractionEmptyError extends Error {
+  readonly code = RAG_EXTRACTION_EMPTY_ERROR_CODE;
+
+  constructor(
+    message = "The RAG extraction resulted in no content to process",
+  ) {
+    super(message);
+    this.name = "RagExtractionEmptyError";
   }
 }
 

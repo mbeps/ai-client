@@ -5,6 +5,7 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/actions/require-session";
 import { logger } from "@/lib/logger";
+import { ModelDuplicateImportError } from "@/lib/constants/errors";
 import {
   importProviderRegistryInputSchema,
   type ImportProviderRegistryInput,
@@ -28,6 +29,7 @@ export async function importProviderRegistry(
   let providersUpdated = 0;
   let modelsCreated = 0;
   let modelsSkipped = 0;
+  const duplicateModelIds: string[] = [];
 
   for (const incomingProvider of parsed.providers) {
     const [existingProvider] = await db
@@ -94,6 +96,7 @@ export async function importProviderRegistry(
 
       if (existingModel) {
         modelsSkipped += 1;
+        duplicateModelIds.push(incomingModel.modelId);
         continue;
       }
 
@@ -115,6 +118,13 @@ export async function importProviderRegistry(
 
       modelsCreated += 1;
     }
+  }
+
+  if (duplicateModelIds.length > 0) {
+    throw new ModelDuplicateImportError(
+      duplicateModelIds.length,
+      duplicateModelIds,
+    );
   }
 
   logger.info(
