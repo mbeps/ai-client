@@ -2,7 +2,7 @@
 import { Edit2, Trash2 } from "lucide-react";
 import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import type { Knowledgebase } from "@/types/knowledgebase";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";

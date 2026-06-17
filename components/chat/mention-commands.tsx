@@ -7,10 +7,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import type { Prompt } from "@/types/prompt";
-import type { Assistant } from "@/types/assistant";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Assistant } from "@/types/assistant/assistant";
 import { cn } from "@/lib/utils";
-import type { MentionTrigger, MentionItem } from "@/hooks/chat/use-mention-commands";
+import type {
+  MentionTrigger,
+  MentionItem,
+} from "@/hooks/chat/use-mention-commands";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bot, Zap, SquareTerminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +53,7 @@ export function MentionCommands({
             {items.map((item, index) => {
               const isPromptTrigger = trigger === "/";
               const isAssistantTrigger = trigger === "@";
-              
+
               const isMcp = "isMcp" in item && item.isMcp;
 
               return (
@@ -66,7 +69,9 @@ export function MentionCommands({
                 >
                   {isAssistantTrigger && !isMcp && (
                     <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage src={(item as Assistant).avatar ?? undefined} />
+                      <AvatarImage
+                        src={(item as Assistant).avatar ?? undefined}
+                      />
                       <AvatarFallback>
                         <Bot className="h-4 w-4" />
                       </AvatarFallback>
@@ -78,11 +83,15 @@ export function MentionCommands({
                   {isPromptTrigger && !isMcp && (
                     <SquareTerminal className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
-                  
+
                   <div className="flex flex-col w-full overflow-hidden">
                     <div className="flex w-full items-center justify-between">
                       <span className="font-medium truncate">
-                        {isMcp ? (item as any).name : (isPromptTrigger ? (item as any).title : (item as any).name)}
+                        {isMcp
+                          ? (item as any).name
+                          : isPromptTrigger
+                            ? (item as any).title
+                            : (item as any).name}
                       </span>
                       {isPromptTrigger && !isMcp && (
                         <span className="text-[10px] text-muted-foreground uppercase bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0">
@@ -92,14 +101,22 @@ export function MentionCommands({
                         </span>
                       )}
                       {isMcp && (
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 ml-2 max-w-[100px] truncate">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1 py-0 h-4 ml-2 max-w-[100px] truncate"
+                        >
                           {(item as any).sourceServer}
                         </Badge>
                       )}
                     </div>
-                    {((!isMcp && isAssistantTrigger && (item as Assistant).description) || (isMcp && (item as any).description)) && (
+                    {((!isMcp &&
+                      isAssistantTrigger &&
+                      (item as Assistant).description) ||
+                      (isMcp && (item as any).description)) && (
                       <span className="text-xs text-muted-foreground truncate">
-                        {isMcp ? (item as any).description : (item as Assistant).description}
+                        {isMcp
+                          ? (item as any).description
+                          : (item as Assistant).description}
                       </span>
                     )}
                   </div>

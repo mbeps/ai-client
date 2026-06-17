@@ -26,7 +26,7 @@ import {
   ArtifactSpreadsheetData,
   CellObject,
   CellStyle,
-} from "@/types/artifact";
+} from "@/types/artifact/artifact";
 import { cn } from "@/lib/utils";
 import {
   useReactTable,

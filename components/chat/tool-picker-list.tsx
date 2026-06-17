@@ -6,10 +6,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
-import type { DiscoveredResource } from "@/types/discovered-resource";
-import type { DiscoveredTool } from "@/types/discovered-tool";
-import type { McpServer } from "@/types/mcp-server";
-import type { PublicMcpServer } from "@/types/public-mcp-server";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import {
   AlertCircle,
   CheckSquare,

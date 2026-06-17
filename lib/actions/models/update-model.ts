@@ -9,7 +9,7 @@ import {
   updateModelSchema,
   type UpdateModelInput,
 } from "@/schemas/provider-registry";
-import type { AiModelRow } from "@/types/ai-model-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 export async function updateModels(
   modelIdOrIds: string | string[],

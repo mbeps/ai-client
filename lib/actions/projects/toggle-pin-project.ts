@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
 import { and, eq, sql } from "drizzle-orm";
-import type { ProjectRow } from "@/types/project-row";
+import type { ProjectRow } from "@/types/project/project-row";
 
 /**
  * Toggles the pin status of a project for the authenticated user.

@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
-import type { ChatRow } from "@/types/chat-row";
+import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
  * Fetches all chats for the authenticated user, ordered by most recently updated first.

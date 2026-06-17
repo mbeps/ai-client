@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { message } from "../drizzle/schema";
+import { message } from "@/drizzle/schema";
 
 /**
  * Database representation of a message in a branching conversation tree from the drizzle schema.

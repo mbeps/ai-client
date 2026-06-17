@@ -3,8 +3,8 @@
 import { FileText } from "lucide-react";
 import { McpItemList } from "@/components/mcp/mcp-item-list";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
-import type { DiscoveredResource } from "@/types/discovered-resource";
-import type { McpServer } from "@/types/mcp-server";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import { Badge } from "@/components/ui/badge";
 
 /**

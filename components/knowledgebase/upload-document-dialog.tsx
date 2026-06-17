@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Upload, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { useUserModels } from "@/hooks/use-user-models";
 
 const ACCEPTED_TYPES = ".pdf,.txt,.md";

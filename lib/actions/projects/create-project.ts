@@ -3,7 +3,7 @@
 import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import type { ProjectRow } from "@/types/project-row";
+import type { ProjectRow } from "@/types/project/project-row";
 import { createProjectSchema } from "@/schemas/project";
 import { z } from "zod";
 import { logger } from "@/lib/logger";

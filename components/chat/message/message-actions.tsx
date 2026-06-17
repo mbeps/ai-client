@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { Message } from "@/types/message";
+import type { Message } from "@/types/message/message";
 import { useUserModels } from "@/hooks/use-user-models";
 
 interface MessageActionsProps {

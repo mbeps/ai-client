@@ -14,7 +14,7 @@ import {
 import { ChatCard } from "@/components/chat/chat-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import type { Chat } from "@/types/chat";
+import type { Chat } from "@/types/chat/chat";
 
 interface ChatsClientProps {
   initialChats: Chat[];

@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import type { AppState } from "@/types/app-state";
+import type { AppState } from "@/types/app/app-state";
 import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { listPrompts } from "@/lib/actions/prompts/list-prompts";
@@ -14,7 +14,7 @@ import { promptRowToStore } from "../mappers/prompt";
 import { transformAgentRowToStore } from "../mappers/transform-agent";
 import { mcpServerRowToStore } from "../mappers/mcp-server";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).

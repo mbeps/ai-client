@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
-import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 export type KnowledgebaseWithCount = KnowledgebaseRow & {
   documentCount: number;

@@ -1,4 +1,4 @@
-import type { Message } from "@/types/message";
+import type { Message } from "@/types/message/message";
 
 /**
  * Follows the last child at each level to find the deepest descendant of a node.

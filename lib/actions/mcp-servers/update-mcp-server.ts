@@ -8,7 +8,7 @@ import {
   updateMcpServerSchema,
   type UpdateMcpServer,
 } from "@/schemas/mcp-server";
-import type { McpServerRow } from "@/types/mcp-server-row";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**

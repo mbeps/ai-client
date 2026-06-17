@@ -36,7 +36,7 @@ import { ModelSelector } from "@/components/shared/model-selector";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { processAttachment } from "@/lib/attachments/process-attachment";
-import { Attachment } from "@/types/attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 

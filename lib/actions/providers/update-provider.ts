@@ -8,7 +8,7 @@ import {
   updateProviderSchema,
   type UpdateProviderInput,
 } from "@/schemas/provider-registry";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 
 export async function updateProvider(

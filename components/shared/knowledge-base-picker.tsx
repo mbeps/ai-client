@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import type { Knowledgebase } from "@/types/knowledgebase";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import {
   Database,
   Search,

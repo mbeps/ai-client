@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { uploadObject, ensureBucket } from "@/lib/storage/s3-client";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",

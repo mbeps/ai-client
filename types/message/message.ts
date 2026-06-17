@@ -1,4 +1,4 @@
-import type { Attachment } from "./attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 import { z } from "zod";
 import { persistMessageSchema } from "@/schemas/chat";
 

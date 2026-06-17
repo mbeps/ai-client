@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { project } from "../drizzle/schema";
+import { project } from "@/drizzle/schema";
 
 /**
  * Database representation of a user project (chat group with shared system prompt) from the drizzle schema.

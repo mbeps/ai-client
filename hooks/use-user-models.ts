@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listModels } from "@/lib/actions/models/list-models";
-import type { AiModelWithProvider } from "@/types/ai-model-row";
+import type { AiModelWithProvider } from "@/types/provider/ai-model-row";
 import type { ProviderModelType } from "@/schemas/provider-registry";
 import {
   fetchProviderRegistryWithCache,

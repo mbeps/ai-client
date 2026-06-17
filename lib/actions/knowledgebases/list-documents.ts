@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq, desc } from "drizzle-orm";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 export async function listDocuments(kbId: string): Promise<KbDocumentRow[]> {
   const session = await requireSession();

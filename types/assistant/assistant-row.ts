@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { assistant } from "../drizzle/schema";
+import { assistant } from "@/drizzle/schema";
 
 /**
  * Database representation of an AI assistant persona (with system prompt and avatar) from the drizzle schema.

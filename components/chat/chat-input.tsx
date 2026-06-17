@@ -41,9 +41,9 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import type { Attachment } from "@/types/attachment";
-import type { McpServer } from "@/types/mcp-server";
-import type { PublicMcpServer } from "@/types/public-mcp-server";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { toast } from "sonner";

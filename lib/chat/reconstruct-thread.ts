@@ -1,4 +1,4 @@
-import type { Message } from "@/types/message";
+import type { Message } from "@/types/message/message";
 
 /**
  * Reconstructs the linear conversation thread from a leaf node back to the root.

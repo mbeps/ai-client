@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { listProviders } from "@/lib/actions/providers/list-providers";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,

@@ -22,7 +22,7 @@ import {
   transformStepSchema,
   type TransformStepInput,
 } from "@/schemas/transform-agent";
-import type { TransformStep } from "@/types/transform-agent";
+import type { TransformStep } from "@/types/transform/transform-agent";
 
 interface TransformStepCardProps {
   step: TransformStep;

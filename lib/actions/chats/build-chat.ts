@@ -1,7 +1,7 @@
-import type { Chat } from "@/types/chat";
-import type { Message } from "@/types/message";
-import type { Attachment } from "@/types/attachment";
-import type { ChatWithMessages } from "@/types/chat-with-messages";
+import type { Chat } from "@/types/chat/chat";
+import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
+import type { Message } from "@/types/message/message";
+import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Reconstructs a message tree structure from flattened database rows.

@@ -5,9 +5,9 @@ import { chatRowToStore } from "@/lib/store/mappers/chat";
 import { projectRowToStore } from "@/lib/store/mappers/project";
 import { assistantRowToStore } from "@/lib/store/mappers/assistant";
 import { SearchClient } from "./_components/search-client";
-import type { ChatRow } from "@/types/chat-row";
-import type { ProjectRow } from "@/types/project-row";
-import type { AssistantRow } from "@/types/assistant-row";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { ProjectRow } from "@/types/project/project-row";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**
  * Global search page — server component fetching all user resources.

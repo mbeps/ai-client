@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { and, eq, desc } from "drizzle-orm";
-import type { TransformRunRow } from "@/types/transform-run-row";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 export async function listTransformRuns(
   agentId: string,

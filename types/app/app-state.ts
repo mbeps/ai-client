@@ -1,18 +1,18 @@
-import type { ChatRow } from "@/types/chat-row";
-import type { MessageRow } from "@/types/message-row";
-import type { AttachmentRow } from "@/types/attachment-row";
-import type { Prompt } from "./prompt";
-import type { Project } from "./project";
-import type { Assistant } from "./assistant";
-import type { McpServer } from "./mcp-server";
-import type { PublicMcpServer } from "./public-mcp-server";
-import type { Attachment } from "./attachment";
-import type { Message } from "./message";
-import type { Chat } from "./chat";
-import type { Knowledgebase } from "./knowledgebase";
-import type { TransformAgent } from "./transform-agent";
-import type { DiscoveredPrompt } from "./mcp/discovered-prompt";
-import type { UserSettingsRow } from "./user-settings-row";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { MessageRow } from "@/types/message/message-row";
+import type { AttachmentRow } from "@/types/attachment/attachment-row";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Project } from "@/types/project/project";
+import type { Assistant } from "@/types/assistant/assistant";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { Message } from "@/types/message/message";
+import type { Chat } from "@/types/chat/chat";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { TransformAgent } from "@/types/transform/transform-agent";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Global application state shape for the Zustand store.

@@ -1,5 +1,5 @@
-import type { ProjectRow } from "@/types/project-row";
-import type { Project } from "@/types/project";
+import type { ProjectRow } from "@/types/project/project-row";
+import type { Project } from "@/types/project/project";
 
 /**
  * Converts a ProjectRow database record to the Zustand Project store shape.

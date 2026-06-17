@@ -1,5 +1,5 @@
 import { createMCPClient } from "@ai-sdk/mcp";
-import type { McpServerConfig } from "@/types/mcp-server-config";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { buildTransport } from "./build-transport";
 
 export const MCP_TIMEOUT_MS = 10_000;

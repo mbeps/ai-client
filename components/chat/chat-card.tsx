@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
-import type { Chat } from "@/types/chat";
+import type { Chat } from "@/types/chat/chat";
 import { ChatOptions } from "./chat-options";
 
 /**

@@ -45,9 +45,8 @@ import { useTabState } from "@/hooks/use-tab-state";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
-import type { KbDocumentRow } from "@/types/kb-document-row";
-
-import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import { AlertTriangle, AlertCircle, RefreshCw, Database } from "lucide-react";
 import { useUserModels } from "@/hooks/use-user-models";
 import { cn } from "@/lib/utils";

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { persistMessageSchema } from "@/schemas/chat";
-import type { Message } from "@/types/message";
-import type { Attachment } from "@/types/attachment";
+import type { Message } from "@/types/message/message";
+import type { Attachment } from "@/types/attachment/attachment";
 
 export type ToolCall = {
   toolCallId: string;

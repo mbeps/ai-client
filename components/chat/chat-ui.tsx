@@ -5,7 +5,7 @@ import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
-import type { Attachment } from "@/types/attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";

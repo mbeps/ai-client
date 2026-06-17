@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { createTransformRunSchema } from "@/schemas/transform-agent";
-import type { TransformRunRow } from "@/types/transform-run-row";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { z } from "zod";
 
 export async function createTransformRun(

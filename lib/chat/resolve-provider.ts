@@ -3,8 +3,8 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
 import { ROUTES } from "@/constants/routes";
-import type { AiModelRow } from "@/types/ai-model-row";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
   ProviderNotConfiguredError,
   ProviderKeyCorruptedError,

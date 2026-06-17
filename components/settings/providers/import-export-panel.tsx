@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { exportProviderRegistry } from "@/lib/actions/providers/export-registry";
 import { importProviderRegistry } from "@/lib/actions/providers/import-registry";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ImportExportPanelProps = {
   providers: AiProviderRow[];

@@ -7,7 +7,7 @@ import {
   createProviderSchema,
   type CreateProviderInput,
 } from "@/schemas/provider-registry";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 
 export async function createProvider(

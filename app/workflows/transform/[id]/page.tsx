@@ -63,10 +63,10 @@ import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-s
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
-import type { TransformStep } from "@/types/transform-agent";
+import type { TransformStep } from "@/types/transform/transform-agent";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
-import type { TransformRunRow } from "@/types/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";

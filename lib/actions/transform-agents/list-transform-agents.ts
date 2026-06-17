@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
-import type { TransformAgentRow } from "@/types/transform-agent-row";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 
 export async function listTransformAgents(): Promise<TransformAgentRow[]> {
   const session = await requireSession();

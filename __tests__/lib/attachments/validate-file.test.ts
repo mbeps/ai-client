@@ -1,5 +1,5 @@
 import { validateFile } from "@/lib/attachments/validate-file";
-import type { Attachment } from "@/types/attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

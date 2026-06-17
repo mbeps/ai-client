@@ -1,4 +1,4 @@
-import type { Message } from "@/types/message";
+import type { Message } from "@/types/message/message";
 
 /**
  * Inserts a new message into the message map and updates the parent's

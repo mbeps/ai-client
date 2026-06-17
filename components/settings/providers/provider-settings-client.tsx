@@ -15,7 +15,7 @@ import { ProviderList } from "@/components/settings/providers/provider-list";
 import { ModelTable } from "@/components/settings/providers/model-table";
 import { DefaultModelPicker } from "@/components/settings/providers/default-model-picker";
 import { ImportExportPanel } from "@/components/settings/providers/import-export-panel";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 
 type ProviderSettingsClientProps = {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { chatSchema } from "@/schemas/chat";
-import type { Message } from "./message";
+import type { Message } from "@/types/message/message";
 
 /**
  * Represents a single conversation thread with branching message tree support.

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
-import type { Chat } from "@/types/chat";
+import type { Chat } from "@/types/chat/chat";
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────
 vi.mock("@/lib/env", () => ({

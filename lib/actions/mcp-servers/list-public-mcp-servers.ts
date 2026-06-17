@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { and, eq, ne } from "drizzle-orm";
-import type { PublicMcpServer } from "@/types/public-mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
 /**
  * Fetches all publically shared MCP servers that are enabled.

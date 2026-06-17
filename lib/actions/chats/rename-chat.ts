@@ -6,7 +6,7 @@ import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { renameChatSchema } from "@/schemas/chat";
 import { z } from "zod";
-import type { ChatRow } from "@/types/chat-row";
+import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
  * Renames a chat with ownership check.
@@ -34,9 +34,7 @@ export async function renameChat(
   const [updated] = await db
     .update(chat)
     .set({ title: validatedTitle, updatedAt: new Date() })
-    .where(
-      and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
-    )
+    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
     .returning();
 
   if (!updated) throw new Error("Chat not found or unauthorized");

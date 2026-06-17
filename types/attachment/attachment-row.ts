@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { attachment } from "../drizzle/schema";
+import { attachment } from "@/drizzle/schema";
 
 /**
  * Database representation of an uploaded file (image, PDF, text, spreadsheet) linked to a message from the drizzle schema.

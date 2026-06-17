@@ -1,7 +1,7 @@
 import { withMcpServer } from "./with-mcp-server";
 import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
-import type { McpServerConfig } from "@/types/mcp-server-config";
-import type { McpConnection } from "@/types/mcp-connection";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { McpConnection } from "@/types/mcp/mcp-connection";
 import { logger } from "@/lib/logger";
 
 /**

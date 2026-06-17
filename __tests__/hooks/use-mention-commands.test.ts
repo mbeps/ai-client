@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { createRef } from "react";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useAppStore } from "@/lib/store";
-import type { Chat } from "@/types/chat";
+import type { Chat } from "@/types/chat/chat";
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────
 vi.mock("@/lib/env", () => ({

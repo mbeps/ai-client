@@ -23,7 +23,7 @@
 import { create } from "zustand";
 import { createChatSlice } from "./slices/chat-slice";
 import { createEntitySlice } from "./slices/entity-slice";
-import type { AppState } from "@/types/app-state";
+import type { AppState } from "@/types/app/app-state";
 
 /**
  * Global Zustand store hook for the AI chat client.

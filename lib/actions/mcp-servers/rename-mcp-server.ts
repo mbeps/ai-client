@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { McpServerRow } from "@/types/mcp-server-row";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 
 /**
  * Renames an MCP server configuration for the authenticated user.

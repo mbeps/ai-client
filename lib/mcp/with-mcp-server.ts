@@ -1,7 +1,7 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { buildTransport } from "./build-transport";
 import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
-import type { McpServerConfig } from "@/types/mcp-server-config";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { logger } from "@/lib/logger";
 
 type Client = Awaited<ReturnType<typeof createMCPClient>>;

@@ -16,9 +16,9 @@ import {
   mapMessageFromDb,
   parseMessageMetadata,
 } from "../mappers/message-mapper";
-import type { AppState } from "@/types/app-state";
-import type { Message } from "@/types/message";
-import type { Chat } from "@/types/chat";
+import type { AppState } from "@/types/app/app-state";
+import type { Message } from "@/types/message/message";
+import type { Chat } from "@/types/chat/chat";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.

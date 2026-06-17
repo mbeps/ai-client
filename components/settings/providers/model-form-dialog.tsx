@@ -25,8 +25,8 @@ import {
 import { createModel } from "@/lib/actions/models/create-model";
 import { updateModel } from "@/lib/actions/models/update-model";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiModelRow } from "@/types/ai-model-row";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const MODEL_TYPES = ["chat", "embedding", "both"] as const;
 type ModelType = (typeof MODEL_TYPES)[number];

@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { chat } from "../drizzle/schema";
+import { chat } from "@/drizzle/schema";
 
 /**
  * Database representation of a chat session from the drizzle schema.

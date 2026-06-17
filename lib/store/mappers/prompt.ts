@@ -1,5 +1,5 @@
-import type { PromptRow } from "@/types/prompt-row";
-import type { Prompt } from "@/types/prompt";
+import type { PromptRow } from "@/types/prompt/prompt-row";
+import type { Prompt } from "@/types/prompt/prompt";
 
 /**
  * Converts a PromptRow database record to the Zustand Prompt store shape.

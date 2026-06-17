@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { updateTransformAgentSchema } from "@/schemas/transform-agent";
-import type { TransformAgentRow } from "@/types/transform-agent-row";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 import { z } from "zod";
 
 export async function updateTransformAgent(

@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { AssistantRow } from "@/types/assistant-row";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 import { updateAssistantSchema } from "@/schemas/assistant";
 import { z } from "zod";
 

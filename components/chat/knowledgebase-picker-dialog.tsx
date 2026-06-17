@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Check, Database, X, AlertTriangle, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { Knowledgebase } from "@/types/knowledgebase";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 

@@ -1,8 +1,8 @@
 import { withMcpServer } from "./with-mcp-server";
 import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
-import type { McpServerConfig } from "@/types/mcp-server-config";
-import type { DiscoveredTool } from "@/types/discovered-tool";
-import type { DiscoveredResource } from "@/types/discovered-resource";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { logger } from "@/lib/logger";
 
@@ -17,8 +17,8 @@ import { logger } from "@/lib/logger";
  */
 export async function discoverToolsAndResources(
   server: McpServerConfig,
-): Promise<{ 
-  tools: DiscoveredTool[]; 
+): Promise<{
+  tools: DiscoveredTool[];
   resources: DiscoveredResource[];
   prompts: DiscoveredPrompt[];
 }> {

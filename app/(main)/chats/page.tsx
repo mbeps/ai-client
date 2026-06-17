@@ -1,7 +1,7 @@
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { ChatsClient } from "./_components/chats-client";
 import { chatRowToStore } from "@/lib/store/mappers/chat";
-import type { ChatRow } from "@/types/chat-row";
+import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
  * Chats listing page — server component fetching all user chats from database.

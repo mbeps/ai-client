@@ -4,7 +4,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/actions/require-session";
-import type { AiModelWithProvider } from "@/types/ai-model-row";
+import type { AiModelWithProvider } from "@/types/provider/ai-model-row";
 import type { ProviderModelType } from "@/schemas/provider-registry";
 
 export async function listModels(filters?: {

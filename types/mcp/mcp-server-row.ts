@@ -1,5 +1,5 @@
 import { type InferSelectModel } from "drizzle-orm";
-import { mcpServer } from "../drizzle/schema";
+import { mcpServer } from "@/drizzle/schema";
 
 /**
  * Database representation of an MCP (Model Context Protocol) server configuration from the drizzle schema.

@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import type { ChatRow } from "@/types/chat-row";
+import type { ChatRow } from "@/types/chat/chat-row";
 import { moveChatSchema } from "@/schemas/chat";
 import { z } from "zod";
 
@@ -34,9 +34,7 @@ export async function moveChat(
   const [updatedChat] = await db
     .update(chat)
     .set({ projectId: validatedData.projectId, updatedAt: new Date() })
-    .where(
-      and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
-    )
+    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
     .returning();
 
   if (!updatedChat) throw new Error("Chat not found or access denied");

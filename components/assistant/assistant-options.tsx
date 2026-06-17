@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import type { Assistant } from "@/types/assistant";
+import type { Assistant } from "@/types/assistant/assistant";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

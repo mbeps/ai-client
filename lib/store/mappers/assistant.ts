@@ -1,5 +1,5 @@
-import type { AssistantRow } from "@/types/assistant-row";
-import type { Assistant } from "@/types/assistant";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
+import type { Assistant } from "@/types/assistant/assistant";
 
 /**
  * Converts an AssistantRow database record to the Zustand Assistant store shape.

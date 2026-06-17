@@ -1,5 +1,8 @@
-import type { TransformAgentRow } from "@/types/transform-agent-row";
-import type { TransformAgent, TransformStep } from "@/types/transform-agent";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
+import type {
+  TransformAgent,
+  TransformStep,
+} from "@/types/transform/transform-agent";
 
 export function transformAgentRowToStore(
   row: TransformAgentRow,

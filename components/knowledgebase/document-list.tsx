@@ -12,7 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { deleteDocument } from "@/lib/actions/knowledgebases/delete-document";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { toast } from "sonner";
 
 const STATUS_CONFIG = {

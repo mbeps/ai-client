@@ -1,6 +1,6 @@
 "use client";
 import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
-import type { McpServer } from "@/types/mcp-server";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

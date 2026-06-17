@@ -1,5 +1,5 @@
-import type { ChatRow } from "@/types/chat-row";
-import type { Chat } from "@/types/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { Chat } from "@/types/chat/chat";
 
 /**
  * Maps a ChatRow database record to the in-memory Chat store shape.

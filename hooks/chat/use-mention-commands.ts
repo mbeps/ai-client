@@ -1,8 +1,8 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import type { Prompt } from "@/types/prompt";
-import type { Assistant } from "@/types/assistant";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Assistant } from "@/types/assistant/assistant";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { useCallback, useMemo, useState, type RefObject } from "react";
 
@@ -55,28 +55,27 @@ export function useMentionCommands(
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const [selectedPrompt, setSelectedPrompt] = useState<
-    MentionPromptItem | null
-  >(() => {
-    if (!initialSelectedPromptId) return null;
-    const local = prompts.find((p) => p.id === initialSelectedPromptId);
-    if (local) return { ...local, isMcp: false };
+  const [selectedPrompt, setSelectedPrompt] =
+    useState<MentionPromptItem | null>(() => {
+      if (!initialSelectedPromptId) return null;
+      const local = prompts.find((p) => p.id === initialSelectedPromptId);
+      if (local) return { ...local, isMcp: false };
 
-    const mcp = mcpPrompts.find(
-      (p) => `mcp:${p.serverId}:${p.name}` === initialSelectedPromptId,
-    );
-    if (mcp) {
-      return {
-        ...mcp,
-        id: `mcp:${mcp.serverId}:${mcp.name}`,
-        title: mcp.name,
-        shortcut: mcp.name,
-        sourceServer: mcp.serverName,
-        isMcp: true,
-      };
-    }
-    return null;
-  });
+      const mcp = mcpPrompts.find(
+        (p) => `mcp:${p.serverId}:${p.name}` === initialSelectedPromptId,
+      );
+      if (mcp) {
+        return {
+          ...mcp,
+          id: `mcp:${mcp.serverId}:${mcp.name}`,
+          title: mcp.name,
+          shortcut: mcp.name,
+          sourceServer: mcp.serverName,
+          isMcp: true,
+        };
+      }
+      return null;
+    });
 
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
     initialSelectedAssistantId
@@ -135,7 +134,14 @@ export function useMentionCommands(
     }
 
     return [];
-  }, [commandQuery, prompts, mcpPrompts, assistants, openTrigger, selectedServerIds]);
+  }, [
+    commandQuery,
+    prompts,
+    mcpPrompts,
+    assistants,
+    openTrigger,
+    selectedServerIds,
+  ]);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
