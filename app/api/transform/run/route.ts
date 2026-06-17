@@ -10,7 +10,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import {
   resolveDefaultChatProvider,
-  resolveProviderForModel,
+  resolveProvider,
 } from "@/lib/chat/resolve-provider";
 import { generateText, stepCountIs } from "ai";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
@@ -460,7 +460,7 @@ export async function POST(req: Request) {
           (parsed.data as { model?: string }).model ?? agentRow.modelId ?? null;
 
         const resolvedProvider = model
-          ? await resolveProviderForModel(session.user.id, model)
+          ? await resolveProvider(session.user.id, model)
           : await resolveDefaultChatProvider(session.user.id);
 
         // Perform global KB context retrieval if agent has knowledge bases

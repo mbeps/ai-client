@@ -11,4 +11,5 @@ export type AiModelRow = InferSelectModel<typeof aiModel>;
  */
 export type AiModelWithProvider = AiModelRow & {
   providerName: string;
+  providerIsEnabled: boolean;
 };

@@ -178,16 +178,33 @@ export function ChatInput({
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
 
   useEffect(() => {
-    if (chatModels.length === 0) return;
+    if (chatModels.length === 0 || isModelsLoading) return;
+
     Promise.resolve().then(() => {
       setModelId((current) => {
+        // 1. If current selection is valid, keep it
         if (current && chatModels.some((model) => model.modelId === current)) {
           return current;
         }
+
+        // 2. If initialModelId is provided and valid, use it
+        // We check both modelId (string slug) and id (UUID) to handle defaults from user settings
+        const initialMatch = initialModelId
+          ? chatModels.find(
+              (model) =>
+                model.modelId === initialModelId || model.id === initialModelId,
+            )
+          : null;
+
+        if (initialMatch) {
+          return initialMatch.modelId;
+        }
+
+        // 3. Fallback to first available model
         return chatModels[0].modelId;
       });
     });
-  }, [chatModels]);
+  }, [chatModels, initialModelId, isModelsLoading]);
 
   const selectedModelObj = useMemo(
     () => chatModels.find((model) => model.modelId === modelId) ?? null,
@@ -512,15 +529,15 @@ export function ChatInput({
       )}
 
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 p-3 bg-destructive/5 border-b border-destructive/10 rounded-t-xl mb-2 -mx-3 -mt-2">
-          <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+        <div className="flex items-center justify-between gap-3 p-3 bg-amber-500/5 border-b border-amber-500/10 rounded-t-xl mb-2 -mx-3 -mt-2">
+          <div className="flex items-center gap-2 text-sm text-amber-600 font-medium">
             <AlertCircle className="h-4 w-4" />
-            <span>No AI models configured</span>
+            <span>All providers are disabled or no models found</span>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="h-8 text-xs border-destructive/20 hover:bg-destructive/10 text-destructive font-medium"
+            className="h-8 text-xs border-amber-500/20 hover:bg-amber-500/10 text-amber-600 font-medium"
             asChild
           >
             <Link href={ROUTES.SETTINGS.PROVIDERS.path}>Configure</Link>

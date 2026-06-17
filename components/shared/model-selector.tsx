@@ -61,7 +61,10 @@ export function ModelSelector({
 
   // Find the currently selected model object or default to the first available model
   const selectedModel = useMemo(
-    () => models.find((m) => m.modelId === value) ?? models[0] ?? null,
+    () =>
+      models.find((m) => m.id === value || m.modelId === value) ??
+      models[0] ??
+      null,
     [models, value],
   );
 

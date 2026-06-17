@@ -18,6 +18,10 @@ export async function listModels(filters?: {
 
   if (filters?.isEnabled !== undefined) {
     conditions.push(eq(aiModel.isEnabled, filters.isEnabled));
+    // If filtering for enabled models, also ensure provider is enabled
+    if (filters.isEnabled === true) {
+      conditions.push(eq(aiProvider.isEnabled, true));
+    }
   }
 
   if (filters?.providerId) {
@@ -51,6 +55,7 @@ export async function listModels(filters?: {
       createdAt: aiModel.createdAt,
       updatedAt: aiModel.updatedAt,
       providerName: aiProvider.name,
+      providerIsEnabled: aiProvider.isEnabled,
     })
     .from(aiModel)
     .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))

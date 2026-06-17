@@ -12,6 +12,7 @@ import type { Chat } from "./chat";
 import type { Knowledgebase } from "./knowledgebase";
 import type { TransformAgent } from "./transform-agent";
 import type { DiscoveredPrompt } from "./mcp/discovered-prompt";
+import type { UserSettingsRow } from "./user-settings-row";
 
 /**
  * Global application state shape for the Zustand store.
@@ -26,6 +27,8 @@ export type AppState = {
   assistants: Assistant[];
   /** All quick-insert prompts. */
   prompts: Prompt[];
+  /** Application-wide user settings (default models, global prompt). */
+  userSettings: UserSettingsRow | null;
   /** All chats keyed by their ID. */
   chats: Record<string, Chat>;
   /** All configured MCP servers. */
@@ -36,7 +39,7 @@ export type AppState = {
   transformAgents: TransformAgent[];
   /** All discovered MCP prompts (ephemeral). */
   mcpPrompts: DiscoveredPrompt[];
-  
+
   loadTransformAgents: () => Promise<void>;
   /** Triggers discovery of prompts from all enabled MCP servers. */
   loadMcpPrompts: () => Promise<void>;
@@ -81,6 +84,9 @@ export type AppState = {
 
   // Prompt Actions
   loadPrompts: () => Promise<void>;
+
+  // User Settings Actions
+  loadUserSettings: () => Promise<void>;
 
   // MCP Server Actions
   loadMcpServers: () => Promise<void>;

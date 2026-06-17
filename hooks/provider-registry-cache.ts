@@ -126,6 +126,7 @@ export function invalidateProviderRegistryCache(keys?: CacheKey[]): void {
 
   for (const key of targetKeys) {
     const entry = cache[key];
+    entry.data = null; // Clear data to avoid stale UI while refetching
     entry.fetchedAt = 0;
     entry.updatedAt = ts;
     emit(key);

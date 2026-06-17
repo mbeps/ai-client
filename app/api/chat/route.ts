@@ -11,7 +11,7 @@ import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import {
   resolveDefaultChatProvider,
-  resolveProviderForModel,
+  resolveProvider,
 } from "@/lib/chat/resolve-provider";
 import { getPresignedUrl } from "@/lib/storage/s3-client";
 import { logger } from "@/lib/logger";
@@ -78,7 +78,9 @@ export async function POST(req: Request) {
     selectedKbIds,
   } = parsed.data;
 
-  const model = requestedModel;
+  // Ensure model is undefined if empty or whitespace-only
+  const model =
+    requestedModel && requestedModel.trim() !== "" ? requestedModel : undefined;
 
   let provider;
   let resolvedModelRow: { capVision: boolean; capTools: boolean } | null = null;
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
 
   try {
     const resolved = model
-      ? await resolveProviderForModel(session.user.id, model)
+      ? await resolveProvider(session.user.id, model)
       : await resolveDefaultChatProvider(session.user.id);
     provider = resolved.sdkProvider;
     resolvedModelId = resolved.modelId;

@@ -7,12 +7,14 @@ import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { projectRowToStore } from "../mappers/project";
 import { assistantRowToStore } from "../mappers/assistant";
 import { promptRowToStore } from "../mappers/prompt";
 import { transformAgentRowToStore } from "../mappers/transform-agent";
 import { mcpServerRowToStore } from "../mappers/mcp-server";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { UserSettingsRow } from "@/types/user-settings-row";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).
@@ -35,6 +37,7 @@ type EntitySlice = Pick<
   | "projects"
   | "assistants"
   | "prompts"
+  | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
   | "transformAgents"
@@ -43,6 +46,7 @@ type EntitySlice = Pick<
   | "loadProjects"
   | "loadAssistants"
   | "loadPrompts"
+  | "loadUserSettings"
   | "loadMcpServers"
   | "loadPublicMcpServers"
   | "loadMcpPrompts"
@@ -54,6 +58,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   projects: [],
   assistants: [],
   prompts: [],
+  userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
   transformAgents: [],
@@ -62,6 +67,11 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   loadMcpPrompts: async () => {
     const prompts = await discoverAllPrompts();
     set({ mcpPrompts: prompts });
+  },
+
+  loadUserSettings: async () => {
+    const settings = await getUserSettings();
+    set({ userSettings: settings });
   },
 
   loadProjects: createEntityLoader(

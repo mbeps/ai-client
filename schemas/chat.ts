@@ -146,7 +146,7 @@ export const chatMessageSchema = z.object({
 export const chatRequestSchema = z.object({
   chatId: idField,
   userMessageId: idField.optional(),
-  model: z.string().min(1).max(100).optional(),
+  model: z.string().max(100).optional(),
   messages: z.array(chatMessageSchema).max(500),
   selectedServerIds: z.array(z.string()).max(20).optional(),
   selectedTools: z.array(z.string()).max(100).optional(),

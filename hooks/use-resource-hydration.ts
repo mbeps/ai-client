@@ -10,7 +10,8 @@ export type HydratableResource =
   | "mcpServers"
   | "publicMcpServers"
   | "transformAgents"
-  | "mcpPrompts";
+  | "mcpPrompts"
+  | "userSettings";
 
 /**
  * Standardised hook for hydrating essential resources into the Zustand store.
@@ -31,7 +32,13 @@ export function useResourceHydration(resources: HydratableResource[]) {
   const hydrate = useCallback(async () => {
     const toLoad = resources.filter((res) => {
       const data = store[res];
-      const isLoaded = Array.isArray(data) && data.length > 0;
+
+      // Determine if resource is already loaded
+      const isLoaded =
+        res === "userSettings"
+          ? data !== null
+          : Array.isArray(data) && data.length > 0;
+
       const isPending = hydrationAttempted.current.has(res);
       return !isLoaded && !isPending;
     });
@@ -49,10 +56,11 @@ export function useResourceHydration(resources: HydratableResource[]) {
 
     const loaders = toLoad.map(async (res) => {
       // Special case for ephemeral discovery methods
-      const loaderName = res === "mcpPrompts" 
-        ? "loadMcpPrompts"
-        : `load\${res.charAt(0).toUpperCase()}\${res.slice(1)}` as keyof typeof store;
-      
+      const loaderName =
+        res === "mcpPrompts"
+          ? "loadMcpPrompts"
+          : (`load\${res.charAt(0).toUpperCase()}\${res.slice(1)}` as keyof typeof store);
+
       const loader = store[loaderName];
 
       if (typeof loader === "function") {

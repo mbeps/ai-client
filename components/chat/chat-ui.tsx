@@ -12,7 +12,10 @@ import { ChatInput } from "./chat-input";
 import { MessageBubble } from "./message-bubble";
 import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import { extractCitations } from "@/lib/store/mappers/message-mapper";
+import {
+  parseMessageMetadata,
+  extractCitations,
+} from "@/lib/store/mappers/message-mapper";
 
 import { Bot } from "lucide-react";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
@@ -59,6 +62,7 @@ export function ChatUI({
   const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
+  const userSettings = useAppStore((state) => state.userSettings);
 
   // Hydrate essential resources
   useResourceHydration([
@@ -68,6 +72,7 @@ export function ChatUI({
     "projects",
     "prompts",
     "mcpPrompts",
+    "userSettings",
   ]);
 
   const currentAssistant = chat?.assistantId
@@ -77,6 +82,36 @@ export function ChatUI({
   const currentProject = chat?.projectId
     ? projects.find((p) => p.id === chat.projectId)
     : undefined;
+
+  const thread = useMemo(() => {
+    return chat?.currentLeafId
+      ? reconstructThread(chat.messages, chat.currentLeafId)
+      : [];
+  }, [chat?.currentLeafId, chat?.messages]);
+
+  const initialModelId = useMemo(() => {
+    // 1. Existing chat: get model from the last user message
+    const lastUserMessage = [...thread]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (lastUserMessage?.metadata) {
+      const { modelId } = parseMessageMetadata(lastUserMessage.metadata);
+      if (modelId) return modelId;
+    }
+
+    // 2. New chat: prioritize Project > Assistant > User Settings
+    // Note: Project and Assistant models currently follow a future schema expansion
+    // but the logic is here for consistency with the plan.
+    if ((currentProject as any)?.defaultChatModelId) {
+      return (currentProject as any).defaultChatModelId;
+    }
+    if ((currentAssistant as any)?.defaultChatModelId) {
+      return (currentAssistant as any).defaultChatModelId;
+    }
+
+    // 3. Application-wide default
+    return userSettings?.defaultChatModelId || undefined;
+  }, [thread, currentProject, currentAssistant, userSettings]);
 
   const initialToolsAndResources = useMemo(() => {
     const combined = new Set<string>();
@@ -111,12 +146,6 @@ export function ChatUI({
     const publicEnabled = publicMcpServers.filter((s) => s.enabled);
     return [...personalEnabled, ...publicEnabled];
   }, [mcpServers, publicMcpServers]);
-
-  const thread = useMemo(() => {
-    return chat?.currentLeafId
-      ? reconstructThread(chat.messages, chat.currentLeafId)
-      : [];
-  }, [chat?.currentLeafId, chat?.messages]);
 
   const {
     allArtifacts,
@@ -453,6 +482,7 @@ export function ChatUI({
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedKbs={initialKbIds}
+              initialModelId={initialModelId}
               onKnowledgebaseChange={handleKbChange}
             />
           </div>

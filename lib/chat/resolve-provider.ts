@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { createOpenAI } from "@ai-sdk/openai";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
+import { ROUTES } from "@/constants/routes";
 import type { AiModelRow } from "@/types/ai-model-row";
 import type { AiProviderRow } from "@/types/ai-provider-row";
 import {
@@ -70,12 +71,7 @@ export async function resolveProviderForModel(
     .from(aiModel)
     .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
     .where(
-      and(
-        eq(aiModel.userId, userId),
-        eq(aiModel.modelId, requestedModelId),
-        eq(aiModel.isEnabled, true),
-        eq(aiProvider.isEnabled, true),
-      ),
+      and(eq(aiModel.userId, userId), eq(aiModel.modelId, requestedModelId)),
     );
 
   const row = rows[0];
@@ -86,12 +82,97 @@ export async function resolveProviderForModel(
     );
   }
 
+  if (!row.provider.isEnabled) {
+    throw new ProviderNotConfiguredError(
+      `Provider '${row.provider.name}' is disabled. Enable it in Settings → Providers (${ROUTES.SETTINGS.PROVIDERS.path}).`,
+    );
+  }
+
+  if (!row.model.isEnabled) {
+    throw new ProviderNotConfiguredError(
+      `Model '${row.model.label}' is disabled. Enable it in Settings → Providers.`,
+    );
+  }
+
   if (isBlockedUrl(row.provider.baseUrl)) {
     throw new ProviderNotConfiguredError(
       `Provider '${row.provider.name}' URL is blocked by security policy.`,
     );
   }
 
+  return buildResolvedProvider(row, userId);
+}
+
+/**
+ * Resolves a provider and model using the internal UUID (aiModel.id).
+ * This is safer than resolving by modelId (string) when multiple providers
+ * might offer the same model ID.
+ */
+export async function resolveProviderByRecordId(
+  userId: string,
+  recordId: string,
+): Promise<ResolvedProvider> {
+  const rows = await db
+    .select({
+      provider: aiProvider,
+      model: aiModel,
+    })
+    .from(aiModel)
+    .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
+    .where(
+      and(
+        eq(aiModel.id, recordId),
+        eq(aiModel.userId, userId),
+        eq(aiModel.isEnabled, true),
+        eq(aiProvider.isEnabled, true),
+      ),
+    );
+
+  const row = rows[0];
+
+  if (!row) {
+    throw new ProviderNotConfiguredError(
+      `Model record '${recordId}' is not configured or enabled.`,
+    );
+  }
+
+  return buildResolvedProvider(row, userId);
+}
+
+/**
+ * Universal resolver that tries to find a model by record ID (UUID) first,
+ * then falls back to resolving by modelId (slug) for backward compatibility
+ * or when only the slug is known.
+ */
+export async function resolveProvider(
+  userId: string,
+  modelIdentifier: string,
+): Promise<ResolvedProvider> {
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      modelIdentifier,
+    );
+
+  if (isUuid) {
+    try {
+      return await resolveProviderByRecordId(userId, modelIdentifier);
+    } catch (err) {
+      // If it looks like a UUID but isn't in our DB as an ID,
+      // maybe it's actually a model slug that happens to look like a UUID
+      // or we just want to fall through.
+      if (!(err instanceof ProviderNotConfiguredError)) {
+        throw err;
+      }
+    }
+  }
+
+  return resolveProviderForModel(userId, modelIdentifier);
+}
+
+function buildResolvedProvider(
+  row: { provider: AiProviderRow; model: AiModelRow },
+  userId: string,
+): ResolvedProvider {
   const decryptedApiKey = decryptProviderField(
     row.provider.apiKey,
     null,
@@ -111,7 +192,7 @@ export async function resolveProviderForModel(
 
   logger.info(
     "Provider resolved for model",
-    { modelId: requestedModelId },
+    { modelId: row.model.modelId, provider: row.provider.name },
     userId,
   );
 
@@ -138,35 +219,33 @@ export async function resolveDefaultChatProvider(
     .where(eq(userSettings.userId, userId));
 
   if (settings?.defaultChatModelId) {
-    const rows = await db
-      .select({ modelId: aiModel.modelId })
-      .from(aiModel)
-      .where(
-        and(
-          eq(aiModel.id, settings.defaultChatModelId),
-          eq(aiModel.userId, userId),
-          eq(aiModel.isEnabled, true),
-          inArray(aiModel.modelType, ["chat", "both"]),
-        ),
+    try {
+      return await resolveProviderByRecordId(
+        userId,
+        settings.defaultChatModelId,
       );
-
-    const model = rows[0];
-    if (model) {
-      return resolveProviderForModel(userId, model.modelId);
+    } catch (err) {
+      logger.warn(
+        "Failed to resolve default chat model, falling back",
+        { error: err instanceof Error ? err.message : String(err) },
+        userId,
+      );
     }
   }
 
   const fallbackRows = await db
-    .select({ modelId: aiModel.modelId })
+    .select({ id: aiModel.id })
     .from(aiModel)
+    .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
     .where(
       and(
         eq(aiModel.userId, userId),
         eq(aiModel.isEnabled, true),
+        eq(aiProvider.isEnabled, true),
         inArray(aiModel.modelType, ["chat", "both"]),
       ),
     )
-    .orderBy(asc(aiModel.createdAt))
+    .orderBy(asc(aiProvider.name), asc(aiModel.label))
     .limit(1);
 
   const fallback = fallbackRows[0];
@@ -176,13 +255,9 @@ export async function resolveDefaultChatProvider(
     );
   }
 
-  logger.warn(
-    "Falling back to oldest available",
-    { userId, type: "chat" },
-    userId,
-  );
+  logger.warn("Falling back to first available chat model", { userId }, userId);
 
-  return resolveProviderForModel(userId, fallback.modelId);
+  return resolveProviderByRecordId(userId, fallback.id);
 }
 
 export async function resolveEmbeddingProvider(
@@ -194,35 +269,33 @@ export async function resolveEmbeddingProvider(
     .where(eq(userSettings.userId, userId));
 
   if (settings?.defaultEmbeddingModelId) {
-    const rows = await db
-      .select({ modelId: aiModel.modelId })
-      .from(aiModel)
-      .where(
-        and(
-          eq(aiModel.id, settings.defaultEmbeddingModelId),
-          eq(aiModel.userId, userId),
-          eq(aiModel.isEnabled, true),
-          inArray(aiModel.modelType, ["embedding", "both"]),
-        ),
+    try {
+      return await resolveProviderByRecordId(
+        userId,
+        settings.defaultEmbeddingModelId,
       );
-
-    const model = rows[0];
-    if (model) {
-      return resolveProviderForModel(userId, model.modelId);
+    } catch (err) {
+      logger.warn(
+        "Failed to resolve default embedding model, falling back",
+        { error: err instanceof Error ? err.message : String(err) },
+        userId,
+      );
     }
   }
 
   const fallbackRows = await db
-    .select({ modelId: aiModel.modelId })
+    .select({ id: aiModel.id })
     .from(aiModel)
+    .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
     .where(
       and(
         eq(aiModel.userId, userId),
         eq(aiModel.isEnabled, true),
+        eq(aiProvider.isEnabled, true),
         inArray(aiModel.modelType, ["embedding", "both"]),
       ),
     )
-    .orderBy(asc(aiModel.createdAt))
+    .orderBy(asc(aiProvider.name), asc(aiModel.label))
     .limit(1);
 
   const fallback = fallbackRows[0];
@@ -233,10 +306,10 @@ export async function resolveEmbeddingProvider(
   }
 
   logger.warn(
-    "Falling back to oldest available",
-    { userId, type: "embedding" },
+    "Falling back to first available embedding model",
+    { userId },
     userId,
   );
 
-  return resolveProviderForModel(userId, fallback.modelId);
+  return resolveProviderByRecordId(userId, fallback.id);
 }
