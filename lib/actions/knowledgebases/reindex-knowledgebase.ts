@@ -80,6 +80,11 @@ export async function reindexKnowledgebase(kbId: string) {
       // Extract text
       const text = await extractTextFromBuffer(buffer, doc.mimeType);
       if (!text.trim()) {
+        await db
+          .update(kbDocument)
+          .set({ status: "failed", updatedAt: new Date() })
+          .where(eq(kbDocument.id, doc.id));
+        failedCount++;
         continue;
       }
 
@@ -104,6 +109,17 @@ export async function reindexKnowledgebase(kbId: string) {
           }))
         );
       }
+
+      // Update document metadata
+      await db
+        .update(kbDocument)
+        .set({
+          chunkCount: chunks.length,
+          tokenCount: chunks.reduce((s, c) => s + Math.round(c.length / 4), 0),
+          status: "ready", // Explicitly ensure it's "ready"
+          updatedAt: new Date(),
+        })
+        .where(eq(kbDocument.id, doc.id));
 
       processedCount++;
     } catch (err) {
