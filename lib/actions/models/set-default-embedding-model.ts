@@ -2,10 +2,9 @@
 
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiModel, userSettings } from "@/drizzle/schema";
+import { aiModel, userSettings, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/actions/require-session";
 import { logger } from "@/lib/logger";
-import { markKnowledgebasesForReindex } from "@/lib/actions/knowledgebases/mark-knowledgebases-for-reindex";
 
 export async function setDefaultEmbeddingModel(modelId: string): Promise<void> {
   const session = await requireSession();
@@ -39,7 +38,10 @@ export async function setDefaultEmbeddingModel(modelId: string): Promise<void> {
       },
     });
 
-  await markKnowledgebasesForReindex("Embedding model changed");
+  await db
+    .update(knowledgebase)
+    .set({ indexStatus: "stale", updatedAt: new Date() })
+    .where(eq(knowledgebase.userId, session.user.id));
 
   logger.info("Default embedding model updated", { modelId }, session.user.id);
 }

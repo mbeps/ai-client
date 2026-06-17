@@ -19,9 +19,8 @@ export async function listKnowledgebases(): Promise<KnowledgebaseWithCount[]> {
       userId: knowledgebase.userId,
       name: knowledgebase.name,
       description: knowledgebase.description,
-      needsReindex: knowledgebase.needsReindex,
+      indexStatus: knowledgebase.indexStatus,
       lastIndexedAt: knowledgebase.lastIndexedAt,
-      reindexReason: knowledgebase.reindexReason,
       createdAt: knowledgebase.createdAt,
       updatedAt: knowledgebase.updatedAt,
       documentCount: sql<number>`(

@@ -87,11 +87,7 @@ export async function ingestDocument(
     await db
       .update(knowledgebase)
       .set({
-        needsReindex: staleDocuments.length === 0 ? "false" : "true",
-        reindexReason:
-          staleDocuments.length === 0
-            ? null
-            : "Knowledgebase has documents pending re-index",
+        indexStatus: staleDocuments.length === 0 ? "ready" : "stale",
         lastIndexedAt: new Date(),
         updatedAt: new Date(),
       })

@@ -81,8 +81,7 @@ export async function uploadKbDocument(
   await db
     .update(knowledgebase)
     .set({
-      needsReindex: "true",
-      reindexReason: "New document pending ingestion",
+      indexStatus: "stale",
       updatedAt: new Date(),
     })
     .where(eq(knowledgebase.id, kbId));
