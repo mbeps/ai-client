@@ -2,7 +2,7 @@
 
 import { generateText } from "ai";
 import { requireSession } from "../require-session";
-import { translateRequestSchema } from "@/schemas/workflows";
+import { translateRequestSchema } from "@/schemas/workflows/workflows";
 import { PROMPTS } from "@/constants/prompts";
 import {
   resolveDefaultChatProvider,

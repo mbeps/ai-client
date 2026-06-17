@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
-import { jsonObjectSchema, idField } from "./shared-fields";
+import { jsonObjectSchema, idField } from "../shared-fields";
 
 /**
  * Validates MCP server configuration.

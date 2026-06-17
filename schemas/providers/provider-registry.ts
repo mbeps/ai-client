@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { idField } from "./shared-fields";
+import { nameField, idField } from "../shared-fields";
 
 export const providerModelTypeSchema = z.enum(["chat", "embedding", "both"]);
 

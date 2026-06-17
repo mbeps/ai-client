@@ -18,7 +18,7 @@ import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { totpSchema, TotpFormData } from "@/schemas/totp";
+import { totpSchema, TotpFormData } from "@/schemas/auth/totp";
 
 /**
  * Primary two-factor authentication form that validates a 6-digit TOTP code.

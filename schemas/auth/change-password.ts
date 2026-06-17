@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { passwordField, requiredPasswordField } from "./shared-fields";
+import { passwordField, requiredPasswordField } from "../shared-fields";
 
 /**
  * Validates the change-password form for authenticated users.

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { persistMessageSchema } from "@/schemas/chat";
+import { persistMessageSchema } from "@/schemas/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Attachment } from "@/types/attachment/attachment";
 

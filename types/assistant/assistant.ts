@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { assistantSchema } from "@/schemas/assistant";
+import { assistantSchema } from "@/schemas/assistant/assistant";
 
 /**
  * Detailed representation of an AI persona or specialized bot.

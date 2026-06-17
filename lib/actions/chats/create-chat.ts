@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import type { ChatRow } from "@/types/chat/chat-row";
-import { createChatSchema } from "@/schemas/chat";
+import { createChatSchema } from "@/schemas/chat/chat";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 

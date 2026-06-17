@@ -20,7 +20,7 @@ import type { McpServer } from "@/types/mcp/mcp-server";
 import {
   updateMcpServerSchema,
   type UpdateMcpServer,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";

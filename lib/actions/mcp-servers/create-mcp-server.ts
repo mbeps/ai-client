@@ -6,7 +6,7 @@ import { mcpServer } from "@/drizzle/schema";
 import {
   createMcpServerSchema,
   type CreateMcpServer,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
 

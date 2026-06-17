@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { sixDigitCodeField } from "./shared-fields";
+import { sixDigitCodeField } from "../shared-fields";
 
 /**
  * Validates a TOTP verification code entry.
- * Used with react-hook-form when the user enters their authenticator app code. 
+ * Used with react-hook-form when the user enters their authenticator app code.
  * Code must be exactly 6 digits.
  *
  * @author Maruf Bepary

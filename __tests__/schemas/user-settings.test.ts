@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { userSettingsSchema } from "@/schemas/user-settings";
+import { userSettingsSchema } from "@/schemas/user/user-settings";
 
 describe("userSettingsSchema", () => {
   it("accepts empty payload", () => {

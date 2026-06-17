@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
 import type { PromptRow } from "@/types/prompt/prompt-row";
-import { createPromptSchema } from "@/schemas/prompt";
+import { createPromptSchema } from "@/schemas/prompt/prompt";
 import { z } from "zod";
 
 /**

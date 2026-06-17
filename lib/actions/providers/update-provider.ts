@@ -7,7 +7,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import {
   updateProviderSchema,
   type UpdateProviderInput,
-} from "@/schemas/provider-registry";
+} from "@/schemas/providers/provider-registry";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 

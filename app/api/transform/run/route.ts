@@ -22,7 +22,7 @@ import {
   createTransformRunSchema,
   resumeTransformRunSchema,
   startTransformRunSchema,
-} from "@/schemas/transform-agent";
+} from "@/schemas/workflows/transform-agent";
 import type { TransformStep } from "@/types/transform/transform-agent";
 import { z } from "zod";
 import { logger } from "@/lib/logger";

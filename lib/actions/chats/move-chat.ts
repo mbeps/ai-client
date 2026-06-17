@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import type { ChatRow } from "@/types/chat/chat-row";
-import { moveChatSchema } from "@/schemas/chat";
+import { moveChatSchema } from "@/schemas/chat/chat";
 import { z } from "zod";
 
 /**

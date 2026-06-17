@@ -3,7 +3,7 @@ import {
   createAssistantSchema,
   updateAssistantSchema,
   renameAssistantSchema,
-} from "@/schemas/assistant";
+} from "@/schemas/assistant/assistant";
 
 // ---------------------------------------------------------------------------
 // createAssistantSchema

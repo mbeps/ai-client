@@ -21,7 +21,7 @@ import { Check, X, Edit2, Trash2, GripVertical } from "lucide-react";
 import {
   transformStepSchema,
   type TransformStepInput,
-} from "@/schemas/transform-agent";
+} from "@/schemas/workflows/transform-agent";
 import type { TransformStep } from "@/types/transform/transform-agent";
 
 interface TransformStepCardProps {

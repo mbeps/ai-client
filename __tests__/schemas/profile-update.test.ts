@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { profileUpdateSchema } from "@/schemas/profile-update";
+import { profileUpdateSchema } from "@/schemas/user/profile-update";
 
 describe("profileUpdateSchema", () => {
   it("accepts valid name", () => {

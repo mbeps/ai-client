@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PasskeyButton } from "../buttons/passkey-button";
 import { HelpCircle, LogIn } from "lucide-react";
-import { signInSchema, SignInForm } from "@/schemas/sign-in";
+import { signInSchema, SignInForm } from "@/schemas/auth/sign-in";
 
 /**
  * Email/password sign-in form with passkey and password-reset shortcuts.

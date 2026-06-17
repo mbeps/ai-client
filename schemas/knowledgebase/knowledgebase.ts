@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameField, descriptionField, idField } from "./shared-fields";
+import { nameField, descriptionField, idField } from "../shared-fields";
 
 /**
  * Validates knowledgebase rename operations with only the new name field.

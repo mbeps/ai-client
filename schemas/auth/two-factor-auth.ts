@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requiredPasswordField, sixDigitCodeField } from "./shared-fields";
+import { requiredPasswordField, sixDigitCodeField } from "../shared-fields";
 
 /**
  * Validates the password confirmation step when enabling or disabling two-factor authentication.

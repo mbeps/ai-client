@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   createMcpServerSchema,
   updateMcpServerSchema,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 
 // Mock isBlockedUrl so URL-guard tests are deterministic and don't depend on network
 vi.mock("@/lib/mcp/url-guard", () => ({

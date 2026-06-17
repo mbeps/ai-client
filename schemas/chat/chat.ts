@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PROMPTS } from "@/constants/prompts";
-import { idField } from "./shared-fields";
+import { idField } from "../shared-fields";
 
 /**
  * Validates a message object for persistence to the database.

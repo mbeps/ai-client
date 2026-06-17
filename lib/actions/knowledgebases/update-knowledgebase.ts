@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
-import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase";
+import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { z } from "zod";
 
 /**

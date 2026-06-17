@@ -5,7 +5,7 @@ import {
   contentField,
   renameSchema,
   idField,
-} from "./shared-fields";
+} from "../shared-fields";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.

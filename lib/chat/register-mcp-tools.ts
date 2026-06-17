@@ -4,7 +4,7 @@ import { hybridSearch } from "@/lib/rag/retrieve";
 import {
   manageArtifactSchema,
   searchKnowledgeBaseSchema,
-} from "@/schemas/chat";
+} from "@/schemas/chat/chat";
 import { PROMPTS } from "@/constants/prompts";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";

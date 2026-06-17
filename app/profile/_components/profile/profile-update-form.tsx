@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import {
   profileUpdateSchema,
   ProfileUpdateFormData,
-} from "@/schemas/profile-update";
+} from "@/schemas/user/profile-update";
 import { Label } from "@/components/ui/label";
 
 /**

@@ -9,7 +9,7 @@ import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
-import { messageMetadataSchema } from "@/schemas/chat";
+import { messageMetadataSchema } from "@/schemas/chat/chat";
 import { chatRowToStore } from "../mappers/chat";
 import { withOptimisticUpdate } from "../with-optimistic-update";
 import {

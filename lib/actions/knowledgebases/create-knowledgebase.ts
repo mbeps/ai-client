@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
-import { createKnowledgebaseSchema } from "@/schemas/knowledgebase";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-provider";
 import { z } from "zod";
 

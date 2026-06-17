@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import type { ProjectRow } from "@/types/project/project-row";
-import { updateProjectSchema } from "@/schemas/project";
+import { updateProjectSchema } from "@/schemas/project/project";
 import { z } from "zod";
 
 /**

@@ -9,7 +9,7 @@ import { ModelDuplicateImportError } from "@/lib/constants/errors";
 import {
   importProviderRegistryInputSchema,
   type ImportProviderRegistryInput,
-} from "@/schemas/provider-registry";
+} from "@/schemas/providers/provider-registry";
 import { toEncryptedProviderValues } from "./utils";
 
 export type ImportRegistryResult = {

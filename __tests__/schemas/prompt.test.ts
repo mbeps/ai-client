@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { createPromptSchema, updatePromptSchema } from "@/schemas/prompt";
+import {
+  createPromptSchema,
+  updatePromptSchema,
+} from "@/schemas/prompt/prompt";
 
 // createPromptSchema
 describe("createPromptSchema", () => {

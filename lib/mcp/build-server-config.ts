@@ -1,4 +1,4 @@
-import type { CreateMcpServer } from "@/schemas/mcp-server";
+import type { CreateMcpServer } from "@/schemas/providers/mcp-server";
 
 /**
  * Builds the database column values object for an MCP server configuration.

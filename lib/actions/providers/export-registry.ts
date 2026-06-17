@@ -9,7 +9,7 @@ import {
   type ExportProviderRegistryInput,
   type ProviderModelType,
   type RegistryExport,
-} from "@/schemas/provider-registry";
+} from "@/schemas/providers/provider-registry";
 import { decodeProviderRecord } from "./utils";
 
 const PROVIDER_MODEL_TYPES = ["chat", "embedding", "both"] as const;

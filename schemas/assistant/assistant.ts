@@ -4,7 +4,7 @@ import {
   descriptionField,
   contentField,
   renameSchema,
-} from "./shared-fields";
+} from "../shared-fields";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.

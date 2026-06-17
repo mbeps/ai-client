@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 import {
   createModelSchema,
   type CreateModelInput,
-} from "@/schemas/provider-registry";
+} from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 export async function createModel(

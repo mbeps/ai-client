@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { chatSchema } from "@/schemas/chat";
+import { chatSchema } from "@/schemas/chat/chat";
 import type { Message } from "@/types/message/message";
 
 /**

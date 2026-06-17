@@ -29,7 +29,7 @@ import { ArrowLeft, Key } from "lucide-react";
 import {
   resetPasswordSchema,
   ResetPasswordForm,
-} from "@/schemas/reset-password";
+} from "@/schemas/auth/reset-password";
 
 /**
  * Password reset page component driven by a signed token in the URL.

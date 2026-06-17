@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   userSettingsSchema,
   type UserSettingsFormData as UserSettings,
-} from "@/schemas/user-settings";
+} from "@/schemas/user/user-settings";
 import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
 import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 import { useRef } from "react";

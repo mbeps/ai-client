@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { changePasswordSchema } from "@/schemas/change-password";
+import { changePasswordSchema } from "@/schemas/auth/change-password";
 
 describe("changePasswordSchema", () => {
   it("accepts valid change-password data with revoke=true", () => {

@@ -27,7 +27,7 @@ import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowled
 import { toast } from "sonner";
 import { Plus, X, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createKnowledgebaseSchema } from "@/schemas/knowledgebase";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { useUserModels } from "@/hooks/use-user-models";
 
 type FormValues = z.infer<typeof createKnowledgebaseSchema>;

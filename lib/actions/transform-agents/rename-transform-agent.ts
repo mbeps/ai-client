@@ -4,20 +4,20 @@ import { requireSession } from "@/lib/actions/require-session";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import { renameTransformAgentSchema } from "@/schemas/transform-agent";
+import { renameTransformAgentSchema } from "@/schemas/workflows/transform-agent";
 import { z } from "zod";
 
 /**
  * Renames a Transform Agent.
  * Follows the centralized rename pattern used for chats, projects, and assistants.
- * 
+ *
  * @param id - The ID of the agent to rename.
  * @param name - The new name for the agent.
  * @author Maruf Bepary
  */
 export async function renameTransformAgent(id: string, name: string) {
   const session = await requireSession();
-  
+
   // Validate inputs
   const validatedId = z.string().uuid().parse(id);
   const { name: validatedName } = renameTransformAgentSchema.parse({ name });
@@ -34,6 +34,6 @@ export async function renameTransformAgent(id: string, name: string) {
     .returning();
 
   if (!row) throw new Error("Agent not found or unauthorized");
-  
+
   return row;
 }
