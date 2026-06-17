@@ -45,6 +45,7 @@ export const knowledgebaseSchema = z.object({
   name: nameField,
   description: descriptionField,
   documentCount: z.number().int().nonnegative(),
+  indexStatus: z.enum(["ready", "stale", "indexing"]),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

@@ -29,6 +29,7 @@ import { DocumentList } from "@/components/knowledgebase/document-list";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
 import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
+import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowledgebase";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
   SidebarTabs,
@@ -44,8 +45,9 @@ import type { KbDocumentRow } from "@/types/kb-document-row";
 
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
-import { AlertTriangle, AlertCircle } from "lucide-react";
+import { AlertTriangle, AlertCircle, RefreshCw, Database } from "lucide-react";
 import { useUserModels } from "@/hooks/use-user-models";
+import { cn } from "@/lib/utils";
 
 export default function KnowledgebasePage() {
   const params = useParams();
@@ -120,6 +122,38 @@ export default function KnowledgebasePage() {
     fetchKb();
     fetchDocuments();
   }, [fetchKb, fetchDocuments]);
+
+  const handleReindex = useCallback(async () => {
+    if (kb?.indexStatus === "indexing") return;
+    
+    try {
+      await reindexKnowledgebase(kbId);
+      toast.success("Indexing started");
+      fetchKb(); // Refresh status
+    } catch (error) {
+      toast.error("Failed to start re-indexing");
+      console.error(error);
+    }
+  }, [kbId, kb?.indexStatus, fetchKb]);
+
+  // Polling for status updates
+  useEffect(() => {
+    if (kb?.indexStatus !== "indexing") return;
+
+    const interval = setInterval(() => {
+      fetchKb();
+      fetchDocuments();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [kb?.indexStatus, fetchKb, fetchDocuments]);
+
+  // Lazy trigger: if stale, start indexing automatically
+  useEffect(() => {
+    if (kb?.indexStatus === "stale") {
+      handleReindex();
+    }
+  }, [kb?.indexStatus, handleReindex]);
 
   if (isLoading) {
     return (
@@ -202,6 +236,40 @@ export default function KnowledgebasePage() {
             <Card className="flex-1 min-w-[200px] shadow-none">
               <CardHeader>
                 <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+                  <RefreshCw className={cn("h-3.5 w-3.5", kb.indexStatus === "indexing" && "animate-spin")} />
+                  Index Status
+                </CardDescription>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl font-bold capitalize">
+                      {kb.indexStatus}
+                    </CardTitle>
+                    {kb.indexStatus === "stale" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={handleReindex}
+                        title="Re-index all documents"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {kb.indexStatus === "indexing"
+                      ? "Processing documents..."
+                      : kb.indexStatus === "stale"
+                        ? "Needs re-indexing"
+                        : "Ready for search"}
+                  </p>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="flex-1 min-w-[200px] shadow-none">
+              <CardHeader>
+                <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
                   <Calendar className="h-3.5 w-3.5" />
                   Stats
                 </CardDescription>
@@ -255,15 +323,35 @@ export default function KnowledgebasePage() {
                 <div className="text-sm text-muted-foreground">
                   {embeddingModelLabel}
                 </div>
-                {kb.needsReindex === "true" && (
+                {kb.indexStatus === "stale" && (
                   <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
                     <div className="flex items-center gap-1.5 font-medium">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       Re-index required
                     </div>
                     <p className="mt-1">
-                      {kb.reindexReason ?? "Embedding configuration changed."}{" "}
-                      Re-upload documents to re-index with the current model.
+                      Your embedding configuration has changed. Documents must
+                      be re-indexed to ensure search accuracy.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-[10px] border-amber-200 hover:bg-amber-100 dark:border-amber-900/50 dark:hover:bg-amber-100/10"
+                      onClick={handleReindex}
+                    >
+                      Re-index Now
+                    </Button>
+                  </div>
+                )}
+                {kb.indexStatus === "indexing" && (
+                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Indexing in progress
+                    </div>
+                    <p className="mt-1">
+                      Updating your search index. This may take a few minutes
+                      depending on document size.
                     </p>
                   </div>
                 )}
@@ -283,17 +371,6 @@ export default function KnowledgebasePage() {
                   Rename
                 </Button>
               </div>
-
-              {kb.needsReindex === "true" && (
-                <Button
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setShowUpload(true)}
-                >
-                  <Upload className="mr-2 h-3.5 w-3.5" />
-                  Re-index documents
-                </Button>
-              )}
             </CardContent>
           </Card>
 
