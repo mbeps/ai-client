@@ -11,7 +11,7 @@ export const PROVIDER_NOT_CONFIGURED_ERROR_CODE =
 export const PROVIDER_KEY_CORRUPTED_ERROR_CODE =
   "PROVIDER_KEY_CORRUPTED" as const;
 
-export const DIMENSION_MISMATCH_ERROR_CODE = "DIMENSION_MISMATCH" as const;
+export const KB_NOT_READY_ERROR_CODE = "KB_NOT_READY" as const;
 
 export const MODEL_MALFORMED_ID_ERROR_CODE = "MODEL_MALFORMED_ID" as const;
 
@@ -45,14 +45,17 @@ export class ProviderKeyCorruptedError extends Error {
   }
 }
 
-export class DimensionMismatchError extends Error {
-  readonly code = DIMENSION_MISMATCH_ERROR_CODE;
+export class KnowledgebaseNotReadyError extends Error {
+  readonly code = KB_NOT_READY_ERROR_CODE;
+  readonly kbId: string;
+  readonly status: string;
 
-  constructor(
-    message = "Embedding dimensions do not match expected vector size",
-  ) {
+  constructor(kbId: string, status: string) {
+    const message = `Knowledge base is not ready for search (status: ${status}). Please wait for indexing to complete.`;
     super(message);
-    this.name = "DimensionMismatchError";
+    this.kbId = kbId;
+    this.status = status;
+    this.name = "KnowledgebaseNotReadyError";
   }
 }
 

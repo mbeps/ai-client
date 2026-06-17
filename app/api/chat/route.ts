@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
-import { assistant, chat, message, mcpServer, project } from "@/drizzle/schema";
+import { assistant, chat, message, mcpServer, project, knowledgebase } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";
@@ -146,6 +146,16 @@ export async function POST(req: Request) {
       projectRow?.knowledgebaseId ??
       null;
 
+    let kbIsReady = false;
+    if (activeKbId) {
+      const [kb] = await db
+        .select({ indexStatus: knowledgebase.indexStatus })
+        .from(knowledgebase)
+        .where(eq(knowledgebase.id, activeKbId))
+        .limit(1);
+      kbIsReady = kb?.indexStatus === "ready";
+    }
+
     const effectiveAssistantId = chatRow.assistantId || selectedAssistantId;
 
     // Fetch assistant prompt if this chat belongs to an assistant or an assistant was mentioned
@@ -248,7 +258,7 @@ export async function POST(req: Request) {
       globalSystemPrompt,
       projectRow?.globalPrompt,
       assistantRow?.prompt,
-      !!activeKbId,
+      kbIsReady,
       attachmentUrls,
     );
     const finalMessages: ModelMessage[] = [

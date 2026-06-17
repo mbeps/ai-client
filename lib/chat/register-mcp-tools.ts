@@ -6,6 +6,9 @@ import {
   searchKnowledgeBaseSchema,
 } from "@/schemas/chat";
 import { PROMPTS } from "@/constants/prompts";
+import { db } from "@/drizzle/db";
+import { knowledgebase } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // The server type accepted by getMcpTools (mirror the parameter type)
 type McpServerParam = Parameters<typeof getMcpTools>[0][number];
@@ -117,25 +120,33 @@ export async function registerMcpTools(
 
   if (activeKbId) {
     const kbId = activeKbId;
-    toolSourceMap["search_knowledge_base"] = "System";
-    mcpTools["search_knowledge_base"] = tool({
-      description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
-      parameters: searchKnowledgeBaseSchema,
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async ({ query }: { query: string }) => {
-        const results = await hybridSearch(kbId, query, userId, 5);
-        return {
-          results: results.map((r) => ({
-            content: r.content,
-            relevanceScore: r.score,
-            documentId: r.documentId,
-            documentName: r.documentName,
-            s3Key: r.s3Key,
-          })),
-          resultCount: results.length,
-        };
-      },
-    });
+    const [kb] = await db
+      .select({ indexStatus: knowledgebase.indexStatus })
+      .from(knowledgebase)
+      .where(eq(knowledgebase.id, kbId))
+      .limit(1);
+
+    if (kb && kb.indexStatus === "ready") {
+      toolSourceMap["search_knowledge_base"] = "System";
+      mcpTools["search_knowledge_base"] = tool({
+        description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
+        parameters: searchKnowledgeBaseSchema,
+        // @ts-expect-error Vercel AI SDK type mismatch with internal tools
+        execute: async ({ query }: { query: string }) => {
+          const results = await hybridSearch(kbId, query, userId, 5);
+          return {
+            results: results.map((r) => ({
+              content: r.content,
+              relevanceScore: r.score,
+              documentId: r.documentId,
+              documentName: r.documentName,
+              s3Key: r.s3Key,
+            })),
+            resultCount: results.length,
+          };
+        },
+      });
+    }
   }
 
   return { mcpTools, toolSourceMap, mcpCleanup };
