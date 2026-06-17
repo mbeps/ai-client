@@ -125,7 +125,7 @@ export default function KnowledgebasePage() {
 
   const handleReindex = useCallback(async () => {
     if (kb?.indexStatus === "indexing") return;
-    
+
     try {
       await reindexKnowledgebase(kbId);
       toast.success("Indexing started");
@@ -236,7 +236,12 @@ export default function KnowledgebasePage() {
             <Card className="flex-1 min-w-[200px] shadow-none">
               <CardHeader>
                 <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
-                  <RefreshCw className={cn("h-3.5 w-3.5", kb.indexStatus === "indexing" && "animate-spin")} />
+                  <RefreshCw
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      kb.indexStatus === "indexing" && "animate-spin",
+                    )}
+                  />
                   Index Status
                 </CardDescription>
                 <div className="flex flex-col gap-0.5 mt-1">

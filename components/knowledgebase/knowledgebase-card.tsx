@@ -34,13 +34,19 @@ export function KnowledgebaseCard({
             <div className="flex items-center gap-2">
               <h3 className="font-semibold leading-none truncate">{kb.name}</h3>
               {kb.indexStatus === "stale" && (
-                <Badge variant="warning" className="h-4 px-1 text-[8px] uppercase">
+                <Badge
+                  variant="warning"
+                  className="h-4 px-1 text-[8px] uppercase"
+                >
                   <AlertTriangle className="mr-0.5 h-2 w-2" />
                   Stale
                 </Badge>
               )}
               {kb.indexStatus === "indexing" && (
-                <Badge variant="outline" className="h-4 px-1 text-[8px] uppercase text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                <Badge
+                  variant="outline"
+                  className="h-4 px-1 text-[8px] uppercase text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20"
+                >
                   <Loader2 className="mr-0.5 h-2 w-2 animate-spin" />
                   Indexing
                 </Badge>

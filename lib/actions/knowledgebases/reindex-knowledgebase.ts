@@ -10,8 +10,6 @@ import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk";
 import { embedDocuments } from "@/lib/rag/embed";
 
-export const maxDuration = 300;
-
 /**
  * Re-indexes all documents in a knowledgebase.
  * This is used when the default embedding model has changed.
@@ -27,8 +25,8 @@ export async function reindexKnowledgebase(kbId: string) {
     .where(
       and(
         eq(knowledgebase.id, kbId),
-        eq(knowledgebase.userId, session.user.id)
-      )
+        eq(knowledgebase.userId, session.user.id),
+      ),
     );
 
   if (!kb) {
@@ -54,12 +52,7 @@ export async function reindexKnowledgebase(kbId: string) {
   const docs = await db
     .select()
     .from(kbDocument)
-    .where(
-      and(
-        eq(kbDocument.kbId, kbId),
-        eq(kbDocument.status, "ready")
-      )
-    );
+    .where(and(eq(kbDocument.kbId, kbId), eq(kbDocument.status, "ready")));
 
   let processedCount = 0;
   let failedCount = 0;
@@ -72,11 +65,11 @@ export async function reindexKnowledgebase(kbId: string) {
         new GetObjectCommand({
           Bucket: S3_BUCKET,
           Key: doc.s3Key,
-        })
+        }),
       );
 
       const buffer = Buffer.from(await s3Res.Body!.transformToByteArray());
-      
+
       // Extract text
       const text = await extractTextFromBuffer(buffer, doc.mimeType);
       if (!text.trim()) {
@@ -95,7 +88,7 @@ export async function reindexKnowledgebase(kbId: string) {
       // Atomic update for the document's chunks
       // We delete existing chunks and insert new ones
       await db.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
-      
+
       if (chunks.length > 0) {
         await db.insert(kbChunk).values(
           chunks.map((content, i) => ({
@@ -106,7 +99,7 @@ export async function reindexKnowledgebase(kbId: string) {
             embedding: embeddings[i],
             chunkIndex: i,
             tokenCount: Math.round(content.length / 4),
-          }))
+          })),
         );
       }
 
@@ -125,13 +118,13 @@ export async function reindexKnowledgebase(kbId: string) {
     } catch (err) {
       console.error(`Failed to re-index document ${doc.id}:`, err);
       failedCount++;
-      
+
       // Mark specific document as failed
       await db
         .update(kbDocument)
         .set({
           status: "failed",
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(kbDocument.id, doc.id));
     }

@@ -1,6 +1,13 @@
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/drizzle/db";
-import { assistant, chat, message, mcpServer, project, knowledgebase } from "@/drizzle/schema";
+import {
+  assistant,
+  chat,
+  message,
+  mcpServer,
+  project,
+  knowledgebase,
+} from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { streamText, stepCountIs, type ModelMessage } from "ai";

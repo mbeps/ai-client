@@ -92,7 +92,7 @@ export function KnowledgebasePickerDialog({
                         type="button"
                         className={cn(
                           "flex items-start gap-3 w-full rounded-md px-3 py-2.5 text-left hover:bg-muted/60 transition-colors",
-                          !isReady && "opacity-60 cursor-not-allowed"
+                          !isReady && "opacity-60 cursor-not-allowed",
                         )}
                         onClick={() => isReady && onToggleKb(kb.id)}
                         disabled={!isReady}
@@ -114,7 +114,7 @@ export function KnowledgebasePickerDialog({
                                 variant={isIndexing ? "outline" : "warning"}
                                 className={cn(
                                   "h-3.5 px-1 text-[7px] uppercase",
-                                  isIndexing && "text-blue-500 border-blue-200"
+                                  isIndexing && "text-blue-500 border-blue-200",
                                 )}
                               >
                                 {isIndexing ? (
