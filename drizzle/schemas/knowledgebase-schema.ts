@@ -12,12 +12,11 @@ export const knowledgebase = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
-    needsReindex: text("needs_reindex")
-      .$type<"true" | "false">()
+    indexStatus: text("index_status")
+      .$type<"ready" | "stale" | "indexing">()
       .notNull()
-      .default("false"),
+      .default("ready"),
     lastIndexedAt: timestamp("last_indexed_at"),
-    reindexReason: text("reindex_reason"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
