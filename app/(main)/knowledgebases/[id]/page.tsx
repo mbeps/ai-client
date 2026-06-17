@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   FileText,
   Calendar,
@@ -17,6 +19,8 @@ import {
   Trash2,
   Library,
   Loader2,
+  Save,
+  Shield,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -28,7 +32,7 @@ import { listModels } from "@/lib/actions/models/list-models";
 import { DocumentList } from "@/components/knowledgebase/document-list";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
+import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
 import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowledgebase";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
@@ -43,7 +47,6 @@ import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import type { KbDocumentRow } from "@/types/kb-document-row";
 
-import { RenameDialog } from "@/components/shared/rename-dialog";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
 import { AlertTriangle, AlertCircle, RefreshCw, Database } from "lucide-react";
 import { useUserModels } from "@/hooks/use-user-models";
@@ -64,6 +67,10 @@ export default function KnowledgebasePage() {
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
 
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const [activeTab, setActiveTab] = useTabState("tab", "documents");
 
   const fetchKb = useCallback(async () => {
@@ -71,6 +78,8 @@ export default function KnowledgebasePage() {
       const data = await getKnowledgebase(kbId);
       if (data) {
         setKb(data);
+        setName(data.name);
+        setDescription(data.description ?? "");
       }
 
       const [settings, embeddingModels] = await Promise.all([
@@ -91,26 +100,31 @@ export default function KnowledgebasePage() {
     }
   }, [kbId]);
 
-  const {
-    showRename,
-    setShowRename,
-    showDelete,
-    setShowDelete,
-    isDeleting,
-    handleRename,
-    handleDelete,
-  } = useEntityOptions({
-    id: kbId,
-    type: "Knowledgebase",
-    onRename: async (id, name) => {
-      const result = await renameKnowledgebase(id, name);
+  const { showDelete, setShowDelete, isDeleting, handleDelete } =
+    useEntityOptions({
+      id: kbId,
+      type: "Knowledgebase",
+      onDelete: (id) => deleteKnowledgebase(id),
+      redirectPath: ROUTES.KNOWLEDGEBASES.path,
+      useRouterRefresh: true,
+    });
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      await updateKnowledgebase(kbId, {
+        name,
+        description,
+      });
+      toast.success("Settings saved");
       fetchKb();
-      return result;
-    },
-    onDelete: (id) => deleteKnowledgebase(id),
-    redirectPath: ROUTES.KNOWLEDGEBASES.path,
-    useRouterRefresh: true,
-  });
+      router.refresh();
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const fetchDocuments = useCallback(() => {
     listDocuments(kbId)
@@ -209,6 +223,10 @@ export default function KnowledgebasePage() {
           <SidebarTabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="danger">
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Danger Zone</span>
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
@@ -312,94 +330,131 @@ export default function KnowledgebasePage() {
           </div>
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="settings" className="space-y-4">
-          <Card className="shadow-none">
-            <CardHeader className="p-4">
-              <CardTitle className="text-base">General Settings</CardTitle>
-              <CardDescription className="text-xs">
-                Manage basic information for this knowledge base.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0 space-y-3">
-              <div className="p-3 border rounded-lg bg-muted/20 space-y-1">
-                <div className="text-xs font-medium">
+        <SidebarTabsContent value="settings" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Knowledge Base Details</h3>
+            <p className="text-sm text-muted-foreground">
+              Manage the knowledge base name and description.
+            </p>
+          </div>
+
+          <div className="space-y-4 max-w-2xl">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Knowledge base name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what this knowledge base contains..."
+                rows={4}
+              />
+            </div>
+            <Button
+              onClick={handleSaveSettings}
+              disabled={isSaving || !name.trim()}
+              className="w-full sm:w-auto"
+            >
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Changes
+            </Button>
+          </div>
+
+          <div className="pt-6 border-t">
+            <div className="space-y-1 mb-4">
+              <h3 className="text-lg font-semibold text-foreground">
+                Embedding Configuration
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Current embedding model and index status.
+              </p>
+            </div>
+
+            <div className="p-4 border rounded-xl bg-muted/20 space-y-3">
+              <div className="space-y-1">
+                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Global Embedding Model
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm font-medium flex items-center gap-2">
+                  <Database className="h-4 w-4 text-primary" />
                   {embeddingModelLabel}
                 </div>
-                {kb.indexStatus === "stale" && (
-                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      Re-index required
-                    </div>
-                    <p className="mt-1">
-                      Your embedding configuration has changed. Documents must
-                      be re-indexed to ensure search accuracy.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-2 h-7 text-[10px] border-amber-200 hover:bg-amber-100 dark:border-amber-900/50 dark:hover:bg-amber-100/10"
-                      onClick={handleReindex}
-                    >
-                      Re-index Now
-                    </Button>
-                  </div>
-                )}
-                {kb.indexStatus === "indexing" && (
-                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Indexing in progress
-                    </div>
-                    <p className="mt-1">
-                      Updating your search index. This may take a few minutes
-                      depending on document size.
-                    </p>
-                  </div>
-                )}
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-medium">Knowledgebase Name</div>
-                  <div className="text-sm text-muted-foreground">{kb.name}</div>
+              {kb.indexStatus === "stale" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-blue-300">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <AlertTriangle className="h-4 w-4" />
+                    Re-index required
+                  </div>
+                  <p className="mt-1.5 leading-relaxed text-amber-600 dark:text-amber-400">
+                    Your embedding configuration has changed. Documents must be
+                    re-indexed to ensure search accuracy.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 h-8 border-amber-200 hover:bg-amber-100 dark:border-amber-900/50 dark:hover:bg-amber-100/10"
+                    onClick={handleReindex}
+                  >
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                    Re-index Now
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setShowRename(true)}
-                >
-                  Rename
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              )}
 
-          <Card className="border-destructive/20 shadow-none">
-            <CardHeader className="p-4 text-destructive">
-              <CardTitle className="text-base">Danger Zone</CardTitle>
-              <CardDescription className="text-xs text-destructive/80">
-                Irreversible actions for this knowledge base.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0">
-              <p className="text-xs text-muted-foreground mb-3">
+              {kb.indexStatus === "indexing" && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Indexing in progress
+                  </div>
+                  <p className="mt-1.5 leading-relaxed text-blue-600 dark:text-blue-400">
+                    Updating your search index. This may take a few minutes
+                    depending on document size.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="danger" className="space-y-6">
+          <Card className="border-destructive/20 shadow-none bg-destructive/5">
+            <CardContent className="py-0 px-4 space-y-4">
+              <div className="space-y-1">
+                <div className="text-base font-semibold text-destructive flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" />
+                  Delete Knowledgebase
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Once you delete a knowledge base, there is no going back.
+                  Please be certain.
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
                 Deleting this knowledge base will permanently remove all
-                associated documents and vector embeddings. This action cannot
-                be undone.
+                associated documents and vector embeddings from our system.
               </p>
+
               <Button
                 variant="destructive"
-                size="sm"
-                className="h-8 text-xs"
+                className="w-full sm:w-auto"
                 onClick={() => setShowDelete(true)}
                 disabled={isDeleting}
               >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Knowledgebase
               </Button>
             </CardContent>
@@ -421,14 +476,6 @@ export default function KnowledgebasePage() {
         title="Delete Knowledgebase"
         description={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
         loading={isDeleting}
-      />
-
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={kb.name}
-        onConfirm={handleRename}
-        title="Rename Knowledgebase"
       />
     </div>
   );

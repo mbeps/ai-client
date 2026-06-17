@@ -7,6 +7,14 @@ import { and, eq } from "drizzle-orm";
 import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
 import { renameKnowledgebaseSchema } from "@/schemas/knowledgebase";
 
+/**
+ * Renames a knowledgebase.
+ * @deprecated Use updateKnowledgebase instead for consolidated metadata updates.
+ *
+ * @param kbId - The unique ID of the knowledgebase to rename.
+ * @param name - The new name for the knowledgebase.
+ * @returns The updated knowledgebase record.
+ */
 export async function renameKnowledgebase(
   kbId: string,
   name: string,

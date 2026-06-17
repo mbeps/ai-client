@@ -13,6 +13,16 @@ export const renameKnowledgebaseSchema = z.object({
 });
 
 /**
+ * Validates updates to an existing knowledgebase.
+ * Includes optional name and description.
+ * Use with updateKnowledgebase server action for consolidated metadata updates.
+ */
+export const updateKnowledgebaseSchema = z.object({
+  name: nameField.optional(),
+  description: descriptionField,
+});
+
+/**
  * Validates new knowledgebase creation with name and optional description.
  * Name required (1-100 chars); description optional (max 500 chars).
  * Use with createKnowledgebase server action to create new information repositories.
