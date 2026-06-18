@@ -10,9 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload, AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
+import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { useUserModels } from "@/hooks/use-user-models";
 
@@ -92,10 +93,12 @@ export function UploadDocumentDialog({
 
       setPhase("ingesting");
 
-      const res = await fetch(`/api/rag/ingest/${doc.id}`, { method: "POST" });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Ingestion failed");
+      const result = await ingestKbDocument(doc.id);
+      if (!result.success) {
+        // Build a custom error object to trigger existing toast and error display logic
+        const error: any = new Error(result.error ?? "Ingestion failed");
+        if (result.code) error.code = result.code;
+        throw error;
       }
 
       toast.success(`"${file.name}" uploaded and queued for processing`);
