@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
@@ -19,14 +19,12 @@ import { logger } from "@/lib/logger";
  * @throws ZodError if data fails schema validation (e.g., name is missing).
  * @see updateAssistant to modify an existing assistant.
  * @see deleteAssistant to remove an assistant.
- * @author Maruf Bepary
  */
 export async function createAssistant(
   data: z.infer<typeof createAssistantSchema>,
 ): Promise<AssistantRow> {
   const session = await requireSession();
 
-  // Validate inputs
   const validated = createAssistantSchema.parse(data);
 
   const [row] = await db

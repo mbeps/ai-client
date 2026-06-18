@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 import { decodeProviderRecord } from "@/lib/actions/providers/utils";
@@ -44,10 +44,10 @@ export async function syncProviderModels(
     );
 
   if (!provider) {
-    throw new Error("Provider not found");
+    throw new Error("Not Found");
   }
 
-  if (isBlockedUrl(provider.baseUrl)) {
+  if (await isBlockedUrl(provider.baseUrl)) {
     throw new Error("Provider URL is blocked by SSRF guard");
   }
 

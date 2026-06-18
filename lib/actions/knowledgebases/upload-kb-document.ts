@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -43,7 +43,7 @@ export async function uploadKbDocument(
       ),
     );
 
-  if (!kb) throw new Error("Knowledgebase not found");
+  if (!kb) throw new Error("Not Found");
 
   const mimeType = file.type || "application/octet-stream";
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {

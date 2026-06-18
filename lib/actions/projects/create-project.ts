@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
 import type { ProjectRow } from "@/types/project/project-row";
@@ -19,14 +19,12 @@ import { logger } from "@/lib/logger";
  * @throws ZodError if data fails schema validation (e.g., name is missing).
  * @see createChat to create a chat bound to this project.
  * @see updateProject to modify project settings or globalPrompt.
- * @author Maruf Bepary
  */
 export async function createProject(
   data: z.infer<typeof createProjectSchema>,
 ): Promise<ProjectRow> {
   const session = await requireSession();
 
-  // Validate inputs
   const validated = createProjectSchema.parse(data);
 
   const [row] = await db

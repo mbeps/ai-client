@@ -26,74 +26,18 @@ vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 vi.mock("@/lib/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/lib/actions/projects/create-project", () => ({
-  createProject: vi.fn(),
-}));
-vi.mock("@/lib/actions/projects/delete-project", () => ({
-  deleteProject: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("@/lib/actions/projects/rename-project", () => ({
-  renameProject: vi.fn(),
-}));
-vi.mock("@/lib/actions/projects/update-project", () => ({
-  updateProject: vi.fn(),
-}));
-vi.mock("@/lib/actions/projects/toggle-pin-project", () => ({
-  togglePinProject: vi.fn(),
-}));
 
 // Assistants
 vi.mock("@/lib/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
-vi.mock("@/lib/actions/assistants/create-assistant", () => ({
-  createAssistant: vi.fn(),
-}));
-vi.mock("@/lib/actions/assistants/delete-assistant", () => ({
-  deleteAssistant: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("@/lib/actions/assistants/rename-assistant", () => ({
-  renameAssistant: vi.fn(),
-}));
-vi.mock("@/lib/actions/assistants/update-assistant", () => ({
-  updateAssistant: vi.fn(),
-}));
 
 // Prompts
 vi.mock("@/lib/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
-vi.mock("@/lib/actions/prompts/create-prompt", () => ({
-  createPrompt: vi.fn(),
-}));
-vi.mock("@/lib/actions/prompts/delete-prompt", () => ({
-  deletePrompt: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("@/lib/actions/prompts/update-prompt", () => ({
-  updatePrompt: vi.fn(),
-}));
 
 // MCP Servers
 vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
-}));
-vi.mock("@/lib/actions/mcp-servers/create-mcp-server", () => ({
-  createMcpServer: vi.fn(),
-}));
-vi.mock("@/lib/actions/mcp-servers/delete-mcp-server", () => ({
-  deleteMcpServer: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("@/lib/actions/mcp-servers/toggle-mcp-server", () => ({
-  toggleMcpServer: vi.fn(),
-}));
-vi.mock("@/lib/actions/mcp-servers/rename-mcp-server", () => ({
-  renameMcpServer: vi.fn(),
-}));
-vi.mock("@/lib/actions/mcp-servers/update-mcp-server", () => ({
-  updateMcpServer: vi.fn(),
-}));
-
-// Knowledgebases (not tested but imported by entity-slice)
-vi.mock("@/lib/actions/knowledgebases/rename-knowledgebase", () => ({
-  renameKnowledgebase: vi.fn(),
 }));
 
 // ─── Import mocked modules for per-test configuration ─────────────────────

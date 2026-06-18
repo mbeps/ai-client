@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import {
   createModelSchema,
@@ -28,7 +28,7 @@ export async function createModel(
     );
 
   if (!provider) {
-    throw new Error("Provider not found");
+    throw new Error("Not Found");
   }
 
   const [created] = await db

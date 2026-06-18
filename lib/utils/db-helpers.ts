@@ -10,7 +10,7 @@ import { db } from "@/drizzle/db";
  * @param userId - The ID of the authenticated user
  * @returns An 'and' expression for ownership validation
  */
-export function whereOwner(table: any, id: string, userId: string) {
+function whereOwner(table: any, id: string, userId: string) {
   return and(eq(table.id, id), eq(table.userId, userId));
 }
 
@@ -23,7 +23,7 @@ export function whereOwner(table: any, id: string, userId: string) {
  * @returns The row if valid
  * @throws Error "Not Found" if row is missing or user doesn't own it
  */
-export function verifyOwnership<T extends { userId: string }>(
+function verifyOwnership<T extends { userId: string }>(
   row: T | undefined | null,
   userId?: string,
 ): T {
@@ -46,7 +46,7 @@ export function verifyOwnership<T extends { userId: string }>(
  * @param userId - The ID of the authenticated user
  * @returns The retrieved resource
  */
-export async function getOwnedResource<T extends { userId: string }>(
+async function getOwnedResource<T extends { userId: string }>(
   table: any,
   id: string,
   userId: string,

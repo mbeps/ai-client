@@ -1,7 +1,7 @@
 "use server";
 
 import { generateText } from "ai";
-import { requireSession } from "../require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { translateRequestSchema } from "@/schemas/workflows/workflows";
 import { PROMPTS } from "@/constants/prompts";
 import {

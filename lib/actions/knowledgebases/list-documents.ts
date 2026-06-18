@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq, desc } from "drizzle-orm";
@@ -19,7 +19,7 @@ export async function listDocuments(kbId: string): Promise<KbDocumentRow[]> {
       ),
     );
 
-  if (!kb) throw new Error("Knowledgebase not found");
+  if (!kb) throw new Error("Not Found");
 
   return db
     .select()

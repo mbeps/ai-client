@@ -20,7 +20,7 @@ export async function withMcpServer<T>(
   config: McpServerConfig,
   callback: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const transport = buildTransport(config);
+  const transport = await buildTransport(config);
   let client: Client | undefined;
 
   try {
@@ -31,16 +31,13 @@ export async function withMcpServer<T>(
     );
 
     return await callback(client);
-  } catch (error) {
-    logger.error(`[MCP] Error in withMcpServer for ${config.name}:`, error, {
-      serverId: config.id,
-    });
-    // In case of connection failure, if client was partially created or exists, close it
+  } finally {
+    // Ensure the client is always closed after the callback completes,
+    // whether it succeeded or threw. Callers that need a persistent
+    // connection (e.g. connectServer) should manage their own lifecycle
+    // instead of using this wrapper.
     if (client) {
       await client.close().catch(() => {});
     }
-    throw error;
   }
-  // No finally block here because connectServer needs to keep the connection open
-  // and manage its own cleanup. discoverToolsAndResources will call client.close() inside its own callback.
 }

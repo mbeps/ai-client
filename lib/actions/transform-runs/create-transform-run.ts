@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -24,7 +24,7 @@ export async function createTransformRun(
       ),
     )
     .limit(1);
-  if (!agents[0]) throw new Error("Agent not found");
+  if (!agents[0]) throw new Error("Not Found");
 
   const [row] = await db
     .insert(transformRun)

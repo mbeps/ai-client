@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -24,5 +24,5 @@ export async function updateChatKnowledgebase(
     .where(and(eq(chat.id, validated.chatId), eq(chat.userId, session.user.id)))
     .returning({ id: chat.id });
 
-  if (!row) throw new Error("Chat not found");
+  if (!row) throw new Error("Not Found");
 }

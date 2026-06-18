@@ -3,9 +3,7 @@ import { Edit2, Trash2 } from "lucide-react";
 import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
 
@@ -50,23 +48,20 @@ export function KnowledgebaseOptions({
   ];
 
   return (
-    <>
-      <ResponsiveMenu title={kb.name} items={items} isMobile={isMobile} />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={kb.name}
-        onConfirm={handleRename}
-        title="Rename Knowledgebase"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Knowledgebase"
-        description={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
-        loading={isDeleting}
-      />
-    </>
+    <BaseEntityOptions
+      name={kb.name}
+      items={items}
+      isMobile={isMobile}
+      showRename={showRename}
+      setShowRename={setShowRename}
+      showDelete={showDelete}
+      setShowDelete={setShowDelete}
+      isDeleting={isDeleting}
+      handleRename={handleRename}
+      handleDelete={handleDelete}
+      renameTitle="Rename Knowledgebase"
+      deleteTitle="Delete Knowledgebase"
+      deleteDescription={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
+    />
   );
 }

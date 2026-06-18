@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { assistant, chat } from "@/drizzle/schema";
 import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
 

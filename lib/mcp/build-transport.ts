@@ -17,12 +17,14 @@ const headersSchema = z.record(z.string(), z.string());
  * @see {@link discover-tools.ts} for how this transport is used in tool discovery
  * @see {@link url-guard.ts} for blocked URL patterns
  */
-export function buildTransport(server: McpServerConfig): MCPTransport {
+export async function buildTransport(
+  server: McpServerConfig,
+): Promise<MCPTransport> {
   const label = server.name ?? server.url ?? "unknown";
 
   if (!server.url) throw new Error(`HTTP server "${label}" requires a URL`);
 
-  if (isBlockedUrl(server.url)) {
+  if (await isBlockedUrl(server.url)) {
     throw new Error(
       `HTTP MCP server URL "${server.url}" points to a blocked/internal address`,
     );

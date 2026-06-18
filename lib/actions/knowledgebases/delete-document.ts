@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -26,7 +26,7 @@ export async function deleteDocument(
       ),
     );
 
-  if (!doc) throw new Error("Document not found");
+  if (!doc) throw new Error("Not Found");
 
   await s3Client.send(
     new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),

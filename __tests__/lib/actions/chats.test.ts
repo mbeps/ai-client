@@ -67,14 +67,14 @@ vi.mock("@/lib/auth/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 
-vi.mock("@/lib/actions/require-session", () => ({
+vi.mock("@/lib/auth/require-session", () => ({
   requireSession: vi.fn().mockResolvedValue({
     user: { id: "user-1", name: "Test User", email: "test@example.com" },
     session: { id: "session-1" },
   }),
 }));
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
@@ -261,10 +261,10 @@ describe("renameChat", () => {
     );
   });
 
-  it("throws 'Chat not found or unauthorized' when row is missing", async () => {
+  it("throws 'Not Found' when row is missing", async () => {
     chainable.returning.mockResolvedValueOnce([]);
     await expect(renameChat(VALID_UUID, "New Title")).rejects.toThrow(
-      "Chat not found or unauthorized",
+      "Not Found",
     );
   });
 
@@ -309,10 +309,10 @@ describe("moveChat", () => {
     );
   });
 
-  it("throws 'Chat not found or access denied' when row is missing", async () => {
+  it("throws 'Not Found' when row is missing", async () => {
     chainable.returning.mockResolvedValueOnce([]);
     await expect(moveChat(CHAT_UUID, PROJ_UUID)).rejects.toThrow(
-      "Chat not found or access denied",
+      "Not Found",
     );
   });
 

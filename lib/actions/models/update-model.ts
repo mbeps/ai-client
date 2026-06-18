@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import {
   updateModelSchema,
@@ -62,7 +62,7 @@ export async function updateModels(
   );
 
   if (updated.length === 0) {
-    throw new Error("No models updated or not found");
+    throw new Error("Not Found");
   }
 
   return updated;

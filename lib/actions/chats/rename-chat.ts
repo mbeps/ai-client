@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -37,7 +37,7 @@ export async function renameChat(
     .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
     .returning();
 
-  if (!updated) throw new Error("Chat not found or unauthorized");
+  if (!updated) throw new Error("Not Found");
 
   return updated;
 }

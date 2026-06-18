@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isBlockedUrl } from "@/lib/mcp/url-guard";
+import { isBlockedUrlSync } from "@/lib/mcp/url-guard";
 import { jsonObjectSchema, idField } from "../shared-fields";
 
 /**
@@ -16,7 +16,7 @@ const mcpServerBaseSchema = z.object({
     .string()
     .url("Invalid URL")
     .max(1024)
-    .refine((val) => !isBlockedUrl(val), {
+    .refine((val) => !isBlockedUrlSync(val), {
       message: "URL points to a blocked or internal address",
     }),
   headers: jsonObjectSchema.optional(),

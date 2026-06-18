@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -31,7 +31,7 @@ export async function getAttachmentUrl(id: string) {
     );
 
   if (!row) {
-    throw new Error("Attachment not found");
+    throw new Error("Not Found");
   }
 
   const url = await getPresignedUrl(row.key);

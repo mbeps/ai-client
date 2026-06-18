@@ -1,6 +1,9 @@
 import { StateCreator } from "zustand";
-import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
-import { insertMessage, removeMessageSubtree } from "@/lib/chat/message-tree";
+import {
+  getDeepestLeaf,
+  insertMessage,
+  removeMessageSubtree,
+} from "@/lib/chat/message-tree-utils";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
@@ -11,7 +14,6 @@ import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/acti
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 import { messageMetadataSchema } from "@/schemas/chat/chat";
 import { chatRowToStore } from "../mappers/chat";
-import { withOptimisticUpdate } from "../with-optimistic-update";
 import {
   mapMessageFromDb,
   parseMessageMetadata,
@@ -171,11 +173,13 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
 
     const previous = get();
-    await withOptimisticUpdate(
-      () => get().deleteMessage(chatId, messageId),
-      () => deleteMessageAction(chatId, messageId, newLeafId),
-      () => set(previous),
-    );
+    get().deleteMessage(chatId, messageId);
+    try {
+      await deleteMessageAction(chatId, messageId, newLeafId);
+    } catch (error) {
+      set(previous);
+      throw error;
+    }
   },
 
   setCurrentLeaf: (chatId, leafId) => {
@@ -196,12 +200,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   setCurrentLeafDb: async (chatId, leafId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () => get().setCurrentLeaf(chatId, leafId),
-      () => updateCurrentLeafAction(chatId, leafId),
-      () => set(previous),
-      { swallowError: true },
-    );
+    get().setCurrentLeaf(chatId, leafId);
+    try {
+      await updateCurrentLeafAction(chatId, leafId);
+    } catch {
+      set(previous);
+    }
   },
 
   deleteChat: (chatId) => {
@@ -240,30 +244,29 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   updateMessageMetadataDb: async (chatId, messageId, metadata) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[chatId];
-          if (!chat) return state;
-          const msg = chat.messages[messageId];
-          if (!msg) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [chatId]: {
-                ...chat,
-                messages: {
-                  ...chat.messages,
-                  [messageId]: { ...msg, metadata },
-                },
-              },
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      const msg = chat.messages[messageId];
+      if (!msg) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: {
+            ...chat,
+            messages: {
+              ...chat.messages,
+              [messageId]: { ...msg, metadata },
             },
-          };
-        }),
-      () => updateMessageMetadataAction(messageId, metadata),
-      () => set(previous),
-      { swallowError: true },
-    );
+          },
+        },
+      };
+    });
+    try {
+      await updateMessageMetadataAction(messageId, metadata);
+    } catch {
+      set(previous);
+    }
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {
@@ -329,48 +332,48 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   renameChatDb: async (id, title) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[id];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [id]: {
-                ...chat,
-                title,
-                updatedAt: new Date(),
-              },
-            },
-          };
-        }),
-      () => renameChatAction(id, title),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            title,
+            updatedAt: new Date(),
+          },
+        },
+      };
+    });
+    try {
+      await renameChatAction(id, title);
+    } catch {
+      set(previous);
+    }
   },
 
   moveChatDb: async (id, projectId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[id];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [id]: {
-                ...chat,
-                projectId,
-                updatedAt: new Date(),
-              },
-            },
-          };
-        }),
-      () => moveChatAction(id, projectId),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            projectId,
+            updatedAt: new Date(),
+          },
+        },
+      };
+    });
+    try {
+      await moveChatAction(id, projectId);
+    } catch {
+      set(previous);
+    }
   },
 
   createChatDb: async (title, projectId, assistantId) => {
@@ -382,29 +385,30 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   deleteChatDb: async (chatId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () => get().deleteChat(chatId),
-      () => deleteChat(chatId),
-      () => set(previous),
-    );
+    get().deleteChat(chatId);
+    try {
+      await deleteChat(chatId);
+    } catch {
+      set(previous);
+    }
   },
 
   setKnowledgebase: async (chatId, kbId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[chatId];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [chatId]: { ...chat, knowledgebaseId: kbId },
-            },
-          };
-        }),
-      () => updateChatKnowledgebase({ chatId, knowledgebaseId: kbId }),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: { ...chat, knowledgebaseId: kbId },
+        },
+      };
+    });
+    try {
+      await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
+    } catch {
+      set(previous);
+    }
   },
 });

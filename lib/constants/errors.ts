@@ -1,9 +1,9 @@
 /**
- * Standard error message for missing OpenRouter API key.
+ * Standard error message for a missing provider API key.
  * Used across the application to identify and handle API configuration issues.
  */
 export const MISSING_API_KEY_ERROR =
-  "OpenRouter API key not found. Please add your key in Settings > App.";
+  "API key not found for this provider. Please configure it in Settings > App.";
 
 export const PROVIDER_NOT_CONFIGURED_ERROR_CODE =
   "PROVIDER_NOT_CONFIGURED" as const;
@@ -176,6 +176,15 @@ export class RagExtractionEmptyError extends Error {
   ) {
     super(message);
     this.name = "RagExtractionEmptyError";
+  }
+}
+
+export class NotFoundError extends Error {
+  readonly code: string = "NOT_FOUND";
+
+  constructor(message?: string) {
+    super(message ?? "Not Found");
+    this.name = "NotFoundError";
   }
 }
 

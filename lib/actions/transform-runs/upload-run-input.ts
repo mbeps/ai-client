@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { uploadObject } from "@/lib/storage/s3-client";

@@ -3,9 +3,7 @@ import { useState } from "react";
 import { Trash2, FolderOutput, Edit2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
 import { useEntityOptions } from "@/hooks/use-entity-options";
@@ -16,7 +14,6 @@ import { useEntityOptions } from "@/hooks/use-entity-options";
  * Automatically handles navigation to the chat list after deletion.
  *
  * @param props.chat - The chat entity to manage.
- * @author Maruf Bepary
  */
 export function ChatOptions({
   chat,
@@ -70,27 +67,21 @@ export function ChatOptions({
 
   return (
     <>
-      <ResponsiveMenu
-        title={chat.title}
+      <BaseEntityOptions
+        name={chat.title}
         items={items}
         isMobile={isMobile}
+        showRename={showRename}
+        setShowRename={setShowRename}
+        showDelete={showDelete}
+        setShowDelete={setShowDelete}
+        isDeleting={isDeleting}
+        handleRename={handleRename}
+        handleDelete={handleDelete}
+        renameTitle="Rename Chat"
+        renameLabel="Title"
+        deleteTitle="Delete Chat"
         trigger={trigger}
-      />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={chat.title}
-        onConfirm={handleRename}
-        title="Rename Chat"
-        label="Title"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Chat"
-        description={`Are you sure you want to delete "${chat.title}"? This action cannot be undone.`}
-        loading={isDeleting}
       />
       <MoveChatDialog
         isOpen={showMove}

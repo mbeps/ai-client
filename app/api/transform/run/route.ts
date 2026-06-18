@@ -16,8 +16,8 @@ import { generateText, stepCountIs } from "ai";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getPresignedUrl, uploadObject } from "@/lib/storage/s3-client";
 import * as XLSX from "xlsx";
-import { v4 as uuidv4 } from "uuid";
 import { hybridSearch } from "@/lib/rag/retrieve";
+import { randomUUID } from "crypto";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,
@@ -781,7 +781,7 @@ export async function POST(req: Request) {
                 }) as ArrayBuffer,
               );
               const outputName = `step-${i + 1}-output.xlsx`;
-              const outputAttachmentId = uuidv4();
+              const outputAttachmentId = randomUUID();
               const s3Key = `transform-outputs/${session.user.id}/${outputAttachmentId}-${outputName}`;
               await uploadObject(
                 s3Key,
@@ -869,7 +869,7 @@ export async function POST(req: Request) {
                       downloadPayload.fileContent,
                       "base64",
                     );
-                    const outputAttachmentId = uuidv4();
+                    const outputAttachmentId = randomUUID();
                     const outputName =
                       downloadPayload.filename ||
                       currentAttachmentRows[0]?.name ||

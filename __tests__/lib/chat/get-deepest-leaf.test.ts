@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { getDeepestLeaf } from "@/lib/chat/message-tree-utils";
 import type { Message } from "@/types/message/message";
 
 function makeMessage(partial: Partial<Message> & { id: string }): Message {

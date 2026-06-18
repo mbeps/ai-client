@@ -15,8 +15,6 @@ const geistMono = Geist_Mono({
 
 /**
  * Default SEO metadata shared across all routes.
- *
- * @author Maruf Bepary
  */
 export const metadata: Metadata = {
   title: "AI Chat Client",
@@ -36,7 +34,6 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
  * @param children - Page content rendered within the layout.
  * @returns HTML document with font variables, tooltip/popover providers, and Sonner toaster.
  * @see AuthenticatedLayout for auth-protected routes.
- * @author Maruf Bepary
  */
 export default function RootLayout({
   children,

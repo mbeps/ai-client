@@ -67,14 +67,14 @@ vi.mock("@/lib/auth/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 
-vi.mock("@/lib/actions/require-session", () => ({
+vi.mock("@/lib/auth/require-session", () => ({
   requireSession: vi.fn().mockResolvedValue({
     user: { id: "user-1", name: "Test User", email: "test@example.com" },
     session: { id: "session-1" },
   }),
 }));
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";

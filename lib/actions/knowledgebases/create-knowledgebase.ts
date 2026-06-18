@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";

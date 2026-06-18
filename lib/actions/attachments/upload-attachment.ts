@@ -1,7 +1,7 @@
 "use server";
 
 import { basename } from "path";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment, message, chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";

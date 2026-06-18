@@ -50,6 +50,6 @@ export async function createConnectedClient(
   server: McpServerConfig,
   label: string,
 ): Promise<Awaited<ReturnType<typeof createMCPClient>>> {
-  const transport = buildTransport(server);
+  const transport = await buildTransport(server);
   return withTimeout(createMCPClient({ transport }), MCP_TIMEOUT_MS, label);
 }

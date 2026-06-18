@@ -108,8 +108,4 @@ export function decodeProviderRecord(row: AiProviderRow): ProviderRecord {
   return { row, apiKey, headers };
 }
 
-export function maskProviderKey(apiKey: string | null): string | null {
-  if (!apiKey) return null;
-  if (apiKey.length <= 8) return "••••";
-  return `${apiKey.slice(0, 4)}••••${apiKey.slice(-4)}`;
-}
+

@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 
 export async function toggleProvider(
   providerId: string,

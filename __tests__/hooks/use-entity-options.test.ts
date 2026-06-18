@@ -20,7 +20,7 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock useIsMobile
-vi.mock("@/hooks/use-mobile", () => ({
+vi.mock("@/hooks/use-is-mobile", () => ({
   useIsMobile: vi.fn().mockReturnValue(false),
 }));
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { and, eq, inArray } from "drizzle-orm";

@@ -28,9 +28,15 @@ function buildSdkProvider(input: {
   apiKey: string | null;
   headers: Record<string, string>;
 }) {
+  if (!input.apiKey) {
+    throw new ProviderNotConfiguredError(
+      `API key not configured for provider: ${input.providerName}. Configure it in Settings → Providers.`,
+    );
+  }
+
   return createOpenAI({
     baseURL: input.baseUrl,
-    apiKey: input.apiKey ?? "no-key",
+    apiKey: input.apiKey,
     headers: input.headers,
   });
 }
@@ -94,7 +100,7 @@ export async function resolveProviderForModel(
     );
   }
 
-  if (isBlockedUrl(row.provider.baseUrl)) {
+  if (await isBlockedUrl(row.provider.baseUrl)) {
     throw new ProviderNotConfiguredError(
       `Provider '${row.provider.name}' URL is blocked by security policy.`,
     );

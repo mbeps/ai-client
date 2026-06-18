@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -42,6 +42,6 @@ export async function updateTransformAgent(
     )
     .returning();
 
-  if (!row) throw new Error("Agent not found");
+  if (!row) throw new Error("Not Found");
   return row;
 }

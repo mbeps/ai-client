@@ -1,9 +1,7 @@
 "use client";
 import { Trash2, Pin, PinOff, Edit2 } from "lucide-react";
 import type { Project } from "@/types/project/project";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { toast } from "sonner";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
@@ -22,7 +20,6 @@ import { useAppStore } from "@/lib/store";
  * @returns Menu with action items, rename dialog, and delete confirmation dialog.
  * @see useEntityOptions for dialog and action state management.
  * @see ResponsiveMenu for responsive menu wrapper.
- * @author Maruf Bepary
  */
 export function ProjectOptions({ project }: { project: Project }) {
   const router = useRouter();
@@ -80,23 +77,20 @@ export function ProjectOptions({ project }: { project: Project }) {
   ];
 
   return (
-    <>
-      <ResponsiveMenu title={project.name} items={items} isMobile={isMobile} />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={project.name}
-        onConfirm={handleRename}
-        title="Rename Project"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Project"
-        description={`Are you sure you want to delete "${project.name}"? This will also remove all associated chats and cannot be undone.`}
-        loading={isDeleting}
-      />
-    </>
+    <BaseEntityOptions
+      name={project.name}
+      items={items}
+      isMobile={isMobile}
+      showRename={showRename}
+      setShowRename={setShowRename}
+      showDelete={showDelete}
+      setShowDelete={setShowDelete}
+      isDeleting={isDeleting}
+      handleRename={handleRename}
+      handleDelete={handleDelete}
+      renameTitle="Rename Project"
+      deleteTitle="Delete Project"
+      deleteDescription={`Are you sure you want to delete "${project.name}"? This will also remove all associated chats and cannot be undone.`}
+    />
   );
 }

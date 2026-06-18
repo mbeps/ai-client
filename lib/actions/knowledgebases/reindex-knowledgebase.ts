@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument, kbChunk } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -30,7 +30,7 @@ export async function reindexKnowledgebase(kbId: string) {
     );
 
   if (!kb) {
-    throw new Error("Knowledgebase not found or unauthorized");
+    throw new Error("Not Found");
   }
 
   // If already ready, nothing to do

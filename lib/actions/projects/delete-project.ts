@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { project, chat } from "@/drizzle/schema";
 import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
 
@@ -16,7 +16,6 @@ import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
  * @throws Error if database transaction fails or rolls back due to constraints.
  * @see createProject to create a new project.
  * @see updateProject to modify an existing project.
- * @author Maruf Bepary
  */
 export async function deleteProject(id: string): Promise<void> {
   const session = await requireSession();

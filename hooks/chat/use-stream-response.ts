@@ -2,7 +2,7 @@
 
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { reconstructThread } from "@/lib/chat/reconstruct-thread";
+import { reconstructThread } from "@/lib/chat/message-tree-utils";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";

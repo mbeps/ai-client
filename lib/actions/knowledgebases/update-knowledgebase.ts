@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
@@ -47,7 +47,7 @@ export async function updateKnowledgebase(
     .returning();
 
   if (!row) {
-    throw new Error("Knowledge base not found or unauthorized");
+    throw new Error("Not Found");
   }
 
   return row as KnowledgebaseRow;

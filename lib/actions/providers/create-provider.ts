@@ -2,7 +2,7 @@
 
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import {
   createProviderSchema,
   type CreateProviderInput,
