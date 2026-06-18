@@ -7,20 +7,18 @@ import {
   reconstructThread,
 } from "@/lib/chat/message-tree-utils";
 import { useAppStore } from "@/lib/store";
+import { extractCitations } from "@/lib/store/mappers/message-mapper";
 import type { Attachment } from "@/types/attachment/attachment";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ArtifactPanel } from "./artifact-panel";
 import { ChatInput } from "./chat-input";
-import { MessageBubble } from "./message-bubble";
+import { AssistantBar } from "./assistant-bar";
+import { MessageThread } from "./message-thread";
+import { StreamingSection } from "./streaming-section";
 import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
+import { useInitialModel } from "@/hooks/chat/use-initial-model";
+import { useInitialTools } from "@/hooks/chat/use-initial-tools";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import {
-  parseMessageMetadata,
-  extractCitations,
-} from "@/lib/store/mappers/message-mapper";
-
-import { Bot } from "lucide-react";
-import { StreamingPlaceholder } from "./message/streaming-placeholder";
 
 /**
  * Props for the ChatUI component.
@@ -39,15 +37,17 @@ interface ChatUIProps {
 
 /**
  * Main chat interface component rendering messages, input, and artifacts.
- * Handles message reconstruction from the branching tree, artifact collection,
- * streaming response integration, and branch navigation via sibling arrows.
- * Automatically detects and displays artifacts (Mermaid, Markdown, HTML, Spreadsheet)
- * from manage_artifact tool calls or mermaid code blocks.
+ * Orchestrates message reconstruction, streaming, artifact management, and
+ * branch navigation via extracted sub-components and hooks.
  *
  * @param props - Configuration for the chat session ID and optional auto-messaging.
- * @returns Chat UI with ScrollArea, MessageBubbles, ChatInput, and ArtifactPanel.
- * @see MessageBubble for individual message rendering.
- * @see useStreamResponse for handling AI responses.
+ * @returns Chat UI with ScrollArea, MessageThread, StreamingSection, ChatInput, and ArtifactPanel.
+ * @see MessageThread for message list rendering.
+ * @see StreamingSection for live streaming state display.
+ * @see AssistantBar for the current assistant header.
+ * @see useStreamResponse for AI response streaming.
+ * @see useInitialModel for model resolution.
+ * @see useInitialTools for tool/server configuration merging.
  * @see ArtifactPanel for artifact display.
  * @author Maruf Bepary
  */
@@ -85,63 +85,31 @@ export function ChatUI({
     ? projects.find((p) => p.id === chat.projectId)
     : undefined;
 
-  const thread = useMemo(() => {
-    return chat?.currentLeafId
-      ? reconstructThread(chat.messages, chat.currentLeafId)
-      : [];
-  }, [chat?.currentLeafId, chat?.messages]);
+  const thread = useMemo(
+    () =>
+      chat?.currentLeafId
+        ? reconstructThread(chat.messages, chat.currentLeafId)
+        : [],
+    [chat?.currentLeafId, chat?.messages],
+  );
 
-  const initialModelId = useMemo(() => {
-    // 1. Existing chat: get model from the last user message
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage?.metadata) {
-      const { modelId } = parseMessageMetadata(lastUserMessage.metadata);
-      if (modelId) return modelId;
-    }
+  // Extracted model and tool resolution hooks
+  const initialModelId = useInitialModel(
+    thread,
+    currentProject ?? null,
+    currentAssistant ?? null,
+    userSettings,
+  );
 
-    // 2. New chat: prioritize Project > Assistant > User Settings
-    // Note: Project and Assistant models currently follow a future schema expansion
-    // but the logic is here for consistency with the plan.
-    if ((currentProject as any)?.defaultChatModelId) {
-      return (currentProject as any).defaultChatModelId;
-    }
-    if ((currentAssistant as any)?.defaultChatModelId) {
-      return (currentAssistant as any).defaultChatModelId;
-    }
+  const { initialServerIds, initialSelectedTools } = useInitialTools(
+    currentProject ?? null,
+    currentAssistant ?? null,
+  );
 
-    // 3. Application-wide default
-    return userSettings?.defaultChatModelId || undefined;
-  }, [thread, currentProject, currentAssistant, userSettings]);
-
-  const initialToolsAndResources = useMemo(() => {
-    const combined = new Set<string>();
-    if (currentProject?.tools) {
-      currentProject.tools.forEach((t) => combined.add(t));
-    }
-    if (currentAssistant?.tools) {
-      currentAssistant.tools.forEach((t) => combined.add(t));
-    }
-    return Array.from(combined);
-  }, [currentProject?.tools, currentAssistant?.tools]);
-
-  const initialServerIds = useMemo(() => {
-    const serverIds = new Set<string>();
-    initialToolsAndResources.forEach((t) => {
-      const serverId = t.split(":")[0];
-      if (serverId) serverIds.add(serverId);
-    });
-    return Array.from(serverIds);
-  }, [initialToolsAndResources]);
-
-  const initialSelectedTools = useMemo(() => {
-    return initialToolsAndResources.filter((t) => t.includes(":tool:"));
-  }, [initialToolsAndResources]);
-
-  const initialKbIds = useMemo(() => {
-    return chat?.knowledgebaseId ? [chat.knowledgebaseId] : [];
-  }, [chat?.knowledgebaseId]);
+  const initialKbIds = useMemo(
+    () => (chat?.knowledgebaseId ? [chat.knowledgebaseId] : []),
+    [chat?.knowledgebaseId],
+  );
 
   const allEnabledServers = useMemo(() => {
     const personalEnabled = mcpServers.filter((s) => s.enabled);
@@ -168,7 +136,7 @@ export function ChatUI({
     [chatId, setKnowledgebase],
   );
 
-  // Extract all artifacts from the thread
+  // Streaming state
   const {
     isLoading,
     streamingContent,
@@ -182,7 +150,6 @@ export function ChatUI({
   const streamingCitations = useMemo(() => {
     if (activeToolCalls.length === 0) return [];
 
-    // Map ActiveToolCalls to ToolResult-like objects for extractCitations
     const completedSearchToolResults = activeToolCalls
       .filter(
         (tc) =>
@@ -283,12 +250,13 @@ export function ChatUI({
     scrollToBottom,
   ]);
 
-  if (!chat)
+  if (!chat) {
     return (
       <div className="flex h-full items-center justify-center">
         Chat not found.
       </div>
     );
+  }
 
   const handleDelete = (id: string) => {
     deleteMessageDb(chatId, id);
@@ -356,117 +324,39 @@ export function ChatUI({
     );
   };
 
+  const handleNavigateBranch = useCallback(
+    (siblingId: string) => {
+      setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
+    },
+    [chatId, chat?.messages, setCurrentLeafDb],
+  );
+
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
-        {currentAssistant && (
-          <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 text-sm text-muted-foreground">
-            <Bot className="h-4 w-4" />
-            <span>
-              Chatting with <strong>{currentAssistant.name}</strong>
-            </span>
-          </div>
-        )}
+        <AssistantBar assistantName={currentAssistant?.name} />
+
         <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
           <div className="px-4 md:px-8 py-6">
             <div className="max-w-4xl mx-auto space-y-6 pb-12">
-              {thread.length === 0 ? (
-                <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-50">
-                  <h2 className="text-2xl font-bold mb-2">
-                    How can I help you today?
-                  </h2>
-                  <p>
-                    Try asking for a diagram, math formula, or standard text.
-                  </p>
-                </div>
-              ) : (
-                thread.map((msg, index) => {
-                  const parent = msg.parentId
-                    ? chat.messages[msg.parentId]
-                    : null;
-                  const siblingsIds = parent
-                    ? parent.childrenIds
-                    : Object.values(chat.messages)
-                        .filter((m) => !m.parentId)
-                        .map((m) => m.id);
-                  const siblings = siblingsIds
-                    .map((id) => chat.messages[id])
-                    .filter(Boolean);
-                  const currentIndex = siblings.findIndex(
-                    (s) => s.id === msg.id,
-                  );
+              <MessageThread
+                thread={thread}
+                chat={chat}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onRegenerate={handleRegenerate}
+                onNavigateBranch={handleNavigateBranch}
+                onShowArtifact={handleShowArtifact}
+              />
 
-                  return (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isLatest={index === thread.length - 1}
-                      isFirst={index === 0}
-                      assistantId={chat?.assistantId}
-                      onDelete={handleDelete}
-                      onEdit={handleEdit}
-                      onRegenerate={handleRegenerate}
-                      siblings={siblings}
-                      currentSiblingIndex={currentIndex}
-                      onNavigateBranch={(siblingId) => {
-                        setCurrentLeafDb(
-                          chatId,
-                          getDeepestLeaf(chat.messages, siblingId),
-                        );
-                      }}
-                      reasoning={msg.reasoning}
-                      isStreamingReasoning={false}
-                      onShowArtifact={() => handleShowArtifact(msg.id)}
-                    />
-                  );
-                })
-              )}
-              {(isLoading ||
-                streamingContent !== null ||
-                activeToolCalls.length > 0 ||
-                streamingReasoning !== null) && (
-                <>
-                  {isLoading &&
-                    streamingContent === null &&
-                    streamingReasoning === null &&
-                    activeToolCalls.length === 0 && <StreamingPlaceholder />}
-                  {activeToolCalls.length > 0 && (
-                    <div className="text-muted-foreground text-sm space-y-1 ml-2">
-                      {activeToolCalls.map((tc) => (
-                        <div key={tc.toolCallId}>
-                          {tc.status === "calling"
-                            ? `🔧 Calling ${tc.toolName}…`
-                            : `✅ ${tc.toolName} complete`}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {(streamingContent !== null ||
-                    streamingReasoning !== null ||
-                    streamingCitations.length > 0) && (
-                    <MessageBubble
-                      message={{
-                        id: "streaming",
-                        role: "assistant",
-                        content: streamingContent ?? "",
-                        createdAt: new Date(),
-                        parentId: null,
-                        childrenIds: [],
-                        metadata: null,
-                      }}
-                      isLatest={true}
-                      onDelete={() => {}}
-                      onEdit={() => {}}
-                      siblings={[]}
-                      currentSiblingIndex={0}
-                      onNavigateBranch={() => {}}
-                      reasoning={streamingReasoning ?? undefined}
-                      isStreamingReasoning={isStreamingReasoning}
-                      streamingCitations={streamingCitations}
-                    />
-                  )}
-                </>
-              )}
+              <StreamingSection
+                isLoading={isLoading}
+                streamingContent={streamingContent}
+                streamingReasoning={streamingReasoning}
+                isStreamingReasoning={isStreamingReasoning}
+                activeToolCalls={activeToolCalls}
+                streamingCitations={streamingCitations}
+              />
             </div>
           </div>
         </ScrollArea>

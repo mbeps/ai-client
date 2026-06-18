@@ -1,10 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
-import type { PromptRow } from "@/types/prompt/prompt-row";
 import { createPromptSchema } from "@/schemas/prompt/prompt";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import type { PromptRow } from "@/types/prompt/prompt-row";
 import { z } from "zod";
 
 /**
@@ -19,22 +18,16 @@ import { z } from "zod";
  * @see usePromptCommands hook for triggering prompts in chat UI.
  * @see updatePrompt to modify prompt content or shortcut.
  */
-export async function createPrompt(
-  data: z.infer<typeof createPromptSchema>,
-): Promise<PromptRow> {
-  const session = await requireSession();
-
-  const validated = createPromptSchema.parse(data);
-
-  const [row] = await db
-    .insert(prompt)
-    .values({
-      title: validated.title,
-      shortcut: validated.shortcut,
-      content: validated.content,
-      userId: session.user.id,
-    })
-    .returning();
-
-  return row;
-}
+export const createPrompt = createEntityFactory<
+  z.infer<typeof createPromptSchema>,
+  PromptRow
+>({
+  table: prompt,
+  schema: createPromptSchema,
+  mapValues: (validated, userId) => ({
+    title: validated.title,
+    shortcut: validated.shortcut,
+    content: validated.content,
+    userId,
+  }),
+});

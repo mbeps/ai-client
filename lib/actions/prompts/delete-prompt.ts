@@ -1,9 +1,7 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**
  * Deletes a slash-command shortcut (prompt) by ID, verifying ownership by the authenticated user.
@@ -14,13 +12,6 @@ import { and, eq } from "drizzle-orm";
  * @throws Error with message "Not Found" when prompt does not exist or is not owned by user
  * @see listPrompts for viewing all prompts
  */
-export async function deletePrompt(id: string): Promise<void> {
-  const session = await requireSession();
-
-  const [row] = await db
-    .delete(prompt)
-    .where(and(eq(prompt.id, id), eq(prompt.userId, session.user.id)))
-    .returning();
-
-  if (!row) throw new Error("Not Found");
-}
+export const deletePrompt = deleteEntityFactory({
+  table: prompt,
+});

@@ -1,12 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import type { AssistantRow } from "@/types/assistant/assistant-row";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 import { z } from "zod";
-import { logger } from "@/lib/logger";
 
 /**
  * Creates a new AI assistant persona for the authenticated user.
@@ -20,30 +18,20 @@ import { logger } from "@/lib/logger";
  * @see updateAssistant to modify an existing assistant.
  * @see deleteAssistant to remove an assistant.
  */
-export async function createAssistant(
-  data: z.infer<typeof createAssistantSchema>,
-): Promise<AssistantRow> {
-  const session = await requireSession();
-
-  const validated = createAssistantSchema.parse(data);
-
-  const [row] = await db
-    .insert(assistant)
-    .values({
-      name: validated.name,
-      description: validated.description ?? null,
-      prompt: validated.prompt ?? null,
-      tools: validated.tools ?? [],
-      avatar: validated.avatar ?? null,
-      userId: session.user.id,
-    })
-    .returning();
-
-  logger.audit("Create Assistant", {
-    userId: session.user.id,
-    assistantId: row.id,
-    name: row.name,
-  });
-
-  return row;
-}
+export const createAssistant = createEntityFactory<
+  z.infer<typeof createAssistantSchema>,
+  AssistantRow
+>({
+  table: assistant,
+  schema: createAssistantSchema,
+  mapValues: (validated, userId) => ({
+    name: validated.name,
+    description: validated.description ?? null,
+    prompt: validated.prompt ?? null,
+    tools: validated.tools ?? [],
+    avatar: validated.avatar ?? null,
+    userId,
+  }),
+  auditName: "Assistant",
+  auditData: (row) => ({ assistantId: row.id, name: row.name }),
+});

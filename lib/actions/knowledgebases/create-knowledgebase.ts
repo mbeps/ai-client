@@ -1,33 +1,34 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
-import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-provider";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import { z } from "zod";
 
-export async function createKnowledgebase(
-  data: z.infer<typeof createKnowledgebaseSchema>,
-): Promise<KnowledgebaseRow> {
-  const session = await requireSession();
-
-  // Verify embedding configuration BEFORE creating the record
-  await resolveEmbeddingProvider(session.user.id);
-
-  const validated = createKnowledgebaseSchema.parse(data);
-
-  const [row] = await db
-    .insert(knowledgebase)
-    .values({
-      name: validated.name,
-      description: validated.description ?? null,
-      userId: session.user.id,
-      indexStatus: "ready",
-      lastIndexedAt: null,
-    })
-    .returning();
-
-  return row;
-}
+/**
+ * Creates a new knowledge base for the authenticated user.
+ * Verifies embedding configuration before creating the record.
+ *
+ * @param data - Knowledge base configuration (name required, description optional).
+ * @returns The newly created knowledge base record.
+ * @throws Error if session is not authenticated or no embedding provider is configured.
+ */
+export const createKnowledgebase = createEntityFactory<
+  z.infer<typeof createKnowledgebaseSchema>,
+  KnowledgebaseRow
+>({
+  table: knowledgebase,
+  schema: createKnowledgebaseSchema,
+  beforeValidate: async (_data, userId) => {
+    await resolveEmbeddingProvider(userId);
+  },
+  mapValues: (validated, userId) => ({
+    name: validated.name,
+    description: validated.description ?? null,
+    userId,
+    indexStatus: "ready",
+    lastIndexedAt: null,
+  }),
+});

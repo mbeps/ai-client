@@ -1,8 +1,7 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
 import { project, chat } from "@/drizzle/schema";
-import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
+import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**
  * Deletes a project and unbinds it from all chats for the authenticated user.
@@ -17,11 +16,7 @@ import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
  * @see createProject to create a new project.
  * @see updateProject to modify an existing project.
  */
-export async function deleteProject(id: string): Promise<void> {
-  const session = await requireSession();
-
-  await deleteResourceWithUnbind(project, id, session.user.id, {
-    table: chat,
-    field: chat.projectId,
-  });
-}
+export const deleteProject = deleteEntityFactory({
+  table: project,
+  unbind: { table: chat, field: chat.projectId },
+});

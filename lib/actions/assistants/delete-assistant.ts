@@ -1,8 +1,7 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
 import { assistant, chat } from "@/drizzle/schema";
-import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
+import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**
  * Deletes an AI assistant persona and unbinds it from all chats for the authenticated user.
@@ -18,11 +17,7 @@ import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
  * @see updateAssistant to modify an existing assistant.
  * @author Maruf Bepary
  */
-export async function deleteAssistant(id: string): Promise<void> {
-  const session = await requireSession();
-
-  await deleteResourceWithUnbind(assistant, id, session.user.id, {
-    table: chat,
-    field: chat.assistantId,
-  });
-}
+export const deleteAssistant = deleteEntityFactory({
+  table: assistant,
+  unbind: { table: chat, field: chat.assistantId },
+});

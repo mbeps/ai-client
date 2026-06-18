@@ -1,17 +1,24 @@
 "use client";
 
-import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/message-tree-utils";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
+import { buildStreamRequestBody } from "@/lib/chat/build-stream-request";
+import {
+  resolveMcpPrompt,
+  resolveSlashPrompt,
+} from "@/lib/chat/resolve-stream-prompts";
+import { uploadAttachments } from "@/lib/chat/upload-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
-import type { ToolCallState } from "@/types/tool/tool-call";
 import { PROMPTS } from "@/constants/prompts";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useApiError } from "@/hooks/use-api-error";
+import { useStreamState } from "@/hooks/chat/use-stream-state";
+import { useToolCalls } from "@/hooks/chat/use-tool-calls";
+import { useStreamAbort } from "@/hooks/chat/use-stream-abort";
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.
@@ -19,6 +26,10 @@ import { useApiError } from "@/hooks/use-api-error";
  * tool call tracking, reasoning token collection, and artifact detection.
  * Automatically creates message tree nodes and updates store optimistically.
  * Supports abort via stopStream() and integrates with useAppStore for state sync.
+ *
+ * Uses extracted sub-hooks for state, tool calls, and abort management,
+ * and extracted pure functions for prompt resolution, attachment uploads,
+ * and request body assembly -- keeping this file a thin coordinator.
  *
  * @param chatId - Target chat session ID for message persistence.
  * @param options - Optional callbacks for completion and artifact discovery.
@@ -39,24 +50,126 @@ export function useStreamResponse(
     (state) => state.updateMessageAttachments,
   );
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingContent, setStreamingContent] = useState<string | null>(null);
-  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(
-    null,
-  );
-  const [isStreamingReasoning, setIsStreamingReasoning] = useState(false);
-  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const {
+    isLoading,
+    setIsLoading,
+    streamingContent,
+    setStreamingContent,
+    streamingReasoning,
+    setStreamingReasoning,
+    isStreamingReasoning,
+    setIsStreamingReasoning,
+  } = useStreamState();
 
-  const stopStream = useCallback(() => {
-    abortControllerRef.current?.abort();
-  }, []);
+  const { activeToolCalls, setActiveToolCalls } = useToolCalls();
 
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
+  const { abortControllerRef, stopStream, setAbortController } =
+    useStreamAbort();
+
+  /**
+   * Builds the metadata object for the user message, tracking model, tools, and prompt info.
+   */
+  const buildMetadata = (
+    model: string,
+    selectedServerIds: string[],
+    selectedTools: string[],
+    selectedAssistantId?: string,
+    selectedKbIds?: string[],
+    selectedPromptId?: string,
+  ): Record<string, unknown> => {
+    const metadataObj: Record<string, unknown> = {
+      model,
+      selectedServerIds,
+      selectedTools,
     };
-  }, []);
+
+    if (selectedAssistantId) {
+      metadataObj.assistantId = selectedAssistantId;
+    }
+
+    if (selectedKbIds && selectedKbIds.length > 0) {
+      metadataObj.selectedKbIds = selectedKbIds;
+    }
+
+    return metadataObj;
+  };
+
+  /**
+   * Resolves the final message content by handling MCP prompts and slash-command prompts.
+   */
+  const resolveContent = async (
+    content: string,
+    selectedPromptId?: string,
+    metadataObj?: Record<string, unknown>,
+  ): Promise<{ fullContent: string }> => {
+    const meta = metadataObj ?? {};
+    if (!selectedPromptId) return { fullContent: content };
+
+    if (selectedPromptId.startsWith("mcp:")) {
+      const parts = selectedPromptId.split(":");
+      const serverId = parts[1];
+      const promptName = parts.slice(2).join(":");
+
+      try {
+        const mcpContent = await resolveMcpPrompt(serverId, promptName);
+        meta.promptId = selectedPromptId;
+        meta.userContent = content;
+        return {
+          fullContent:
+            mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content,
+        };
+      } catch (err) {
+        console.error("Failed to load MCP prompt:", err);
+        toast.error("Failed to load MCP prompt. Sending message without it.");
+        return { fullContent: content };
+      }
+    }
+
+    const prompts = useAppStore.getState().prompts;
+    const { fullContent, metadata } = resolveSlashPrompt(
+      selectedPromptId,
+      content,
+      prompts,
+    );
+    Object.assign(meta, metadata);
+    return { fullContent };
+  };
+
+  /**
+   * Assembles the conversation history for the AI request.
+   * Uses store state with a fallback for race conditions (new chats, un-flushed leaf updates).
+   */
+  const assembleHistory = (
+    userMsgId: string,
+    fullContent: string,
+    userMsgMetadata: string | null,
+    attachments: Attachment[],
+  ) => {
+    const latestChat = useAppStore.getState().chats[chatId];
+    let latestThread = latestChat?.currentLeafId
+      ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
+      : [];
+
+    // Fallback: ensure the current user message is included when the store
+    // hasn't fully flushed the leaf ID update (new chat or race condition).
+    if (!latestThread.some((m) => m.id === userMsgId)) {
+      const currentMsg = latestChat?.messages[userMsgId] || {
+        id: userMsgId,
+        role: "user" as const,
+        content: fullContent,
+        metadata: userMsgMetadata,
+        attachments,
+      };
+      latestThread = [...latestThread, currentMsg as any];
+    }
+
+    return latestThread.map((m) => ({
+      role: m.role,
+      content: m.content,
+      attachments: m.attachments,
+      metadata: m.metadata ?? undefined,
+    }));
+  };
 
   /**
    * Streams an AI response for a given user message and persists it to the store and database.
@@ -91,68 +204,28 @@ export function useStreamResponse(
     selectedKbIds: string[] = [],
   ) => {
     setIsLoading(true);
-    abortControllerRef.current?.abort();
     const controller = new AbortController();
-    abortControllerRef.current = controller;
+    setAbortController(controller);
 
-    let fullContent = content;
-    const metadataObj: any = {
+    // 1. Build metadata object
+    const metadataObj = buildMetadata(
       model,
       selectedServerIds,
       selectedTools,
-    };
+      selectedAssistantId,
+      selectedKbIds,
+      selectedPromptId,
+    );
 
-    if (selectedAssistantId) {
-      metadataObj.assistantId = selectedAssistantId;
-    }
-
-    if (selectedKbIds.length > 0) {
-      metadataObj.selectedKbIds = selectedKbIds;
-    }
-
-    if (selectedPromptId) {
-      if (selectedPromptId.startsWith("mcp:")) {
-        const parts = selectedPromptId.split(":");
-        const serverId = parts[1];
-        const promptName = parts.slice(2).join(":");
-
-        try {
-          const { getMcpPrompt } =
-            await import("@/lib/actions/mcp/get-mcp-prompt");
-          const mcpPromptResult = await getMcpPrompt(serverId, promptName);
-          const mcpContent = (mcpPromptResult as any).messages
-            .map((m: any) => {
-              if (typeof m.content === "string") return m.content;
-              if (m.content?.type === "text") return m.content.text;
-              if (m.content?.text) return m.content.text;
-              return "";
-            })
-            .join("\n\n");
-
-          fullContent =
-            mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content;
-          metadataObj.promptId = selectedPromptId;
-          metadataObj.userContent = content;
-        } catch (err) {
-          console.error("Failed to load MCP prompt:", err);
-          toast.error("Failed to load MCP prompt. Sending message without it.");
-        }
-      } else {
-        const prompts = useAppStore.getState().prompts;
-        const selectedPrompt = prompts.find((p) => p.id === selectedPromptId);
-        if (selectedPrompt) {
-          fullContent =
-            selectedPrompt.content +
-            PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
-            content;
-          metadataObj.promptId = selectedPromptId;
-          metadataObj.userContent = content;
-        }
-      }
-    }
-
+    // 2. Resolve prompt content (MCP / slash-command)
+    const { fullContent } = await resolveContent(
+      content,
+      selectedPromptId,
+      metadataObj,
+    );
     const userMsgMetadata = JSON.stringify(metadataObj);
 
+    // 3. Optimistic store insert
     addMessage(
       chatId,
       "user",
@@ -163,6 +236,7 @@ export function useStreamResponse(
       attachments,
     );
 
+    // 4. Persist message (non-blocking for stream)
     try {
       await persistMessage(chatId, {
         id: userMsgId,
@@ -178,91 +252,40 @@ export function useStreamResponse(
       );
     }
 
-    // Upload attachments to server
-    const uploadedAttachments: Attachment[] = [];
-    for (const att of attachments) {
-      try {
-        const formData = new FormData();
-        let blob: Blob;
-        if (att.rawFile) {
-          blob = att.rawFile;
-        } else {
-          const response = await fetch(att.dataUrl);
-          blob = await response.blob();
-        }
-        const file = new File([blob], att.name, { type: att.mimeType });
-        formData.append("file", file);
-        formData.append("messageId", userMsgId);
-        formData.append("attachmentId", att.id);
-
-        const data = await uploadAttachment(formData);
-        // Keep the original client-side att.id so it matches the store entry.
-        uploadedAttachments.push({ ...att, key: data.key });
-      } catch (err) {
-        console.error("[Chat] Attachment upload failed:", err);
-        toast.error(
-          `Failed to upload "${att.name}". It will not be sent to the AI.`,
-        );
-      }
-    }
-
+    // 5. Upload attachments
+    const uploadedAttachments = await uploadAttachments(attachments, userMsgId);
     if (uploadedAttachments.length > 0) {
       updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
     }
 
-    const latestChat = useAppStore.getState().chats[chatId];
-    let latestThread = latestChat?.currentLeafId
-      ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
-      : [];
+    // 6. Assemble conversation history
+    const history = assembleHistory(
+      userMsgId,
+      fullContent,
+      userMsgMetadata,
+      attachments,
+    );
 
-    // Fallback logic: Ensure the current user message is included in the history.
-    // This handles the race condition where addMessage hasn't fully updated the leaf ID
-    // or when starting a brand new chat.
-    if (!latestThread.some((m) => m.id === userMsgId)) {
-      const currentMsg = latestChat?.messages[userMsgId] || {
-        id: userMsgId,
-        role: "user" as const,
-        content: fullContent,
-        metadata: userMsgMetadata,
-        attachments: attachments,
-      };
-      // For a new chat, latestThread might be empty. For an edit/branch, it might have prefix history.
-      latestThread = [...latestThread, currentMsg as any];
-    }
-
-    const history = latestThread.map((m) => ({
-      role: m.role,
-      content: m.content,
-      attachments: m.attachments?.map((att) => ({
-        id: att.id,
-        type: att.type,
-        dataUrl: att.dataUrl,
-        name: att.name,
-        mimeType: att.mimeType,
-        extractedText: att.extractedText,
-        key: att.key,
-      })),
-      metadata: m.metadata,
-    }));
-
+    // 7. Stream the AI response
     let accumulated = "";
     let accumulatedReasoning = "";
-    const pendingNewAttachments: Attachment[] = [];
 
     try {
+      const requestBody = buildStreamRequestBody({
+        chatId,
+        userMessageId: userMsgId,
+        messages: history,
+        model,
+        selectedServerIds,
+        selectedTools,
+        selectedAssistantId,
+        selectedKbIds,
+      });
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          userMessageId: userMsgId,
-          messages: history,
-          model,
-          selectedServerIds,
-          selectedTools,
-          selectedAssistantId,
-          selectedKbIds,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
@@ -340,12 +363,8 @@ export function useStreamResponse(
           setIsStreamingReasoning(false);
           setActiveToolCalls([]);
 
-          if (pendingNewAttachments.length > 0) {
-            updateMessageAttachments(chatId, event.id, pendingNewAttachments);
-          }
-
           options?.onDone?.(accumulated);
-          return accumulated; // Return the full content for any post-processing
+          return accumulated;
         } else if (event.type === "error") {
           setStreamingContent(null);
           setActiveToolCalls([]);

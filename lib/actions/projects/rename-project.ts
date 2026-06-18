@@ -1,12 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import type { ProjectRow } from "@/types/project/project-row";
 import { renameProjectSchema } from "@/schemas/project/project";
-import { z } from "zod";
+import { renameEntityFactory } from "@/lib/actions/shared/rename-entity-factory";
+import type { ProjectRow } from "@/types/project/project-row";
 
 /**
  * Renames a project with ownership check.
@@ -16,25 +13,7 @@ import { z } from "zod";
  * @returns The updated project record.
  * @author Maruf Bepary
  */
-export async function renameProject(
-  projectId: string,
-  name: string,
-): Promise<ProjectRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validatedId = z.string().uuid().parse(projectId);
-  const { name: validatedName } = renameProjectSchema.parse({ name });
-
-  const [updated] = await db
-    .update(project)
-    .set({ name: validatedName, updatedAt: new Date() })
-    .where(
-      and(eq(project.id, validatedId), eq(project.userId, session.user.id)),
-    )
-    .returning();
-
-  if (!updated) throw new Error("Not Found");
-
-  return updated;
-}
+export const renameProject = renameEntityFactory<ProjectRow>({
+  table: project,
+  nameSchema: renameProjectSchema.shape.name,
+});
