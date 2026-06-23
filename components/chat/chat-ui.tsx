@@ -250,14 +250,6 @@ export function ChatUI({
     scrollToBottom,
   ]);
 
-  if (!chat) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        Chat not found.
-      </div>
-    );
-  }
-
   const handleDelete = (id: string) => {
     deleteMessageDb(chatId, id);
   };
@@ -272,7 +264,7 @@ export function ChatUI({
     promptId?: string,
     assistantId?: string,
   ) => {
-    const msg = chat.messages[id];
+    const msg = chat?.messages[id];
     if (!msg) return;
     await streamResponse(
       crypto.randomUUID(),
@@ -288,10 +280,10 @@ export function ChatUI({
   };
 
   const handleRegenerate = async (id: string) => {
-    const msg = chat.messages[id];
+    const msg = chat?.messages[id];
     if (!msg || msg.role !== "assistant" || !msg.parentId) return;
 
-    const parentMsg = chat.messages[msg.parentId];
+    const parentMsg = chat?.messages[msg.parentId];
     if (!parentMsg) return;
 
     let promptId: string | undefined;
@@ -326,10 +318,19 @@ export function ChatUI({
 
   const handleNavigateBranch = useCallback(
     (siblingId: string) => {
+      if (!chat) return;
       setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
     },
-    [chatId, chat?.messages, setCurrentLeafDb],
+    [chatId, chat, setCurrentLeafDb],
   );
+
+  if (!chat) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        Chat not found.
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full w-full overflow-hidden">

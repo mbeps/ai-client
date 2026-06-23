@@ -5,17 +5,7 @@ import {
 } from "@/schemas/providers/mcp-server";
 
 // Mock isBlockedUrlSync so URL-guard tests are deterministic and don't depend on network
-vi.mock("@/lib/mcp/url-guard", () => ({
-  isBlockedUrl: async (url: string) => {
-    // Block internal addresses for test purposes
-    return (
-      url.includes("localhost") ||
-      url.includes("127.0.0.1") ||
-      url.includes("192.168.") ||
-      url.includes("10.0.") ||
-      url.includes("172.16.")
-    );
-  },
+vi.mock("@/lib/mcp/url-guard-core", () => ({
   isBlockedUrlSync: (url: string) => {
     // Block internal addresses for test purposes
     return (

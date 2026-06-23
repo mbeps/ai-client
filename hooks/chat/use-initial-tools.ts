@@ -28,16 +28,19 @@ export function useInitialTools(
   project: Project | null,
   assistant: Assistant | null,
 ): InitialToolsResult {
+  const projectTools = project?.tools;
+  const assistantTools = assistant?.tools;
+
   const initialToolsAndResources = useMemo(() => {
     const combined = new Set<string>();
-    if (project?.tools) {
-      project.tools.forEach((t) => combined.add(t));
+    if (projectTools) {
+      projectTools.forEach((t) => combined.add(t));
     }
-    if (assistant?.tools) {
-      assistant.tools.forEach((t) => combined.add(t));
+    if (assistantTools) {
+      assistantTools.forEach((t) => combined.add(t));
     }
     return Array.from(combined);
-  }, [project?.tools, assistant?.tools]);
+  }, [projectTools, assistantTools]);
 
   const initialServerIds = useMemo(() => {
     const serverIds = new Set<string>();
