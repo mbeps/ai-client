@@ -8,7 +8,7 @@ import {
   resolveMcpPrompt,
   resolveSlashPrompt,
 } from "@/lib/chat/resolve-stream-prompts";
-import { uploadAttachments } from "@/lib/chat/upload-attachments";
+import { processAttachments } from "@/lib/chat/upload-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import { PROMPTS } from "@/constants/prompts";
@@ -253,7 +253,10 @@ export function useStreamResponse(
     }
 
     // 5. Upload attachments
-    const uploadedAttachments = await uploadAttachments(attachments, userMsgId);
+    const uploadedAttachments = await processAttachments(
+      attachments,
+      userMsgId,
+    );
     if (uploadedAttachments.length > 0) {
       updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
     }

@@ -300,6 +300,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
             sizeBytes: att.size,
             dataUrl: "",
             key: att.key,
+            extractedText: (att as any).extractedText ?? undefined,
           };
         });
 

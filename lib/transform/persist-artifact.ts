@@ -129,6 +129,7 @@ async function persistArtifact(
       mimeType,
       size: xlsxBuffer.length,
       key: s3Key,
+      extractedText: null,
       createdAt: new Date(),
     };
 
@@ -187,6 +188,7 @@ async function persistDownload(
       mimeType,
       size: xlsxBuffer.length,
       key: s3Key,
+      extractedText: null,
       createdAt: new Date(),
     };
 

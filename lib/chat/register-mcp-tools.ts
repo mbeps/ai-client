@@ -132,8 +132,13 @@ export async function registerMcpTools(
         description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
         parameters: searchKnowledgeBaseSchema,
         // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-        execute: async ({ query }: { query: string }) => {
-          const results = await hybridSearch(kbId, query, userId, 5);
+        execute: async ({ query }: { query?: string }) => {
+          const normalizedQuery = query?.trim();
+          if (!normalizedQuery) {
+            return { results: [], resultCount: 0 };
+          }
+
+          const results = await hybridSearch(kbId, normalizedQuery, userId, 5);
           return {
             results: results.map((r) => ({
               content: r.content,

@@ -142,18 +142,16 @@ export async function POST(req: Request) {
     // --- Prepare messages ---
     const processedMessages = assembleModelMessages(history);
 
-    // Identify spreadsheet attachments in the latest user message for
-    // HTTP-only tool access
+    // Identify attachments in the latest user message for
+    // Tool/Model-based access via presigned URLs
     const lastUserMessage = history.filter((m) => m.role === "user").pop();
-    const spreadsheetAttachments =
-      lastUserMessage?.attachments?.filter(
-        (a) => a.type === "spreadsheet" && a.key,
-      ) ?? [];
+    const messageAttachments =
+      lastUserMessage?.attachments?.filter((a) => a.key) ?? [];
 
-    // Generate presigned S3 URLs for spreadsheet files to enable
-    // Tool/Model-based access
+    // Generate presigned S3 URLs for all file types (images, documents,
+    // spreadsheets) to enable Tool/Model-based access
     const attachmentUrls = await Promise.all(
-      spreadsheetAttachments.map(async (a) => {
+      messageAttachments.map(async (a) => {
         const url = await getPresignedUrl(a.key!);
         return { name: a.name, url };
       }),

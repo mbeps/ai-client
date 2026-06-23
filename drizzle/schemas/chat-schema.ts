@@ -84,11 +84,12 @@ export const attachment = pgTable(
     mimeType: text("mime_type").notNull(),
     size: integer("size").notNull(),
     key: text("key").notNull(),
+    extractedText: text("extracted_text"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
     index("attachment_message_id_idx").on(table.messageId),
     index("attachment_user_id_idx").on(table.userId),
-    uniqueIndex("attachment_key_idx").on(table.key),
+    index("attachment_key_idx").on(table.key),
   ],
 );

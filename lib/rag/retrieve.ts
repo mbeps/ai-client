@@ -66,6 +66,12 @@ export async function hybridSearch(
   userId: string,
   topK = 5,
 ): Promise<ChunkResult[]> {
+  const normalizedQuery = query.trim();
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
   // 1. Check if KB is ready
   const [kb] = await db
     .select({ indexStatus: knowledgebase.indexStatus })
@@ -79,7 +85,7 @@ export async function hybridSearch(
   }
 
   // 2. Search
-  const embedding = await embedQuery(query, userId);
+  const embedding = await embedQuery(normalizedQuery, userId);
   const embeddingLiteral = `[${embedding.join(",")}]`;
 
   const vectorRows = (
@@ -114,8 +120,8 @@ export async function hybridSearch(
         FROM kb_chunk c
         JOIN kb_document d ON c.document_id = d.id
         WHERE c.kb_id = ${kbId}
-          AND c.search_vector @@ plainto_tsquery('english', ${query})
-        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${query})) DESC
+          AND c.search_vector @@ plainto_tsquery('english', ${normalizedQuery})
+        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${normalizedQuery})) DESC
         LIMIT 20
       `)
     ).rows as RawChunkRow[];

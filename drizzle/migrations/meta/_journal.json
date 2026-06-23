@@ -218,6 +218,13 @@
       "when": 1781699718842,
       "tag": "0030_vengeful_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1782210468483,
+      "tag": "0031_lucky_jack_power",
+      "breakpoints": true
     }
   ]
 }

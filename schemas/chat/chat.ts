@@ -217,6 +217,7 @@ export const manageArtifactSchema = z.union([
 export const searchKnowledgeBaseSchema = z.object({
   query: z
     .string()
+    .trim()
     .min(1)
     .max(500)
     .describe(
