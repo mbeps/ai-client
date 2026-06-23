@@ -44,7 +44,8 @@ export function StreamingSection({
   const hasStreamingContent =
     streamingContent !== null ||
     streamingReasoning !== null ||
-    streamingCitations.length > 0;
+    streamingCitations.length > 0 ||
+    activeToolCalls.length > 0;
 
   if (
     !isLoading &&
@@ -61,18 +62,6 @@ export function StreamingSection({
         streamingContent === null &&
         streamingReasoning === null &&
         activeToolCalls.length === 0 && <StreamingPlaceholder />}
-
-      {activeToolCalls.length > 0 && (
-        <div className="text-muted-foreground text-sm space-y-1 ml-2">
-          {activeToolCalls.map((tc) => (
-            <div key={tc.toolCallId}>
-              {tc.status === "calling"
-                ? `🔧 Calling ${tc.toolName}…`
-                : `✅ ${tc.toolName} complete`}
-            </div>
-          ))}
-        </div>
-      )}
 
       {hasStreamingContent && (
         <MessageBubble
@@ -94,6 +83,7 @@ export function StreamingSection({
           reasoning={streamingReasoning ?? undefined}
           isStreamingReasoning={isStreamingReasoning}
           streamingCitations={streamingCitations}
+          activeToolCalls={activeToolCalls}
         />
       )}
     </>

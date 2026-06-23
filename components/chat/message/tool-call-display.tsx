@@ -31,11 +31,13 @@ type ToolResult = {
 interface ToolCallDisplayProps {
   toolCalls: ToolCall[];
   toolResults: ToolResult[];
+  initialOpen?: boolean;
 }
 
 export function ToolCallDisplay({
   toolCalls,
   toolResults,
+  initialOpen = false,
 }: ToolCallDisplayProps) {
   if (!toolCalls || toolCalls.length === 0) return null;
 
@@ -50,7 +52,10 @@ export function ToolCallDisplay({
 
         return (
           <div key={tc.toolCallId} className="group/tool">
-            <Collapsible className="w-full rounded-lg border border-muted bg-muted/20 overflow-hidden">
+            <Collapsible
+              defaultOpen={initialOpen}
+              className="w-full rounded-lg border border-muted bg-muted/20 overflow-hidden"
+            >
               <CollapsibleTrigger className="flex items-center gap-2 p-2.5 w-full text-sm font-medium transition-colors hover:bg-muted/30 outline-none">
                 <div className="flex items-center gap-2 flex-1 text-muted-foreground">
                   <div className="relative">

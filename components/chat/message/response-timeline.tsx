@@ -1,6 +1,7 @@
 "use client";
 
 import type { ToolCall, ToolResult } from "@/lib/store/mappers/message-mapper";
+import type { ToolCallState } from "@/types/tool/tool-call";
 import { ThinkingDisplay } from "./thinking-display";
 import { ToolCallDisplay } from "./tool-call-display";
 import { useMemo } from "react";
@@ -10,6 +11,7 @@ interface ResponseTimelineProps {
   isStreamingReasoning?: boolean;
   toolCalls?: ToolCall[];
   toolResults?: ToolResult[];
+  activeToolCalls?: ToolCallState[];
   isLatest?: boolean;
 }
 
@@ -18,6 +20,7 @@ export function ResponseTimeline({
   isStreamingReasoning,
   toolCalls,
   toolResults,
+  activeToolCalls,
   isLatest,
 }: ResponseTimelineProps) {
   // Currently, we don't have true interleaving from the backend yet,
@@ -43,18 +46,50 @@ export function ResponseTimeline({
     }
 
     // 2. Tool Calls Step
-    if (toolCalls && toolCalls.length > 0) {
-      items.push(
-        <ToolCallDisplay
-          key="tools"
-          toolCalls={toolCalls}
-          toolResults={toolResults ?? []}
-        />,
-      );
+    const hasActiveTools = activeToolCalls && activeToolCalls.length > 0;
+    const hasStaticTools = toolCalls && toolCalls.length > 0;
+
+    if (hasActiveTools || hasStaticTools) {
+      if (hasActiveTools) {
+        items.push(
+          <ToolCallDisplay
+            key="tools-active"
+            toolCalls={activeToolCalls!.map((tc) => ({
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              args: tc.args as any,
+            }))}
+            toolResults={activeToolCalls!
+              .filter((tc) => tc.status === "complete")
+              .map((tc) => ({
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                result: tc.result,
+              }))}
+            initialOpen={isLatest}
+          />,
+        );
+      } else if (hasStaticTools) {
+        items.push(
+          <ToolCallDisplay
+            key="tools-static"
+            toolCalls={toolCalls!}
+            toolResults={toolResults ?? []}
+            initialOpen={false}
+          />,
+        );
+      }
     }
 
     return items;
-  }, [reasoning, isStreamingReasoning, toolCalls, toolResults, isLatest]);
+  }, [
+    reasoning,
+    isStreamingReasoning,
+    toolCalls,
+    toolResults,
+    activeToolCalls,
+    isLatest,
+  ]);
 
   if (steps.length === 0) return null;
 
