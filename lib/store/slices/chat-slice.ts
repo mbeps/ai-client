@@ -13,7 +13,7 @@ import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chat
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 import { messageMetadataSchema } from "@/schemas/chat/chat";
-import { chatRowToStore } from "../mappers/chat";
+
 import {
   mapMessageFromDb,
   parseMessageMetadata,
@@ -32,22 +32,18 @@ import type { Chat } from "@/types/chat/chat";
 type ChatSlice = Pick<
   AppState,
   | "chats"
-  | "createChat"
   | "addMessage"
   | "deleteMessage"
   | "deleteMessageDb"
-  | "setCurrentLeaf"
-  | "setCurrentLeafDb"
-  | "deleteChat"
   | "updateMessageAttachments"
   | "updateMessageMetadataDb"
   | "loadChats"
-  | "upsertChat"
   | "renameChatDb"
   | "moveChatDb"
   | "createChatDb"
   | "deleteChatDb"
   | "setKnowledgebase"
+  | "setCurrentLeafDb"
 >;
 
 /**
@@ -70,25 +66,6 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   get,
 ) => ({
   chats: {},
-
-  createChat: (projectId, assistantId) => {
-    const newChatId = crypto.randomUUID();
-    set((state) => ({
-      chats: {
-        ...state.chats,
-        [newChatId]: {
-          id: newChatId,
-          title: "New Chat",
-          projectId,
-          assistantId,
-          updatedAt: new Date(),
-          messages: {},
-          currentLeafId: null,
-        },
-      },
-    }));
-    return newChatId;
-  },
 
   addMessage: (
     chatId,
@@ -182,7 +159,8 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
   },
 
-  setCurrentLeaf: (chatId, leafId) => {
+  setCurrentLeafDb: async (chatId, leafId) => {
+    const previous = get();
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -196,23 +174,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         },
       };
     });
-  },
-
-  setCurrentLeafDb: async (chatId, leafId) => {
-    const previous = get();
-    get().setCurrentLeaf(chatId, leafId);
     try {
       await updateCurrentLeafAction(chatId, leafId);
     } catch {
       set(previous);
     }
-  },
-
-  deleteChat: (chatId) => {
-    set((state) => {
-      const { [chatId]: removed, ...rest } = state.chats;
-      return { chats: rest };
-    });
   },
 
   updateMessageAttachments: (chatId, messageId, attachments) => {
@@ -273,7 +239,16 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
-      chats[row.id] = chatRowToStore(row);
+      chats[row.id] = {
+        id: row.id,
+        title: row.title,
+        projectId: row.projectId ?? undefined,
+        assistantId: row.assistantId ?? undefined,
+        knowledgebaseId: row.knowledgebaseId ?? null,
+        updatedAt: new Date(row.updatedAt),
+        messages: {},
+        currentLeafId: row.currentLeafId ?? null,
+      };
     }
 
     if (messageRows.length === 0) {
@@ -325,12 +300,6 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     set({ chats });
   },
 
-  upsertChat: (chat) => {
-    set((state) => ({
-      chats: { ...state.chats, [chat.id]: chat },
-    }));
-  },
-
   renameChatDb: async (id, title) => {
     const previous = get();
     set((state) => {
@@ -379,14 +348,26 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   createChatDb: async (title, projectId, assistantId) => {
     const row = await createChat(title, projectId, assistantId);
-    const newChat = chatRowToStore(row);
+    const newChat = {
+      id: row.id,
+      title: row.title,
+      projectId: row.projectId ?? undefined,
+      assistantId: row.assistantId ?? undefined,
+      knowledgebaseId: row.knowledgebaseId ?? null,
+      updatedAt: new Date(row.updatedAt),
+      messages: {},
+      currentLeafId: row.currentLeafId ?? null,
+    };
     set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
     return row.id;
   },
 
   deleteChatDb: async (chatId) => {
     const previous = get();
-    get().deleteChat(chatId);
+    set((state) => {
+      const { [chatId]: removed, ...rest } = state.chats;
+      return { chats: rest };
+    });
     try {
       await deleteChat(chatId);
     } catch {

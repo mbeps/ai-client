@@ -45,7 +45,6 @@ export type AppState = {
   loadMcpPrompts: () => Promise<void>;
 
   // Chat Actions
-  createChat: (projectId?: string, assistantId?: string) => string;
   addMessage: (
     chatId: string,
     role: "user" | "assistant",
@@ -58,9 +57,7 @@ export type AppState = {
   ) => void;
   deleteMessage: (chatId: string, messageId: string) => void;
   deleteMessageDb: (chatId: string, messageId: string) => Promise<void>;
-  setCurrentLeaf: (chatId: string, leafId: string) => void;
   setCurrentLeafDb: (chatId: string, leafId: string) => Promise<void>;
-  deleteChat: (chatId: string) => void;
   updateMessageAttachments: (
     chatId: string,
     messageId: string,
@@ -104,6 +101,5 @@ export type AppState = {
     assistantId?: string,
   ) => Promise<string>;
   deleteChatDb: (chatId: string) => Promise<void>;
-  upsertChat: (chat: Chat) => void;
   setKnowledgebase: (chatId: string, kbId: string | null) => Promise<void>;
 };
