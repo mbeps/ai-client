@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -60,5 +60,5 @@ export async function listModels(filters?: {
     .from(aiModel)
     .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
     .where(and(...conditions))
-    .orderBy(desc(aiModel.updatedAt));
+    .orderBy(asc(aiProvider.name), asc(aiModel.label));
 }

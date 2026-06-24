@@ -74,7 +74,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
   const filteredModels = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return models.filter((model) => {
+    const filtered = models.filter((model) => {
       if (providerFilter !== "all" && model.providerId !== providerFilter)
         return false;
 
@@ -100,6 +100,13 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         model.modelId.toLowerCase().includes(q) ||
         providerName.toLowerCase().includes(q)
       );
+    });
+
+    return [...filtered].sort((a, b) => {
+      const aProvider = providerNameById[a.providerId] ?? "";
+      const bProvider = providerNameById[b.providerId] ?? "";
+      if (aProvider !== bProvider) return aProvider.localeCompare(bProvider);
+      return a.label.localeCompare(b.label);
     });
   }, [
     models,

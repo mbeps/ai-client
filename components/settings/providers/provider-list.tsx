@@ -53,14 +53,16 @@ export function ProviderList({
 
   const filteredProviders = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return providers;
+    const filtered = query
+      ? providers.filter((provider) => {
+          return (
+            provider.name.toLowerCase().includes(query) ||
+            provider.baseUrl.toLowerCase().includes(query)
+          );
+        })
+      : providers;
 
-    return providers.filter((provider) => {
-      return (
-        provider.name.toLowerCase().includes(query) ||
-        provider.baseUrl.toLowerCase().includes(query)
-      );
-    });
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [providers, search]);
 
   const openCreateDialog = (): void => {
