@@ -11,14 +11,12 @@ import {
 import { processAttachments } from "@/lib/chat/upload-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { ToolCallState } from "@/types/tool/tool-call";
 import { PROMPTS } from "@/constants/prompts";
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useApiError } from "@/hooks/use-api-error";
-import { useStreamState } from "@/hooks/chat/use-stream-state";
-import { useToolCalls } from "@/hooks/chat/use-tool-calls";
-import { useStreamAbort } from "@/hooks/chat/use-stream-abort";
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.
@@ -50,21 +48,54 @@ export function useStreamResponse(
     (state) => state.updateMessageAttachments,
   );
 
-  const {
-    isLoading,
-    setIsLoading,
-    streamingContent,
-    setStreamingContent,
-    streamingReasoning,
-    setStreamingReasoning,
-    isStreamingReasoning,
-    setIsStreamingReasoning,
-  } = useStreamState();
+  // Streaming state management (inlined from useStreamState)
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
+  const [isStreamingReasoning, setIsStreamingReasoning] = useState(false);
 
-  const { activeToolCalls, setActiveToolCalls } = useToolCalls();
+  // Tool call tracking (inlined from useToolCalls)
+  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
 
-  const { abortControllerRef, stopStream, setAbortController } =
-    useStreamAbort();
+  const addToolCall = useCallback((toolCallId: string, toolName: string, args?: unknown) => {
+    setActiveToolCalls((prev) => [
+      ...prev,
+      { toolCallId, toolName, args, status: "calling" },
+    ]);
+  }, []);
+
+  const updateToolCall = useCallback(
+    (toolCallId: string, updates: Partial<Pick<ToolCallState, "status" | "result">>) => {
+      setActiveToolCalls((prev) =>
+        prev.map((tc) =>
+          tc.toolCallId === toolCallId ? { ...tc, ...updates } : tc
+        )
+      );
+    },
+    []
+  );
+
+  const clearToolCalls = useCallback(() => {
+    setActiveToolCalls([]);
+  }, []);
+
+  // AbortController management (inlined from useStreamAbort)
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const stopStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
+
+  const setAbortController = useCallback((controller: AbortController) => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = controller;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   /**
    * Builds the metadata object for the user message, tracking model, tools, and prompt info.
