@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listModels } from "@/lib/actions/models/list-models";
-import type { AiModelWithProvider } from "@/types/ai-model-row";
-import type { ProviderModelType } from "@/schemas/provider-registry";
+import type { AiModelWithProvider } from "@/types/provider/ai-model-row";
+import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,
@@ -32,6 +32,7 @@ export type UserModelOption = {
   capReasoning: boolean;
   capStructuredOutput: boolean;
   isEnabled: boolean;
+  providerIsEnabled: boolean;
 };
 
 export type UseUserModelsResult = {
@@ -119,7 +120,9 @@ export function useUserModels(
           : new Set(["both"]);
 
     return rawModels
-      .filter((model) => model.isEnabled)
+      .filter(
+        (model) => model.isEnabled === true && model.providerIsEnabled === true,
+      )
       .filter((model) => typeSet.has(model.modelType))
       .map((model) => ({
         id: model.id,
@@ -135,6 +138,7 @@ export function useUserModels(
         capReasoning: model.capReasoning,
         capStructuredOutput: model.capStructuredOutput,
         isEnabled: model.isEnabled,
+        providerIsEnabled: model.providerIsEnabled,
       }))
       .sort((a, b) => {
         if (a.providerName !== b.providerName) {

@@ -42,9 +42,6 @@ yarn-error.log*
 next-env.d.ts
 .github/copilot-instructions.md
 
-# drizzle
-drizzle/migrations/**
-
 
 docs/**
 scripts/hash-password.js

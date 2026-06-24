@@ -1,12 +1,15 @@
-import { withMcpServer } from "./with-mcp-server";
+import { createMCPClient } from "@ai-sdk/mcp";
+import { buildTransport } from "./build-transport";
 import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
-import type { McpServerConfig } from "@/types/mcp-server-config";
-import type { McpConnection } from "@/types/mcp-connection";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { McpConnection } from "@/types/mcp/mcp-connection";
 import { logger } from "@/lib/logger";
 
 /**
  * Connects to a single MCP server and retrieves its tools.
- * Uses the withMcpServer resilience wrapper for connection and cleanup.
+ * Manages its own lifecycle — the returned connection stays open until the
+ * caller invokes the `close` function. This is intentionally independent of
+ * `withMcpServer` (which auto-closes the client after the callback).
  *
  * @param server - MCP server configuration
  * @returns Active connection object with tools and cleanup function
@@ -15,7 +18,15 @@ import { logger } from "@/lib/logger";
 export async function connectServer(
   server: McpServerConfig,
 ): Promise<McpConnection> {
-  return withMcpServer(server, async (client) => {
+  const transport = await buildTransport(server);
+
+  const client = await withTimeout(
+    createMCPClient({ transport }),
+    MCP_TIMEOUT_MS,
+    `connect to ${server.name}`,
+  );
+
+  try {
     const tools = await withTimeout(
       client.tools(),
       MCP_TIMEOUT_MS,
@@ -31,14 +42,11 @@ export async function connectServer(
       serverId: server.id,
       serverName: server.name,
       tools,
-      // The lifecycle of the connection here is slightly different from discoverToolsAndResources
-      // as the caller might need to keep it open. However, connectServer's existing
-      // signature returns a 'close' method.
-      // Wait, withMcpServer closes the client immediately after callback.
-      // If McpConnection needs to stay open, withMcpServer might not be suitable
-      // for connectServer if the connection is supposed to persist.
-      // Let's re-examine McpConnection.
       close: () => client.close(),
     };
-  });
+  } catch (error) {
+    // Connection or tool discovery failed — close client before throwing
+    await client.close().catch(() => {});
+    throw error;
+  }
 }

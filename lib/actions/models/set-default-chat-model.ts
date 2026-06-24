@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, userSettings } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 
 export async function setDefaultChatModel(modelId: string): Promise<void> {
@@ -21,7 +21,7 @@ export async function setDefaultChatModel(modelId: string): Promise<void> {
     );
 
   if (!model) {
-    throw new Error("Chat model not found");
+    throw new Error("Not Found");
   }
 
   await db

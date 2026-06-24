@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq, desc } from "drizzle-orm";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 export async function listDocuments(kbId: string): Promise<KbDocumentRow[]> {
   const session = await requireSession();
@@ -19,7 +19,7 @@ export async function listDocuments(kbId: string): Promise<KbDocumentRow[]> {
       ),
     );
 
-  if (!kb) throw new Error("Knowledgebase not found");
+  if (!kb) throw new Error("Not Found");
 
   return db
     .select()

@@ -25,7 +25,7 @@ import {
   TwoFactorAuthForm,
   qrSchema,
   QrForm,
-} from "@/schemas/two-factor-auth";
+} from "@/schemas/auth/two-factor-auth";
 type TwoFactorData = {
   totpURI: string;
   backupCodes: string[];

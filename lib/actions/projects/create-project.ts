@@ -1,12 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import type { ProjectRow } from "@/types/project-row";
-import { createProjectSchema } from "@/schemas/project";
+import { createProjectSchema } from "@/schemas/project/project";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import type { ProjectRow } from "@/types/project/project-row";
 import { z } from "zod";
-import { logger } from "@/lib/logger";
 
 /**
  * Creates a new project for the authenticated user.
@@ -19,33 +17,21 @@ import { logger } from "@/lib/logger";
  * @throws ZodError if data fails schema validation (e.g., name is missing).
  * @see createChat to create a chat bound to this project.
  * @see updateProject to modify project settings or globalPrompt.
- * @author Maruf Bepary
  */
-export async function createProject(
-  data: z.infer<typeof createProjectSchema>,
-): Promise<ProjectRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validated = createProjectSchema.parse(data);
-
-  const [row] = await db
-    .insert(project)
-    .values({
-      name: validated.name,
-      description: validated.description ?? null,
-      globalPrompt: validated.globalPrompt ?? null,
-      tools: validated.tools ?? [],
-      knowledgebaseId: validated.knowledgebaseId ?? null,
-      userId: session.user.id,
-    })
-    .returning();
-
-  logger.audit("Create Project", {
-    userId: session.user.id,
-    projectId: row.id,
-    name: row.name,
-  });
-
-  return row;
-}
+export const createProject = createEntityFactory<
+  z.infer<typeof createProjectSchema>,
+  ProjectRow
+>({
+  table: project,
+  schema: createProjectSchema,
+  mapValues: (validated, userId) => ({
+    name: validated.name,
+    description: validated.description ?? null,
+    globalPrompt: validated.globalPrompt ?? null,
+    tools: validated.tools ?? [],
+    knowledgebaseId: validated.knowledgebaseId ?? null,
+    userId,
+  }),
+  auditName: "Project",
+  auditData: (row) => ({ projectId: row.id, name: row.name }),
+});

@@ -66,7 +66,7 @@ const formatLog = (entry: LogEntry) => {
     ...entry,
     context: entry.context ? sanitize(entry.context) : undefined,
   };
-  return JSON.stringify(sanitizedEntry);
+  return JSON.stringify(sanitizedEntry, null, 2);
 };
 
 const isDev = process.env.NODE_ENV === 'development';

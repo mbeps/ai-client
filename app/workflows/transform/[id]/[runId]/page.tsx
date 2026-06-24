@@ -28,15 +28,18 @@ import {
 } from "@/components/ui/resizable";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
-import type { ArtifactData } from "@/types/artifact";
+import type { ArtifactData } from "@/types/artifact/artifact";
 import { toast } from "sonner";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
-import type { TransformAgent } from "@/types/transform-agent";
-import type { TransformRun, TransformRunStatus } from "@/types/transform-run";
-import type { TransformRunRow } from "@/types/transform-run-row";
+
+import type { TransformAgent } from "@/types/transform/transform-agent";
+import type {
+  TransformRun,
+  TransformRunStatus,
+} from "@/types/transform/transform-run";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
 
 type ToolCall = {
@@ -121,7 +124,26 @@ export default function TransformRunDetailPage() {
 
       const agentRow = await getTransformAgent(runRow.agentId);
       if (agentRow) {
-        setAgent(transformAgentRowToStore(agentRow));
+        let steps = [];
+        try {
+          steps = JSON.parse(agentRow.steps);
+        } catch {
+          steps = [];
+        }
+        setAgent({
+          id: agentRow.id,
+          userId: agentRow.userId,
+          name: agentRow.name,
+          description: agentRow.description ?? "",
+          globalContext: agentRow.globalContext ?? undefined,
+          modelId: agentRow.modelId ?? undefined,
+          tools: agentRow.tools,
+          knowledgeBaseIds: agentRow.knowledgeBaseIds,
+          requiresFileUpload: agentRow.requiresFileUpload,
+          steps,
+          createdAt: new Date(agentRow.createdAt),
+          updatedAt: new Date(agentRow.updatedAt),
+        });
       }
       setIsLoading(false);
 
@@ -315,7 +337,7 @@ export default function TransformRunDetailPage() {
             prev ? { ...prev, status: "failed" } : prev,
           );
 
-          if (!handleApiError(event.message)) {
+          if (!handleApiError(event)) {
             toast.error(event.message as string);
           }
           break;

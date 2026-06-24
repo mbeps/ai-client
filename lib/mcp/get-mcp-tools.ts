@@ -1,5 +1,5 @@
-import type { McpServerConfig } from "@/types/mcp-server-config";
-import type { McpConnection } from "@/types/mcp-connection";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { McpConnection } from "@/types/mcp/mcp-connection";
 import { connectServer } from "./connect-server";
 
 /**

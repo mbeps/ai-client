@@ -22,7 +22,7 @@ import {
 import { setDefaultChatModel } from "@/lib/actions/models/set-default-chat-model";
 import { setDefaultEmbeddingModel } from "@/lib/actions/models/set-default-embedding-model";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import type { UserModelOption } from "@/hooks/use-user-models";
 
 type ModelItem = {

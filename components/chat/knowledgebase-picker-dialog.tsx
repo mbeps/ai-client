@@ -12,10 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Check, Database, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Database, X, AlertTriangle, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { Knowledgebase } from "@/types/knowledgebase";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/utils";
 
 interface KnowledgebasePickerDialogProps {
   knowledgebases: Knowledgebase[];
@@ -81,23 +83,49 @@ export function KnowledgebasePickerDialog({
                 ) : (
                   filtered.map((kb) => {
                     const isSelected = selectedKbs.has(kb.id);
+                    const isReady = kb.indexStatus === "ready";
+                    const isIndexing = kb.indexStatus === "indexing";
+
                     return (
                       <button
                         key={kb.id}
                         type="button"
-                        className="flex items-start gap-3 w-full rounded-md px-3 py-2.5 text-left hover:bg-muted/60 transition-colors"
-                        onClick={() => onToggleKb(kb.id)}
+                        className={cn(
+                          "flex items-start gap-3 w-full rounded-md px-3 py-2.5 text-left hover:bg-muted/60 transition-colors",
+                          !isReady && "opacity-60 cursor-not-allowed",
+                        )}
+                        onClick={() => isReady && onToggleKb(kb.id)}
+                        disabled={!isReady}
                       >
                         <Checkbox
                           checked={isSelected}
                           className="mt-0.5 shrink-0"
-                          onCheckedChange={() => onToggleKb(kb.id)}
+                          onCheckedChange={() => isReady && onToggleKb(kb.id)}
                           onClick={(e) => e.stopPropagation()}
+                          disabled={!isReady}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium leading-tight truncate">
-                            {kb.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium leading-tight truncate">
+                              {kb.name}
+                            </p>
+                            {!isReady && (
+                              <Badge
+                                variant={isIndexing ? "outline" : "warning"}
+                                className={cn(
+                                  "h-3.5 px-1 text-[7px] uppercase",
+                                  isIndexing && "text-blue-500 border-blue-200",
+                                )}
+                              >
+                                {isIndexing ? (
+                                  <Loader2 className="mr-0.5 h-2 w-2 animate-spin" />
+                                ) : (
+                                  <AlertTriangle className="mr-0.5 h-2 w-2" />
+                                )}
+                                {kb.indexStatus}
+                              </Badge>
+                            )}
+                          </div>
                           {kb.description && (
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                               {kb.description}

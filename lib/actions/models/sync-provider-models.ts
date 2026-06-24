@@ -3,14 +3,17 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 import { decodeProviderRecord } from "@/lib/actions/providers/utils";
+import { ModelMalformedIdError } from "@/lib/constants/errors";
 
 export type SyncProviderModelsResult = {
   added: number;
   unchanged: number;
+  limitExceeded?: boolean;
+  totalDiscovered?: number;
 };
 
 type ProviderModelsResponse = {
@@ -41,10 +44,10 @@ export async function syncProviderModels(
     );
 
   if (!provider) {
-    throw new Error("Provider not found");
+    throw new Error("Not Found");
   }
 
-  if (isBlockedUrl(provider.baseUrl)) {
+  if (await isBlockedUrl(provider.baseUrl)) {
     throw new Error("Provider URL is blocked by SSRF guard");
   }
 
@@ -101,6 +104,7 @@ export async function syncProviderModels(
     types: Set<"chat" | "embedding">;
   };
   const modelsMap = new Map<string, DiscoveredModel>();
+  const invalidModels: Array<{ endpoint: string; source: string }> = [];
 
   // Helper to determine type from ID heuristic
   const isIdxEmbedding = (modelId: string) => {
@@ -114,8 +118,15 @@ export async function syncProviderModels(
 
   // Process standard list
   for (const m of standardList) {
-    if (!m.id) continue;
+    if (!m.id) {
+      invalidModels.push({ endpoint: "/models", source: "standard" });
+      continue;
+    }
     const modelId = m.id.trim();
+    if (!modelId) {
+      invalidModels.push({ endpoint: "/models", source: "standard (empty)" });
+      continue;
+    }
     if (!modelsMap.has(modelId)) {
       modelsMap.set(modelId, { id: modelId, types: new Set() });
     }
@@ -126,16 +137,48 @@ export async function syncProviderModels(
 
   // Process specialized embedding list
   for (const m of embeddingList) {
-    if (!m.id) continue;
+    if (!m.id) {
+      invalidModels.push({
+        endpoint: "/embeddings/models",
+        source: "embedding",
+      });
+      continue;
+    }
     const modelId = m.id.trim();
+    if (!modelId) {
+      invalidModels.push({
+        endpoint: "/embeddings/models",
+        source: "embedding (empty)",
+      });
+      continue;
+    }
     if (!modelsMap.has(modelId)) {
       modelsMap.set(modelId, { id: modelId, types: new Set() });
     }
     modelsMap.get(modelId)!.types.add("embedding");
   }
 
+  // If any models have malformed IDs, throw error after collecting all data
+  if (invalidModels.length > 0) {
+    logger.warn(
+      "[Sync Models] Found models with malformed/missing IDs",
+      {
+        count: invalidModels.length,
+        providerId,
+        samples: invalidModels.slice(0, 5),
+      },
+      session.user.id,
+    );
+
+    throw new ModelMalformedIdError(invalidModels.length);
+  }
+
   let added = 0;
   let unchanged = 0;
+
+  // Check if model count exceeds 1000-model limit
+  const totalDiscovered = modelsMap.size;
+  const limitExceeded = totalDiscovered > 1000;
 
   // Process discovered models (limit to 1000 to prevent OOM)
   const allModels = Array.from(modelsMap.values()).slice(0, 1000);
@@ -200,9 +243,16 @@ export async function syncProviderModels(
 
   logger.info(
     "Provider model sync complete",
-    { providerId, added, unchanged, userId: session.user.id },
+    {
+      providerId,
+      added,
+      unchanged,
+      totalDiscovered,
+      limitExceeded,
+      userId: session.user.id,
+    },
     session.user.id,
   );
 
-  return { added, unchanged };
+  return { added, unchanged, limitExceeded, totalDiscovered };
 }

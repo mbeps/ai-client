@@ -7,7 +7,7 @@ import {
   messageMetadataSchema,
   chatMessageSchema,
   chatRequestSchema,
-} from "@/schemas/chat";
+} from "@/schemas/chat/chat";
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 

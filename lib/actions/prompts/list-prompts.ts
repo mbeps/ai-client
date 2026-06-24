@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
 import { eq, desc } from "drizzle-orm";
-import type { PromptRow } from "@/types/prompt-row";
+import type { PromptRow } from "@/types/prompt/prompt-row";
 
 /**
  * Fetches all slash-command shortcuts (prompts) for the authenticated user, ordered by most recently updated first.

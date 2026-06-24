@@ -1,14 +1,14 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import {
   updateMcpServerSchema,
   type UpdateMcpServer,
-} from "@/schemas/mcp-server";
-import type { McpServerRow } from "@/types/mcp-server-row";
+} from "@/schemas/providers/mcp-server";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**

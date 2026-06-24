@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Download, FileText, FileSpreadsheet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
-import type { Attachment } from "@/types/attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 
 interface AttachmentGalleryProps {
   attachments: Attachment[];

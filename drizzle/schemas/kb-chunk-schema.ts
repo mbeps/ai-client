@@ -24,12 +24,32 @@ const vectorType = customType<{ data: number[] | null; driverData: string }>({
   },
 });
 
+const tsvectorType = customType<{ data: string | null; driverData: string }>({
+  dataType() {
+    return "tsvector";
+  },
+  toDriver(value) {
+    return value ?? "";
+  },
+  fromDriver(value) {
+    return value;
+  },
+});
+
 /**
  * Stores text chunks derived from kb_document files with provider-configurable embedding vectors.
  * Many-to-one with kb_document (CASCADE DELETE); kbId is denormalized for efficient per-KB retrieval.
- * searchVector (tsvector GENERATED ALWAYS) is defined only in the SQL migration — not a Drizzle column.
  * Hybrid retrieval: exact cosine similarity on embedding
  * + full-text search via GIN index on search_vector.
+ *
+ * IMPORTANT: search_vector must be a GENERATED ALWAYS column in PostgreSQL.
+ * Drizzle's db:push will convert it to a regular column. After running db:push,
+ * manually restore it with:
+ *
+ * ALTER TABLE kb_chunk DROP COLUMN search_vector;
+ * ALTER TABLE kb_chunk ADD COLUMN search_vector tsvector
+ *   GENERATED ALWAYS AS (to_tsvector('english', content)) STORED;
+ * CREATE INDEX IF NOT EXISTS kb_chunk_search_vector_idx ON kb_chunk USING gin (search_vector);
  *
  * @author Maruf Bepary
  */
@@ -49,10 +69,12 @@ export const kbChunk = pgTable(
     chunkIndex: integer("chunk_index").notNull(),
     tokenCount: integer("token_count").notNull().default(0),
     chunkMetadata: text("chunk_metadata"),
+    searchVector: tsvectorType("search_vector"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("kb_chunk_kb_id_idx").on(table.kbId),
     index("kb_chunk_document_id_idx").on(table.documentId),
+    index("kb_chunk_search_vector_idx").using("gin", table.searchVector),
   ],
 );

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Play } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import type { TransformRunRow } from "@/types/transform-run-row";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 interface TransformRunCardProps {
   run: TransformRunRow;

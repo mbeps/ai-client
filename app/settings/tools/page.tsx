@@ -9,7 +9,7 @@ import { AddServerDialog } from "@/components/mcp/add-server-dialog";
 import { DiscoverCommunityToolsDialog } from "@/components/mcp/discover-community-tools-dialog";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { ResponsiveMenu, MenuItem } from "@/components/shared/responsive-menu";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 /**
  * Tools/MCP servers listing page — client component displaying all configured MCP servers.

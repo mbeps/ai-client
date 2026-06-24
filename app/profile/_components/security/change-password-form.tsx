@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   changePasswordSchema,
   ChangePasswordFormData,
-} from "@/schemas/change-password";
+} from "@/schemas/auth/change-password";
 
 /**
  * Form that lets users update credentials and optionally revoke other sessions.

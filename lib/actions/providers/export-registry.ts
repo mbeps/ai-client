@@ -3,13 +3,13 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import {
   exportProviderRegistryInputSchema,
   type ExportProviderRegistryInput,
   type ProviderModelType,
   type RegistryExport,
-} from "@/schemas/provider-registry";
+} from "@/schemas/providers/provider-registry";
 import { decodeProviderRecord } from "./utils";
 
 const PROVIDER_MODEL_TYPES = ["chat", "embedding", "both"] as const;

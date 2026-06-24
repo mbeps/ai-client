@@ -19,8 +19,8 @@ import { ProviderFormDialog } from "@/components/settings/providers/provider-for
 import { ProviderCard } from "@/components/settings/providers/provider-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiProviderRow } from "@/types/ai-provider-row";
-import type { AiModelRow } from "@/types/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 type ProviderListProps = {
   providers: AiProviderRow[];
@@ -144,9 +144,15 @@ export function ProviderList({
                 onSync={() =>
                   void runAction(provider.id, async () => {
                     const result = await syncProviderModels(provider.id);
-                    toast.success(
-                      `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
-                    );
+                    if (result.limitExceeded) {
+                      toast.warning("Model Limit Reached", {
+                        description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
+                      });
+                    } else {
+                      toast.success(
+                        `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
+                      );
+                    }
                   })
                 }
               />

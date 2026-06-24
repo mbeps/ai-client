@@ -34,11 +34,12 @@ import {
   Shield,
   History,
   Edit2,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -61,11 +62,11 @@ import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-ru
 import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ModelSelector } from "@/components/shared/model-selector";
-import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
-import type { TransformStep } from "@/types/transform-agent";
+
+import type { TransformStep } from "@/types/transform/transform-agent";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
-import type { TransformRunRow } from "@/types/transform-run-row";
 import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
@@ -82,6 +83,7 @@ export default function AgentEditorPage() {
   const { mcpServers, loadMcpServers } = useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
   const { models: chatModels } = useUserModels("chat");
+  const hasNoModels = chatModels.length === 0;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -97,7 +99,13 @@ export default function AgentEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [runs, setRuns] = useState<TransformRunRow[]>([]);
   const [isLoadingRuns, setIsLoadingRuns] = useState(false);
-  const [activeTab, setActiveTab] = useTabState("tab", "steps");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("steps").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   // Run dialog state
   const [runDialogOpen, setRunDialogOpen] = useState(false);
@@ -134,7 +142,26 @@ export default function AgentEditorPage() {
           router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
           return;
         }
-        const agent = transformAgentRowToStore(row);
+        let steps = [];
+        try {
+          steps = JSON.parse(row.steps);
+        } catch {
+          steps = [];
+        }
+        const agent = {
+          id: row.id,
+          userId: row.userId,
+          name: row.name,
+          description: row.description ?? "",
+          globalContext: row.globalContext ?? undefined,
+          modelId: row.modelId ?? undefined,
+          tools: row.tools,
+          knowledgeBaseIds: row.knowledgeBaseIds,
+          requiresFileUpload: row.requiresFileUpload,
+          steps,
+          createdAt: new Date(row.createdAt),
+          updatedAt: new Date(row.updatedAt),
+        };
         setName(agent.name);
         setDescription(agent.description);
         setGlobalContext(agent.globalContext ?? "");
@@ -318,7 +345,7 @@ export default function AgentEditorPage() {
           {!isNew && (
             <Dialog open={runDialogOpen} onOpenChange={setRunDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={hasNoModels}>
                   <Play className="mr-2 h-4 w-4" /> Run
                 </Button>
               </DialogTrigger>
@@ -385,7 +412,7 @@ export default function AgentEditorPage() {
               </DialogContent>
             </Dialog>
           )}
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || hasNoModels}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -395,6 +422,26 @@ export default function AgentEditorPage() {
           </Button>
         </div>
       </div>
+
+      {hasNoModels && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+              No AI models configured. Please set up a provider to use Transform
+              workflows.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
+          >
+            Go to Settings
+          </Button>
+        </div>
+      )}
 
       <SidebarTabs
         value={activeTab}

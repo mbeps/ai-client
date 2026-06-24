@@ -1,9 +1,7 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**
  * Deletes an MCP server configuration for the authenticated user.
@@ -15,13 +13,6 @@ import { and, eq } from "drizzle-orm";
  * @throws Error if database deletion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
-export async function deleteMcpServer(id: string): Promise<void> {
-  const session = await requireSession();
-
-  const [deleted] = await db
-    .delete(mcpServer)
-    .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
-    .returning({ id: mcpServer.id });
-
-  if (!deleted) throw new Error("Not Found");
-}
+export const deleteMcpServer = deleteEntityFactory({
+  table: mcpServer,
+});

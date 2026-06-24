@@ -1,7 +1,7 @@
 "use client";
 
 import { EntityCard } from "@/components/shared/entity-card";
-import { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
   Settings2,
   Trash2,

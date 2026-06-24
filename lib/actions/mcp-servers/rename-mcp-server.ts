@@ -1,10 +1,8 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import type { McpServerRow } from "@/types/mcp-server-row";
+import { renameEntityFactory } from "@/lib/actions/shared/rename-entity-factory";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 
 /**
  * Renames an MCP server configuration for the authenticated user.
@@ -17,19 +15,7 @@ import type { McpServerRow } from "@/types/mcp-server-row";
  * @throws Error if database update fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
-export async function renameMcpServer(
-  id: string,
-  name: string,
-): Promise<McpServerRow> {
-  const session = await requireSession();
-
-  const [renamed] = await db
-    .update(mcpServer)
-    .set({ name, updatedAt: new Date() })
-    .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
-    .returning();
-
-  if (!renamed) throw new Error("Not Found");
-
-  return renamed;
-}
+export const renameMcpServer = renameEntityFactory<McpServerRow>({
+  table: mcpServer,
+  validateId: false,
+});

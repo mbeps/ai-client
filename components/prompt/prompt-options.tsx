@@ -1,6 +1,6 @@
 "use client";
 import { Trash2, Edit2, ExternalLink } from "lucide-react";
-import type { Prompt } from "@/types/prompt";
+import type { Prompt } from "@/types/prompt/prompt";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

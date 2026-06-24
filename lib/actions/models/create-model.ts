@@ -3,13 +3,13 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import {
   createModelSchema,
   type CreateModelInput,
-} from "@/schemas/provider-registry";
-import type { AiModelRow } from "@/types/ai-model-row";
+} from "@/schemas/providers/provider-registry";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 export async function createModel(
   input: CreateModelInput,
@@ -28,7 +28,7 @@ export async function createModel(
     );
 
   if (!provider) {
-    throw new Error("Provider not found");
+    throw new Error("Not Found");
   }
 
   const [created] = await db

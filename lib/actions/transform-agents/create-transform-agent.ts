@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schema";
-import { createTransformAgentSchema } from "@/schemas/transform-agent";
-import type { TransformAgentRow } from "@/types/transform-agent-row";
+import { createTransformAgentSchema } from "@/schemas/workflows/transform-agent";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 import { z } from "zod";
 
 export async function createTransformAgent(

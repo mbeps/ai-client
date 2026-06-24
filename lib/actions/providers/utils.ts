@@ -1,5 +1,5 @@
 import { aiProvider } from "@/drizzle/schema";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { decrypt, encrypt } from "@/lib/utils/encryption";
 import { ProviderKeyCorruptedError } from "@/lib/constants/errors";
 import { logger } from "@/lib/logger";
@@ -108,8 +108,4 @@ export function decodeProviderRecord(row: AiProviderRow): ProviderRecord {
   return { row, apiKey, headers };
 }
 
-export function maskProviderKey(apiKey: string | null): string | null {
-  if (!apiKey) return null;
-  if (apiKey.length <= 8) return "••••";
-  return `${apiKey.slice(0, 4)}••••${apiKey.slice(-4)}`;
-}
+

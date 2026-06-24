@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import type { Chat } from "@/types/chat";
+import type { Chat } from "@/types/chat/chat";
 import { ChatUI } from "@/components/chat/chat-ui";
 
 interface ChatPageClientProps {

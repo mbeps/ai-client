@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Paperclip, Database, Wrench } from "lucide-react";
-import type { McpServer } from "@/types/mcp-server";
-import type { PublicMcpServer } from "@/types/public-mcp-server";
-import type { Knowledgebase } from "@/types/knowledgebase";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { ToolPickerDialog } from "./tool-picker-dialog";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker-dialog";
 

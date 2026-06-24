@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { signUpSchema } from "@/schemas/sign-up";
+import { signUpSchema } from "@/schemas/auth/sign-up";
 
 describe("signUpSchema", () => {
   it("accepts valid registration data", () => {

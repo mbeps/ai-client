@@ -40,8 +40,8 @@ import { updateModels, updateModel } from "@/lib/actions/models/update-model";
 import { ModelFormDialog } from "@/components/settings/providers/model-form-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiModelRow } from "@/types/ai-model-row";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ModelTableProps = {
   models: AiModelRow[];

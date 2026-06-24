@@ -11,6 +11,8 @@ import { authClient } from "@/lib/auth/auth-client";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ROUTES } from "@/constants/routes";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { useUserModels } from "@/hooks/use-user-models";
+import { toast } from "sonner";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -27,6 +29,7 @@ export default function HomePage() {
   const createChatDb = useAppStore((state) => state.createChatDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const publicMcpServers = useAppStore((state) => state.publicMcpServers);
+  const { models: chatModels } = useUserModels("chat");
 
   useResourceHydration(["mcpServers", "publicMcpServers"]);
 
@@ -36,6 +39,17 @@ export default function HomePage() {
 
   const handleStart = async (content: string) => {
     if (!content.trim()) return;
+
+    if (chatModels.length === 0) {
+      toast.error("No AI models configured. Please set up a provider first.", {
+        action: {
+          label: "Settings",
+          onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
+        },
+      });
+      return;
+    }
+
     const chatId = await createChatDb(content.slice(0, 60));
     router.push(
       `${ROUTES.CHATS.detail(chatId)}?msg=${encodeURIComponent(content)}`,

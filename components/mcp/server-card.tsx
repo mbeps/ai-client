@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Server } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
-import type { McpServer } from "@/types/mcp-server";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import { Badge } from "@/components/ui/badge";
 import { ServerOptions } from "./server-options";
 

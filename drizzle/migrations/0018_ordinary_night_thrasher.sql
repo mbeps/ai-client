@@ -1,0 +1,1 @@
+ALTER TABLE "transform_agent" ADD COLUMN "global_context" text;

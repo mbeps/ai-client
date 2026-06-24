@@ -20,7 +20,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 import {
   forgotPasswordSchema,
   ForgotPasswordForm,
-} from "@/schemas/forgot-password";
+} from "@/schemas/auth/forgot-password";
 
 /**
  * Form that sends a Better Auth password reset email to the supplied address.

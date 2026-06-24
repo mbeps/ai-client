@@ -3,8 +3,8 @@
 import { Wrench } from "lucide-react";
 import { McpItemList } from "@/components/mcp/mcp-item-list";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
-import type { DiscoveredTool } from "@/types/discovered-tool";
-import type { McpServer } from "@/types/mcp-server";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import { Badge } from "@/components/ui/badge";
 
 /**

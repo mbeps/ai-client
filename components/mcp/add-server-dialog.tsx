@@ -32,7 +32,7 @@ import { Plus, X } from "lucide-react";
 import {
   createMcpServerSchema,
   type CreateMcpServer,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";

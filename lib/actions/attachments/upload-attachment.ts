@@ -1,7 +1,7 @@
 "use server";
 
 import { basename } from "path";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment, message, chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -46,6 +46,7 @@ export async function uploadAttachment(formData: FormData) {
   const file = formData.get("file") as File | null;
   const messageId = formData.get("messageId") as string | null;
   const clientAttachmentId = formData.get("attachmentId") as string | null;
+  const extractedText = formData.get("extractedText") as string | null;
 
   if (!file) throw new Error("No file provided");
   if (!messageId) throw new Error("No messageId provided");
@@ -104,6 +105,7 @@ export async function uploadAttachment(formData: FormData) {
       mimeType,
       size: file.size,
       key,
+      extractedText: extractedText || null,
     })
     .returning();
 

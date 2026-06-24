@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import {
   createMcpServerSchema,
   updateMcpServerSchema,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 
-// Mock isBlockedUrl so URL-guard tests are deterministic and don't depend on network
-vi.mock("@/lib/mcp/url-guard", () => ({
-  isBlockedUrl: (url: string) => {
+// Mock isBlockedUrlSync so URL-guard tests are deterministic and don't depend on network
+vi.mock("@/lib/mcp/url-guard-core", () => ({
+  isBlockedUrlSync: (url: string) => {
     // Block internal addresses for test purposes
     return (
       url.includes("localhost") ||

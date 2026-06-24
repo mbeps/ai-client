@@ -1,11 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { uploadObject, ensureBucket } from "@/lib/storage/s3-client";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -43,7 +43,7 @@ export async function uploadKbDocument(
       ),
     );
 
-  if (!kb) throw new Error("Knowledgebase not found");
+  if (!kb) throw new Error("Not Found");
 
   const mimeType = file.type || "application/octet-stream";
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
@@ -81,8 +81,7 @@ export async function uploadKbDocument(
   await db
     .update(knowledgebase)
     .set({
-      needsReindex: "true",
-      reindexReason: "New document pending ingestion",
+      indexStatus: "stale",
       updatedAt: new Date(),
     })
     .where(eq(knowledgebase.id, kbId));

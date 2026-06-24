@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import {
   chat,
@@ -10,7 +10,7 @@ import {
   assistant,
 } from "@/drizzle/schema";
 import { eq, and, asc, inArray } from "drizzle-orm";
-import type { ChatWithMessages } from "@/types/chat-with-messages";
+import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 
 /**
  * Fetches a single chat with all messages and attachments for the authenticated user.

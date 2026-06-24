@@ -30,12 +30,13 @@ import {
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
 } from "@/constants/languages";
+import { ROUTES } from "@/constants/routes";
 import { translateText } from "@/lib/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { processAttachment } from "@/lib/attachments/process-attachment";
-import { Attachment } from "@/types/attachment";
+import type { Attachment } from "@/types/attachment/attachment";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 
@@ -58,6 +59,7 @@ export default function TranslationWorkflowPage() {
     DEFAULT_TARGET_LANGUAGE,
   );
   const { models: chatModels } = useUserModels("chat");
+  const hasNoModels = chatModels.length === 0;
   const [modelId, setModelId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -192,6 +194,27 @@ export default function TranslationWorkflowPage() {
           />
         </div>
       </div>
+
+      {/* Global Banner for Missing Models */}
+      {hasNoModels && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+              No AI models configured. Please set up a provider to use
+              translation.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
+          >
+            Go to Settings
+          </Button>
+        </div>
+      )}
 
       {/* Control Bar - Space Efficient */}
       <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0 bg-muted/30 p-1.5 rounded-lg border shadow-sm">
@@ -413,7 +436,10 @@ export default function TranslationWorkflowPage() {
           size="sm"
           onClick={handleTranslate}
           disabled={
-            isLoading || isExtracting || (!sourceText.trim() && !attachment)
+            isLoading ||
+            isExtracting ||
+            hasNoModels ||
+            (!sourceText.trim() && !attachment)
           }
           className="px-8 h-8 text-xs font-medium shadow-sm transition-all"
         >

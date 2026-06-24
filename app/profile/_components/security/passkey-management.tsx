@@ -34,7 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import { passkeySchema, PasskeyForm } from "@/schemas/passkey";
+import { passkeySchema, PasskeyForm } from "@/schemas/auth/passkey";
 
 /**
  * Displays existing passkeys and provides controls for creating or deleting them.

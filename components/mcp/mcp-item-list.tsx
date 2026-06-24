@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
-import type { DiscoveredTool } from "@/types/discovered-tool";
-import type { DiscoveredResource } from "@/types/discovered-resource";
-import type { McpServer } from "@/types/mcp-server";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,

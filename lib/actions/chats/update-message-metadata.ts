@@ -2,7 +2,7 @@
 
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 

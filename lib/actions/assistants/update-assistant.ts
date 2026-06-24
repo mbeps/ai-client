@@ -1,11 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { AssistantRow } from "@/types/assistant-row";
-import { updateAssistantSchema } from "@/schemas/assistant";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
+import { updateAssistantSchema } from "@/schemas/assistant/assistant";
 import { z } from "zod";
 
 /**

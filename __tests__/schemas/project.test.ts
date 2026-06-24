@@ -3,7 +3,7 @@ import {
   createProjectSchema,
   updateProjectSchema,
   renameProjectSchema,
-} from "@/schemas/project";
+} from "@/schemas/project/project";
 
 // ---------------------------------------------------------------------------
 // createProjectSchema

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { createProvider } from "@/lib/actions/providers/create-provider";
 import { updateProvider } from "@/lib/actions/providers/update-provider";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type HeaderRow = { key: string; value: string };
 

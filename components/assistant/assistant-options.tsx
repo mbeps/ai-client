@@ -1,10 +1,8 @@
 "use client";
 
 import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import type { Assistant } from "@/types/assistant";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import type { Assistant } from "@/types/assistant/assistant";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
@@ -22,7 +20,6 @@ import { useAppStore } from "@/lib/store";
  * @returns Menu with action items, rename dialog, and delete confirmation dialog.
  * @see useEntityOptions for shared dialog and action state management.
  * @see ResponsiveMenu for desktop/mobile responsive menu wrapper.
- * @author Maruf Bepary
  */
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   const router = useRouter();
@@ -74,27 +71,19 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
   ];
 
   return (
-    <>
-      <ResponsiveMenu
-        title={assistant.name}
-        items={items}
-        isMobile={isMobile}
-      />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={assistant.name}
-        onConfirm={handleRename}
-        title="Rename Assistant"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Assistant"
-        description={`Are you sure you want to delete "${assistant.name}"? This action cannot be undone.`}
-        loading={isDeleting}
-      />
-    </>
+    <BaseEntityOptions
+      name={assistant.name}
+      items={items}
+      isMobile={isMobile}
+      showRename={showRename}
+      setShowRename={setShowRename}
+      showDelete={showDelete}
+      setShowDelete={setShowDelete}
+      isDeleting={isDeleting}
+      handleRename={handleRename}
+      handleDelete={handleDelete}
+      renameTitle="Rename Assistant"
+      deleteTitle="Delete Assistant"
+    />
   );
 }

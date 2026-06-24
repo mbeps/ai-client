@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
@@ -29,7 +29,9 @@ export async function discoverAllPrompts(): Promise<DiscoveredPrompt[]> {
 
   const discoveryPromises = enabledServers.map(async (server) => {
     try {
-      const result = await discoverToolsAndResources(mcpServerRowToConfig(server));
+      const result = await discoverToolsAndResources(
+        mcpServerRowToConfig(server),
+      );
       return result.prompts;
     } catch (e) {
       logger.error(`[MCP] Failed to discover prompts for ${server.name}`, e);

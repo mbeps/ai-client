@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { TransformAgent } from "@/types/transform-agent";
+import type { TransformAgent } from "@/types/transform/transform-agent";
 import { TransformAgentOptions } from "./transform-agent-options";
 import { EntityCard } from "@/components/shared/entity-card";
 

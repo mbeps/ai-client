@@ -18,7 +18,7 @@ import {
 
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import {
   ChevronLeft,
   FileText,
@@ -51,7 +51,13 @@ export default function McpServerPage() {
     })),
   );
 
-  const [activeTab, setActiveTab] = useTabState("tab", "tools");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("tools").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   if (!server) return <NotFoundMessage entity="MCP Server" />;
 

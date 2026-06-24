@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Fetches application-wide settings for the authenticated user.

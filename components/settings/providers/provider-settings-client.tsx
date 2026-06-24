@@ -8,14 +8,14 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { useProviders } from "@/hooks/use-providers";
 import { useUserModels } from "@/hooks/use-user-models";
 import { ProviderList } from "@/components/settings/providers/provider-list";
 import { ModelTable } from "@/components/settings/providers/model-table";
 import { DefaultModelPicker } from "@/components/settings/providers/default-model-picker";
 import { ImportExportPanel } from "@/components/settings/providers/import-export-panel";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 
 type ProviderSettingsClientProps = {
@@ -25,7 +25,13 @@ type ProviderSettingsClientProps = {
 export function ProviderSettingsClient({
   initialSettings,
 }: ProviderSettingsClientProps) {
-  const [tab, setTab] = useTabState("tab", "providers");
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("providers").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
   const [settings, setSettings] = useState<UserSettingsRow | null>(
     initialSettings,
   );

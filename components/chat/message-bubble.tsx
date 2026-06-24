@@ -5,8 +5,9 @@ import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import type { Message } from "@/types/message";
-import type { Attachment } from "@/types/attachment";
+import type { Message } from "@/types/message/message";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { ToolCallState } from "@/types/tool/tool-call";
 import { ROUTES } from "@/constants/routes";
 import { Bot, Command, Database, User } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -64,6 +65,8 @@ interface MessageBubbleProps {
   onShowArtifact?: () => void;
   /** Optional citations to show during streaming before they are persisted in metadata. */
   streamingCitations?: Citation[];
+  /** Tool invocations currently in flight during streaming. */
+  activeToolCalls?: ToolCallState[];
 }
 
 /**
@@ -97,6 +100,7 @@ export function MessageBubble({
   onRegenerate,
   onShowArtifact,
   streamingCitations,
+  activeToolCalls,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -174,6 +178,7 @@ export function MessageBubble({
               isStreamingReasoning={isStreamingReasoning}
               toolCalls={toolData?.toolCalls}
               toolResults={toolData?.toolResults}
+              activeToolCalls={activeToolCalls}
               isLatest={isLatest}
             />
           )}

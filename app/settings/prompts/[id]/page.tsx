@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import {
   SidebarTabs,
   SidebarTabsList,
@@ -44,7 +44,13 @@ export default function PromptDetailPage() {
   const router = useRouter();
   const promptId = params.id as string;
 
-  const [tab, setTab] = useTabState("tab", "general");
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("general").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   const prompts = useAppStore((state) => state.prompts);
   const prompt = prompts.find((p) => p.id === promptId);

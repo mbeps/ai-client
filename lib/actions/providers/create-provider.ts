@@ -2,12 +2,12 @@
 
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import {
   createProviderSchema,
   type CreateProviderInput,
-} from "@/schemas/provider-registry";
-import type { AiProviderRow } from "@/types/ai-provider-row";
+} from "@/schemas/providers/provider-registry";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 
 export async function createProvider(

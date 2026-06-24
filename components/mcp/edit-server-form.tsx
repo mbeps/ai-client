@@ -16,11 +16,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Save } from "lucide-react";
-import type { McpServer } from "@/types/mcp-server";
+import type { McpServer } from "@/types/mcp/mcp-server";
 import {
   updateMcpServerSchema,
   type UpdateMcpServer,
-} from "@/schemas/mcp-server";
+} from "@/schemas/providers/mcp-server";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";

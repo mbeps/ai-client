@@ -1,0 +1,1 @@
+ALTER TABLE "transform_run" ADD COLUMN "step_results" text DEFAULT '[]' NOT NULL;

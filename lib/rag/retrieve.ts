@@ -1,7 +1,8 @@
 import { db } from "@/drizzle/db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed";
-import { DimensionMismatchError } from "@/lib/constants/errors";
+import { KnowledgebaseNotReadyError } from "@/lib/constants/errors";
+import { knowledgebase } from "@/drizzle/schema";
 
 const RRF_K = 60;
 
@@ -65,32 +66,27 @@ export async function hybridSearch(
   userId: string,
   topK = 5,
 ): Promise<ChunkResult[]> {
-  // SECURITY: kbId is always a server-resolved UUID from session-owned chat/project.
-  // Both queries filter by kbId to prevent cross-user data leakage.
+  const normalizedQuery = query.trim();
 
-  let embedding: number[];
-  try {
-    embedding = await embedQuery(query, userId);
-  } catch (err) {
-    console.error("[RAG] embedQuery failed:", err);
-    throw err;
+  if (!normalizedQuery) {
+    return [];
   }
+
+  // 1. Check if KB is ready
+  const [kb] = await db
+    .select({ indexStatus: knowledgebase.indexStatus })
+    .from(knowledgebase)
+    .where(eq(knowledgebase.id, kbId))
+    .limit(1);
+
+  if (!kb) throw new Error("Knowledge base not found");
+  if (kb.indexStatus !== "ready") {
+    throw new KnowledgebaseNotReadyError(kbId, kb.indexStatus);
+  }
+
+  // 2. Search
+  const embedding = await embedQuery(normalizedQuery, userId);
   const embeddingLiteral = `[${embedding.join(",")}]`;
-
-  const dimRows = await db.execute(sql`
-    SELECT vector_dims(c.embedding) AS dim
-    FROM kb_chunk c
-    WHERE c.kb_id = ${kbId}
-      AND c.embedding IS NOT NULL
-    LIMIT 1
-  `);
-
-  const currentDim = Number(dimRows.rows?.[0]?.dim ?? 0);
-  if (currentDim > 0 && currentDim !== embedding.length) {
-    throw new DimensionMismatchError(
-      `Knowledgebase embeddings use dimension ${currentDim}, but current model returned ${embedding.length}. Re-index required.`,
-    );
-  }
 
   const vectorRows = (
     await db.execute(sql`
@@ -124,8 +120,8 @@ export async function hybridSearch(
         FROM kb_chunk c
         JOIN kb_document d ON c.document_id = d.id
         WHERE c.kb_id = ${kbId}
-          AND c.search_vector @@ plainto_tsquery('english', ${query})
-        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${query})) DESC
+          AND c.search_vector @@ plainto_tsquery('english', ${normalizedQuery})
+        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${normalizedQuery})) DESC
         LIMIT 20
       `)
     ).rows as RawChunkRow[];

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
 
 /**
  * Retrieves a specific prompt from an MCP server.
- * 
+ *
  * @param serverId - The unique ID of the MCP server
  * @param promptName - The name of the prompt to retrieve
  * @param args - Optional arguments for the prompt
@@ -31,15 +31,12 @@ export async function getMcpPrompt(
     .where(
       and(
         eq(mcpServer.id, serverId),
-        or(
-          eq(mcpServer.userId, session.user.id),
-          eq(mcpServer.isPublic, true)
-        )
-      )
+        or(eq(mcpServer.userId, session.user.id), eq(mcpServer.isPublic, true)),
+      ),
     );
 
   if (!server) {
-    throw new Error("MCP server not found or access denied");
+    throw new Error("Not Found");
   }
 
   if (!server.enabled) {
@@ -49,7 +46,7 @@ export async function getMcpPrompt(
   // 2. Connect and fetch prompt
   try {
     const config = mcpServerRowToConfig(server);
-    
+
     return await withMcpServer(config, async (client) => {
       try {
         const result = await withTimeout(
@@ -58,20 +55,16 @@ export async function getMcpPrompt(
             arguments: args,
           }),
           MCP_TIMEOUT_MS,
-          `getPrompt ${promptName}`
+          `getPrompt ${promptName}`,
         );
-        
+
         return result;
       } catch (error) {
-        logger.error(`[MCP] Failed to get prompt "${promptName}" from server "${server.name}":`, error);
+        logger.error(
+          `[MCP] Failed to get prompt "${promptName}" from server "${server.name}":`,
+          error,
+        );
         throw error;
-      } finally {
-        // Ensure client is closed properly
-        try {
-          await client.close();
-        } catch (closeError) {
-          logger.warn(`[MCP] Failed to close client for server "${server.name}":`, closeError);
-        }
       }
     });
   } catch (error) {

@@ -13,9 +13,9 @@ import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { ChatCard } from "@/components/chat/chat-card";
 import { ProjectCard } from "@/components/project/project-card";
 import { AssistantCard } from "@/components/assistant/assistant-card";
-import type { Chat } from "@/types/chat";
-import type { Project } from "@/types/project";
-import type { Assistant } from "@/types/assistant";
+import type { Chat } from "@/types/chat/chat";
+import type { Project } from "@/types/project/project";
+import type { Assistant } from "@/types/assistant/assistant";
 
 interface SearchClientProps {
   initialChats: Chat[];
@@ -40,7 +40,9 @@ export function SearchClient({
   initialProjects,
   initialAssistants,
 }: SearchClientProps) {
-  const [filterType, setFilterType] = useState<"all" | "chat" | "project" | "assistant">("all");
+  const [filterType, setFilterType] = useState<
+    "all" | "chat" | "project" | "assistant"
+  >("all");
 
   const items = useMemo<SearchItem[]>(() => {
     const chats: SearchItem[] = initialChats.map((chat) => ({

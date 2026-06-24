@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import type { KnowledgebaseRow } from "@/types/knowledgebase-row";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 /**
  * Fetches a single knowledge base by ID, ensuring it belongs to the authenticated user.
@@ -24,9 +24,8 @@ export async function getKnowledgebase(
       userId: knowledgebase.userId,
       name: knowledgebase.name,
       description: knowledgebase.description,
-      needsReindex: knowledgebase.needsReindex,
+      indexStatus: knowledgebase.indexStatus,
       lastIndexedAt: knowledgebase.lastIndexedAt,
-      reindexReason: knowledgebase.reindexReason,
       createdAt: knowledgebase.createdAt,
       updatedAt: knowledgebase.updatedAt,
     })

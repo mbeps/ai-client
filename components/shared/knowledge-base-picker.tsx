@@ -3,28 +3,35 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Knowledgebase } from "@/types/knowledgebase";
-import { Database, Search, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import {
+  Database,
+  Search,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface KnowledgeBasePickerProps {
   knowledgebases: Knowledgebase[];
-  
+
   // Selection mode
   mode?: "single" | "multiple";
-  
+
   // Selection state
   selectedIds: Set<string>;
-  
+
   // Callbacks
   onSelect: (ids: Set<string>) => void;
-  
+
   // UI Customisation
   className?: string;
   maxHeight?: string;
   showIcons?: boolean;
-  
+
   // Empty state handling
   allowEmpty?: boolean;
   emptyLabel?: string;
@@ -91,7 +98,7 @@ export function KnowledgeBasePicker({
             <div
               className={cn(
                 "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
-                selectedIds.size === 0 && "border-primary bg-primary/5"
+                selectedIds.size === 0 && "border-primary bg-primary/5",
               )}
               onClick={clearSelection}
             >
@@ -107,41 +114,66 @@ export function KnowledgeBasePicker({
               No knowledge bases found.
             </div>
           ) : (
-            filteredKbs.map((kb) => (
-              <div
-                key={kb.id}
-                className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
-                  selectedIds.has(kb.id) && "border-primary bg-primary/5"
-                )}
-                onClick={() => handleToggle(kb.id)}
-              >
-                <div className="pt-0.5">
-                  <Checkbox
-                    checked={selectedIds.has(kb.id)}
-                    onCheckedChange={() => handleToggle(kb.id)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="flex-1 min-w-0 flex gap-3">
-                  {showIcons && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Database className="h-4 w-4 text-primary" />
-                    </div>
+            filteredKbs.map((kb) => {
+              const isReady = kb.indexStatus === "ready";
+              const isIndexing = kb.indexStatus === "indexing";
+
+              return (
+                <div
+                  key={kb.id}
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
+                    selectedIds.has(kb.id) && "border-primary bg-primary/5",
+                    !isReady && "opacity-60 cursor-not-allowed",
                   )}
-                  <div className="space-y-1 min-w-0">
-                    <div className="font-medium text-sm leading-none truncate pr-4">
-                      {kb.name}
-                    </div>
-                    {kb.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {kb.description}
-                      </p>
+                  onClick={() => isReady && handleToggle(kb.id)}
+                >
+                  <div className="pt-0.5">
+                    <Checkbox
+                      checked={selectedIds.has(kb.id)}
+                      onCheckedChange={() => isReady && handleToggle(kb.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      disabled={!isReady}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 flex gap-3">
+                    {showIcons && (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Database className="h-4 w-4 text-primary" />
+                      </div>
                     )}
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-sm leading-none truncate">
+                          {kb.name}
+                        </div>
+                        {!isReady && (
+                          <Badge
+                            variant={isIndexing ? "outline" : "warning"}
+                            className={cn(
+                              "h-3.5 px-1 text-[7px] uppercase",
+                              isIndexing && "text-blue-500 border-blue-200",
+                            )}
+                          >
+                            {isIndexing ? (
+                              <Loader2 className="mr-0.5 h-2 w-2 animate-spin" />
+                            ) : (
+                              <AlertTriangle className="mr-0.5 h-2 w-2" />
+                            )}
+                            {kb.indexStatus}
+                          </Badge>
+                        )}
+                      </div>
+                      {kb.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {kb.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </ScrollArea>

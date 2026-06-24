@@ -1,13 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { discoverToolsAndResources } from "./discover-tools-and-resources";
 import { mcpServerRowToConfig } from "./mappers";
-import type { DiscoveredTool } from "@/types/discovered-tool";
-import type { DiscoveredResource } from "@/types/discovered-resource";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 
 /**
@@ -23,10 +23,8 @@ import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
  * @see getMcpTools for usage in chat streaming pipeline.
  * @author Maruf Bepary
  */
-export async function discoverMcpServerTools(
-  serverId: string,
-): Promise<{ 
-  tools: DiscoveredTool[]; 
+export async function discoverMcpServerTools(serverId: string): Promise<{
+  tools: DiscoveredTool[];
   resources: DiscoveredResource[];
   prompts: DiscoveredPrompt[];
 }> {

@@ -18,7 +18,7 @@ import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { backupCodeSchema, BackupCodeForm } from "@/schemas/backup-code";
+import { backupCodeSchema, BackupCodeForm } from "@/schemas/auth/backup-code";
 
 /**
  * Two-factor authentication fallback that accepts a static backup code.

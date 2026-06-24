@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "global_system_prompt" text;

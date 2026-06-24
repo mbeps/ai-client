@@ -1,6 +1,9 @@
 import { StateCreator } from "zustand";
-import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
-import { insertMessage, removeMessageSubtree } from "@/lib/chat/message-tree";
+import {
+  getDeepestLeaf,
+  insertMessage,
+  removeMessageSubtree,
+} from "@/lib/chat/message-tree-utils";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
@@ -9,16 +12,15 @@ import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
-import { messageMetadataSchema } from "@/schemas/chat";
-import { chatRowToStore } from "../mappers/chat";
-import { withOptimisticUpdate } from "../with-optimistic-update";
+import { messageMetadataSchema } from "@/schemas/chat/chat";
+
 import {
   mapMessageFromDb,
   parseMessageMetadata,
 } from "../mappers/message-mapper";
-import type { AppState } from "@/types/app-state";
-import type { Message } from "@/types/message";
-import type { Chat } from "@/types/chat";
+import type { AppState } from "@/types/app/app-state";
+import type { Message } from "@/types/message/message";
+import type { Chat } from "@/types/chat/chat";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.
@@ -30,13 +32,9 @@ import type { Chat } from "@/types/chat";
 type ChatSlice = Pick<
   AppState,
   | "chats"
-  | "createChat"
   | "addMessage"
   | "deleteMessage"
   | "deleteMessageDb"
-  | "setCurrentLeaf"
-  | "setCurrentLeafDb"
-  | "deleteChat"
   | "updateMessageAttachments"
   | "updateMessageMetadataDb"
   | "loadChats"
@@ -46,6 +44,7 @@ type ChatSlice = Pick<
   | "createChatDb"
   | "deleteChatDb"
   | "setKnowledgebase"
+  | "setCurrentLeafDb"
 >;
 
 /**
@@ -68,25 +67,6 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   get,
 ) => ({
   chats: {},
-
-  createChat: (projectId, assistantId) => {
-    const newChatId = crypto.randomUUID();
-    set((state) => ({
-      chats: {
-        ...state.chats,
-        [newChatId]: {
-          id: newChatId,
-          title: "New Chat",
-          projectId,
-          assistantId,
-          updatedAt: new Date(),
-          messages: {},
-          currentLeafId: null,
-        },
-      },
-    }));
-    return newChatId;
-  },
 
   addMessage: (
     chatId,
@@ -171,14 +151,17 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
 
     const previous = get();
-    await withOptimisticUpdate(
-      () => get().deleteMessage(chatId, messageId),
-      () => deleteMessageAction(chatId, messageId, newLeafId),
-      () => set(previous),
-    );
+    get().deleteMessage(chatId, messageId);
+    try {
+      await deleteMessageAction(chatId, messageId, newLeafId);
+    } catch (error) {
+      set(previous);
+      throw error;
+    }
   },
 
-  setCurrentLeaf: (chatId, leafId) => {
+  setCurrentLeafDb: async (chatId, leafId) => {
+    const previous = get();
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -192,23 +175,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         },
       };
     });
-  },
-
-  setCurrentLeafDb: async (chatId, leafId) => {
-    const previous = get();
-    await withOptimisticUpdate(
-      () => get().setCurrentLeaf(chatId, leafId),
-      () => updateCurrentLeafAction(chatId, leafId),
-      () => set(previous),
-      { swallowError: true },
-    );
-  },
-
-  deleteChat: (chatId) => {
-    set((state) => {
-      const { [chatId]: removed, ...rest } = state.chats;
-      return { chats: rest };
-    });
+    try {
+      await updateCurrentLeafAction(chatId, leafId);
+    } catch {
+      set(previous);
+    }
   },
 
   updateMessageAttachments: (chatId, messageId, attachments) => {
@@ -240,37 +211,45 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   updateMessageMetadataDb: async (chatId, messageId, metadata) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[chatId];
-          if (!chat) return state;
-          const msg = chat.messages[messageId];
-          if (!msg) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [chatId]: {
-                ...chat,
-                messages: {
-                  ...chat.messages,
-                  [messageId]: { ...msg, metadata },
-                },
-              },
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      const msg = chat.messages[messageId];
+      if (!msg) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: {
+            ...chat,
+            messages: {
+              ...chat.messages,
+              [messageId]: { ...msg, metadata },
             },
-          };
-        }),
-      () => updateMessageMetadataAction(messageId, metadata),
-      () => set(previous),
-      { swallowError: true },
-    );
+          },
+        },
+      };
+    });
+    try {
+      await updateMessageMetadataAction(messageId, metadata);
+    } catch {
+      set(previous);
+    }
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
-      chats[row.id] = chatRowToStore(row);
+      chats[row.id] = {
+        id: row.id,
+        title: row.title,
+        projectId: row.projectId ?? undefined,
+        assistantId: row.assistantId ?? undefined,
+        knowledgebaseId: row.knowledgebaseId ?? null,
+        updatedAt: new Date(row.updatedAt),
+        messages: {},
+        currentLeafId: row.currentLeafId ?? null,
+      };
     }
 
     if (messageRows.length === 0) {
@@ -297,6 +276,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
             sizeBytes: att.size,
             dataUrl: "",
             key: att.key,
+            extractedText: (att as any).extractedText ?? undefined,
           };
         });
 
@@ -329,82 +309,95 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   renameChatDb: async (id, title) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[id];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [id]: {
-                ...chat,
-                title,
-                updatedAt: new Date(),
-              },
-            },
-          };
-        }),
-      () => renameChatAction(id, title),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            title,
+            updatedAt: new Date(),
+          },
+        },
+      };
+    });
+    try {
+      await renameChatAction(id, title);
+    } catch {
+      set(previous);
+    }
   },
 
   moveChatDb: async (id, projectId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[id];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [id]: {
-                ...chat,
-                projectId,
-                updatedAt: new Date(),
-              },
-            },
-          };
-        }),
-      () => moveChatAction(id, projectId),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[id];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [id]: {
+            ...chat,
+            projectId,
+            updatedAt: new Date(),
+          },
+        },
+      };
+    });
+    try {
+      await moveChatAction(id, projectId);
+    } catch {
+      set(previous);
+    }
   },
 
   createChatDb: async (title, projectId, assistantId) => {
     const row = await createChat(title, projectId, assistantId);
-    const newChat = chatRowToStore(row);
+    const newChat = {
+      id: row.id,
+      title: row.title,
+      projectId: row.projectId ?? undefined,
+      assistantId: row.assistantId ?? undefined,
+      knowledgebaseId: row.knowledgebaseId ?? null,
+      updatedAt: new Date(row.updatedAt),
+      messages: {},
+      currentLeafId: row.currentLeafId ?? null,
+    };
     set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
     return row.id;
   },
 
   deleteChatDb: async (chatId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () => get().deleteChat(chatId),
-      () => deleteChat(chatId),
-      () => set(previous),
-    );
+    set((state) => {
+      const { [chatId]: removed, ...rest } = state.chats;
+      return { chats: rest };
+    });
+    try {
+      await deleteChat(chatId);
+    } catch {
+      set(previous);
+    }
   },
 
   setKnowledgebase: async (chatId, kbId) => {
     const previous = get();
-    await withOptimisticUpdate(
-      () =>
-        set((state) => {
-          const chat = state.chats[chatId];
-          if (!chat) return state;
-          return {
-            chats: {
-              ...state.chats,
-              [chatId]: { ...chat, knowledgebaseId: kbId },
-            },
-          };
-        }),
-      () => updateChatKnowledgebase({ chatId, knowledgebaseId: kbId }),
-      () => set(previous),
-    );
+    set((state) => {
+      const chat = state.chats[chatId];
+      if (!chat) return state;
+      return {
+        chats: {
+          ...state.chats,
+          [chatId]: { ...chat, knowledgebaseId: kbId },
+        },
+      };
+    });
+    try {
+      await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
+    } catch {
+      set(previous);
+    }
   },
 });

@@ -1,5 +1,5 @@
 import { createMCPClient } from "@ai-sdk/mcp";
-import type { McpServerConfig } from "@/types/mcp-server-config";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { buildTransport } from "./build-transport";
 
 export const MCP_TIMEOUT_MS = 10_000;
@@ -50,6 +50,6 @@ export async function createConnectedClient(
   server: McpServerConfig,
   label: string,
 ): Promise<Awaited<ReturnType<typeof createMCPClient>>> {
-  const transport = buildTransport(server);
+  const transport = await buildTransport(server);
   return withTimeout(createMCPClient({ transport }), MCP_TIMEOUT_MS, label);
 }

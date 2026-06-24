@@ -1,11 +1,13 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ROUTES } from "@/constants/routes";
-import type { Knowledgebase } from "@/types/knowledgebase";
-import { Database } from "lucide-react";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import { Database, AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { KnowledgebaseOptions } from "./knowledgebase-options";
+import { cn } from "@/lib/utils";
 
 interface KnowledgebaseCardProps {
   knowledgebase: Knowledgebase;
@@ -29,7 +31,27 @@ export function KnowledgebaseCard({
             <Database className="h-5 w-5 text-primary" />
           </div>
           <div className="space-y-1.5 flex-1 min-w-0">
-            <h3 className="font-semibold leading-none truncate">{kb.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold leading-none truncate">{kb.name}</h3>
+              {kb.indexStatus === "stale" && (
+                <Badge
+                  variant="warning"
+                  className="h-4 px-1 text-[8px] uppercase"
+                >
+                  <AlertTriangle className="mr-0.5 h-2 w-2" />
+                  Stale
+                </Badge>
+              )}
+              {kb.indexStatus === "indexing" && (
+                <Badge
+                  variant="outline"
+                  className="h-4 px-1 text-[8px] uppercase text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20"
+                >
+                  <Loader2 className="mr-0.5 h-2 w-2 animate-spin" />
+                  Indexing
+                </Badge>
+              )}
+            </div>
             {kb.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {kb.description}

@@ -19,7 +19,7 @@ import { ROUTES } from "@/constants/routes";
 import { env } from "@/lib/env";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
-import { signUpSchema, SignUpForm } from "@/schemas/sign-up";
+import { signUpSchema, SignUpForm } from "@/schemas/auth/sign-up";
 
 /**
  * Registration form that creates a new account via `authClient.signUp.email`.

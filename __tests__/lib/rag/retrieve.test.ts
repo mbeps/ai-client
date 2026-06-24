@@ -15,7 +15,7 @@ vi.mock("@/lib/env", () => ({
 vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/rag/embed", () => ({ embedQuery: vi.fn() }));
 
-import { applyRRF } from "@/lib/rag/retrieve";
+import { applyRRF, hybridSearch } from "@/lib/rag/retrieve";
 
 type Row = {
   id: string;
@@ -65,5 +65,11 @@ describe("applyRRF", () => {
     const rows = [makeRow("x")];
     const results = applyRRF(rows, [], 5);
     expect(results[0].documentId).toBe("doc-1");
+  });
+});
+
+describe("hybridSearch", () => {
+  it("returns no results for empty or whitespace-only queries", async () => {
+    await expect(hybridSearch("kb-1", "   ", "user-1")).resolves.toEqual([]);
   });
 });

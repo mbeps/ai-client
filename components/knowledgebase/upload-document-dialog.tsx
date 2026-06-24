@@ -10,10 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload } from "lucide-react";
+import { AlertCircle, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
-import type { KbDocumentRow } from "@/types/kb-document-row";
+import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import { useUserModels } from "@/hooks/use-user-models";
 
 const ACCEPTED_TYPES = ".pdf,.txt,.md";
 const MAX_SIZE_MB = 50;
@@ -45,6 +47,9 @@ export function UploadDocumentDialog({
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const { models } = useUserModels("embedding");
+  const hasNoModels = models.length === 0;
 
   const isLoading = phase === "uploading" || phase === "ingesting";
 
@@ -88,10 +93,12 @@ export function UploadDocumentDialog({
 
       setPhase("ingesting");
 
-      const res = await fetch(`/api/rag/ingest/${doc.id}`, { method: "POST" });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Ingestion failed");
+      const result = await ingestKbDocument(doc.id);
+      if (!result.success) {
+        // Build a custom error object to trigger existing toast and error display logic
+        const error: any = new Error(result.error ?? "Ingestion failed");
+        if (result.code) error.code = result.code;
+        throw error;
       }
 
       toast.success(`"${file.name}" uploaded and queued for processing`);
@@ -145,6 +152,15 @@ export function UploadDocumentDialog({
               {statusLabel}
             </div>
           )}
+
+          {hasNoModels && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
+                No embedding models configured. Please set up a provider first.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -157,7 +173,7 @@ export function UploadDocumentDialog({
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={!file || isLoading || !!error}
+            disabled={!file || isLoading || !!error || hasNoModels}
           >
             {isLoading ? (
               <>

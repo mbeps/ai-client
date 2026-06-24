@@ -25,9 +25,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowledgebase";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createKnowledgebaseSchema } from "@/schemas/knowledgebase";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
+import { useUserModels } from "@/hooks/use-user-models";
 
 type FormValues = z.infer<typeof createKnowledgebaseSchema>;
 
@@ -44,6 +45,9 @@ export function CreateKnowledgebaseDialog({
 }: CreateKnowledgebaseDialogProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { models } = useUserModels("embedding");
+  const hasNoModels = models.length === 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createKnowledgebaseSchema),
@@ -111,6 +115,17 @@ export function CreateKnowledgebaseDialog({
                 </FormItem>
               )}
             />
+
+            {hasNoModels && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
+                  No embedding models configured. Please set up a provider
+                  first.
+                </p>
+              </div>
+            )}
+
             <DialogFooter>
               <Button
                 type="button"
@@ -121,7 +136,7 @@ export function CreateKnowledgebaseDialog({
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || hasNoModels}>
                 {isSubmitting ? (
                   "Creating..."
                 ) : (

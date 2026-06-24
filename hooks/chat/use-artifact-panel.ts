@@ -1,8 +1,8 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import type { ArtifactData } from "@/types/artifact";
-import type { Message } from "@/types/message";
+import type { ArtifactData } from "@/types/artifact/artifact";
+import type { Message } from "@/types/message/message";
 import { useCallback, useMemo, useState } from "react";
 
 export interface UseArtifactPanelReturn {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { forgotPasswordSchema } from "@/schemas/forgot-password";
-import { resetPasswordSchema } from "@/schemas/reset-password";
+import { forgotPasswordSchema } from "@/schemas/auth/forgot-password";
+import { resetPasswordSchema } from "@/schemas/auth/reset-password";
 import {
   emailField,
   passwordField,

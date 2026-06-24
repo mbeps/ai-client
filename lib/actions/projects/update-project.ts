@@ -1,11 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { ProjectRow } from "@/types/project-row";
-import { updateProjectSchema } from "@/schemas/project";
+import type { ProjectRow } from "@/types/project/project-row";
+import { updateProjectSchema } from "@/schemas/project/project";
 import { z } from "zod";
 
 /**

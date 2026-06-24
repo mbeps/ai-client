@@ -1,13 +1,11 @@
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-import { chatRowToStore } from "@/lib/store/mappers/chat";
-import { projectRowToStore } from "@/lib/store/mappers/project";
-import { assistantRowToStore } from "@/lib/store/mappers/assistant";
+
 import { SearchClient } from "./_components/search-client";
-import type { ChatRow } from "@/types/chat-row";
-import type { ProjectRow } from "@/types/project-row";
-import type { AssistantRow } from "@/types/assistant-row";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { ProjectRow } from "@/types/project/project-row";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**
  * Global search page — server component fetching all user resources.
@@ -23,9 +21,39 @@ export default async function SearchPage() {
     listAssistants().catch(() => [] as AssistantRow[]),
   ]);
 
-  const chats = chatRows.map(chatRowToStore);
-  const projects = projectRows.map(projectRowToStore);
-  const assistants = assistantRows.map(assistantRowToStore);
+  const chats = chatRows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    projectId: row.projectId ?? undefined,
+    assistantId: row.assistantId ?? undefined,
+    knowledgebaseId: row.knowledgebaseId ?? null,
+    updatedAt: new Date(row.updatedAt),
+    messages: {},
+    currentLeafId: row.currentLeafId ?? null,
+  }));
+  const projects = projectRows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description ?? "",
+    isPinned: row.isPinned,
+    globalPrompt: row.globalPrompt ?? "",
+    tools: row.tools ?? [],
+    knowledgebaseId: row.knowledgebaseId ?? null,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  }));
+  const assistants = assistantRows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description ?? "",
+    prompt: row.prompt ?? "",
+    tools: row.tools ?? [],
+    avatar: row.avatar ?? null,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  }));
 
   return (
     <SearchClient

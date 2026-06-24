@@ -1,14 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
-import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import {
   createMcpServerSchema,
   type CreateMcpServer,
-} from "@/schemas/mcp-server";
-import type { McpServerRow } from "@/types/mcp-server-row";
+} from "@/schemas/providers/mcp-server";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
 
 /**
  * Creates a new MCP server configuration for the authenticated user.
@@ -22,22 +21,14 @@ import { buildServerConfig } from "@/lib/mcp/build-server-config";
  * @throws Error if database insertion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
-export async function createMcpServer(
-  data: CreateMcpServer,
-): Promise<McpServerRow> {
-  const session = await requireSession();
-
-  const parsed = createMcpServerSchema.parse(data);
-
-  const values = buildServerConfig(parsed);
-
-  const [created] = await db
-    .insert(mcpServer)
-    .values({
-      ...values,
-      userId: session.user.id,
-    })
-    .returning();
-
-  return created;
-}
+export const createMcpServer = createEntityFactory<
+  CreateMcpServer,
+  McpServerRow
+>({
+  table: mcpServer,
+  schema: createMcpServerSchema,
+  mapValues: (validated, userId) => ({
+    ...buildServerConfig(validated),
+    userId,
+  }),
+});

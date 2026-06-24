@@ -1,5 +1,5 @@
-import type { McpServerRow } from "@/types/mcp-server-row";
-import type { McpServerConfig } from "@/types/mcp-server-config";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
 export function mcpServerRowToConfig(row: McpServerRow): McpServerConfig {
   return {

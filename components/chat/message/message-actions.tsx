@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { Message } from "@/types/message";
+import type { Message } from "@/types/message/message";
+import { useUserModels } from "@/hooks/use-user-models";
 
 interface MessageActionsProps {
   message: Message;
@@ -53,6 +54,8 @@ export function MessageActions({
   hasArtifact,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
+  const { models } = useUserModels("chat");
+  const hasNoModels = models.length === 0;
 
   const handleCopy = async () => {
     try {
@@ -123,7 +126,9 @@ export function MessageActions({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              onClick={() => onEdit?.(message.id, editContent ?? message.content)}
+              onClick={() =>
+                onEdit?.(message.id, editContent ?? message.content)
+              }
             >
               <Edit2 className="h-3 w-3" />
             </Button>
@@ -154,11 +159,14 @@ export function MessageActions({
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
               onClick={() => onRegenerate(message.id)}
+              disabled={hasNoModels}
             >
               <RotateCcw className="h-3 w-3" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Regenerate response</TooltipContent>
+          <TooltipContent>
+            {hasNoModels ? "No models configured" : "Regenerate response"}
+          </TooltipContent>
         </Tooltip>
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2, Edit2 } from "lucide-react";
-import type { TransformAgent } from "@/types/transform-agent";
+import type { TransformAgent } from "@/types/transform/transform-agent";
 import { RenameDialog } from "@/components/shared/rename-dialog";
 import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";

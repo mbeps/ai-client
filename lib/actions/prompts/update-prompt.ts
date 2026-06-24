@@ -1,11 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import type { PromptRow } from "@/types/prompt-row";
-import { updatePromptSchema } from "@/schemas/prompt";
+import type { PromptRow } from "@/types/prompt/prompt-row";
+import { updatePromptSchema } from "@/schemas/prompt/prompt";
 import { z } from "zod";
 
 /**

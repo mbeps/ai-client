@@ -1,11 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/actions/require-session";
+import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
-import { userSettingsSchema } from "@/schemas/user-settings";
+import { userSettingsSchema } from "@/schemas/user/user-settings";
 import { revalidatePath } from "next/cache";
-import type { UserSettingsRow } from "@/types/user-settings-row";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
