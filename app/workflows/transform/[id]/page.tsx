@@ -39,7 +39,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -99,7 +99,13 @@ export default function AgentEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [runs, setRuns] = useState<TransformRunRow[]>([]);
   const [isLoadingRuns, setIsLoadingRuns] = useState(false);
-  const [activeTab, setActiveTab] = useTabState("tab", "steps");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("steps").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   // Run dialog state
   const [runDialogOpen, setRunDialogOpen] = useState(false);

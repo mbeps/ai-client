@@ -3,7 +3,7 @@
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/message-tree-utils";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
-import { buildStreamRequestBody } from "@/lib/chat/build-stream-request";
+import { buildStreamRequestBody } from "@/lib/chat/prepare-chat-request";
 import {
   resolveMcpPrompt,
   resolveSlashPrompt,

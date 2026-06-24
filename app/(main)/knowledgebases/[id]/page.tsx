@@ -41,7 +41,7 @@ import {
   SidebarTabsTrigger,
   SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { toast } from "sonner";
@@ -70,7 +70,13 @@ export default function KnowledgebasePage() {
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const [activeTab, setActiveTab] = useTabState("tab", "documents");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("documents").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   const fetchKb = useCallback(async () => {
     try {

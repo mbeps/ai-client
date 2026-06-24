@@ -20,7 +20,7 @@ import {
 import {
   loadChatContext,
   ChatNotFoundError,
-} from "@/lib/chat/load-chat-context";
+} from "@/lib/chat/prepare-chat-request.server";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import {

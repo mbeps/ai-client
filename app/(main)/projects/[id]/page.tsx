@@ -46,9 +46,12 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
-import { listKnowledgebases, type KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
+import {
+  listKnowledgebases,
+  type KnowledgebaseWithCount,
+} from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { useState, useEffect, useMemo } from "react";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { toast } from "sonner";
@@ -86,7 +89,11 @@ export default function ProjectPage() {
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
-  const { normalizedKnowledgebases, isLoading: loadingKbs, refresh: refreshKbs } = useKnowledgebases();
+  const {
+    normalizedKnowledgebases,
+    isLoading: loadingKbs,
+    refresh: refreshKbs,
+  } = useKnowledgebases();
 
   // Centralised hydration for all required entities
   const { isLoading: hydrationLoading } = useResourceHydration([
@@ -109,7 +116,13 @@ export default function ProjectPage() {
     project?.knowledgebaseId ?? null,
   );
   const [savingKb, setSavingKb] = useState(false);
-  const [tab, setTab] = useTabState("tab", "chats");
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("chats").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   const filteredChats = useMemo(() => {
     return chats
@@ -140,7 +153,8 @@ export default function ProjectPage() {
     }
   }, [project]);
 
-  const loading = hydrationLoading || loadingKbs || (projects.length === 0 && !project);
+  const loading =
+    hydrationLoading || loadingKbs || (projects.length === 0 && !project);
 
   if (loading) {
     return (

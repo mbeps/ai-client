@@ -7,8 +7,7 @@ import {
   type UserSettingsFormData as UserSettings,
 } from "@/schemas/user/user-settings";
 import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
-import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -37,7 +36,15 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
   // eslint-disable-next-line react-hooks/incompatible-library
   const globalSystemPrompt = form.watch("globalSystemPrompt");
 
-  useAutoExpandingTextarea(textareaRef, [globalSystemPrompt], 600);
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        600,
+      )}px`;
+    }
+  }, [globalSystemPrompt]);
 
   return (
     <div className="space-y-4">

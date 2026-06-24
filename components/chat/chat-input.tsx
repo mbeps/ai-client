@@ -18,7 +18,6 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
 import { MentionCommands } from "./mention-commands";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
-import { useAutoExpandingTextarea } from "@/hooks/use-auto-expanding-textarea";
 import { useUserModels } from "@/hooks/use-user-models";
 import { useFileUpload } from "@/hooks/chat/use-file-upload";
 import { useMcpSelection } from "@/hooks/chat/use-mcp-selection";
@@ -209,7 +208,15 @@ export function ChatInput({
     selectedServerIds,
   );
 
-  useAutoExpandingTextarea(textareaRef, [input]);
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        200,
+      )}px`;
+    }
+  }, [input]);
 
   // -- Model initialisation --
   useEffect(() => {

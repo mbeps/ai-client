@@ -43,7 +43,7 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { useTabState } from "@/hooks/use-tab-state";
+import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { toast } from "sonner";
 import { ChatCard } from "@/components/chat/chat-card";
@@ -92,7 +92,13 @@ export default function AssistantPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(assistant?.tools || []),
   );
-  const [tab, setTab] = useTabState("tab", "settings");
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("settings").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   const filteredChats = useMemo(() => {
     return chats
