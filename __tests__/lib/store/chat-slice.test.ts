@@ -80,6 +80,48 @@ const makeAttachment = (id: string) => ({
   key: `uploads/${id}.png`,
 });
 
+// Helper to replace removed createChat() method
+const createChatInStore = (
+  projectId?: string,
+  assistantId?: string,
+): string => {
+  const id = crypto.randomUUID();
+  const mockChat: Chat = {
+    id,
+    title: "New Chat",
+    updatedAt: new Date(),
+    messages: {},
+    currentLeafId: null,
+    projectId,
+    assistantId,
+  };
+  useAppStore.setState((state) => ({
+    chats: { ...state.chats, [id]: mockChat },
+  }));
+  return id;
+};
+
+// Helper to replace removed deleteChat() method
+const deleteChatInStore = (chatId: string): void => {
+  useAppStore.setState((state) => {
+    const { [chatId]: deleted, ...rest } = state.chats;
+    return { chats: rest };
+  });
+};
+
+// Helper to replace removed setCurrentLeaf() method
+const setCurrentLeafInStore = (chatId: string, leafId: string): void => {
+  useAppStore.setState((state) => {
+    if (!state.chats[chatId]) return state; // Do nothing if chat doesn't exist
+    return {
+      chats: {
+        ...state.chats,
+        [chatId]: { ...state.chats[chatId], currentLeafId: leafId },
+      },
+    };
+  });
+};
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
 describe("ChatSlice — in-memory (optimistic) actions", () => {
   beforeEach(() => {
@@ -95,39 +137,39 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   });
 
   // ── createChat ──────────────────────────────────────────────────────────
-  describe("createChat", () => {
+  describe("createChat (helper)", () => {
     it("returns a new UUID and adds the chat to store", () => {
-      const id = useAppStore.getState().createChat();
+      const id = createChatInStore();
       const chats = useAppStore.getState().chats;
       expect(id).toBeTruthy();
       expect(chats[id]).toBeDefined();
     });
 
     it("creates chat with default title 'New Chat'", () => {
-      const id = useAppStore.getState().createChat();
+      const id = createChatInStore();
       expect(useAppStore.getState().chats[id].title).toBe("New Chat");
     });
 
     it("stores projectId when provided", () => {
-      const id = useAppStore.getState().createChat("proj-1");
+      const id = createChatInStore("proj-1");
       expect(useAppStore.getState().chats[id].projectId).toBe("proj-1");
     });
 
     it("stores assistantId when provided", () => {
-      const id = useAppStore.getState().createChat(undefined, "asst-1");
+      const id = createChatInStore(undefined, "asst-1");
       expect(useAppStore.getState().chats[id].assistantId).toBe("asst-1");
     });
 
     it("initialises with empty messages and null currentLeafId", () => {
-      const id = useAppStore.getState().createChat();
+      const id = createChatInStore();
       const chat = useAppStore.getState().chats[id];
       expect(chat.messages).toEqual({});
       expect(chat.currentLeafId).toBeNull();
     });
 
     it("each call returns a unique ID", () => {
-      const a = useAppStore.getState().createChat();
-      const b = useAppStore.getState().createChat();
+      const a = createChatInStore();
+      const b = createChatInStore();
       expect(a).not.toBe(b);
     });
   });
@@ -135,7 +177,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   // ── addMessage ──────────────────────────────────────────────────────────
   describe("addMessage", () => {
     it("adds a root message and sets currentLeafId", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       const chat = useAppStore.getState().chats[chatId];
       expect(chat.messages["msg-1"]).toBeDefined();
@@ -143,7 +185,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("links message to its parent's childrenIds", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -153,7 +195,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("sets message role correctly", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore
         .getState()
         .addMessage(chatId, "assistant", "Hi", null, "msg-1");
@@ -163,14 +205,14 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("generates a UUID when id is not provided", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hi", null);
       const messages = useAppStore.getState().chats[chatId].messages;
       expect(Object.keys(messages)).toHaveLength(1);
     });
 
     it("stores attachments on the message", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       const att = makeAttachment("att-1");
       useAppStore
         .getState()
@@ -191,7 +233,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   // ── deleteMessage ───────────────────────────────────────────────────────
   describe("deleteMessage", () => {
     it("removes the message from the chat", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hi", null, "msg-1");
       useAppStore.getState().deleteMessage(chatId, "msg-1");
       expect(
@@ -200,7 +242,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("removes the message from parent's childrenIds", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -212,7 +254,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("recursively removes children of the deleted message", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -228,7 +270,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("sets currentLeafId to parent after deletion", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -244,9 +286,9 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   });
 
   // ── setCurrentLeaf ──────────────────────────────────────────────────────
-  describe("setCurrentLeaf", () => {
+  describe("setCurrentLeaf (helper)", () => {
     it("updates currentLeafId for the given chat", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -254,30 +296,30 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       useAppStore
         .getState()
         .addMessage(chatId, "user", "Root", null, "branch-b");
-      useAppStore.getState().setCurrentLeaf(chatId, "branch-a");
+      setCurrentLeafInStore(chatId, "branch-a");
       expect(useAppStore.getState().chats[chatId].currentLeafId).toBe(
         "branch-a",
       );
     });
 
     it("does nothing when chat does not exist", () => {
-      useAppStore.getState().setCurrentLeaf("nonexistent", "msg-1");
+      setCurrentLeafInStore("nonexistent", "msg-1");
       expect(useAppStore.getState().chats["nonexistent"]).toBeUndefined();
     });
   });
 
   // ── deleteChat ──────────────────────────────────────────────────────────
-  describe("deleteChat", () => {
+  describe("deleteChat (helper)", () => {
     it("removes chat from the store", () => {
-      const chatId = useAppStore.getState().createChat();
-      useAppStore.getState().deleteChat(chatId);
+      const chatId = createChatInStore();
+      deleteChatInStore(chatId);
       expect(useAppStore.getState().chats[chatId]).toBeUndefined();
     });
 
     it("does not affect other chats", () => {
-      const a = useAppStore.getState().createChat();
-      const b = useAppStore.getState().createChat();
-      useAppStore.getState().deleteChat(a);
+      const a = createChatInStore();
+      const b = createChatInStore();
+      deleteChatInStore(a);
       expect(useAppStore.getState().chats[b]).toBeDefined();
     });
   });
@@ -285,7 +327,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   // ── updateMessageAttachments ────────────────────────────────────────────
   describe("updateMessageAttachments", () => {
     it("merges updated attachment data into existing attachments", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       const att = makeAttachment("att-1");
       useAppStore
         .getState()
@@ -326,7 +368,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("replaces an existing chat", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       const updated: Chat = {
         id: chatId,
         title: "Replaced",
@@ -398,7 +440,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     });
 
     it("replaces existing chat state with new rows", () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().loadChats(
         [
           {
@@ -447,7 +489,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("deleteChatDb", () => {
     it("removes chat from store after server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       await useAppStore.getState().deleteChatDb(chatId);
       expect(useAppStore.getState().chats[chatId]).toBeUndefined();
     });
@@ -455,7 +497,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("renameChatDb", () => {
     it("updates chat title after server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       const now = new Date().toISOString();
       vi.mocked(renameChatAction).mockResolvedValueOnce({
         id: chatId,
@@ -474,7 +516,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("moveChatDb", () => {
     it("updates chat projectId after server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       const now = new Date().toISOString();
       vi.mocked(moveChatAction).mockResolvedValueOnce({
         id: chatId,
@@ -491,7 +533,7 @@ describe("ChatSlice — DB actions", () => {
     });
 
     it("sets projectId to undefined when server returns null", async () => {
-      const chatId = useAppStore.getState().createChat("proj-1");
+      const chatId = createChatInStore("proj-1");
       const now = new Date().toISOString();
       vi.mocked(moveChatAction).mockResolvedValueOnce({
         id: chatId,
@@ -510,7 +552,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("deleteMessageDb", () => {
     it("removes the message from the store and calls server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       await useAppStore.getState().deleteMessageDb(chatId, "msg-1");
       expect(
@@ -522,7 +564,7 @@ describe("ChatSlice — DB actions", () => {
       const { deleteMessage: deleteMsgAction } =
         await import("@/lib/actions/chats/delete-message");
       vi.mocked(deleteMsgAction).mockRejectedValueOnce(new Error("DB error"));
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       await expect(
         useAppStore.getState().deleteMessageDb(chatId, "msg-1"),
@@ -535,7 +577,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("setCurrentLeafDb", () => {
     it("updates currentLeafId in store and calls server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
       useAppStore
         .getState()
@@ -548,7 +590,7 @@ describe("ChatSlice — DB actions", () => {
       const { updateCurrentLeaf } =
         await import("@/lib/actions/chats/update-current-leaf");
       vi.mocked(updateCurrentLeaf).mockRejectedValueOnce(new Error("DB error"));
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       await expect(
         useAppStore.getState().setCurrentLeafDb(chatId, "leaf-1"),
       ).resolves.toBeUndefined();
@@ -557,7 +599,7 @@ describe("ChatSlice — DB actions", () => {
 
   describe("updateMessageMetadataDb", () => {
     it("updates metadata in store and calls server action", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       const metadata = JSON.stringify({ reasoning: "Some reasoning" });
       await useAppStore
@@ -575,7 +617,7 @@ describe("ChatSlice — DB actions", () => {
     });
 
     it("does nothing when message does not exist", async () => {
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       await expect(
         useAppStore
           .getState()
@@ -589,7 +631,7 @@ describe("ChatSlice — DB actions", () => {
       vi.mocked(updateMessageMetadata).mockRejectedValueOnce(
         new Error("DB error"),
       );
-      const chatId = useAppStore.getState().createChat();
+      const chatId = createChatInStore();
       useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
       await expect(
         useAppStore.getState().updateMessageMetadataDb(chatId, "msg-1", "{}"),
