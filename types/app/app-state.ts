@@ -95,6 +95,7 @@ export type AppState = {
     messageRows: MessageRow[],
     attachmentRows?: AttachmentRow[],
   ) => void;
+  upsertChat: (chat: Chat) => void;
   createChatDb: (
     title?: string,
     projectId?: string,

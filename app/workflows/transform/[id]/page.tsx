@@ -62,7 +62,7 @@ import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-ru
 import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ModelSelector } from "@/components/shared/model-selector";
-import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
+
 import type { TransformStep } from "@/types/transform/transform-agent";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
@@ -136,7 +136,26 @@ export default function AgentEditorPage() {
           router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
           return;
         }
-        const agent = transformAgentRowToStore(row);
+        let steps = [];
+        try {
+          steps = JSON.parse(row.steps);
+        } catch {
+          steps = [];
+        }
+        const agent = {
+          id: row.id,
+          userId: row.userId,
+          name: row.name,
+          description: row.description ?? "",
+          globalContext: row.globalContext ?? undefined,
+          modelId: row.modelId ?? undefined,
+          tools: row.tools,
+          knowledgeBaseIds: row.knowledgeBaseIds,
+          requiresFileUpload: row.requiresFileUpload,
+          steps,
+          createdAt: new Date(row.createdAt),
+          updatedAt: new Date(row.updatedAt),
+        };
         setName(agent.name);
         setDescription(agent.description);
         setGlobalContext(agent.globalContext ?? "");

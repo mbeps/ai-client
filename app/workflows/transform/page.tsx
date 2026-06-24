@@ -4,12 +4,33 @@ import { Plus, Settings2, Zap } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
-import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
+
 import { TransformAgentCard } from "@/components/workflows/sheet-flow/transform-agent-card";
 
 export default async function TransformAgentsPage() {
   const rows = await listTransformAgents();
-  const agents = rows.map(transformAgentRowToStore);
+  const agents = rows.map((row) => {
+    let steps = [];
+    try {
+      steps = JSON.parse(row.steps);
+    } catch {
+      steps = [];
+    }
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      description: row.description ?? "",
+      globalContext: row.globalContext ?? undefined,
+      modelId: row.modelId ?? undefined,
+      tools: row.tools,
+      knowledgeBaseIds: row.knowledgeBaseIds,
+      requiresFileUpload: row.requiresFileUpload,
+      steps,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    };
+  });
 
   return (
     <div className="space-y-6">

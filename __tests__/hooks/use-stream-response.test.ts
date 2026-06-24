@@ -11,7 +11,9 @@ const mockToastSuccess = vi.hoisted(() => vi.fn());
 const mockHandleApiError = vi.hoisted(() => vi.fn().mockReturnValue(false));
 const mockAddMessage = vi.hoisted(() => vi.fn());
 const mockUpdateMessageAttachments = vi.hoisted(() => vi.fn());
-const mockPersistMessage = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockPersistMessage = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
 const mockProcessAttachments = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 const mockGetState = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -285,9 +287,7 @@ describe("useStreamResponse", () => {
       (global.fetch as any).mockImplementation((url: string, options: any) => {
         return new Promise((resolve) => {
           options.signal.addEventListener("abort", () => {
-            resolve(
-              Promise.reject(new DOMException("Aborted", "AbortError")),
-            );
+            resolve(Promise.reject(new DOMException("Aborted", "AbortError")));
           });
 
           // Stream starts but never finishes
@@ -359,13 +359,7 @@ describe("useStreamResponse", () => {
 
       // Start streaming and abort quickly
       const streamPromise = act(async () => {
-        result.current.streamResponse(
-          userMsgId,
-          "Message",
-          null,
-          [],
-          "gpt-4",
-        );
+        result.current.streamResponse(userMsgId, "Message", null, [], "gpt-4");
       });
 
       // Abort after a brief moment

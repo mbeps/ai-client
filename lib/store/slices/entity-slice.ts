@@ -70,23 +70,18 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     set({ userSettings: settings });
   },
 
-  loadProjects: createEntityLoader(
-    set,
-    "projects",
-    listProjects,
-    (row) => ({
-      id: row.id,
-      userId: row.userId,
-      name: row.name,
-      description: row.description ?? "",
-      isPinned: row.isPinned,
-      globalPrompt: row.globalPrompt ?? "",
-      tools: row.tools ?? [],
-      knowledgebaseId: row.knowledgebaseId ?? null,
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
-    }),
-  ),
+  loadProjects: createEntityLoader(set, "projects", listProjects, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description ?? "",
+    isPinned: row.isPinned,
+    globalPrompt: row.globalPrompt ?? "",
+    tools: row.tools ?? [],
+    knowledgebaseId: row.knowledgebaseId ?? null,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
 
   loadTransformAgents: createEntityLoader(
     set,
@@ -133,20 +128,15 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     }),
   ),
 
-  loadPrompts: createEntityLoader(
-    set,
-    "prompts",
-    listPrompts,
-    (row) => ({
-      id: row.id,
-      userId: row.userId,
-      title: row.title,
-      shortcut: row.shortcut,
-      content: row.content,
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
-    }),
-  ),
+  loadPrompts: createEntityLoader(set, "prompts", listPrompts, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    title: row.title,
+    shortcut: row.shortcut,
+    content: row.content,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
 
   loadMcpServers: createEntityLoader(
     set,

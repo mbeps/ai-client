@@ -38,6 +38,7 @@ type ChatSlice = Pick<
   | "updateMessageAttachments"
   | "updateMessageMetadataDb"
   | "loadChats"
+  | "upsertChat"
   | "renameChatDb"
   | "moveChatDb"
   | "createChatDb"
@@ -298,6 +299,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
 
     set({ chats });
+  },
+
+  upsertChat: (chat) => {
+    set((state) => ({
+      chats: { ...state.chats, [chat.id]: chat },
+    }));
   },
 
   renameChatDb: async (id, title) => {

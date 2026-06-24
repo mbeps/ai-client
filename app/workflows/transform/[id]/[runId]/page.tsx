@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-import { transformAgentRowToStore } from "@/lib/store/mappers/transform-agent";
+
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type {
   TransformRun,
@@ -124,7 +124,26 @@ export default function TransformRunDetailPage() {
 
       const agentRow = await getTransformAgent(runRow.agentId);
       if (agentRow) {
-        setAgent(transformAgentRowToStore(agentRow));
+        let steps = [];
+        try {
+          steps = JSON.parse(agentRow.steps);
+        } catch {
+          steps = [];
+        }
+        setAgent({
+          id: agentRow.id,
+          userId: agentRow.userId,
+          name: agentRow.name,
+          description: agentRow.description ?? "",
+          globalContext: agentRow.globalContext ?? undefined,
+          modelId: agentRow.modelId ?? undefined,
+          tools: agentRow.tools,
+          knowledgeBaseIds: agentRow.knowledgeBaseIds,
+          requiresFileUpload: agentRow.requiresFileUpload,
+          steps,
+          createdAt: new Date(agentRow.createdAt),
+          updatedAt: new Date(agentRow.updatedAt),
+        });
       }
       setIsLoading(false);
 

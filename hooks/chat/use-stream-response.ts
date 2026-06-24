@@ -51,28 +51,36 @@ export function useStreamResponse(
   // Streaming state management (inlined from useStreamState)
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
-  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
+  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(
+    null,
+  );
   const [isStreamingReasoning, setIsStreamingReasoning] = useState(false);
 
   // Tool call tracking (inlined from useToolCalls)
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
 
-  const addToolCall = useCallback((toolCallId: string, toolName: string, args?: unknown) => {
-    setActiveToolCalls((prev) => [
-      ...prev,
-      { toolCallId, toolName, args, status: "calling" },
-    ]);
-  }, []);
+  const addToolCall = useCallback(
+    (toolCallId: string, toolName: string, args?: unknown) => {
+      setActiveToolCalls((prev) => [
+        ...prev,
+        { toolCallId, toolName, args, status: "calling" },
+      ]);
+    },
+    [],
+  );
 
   const updateToolCall = useCallback(
-    (toolCallId: string, updates: Partial<Pick<ToolCallState, "status" | "result">>) => {
+    (
+      toolCallId: string,
+      updates: Partial<Pick<ToolCallState, "status" | "result">>,
+    ) => {
       setActiveToolCalls((prev) =>
         prev.map((tc) =>
-          tc.toolCallId === toolCallId ? { ...tc, ...updates } : tc
-        )
+          tc.toolCallId === toolCallId ? { ...tc, ...updates } : tc,
+        ),
       );
     },
-    []
+    [],
   );
 
   const clearToolCalls = useCallback(() => {
