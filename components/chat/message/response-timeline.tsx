@@ -66,7 +66,7 @@ export function ResponseTimeline({
                 toolName: tc.toolName,
                 result: tc.result,
               }))}
-            initialOpen={isLatest}
+            initialOpen={false}
           />,
         );
       } else if (hasStaticTools) {
