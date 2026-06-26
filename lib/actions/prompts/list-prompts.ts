@@ -12,7 +12,6 @@ import type { PromptRow } from "@/types/prompt/prompt-row";
  *
  * @returns Array of all user's prompts sorted by updatedAt descending; empty array if no prompts exist
  * @throws Error when session is invalid or user is not authenticated
- * @author Maruf Bepary
  */
 export async function listPrompts(): Promise<PromptRow[]> {
   const session = await requireSession();

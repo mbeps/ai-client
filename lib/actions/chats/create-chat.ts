@@ -21,7 +21,6 @@ import { logger } from "@/lib/logger";
  * @throws ZodError if any input fails schema validation.
  * @see getChat to fetch a single chat with messages.
  * @see deleteChat to remove a chat.
- * @author Maruf Bepary
  */
 export async function createChat(
   title?: string,

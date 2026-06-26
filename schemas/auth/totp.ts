@@ -6,7 +6,6 @@ import { sixDigitCodeField } from "../shared-fields";
  * Used with react-hook-form when the user enters their authenticator app code.
  * Code must be exactly 6 digits.
  *
- * @author Maruf Bepary
  */
 export const totpSchema = z.object({
   code: sixDigitCodeField(),
@@ -15,6 +14,5 @@ export const totpSchema = z.object({
 /**
  * Inferred TypeScript type for the TOTP form.
  *
- * @author Maruf Bepary
  */
 export type TotpFormData = z.infer<typeof totpSchema>;

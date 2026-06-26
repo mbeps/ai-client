@@ -11,7 +11,6 @@ import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory"
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if server does not exist or user does not own it (returns "Not Found").
  * @throws Error if database deletion fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export const deleteMcpServer = deleteEntityFactory({
   table: mcpServer,

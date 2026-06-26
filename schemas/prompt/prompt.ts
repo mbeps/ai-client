@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { contentField } from "../shared-fields";
+import { contentField, nameField, idField } from "../shared-fields";
 
 /**
  * Validates new slash-command prompt creation with title, content, and alphanumeric shortcut.
@@ -7,10 +7,9 @@ import { contentField } from "../shared-fields";
  * Use with createPrompt server action to register new AI prompt shortcuts prepended to message context.
  *
  * @see {@link lib/actions/prompts/create-prompt.ts} for creation action
- * @author Maruf Bepary
  */
 export const createPromptSchema = z.object({
-  title: z.string().min(1, "Title is required").max(100),
+  title: nameField,
   content: contentField.min(1, "Content is required"),
   shortcut: z
     .string()
@@ -27,7 +26,6 @@ export const createPromptSchema = z.object({
  * Use with updatePrompt server action to modify shortcut definitions without full re-entry.
  *
  * @see {@link lib/actions/prompts/update-prompt.ts} for update action
- * @author Maruf Bepary
  */
 export const updatePromptSchema = createPromptSchema.partial();
 
@@ -35,9 +33,9 @@ export const updatePromptSchema = createPromptSchema.partial();
  * Validates the full prompt object as stored in the database.
  */
 export const promptSchema = z.object({
-  id: z.string().uuid(),
+  id: idField,
   userId: z.string(),
-  title: z.string().min(1).max(100),
+  title: nameField,
   shortcut: z.string().min(1).max(50),
   content: z.string().min(1),
   createdAt: z.date(),

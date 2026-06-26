@@ -39,7 +39,6 @@ interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
  * Standardised layout for resource listing pages (Chats, Projects, Assistants).
  * Handles search, sorting by updatedAt, and optional custom filtering.
  *
- * @author Maruf Bepary
  */
 export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
   icon,

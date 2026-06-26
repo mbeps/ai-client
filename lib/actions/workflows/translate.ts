@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { generateText } from "ai";
 import { requireSession } from "@/lib/auth/require-session";
@@ -87,7 +88,7 @@ export async function translateText(input: unknown) {
     if (isRateLimitError(error)) {
       throw new RateLimitError(normalizeRateLimitMessage(error));
     }
-    console.error("[Translate Action Error]:", error);
+    logger.error("[Translate Action Error]:", error);
     throw new Error("Failed to translate text. Please try again.");
   }
 }

@@ -28,7 +28,6 @@ import {
  * `ROUTES.AUTH.RESET_PASSWORD`. Includes a Back button to return to sign-in.
  *
  * @param props.openSignInTab - Callback that switches the parent view back to sign-in
- * @author Maruf Bepary
  */
 export function ForgotPassword({
   openSignInTab,

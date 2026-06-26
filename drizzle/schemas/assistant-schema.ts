@@ -6,7 +6,6 @@ import { user } from "./auth-schema";
  * Many-to-one with user (CASCADE DELETE); prompt is prepended to AI calls for chats bound to this assistant.
  * Enables creation of reusable chat personality presets; auto-generated UUID primary key.
  *
- * @author Maruf Bepary
  */
 export const assistant = pgTable(
   "assistant",

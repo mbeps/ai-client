@@ -11,7 +11,6 @@ import { ActionButton } from "@/components/ui/action-button";
  *
  * @param props.action - Better Auth mutation; must return `{ error: null | { message? } }`
  * @param props.successMessage - Toast message shown on success; omit to suppress
- * @author Maruf Bepary
  */
 export function BetterAuthActionButton({
   action,

@@ -15,7 +15,6 @@ import { CreateProjectDialog } from "./_components/create-project-dialog";
  *
  * @returns Searchable list of project cards with creation and management options.
  * @see HomePage to create new chats within a selected project.
- * @author Maruf Bepary
  */
 export default function ProjectsPage() {
   const projects = useAppStore((state) => state.projects);

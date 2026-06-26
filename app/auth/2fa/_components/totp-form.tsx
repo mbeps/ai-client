@@ -25,7 +25,6 @@ import { totpSchema, TotpFormData } from "@/schemas/auth/totp";
  * Calls `authClient.twoFactor.verifyTotp`; redirects to `ROUTES.HOME` on success.
  * Rendered as the default tab on the 2FA challenge page.
  *
- * @author Maruf Bepary
  */
 export function TotpForm() {
   const router = useRouter();

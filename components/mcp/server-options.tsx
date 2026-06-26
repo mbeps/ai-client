@@ -1,9 +1,7 @@
 "use client";
 import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
 import type { McpServer } from "@/types/mcp/mcp-server";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { toast } from "sonner";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { renameMcpServer } from "@/lib/actions/mcp-servers/rename-mcp-server";
@@ -12,21 +10,7 @@ import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
-/**
- * Responsive menu for server actions: rename, enable/disable toggle, and delete.
- * Adapts between dropdown (desktop) and drawer (mobile) UI. Uses direct Server Actions for mutations.
- * Shows delete confirmation dialog before permanent removal.
- *
- * @param server - MCP server to manage; used for rename, toggle, and delete operations
- * @see {@link ServerCard} for server display
- * @see {@link RenameDialog} for rename confirmation UI
- * @see {@link DeleteConfirmDialog} for deletion confirmation UI
- */
 export interface ServerOptionsProps {
-  /**
-   * The MCP server to manage.
-   * All operations (rename, toggle, delete) are scoped to this server.
-   */
   server: McpServer;
 }
 
@@ -87,23 +71,19 @@ export function ServerOptions({ server }: ServerOptionsProps) {
   ];
 
   return (
-    <>
-      <ResponsiveMenu title={server.name} items={items} isMobile={isMobile} />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={server.name}
-        onConfirm={handleRename}
-        title="Rename Server"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Server"
-        description={`Are you sure you want to delete "${server.name}"? This action cannot be undone.`}
-        loading={isDeleting}
-      />
-    </>
+    <BaseEntityOptions
+      name={server.name}
+      items={items}
+      isMobile={isMobile}
+      showRename={showRename}
+      setShowRename={setShowRename}
+      showDelete={showDelete}
+      setShowDelete={setShowDelete}
+      isDeleting={isDeleting}
+      handleRename={handleRename}
+      handleDelete={handleDelete}
+      renameTitle="Rename Server"
+      deleteTitle="Delete Server"
+    />
   );
 }

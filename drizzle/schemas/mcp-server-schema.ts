@@ -6,7 +6,6 @@ import { user } from "./auth-schema";
  * Many-to-one with user (CASCADE DELETE).
  * enabled flag controls whether the server is available for tool selection in chat UI; used by MCP library for discovery.
  *
- * @author Maruf Bepary
  */
 export const mcpServer = pgTable(
   "mcp_server",

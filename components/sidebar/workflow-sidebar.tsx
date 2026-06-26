@@ -43,7 +43,6 @@ import * as React from "react";
  * Provides navigation to various automated workflows like Translation and Transform.
  * Includes "Back to Home" and a user profile dropdown footer matching the main app sidebar.
  *
- * @author Maruf Bepary
  */
 export function WorkflowSidebar({
   ...props

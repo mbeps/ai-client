@@ -28,7 +28,6 @@ interface MoveChatDialogProps {
  * A search-enabled dialog that allows users to move a chat to a project.
  * Uses Shadcn UI's Command component for quick filtering.
  *
- * @author Maruf Bepary
  */
 export function MoveChatDialog({
   isOpen,

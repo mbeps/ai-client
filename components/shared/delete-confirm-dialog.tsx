@@ -31,7 +31,6 @@ interface DeleteConfirmDialogProps {
  * Shared alert dialog for confirming destructive delete actions.
  * Provides a standardised layout with a title, description, and "Cancel" vs "Delete" buttons.
  *
- * @author Maruf Bepary
  */
 export function DeleteConfirmDialog({
   isOpen,

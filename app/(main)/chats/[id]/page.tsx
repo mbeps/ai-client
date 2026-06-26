@@ -15,7 +15,6 @@ import type { Chat } from "@/types/chat/chat";
  * @returns Chat interface with branching message tree, artifacts, and AI responses.
  * @throws 404 if chat not found or user lacks ownership.
  * @see ChatPageClient for streaming and branching UI.
- * @author Maruf Bepary
  */
 export default async function ChatPage({
   params,

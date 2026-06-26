@@ -28,7 +28,6 @@ interface UseEntityOptionsProps {
  * @param props.useRouterRefresh - Whether to trigger router.refresh() after successful mutation.
  * @returns Dialog state (showRename, showDelete, isDeleting) and handlers (handleRename, handleDelete).
  * @see useCreateChat for chat creation flows.
- * @author Maruf Bepary
  */
 export function useEntityOptions({
   id,

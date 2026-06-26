@@ -10,7 +10,6 @@ import { sendEmail } from "./send-email";
  * @returns Promise resolving when email is queued with Postmark
  * @throws {ServerError} When Postmark fails to send the email
  * @see sendEmail for underlying Postmark integration
- * @author Maruf Bepary
  */
 export function sendPasswordResetEmail({
   user,

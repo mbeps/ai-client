@@ -3,14 +3,17 @@ export const PROMPTS = {
     FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE: (lines: string): string =>
       `## File Access\nIMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
     KNOWLEDGE_BASE_TOOL_INSTRUCTION:
-      "A knowledge base is attached to this conversation. Use the `search_knowledge_base` tool to retrieve relevant information when answering questions about the user's documents or when you need domain-specific context. Formulate precise search queries. Do not call the tool for conversational or general-knowledge questions.",
+      "A knowledge base is attached to this conversation with company-specific documents and domain context. " +
+      "ALWAYS search the knowledge base first when answering questions, unless the query is clearly off-topic or requires only common knowledge. " +
+      "Examples of when to search: product details, policies, technical specs, process documentation, historical data, user requirements, any domain-specific content. " +
+      "Use precise, focused search queries. After retrieving results, synthesise them into your response.",
   },
   TOOLS: {
     MANAGE_ARTIFACT: {
       DESCRIPTION:
         "Manage and display an interactive artifact to the user. Use this when the user asks for a document, email, text, spreadsheet, HTML UI, or Mermaid diagram.\n\n" +
         "TYPE GUIDELINES:\n" +
-        "- 'markdown': Use for text, reports, emails, or code. Supports GitHub Flavored Markdown (tables, lists, etc).\n" +
+        "- 'markdown': Use for text, reports, emails, or code. Supports GitHub Flavored Markdown (tables, lists, etc). Use this by default.\n" +
         '- \'spreadsheet\': Use for rich tabular data. Pass the full multi-sheet JSON via the `sheets` argument: [{ "name": "SheetName", "data": [[values]] }]. Values can be primitives or objects { "v": value, "s": { "bold": boolean, "italic": boolean, "textAlign": \'left\'|\'center\'|\'right\', "backgroundColor": string, "color": string } }.\n' +
         "- 'html': Use for interactive designs, custom layouts, or web-like dashboards. Provide standalone HTML snippets.\n" +
         "- 'mermaid': Strictly for diagrams (flowcharts, sequence, etc). Provide raw Mermaid.js markup.\n\n" +
@@ -59,8 +62,11 @@ export const PROMPTS = {
     TRANSLATE: (
       sourceDesc: string,
       targetLanguage: string,
-      text: string, hasImage?: boolean,
+      text: string,
+      hasImage?: boolean,
     ): string =>
-      hasImage ? `I have attached an image containing text. Please perform the following steps:\n1. OCR: Accurately identify and extract all text from the image.\n2. Translate: Translate the extracted text from ${sourceDesc} to ${targetLanguage}.\n3. Formatting: Maintain the original formatting as much as possible.\n\nOnly return the translated text. Do not include explanations, original text, or extra commentary.` : `Translate the following text from ${sourceDesc} to ${targetLanguage}. \nOnly return the translated text. Do not include any explanations or extra text.\n\nText to translate:\n${text}`,
+      hasImage
+        ? `I have attached an image containing text. Please perform the following steps:\n1. OCR: Accurately identify and extract all text from the image.\n2. Translate: Translate the extracted text from ${sourceDesc} to ${targetLanguage}.\n3. Formatting: Maintain the original formatting as much as possible.\n\nOnly return the translated text. Do not include explanations, original text, or extra commentary.`
+        : `Translate the following text from ${sourceDesc} to ${targetLanguage}. \nOnly return the translated text. Do not include any explanations or extra text.\n\nText to translate:\n${text}`,
   },
 } as const;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "@/schemas/shared-fields";
 
 /**
  * Validates the profile update form for user profile modifications.
@@ -7,15 +8,12 @@ import { z } from "zod";
  *
  * @see {@link schemas/change-password.ts} for password updates
  * @see {@link schemas/shared-fields.ts} for field definitions
- * @author Maruf Bepary
  */
 export const profileUpdateSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: nameField,
 });
 
 /**
  * TypeScript type inferred from profileUpdateSchema; used for form state typing.
- *
- * @author Maruf Bepary
  */
 export type ProfileUpdateFormData = z.infer<typeof profileUpdateSchema>;

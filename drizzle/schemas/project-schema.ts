@@ -6,7 +6,6 @@ import { user } from "./auth-schema";
  * Many-to-one with user (CASCADE DELETE); globalPrompt is prepended to AI calls for chats in this project.
  * isPinned allows users to surface frequently-used projects in UI; auto-generated UUID primary key.
  *
- * @author Maruf Bepary
  */
 export const project = pgTable(
   "project",

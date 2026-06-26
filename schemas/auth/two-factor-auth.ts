@@ -8,7 +8,6 @@ import { requiredPasswordField, sixDigitCodeField } from "../shared-fields";
  *
  * @see {@link schemas/two-factor-auth.ts} for TOTP verification schema
  * @see {@link schemas/shared-fields.ts} for field definitions
- * @author Maruf Bepary
  */
 export const twoFactorAuthSchema = z.object({
   password: requiredPasswordField,
@@ -17,7 +16,6 @@ export const twoFactorAuthSchema = z.object({
 /**
  * TypeScript type inferred from twoFactorAuthSchema; used for form state typing.
  *
- * @author Maruf Bepary
  */
 export type TwoFactorAuthForm = z.infer<typeof twoFactorAuthSchema>;
 
@@ -28,7 +26,6 @@ export type TwoFactorAuthForm = z.infer<typeof twoFactorAuthSchema>;
  *
  * @see {@link schemas/two-factor-auth.ts} for password confirmation schema
  * @see {@link schemas/shared-fields.ts} for sixDigitCodeField
- * @author Maruf Bepary
  */
 export const qrSchema = z.object({
   token: sixDigitCodeField("Token"),
@@ -37,6 +34,5 @@ export const qrSchema = z.object({
 /**
  * TypeScript type inferred from qrSchema; used for form state typing.
  *
- * @author Maruf Bepary
  */
 export type QrForm = z.infer<typeof qrSchema>;

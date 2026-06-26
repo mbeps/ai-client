@@ -11,7 +11,6 @@ import type { AssistantRow } from "@/types/assistant/assistant-row";
  * @param assistantId - Unique identifier of the assistant.
  * @param name - The new display name for the assistant.
  * @returns The updated assistant record.
- * @author Maruf Bepary
  */
 export const renameAssistant = renameEntityFactory<AssistantRow>({
   table: assistant,

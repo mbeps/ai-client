@@ -10,7 +10,6 @@ import type { Attachment } from "@/types/attachment/attachment";
  *
  * @param row - Flat database row containing chat metadata, messages, and attachments
  * @returns Fully structured Chat object with nested message tree and attachment associations
- * @author Maruf Bepary
  */
 export function buildChatFromRows(row: ChatWithMessages): Chat {
   const messages: Record<string, Message> = {};

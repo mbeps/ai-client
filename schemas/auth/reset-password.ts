@@ -8,7 +8,6 @@ import { passwordField } from "@/schemas/shared-fields";
  *
  * @see {@link schemas/change-password.ts} for authenticated password change
  * @see {@link schemas/shared-fields.ts} for field definitions
- * @author Maruf Bepary
  */
 export const resetPasswordSchema = z.object({
   password: passwordField,
@@ -17,6 +16,5 @@ export const resetPasswordSchema = z.object({
 /**
  * TypeScript type inferred from resetPasswordSchema; used for form state typing.
  *
- * @author Maruf Bepary
  */
 export type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;

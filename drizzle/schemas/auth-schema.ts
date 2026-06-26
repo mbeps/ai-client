@@ -13,7 +13,6 @@ import {
  * Primary key for all auth relationships; one-to-many with session, account, and passkey; one-to-one with twoFactor.
  * emailVerified and twoFactorEnabled control authentication flow; image stores avatar URL for profile display.
  *
- * @author Maruf Bepary
  */
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -34,7 +33,6 @@ export const user = pgTable("user", {
  * Many-to-one with user (CASCADE DELETE); expiresAt enforces session TTL; token is UNIQUE and used as session identifier.
  * ipAddress and userAgent enable device tracking and suspicious activity detection; updated_at reflects last activity.
  *
- * @author Maruf Bepary
  */
 export const session = pgTable(
   "session",
@@ -61,7 +59,6 @@ export const session = pgTable(
  * OAuth: accountId, accessToken, refreshToken, idToken, scope, and expiry timestamps for token lifecycle.
  * Credential auth: password hash; unique constraint on (userId, providerId) enforces single provider per user.
  *
- * @author Maruf Bepary
  */
 export const account = pgTable(
   "account",
@@ -95,7 +92,6 @@ export const account = pgTable(
  * identifier holds the email address; value holds token hash or code; expiresAt enforces TTL.
  * No direct user foreign key; used by auth system to validate ownership before account mutations.
  *
- * @author Maruf Bepary
  */
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -114,7 +110,6 @@ export const verification = pgTable("verification", {
  * One-to-one with user (CASCADE DELETE); secret used by authenticator apps (Google Authenticator, Authy, etc.).
  * backupCodes stored as JSON array of one-time use codes for account recovery if authenticator lost.
  *
- * @author Maruf Bepary
  */
 export const twoFactor = pgTable(
   "two_factor",
@@ -135,7 +130,6 @@ export const twoFactor = pgTable(
  * credentialID and publicKey enable cryptographic validation; deviceType (e.g., 'multiDevice', 'singleDevice') and backedUp track platform capabilities.
  * transports (e.g., 'internal', 'usb') hint at expected authentication methods; aaguid identifies authenticator model.
  *
- * @author Maruf Bepary
  */
 export const passkey = pgTable(
   "passkey",

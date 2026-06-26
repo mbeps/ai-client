@@ -12,7 +12,6 @@ import type { AssistantRow } from "@/types/assistant/assistant-row";
  * Fetches chats, projects, and assistants concurrently.
  * Displays a unified searchable interface.
  *
- * @author Maruf Bepary
  */
 export default async function SearchPage() {
   const [chatRows, projectRows, assistantRows] = await Promise.all([

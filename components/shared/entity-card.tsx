@@ -34,7 +34,6 @@ Assistants,
 placement.
  *
  * @param props - EntityCardProps
- * @author Maruf Bepary
  */
 export function EntityCard({
   icon,

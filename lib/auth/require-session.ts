@@ -11,7 +11,6 @@ import { headers } from "next/headers";
  *
  * @returns The authenticated session object containing user information and metadata
  * @throws {Error} "Unauthorized" when no valid session is found for the current request
- * @author Maruf Bepary
  */
 export async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { persistMessageSchema } from "@/schemas/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Attachment } from "@/types/attachment/attachment";
+import { logger } from "@/lib/logger";
 
 export type ToolCall = {
   toolCallId: string;
@@ -104,7 +105,7 @@ export function parseMessageMetadata(
       reasoning,
     };
   } catch (e) {
-    console.error("[MessageMapper] Metadata parse error:", e);
+    logger.error("[MessageMapper] Metadata parse error:", e);
     return empty;
   }
 }
@@ -133,7 +134,7 @@ export function extractCitations(toolResults: ToolResult[]): Citation[] {
  */
 export function mapMessageFromDb(
   m: z.infer<typeof persistMessageSchema> & {
-    createdAt: Date | string | null;
+    createdAt: Date;
     chatId: string;
   },
   attachments: Attachment[] = [],
@@ -142,12 +143,9 @@ export function mapMessageFromDb(
 
   return {
     id: m.id,
-    role: m.role as "user" | "assistant",
+    role: m.role as Message["role"],
     content: m.content,
-    createdAt:
-      m.createdAt instanceof Date
-        ? m.createdAt
-        : new Date(m.createdAt || Date.now()),
+    createdAt: m.createdAt,
     parentId: m.parentId,
     childrenIds: [], // Populated during tree reconstruction
     metadata: m.metadata || null,

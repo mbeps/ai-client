@@ -14,7 +14,6 @@ import { z } from "zod";
  * @param id - Unique identifier of the prompt.
  * @param data - Fields to update.
  * @returns The updated prompt record.
- * @author Maruf Bepary
  */
 export async function updatePrompt(
   id: string,

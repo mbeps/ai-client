@@ -8,7 +8,6 @@ import { jsonObjectSchema, idField } from "../shared-fields";
  * Use with createMcpServer and updateMcpServer server actions to persist tool provider configurations.
  *
  * @see {@link lib/mcp/} for MCP server creation/update actions
- * @author Maruf Bepary
  */
 const mcpServerBaseSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -28,7 +27,6 @@ const mcpServerBaseSchema = z.object({
  * Validates complete server configuration before persistence.
  *
  * @see {@link lib/mcp/} for creation action
- * @author Maruf Bepary
  */
 export const createMcpServerSchema = mcpServerBaseSchema;
 
@@ -37,7 +35,6 @@ export const createMcpServerSchema = mcpServerBaseSchema;
  * Validates complete server configuration before persistence (does not support partial updates).
  *
  * @see {@link lib/mcp/} for update action
- * @author Maruf Bepary
  */
 export const updateMcpServerSchema = mcpServerBaseSchema;
 

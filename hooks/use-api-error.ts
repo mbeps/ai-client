@@ -13,6 +13,8 @@ import {
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
   PROVIDER_NOT_CONFIGURED_ERROR_CODE,
   RATE_LIMIT_ERROR_CODE,
+  UNAUTHORIZED_ERROR_CODE,
+  UNAUTHORIZED_ERROR_MESSAGE,
 } from "@/lib/constants/errors";
 import { ROUTES } from "@/constants/routes";
 
@@ -21,7 +23,6 @@ import { ROUTES } from "@/constants/routes";
  * Specifically detects missing API key errors and provides a shortcut to settings.
  *
  * @returns Object containing error handling methods.
- * @author Maruf Bepary
  */
 export function useApiError() {
   const router = useRouter();
@@ -117,6 +118,17 @@ export function useApiError() {
           },
         },
       );
+      return true;
+    }
+
+    if (code === UNAUTHORIZED_ERROR_CODE) {
+      toast.error("Session Expired", {
+        description: UNAUTHORIZED_ERROR_MESSAGE,
+        action: {
+          label: "Log In",
+          onClick: () => router.push(ROUTES.AUTH.LOGIN.path),
+        },
+      });
       return true;
     }
 

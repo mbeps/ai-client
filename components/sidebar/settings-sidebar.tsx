@@ -32,7 +32,6 @@ import { ROUTES } from "@/constants/routes";
  * "Back to Home" button returns to main chat interface. Active route is highlighted based on `pathname`.
  *
  * @see ROUTES.SETTINGS for available settings page routes
- * @author Maruf Bepary
  */
 export function SettingsSidebar({
   ...props

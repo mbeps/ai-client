@@ -8,7 +8,6 @@
  * import { ROUTES } from "@/lib/routes";
  * const chatPath = ROUTES.CHATS.detail("chat-123");  // "/chats/chat-123"
  * const settingsPath = ROUTES.SETTINGS.TOOLS.path;  // "/settings/tools"
- * @author Maruf Bepary
  */
 
 /** Base path segment shared by all authentication routes. */
@@ -43,7 +42,6 @@ const WORKFLOWS_BASE = "/workflows" as const;
  * Static routes expose a `.path` string; dynamic routes expose helper functions
  * that return typed path strings from their arguments.
  *
- * @author Maruf Bepary
  */
 export const ROUTES = {
   HOME: { path: "/" as const, name: "Home" },

@@ -7,6 +7,5 @@ import { promptSchema } from "@/schemas/prompt/prompt";
  * code templates, checklists, etc.) using the shortcut syntax /shortcut-name.
  * Shortcuts are hidden from the final AI request but prepend content before sending.
  *
- * @author Maruf Bepary
  */
 export type Prompt = z.infer<typeof promptSchema>;

@@ -4,7 +4,6 @@
  * This module should be imported in Drizzle client initialisation and Server Actions.
  *
  * @see db.ts for the Drizzle ORM client configuration.
- * @author Maruf Bepary
  */
 export * from "./schemas/auth-schema";
 export * from "./schemas/ai-provider-schema";

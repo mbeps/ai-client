@@ -15,7 +15,6 @@ import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory"
  * @throws Error if database transaction fails or rolls back due to constraints.
  * @see createAssistant to create a new assistant.
  * @see updateAssistant to modify an existing assistant.
- * @author Maruf Bepary
  */
 export const deleteAssistant = deleteEntityFactory({
   table: assistant,

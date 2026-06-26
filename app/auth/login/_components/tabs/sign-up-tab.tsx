@@ -27,7 +27,6 @@ import { signUpSchema, SignUpForm } from "@/schemas/auth/sign-up";
  * returned `user.emailVerified` flag is `false`.
  *
  * @param props.openEmailVerificationTab - Called with the user's email to show the verification step
- * @author Maruf Bepary
  */
 export function SignUpTab({
   openEmailVerificationTab,

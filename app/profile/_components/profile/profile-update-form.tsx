@@ -27,7 +27,6 @@ import { Label } from "@/components/ui/label";
  * Form that updates profile metadata.
  * @param user Initial user data used to seed the form.
  * @returns Controlled profile update form component.
- * @author Maruf Bepary
  */
 export function ProfileUpdateForm({
   user,

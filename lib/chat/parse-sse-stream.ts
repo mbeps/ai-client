@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 // Typed SSE event union — mirrors what the chat route emits
 export type SseEvent =
   | { type: "text"; delta: string }
@@ -45,7 +46,7 @@ export async function* parseSseStream(
           const event = JSON.parse(trimmed.slice(6)) as SseEvent;
           yield event;
         } catch (e) {
-          console.error("Failed to parse SSE event:", e, trimmed);
+          logger.error("Failed to parse SSE event:", e, trimmed);
         }
       }
     }

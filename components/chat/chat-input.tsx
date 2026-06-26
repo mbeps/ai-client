@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Mic, Send, Square, X, Save } from "lucide-react";
@@ -19,13 +19,14 @@ import { AttachmentsMenu } from "./attachments-menu";
 import { MentionCommands } from "./mention-commands";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useUserModels } from "@/hooks/use-user-models";
-import { useFileUpload } from "@/hooks/chat/use-file-upload";
-import { useMcpSelection } from "@/hooks/chat/use-mcp-selection";
-import { useKbSelection } from "@/hooks/chat/use-kb-selection";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
 import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
+import { processAttachment } from "@/lib/attachments/process-attachment";
+import { AttachmentVisionUnsupportedError } from "@/lib/constants/errors";
+import { useApiError } from "@/hooks/use-api-error";
+import { toast } from "sonner";
 
 /**
  * Props for the ChatInput component.
@@ -109,7 +110,6 @@ interface ChatInputProps {
  * @see usePromptCommands for slash-command handling.
  * @see processAttachment for file validation and metadata extraction.
  * @see ToolPickerDialog for MCP server/tool UI.
- * @author Maruf Bepary
  */
 export function ChatInput({
   onSend,
@@ -158,31 +158,160 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const { handleApiError } = useApiError();
 
-  // -- Extracted hooks --
-  const {
-    attachments,
-    addFiles,
-    removeAttachment,
-    clearAttachments,
-    isDragging,
-    dragHandlers,
-  } = useFileUpload({
-    supportsVision,
-    existingAttachments: initialAttachments,
-  });
+  // -- File Upload Logic (Inlined) --
+  const [attachments, setAttachments] =
+    useState<Attachment[]>(initialAttachments);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const {
-    selectedServerIds,
-    selectedTools,
-    toggleServer,
-    toggleTool,
-    handleBulkSelect,
-  } = useMcpSelection(initialSelectedServerIds, initialSelectedTools);
+  const addFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const localNew: Attachment[] = [];
+      for (const file of Array.from(files)) {
+        if (file.type.startsWith("image/") && !supportsVision) {
+          const error = new AttachmentVisionUnsupportedError();
+          handleApiError(error);
+          continue;
+        }
 
-  const { selectedKbs, handleToggleKb, handleRemoveKb } = useKbSelection(
-    initialSelectedKbs,
-    onKnowledgebaseChange,
+        try {
+          const att = await processAttachment(file, [
+            ...attachments,
+            ...localNew,
+          ]);
+          localNew.push(att);
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to process file",
+          );
+        }
+      }
+      if (localNew.length > 0) {
+        setAttachments((prev) => [...prev, ...localNew]);
+      }
+    },
+    [attachments, supportsVision, handleApiError],
+  );
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const clearAttachments = useCallback(() => {
+    setAttachments([]);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      if (e.dataTransfer.files.length > 0) {
+        addFiles(e.dataTransfer.files);
+      }
+    },
+    [addFiles],
+  );
+
+  // -- MCP Selection Logic (Inlined) --
+  const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
+    new Set(initialSelectedServerIds),
+  );
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(initialSelectedTools),
+  );
+
+  const toggleServer = useCallback((id: string) => {
+    setSelectedServerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        setSelectedTools((prevTools) => {
+          const nextTools = new Set(prevTools);
+          nextTools.forEach((tId) => {
+            if (tId.startsWith(`${id}:`)) nextTools.delete(tId);
+          });
+          return nextTools;
+        });
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleTool = useCallback((serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(toolId)) next.delete(toolId);
+      else {
+        next.add(toolId);
+        setSelectedServerIds((prevServers) =>
+          new Set(prevServers).add(serverId),
+        );
+      }
+      return next;
+    });
+  }, []);
+
+  const handleBulkSelect = useCallback(
+    (serverId: string, toolNames: string[], select: boolean) => {
+      if (select) {
+        setSelectedServerIds((prev) => new Set(prev).add(serverId));
+        setSelectedTools((prev) => {
+          const next = new Set(prev);
+          toolNames.forEach((name) => next.add(`${serverId}:tool:${name}`));
+          return next;
+        });
+      } else {
+        setSelectedTools((prev) => {
+          const next = new Set(prev);
+          toolNames.forEach((name) => next.delete(`${serverId}:tool:${name}`));
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
+  // -- KB Selection Logic (Inlined) --
+  const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
+    new Set(initialSelectedKbs),
+  );
+
+  const handleToggleKb = useCallback(
+    (id: string) => {
+      setSelectedKbs((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        onKnowledgebaseChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onKnowledgebaseChange],
+  );
+
+  const handleRemoveKb = useCallback(
+    (id: string) => {
+      setSelectedKbs((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        onKnowledgebaseChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onKnowledgebaseChange],
   );
 
   const {
@@ -286,9 +415,9 @@ export function ChatInput({
   return (
     <div
       className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors relative ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
-      onDragOver={dragHandlers.onDragOver}
-      onDragLeave={dragHandlers.onDragLeave}
-      onDrop={dragHandlers.onDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {openTrigger && (
         <MentionCommands

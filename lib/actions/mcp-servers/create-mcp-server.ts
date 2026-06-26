@@ -19,7 +19,6 @@ import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory"
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws ZodError if data fails schema validation (missing required fields, malformed URL).
  * @throws Error if database insertion fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export const createMcpServer = createEntityFactory<
   CreateMcpServer,

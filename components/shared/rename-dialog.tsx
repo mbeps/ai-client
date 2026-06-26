@@ -30,7 +30,6 @@ type RenameFormData = z.infer<typeof renameSchema>;
  * @param props.onConfirm - Callback triggered when the new name is submitted.
  * @param props.title - Optional heading for the dialog (defaults to "Rename").
  * @param props.label - Optional text for the input label.
- * @author Maruf Bepary
  */
 export function RenameDialog({
   isOpen,

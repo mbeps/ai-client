@@ -37,7 +37,6 @@ type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];
  *
  * @returns Tabbed auth interface with sign-in, sign-up, and recovery flows.
  * @see TwoFactorPage for TOTP/backup code challenges when 2FA is enabled.
- * @author Maruf Bepary
  */
 export default function LoginPage() {
   const router = useRouter();

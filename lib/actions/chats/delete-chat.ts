@@ -18,7 +18,6 @@ import { z } from "zod";
  * @throws Error if deletion fails due to database constraints.
  * @see createChat to create a new chat.
  * @see getChat to fetch a single chat.
- * @author Maruf Bepary
  */
 export async function deleteChat(chatId: string): Promise<void> {
   const session = await requireSession();

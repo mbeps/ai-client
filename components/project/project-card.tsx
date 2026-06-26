@@ -10,7 +10,6 @@ import { EntityCard } from "@/components/shared/entity-card";
 /**
  * Props for the ProjectCard component.
  *
- * @author Maruf Bepary
  */
 interface ProjectCardProps {
   /** The project entity containing id, name, description, and isPinned flag. */
@@ -24,7 +23,6 @@ interface ProjectCardProps {
  *
  * @param props.project - Project entity with metadata for display and interaction.
  * @see ProjectOptions for menu actions including pin toggle.
- * @author Maruf Bepary
  */
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();

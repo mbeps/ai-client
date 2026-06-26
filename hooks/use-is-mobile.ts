@@ -10,7 +10,6 @@ const MOBILE_BREAKPOINT = 768;
  *
  * @returns Boolean indicating whether viewport is in mobile state (< 768px).
  * @see ResponsiveMenu for component that consumes this hook.
- * @author Maruf Bepary
  */
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(

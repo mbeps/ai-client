@@ -12,7 +12,6 @@ import {
  * Use with createAssistant server action to persist new AI personas for chat sessions.
  *
  * @see {@link lib/actions/assistants/create-assistant.ts} for creation action
- * @author Maruf Bepary
  */
 export const createAssistantSchema = z.object({
   name: nameField,
@@ -28,23 +27,16 @@ export const createAssistantSchema = z.object({
  * Use with updateAssistant server action to modify existing assistant configurations.
  *
  * @see {@link lib/actions/assistants/update-assistant.ts} for update action
- * @author Maruf Bepary
  */
-export const updateAssistantSchema = z.object({
-  name: nameField.optional(),
-  description: descriptionField,
-  prompt: contentField.optional(),
-  tools: z.array(z.string()).optional(),
-  avatar: z.string().url().max(1024).optional().nullable(),
-});
+export const updateAssistantSchema = createAssistantSchema.partial();
 
 /**
  * Validates assistant rename operations with only the new name field.
+
  * Requires name to be non-empty and under 100 characters.
  * Use with renameAssistant server action for quick name changes.
  *
  * @see {@link lib/actions/assistants/rename-assistant.ts} for rename action
- * @author Maruf Bepary
  */
 export const renameAssistantSchema = renameSchema;
 

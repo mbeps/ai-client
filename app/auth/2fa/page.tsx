@@ -20,7 +20,6 @@ const TAB_VALUES = {
  *
  * @returns Challenge page with TOTP authenticator and backup code tabs.
  * @see LoginPage for initial email/password authentication flow.
- * @author Maruf Bepary
  */
 export default async function TwoFactorPage() {
   const session = await auth.api.getSession({ headers: await headers() });

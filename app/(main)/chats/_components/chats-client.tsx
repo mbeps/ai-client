@@ -26,7 +26,6 @@ interface ChatsClientProps {
  * Uses the shared ResourceListPage for a consistent layout.
  *
  * @param props.initialChats - The list of chats from the server.
- * @author Maruf Bepary
  */
 export function ChatsClient({ initialChats }: ChatsClientProps) {
   const { chats: storeChats, upsertChat } = useAppStore();

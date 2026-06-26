@@ -11,7 +11,6 @@ import type { Message } from "@/types/message/message";
  * @see Message for the structure of individual messages in the tree
  * @see Project for workspace context
  * @see Assistant for AI persona configuration
- * @author Maruf Bepary
  */
 export type Chat = z.infer<typeof chatSchema> & {
   /**

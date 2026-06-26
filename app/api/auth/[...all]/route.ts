@@ -21,6 +21,5 @@ const authHandlers = toNextJsHandler(auth);
  * - POST /api/auth/2fa/* (TOTP setup, verification, and backup codes)
  *
  * @see auth configuration in lib/auth/auth for providers and hooks
- * @author Maruf Bepary
  */
 export const { GET, POST } = authHandlers;

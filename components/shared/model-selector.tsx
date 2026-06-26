@@ -46,7 +46,6 @@ interface ModelSelectorProps {
  *
  * @param props - Selection state and behavior callbacks.
  * @returns A combobox for model selection with groups and 'thinking' badges.
- * @author Maruf Bepary
  */
 export function ModelSelector({
   value,

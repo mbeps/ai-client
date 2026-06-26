@@ -18,7 +18,6 @@ import { z } from "zod";
  * @returns The updated or newly created user settings record
  * @throws {Error} "Unauthorized" if no session exists
  * @throws {ZodError} If input data fails validation
- * @author Maruf Bepary
  */
 export async function updateUserSettings(
   data: z.infer<typeof userSettingsSchema>,

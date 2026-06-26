@@ -10,7 +10,6 @@ import { ChatOptions } from "./chat-options";
 /**
  * Props for the ChatCard component.
  *
- * @author Maruf Bepary
  */
 interface ChatCardProps {
   /** The chat entity to display. */
@@ -23,7 +22,6 @@ interface ChatCardProps {
  * Shows a chat type label and an options menu with Move and Delete actions.
  *
  * @param props.chat - The chat to display.
- * @author Maruf Bepary
  */
 export function ChatCard({ chat }: ChatCardProps) {
   const router = useRouter();

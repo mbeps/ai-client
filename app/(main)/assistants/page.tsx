@@ -15,7 +15,6 @@ import { CreateAssistantDialog } from "./_components/create-assistant-dialog";
  *
  * @returns Searchable list of assistant cards with creation and management options.
  * @see ChatPageClient to use an assistant in a chat conversation.
- * @author Maruf Bepary
  */
 export default function AssistantsPage() {
   const assistants = useAppStore((state) => state.assistants);

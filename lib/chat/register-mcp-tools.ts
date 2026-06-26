@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { tool } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { hybridSearch } from "@/lib/rag/retrieve";
@@ -107,7 +108,7 @@ export async function registerMcpTools(
             artifact: normalizedArgs,
           };
         } catch (error) {
-          console.error("[Artifact] Failed to process tool call:", error);
+          logger.error("[Artifact] Failed to process tool call:", error);
           return {
             success: false,
             message:

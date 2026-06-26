@@ -9,7 +9,6 @@ import { Mail } from "lucide-react";
  * Button that triggers the password reset flow for users without a password.
  * @param email Address where the reset link should be delivered.
  * @returns Better Auth action button configured for password reset.
- * @author Maruf Bepary
  */
 export function SetPasswordButton({ email }: { email: string }) {
   return (

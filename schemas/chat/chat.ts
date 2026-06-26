@@ -8,7 +8,6 @@ import { idField } from "../shared-fields";
  * Use when saving individual messages in a chat conversation tree structure.
  *
  * @see {@link lib/actions/chats/} for message persistence actions
- * @author Maruf Bepary
  */
 export const persistMessageSchema = z.object({
   id: idField,
@@ -24,7 +23,6 @@ export const persistMessageSchema = z.object({
  * Use when creating a new conversation thread via createChat server action.
  *
  * @see {@link lib/actions/chats/create-chat.ts} for chat creation action
- * @author Maruf Bepary
  */
 export const createChatSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -38,7 +36,6 @@ export const createChatSchema = z.object({
  * Use when renaming an existing chat conversation.
  *
  * @see {@link lib/actions/chats/rename-chat.ts} for rename action
- * @author Maruf Bepary
  */
 export const renameChatSchema = z.object({
   title: z.string().min(1).max(255),
@@ -50,7 +47,6 @@ export const renameChatSchema = z.object({
  * Use when reassigning a chat to a different project or unbinding it.
  *
  * @see {@link lib/actions/chats/move-chat.ts} for move action
- * @author Maruf Bepary
  */
 export const moveChatSchema = z.object({
   projectId: idField.nullable(),
@@ -77,7 +73,6 @@ export const chatSchema = z.object({
  * Use when persisting extended message context with tool execution traces and AI thinking process.
  *
  * @see {@link lib/actions/chats/} for message persistence with metadata
- * @author Maruf Bepary
  */
 export const messageMetadataSchema = z.object({
   toolCalls: z

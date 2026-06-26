@@ -10,7 +10,6 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  *
  * @param children - Workflow sub-page content.
  * @returns Workflow scaffold with sidebar and centered content area.
- * @author Maruf Bepary
  */
 export default function WorkflowsLayout({
   children,

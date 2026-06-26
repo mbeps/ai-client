@@ -13,7 +13,6 @@ import { env } from "@/lib/env";
  * @param email Email address used for password setup flows.
  * @param isTwoFactorEnabled Current two-factor state for the user.
  * @returns Stacked security settings for password, 2FA, and passkeys.
- * @author Maruf Bepary
  */
 export async function SecurityTab({
   email,

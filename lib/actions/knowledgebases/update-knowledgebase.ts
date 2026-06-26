@@ -15,7 +15,6 @@ import { z } from "zod";
  * @param id - The unique ID of the knowledgebase to update.
  * @param data - The fields to update (name, description).
  * @returns The updated knowledgebase record.
- * @author Maruf Bepary
  */
 export async function updateKnowledgebase(
   id: string,

@@ -66,7 +66,7 @@ import { ModelSelector } from "@/components/shared/model-selector";
 import type { TransformStep } from "@/types/transform/transform-agent";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
-import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
+import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgebases";
@@ -545,7 +545,7 @@ export default function AgentEditorPage() {
             </p>
           </div>
           <div className="rounded-lg border bg-card p-4">
-            <KnowledgeBasePicker
+            <KnowledgebasePicker
               knowledgebases={knowledgebases}
               selectedIds={knowledgeBaseIds}
               onSelect={setKnowledgeBaseIds}

@@ -24,7 +24,7 @@ const createEntityLoader = <K extends keyof AppState, R>(
 ) => {
   return async () => {
     const rows = await listAction();
-    set({ [key]: rows.map(mapper) } as any);
+    set({ [key]: rows.map(mapper) } as Partial<AppState>);
   };
 };
 

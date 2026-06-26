@@ -12,7 +12,6 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  * @param children - Profile sub-page content.
  * @returns Profile scaffold with sidebar and centered content area.
  * @see AuthenticatedLayout for session validation and auth guards.
- * @author Maruf Bepary
  */
 export default function ProfileLayout({
   children,

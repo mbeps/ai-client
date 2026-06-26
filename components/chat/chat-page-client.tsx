@@ -27,7 +27,6 @@ interface ChatPageClientProps {
  * @param props - Server-rendered chat data and optional initial message.
  * @returns ChatUI wrapped with store hydration and initial message tracking.
  * @see ChatUI for the main chat interface.
- * @author Maruf Bepary
  */
 export function ChatPageClient({
   initialChat,

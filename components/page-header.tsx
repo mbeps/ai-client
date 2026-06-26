@@ -1,7 +1,6 @@
 /**
  * Props for the PageHeader component.
  *
- * @author Maruf Bepary
  */
 interface PageHeaderProps {
   /** Icon element displayed to the left of the title block. */
@@ -22,7 +21,6 @@ interface PageHeaderProps {
  * @param props.title - Page heading.
  * @param props.description - Brief description shown below the heading.
  * @param props.action - Optional button or control placed in the header's action area.
- * @author Maruf Bepary
  */
 export function PageHeader({
   icon,

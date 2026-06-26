@@ -7,7 +7,6 @@ import { aiModel } from "./ai-model-schema";
  * One-to-one with user (CASCADE DELETE); globalSystemPrompt prepends all AI interactions.
  * Enables users to define a baseline system instruction that applies across all projects and assistants.
  *
- * @author Maruf Bepary
  */
 export const userSettings = pgTable(
   "user_settings",

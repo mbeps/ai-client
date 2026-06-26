@@ -3,7 +3,7 @@
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/message-tree-utils";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
-import { buildStreamRequestBody } from "@/lib/chat/prepare-chat-request";
+import { buildStreamRequestBody } from "@/lib/chat/build-stream-request-body";
 import {
   resolveMcpPrompt,
   resolveSlashPrompt,
@@ -17,7 +17,10 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useApiError } from "@/hooks/use-api-error";
-import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
+import {
+  RATE_LIMIT_ERROR_CODE,
+  UNAUTHORIZED_ERROR_CODE,
+} from "@/lib/constants/errors";
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.
@@ -34,7 +37,6 @@ import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
  * @param options - Optional callbacks for completion and artifact discovery.
  * @returns Object with loading state, streaming content, tool calls, and streamResponse function.
  * @see ToolCallState for tool invocation tracking.
- * @author Maruf Bepary
  */
 export function useStreamResponse(
   chatId: string,
@@ -229,7 +231,6 @@ export function useStreamResponse(
    * @throws Error when message persistence fails (shows warning toast but continues streaming).
    * @throws AbortError when stream is cancelled via stopStream() — returns accumulated content without error.
    * @see uploadAttachment for file upload details and size limits.
-   * @author Maruf Bepary
    */
   const streamResponse = async (
     userMsgId: string,
@@ -339,7 +340,11 @@ export function useStreamResponse(
         ) as any;
         err.code =
           errorData.code ||
-          (response.status === 429 ? RATE_LIMIT_ERROR_CODE : undefined);
+          (response.status === 401
+            ? UNAUTHORIZED_ERROR_CODE
+            : response.status === 429
+              ? RATE_LIMIT_ERROR_CODE
+              : undefined);
         err.status = response.status;
         throw err;
       }

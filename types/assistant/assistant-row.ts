@@ -6,6 +6,5 @@ import { assistant } from "@/drizzle/schema";
  * prompt is prepended to AI calls for chats bound to this assistant; enables creation of reusable chat personalities.
  *
  * @see {@link ../drizzle/schemas/assistant-schema.ts} for database definition
- * @author Maruf Bepary
  */
 export type AssistantRow = InferSelectModel<typeof assistant>;

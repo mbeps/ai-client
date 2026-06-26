@@ -10,14 +10,13 @@ import { persistMessageSchema } from "@/schemas/chat/chat";
  *
  * @see Chat for the parent conversation container
  * @see Attachment for file structure
- * @author Maruf Bepary
  */
 export type Message = Omit<
   z.infer<typeof persistMessageSchema>,
   "role" | "metadata"
 > & {
-  /** Sender role: "user" for user messages, "assistant" for AI responses. */
-  role: "user" | "assistant";
+  /** Sender role: "user" for user messages, "assistant" for AI responses, "system" for prepended context. */
+  role: "user" | "assistant" | "system";
 
   /** Timestamp of message creation (immutable after creation). */
   createdAt: Date;

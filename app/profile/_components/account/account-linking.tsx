@@ -19,7 +19,6 @@ type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
  * Lists linked OAuth accounts and offers buttons to link or unlink providers.
  * @param currentAccounts Accounts currently associated with the user.
  * @returns Account linking layout composed of provider cards.
- * @author Maruf Bepary
  */
 export function AccountLinking({
   currentAccounts,

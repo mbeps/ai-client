@@ -2,10 +2,10 @@
  * Persists a transform step output as an S3 attachment.
  * Supports two persistence paths:
  *
- * - `"artifact"`:  a `manage_artifact` spreadsheet result → convert to XLSX → upload
- * - `"download"`:   a `download_file` tool result (base64) → upload
+ * - "artifact":  a manage_artifact spreadsheet result -> convert to XLSX -> upload
+ * - "download":   a download_file tool result (base64) -> upload
  *
- * Returns the new output attachment IDs and the new attachment row, or `null`
+ * Returns the new output attachment IDs and the new attachment row, or null
  * when no persistence was applicable.
  */
 
@@ -49,7 +49,7 @@ export type PersistArtifactResult = {
  * @param input  - Discriminated persistence input.
  * @param userId - Owning user ID.
  * @param runId  - Transform run ID.
- * @returns The new output attachment IDs and row, or `null` if persistence
+ * @returns The new output attachment IDs and row, or null if persistence
  *          could not be completed (e.g. malformed artifact content).
  */
 export async function persistTransformArtifact(
@@ -57,52 +57,51 @@ export async function persistTransformArtifact(
   userId: string,
   runId: string,
 ): Promise<PersistArtifactResult | null> {
-  switch (input.kind) {
-    case "artifact":
-      return persistArtifact(input, userId, runId);
-    case "download":
-      return persistDownload(input, userId, runId);
-  }
-}
-
-/* ── internal helpers ────────────────────────────────────────────────── */
-
-async function persistArtifact(
-  input: Extract<PersistArtifactInput, { kind: "artifact" }>,
-  userId: string,
-  runId: string,
-): Promise<PersistArtifactResult | null> {
-  const artifactType = (input.artifact.type as string | undefined) ?? "";
-  const artifactContent = (input.artifact.content as string | undefined) ?? "";
-
-  if (artifactType.toLowerCase() !== "spreadsheet" || !artifactContent) {
-    return null;
-  }
+  const outputAttachmentId = randomUUID();
+  let outputName: string;
+  let xlsxBuffer: Buffer;
 
   try {
-    const parsed = JSON.parse(artifactContent);
-    const workbook = XLSX.utils.book_new();
+    if (input.kind === "artifact") {
+      const artifactType = (input.artifact.type as string | undefined) ?? "";
+      const artifactContent =
+        (input.artifact.content as string | undefined) ?? "";
 
-    for (const sheet of (parsed.sheets ?? []) as Array<{
-      name?: string;
-      data?: unknown[][];
-    }>) {
-      const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
-      XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+      if (artifactType.toLowerCase() !== "spreadsheet" || !artifactContent) {
+        return null;
+      }
+
+      const parsed = JSON.parse(artifactContent);
+      const workbook = XLSX.utils.book_new();
+
+      for (const sheet of (parsed.sheets ?? []) as Array<{
+        name?: string;
+        data?: unknown[][];
+      }>) {
+        const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
+        XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+      }
+
+      xlsxBuffer = Buffer.from(
+        XLSX.write(workbook, {
+          type: "array",
+          bookType: "xlsx",
+        }) as ArrayBuffer,
+      );
+      outputName = `step-${input.stepIndex + 1}-output.xlsx`;
+    } else {
+      xlsxBuffer = Buffer.from(input.fileContent, "base64");
+      outputName = input.filename || `step-${input.stepIndex + 1}-output.xlsx`;
     }
 
-    const xlsxBuffer = Buffer.from(
-      XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as ArrayBuffer,
-    );
-
-    const outputName = `step-${input.stepIndex + 1}-output.xlsx`;
-    const outputAttachmentId = randomUUID();
     const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
     const mimeType =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
+    // 1. Upload to S3
     await uploadObject(s3Key, xlsxBuffer, mimeType);
 
+    // 2. DB record
     await db.insert(attachment).values({
       id: outputAttachmentId,
       userId,
@@ -113,72 +112,13 @@ async function persistArtifact(
       key: s3Key,
     });
 
-    logger.info("[Transform AI] Persisted spreadsheet artifact output", {
-      runId,
-      stepIndex: input.stepIndex,
-      outputAttachmentId,
-      outputName,
-    });
-
-    const attachmentRow: AttachmentRow = {
-      id: outputAttachmentId,
-      messageId: null,
-      transformRunId: runId,
-      userId,
-      name: outputName,
-      mimeType,
-      size: xlsxBuffer.length,
-      key: s3Key,
-      extractedText: null,
-      createdAt: new Date(),
-    };
-
+    // 3. Update the run record output state
     // Persist in run record so resume logic picks up the latest workbook
     await db
       .update(transformRun)
       .set({ outputAttachmentIds: [outputAttachmentId] })
       .where(eq(transformRun.id, runId));
 
-    return {
-      outputAttachmentIds: [outputAttachmentId],
-      attachmentRow,
-    };
-  } catch (err) {
-    logger.warn(
-      "[Transform AI] Failed to persist step output as xlsx",
-      { err },
-      userId,
-    );
-    return null;
-  }
-}
-
-async function persistDownload(
-  input: Extract<PersistArtifactInput, { kind: "download" }>,
-  userId: string,
-  runId: string,
-): Promise<PersistArtifactResult | null> {
-  try {
-    const xlsxBuffer = Buffer.from(input.fileContent, "base64");
-    const outputAttachmentId = randomUUID();
-    const outputName =
-      input.filename || `step-${input.stepIndex + 1}-output.xlsx`;
-    const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
-    const mimeType =
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-    await uploadObject(s3Key, xlsxBuffer, mimeType);
-
-    await db.insert(attachment).values({
-      id: outputAttachmentId,
-      userId,
-      transformRunId: runId,
-      name: outputName,
-      mimeType,
-      size: xlsxBuffer.length,
-      key: s3Key,
-    });
-
     const attachmentRow: AttachmentRow = {
       id: outputAttachmentId,
       messageId: null,
@@ -192,12 +132,7 @@ async function persistDownload(
       createdAt: new Date(),
     };
 
-    await db
-      .update(transformRun)
-      .set({ outputAttachmentIds: [outputAttachmentId] })
-      .where(eq(transformRun.id, runId));
-
-    logger.info("[Transform AI] Persisted step output from download_file", {
+    logger.info(`[Transform AI] Persisted ${input.kind} output`, {
       runId,
       stepIndex: input.stepIndex,
       outputAttachmentId,
@@ -209,11 +144,12 @@ async function persistDownload(
       attachmentRow,
     };
   } catch (err) {
-    logger.warn(
-      "[Transform AI] download_file persistence failed",
-      { err, runId, stepIndex: input.stepIndex },
+    logger.warn(`[Transform AI] Failed to persist ${input.kind} output`, {
+      err,
+      runId,
       userId,
-    );
+      stepIndex: input.stepIndex,
+    });
     return null;
   }
 }

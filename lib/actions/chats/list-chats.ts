@@ -12,7 +12,6 @@ import type { ChatRow } from "@/types/chat/chat-row";
  *
  * @returns Array of all user's chats sorted by updatedAt descending; empty array if no chats exist
  * @throws Error when session is invalid or user is not authenticated
- * @author Maruf Bepary
  */
 export async function listChats(): Promise<ChatRow[]> {
   const session = await requireSession();

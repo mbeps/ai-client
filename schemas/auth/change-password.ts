@@ -9,7 +9,6 @@ import { passwordField, requiredPasswordField } from "../shared-fields";
  *
  * @see {@link schemas/reset-password.ts} for password reset (unauthenticated)
  * @see {@link schemas/shared-fields.ts} for field definitions
- * @author Maruf Bepary
  */
 export const changePasswordSchema = z.object({
   currentPassword: requiredPasswordField,
@@ -20,6 +19,5 @@ export const changePasswordSchema = z.object({
 /**
  * TypeScript type inferred from changePasswordSchema; used for form state typing.
  *
- * @author Maruf Bepary
  */
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;

@@ -13,7 +13,6 @@ import { user } from "./auth-schema";
  * Links messages via chatId; supports many-to-one with user (CASCADE DELETE).
  * currentLeafId tracks the active message in branching conversation trees.
  *
- * @author Maruf Bepary
  */
 export const chat = pgTable(
   "chat",
@@ -42,7 +41,6 @@ export const chat = pgTable(
  * Tree traversal and branch logic handled at the application layer (see message-bubble.tsx for rendering).
  * role enum: 'user', 'assistant', 'system'; metadata stores JSON tool calls and reasoning tokens.
  *
- * @author Maruf Bepary
  */
 export const message = pgTable(
   "message",
@@ -67,7 +65,6 @@ export const message = pgTable(
  * Many-to-one with message and user (both CASCADE DELETE); key is UNIQUE and points to S3 object path.
  * MIME type and size metadata enable validation and rendering in chat UI; name preserves original filename.
  *
- * @author Maruf Bepary
  */
 export const attachment = pgTable(
   "attachment",

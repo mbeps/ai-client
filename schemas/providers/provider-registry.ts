@@ -6,7 +6,7 @@ export const providerModelTypeSchema = z.enum(["chat", "embedding", "both"]);
 const providerHeadersSchema = z.record(z.string(), z.string());
 
 export const createProviderSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: nameField,
   baseUrl: z.string().url("Invalid provider URL").max(1024),
   apiKey: z.string().max(4096).optional().nullable(),
   headers: providerHeadersSchema.optional(),
@@ -14,15 +14,8 @@ export const createProviderSchema = z.object({
   requiresKey: z.boolean().optional(),
 });
 
-export const updateProviderSchema = z
-  .object({
-    name: z.string().min(1, "Name is required").max(100).optional(),
-    baseUrl: z.string().url("Invalid provider URL").max(1024).optional(),
-    apiKey: z.string().max(4096).optional().nullable(),
-    headers: providerHeadersSchema.optional(),
-    isEnabled: z.boolean().optional(),
-    requiresKey: z.boolean().optional(),
-  })
+export const updateProviderSchema = createProviderSchema
+  .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
   });
@@ -47,24 +40,8 @@ export const createModelSchema = z.object({
   isEnabled: z.boolean().optional(),
 });
 
-export const updateModelSchema = z
-  .object({
-    label: z.string().min(1).max(255).optional(),
-    modelType: providerModelTypeSchema.optional(),
-    contextWindow: z.number().int().positive().max(10_000_000).optional(),
-    embeddingDimensions: z
-      .number()
-      .int()
-      .positive()
-      .max(100_000)
-      .nullable()
-      .optional(),
-    capTools: z.boolean().optional(),
-    capVision: z.boolean().optional(),
-    capReasoning: z.boolean().optional(),
-    capStructuredOutput: z.boolean().optional(),
-    isEnabled: z.boolean().optional(),
-  })
+export const updateModelSchema = createModelSchema
+  .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
   });

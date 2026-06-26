@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 /**
  * Props for the PromptCard component.
  *
- * @author Maruf Bepary
  */
 interface PromptCardProps {
   /** The prompt entity containing id, title, shortcut, and content for display. */
@@ -25,7 +24,6 @@ interface PromptCardProps {
  *
  * @param props.prompt - Prompt entity with title, shortcut, and content metadata.
  * @see PromptOptions for menu actions including rename and content editing.
- * @author Maruf Bepary
  */
 export function PromptCard({ prompt }: PromptCardProps) {
   const router = useRouter();

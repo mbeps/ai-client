@@ -25,7 +25,6 @@ import {
 /**
  * Form that lets users update credentials and optionally revoke other sessions.
  * @returns Controlled password change form component.
- * @author Maruf Bepary
  */
 export function ChangePasswordForm() {
   const form = useForm<ChangePasswordFormData>({

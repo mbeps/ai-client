@@ -14,7 +14,6 @@ export const metadata = {
  *
  * @returns Reset form with token validation and new password confirmation.
  * @see LoginPage for Forgot Password flow that sends reset email.
- * @author Maruf Bepary
  */
 export default function ResetPasswordPage() {
   if (!env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD) {

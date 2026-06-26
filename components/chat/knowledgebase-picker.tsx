@@ -4,6 +4,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import {
   Database,
@@ -11,33 +19,30 @@ import {
   XCircle,
   AlertTriangle,
   Loader2,
+  Check,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { ROUTES } from "@/constants/routes";
 
-interface KnowledgeBasePickerProps {
+interface KnowledgebasePickerProps {
   knowledgebases: Knowledgebase[];
-
-  // Selection mode
   mode?: "single" | "multiple";
-
-  // Selection state
   selectedIds: Set<string>;
-
-  // Callbacks
   onSelect: (ids: Set<string>) => void;
-
-  // UI Customisation
   className?: string;
   maxHeight?: string;
   showIcons?: boolean;
-
-  // Empty state handling
   allowEmpty?: boolean;
   emptyLabel?: string;
 }
 
-export function KnowledgeBasePicker({
+/**
+ * Core picker component for selecting knowledge bases.
+ */
+export function KnowledgebasePicker({
   knowledgebases,
   mode = "multiple",
   selectedIds,
@@ -47,7 +52,7 @@ export function KnowledgeBasePicker({
   showIcons = true,
   allowEmpty = true,
   emptyLabel = "None",
-}: KnowledgeBasePickerProps) {
+}: KnowledgebasePickerProps) {
   const [search, setSearch] = useState("");
 
   const filteredKbs = knowledgebases.filter(
@@ -178,5 +183,95 @@ export function KnowledgeBasePicker({
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+interface KnowledgebasePickerDialogProps {
+  knowledgebases: Knowledgebase[];
+  selectedKbs: Set<string>;
+  onToggleKb: (id: string) => void;
+  trigger?: React.ReactNode;
+}
+
+/**
+ * Dialog wrapper for the KnowledgebasePicker.
+ */
+export function KnowledgebasePickerDialog({
+  knowledgebases,
+  selectedKbs,
+  onToggleKb,
+  trigger,
+}: KnowledgebasePickerDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || <Button>Select Knowledge Bases</Button>}
+      </DialogTrigger>
+      <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pb-3 border-b">
+          <DialogTitle>Select Knowledge Bases</DialogTitle>
+        </DialogHeader>
+
+        {knowledgebases.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <Database className="h-8 w-8 mx-auto mb-3 opacity-40" />
+            <p className="mb-2">No knowledge bases available.</p>
+            <Link
+              href={ROUTES.KNOWLEDGEBASES.path}
+              className="text-primary underline underline-offset-4"
+              onClick={() => setOpen(false)}
+            >
+              Create a knowledge base
+            </Link>
+          </div>
+        ) : (
+          <>
+            <KnowledgebasePicker
+              knowledgebases={knowledgebases}
+              selectedIds={selectedKbs}
+              onSelect={(ids) => {
+                // Determine which one was toggled
+                const added = [...ids].find((id) => !selectedKbs.has(id));
+                const removed = [...selectedKbs].find((id) => !ids.has(id));
+                if (added) onToggleKb(added);
+                else if (removed) onToggleKb(removed);
+              }}
+              className="p-4"
+              maxHeight="300px"
+              showIcons={false}
+            />
+
+            <div className="px-4 py-3 border-t flex items-center justify-between bg-muted/20 shrink-0">
+              <p className="text-xs text-muted-foreground">
+                <strong>{selectedKbs.size}</strong>{" "}
+                {selectedKbs.size === 1 ? "knowledge base" : "knowledge bases"}{" "}
+                selected
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                  className="gap-2 px-6"
+                >
+                  <Check className="h-4 w-4" />
+                  Done
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

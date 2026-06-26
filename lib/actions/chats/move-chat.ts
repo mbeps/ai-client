@@ -19,7 +19,6 @@ import { z } from "zod";
  * @throws ZodError if projectId fails schema validation (must be valid UUID or null).
  * @throws Error if chat does not exist or user does not own it (returns "Chat not found or access denied").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function moveChat(
   chatId: string,

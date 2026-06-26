@@ -1,9 +1,7 @@
 "use client";
 import { Trash2, Edit2, ExternalLink } from "lucide-react";
 import type { Prompt } from "@/types/prompt/prompt";
-import { RenameDialog } from "@/components/shared/rename-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
@@ -13,14 +11,6 @@ import { useAppStore } from "@/lib/store";
 
 /**
  * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.
- * Uses useEntityOptions hook for shared dialog state and direct Server Actions for mutations.
- * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
- *
- * @param props.prompt - Prompt entity with id, title, and shortcut.
- * @returns Menu with action items, rename dialog, and delete confirmation dialog.
- * @see useEntityOptions for dialog and action state management.
- * @see ResponsiveMenu for responsive menu wrapper.
- * @author Maruf Bepary
  */
 export function PromptOptions({ prompt }: { prompt: Prompt }) {
   const router = useRouter();
@@ -65,23 +55,19 @@ export function PromptOptions({ prompt }: { prompt: Prompt }) {
   ];
 
   return (
-    <>
-      <ResponsiveMenu title={prompt.title} items={items} isMobile={isMobile} />
-      <RenameDialog
-        isOpen={showRename}
-        onClose={() => setShowRename(false)}
-        initialValue={prompt.title}
-        onConfirm={handleRename}
-        title="Rename Prompt"
-      />
-      <DeleteConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete Prompt"
-        description={`Are you sure you want to delete "${prompt.title}"? This cannot be undone.`}
-        loading={isDeleting}
-      />
-    </>
+    <BaseEntityOptions
+      name={prompt.title}
+      items={items}
+      isMobile={isMobile}
+      showRename={showRename}
+      setShowRename={setShowRename}
+      showDelete={showDelete}
+      setShowDelete={setShowDelete}
+      isDeleting={isDeleting}
+      handleRename={handleRename}
+      handleDelete={handleDelete}
+      renameTitle="Rename Prompt"
+      deleteTitle="Delete Prompt"
+    />
   );
 }

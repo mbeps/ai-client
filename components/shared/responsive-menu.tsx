@@ -56,7 +56,6 @@ export interface ResponsiveMenuProps {
  * @param props.items - Menu items with destructive state and separators
  * @param props.isMobile - Toggles between Drawer (true) and DropdownMenu (false) layouts
  * @see {@link useResponsiveMenu} for recommended setup with mobile detection
- * @author Maruf Bepary
  */
 export function ResponsiveMenu({
   trigger,

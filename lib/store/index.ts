@@ -18,7 +18,6 @@
  * @see useAppStore for the main store hook
  * @see AppState for the full state shape and action interfaces
  * @see ChatSlice and EntitySlice for implementation details
- * @author Maruf Bepary
  */
 import { create } from "zustand";
 import { createChatSlice } from "./slices/chat-slice";
@@ -43,7 +42,6 @@ import type { AppState } from "@/types/app/app-state";
  * @returns Store with all entity collections and mutation actions
  * @see ChatSlice for chat and message management
  * @see createEntitySlice for projects, assistants, and other entity operations
- * @author Maruf Bepary
  */
 export const useAppStore = create<AppState>((...a) => ({
   ...createChatSlice(...a),

@@ -5,7 +5,6 @@
  * File size limits: 2MB (images), 20MB (documents), 50MB (spreadsheets).
  *
  * @see Message for the message containing this attachment
- * @author Maruf Bepary
  */
 export type Attachment = {
   /** Unique identifier for this attachment (UUID). */

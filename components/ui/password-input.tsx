@@ -12,7 +12,6 @@ import { useState, type ComponentProps } from "react";
  * standard `Input` props except `type`, which is managed internally.
  *
  * @param props.className - Additional classes forwarded to the `Input` element
- * @author Maruf Bepary
  */
 export function PasswordInput({
   className,

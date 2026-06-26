@@ -33,7 +33,6 @@ type SearchItem =
  * Aggregates chats, projects, and assistants into a unified searchable list.
  * Uses the shared ResourceListPage for a consistent layout.
  *
- * @author Maruf Bepary
  */
 export function SearchClient({
   initialChats,
