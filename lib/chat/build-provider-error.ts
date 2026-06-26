@@ -2,7 +2,12 @@ import {
   ProviderNotConfiguredError,
   VisionNotSupportedError,
   ToolsNotSupportedError,
+  RATE_LIMIT_ERROR_CODE,
 } from "@/lib/constants/errors";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 /**
  * Maps known application errors to structured HTTP error responses.
@@ -25,6 +30,18 @@ export function buildProviderErrorResponse(error: unknown): Response | null {
       },
       {
         status: error instanceof ProviderNotConfiguredError ? 412 : 400,
+      },
+    );
+  }
+
+  if (isRateLimitError(error)) {
+    return Response.json(
+      {
+        error: normalizeRateLimitMessage(error),
+        code: RATE_LIMIT_ERROR_CODE,
+      },
+      {
+        status: 429,
       },
     );
   }

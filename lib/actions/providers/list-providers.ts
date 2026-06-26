@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -13,5 +13,5 @@ export async function listProviders(): Promise<AiProviderRow[]> {
     .select()
     .from(aiProvider)
     .where(eq(aiProvider.userId, session.user.id))
-    .orderBy(desc(aiProvider.updatedAt));
+    .orderBy(asc(aiProvider.name));
 }

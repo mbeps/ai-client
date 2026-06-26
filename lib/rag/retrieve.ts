@@ -1,8 +1,15 @@
 import { db } from "@/drizzle/db";
 import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed";
-import { KnowledgebaseNotReadyError } from "@/lib/constants/errors";
+import {
+  KnowledgebaseNotReadyError,
+  RateLimitError,
+} from "@/lib/constants/errors";
 import { knowledgebase } from "@/drizzle/schema";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 const RRF_K = 60;
 
@@ -85,7 +92,15 @@ export async function hybridSearch(
   }
 
   // 2. Search
-  const embedding = await embedQuery(normalizedQuery, userId);
+  let embedding: number[];
+  try {
+    embedding = await embedQuery(normalizedQuery, userId);
+  } catch (err) {
+    if (isRateLimitError(err)) {
+      throw new RateLimitError(normalizeRateLimitMessage(err));
+    }
+    throw err;
+  }
   const embeddingLiteral = `[${embedding.join(",")}]`;
 
   const vectorRows = (
