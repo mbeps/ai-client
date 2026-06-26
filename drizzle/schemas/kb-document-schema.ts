@@ -14,7 +14,6 @@ import { knowledgebase } from "./knowledgebase-schema";
  * Many-to-one with knowledgebase and user (both CASCADE DELETE); s3Key is UNIQUE.
  * status lifecycle: pending → processing → ready | failed.
  *
- * @author Maruf Bepary
  */
 export const kbDocument = pgTable(
   "kb_document",

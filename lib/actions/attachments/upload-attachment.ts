@@ -38,7 +38,6 @@ const ALLOWED_TYPES = new Set([
  * @throws Error if S3 upload fails.
  * @see MessageBubble component for rendering attachment chips.
  * @see ChatInput for triggering file upload.
- * @author Maruf Bepary
  */
 export async function uploadAttachment(formData: FormData) {
   const session = await requireSession();

@@ -6,6 +6,5 @@ import { assistantSchema } from "@/schemas/assistant/assistant";
  * Based on the Zod schema for validation and persistence.
  *
  * @see {@link schemas/assistant.ts}
- * @author Maruf Bepary
  */
 export type Assistant = z.infer<typeof assistantSchema>;

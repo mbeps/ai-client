@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { db } from "@/drizzle/db";
 import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed";
@@ -141,7 +142,7 @@ export async function hybridSearch(
       `)
     ).rows as RawChunkRow[];
   } catch (err) {
-    console.error("[RAG] FTS query failed:", err);
+    logger.error("[RAG] FTS query failed:", err);
     ftsRows = [];
   }
 

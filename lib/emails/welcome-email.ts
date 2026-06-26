@@ -8,7 +8,6 @@ import { sendEmail } from "./send-email";
  * @param user - User object containing `name` and `email` from Better Auth registration
  * @throws {ServerError} When Postmark fails to send the email
  * @see sendEmail for underlying Postmark integration
- * @author Maruf Bepary
  */
 export async function sendWelcomeEmail(user: { name: string; email: string }) {
   await sendEmail({

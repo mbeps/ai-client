@@ -25,7 +25,6 @@ import {
  * @param props.action - Async callback; return `{ error: true }` to surface an error toast
  * @param props.requireAreYouSure - Show an `AlertDialog` before executing the action
  * @param props.areYouSureDescription - Custom body copy for the confirmation dialog
- * @author Maruf Bepary
  */
 export function ActionButton({
   action,

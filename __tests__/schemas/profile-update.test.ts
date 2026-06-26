@@ -22,10 +22,10 @@ describe("profileUpdateSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts a very long name (no max length constraint)", () => {
-    // profileUpdateSchema uses z.string().min(1) only — no upper bound
-    const result = profileUpdateSchema.safeParse({ name: "n".repeat(500) });
-    expect(result.success).toBe(true);
+  it("rejects a very long name (exceeds 100 characters)", () => {
+    // profileUpdateSchema uses nameField which has a max(100) constraint
+    const result = profileUpdateSchema.safeParse({ name: "n".repeat(101) });
+    expect(result.success).toBe(false);
   });
 
   it("accepts name with spaces and special characters", () => {

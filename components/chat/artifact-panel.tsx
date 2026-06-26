@@ -68,7 +68,6 @@ export interface ArtifactPanelProps {
  * @see MarkdownView for Markdown artifact rendering.
  * @see SpreadsheetView for data table editing.
  * @see HtmlView for HTML iframe display.
- * @author Maruf Bepary
  */
 export function ArtifactPanel({
   artifact,

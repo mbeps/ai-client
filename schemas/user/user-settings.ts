@@ -5,7 +5,6 @@ import { z } from "zod";
  * globalSystemPrompt is optional and capped at 5000 characters to ensure token efficiency.
  * Use with {@link lib/actions/user-settings/update-user-settings.ts} to persist user-wide AI instructions.
  *
- * @author Maruf Bepary
  */
 export const userSettingsSchema = z.object({
   globalSystemPrompt: z

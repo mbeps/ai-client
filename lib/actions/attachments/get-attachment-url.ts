@@ -12,7 +12,6 @@ import { z } from "zod";
  *
  * @param id - The ID of the attachment.
  * @returns The presigned URL and attachment metadata.
- * @author Maruf Bepary
  */
 export async function getAttachmentUrl(id: string) {
   const session = await requireSession();

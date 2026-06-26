@@ -83,7 +83,6 @@ interface MessageBubbleProps {
  * @see ToolCallDisplay for visualizing tool invocations.
  * @see ThinkingDisplay for streaming reasoning output.
  * @see MessageActions for edit/delete/regenerate UI.
- * @author Maruf Bepary
  */
 export function MessageBubble({
   message,

@@ -10,7 +10,6 @@ import type { ReactNode } from "react";
  * @param props.isLoading - When `true`, hides children and shows the spinner
  * @param props.children - Content rendered when not in a loading state
  * @param props.className - Additional classes applied to both overlay layers
- * @author Maruf Bepary
  */
 export function LoadingSwap({
   isLoading,

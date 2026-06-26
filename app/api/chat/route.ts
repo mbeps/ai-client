@@ -25,7 +25,7 @@ import {
 import {
   loadChatContext,
   ChatNotFoundError,
-} from "@/lib/chat/prepare-chat-request.server";
+} from "@/lib/chat/load-chat-context";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import {
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
-    console.error(
+    logger.error(
       "[Chat API] Invalid request:",
       JSON.stringify(parsed.error.format(), null, 2),
     );

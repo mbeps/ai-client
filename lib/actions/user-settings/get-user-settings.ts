@@ -13,7 +13,6 @@ import type { UserSettingsRow } from "@/types/user/user-settings-row";
  *
  * @returns The user settings record or null if not found
  * @throws {Error} "Unauthorized" if no valid session is found
- * @author Maruf Bepary
  */
 export async function getUserSettings(): Promise<UserSettingsRow | null> {
   const session = await requireSession();

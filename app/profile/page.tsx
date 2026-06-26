@@ -8,7 +8,6 @@ import { redirect } from "next/navigation";
  *
  * @returns Never returns; always redirects to /profile/general.
  * @see ProfileLayout for parent layout with sidebar.
- * @author Maruf Bepary
  */
 export default function ProfilePage() {
   redirect(ROUTES.PROFILE.GENERAL.path);

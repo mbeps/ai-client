@@ -21,7 +21,6 @@ import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
  * @throws Error if MCP server connection fails (network error, invalid configuration, timeout).
  * @throws Error if tool discovery protocol returns invalid or unexpected data.
  * @see getMcpTools for usage in chat streaming pipeline.
- * @author Maruf Bepary
  */
 export async function discoverMcpServerTools(serverId: string): Promise<{
   tools: DiscoveredTool[];

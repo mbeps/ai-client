@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
  * Sets up shared focus-ring, error, and disabled state via CSS group selectors.
  * Compose with `InputGroupAddon`, `InputGroupInput`, and `InputGroupTextarea`.
  *
- * @author Maruf Bepary
  */
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -70,7 +69,6 @@ const inputGroupAddonVariants = cva(
  * Alignment is controlled by the `align` prop via `inputGroupAddonVariants`.
  *
  * @param props.align - Determines attachment side: `inline-start`, `inline-end`, `block-start`, or `block-end`
- * @author Maruf Bepary
  */
 function InputGroupAddon({
   className,
@@ -118,7 +116,6 @@ const inputGroupButtonVariants = cva(
  * Size variants match the input height so the group border is unbroken.
  *
  * @param props.size - Button size variant (`xs`, `sm`, `icon-xs`, `icon-sm`)
- * @author Maruf Bepary
  */
 function InputGroupButton({
   className,
@@ -143,7 +140,6 @@ function InputGroupButton({
  * Read-only text or icon label rendered inside an `InputGroupAddon`.
  * Applies muted-foreground colour and consistent icon sizing.
  *
- * @author Maruf Bepary
  */
 function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
@@ -161,7 +157,6 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
  * The `<input>` element styled to sit seamlessly inside an `InputGroup`.
  * Removes border, background, and focus ring so the parent group provides them.
  *
- * @author Maruf Bepary
  */
 function InputGroupInput({
   className,
@@ -183,7 +178,6 @@ function InputGroupInput({
  * The `<textarea>` element styled to sit seamlessly inside an `InputGroup`.
  * Auto-resizes with content; removes border, background, and focus ring.
  *
- * @author Maruf Bepary
  */
 function InputGroupTextarea({
   className,

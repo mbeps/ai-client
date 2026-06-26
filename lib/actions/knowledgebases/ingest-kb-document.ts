@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { logger } from "@/lib/logger";
 import { ingestDocument } from "@/lib/rag/ingest";
 import {
   RagExtractionEmptyError,
@@ -73,7 +74,7 @@ export async function ingestKbDocument(
       };
     }
 
-    console.error("[ingestKbDocument] Unexpected error:", error);
+    logger.error("[ingestKbDocument] Unexpected error:", error);
     return {
       success: false,
       error: "An unexpected error occurred during ingestion",

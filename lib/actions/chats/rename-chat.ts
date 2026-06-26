@@ -19,7 +19,6 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * @throws ZodError if title fails schema validation (empty or exceeds max length).
  * @throws Error if chat does not exist or user does not own it (returns "Chat not found or unauthorized").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function renameChat(
   chatId: string,

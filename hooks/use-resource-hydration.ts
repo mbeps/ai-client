@@ -20,7 +20,6 @@ export type HydratableResource =
  *
  * @param resources - Array of resource keys to hydrate, including ephemeral ones like "mcpPrompts".
  * @returns { isLoading: boolean } - True if any requested resource is still loading.
- * @author Maruf Bepary
  */
 export function useResourceHydration(resources: HydratableResource[]) {
   const store = useAppStore();

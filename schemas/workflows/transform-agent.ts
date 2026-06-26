@@ -26,16 +26,7 @@ export const createTransformAgentSchema = z.object({
   steps: z.array(transformStepSchema).optional().default([]),
 });
 
-export const updateTransformAgentSchema = z.object({
-  name: nameField.optional(),
-  description: descriptionField,
-  globalContext: z.string().max(2000).optional(),
-  modelId: z.string().max(100).optional(),
-  tools: z.array(z.string()).optional(),
-  knowledgeBaseIds: z.array(z.string()).optional(),
-  requiresFileUpload: z.boolean().optional(),
-  steps: z.array(transformStepSchema).optional(),
-});
+export const updateTransformAgentSchema = createTransformAgentSchema.partial();
 
 export const createTransformRunSchema = z.object({
   agentId: z.string().uuid(),

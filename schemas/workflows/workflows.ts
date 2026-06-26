@@ -4,7 +4,6 @@ import { z } from "zod";
  * Validates a translation request.
  * Ensures all required fields are present and within reasonable limits.
  *
- * @author Maruf Bepary
  */
 export const translateRequestSchema = z
   .object({

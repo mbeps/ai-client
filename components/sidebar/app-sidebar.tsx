@@ -64,7 +64,6 @@ import { ChatOptions } from "@/components/chat/chat-options";
  * @see ChatActionMenu for per-chat action menu (rename, move, delete)
  * @see useCreateChat for new chat initialization
  * @see useAppStore for chat state management
- * @author Maruf Bepary
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();

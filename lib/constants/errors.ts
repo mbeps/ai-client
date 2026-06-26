@@ -17,6 +17,11 @@ export const MODEL_MALFORMED_ID_ERROR_CODE = "MODEL_MALFORMED_ID" as const;
 
 export const RATE_LIMIT_ERROR_CODE = "RATE_LIMIT" as const;
 
+export const UNAUTHORIZED_ERROR_CODE = "UNAUTHORIZED" as const;
+
+export const UNAUTHORIZED_ERROR_MESSAGE =
+  "Your session has expired. Please log in again.";
+
 export class RateLimitError extends Error {
   readonly code = RATE_LIMIT_ERROR_CODE;
   readonly status = 429;

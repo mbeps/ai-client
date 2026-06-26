@@ -9,6 +9,7 @@ import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk";
 import { embedDocuments } from "@/lib/rag/embed";
+import { logger } from "@/lib/logger";
 import {
   isRateLimitError,
   normalizeRateLimitMessage,
@@ -131,7 +132,7 @@ export async function reindexKnowledgebase(kbId: string) {
 
       processedCount++;
     } catch (err) {
-      console.error(`Failed to re-index document ${doc.id}:`, err);
+      logger.error(`Failed to re-index document ${doc.id}:`, err);
       failedCount++;
 
       const errorMessage = isRateLimitError(err)

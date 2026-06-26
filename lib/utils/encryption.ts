@@ -8,7 +8,6 @@ import { env } from "@/lib/env";
  * Format: iv:authTag:content (hex encoded)
  * Requires ENCRYPTION_SECRET (32 characters) to be set in environment variables.
  *
- * @author Maruf Bepary
  */
 
 const ALGORITHM = "aes-256-gcm";

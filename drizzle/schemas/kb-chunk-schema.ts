@@ -51,7 +51,6 @@ const tsvectorType = customType<{ data: string | null; driverData: string }>({
  *   GENERATED ALWAYS AS (to_tsvector('english', content)) STORED;
  * CREATE INDEX IF NOT EXISTS kb_chunk_search_vector_idx ON kb_chunk USING gin (search_vector);
  *
- * @author Maruf Bepary
  */
 export const kbChunk = pgTable(
   "kb_chunk",

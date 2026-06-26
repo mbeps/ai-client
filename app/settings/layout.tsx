@@ -12,7 +12,6 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  * @param children - Settings sub-page content.
  * @returns Settings scaffold with sidebar and centered content area.
  * @see AuthenticatedLayout for session validation and auth guards.
- * @author Maruf Bepary
  */
 export default function SettingsLayout({
   children,

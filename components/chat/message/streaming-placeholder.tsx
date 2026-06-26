@@ -7,7 +7,6 @@ import { Bot, Loader2Icon } from "lucide-react";
  * A placeholder bubble shown when the assistant is thinking but hasn't
  * started streaming content yet.
  * 
- * @author Maruf Bepary
  */
 export function StreamingPlaceholder() {
   return (

@@ -9,6 +9,5 @@ import * as schema from "./schema";
  * Schema includes auth tables (user, session, account, verification, twoFactor, passkey) and app tables (chat, message, attachment, project, assistant, prompt, mcpServer).
  *
  * @see schema.ts for exported table definitions.
- * @author Maruf Bepary
  */
 export const db = drizzle(env.DATABASE_URL, { schema });

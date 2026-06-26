@@ -5,7 +5,6 @@ import { ComponentProps } from "react";
  * Used alongside `BetterAuthActionButton` in social sign-in flows.
  *
  * @param props - SVG props forwarded to the underlying element
- * @author Maruf Bepary
  */
 export function DiscordIcon(props: ComponentProps<"svg">) {
   return (
@@ -20,7 +19,6 @@ export function DiscordIcon(props: ComponentProps<"svg">) {
  * Used alongside `BetterAuthActionButton` in social sign-in flows.
  *
  * @param props - SVG props forwarded to the underlying element
- * @author Maruf Bepary
  */
 export function GitHubIcon(props: ComponentProps<"svg">) {
   return (

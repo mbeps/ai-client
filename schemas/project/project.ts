@@ -13,7 +13,6 @@ import {
  * Use with createProject server action to create a new chat grouping and prompt scope.
  *
  * @see {@link lib/actions/projects/create-project.ts} for creation action
- * @author Maruf Bepary
  */
 export const createProjectSchema = z.object({
   name: nameField,
@@ -29,15 +28,8 @@ export const createProjectSchema = z.object({
  * Use with updateProject server action to modify existing project metadata and prompts.
  *
  * @see {@link lib/actions/projects/update-project.ts} for update action
- * @author Maruf Bepary
  */
-export const updateProjectSchema = z.object({
-  name: nameField.optional(),
-  description: descriptionField,
-  globalPrompt: contentField.optional(),
-  tools: z.array(z.string()).optional(),
-  knowledgebaseId: z.string().nullable().optional(),
-});
+export const updateProjectSchema = createProjectSchema.partial();
 
 /**
  * Validates project rename operations with only the new name field.
@@ -45,7 +37,6 @@ export const updateProjectSchema = z.object({
  * Use with renameProject server action for quick name changes.
  *
  * @see {@link lib/actions/projects/rename-project.ts} for rename action
- * @author Maruf Bepary
  */
 export const renameProjectSchema = renameSchema;
 

@@ -12,7 +12,6 @@ import { Fingerprint } from "lucide-react";
  * prompt is displayed on explicit interaction only. Redirects to `ROUTES.HOME`
  * on success and refreshes the active session.
  *
- * @author Maruf Bepary
  */
 export function PasskeyButton() {
   const router = useRouter();

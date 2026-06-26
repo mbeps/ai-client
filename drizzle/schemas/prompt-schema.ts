@@ -7,7 +7,6 @@ import { user } from "./auth-schema";
  * shortcut becomes the command trigger; content is prepended to AI calls when command invoked (hidden from user message display).
  * Enables rapid message templating and workflow shortcuts; auto-generated UUID primary key.
  *
- * @author Maruf Bepary
  */
 export const prompt = pgTable(
   "prompt",

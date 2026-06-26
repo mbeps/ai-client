@@ -8,7 +8,6 @@ import { UserX } from "lucide-react";
 /**
  * Danger zone button that starts the Better Auth account deletion flow.
  * @returns Action button that emails a confirmation link.
- * @author Maruf Bepary
  */
 export function AccountDeletion() {
   return (

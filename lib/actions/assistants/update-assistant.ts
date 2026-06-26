@@ -14,7 +14,6 @@ import { z } from "zod";
  * @param id - Unique identifier of the assistant.
  * @param data - Fields to update.
  * @returns The updated assistant record.
- * @author Maruf Bepary
  */
 export async function updateAssistant(
   id: string,

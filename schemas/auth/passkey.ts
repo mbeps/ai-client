@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "@/schemas/shared-fields";
 
 /**
  * Validates the passkey registration form for naming WebAuthn credentials.
@@ -7,15 +8,12 @@ import { z } from "zod";
  * Pair with `authClient.passkey.addPasskey()` for submission.
  *
  * @see {@link schemas/two-factor-auth.ts} for 2FA schemas
- * @author Maruf Bepary
  */
 export const passkeySchema = z.object({
-  name: z.string().min(1, "Passkey name is required"),
+  name: nameField,
 });
 
 /**
  * TypeScript type inferred from passkeySchema; used for form state typing.
- *
- * @author Maruf Bepary
  */
 export type PasskeyForm = z.infer<typeof passkeySchema>;

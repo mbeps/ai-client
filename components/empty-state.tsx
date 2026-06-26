@@ -3,7 +3,6 @@ import { Inbox } from "lucide-react";
 /**
  * Props for the EmptyState component.
  *
- * @author Maruf Bepary
  */
 interface EmptyStateProps {
   /** Human-readable message to display when the list is empty. */
@@ -15,7 +14,6 @@ interface EmptyStateProps {
  * Spans all columns via `col-span-full` and shows a dashed border to indicate the empty region.
  *
  * @param props.message - Text to show inside the empty state container.
- * @author Maruf Bepary
  */
 export function EmptyState({ message }: EmptyStateProps) {
   return (

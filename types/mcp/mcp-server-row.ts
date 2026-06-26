@@ -7,6 +7,5 @@ import { mcpServer } from "@/drizzle/schema";
  * enabled flag controls availability in tool selection UI.
  *
  * @see {@link ../drizzle/schemas/mcp-server-schema.ts} for database definition
- * @author Maruf Bepary
  */
 export type McpServerRow = InferSelectModel<typeof mcpServer>;

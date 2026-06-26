@@ -6,6 +6,5 @@ import { message } from "@/drizzle/schema";
  * Supports tree structure via parentId; metadata stores JSON-serialized tool calls and reasoning tokens.
  *
  * @see {@link ../drizzle/schemas/chat-schema.ts} for database definition
- * @author Maruf Bepary
  */
 export type MessageRow = InferSelectModel<typeof message>;

@@ -3,7 +3,6 @@ import { FileQuestion } from "lucide-react";
 /**
  * Props for the NotFoundMessage component.
  *
- * @author Maruf Bepary
  */
 interface NotFoundMessageProps {
   /** Name of the entity that was not found (e.g. "Chat", "Project"). */
@@ -15,7 +14,6 @@ interface NotFoundMessageProps {
  * Used on detail pages when the Zustand store does not contain the given ID.
  *
  * @param props.entity - The entity type name to include in the message.
- * @author Maruf Bepary
  */
 export function NotFoundMessage({ entity }: NotFoundMessageProps) {
   return (

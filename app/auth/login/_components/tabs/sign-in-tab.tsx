@@ -31,7 +31,6 @@ import { signInSchema, SignInForm } from "@/schemas/auth/sign-in";
  *
  * @param props.openEmailVerificationTab - Called with the email when verification is required
  * @param props.openForgotPassword - Switches the parent view to the forgot-password flow
- * @author Maruf Bepary
  */
 export function SignInTab({
   openEmailVerificationTab,

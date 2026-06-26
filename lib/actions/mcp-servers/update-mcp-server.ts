@@ -22,7 +22,6 @@ import { buildServerConfig } from "@/lib/mcp/build-server-config";
  * @throws ZodError if data fails schema validation (malformed URL, etc.).
  * @throws Error if server does not exist or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function updateMcpServer(
   id: string,

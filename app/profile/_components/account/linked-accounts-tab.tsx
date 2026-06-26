@@ -5,7 +5,6 @@ import { AccountLinking } from "./account-linking";
 /**
  * Server component that lists linked social accounts and masks credential providers.
  * @returns Account linking controls without card wrapper.
- * @author Maruf Bepary
  */
 export async function LinkedAccountsTab() {
   const accounts = await auth.api.listUserAccounts({

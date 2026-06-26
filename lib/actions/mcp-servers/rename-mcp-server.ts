@@ -13,7 +13,6 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if server does not exist or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export const renameMcpServer = renameEntityFactory<McpServerRow>({
   table: mcpServer,

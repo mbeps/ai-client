@@ -6,6 +6,5 @@ import { userSettings } from "@/drizzle/schema";
  * One-to-one with user; globalSystemPrompt prepends all AI interactions.
  *
  * @see {@link ../drizzle/schemas/user-settings-schema.ts} for database definition
- * @author Maruf Bepary
  */
 export type UserSettingsRow = InferSelectModel<typeof userSettings>;

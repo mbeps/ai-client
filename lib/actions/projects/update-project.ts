@@ -14,7 +14,6 @@ import { z } from "zod";
  * @param id - The unique ID of the project to update.
  * @param data - The fields to update (name, description, globalPrompt).
  * @returns The updated project record.
- * @author Maruf Bepary
  */
 export async function updateProject(
   id: string,

@@ -36,7 +36,6 @@ import { ROUTES } from "@/constants/routes";
  * and Danger Zone (account deletion) pages. "Back to Home" button returns to main chat interface.
  *
  * @see ROUTES.PROFILE for available profile page routes
- * @author Maruf Bepary
  */
 export function ProfileSidebar({
   ...props

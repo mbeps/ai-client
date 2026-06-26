@@ -16,7 +16,6 @@ import remarkMath from "remark-math";
  *
  * @param props.chart - Raw Mermaid diagram definition string (e.g., "graph TD; A-->B").
  * @returns Centered SVG container, loading skeleton, or error message.
- * @author Maruf Bepary
  */
 const MermaidBlock = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>("");
@@ -72,7 +71,6 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
  * @param props.content - Raw Markdown string to render with all supported extensions.
  * @returns Prose container with React Markdown, KaTeX, and Mermaid integration.
  * @see MermaidBlock for Mermaid diagram rendering details.
- * @author Maruf Bepary
  */
 export function MarkdownRenderer({ content }: { content: string }) {
   return (

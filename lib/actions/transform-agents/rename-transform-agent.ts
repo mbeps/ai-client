@@ -10,7 +10,6 @@ import { renameEntityFactory } from "@/lib/actions/shared/rename-entity-factory"
  *
  * @param id - The ID of the agent to rename.
  * @param name - The new name for the agent.
- * @author Maruf Bepary
  */
 export const renameTransformAgent = renameEntityFactory({
   table: transformAgent,

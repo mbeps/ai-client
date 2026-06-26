@@ -6,6 +6,5 @@ import { project } from "@/drizzle/schema";
  * globalPrompt is prepended to AI calls for chats scoped to this project; isPinned controls UI visibility.
  *
  * @see {@link ../drizzle/schemas/project-schema.ts} for database definition
- * @author Maruf Bepary
  */
 export type ProjectRow = InferSelectModel<typeof project>;

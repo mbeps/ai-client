@@ -8,7 +8,6 @@ import { emailField, requiredPasswordField } from "@/schemas/shared-fields";
  *
  * @see {@link schemas/shared-fields.ts} for field definitions
  * @see {@link schemas/sign-up.ts} for registration schema
- * @author Maruf Bepary
  */
 export const signInSchema = z.object({
   email: emailField,
@@ -18,6 +17,5 @@ export const signInSchema = z.object({
 /**
  * TypeScript type inferred from signInSchema; used for form state typing.
  *
- * @author Maruf Bepary
  */
 export type SignInForm = z.infer<typeof signInSchema>;

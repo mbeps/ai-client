@@ -23,7 +23,6 @@ import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
  * @throws Error if database query fails.
  * @see createChat to create a new chat.
  * @see deleteChat to remove a chat.
- * @author Maruf Bepary
  */
 export async function getChat(chatId: string): Promise<ChatWithMessages> {
   const session = await requireSession();

@@ -21,7 +21,6 @@ import { toast } from "sonner";
  *
  * @returns Home page with quick actions, recent chats, and chat input form.
  * @see ChatPageClient for chat detail view after new chat creation.
- * @author Maruf Bepary
  */
 export default function HomePage() {
   const router = useRouter();

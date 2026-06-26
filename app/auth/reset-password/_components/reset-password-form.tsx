@@ -37,7 +37,6 @@ import {
  * is absent or `error` is present. On valid submission calls
  * `authClient.resetPassword` and redirects to the login page after 1 s.
  *
- * @author Maruf Bepary
  */
 export default function ResetPasswordClient() {
   const router = useRouter();

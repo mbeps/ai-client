@@ -35,7 +35,6 @@ type TwoFactorData = {
  * Manages enabling or disabling TOTP-based two-factor authentication.
  * @param isEnabled Flag indicating whether 2FA is already active.
  * @returns Two-factor form that switches between enable and disable states.
- * @author Maruf Bepary
  */
 export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(

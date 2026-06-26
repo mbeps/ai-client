@@ -12,7 +12,6 @@ import { useEffect, useRef, useState } from "react";
  * Shown automatically after sign-up when `user.emailVerified` is `false`.
  *
  * @param props.email - Address to send the verification link to
- * @author Maruf Bepary
  */
 export function EmailVerification({ email }: { email: string }) {
   const [timeToNextResend, setTimeToNextResend] = useState(30);

@@ -8,7 +8,6 @@ import { ROUTES } from "@/constants/routes";
  *
  * @returns Never returns; always redirects to /settings/app.
  * @see SettingsLayout for parent layout with sidebar.
- * @author Maruf Bepary
  */
 export default function SettingsPage() {
   redirect(ROUTES.SETTINGS.APP.path);

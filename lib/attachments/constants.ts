@@ -3,7 +3,6 @@
  * Defines allowed MIME types, maximum file sizes, and limits on attachment counts.
  * Use these constants in file upload validation to enforce consistent rules across client and server.
  *
- * @author Maruf Bepary
  */
 
 /**

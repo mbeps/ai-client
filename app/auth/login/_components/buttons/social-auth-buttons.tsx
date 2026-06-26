@@ -14,7 +14,6 @@ import {
  * Iterates `SUPPORTED_OAUTH_PROVIDERS`, rendering each provider's icon and name.
  * Redirects to `ROUTES.HOME` on a successful OAuth callback.
  *
- * @author Maruf Bepary
  */
 export function SocialAuthButtons() {
   return SUPPORTED_OAUTH_PROVIDERS.map((provider) => {

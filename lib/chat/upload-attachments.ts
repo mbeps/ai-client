@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 import { cloneAttachment } from "@/lib/actions/attachments/clone-attachment";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -36,7 +37,7 @@ export async function uploadSingleAttachment(
     const data = await uploadAttachment(formData);
     return { ...attachment, key: data.key };
   } catch (err) {
-    console.error("[Chat] Attachment upload failed:", err);
+    logger.error("[Chat] Attachment upload failed:", err);
     toast.error(
       `Failed to upload "${attachment.name}". It will not be sent to the AI.`,
     );
@@ -67,7 +68,7 @@ export async function cloneAttachments(
         extractedText: result.extractedText ?? att.extractedText,
       });
     } catch (err) {
-      console.error("[Chat] Attachment clone failed:", err);
+      logger.error("[Chat] Attachment clone failed:", err);
       toast.error(
         `Failed to clone "${att.name}". It will not be sent to the AI.`,
       );
@@ -104,7 +105,7 @@ export async function processAttachments(
           extractedText: cloned.extractedText ?? att.extractedText,
         });
       } catch (err) {
-        console.error("[Chat] Attachment clone failed:", err);
+        logger.error("[Chat] Attachment clone failed:", err);
         toast.error(
           `Failed to clone "${att.name}". It will not be sent to the AI.`,
         );

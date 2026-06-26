@@ -7,7 +7,6 @@
  * @see sendEmailVerificationEmail
  * @see sendPasswordResetEmail
  * @see sendDeleteAccountVerificationEmail
- * @author Maruf Bepary
  */
 
 import { env } from "@/lib/env";
@@ -27,7 +26,6 @@ const postmarkClient = new ServerClient(env.POSTMARK_SERVER_TOKEN);
  * @param text - Plain-text fallback for text-only email clients
  * @returns Promise resolving with Postmark's send response (includes MessageID)
  * @throws {ServerError} When Postmark token is invalid or network fails
- * @author Maruf Bepary
  */
 export function sendEmail({
   to,

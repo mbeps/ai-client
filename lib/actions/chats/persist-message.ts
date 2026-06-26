@@ -20,7 +20,6 @@ import { z } from "zod";
  * @throws ZodError if message data fails schema validation (invalid role, content, etc.).
  * @throws Error if chat does not exist or user does not own it (ownership check enforced via session).
  * @throws Error if database insertion fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function persistMessage(
   chatId: string,

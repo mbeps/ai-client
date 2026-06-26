@@ -55,7 +55,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { toast } from "sonner";
-import { KnowledgeBasePicker } from "@/components/shared/knowledge-base-picker";
+import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import {
   Select,
   SelectContent,
@@ -319,7 +319,7 @@ export default function ProjectPage() {
           </div>
 
           <div className="space-y-4">
-            <KnowledgeBasePicker
+            <KnowledgebasePicker
               knowledgebases={normalizedKnowledgebases}
               mode="single"
               selectedIds={new Set(selectedKbId ? [selectedKbId] : [])}

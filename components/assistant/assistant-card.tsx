@@ -9,7 +9,6 @@ import { EntityCard } from "@/components/shared/entity-card";
 /**
  * Props for the AssistantCard component.
  *
- * @author Maruf Bepary
  */
 interface AssistantCardProps {
   /** The assistant entity to display with name and description. */
@@ -24,7 +23,6 @@ interface AssistantCardProps {
  * @param props.assistant - Assistant entity containing id, name, description, and avatar.
  * @see AssistantOptions for menu actions.
  * @see useCreateChat for chat creation on card click.
- * @author Maruf Bepary
  */
 export function AssistantCard({ assistant }: AssistantCardProps) {
   const createNewChat = useCreateChat();

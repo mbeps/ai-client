@@ -12,15 +12,15 @@ import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
-import { messageMetadataSchema } from "@/schemas/chat/chat";
 
-import {
-  mapMessageFromDb,
-  parseMessageMetadata,
-} from "../mappers/message-mapper";
+import { mapMessageFromDb } from "../mappers/message-mapper";
 import type { AppState } from "@/types/app/app-state";
 import type { Message } from "@/types/message/message";
 import type { Chat } from "@/types/chat/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { MessageRow } from "@/types/message/message-row";
+import type { AttachmentRow } from "@/types/attachment/attachment-row";
+import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.
@@ -60,7 +60,6 @@ type ChatSlice = Pick<
  *
  * @see ChatSlice for the slice type
  * @see Message for message tree structure
- * @author Maruf Bepary
  */
 export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   set,
@@ -264,7 +263,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       const chatEntry = chats[m.chatId];
       if (!chatEntry) continue;
 
-      const attachmentsForMsg = safeAttachments
+      const attachmentsForMsg: Attachment[] = safeAttachments
         .filter((a) => a.messageId === m.id)
         .map((att) => {
           const isImage = att.mimeType.startsWith("image/");
@@ -276,26 +275,26 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
             sizeBytes: att.size,
             dataUrl: "",
             key: att.key,
-            extractedText: (att as any).extractedText ?? undefined,
+            extractedText: att.extractedText ?? undefined,
           };
         });
 
       chatEntry.messages[m.id] = mapMessageFromDb(
         {
           ...m,
-          createdAt: (m as any).createdAt || (m as any).created_at || null,
-        } as any,
-        attachmentsForMsg as any,
+          createdAt: m.createdAt,
+        },
+        attachmentsForMsg,
       );
     }
 
     // Pass 2: Reconstruct tree children
     for (const m of messageRows) {
-      if (!(m as any).parentId) continue;
-      const chatEntry = chats[(m as any).chatId];
+      if (!m.parentId) continue;
+      const chatEntry = chats[m.chatId];
       if (!chatEntry) continue;
-      const parent = chatEntry.messages[(m as any).parentId];
-      if (parent) parent.childrenIds.push((m as any).id);
+      const parent = chatEntry.messages[m.parentId];
+      if (parent) parent.childrenIds.push(m.id);
     }
 
     set({ chats });

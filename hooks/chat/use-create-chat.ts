@@ -12,7 +12,6 @@ import { ROUTES } from "@/constants/routes";
  * @returns Async function that creates chat with optional projectId/assistantId and returns the created chat ID.
  * @throws When database creation fails or navigation fails.
  * @see useEntityOptions for managing chat state mutations.
- * @author Maruf Bepary
  */
 export function useCreateChat() {
   const router = useRouter();

@@ -399,9 +399,8 @@ describe("useStreamResponse", () => {
         );
       });
 
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Your session has expired. Please log in again.",
-      );
+      // useApiError is mocked to return false, so useStreamResponse falls back to toast.error(err.message)
+      expect(mockToastError).toHaveBeenCalledWith("Unauthorized");
       expect(result.current.isLoading).toBe(false);
     });
 
@@ -426,9 +425,7 @@ describe("useStreamResponse", () => {
         );
       });
 
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Too many requests. Please try again later.",
-      );
+      expect(mockToastError).toHaveBeenCalledWith("Rate limit exceeded");
       expect(result.current.isLoading).toBe(false);
     });
 

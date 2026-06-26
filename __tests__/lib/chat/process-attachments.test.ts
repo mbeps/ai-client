@@ -2,10 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { processAttachments } from "@/lib/chat/upload-attachments";
 import type { Attachment } from "@/types/attachment/attachment";
 
-// ─── Mock server actions (vi.hoisted so they exist before vi.mock runs) ───
-const { mockCloneAttachment, mockUploadAttachment } = vi.hoisted(() => ({
-  mockCloneAttachment: vi.fn(),
-  mockUploadAttachment: vi.fn(),
+// ─── Mock logger and server actions ───────────────────────────────────────
+const { mockCloneAttachment, mockUploadAttachment, mockLoggerError } =
+  vi.hoisted(() => ({
+    mockCloneAttachment: vi.fn(),
+    mockUploadAttachment: vi.fn(),
+    mockLoggerError: vi.fn(),
+  }));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    error: mockLoggerError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/actions/attachments/clone-attachment", () => ({
@@ -110,26 +121,21 @@ describe("processAttachments", () => {
 
   describe("error handling", () => {
     it("skips and logs when cloneAttachment throws", async () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      mockLoggerError.mockClear();
       mockCloneAttachment.mockRejectedValueOnce(new Error("DB error"));
 
       const att = makeAttachment({ id: "att-1", key: "uploads/existing.pdf" });
       const result = await processAttachments([att], "msg-1");
 
       expect(result).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLoggerError).toHaveBeenCalledWith(
         expect.stringContaining("Attachment clone failed"),
         expect.any(Error),
       );
-      consoleSpy.mockRestore();
     });
 
     it("skips and logs when uploadSingleAttachment (via uploadAttachment) throws", async () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      mockLoggerError.mockClear();
       mockUploadAttachment.mockRejectedValueOnce(new Error("S3 error"));
 
       const att = makeAttachment({
@@ -140,11 +146,10 @@ describe("processAttachments", () => {
       const result = await processAttachments([att], "msg-1");
 
       expect(result).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("upload failed"),
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        expect.stringContaining("Attachment upload failed"),
         expect.any(Error),
       );
-      consoleSpy.mockRestore();
     });
 
     it("skips attachments that have no key and no rawFile (fails in uploadSingleAttachment)", async () => {

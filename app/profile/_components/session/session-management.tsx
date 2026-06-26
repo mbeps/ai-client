@@ -14,7 +14,6 @@ import { UAParser } from "ua-parser-js";
  * @param sessions List of sessions returned by Better Auth.
  * @param currentSessionToken Token for the session currently in use.
  * @returns Session management interface with revoke controls.
- * @author Maruf Bepary
  */
 export function SessionManagement({
   sessions,

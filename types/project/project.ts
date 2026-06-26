@@ -9,6 +9,5 @@ import { projectSchema } from "@/schemas/project/project";
  *
  * @see Chat for chats grouped under this project
  * @see Assistant for individual AI personas (distinct from project-level prompts)
- * @author Maruf Bepary
  */
 export type Project = z.infer<typeof projectSchema>;

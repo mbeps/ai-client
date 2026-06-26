@@ -15,9 +15,10 @@ import { ChatInput } from "./chat-input";
 import { AssistantBar } from "./assistant-bar";
 import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
-import { useArtifactPanel } from "@/hooks/chat/use-artifact-panel";
-import { useInitialModel } from "@/hooks/chat/use-initial-model";
-import { useInitialTools } from "@/hooks/chat/use-initial-tools";
+import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
+import { parseMessageMetadata } from "@/lib/store/mappers/message-mapper";
+import type { ArtifactData } from "@/types/artifact/artifact";
+import { useState } from "react";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 
 /**
@@ -49,7 +50,6 @@ interface ChatUIProps {
  * @see useInitialModel for model resolution.
  * @see useInitialTools for tool/server configuration merging.
  * @see ArtifactPanel for artifact display.
- * @author Maruf Bepary
  */
 export function ChatUI({
   chatId,
@@ -93,18 +93,56 @@ export function ChatUI({
     [chat?.currentLeafId, chat?.messages],
   );
 
-  // Extracted model and tool resolution hooks
-  const initialModelId = useInitialModel(
-    thread,
-    currentProject ?? null,
-    currentAssistant ?? null,
-    userSettings,
-  );
+  // -- Initial Model Resolution (Inlined) --
+  const initialModelId = useMemo(() => {
+    // 1. Existing chat: get model from the last user message
+    const lastUserMessage = [...thread]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (lastUserMessage?.metadata) {
+      const { modelId } = parseMessageMetadata(lastUserMessage.metadata);
+      if (modelId) return modelId;
+    }
 
-  const { initialServerIds, initialSelectedTools } = useInitialTools(
-    currentProject ?? null,
-    currentAssistant ?? null,
-  );
+    // 2. New chat: prioritize Project > Assistant > User Settings
+    if ((currentProject as any)?.defaultChatModelId) {
+      return (currentProject as any).defaultChatModelId;
+    }
+    if ((currentAssistant as any)?.defaultChatModelId) {
+      return (currentAssistant as any).defaultChatModelId;
+    }
+
+    // 3. Application-wide default
+    return userSettings?.defaultChatModelId || undefined;
+  }, [thread, currentProject, currentAssistant, userSettings]);
+
+  // -- Initial Tools Resolution (Inlined) --
+  const { initialServerIds, initialSelectedTools } = useMemo(() => {
+    const projectTools = currentProject?.tools;
+    const assistantTools = currentAssistant?.tools;
+
+    const combined = new Set<string>();
+    if (projectTools) {
+      projectTools.forEach((t) => combined.add(t));
+    }
+    if (assistantTools) {
+      assistantTools.forEach((t) => combined.add(t));
+    }
+    const combinedArray = Array.from(combined);
+
+    const serverIds = new Set<string>();
+    combinedArray.forEach((t) => {
+      const serverId = t.split(":")[0];
+      if (serverId) serverIds.add(serverId);
+    });
+
+    const selectedTools = combinedArray.filter((t) => t.includes(":tool:"));
+
+    return {
+      initialServerIds: Array.from(serverIds),
+      initialSelectedTools: selectedTools,
+    };
+  }, [currentProject?.tools, currentAssistant?.tools]);
 
   const initialKbIds = useMemo(
     () => (chat?.knowledgebaseId ? [chat.knowledgebaseId] : []),
@@ -117,16 +155,125 @@ export function ChatUI({
     return [...personalEnabled, ...publicEnabled];
   }, [mcpServers, publicMcpServers]);
 
-  const {
-    allArtifacts,
-    activeArtifact,
-    artifactIndex,
-    setArtifactIndex,
-    isArtifactOpen,
-    setIsArtifactOpen,
-    handleShowArtifact,
-    handleUpdateArtifact,
-  } = useArtifactPanel(chatId, thread);
+  // -- Artifact Panel Logic (Inlined) --
+  const updateMessageMetadataDb = useAppStore(
+    (state) => state.updateMessageMetadataDb,
+  );
+
+  const [artifactIndex, setArtifactIndex] = useState<number>(-1);
+  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
+  const [prevArtifactsLength, setPrevArtifactsLength] = useState(0);
+
+  const allArtifacts = useMemo(() => {
+    const artifacts: ArtifactData[] = [];
+    thread.forEach((msg) => {
+      if (msg.metadata) {
+        try {
+          const meta = JSON.parse(msg.metadata);
+          if (Array.isArray(meta.toolResults)) {
+            meta.toolResults.forEach((tr: any) => {
+              if (tr.toolName === "manage_artifact" && tr.result?.artifact) {
+                artifacts.push({ ...tr.result.artifact, messageId: msg.id });
+              }
+            });
+          }
+        } catch {}
+      }
+      const mermaidMatch = msg.content.match(/```mermaid\n([\s\S]*?)```/);
+      if (mermaidMatch) {
+        artifacts.push({
+          type: "mermaid",
+          title: "Mermaid Diagram",
+          content: mermaidMatch[1].trim(),
+          messageId: msg.id,
+        });
+      }
+    });
+    return artifacts;
+  }, [thread]);
+
+  const activeArtifact =
+    artifactIndex >= 0 ? allArtifacts[artifactIndex] : null;
+
+  // Auto-open when artifacts appear
+  if (allArtifacts.length !== prevArtifactsLength) {
+    setPrevArtifactsLength(allArtifacts.length);
+    if (allArtifacts.length > 0 && !isArtifactOpen && artifactIndex === -1) {
+      setArtifactIndex(allArtifacts.length - 1);
+      setIsArtifactOpen(true);
+    } else if (allArtifacts.length > 0 && artifactIndex === -1) {
+      setArtifactIndex(allArtifacts.length - 1);
+    }
+  }
+
+  const handleShowArtifact = useCallback(
+    (msgId: string) => {
+      let foundIndex = -1;
+      let artifactCounter = 0;
+
+      for (const msg of thread) {
+        let msgArtifactsCount = 0;
+        if (msg.metadata) {
+          try {
+            const meta = JSON.parse(msg.metadata);
+            if (Array.isArray(meta.toolResults)) {
+              msgArtifactsCount = meta.toolResults.filter(
+                (tr: any) => tr.toolName === "manage_artifact",
+              ).length;
+            }
+          } catch {}
+        }
+        if (msgArtifactsCount === 0 && msg.content.includes("```mermaid")) {
+          msgArtifactsCount = 1;
+        }
+
+        if (msg.id === msgId) {
+          foundIndex = artifactCounter;
+          break;
+        }
+        artifactCounter += msgArtifactsCount;
+      }
+
+      if (foundIndex >= 0) {
+        setArtifactIndex(foundIndex);
+        setIsArtifactOpen(true);
+      }
+    },
+    [thread],
+  );
+
+  const handleUpdateArtifact = useCallback(
+    (newContent: string) => {
+      if (!activeArtifact || !activeArtifact.messageId) return;
+
+      const msg = chat?.messages[activeArtifact.messageId];
+      if (!msg || !msg.metadata) return;
+
+      try {
+        const meta = JSON.parse(msg.metadata);
+        let updated = false;
+
+        if (Array.isArray(meta.toolResults)) {
+          meta.toolResults.forEach((tr: any) => {
+            if (
+              tr.toolName === "manage_artifact" &&
+              tr.result?.artifact?.content === activeArtifact.content
+            ) {
+              tr.result.artifact.content = newContent;
+              updated = true;
+            }
+          });
+        }
+
+        if (updated) {
+          updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
+        }
+      } catch (e) {
+        console.error("Failed to update artifact metadata", e);
+      }
+    },
+    [activeArtifact, chat, chatId, updateMessageMetadataDb],
+  );
 
   const handleKbChange = useCallback(
     (kbIds: string[]) => {

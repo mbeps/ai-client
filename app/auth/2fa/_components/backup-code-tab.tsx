@@ -25,7 +25,6 @@ import { backupCodeSchema, BackupCodeForm } from "@/schemas/auth/backup-code";
  * Calls `authClient.twoFactor.verifyBackupCode`; redirects to `ROUTES.HOME` on success.
  * Shown as an alternative to the TOTP form on the 2FA challenge page.
  *
- * @author Maruf Bepary
  */
 export function BackupCodeTab() {
   const router = useRouter();

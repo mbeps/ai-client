@@ -18,7 +18,6 @@ import { z } from "zod";
  * @throws Error if chatId or messageId are not valid UUID format.
  * @throws Error if chat does not exist or user does not own it (ownership check enforced via session).
  * @throws Error if database deletion fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function deleteMessage(
   chatId: string,

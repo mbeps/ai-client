@@ -3,9 +3,6 @@
 const STALE_MS = 30 * 60 * 1000;
 const GC_MS = 2 * 60 * 60 * 1000;
 
-export const PROVIDER_REGISTRY_STALE_TIME_MS = STALE_MS;
-export const PROVIDER_REGISTRY_GC_TIME_MS = GC_MS;
-
 type CacheKey = "providers" | "models";
 
 type CacheEntry<T> = {
@@ -135,8 +132,4 @@ export function invalidateProviderRegistryCache(keys?: CacheKey[]): void {
 
 export function invalidateProviderCache(): void {
   invalidateProviderRegistryCache(["providers"]);
-}
-
-export function invalidateModelCache(): void {
-  invalidateProviderRegistryCache(["models"]);
 }

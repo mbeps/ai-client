@@ -13,7 +13,6 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
  * @returns Array of MCP server configurations (name, type, connection details, enabled status).
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if database query fails due to connection issues.
- * @author Maruf Bepary
  */
 export async function listMcpServers(): Promise<McpServerRow[]> {
   const session = await requireSession();

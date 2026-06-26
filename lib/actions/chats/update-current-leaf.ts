@@ -17,7 +17,6 @@ import { z } from "zod";
  * @throws Error if chatId or leafId are not valid UUID format.
  * @throws Error if chat does not exist or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author Maruf Bepary
  */
 export async function updateCurrentLeaf(
   chatId: string,

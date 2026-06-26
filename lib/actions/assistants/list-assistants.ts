@@ -12,7 +12,6 @@ import type { AssistantRow } from "@/types/assistant/assistant-row";
  *
  * @returns Array of all user's assistants sorted by updatedAt descending; empty array if no assistants exist
  * @throws Error when session is invalid or user is not authenticated
- * @author Maruf Bepary
  */
 export async function listAssistants(): Promise<AssistantRow[]> {
   const session = await requireSession();
