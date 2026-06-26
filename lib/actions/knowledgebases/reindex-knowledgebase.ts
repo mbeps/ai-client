@@ -9,6 +9,10 @@ import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk";
 import { embedDocuments } from "@/lib/rag/embed";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 /**
  * Re-indexes all documents in a knowledgebase.
@@ -48,6 +52,12 @@ export async function reindexKnowledgebase(kbId: string) {
     })
     .where(eq(knowledgebase.id, kbId));
 
+  // Also reset status message for documents being re-indexed
+  await db
+    .update(kbDocument)
+    .set({ statusMessage: null })
+    .where(and(eq(kbDocument.kbId, kbId), eq(kbDocument.status, "ready")));
+
   // 3. Get all "ready" documents to re-index
   const docs = await db
     .select()
@@ -75,7 +85,11 @@ export async function reindexKnowledgebase(kbId: string) {
       if (!text.trim()) {
         await db
           .update(kbDocument)
-          .set({ status: "failed", updatedAt: new Date() })
+          .set({
+            status: "failed",
+            statusMessage: "Document contains no readable text.",
+            updatedAt: new Date(),
+          })
           .where(eq(kbDocument.id, doc.id));
         failedCount++;
         continue;
@@ -110,6 +124,7 @@ export async function reindexKnowledgebase(kbId: string) {
           chunkCount: chunks.length,
           tokenCount: chunks.reduce((s, c) => s + Math.round(c.length / 4), 0),
           status: "ready", // Explicitly ensure it's "ready"
+          statusMessage: null,
           updatedAt: new Date(),
         })
         .where(eq(kbDocument.id, doc.id));
@@ -119,14 +134,25 @@ export async function reindexKnowledgebase(kbId: string) {
       console.error(`Failed to re-index document ${doc.id}:`, err);
       failedCount++;
 
+      const errorMessage = isRateLimitError(err)
+        ? normalizeRateLimitMessage(err)
+        : (err as Error).message;
+
       // Mark specific document as failed
       await db
         .update(kbDocument)
         .set({
           status: "failed",
+          statusMessage: errorMessage,
           updatedAt: new Date(),
         })
         .where(eq(kbDocument.id, doc.id));
+
+      // If it's a rate limit error, we should stop the whole re-indexing process
+      // to avoid hitting the provider with dozens of failed requests.
+      if (isRateLimitError(err)) {
+        break;
+      }
     }
   }
 

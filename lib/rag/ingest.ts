@@ -6,7 +6,14 @@ import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk";
 import { embedDocuments } from "./embed";
-import { RagExtractionEmptyError } from "@/lib/constants/errors";
+import {
+  RagExtractionEmptyError,
+  RateLimitError,
+} from "@/lib/constants/errors";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 export async function ingestDocument(
   documentId: string,
@@ -22,7 +29,11 @@ export async function ingestDocument(
   // Mark as processing
   await db
     .update(kbDocument)
-    .set({ status: "processing", updatedAt: new Date() })
+    .set({
+      status: "processing",
+      statusMessage: null,
+      updatedAt: new Date(),
+    })
     .where(eq(kbDocument.id, documentId));
 
   try {
@@ -72,6 +83,7 @@ export async function ingestDocument(
       .update(kbDocument)
       .set({
         status: "ready",
+        statusMessage: null,
         chunkCount: chunks.length,
         tokenCount: chunks.reduce((s, c) => s + Math.round(c.length / 4), 0),
         updatedAt: new Date(),
@@ -93,10 +105,23 @@ export async function ingestDocument(
       })
       .where(eq(knowledgebase.id, doc.kbId));
   } catch (err) {
+    const isRateLimit = isRateLimitError(err);
+    const errorMessage = isRateLimit
+      ? normalizeRateLimitMessage(err)
+      : (err as Error).message;
+
     await db
       .update(kbDocument)
-      .set({ status: "failed", updatedAt: new Date() })
+      .set({
+        status: "failed",
+        statusMessage: errorMessage,
+        updatedAt: new Date(),
+      })
       .where(eq(kbDocument.id, documentId));
+
+    if (isRateLimit) {
+      throw new RateLimitError(errorMessage);
+    }
     throw err;
   }
 }

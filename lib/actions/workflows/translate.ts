@@ -8,7 +8,14 @@ import {
   resolveDefaultChatProvider,
   resolveProviderForModel,
 } from "@/lib/chat/resolve-provider";
-import { ProviderNotConfiguredError } from "@/lib/constants/errors";
+import {
+  ProviderNotConfiguredError,
+  RateLimitError,
+} from "@/lib/constants/errors";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 /**
  * Server action to translate text using AI.
@@ -77,6 +84,9 @@ export async function translateText(input: unknown) {
     return translatedText.trim();
   } catch (error) {
     if (error instanceof ProviderNotConfiguredError) throw error;
+    if (isRateLimitError(error)) {
+      throw new RateLimitError(normalizeRateLimitMessage(error));
+    }
     console.error("[Translate Action Error]:", error);
     throw new Error("Failed to translate text. Please try again.");
   }

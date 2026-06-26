@@ -16,7 +16,12 @@ import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 import {
   VisionNotSupportedError,
   ToolsNotSupportedError,
+  RATE_LIMIT_ERROR_CODE,
 } from "@/lib/constants/errors";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 import {
   loadChatContext,
   ChatNotFoundError,
@@ -236,20 +241,9 @@ export async function POST(req: Request) {
           let message = "An error occurred during generation";
           let code = "ERROR";
 
-          if (
-            error.name === "AI_RetryError" ||
-            error.name === "AI_APICallError"
-          ) {
-            const statusCode = error.statusCode || error.lastError?.statusCode;
-            if (statusCode === 429) {
-              message =
-                "Too many requests. Please try again later or add your own API key.";
-              code = "RATE_LIMIT";
-            } else if (error.message?.includes("rate-limited")) {
-              message =
-                "The AI provider is temporarily rate-limited. Please try again shortly.";
-              code = "RATE_LIMIT";
-            }
+          if (isRateLimitError(error)) {
+            message = normalizeRateLimitMessage(error);
+            code = RATE_LIMIT_ERROR_CODE;
           }
 
           controller.enqueue(encodeSSE({ type: "error", message, code }));

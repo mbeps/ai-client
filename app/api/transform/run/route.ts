@@ -20,6 +20,11 @@ import type { TransformStep } from "@/types/transform/transform-agent";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
+import {
+  isRateLimitError,
+  normalizeRateLimitMessage,
+} from "@/lib/utils/error-utils";
 
 import { initTransformRun } from "@/lib/transform/lifecycle-service";
 import { buildFileContext } from "@/lib/transform/build-file-context";
@@ -424,15 +429,24 @@ export async function POST(req: Request) {
 
             stepSummary = result.text || stepSummary;
           } catch (stepErr: unknown) {
-            const msg =
+            let msg =
               stepErr instanceof Error ? stepErr.message : "Step failed";
+            let code = "ERROR";
+
+            if (isRateLimitError(stepErr)) {
+              msg = normalizeRateLimitMessage(stepErr);
+              code = RATE_LIMIT_ERROR_CODE;
+            }
+
             await db
               .update(transformRun)
               .set({ status: "failed", errorMessage: msg })
               .where(eq(transformRun.id, runRow.id));
+
             emit({
               type: "error",
               message: `Step "${step.name}" failed: ${msg}`,
+              code,
             });
             controller.close();
             return;

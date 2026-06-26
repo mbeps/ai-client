@@ -80,9 +80,17 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
               <p className="text-[13px] font-medium truncate leading-tight">
                 {doc.name}
               </p>
-              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                {doc.chunkCount} chunks &middot; {(doc.size / 1024).toFixed(1)}{" "}
-                KB
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                {doc.status === "failed" && doc.statusMessage ? (
+                  <span className="text-destructive font-medium">
+                    {doc.statusMessage}
+                  </span>
+                ) : (
+                  <>
+                    {doc.chunkCount} chunks &middot;{" "}
+                    {(doc.size / 1024).toFixed(1)} KB
+                  </>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-1.5">

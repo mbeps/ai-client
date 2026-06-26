@@ -12,6 +12,7 @@ import {
   MODEL_MALFORMED_ID_ERROR_CODE,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
   PROVIDER_NOT_CONFIGURED_ERROR_CODE,
+  RATE_LIMIT_ERROR_CODE,
 } from "@/lib/constants/errors";
 import { ROUTES } from "@/constants/routes";
 
@@ -98,6 +99,24 @@ export function useApiError() {
       toast.warning(`${duplicateCount} model(s) skipped (already exist)`, {
         description: "These models will be skipped during import.",
       });
+      return true;
+    }
+
+    if (code === RATE_LIMIT_ERROR_CODE) {
+      const isOpenRouterCredits =
+        message.toLowerCase().includes("openrouter") &&
+        message.toLowerCase().includes("credits");
+
+      toast.error(
+        isOpenRouterCredits ? "Insufficient Credits" : "Rate Limit Reached",
+        {
+          description: message,
+          action: {
+            label: "View Providers",
+            onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
+          },
+        },
+      );
       return true;
     }
 

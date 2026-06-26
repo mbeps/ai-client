@@ -17,6 +17,7 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useApiError } from "@/hooks/use-api-error";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
 
 /**
  * Manages AI response streaming with tool integration and artifact generation.
@@ -332,19 +333,14 @@ export function useStreamResponse(
       });
 
       if (!response.ok || !response.body) {
-        if (response.status === 429) {
-          toast.error("Too many requests. Please try again later.");
-          throw new Error("Rate limit exceeded");
-        }
-        if (response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          throw new Error("Unauthorized");
-        }
         const errorData = await response.json().catch(() => ({}));
         const err = new Error(
-          errorData.error || "Stream request failed",
+          errorData.message || errorData.error || "Stream request failed",
         ) as any;
-        err.code = errorData.code;
+        err.code =
+          errorData.code ||
+          (response.status === 429 ? RATE_LIMIT_ERROR_CODE : undefined);
+        err.status = response.status;
         throw err;
       }
 
@@ -408,20 +404,11 @@ export function useStreamResponse(
           options?.onDone?.(accumulated);
           return accumulated;
         } else if (event.type === "error") {
-          setStreamingContent(null);
-          setActiveToolCalls([]);
-
-          if (!handleApiError(event)) {
-            toast.error(event.message || "An error occurred during generation");
-          }
-
-          addMessage(
-            chatId,
-            "assistant",
-            event.message ||
-              "Sorry, I couldn't generate a response. Please try again.",
-            userMsgId,
-          );
+          const err = new Error(
+            event.message || "An error occurred during generation",
+          ) as any;
+          err.code = event.code;
+          throw err;
         }
       }
     } catch (err: any) {
@@ -444,6 +431,14 @@ export function useStreamResponse(
         if (!handleApiError(err)) {
           toast.error(err.message || "Failed to generate response");
         }
+
+        addMessage(
+          chatId,
+          "assistant",
+          err.message ||
+            "Sorry, I couldn't generate a response. Please try again.",
+          userMsgId,
+        );
       }
     } finally {
       abortControllerRef.current = null;

@@ -34,6 +34,7 @@ export const kbDocument = pgTable(
     s3Key: text("s3_key").notNull(),
     // pending | processing | ready | failed
     status: text("status").notNull().default("pending"),
+    statusMessage: text("status_message"),
     chunkCount: integer("chunk_count").notNull().default(0),
     tokenCount: integer("token_count").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),

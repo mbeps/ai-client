@@ -15,6 +15,21 @@ export const KB_NOT_READY_ERROR_CODE = "KB_NOT_READY" as const;
 
 export const MODEL_MALFORMED_ID_ERROR_CODE = "MODEL_MALFORMED_ID" as const;
 
+export const RATE_LIMIT_ERROR_CODE = "RATE_LIMIT" as const;
+
+export class RateLimitError extends Error {
+  readonly code = RATE_LIMIT_ERROR_CODE;
+  readonly status = 429;
+  readonly isRetryable = true;
+  readonly retryAfter?: number;
+
+  constructor(message: string, retryAfter?: number) {
+    super(message);
+    this.name = "RateLimitError";
+    this.retryAfter = retryAfter;
+  }
+}
+
 export class ProviderNotConfiguredError extends Error {
   readonly code = PROVIDER_NOT_CONFIGURED_ERROR_CODE;
 
