@@ -8,6 +8,23 @@ import { updateTransformAgentSchema } from "@/schemas/workflows/transform-agent"
 import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 import { z } from "zod";
 
+/**
+ * Updates an existing transform agent with partial field updates.
+ * Validates inputs and enforces ownership check before updating database record.
+ * Serializes workflow steps to JSON before storing if provided.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param id - UUID of the agent to update; must be owned by the authenticated user.
+ * @param data - Partial agent update object (name, description, globalContext, modelId, tools, knowledgeBaseIds, steps, requiresFileUpload fields).
+ * @returns The updated agent record.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if id is not a valid UUID format.
+ * @throws ZodError if data fails schema validation against updateTransformAgentSchema.
+ * @throws Error if agent is not found or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createTransformAgent to create a new agent.
+ * @author Maruf Bepary
+ */
 export async function updateTransformAgent(
   id: string,
   data: z.infer<typeof updateTransformAgentSchema>,

@@ -10,6 +10,7 @@ import { toast } from "sonner";
  * @param promptName - The prompt name to fetch.
  * @returns The concatenated prompt messages as a single string.
  * @throws Logs error and shows toast on failure — caller should handle gracefully.
+ * @author Maruf Bepary
  */
 export async function resolveMcpPrompt(
   serverId: string,
@@ -36,6 +37,7 @@ export async function resolveMcpPrompt(
  * @param userContent - The user's original message content.
  * @param prompts - The list of available prompts from the store.
  * @returns The composed full content (prompt + separator + userContent).
+ * @author Maruf Bepary
  */
 export function resolveSlashPrompt(
   promptId: string,

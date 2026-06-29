@@ -7,15 +7,19 @@ import { and, eq, not } from "drizzle-orm";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 
 /**
- * Toggles the public/private status of an MCP server for the authenticated user.
- * Allowing users to share their MCP servers with the community.
+ * Toggles the public/private visibility of an MCP server for the authenticated user.
+ * Flips the isPublic boolean to control whether other users can discover and import this server.
+ * IMPORTANT: When toggling to public, sensitive data like API keys or custom headers should NOT be included.
+ * Runs on server only — invoked from client via Server Action.
  *
  * @param id - UUID of the MCP server to toggle; must be owned by the authenticated user.
- * @returns The updated MCP server row with new public status.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if server does not exist or user does not own it (returns "Not Found").
+ * @returns The updated MCP server record with toggled isPublic status.
+ * @throws Error if session is not authenticated.
+ * @throws Error if server is not found or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
- * @author GitHub Copilot
+ * @see createMcpServer to add a new server.
+ * @see listPublicMcpServers to view public servers.
+ * @author Maruf Bepary
  */
 export async function toggleMcpServerPublic(id: string): Promise<McpServerRow> {
   const session = await requireSession();

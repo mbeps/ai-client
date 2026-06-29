@@ -6,6 +6,23 @@ import { aiModel, userSettings, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 
+/**
+ * Sets the default embedding model for the authenticated user and marks all knowledgebases as stale.
+ * Updates or inserts the user's settings record with the specified model ID.
+ * Validates that the model supports embedding capability (modelType includes "embedding" or "both").
+ * Automatically flags all user's knowledgebases with indexStatus="stale" to trigger re-indexing.
+ * Logs the operation for audit purposes.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param modelId - UUID of an embedding-capable model to set as default; must be owned by the authenticated user.
+ * @returns void (no return value).
+ * @throws Error if session is not authenticated.
+ * @throws Error if model is not found, user does not own it, or model does not support embedding (returns "Not Found").
+ * @throws Error if database upsert or update fails due to constraints or connection issues.
+ * @see setDefaultChatModel to set the default chat model.
+ * @author Maruf Bepary
+ */
+
 export async function setDefaultEmbeddingModel(modelId: string): Promise<void> {
   const session = await requireSession();
 

@@ -11,8 +11,8 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  * Route group: /chats, /assistants, /projects, /settings.
  *
  * @param children - Route content (chats, assistants, projects, etc.).
- * @returns Main app scaffold with sidebar, header menu, and nested page content.
- * @see AuthenticatedLayout for session validation and auth guards.
+ * @author Maruf Bepary
+ * @see {@link AuthenticatedLayout} for session validation and auth guards.
  */
 export default function MainLayout({
   children,

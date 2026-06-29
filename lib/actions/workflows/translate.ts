@@ -19,12 +19,18 @@ import {
 } from "@/lib/utils/error-utils";
 
 /**
- * Server action to translate text using AI.
+ * Server action to translate text using AI with optional source language detection.
+ * Resolves the appropriate chat model (user-specified or default) and constructs a translation prompt.
+ * Handles rate-limit errors gracefully and returns structured result.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param input - The translation request data.
- * @returns The translated text.
- * @throws 401 if unauthorized.
- * @throws Error if validation fails.
+ * @param input - The translation request data validated against translateRequestSchema (text, sourceLanguage, targetLanguage required; modelId, attachment optional).
+ * @returns Object with translated text and metadata (originalText, sourceLanguage, targetLanguage, modelId).
+ * @throws 401 Unauthorized if user is not authenticated.
+ * @throws ValidationError if input fails schema validation.
+ * @throws ProviderNotConfiguredError if no chat model is available.
+ * @throws RateLimitError if provider rate limit is exceeded.
+ * @author Maruf Bepary
  */
 export async function translateText(input: unknown) {
   const session = await requireSession();

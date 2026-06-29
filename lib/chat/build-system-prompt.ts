@@ -1,6 +1,22 @@
 import type { ModelMessage } from "ai";
 import { PROMPTS } from "@/constants/prompts";
 
+/**
+ * Builds the system prompt message for a chat request by composing multiple prompt layers.
+ * Merges global app prompts, project-level prompts, assistant-specific prompts,
+ * and adds knowledge base / attachment instructions as needed.
+ * All parts are joined with double newlines for clarity.
+ * Defaults to generic helpful assistant prompt if no custom prompts provided.
+ *
+ * @param globalPrompt - Global application system prompt (optional)
+ * @param projectPrompt - Project-specific system prompt (optional)
+ * @param assistantPrompt - Assistant-specific system prompt (optional)
+ * @param hasKnowledgeBase - Whether knowledge base tool is available
+ * @param attachmentUrls - Presigned URLs for spreadsheet files to load via MCP
+ * @returns Array with single system message for model
+ * @see {@link lib/chat/register-mcp-tools.ts} for MCP tool registration
+ * @author Maruf Bepary
+ */
 export function buildSystemPrompt(
   globalPrompt: string | null | undefined,
   projectPrompt: string | null | undefined,

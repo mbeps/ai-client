@@ -7,14 +7,21 @@ import { and, eq, sql } from "drizzle-orm";
 import type { ProjectRow } from "@/types/project/project-row";
 
 /**
- * Toggles the pin status of a project for the authenticated user.
- * Inverses the isPinned flag and updates the updatedAt timestamp. Ownership check prevents toggling other users' projects.
- * Performs two database queries: initial fetch to get current state, then update with new state.
+ * Toggles the pin/star status of a project for quick access in the sidebar.
+ * Flips the isPinned boolean and returns the updated project state.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param id - Unique identifier of the project to toggle
- * @returns Updated project with inverted isPinned flag and current timestamp
- * @throws Error with message "Not Found" when project does not exist or is not owned by user
+ * @param id - UUID of the project to toggle; must be owned by the authenticated user.
+ * @returns The updated project record with toggled isPinned status.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if id is not a valid UUID format.
+ * @throws Error if project is not found or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createProject to create a new project.
+ * @see listProjects to fetch all projects.
+ * @author Maruf Bepary
  */
+
 export async function togglePinProject(id: string): Promise<ProjectRow> {
   const session = await requireSession();
 

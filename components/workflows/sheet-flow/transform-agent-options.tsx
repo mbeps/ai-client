@@ -9,7 +9,14 @@ import { renameTransformAgent } from "@/lib/actions/transform-agents/rename-tran
 import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
 
 /**
- * Dropdown/Drawer menu with Rename and Delete options for transform agents.
+ * Dropdown/drawer context menu for managing a transformation agent.
+ * Provides rename and delete operations with responsive mobile drawer support.
+ * Displays confirmation dialogs and handles server-side mutations via useEntityOptions hook.
+ *
+ * @param agent - TransformAgent to manage
+ * @returns Context menu with rename and delete options
+ * @throws Shows error toast if rename or delete server action fails
+ * @author Maruf Bepary
  */
 export function TransformAgentOptions({ agent }: { agent: TransformAgent }) {
   const {

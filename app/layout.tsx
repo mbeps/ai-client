@@ -32,8 +32,8 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
  * Public route — no authentication required.
  *
  * @param children - Page content rendered within the layout.
- * @returns HTML document with font variables, tooltip/popover providers, and Sonner toaster.
- * @see AuthenticatedLayout for auth-protected routes.
+ * @author Maruf Bepary
+ * @see {@link AuthenticatedLayout} for auth-protected routes.
  */
 export default function RootLayout({
   children,

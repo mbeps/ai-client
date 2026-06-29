@@ -43,6 +43,16 @@ interface DocumentListProps {
   onDeleted: (documentId: string) => void;
 }
 
+/**
+ * Renders a scrollable list of uploaded documents in a knowledgebase.
+ * Shows document name, processing status, chunk count, and file size.
+ * Includes delete button with confirmation for each document.
+ *
+ * @param props.documents - Array of uploaded documents to display.
+ * @param props.onDeleted - Callback invoked after successful document deletion.
+ * @returns List of document items or empty state message.
+ * @author Maruf Bepary
+ */
 export function DocumentList({ documents, onDeleted }: DocumentListProps) {
   const [isPending, startTransition] = useTransition();
 

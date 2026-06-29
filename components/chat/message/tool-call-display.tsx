@@ -34,6 +34,16 @@ interface ToolCallDisplayProps {
   initialOpen?: boolean;
 }
 
+/**
+ * Displays a collapsible sequence of MCP tool calls and their results.
+ * Shows tool name, arguments, and result status (pending or completed with result).
+ * Used in ResponseTimeline to visualize tool usage during AI processing.
+ *
+ * @param props.toolCalls - Array of tool calls initiated by the model.
+ * @param props.toolResults - Array of tool execution results.
+ * @param props.initialOpen - Whether to show tool details expanded on first render.
+ * @author Maruf Bepary
+ */
 export function ToolCallDisplay({
   toolCalls,
   toolResults,

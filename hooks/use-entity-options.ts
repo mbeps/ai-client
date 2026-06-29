@@ -16,18 +16,26 @@ interface UseEntityOptionsProps {
 }
 
 /**
- * Manages rename and delete operations for entities with dialog state and error handling.
- * Centralises toast notifications and conditional navigation for consistency across entity types.
- * Supports both Zustand store actions and direct Server Actions with optional router.refresh().
+ * Manages rename and delete modal state for entities with consistent error handling and navigation.
+ * Provides toast feedback on success/failure, optional router refresh, and post-mutation callback.
+ * Supports both Zustand store actions and direct Server Actions with conditional routing.
  *
- * @param props.id - Entity ID to manage.
- * @param props.type - Human-readable entity type (e.g., 'Project', 'Assistant') for toast messages.
- * @param props.onRename - Async callback for rename operation.
- * @param props.onDelete - Async callback for delete operation.
- * @param props.redirectPath - Optional path to navigate to after successful deletion.
- * @param props.useRouterRefresh - Whether to trigger router.refresh() after successful mutation.
- * @returns Dialog state (showRename, showDelete, isDeleting) and handlers (handleRename, handleDelete).
- * @see useCreateChat for chat creation flows.
+ * Side effects: Shows toast notifications, calls router.refresh() if enabled, navigates on delete if redirectPath provided.
+ * Use case: Context menu actions, entity detail page options, bulk operation feedback.
+ * Constraint: Dialogs managed here; parent must render delete confirmation UI based on showDelete state.
+ *
+ * @param props.id - Entity ID to operate on (project, assistant, prompt, KB, etc.).
+ * @param props.type - Human-readable entity type for toast messages (e.g. 'Project', 'Assistant').
+ * @param props.onRename - Optional async callback invoked with (id, newName); if not provided, rename is disabled.
+ * @param props.onDelete - Optional async callback invoked with (id); if not provided, delete is disabled.
+ * @param props.redirectPath - Optional route to navigate to after successful deletion (e.g. /projects).
+ * @param props.useRouterRefresh - If true, calls router.refresh() after successful mutation (default: false).
+ * @param props.onAfterMutation - Optional callback invoked after successful rename or delete.
+ * @returns Dialog state (showRename, showDelete, isDeleting) and handlers (handleRename, handleDelete) for UI binding.
+ * @throws Errors from onRename/onDelete are re-thrown after toast; caller must handle in component.
+ * @see useCreateChat for similar chat creation flow.
+ * @see useAppStore for entity store mutations.
+ * @author Maruf Bepary
  */
 export function useEntityOptions({
   id,

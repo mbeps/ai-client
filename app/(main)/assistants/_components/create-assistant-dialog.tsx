@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+// TODO: Move to schema
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -43,6 +44,15 @@ interface CreateAssistantDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Create Assistant Dialog: Form component for defining new AI personas.
+ *
+ * Allows users to define assistant name, description, and optional system prompt.
+ * Submits to server action, updates store, and redirects to assistant detail page.
+ * Validates input with Zod schema and displays error toasts on failure.
+ *
+ * @author Maruf Bepary
+ */
 export function CreateAssistantDialog({
   open,
   onOpenChange,

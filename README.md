@@ -265,59 +265,35 @@ npm start
 
 # References
 
-## Framework & Build
 - [**Next.js**](https://nextjs.org/docs/app) — React meta-framework with App Router, Server Components, and Server Actions
 - [**React**](https://react.dev) — Component-based UI library for building interactive interfaces
 - [**TypeScript**](https://www.typescriptlang.org/docs) — Typed superset of JavaScript with compile-time safety
-
-## Authentication & Security
 - [**Better Auth**](https://better-auth.com/docs) — Multi-method authentication (email/password, OAuth, passkeys, TOTP 2FA)
-- [**Radix UI**](https://www.radix-ui.com) — Unstyled, accessible component primitives for custom design systems
-
-## Database & ORM
 - [**PostgreSQL**](https://www.postgresql.org/docs) — Relational database for persistent storage
 - [**Drizzle ORM**](https://orm.drizzle.team) — Type-safe SQL query builder with migrations and introspection
-
-## AI & Language Models
 - [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses, tool integration, and multi-provider language model abstraction
 - [**OpenAI API Compatibility**](https://platform.openai.com/docs/api-reference) — Universal interface for chat and embedding model access across any OpenAI-compatible provider
 - [**Model Context Protocol**](https://modelcontextprotocol.io) — Protocol for AI tool and server integration
-
-## UI & Styling
 - [**Shadcn UI**](https://ui.shadcn.com) — Copy-paste React component library built on Radix UI
+- [**Radix UI**](https://www.radix-ui.com) — Unstyled, accessible component primitives for custom design systems
 - [**Tailwind CSS**](https://tailwindcss.com/docs) — Utility-first CSS framework for rapid styling
-- [**Sonner**](https://sonner.emilkowal.ski) — Toast notification component library
-
-## Forms & Validation
-- [**React Hook Form**](https://react-hook-form.com) — Performant form handling with minimal re-renders
-- [**Zod**](https://zod.dev) — TypeScript-first schema validation for runtime safety
-
-## State Management
-- [**Zustand**](https://zustand.docs.pmnd.rs) — Lightweight, flexible state management without boilerplate
-
-## Content Rendering
 - [**React Markdown**](https://github.com/remarkjs/react-markdown) — Parse and render Markdown to React components
 - [**Mermaid**](https://mermaid.js.org) — Diagram rendering for flowcharts, sequence diagrams, and more
 - [**KaTeX**](https://katex.org) — Mathematical typesetting and LaTeX notation rendering
 - [**unpdf**](https://github.com/pdfjs-express/pdfjs-express) — PDF text extraction and processing
-
-## Storage & Files
+- [**React Hook Form**](https://react-hook-form.com) — Performant form handling with minimal re-renders
+- [**Zod**](https://zod.dev) — TypeScript-first schema validation for runtime safety
+- [**Zustand**](https://zustand.docs.pmnd.rs) — Lightweight, flexible state management without boilerplate
 - [**MinIO**](https://docs.min.io) — S3-compatible object storage for file uploads and assets
 - [**AWS SDK v3**](https://docs.aws.amazon.com/sdk-for-javascript/) — AWS service client for S3/MinIO
 - [**xlsx**](https://github.com/SheetJS/sheetjs) — Excel file parsing, generation, and manipulation
-
-## Utilities
 - [**UUID**](https://github.com/uuidjs/uuid) — Standard UUID generation for unique identifiers
 - [**Date-fns**](https://date-fns.org) — Date manipulation, formatting, and parsing utilities
 - [**cmdk**](https://github.com/pacocoursey/cmdk) — Fast command/search interface component
 - [**Resizable Panels**](https://github.com/bvaughn/react-resizable-panels) — Draggable, resizable layout panels
 - [**Vaul**](https://github.com/emilkowalski/vaul) — Mobile drawer/sheet component
 - [**BlockNote**](https://www.blocknote.dev) — Rich text editor for document editing
-
-## Services
 - [**Postmark**](https://postmark.com) — Transactional email service for reliable delivery
 - [**Node PostgreSQL**](https://node-postgres.com) — Node.js PostgreSQL client library
-
-## Development
 - [**Turbopack**](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
 - [**ESLint**](https://eslint.org) — JavaScript linter for code quality and consistency

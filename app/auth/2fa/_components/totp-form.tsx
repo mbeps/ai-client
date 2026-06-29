@@ -21,10 +21,13 @@ import { Check } from "lucide-react";
 import { totpSchema, TotpFormData } from "@/schemas/auth/totp";
 
 /**
- * Primary two-factor authentication form that validates a 6-digit TOTP code.
- * Calls `authClient.twoFactor.verifyTotp`; redirects to `ROUTES.HOME` on success.
- * Rendered as the default tab on the 2FA challenge page.
+ * Primary two-factor authentication form that accepts a 6-digit TOTP code from an authenticator app.
+ * Provides time-based one-time password verification as the default 2FA method with fallback to backup codes.
+ * Validates input with Zod schema, calls `authClient.twoFactor.verifyTotp` on submit,
+ * and redirects to home on success. Includes loading state and error toast notifications.
  *
+ * @author Maruf Bepary
+ * @see BackupCodeTab for the 2FA backup verification method
  */
 export function TotpForm() {
   const router = useRouter();

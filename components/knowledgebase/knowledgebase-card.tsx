@@ -14,6 +14,15 @@ interface KnowledgebaseCardProps {
   onAfterMutation?: () => void;
 }
 
+/**
+ * Card displaying knowledgebase name, description, and indexing status.
+ * Clicking navigates to the knowledgebase detail page; options menu provides Rename and Delete actions.
+ * Shows status badges for indexing state and stale index warnings.
+ *
+ * @param props.knowledgebase - Knowledgebase entity with name, description, and indexing status.
+ * @param props.onAfterMutation - Optional callback invoked after rename/delete mutations.
+ * @author Maruf Bepary
+ */
 export function KnowledgebaseCard({
   knowledgebase: kb,
   onAfterMutation,

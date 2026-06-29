@@ -1,16 +1,13 @@
-import { StateCreator } from "zustand";
-import type { AppState } from "@/types/app/app-state";
-import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
-import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
+import { listProjects } from "@/lib/actions/projects/list-projects";
+import { listPrompts } from "@/lib/actions/prompts/list-prompts";
+import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import type { UserSettingsRow } from "@/types/user/user-settings-row";
+import type { AppState } from "@/types/app/app-state";
+import { StateCreator } from "zustand";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).

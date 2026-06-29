@@ -3,8 +3,10 @@ import { headers } from "next/headers";
 import { AccountLinking } from "./account-linking";
 
 /**
- * Server component that lists linked social accounts and masks credential providers.
- * @returns Account linking controls without card wrapper.
+ * Server component that fetches and displays linked OAuth accounts, excluding credential provider.
+ * Filters out password-based accounts to show only social account linking UI.
+ *
+ * @author Maruf Bepary
  */
 export async function LinkedAccountsTab() {
   const accounts = await auth.api.listUserAccounts({

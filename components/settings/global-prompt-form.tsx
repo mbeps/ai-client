@@ -24,6 +24,14 @@ interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;
 }
 
+/**
+ * Form component for editing the global system prompt in user settings.
+ * Displays a resizing textarea that prepends to all AI requests for consistent context.
+ * Auto-expands textarea height based on content up to a maximum height.
+ *
+ * @param props.initialSettings - Current user settings containing the global system prompt.
+ * @author Maruf Bepary
+ */
 export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
   const form = useForm<UserSettings>({
     resolver: zodResolver(userSettingsSchema),

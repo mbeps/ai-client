@@ -10,10 +10,12 @@ import {
 } from "@/lib/auth/o-auth-providers";
 
 /**
- * Renders a `BetterAuthActionButton` for every configured OAuth provider.
- * Iterates `SUPPORTED_OAUTH_PROVIDERS`, rendering each provider's icon and name.
- * Redirects to `ROUTES.HOME` on a successful OAuth callback.
+ * Renders OAuth sign-in buttons for all configured social providers (GitHub, Discord, etc.).
+ * Maps over `SUPPORTED_OAUTH_PROVIDERS` to dynamically render buttons with provider branding.
+ * Each button triggers OAuth flow with home page as the callback destination.
  *
+ * @author Maruf Bepary
+ * @see PasskeyButton for passwordless sign-in option
  */
 export function SocialAuthButtons() {
   return SUPPORTED_OAUTH_PROVIDERS.map((provider) => {

@@ -15,6 +15,7 @@ import { ROUTES } from "../../constants/routes";
  *
  * @see {@link https://better-auth.com/docs/client/react} for full API reference
  * @see {@link lib/auth/auth.ts} for server-side configuration
+ * @author Maruf Bepary
  */
 export const authClient = createAuthClient({
   plugins: [

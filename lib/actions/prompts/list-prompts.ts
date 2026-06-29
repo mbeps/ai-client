@@ -7,11 +7,17 @@ import { eq, desc } from "drizzle-orm";
 import type { PromptRow } from "@/types/prompt/prompt-row";
 
 /**
- * Fetches all slash-command shortcuts (prompts) for the authenticated user, ordered by most recently updated first.
- * Use this to populate the prompt palette or settings view. Performs automatic ownership check via session validation.
+ * Fetches all saved prompts for the authenticated user, ordered by most recently created first.
+ * Use this to display available shortcuts in command palettes or prompt editors.
+ * Performs automatic ownership check via session validation.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @returns Array of all user's prompts sorted by updatedAt descending; empty array if no prompts exist
- * @throws Error when session is invalid or user is not authenticated
+ * @returns Array of all user's prompts sorted by createdAt descending; empty array if no prompts exist.
+ * @throws Error if session is not authenticated.
+ * @throws Error if database query fails due to connection issues.
+ * @see createPrompt to create a new reusable prompt.
+ * @see deletePrompt to remove a prompt.
+ * @author Maruf Bepary
  */
 export async function listPrompts(): Promise<PromptRow[]> {
   const session = await requireSession();

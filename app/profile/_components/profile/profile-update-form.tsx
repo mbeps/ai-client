@@ -24,9 +24,10 @@ import {
 import { Label } from "@/components/ui/label";
 
 /**
- * Form that updates profile metadata.
- * @param user Initial user data used to seed the form.
- * @returns Controlled profile update form component.
+ * React Hook Form-based form for updating user profile name with real-time validation.
+ * Name field is editable; email is displayed but immutable. Submits via Better Auth.
+ *
+ * @author Maruf Bepary
  */
 export function ProfileUpdateForm({
   user,
@@ -47,8 +48,7 @@ export function ProfileUpdateForm({
   const { isSubmitting } = form.formState;
 
   /**
-   * Updates profile fields.
-   * @param data Form submission containing updated profile values.
+   * Submits the profile update request to Better Auth and refreshes the page on success.
    */
   async function handleProfileUpdate(data: ProfileUpdateFormData) {
     const { error } = await authClient.updateUser({

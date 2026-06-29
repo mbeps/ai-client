@@ -20,15 +20,34 @@ import { updateProvider } from "@/lib/actions/providers/update-provider";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/** Represents a custom HTTP header key-value pair for provider requests. */
 type HeaderRow = { key: string; value: string };
 
+/**
+ * Props for ProviderFormDialog component.
+ * Controls dialog visibility, initial provider data, and completion callbacks.
+ *
+ * @author Maruf Bepary
+ */
 type ProviderFormDialogProps = {
+  /** Whether the dialog is visible. */
   open: boolean;
+  /** Callback fired when dialog visibility changes (user closes or saves). */
   onOpenChange: (open: boolean) => void;
+  /** Optional existing provider to edit; undefined for create mode. */
   provider?: AiProviderRow | null;
+  /** Optional callback fired after successful create or update. */
   onSaved?: () => void;
 };
 
+/**
+ * Parses stored JSON headers string into editable key-value pair rows.
+ * Returns single empty row if headers are empty or malformed.
+ *
+ * @param _headers - Stored JSON headers string from database (e.g., '{"Authorization":"Bearer xyz"}')
+ * @returns Array of header rows with key and value fields; min 1 empty row
+ * @author Maruf Bepary
+ */
 function parseHeaderRows(_headers: string | null): HeaderRow[] {
   if (!_headers) return [{ key: "", value: "" }];
 
@@ -44,6 +63,14 @@ function parseHeaderRows(_headers: string | null): HeaderRow[] {
   }
 }
 
+/**
+ * Converts header row array into a normalized JSON object record.
+ * Filters out empty keys/values and trims whitespace.
+ *
+ * @param rows - Array of header rows with key and value
+ * @returns Object with normalized header name/value pairs; empty object if no valid headers
+ * @author Maruf Bepary
+ */
 function normaliseHeaderRows(rows: HeaderRow[]): Record<string, string> {
   return Object.fromEntries(
     rows
@@ -52,6 +79,22 @@ function normaliseHeaderRows(rows: HeaderRow[]): Record<string, string> {
   );
 }
 
+/**
+ * Modal dialog for creating or editing AI provider configurations.
+ * Supports provider name, base URL, API key (optional), custom HTTP headers,
+ * enable/disable toggle, and response caching settings.
+ * Calls createProvider or updateProvider server actions and invalidates registry cache on success.
+ *
+ * @param open - Whether dialog is visible
+ * @param onOpenChange - Callback when dialog visibility changes
+ * @param provider - Existing provider to edit (undefined = create mode)
+ * @param onSaved - Optional callback fired after successful save
+ * @returns Modal form dialog with provider configuration fields
+ * @throws Shows error toast on save failure (server action errors)
+ * @see createProvider for creation logic
+ * @see updateProvider for update logic
+ * @author Maruf Bepary
+ */
 export function ProviderFormDialog({
   open,
   onOpenChange,

@@ -1,53 +1,33 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { ServerFormFields } from "@/components/mcp/server-form-fields";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { Plus, X } from "lucide-react";
+import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
+import { useAppStore } from "@/lib/store";
 import {
   createMcpServerSchema,
   type CreateMcpServer,
 } from "@/schemas/providers/mcp-server";
-import { toast } from "sonner";
-import { ServerFormFields } from "@/components/mcp/server-form-fields";
-import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAppStore } from "@/lib/store";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 /**
- * Dialog for adding a new Model Context Protocol server.
- * Renders form for HTTP MCP server configuration and auto-resets form state on close.
- * Validates inputs against createMcpServerSchema before submission.
+ * Props for AddServerDialog component.
  *
- * @param open - Whether the dialog is visible
- * @param onOpenChange - Callback invoked when dialog open state changes
- * @see {@link EditServerForm} for editing existing servers
- * @see {@link ServerCard} for server display
+ * @interface AddServerDialogProps
  */
 export interface AddServerDialogProps {
   /**
@@ -69,6 +49,18 @@ const DEFAULTS: CreateMcpServer = {
   isPublic: false,
 };
 
+/**
+ * Dialog for adding a new Model Context Protocol server.
+ * Renders form for HTTP MCP server configuration and auto-resets form state on close.
+ * Validates inputs against createMcpServerSchema before submission.
+ *
+ * @param props - Component props
+ * @param props.open - Whether the dialog is visible
+ * @param props.onOpenChange - Callback invoked when dialog open state changes
+ * @see {@link EditServerForm} for editing existing servers
+ * @see {@link ServerCard} for server display
+ * @author Maruf Bepary
+ */
 export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
   const router = useRouter();
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);

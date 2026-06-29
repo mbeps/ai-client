@@ -7,6 +7,16 @@ import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
 
+/**
+ * Dropdown/Drawer menu with Rename and Delete options for knowledgebases.
+ * Uses useEntityOptions hook for shared dialog state and direct Server Actions for mutations.
+ * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
+ *
+ * @param props.kb - Knowledgebase entity with id and name.
+ * @returns Menu with action items, rename dialog, and delete confirmation dialog.
+ * @see useEntityOptions for dialog and action state management.
+ * @author Maruf Bepary
+ */
 export function KnowledgebaseOptions({
   kb,
   onAfterMutation,

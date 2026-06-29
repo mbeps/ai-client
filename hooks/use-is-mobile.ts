@@ -4,12 +4,17 @@ import * as React from "react";
 const MOBILE_BREAKPOINT = 768;
 
 /**
- * Returns true when viewport width is below 768px mobile breakpoint.
- * Subscribes to MediaQueryList for reactive updates on window resize.
- * Used in ResponsiveMenu to swap Popover (desktop) for Drawer (mobile) and conditional component rendering.
+ * Reactive media query hook detecting mobile viewport (width < 768px).
+ * Maintains listener subscription across component lifecycle for real-time updates
+ * on window resize events. Returns boolean undefined during SSR, then stable value.
  *
- * @returns Boolean indicating whether viewport is in mobile state (< 768px).
- * @see ResponsiveMenu for component that consumes this hook.
+ * Side effects: Subscribes to MediaQueryList, updates on resize, cleans up listener.
+ * Use case: Conditional rendering (Popover vs Drawer), responsive layout logic.
+ * Constraint: Only works in browser; returns undefined on initial SSR render.
+ *
+ * @returns Boolean true if viewport width < 768px, false otherwise.
+ * @see ResponsiveMenu component that conditionally renders based on this hook.
+ * @author Maruf Bepary
  */
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(

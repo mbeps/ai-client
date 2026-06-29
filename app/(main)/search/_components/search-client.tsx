@@ -27,12 +27,14 @@ type SearchItem =
   | { type: "chat"; data: Chat; id: string; updatedAt: Date }
   | { type: "project"; data: Project; id: string; updatedAt: Date }
   | { type: "assistant"; data: Assistant; id: string; updatedAt: Date };
-
 /**
- * Client-side component for the global search page.
- * Aggregates chats, projects, and assistants into a unified searchable list.
- * Uses the shared ResourceListPage for a consistent layout.
+ * Search client: Unified search interface for chats, projects, and assistants.
  *
+ * Accepts server-fetched resources and renders searchable grid with type filtering.
+ * Groups results by type (Projects, Assistants, Chats). Supports filtering by
+ * resource type (all, chat, project, assistant). Each card links to detail page.
+ *
+ * @author Maruf Bepary
  */
 export function SearchClient({
   initialChats,

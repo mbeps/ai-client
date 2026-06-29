@@ -22,11 +22,12 @@ import { UserPlus } from "lucide-react";
 import { signUpSchema, SignUpForm } from "@/schemas/auth/sign-up";
 
 /**
- * Registration form that creates a new account via `authClient.signUp.email`.
- * After successful registration, opens the email-verification tab when the
- * returned `user.emailVerified` flag is `false`.
+ * User registration form that creates a new account with email, name, and password.
+ * Validates input with Zod schema, calls `authClient.signUp.email`, and delegates to
+ * email verification flow when the new account requires email verification.
  *
- * @param props.openEmailVerificationTab - Called with the user's email to show the verification step
+ * @param props.openEmailVerificationTab - Callback invoked with email to show verification step after successful signup
+ * @author Maruf Bepary
  */
 export function SignUpTab({
   openEmailVerificationTab,

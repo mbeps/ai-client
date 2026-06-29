@@ -8,10 +8,13 @@ import type { ProjectRow } from "@/types/project/project-row";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**
- * Global search page — server component fetching all user resources.
- * Fetches chats, projects, and assistants concurrently.
- * Displays a unified searchable interface.
+ * Global search page: Unified interface for finding chats, projects, and assistants.
  *
+ * Route: /search. Server component fetching all user resources in parallel.
+ * Aggregates chats, projects, and assistants into single searchable list with
+ * type-based filtering (all, chat, project, assistant). Protected route.
+ *
+ * @author Maruf Bepary
  */
 export default async function SearchPage() {
   const [chatRows, projectRows, assistantRows] = await Promise.all([

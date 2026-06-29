@@ -7,8 +7,11 @@ import { LoadingSuspense } from "../_components/shared/loading-suspense";
 import { env } from "@/lib/env";
 
 /**
- * Security settings page.
- * @returns Server-rendered security tools.
+ * Security settings page for password management, two-factor authentication, and passkeys.
+ * Conditionally displays password and 2FA tools based on account type and feature flags.
+ * Route: /profile/security. Protected by session auth.
+ *
+ * @author Maruf Bepary
  */
 export default async function SecurityPage() {
   const session = await auth.api.getSession({ headers: await headers() });

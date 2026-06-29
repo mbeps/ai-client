@@ -1,3 +1,6 @@
+/**
+ * List of languages for translation.
+ */
 export const LANGUAGES = [
   { label: "Detect Language", value: "auto" },
   { label: "English", value: "en" },

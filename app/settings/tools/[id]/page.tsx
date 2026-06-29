@@ -38,6 +38,7 @@ import { useShallow } from "zustand/react/shallow";
  * Features: view server configuration, list available tools and resources, toggle server enabled state,
  * edit server settings, view resource descriptions. Shows 404 if server not found.
  *
+ * @author Maruf Bepary
  * @see ToolsPage for parent MCP servers list
  */
 export default function McpServerPage() {

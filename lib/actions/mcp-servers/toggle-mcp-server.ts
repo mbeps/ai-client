@@ -8,13 +8,18 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 
 /**
  * Toggles the enabled/disabled status of an MCP server for the authenticated user.
- * Used to quickly enable/disable tool availability without deleting the configuration.
+ * Flips the enabled boolean and returns the updated server state.
+ * Disabling prevents the server from being used in chat or tool discovery.
+ * Runs on server only — invoked from client via Server Action.
  *
  * @param id - UUID of the MCP server to toggle; must be owned by the authenticated user.
- * @returns The updated MCP server row with new enabled status.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if server does not exist or user does not own it (returns "Not Found").
+ * @returns The updated MCP server record with toggled enabled status.
+ * @throws Error if session is not authenticated.
+ * @throws Error if server is not found or user does not own it (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
+ * @see createMcpServer to add a new server.
+ * @see listMcpServers to view all servers.
+ * @author Maruf Bepary
  */
 export async function toggleMcpServer(id: string): Promise<McpServerRow> {
   const session = await requireSession();

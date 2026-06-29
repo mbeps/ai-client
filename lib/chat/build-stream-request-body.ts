@@ -2,6 +2,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Payload sent to the /api/chat SSE endpoint.
+ * @author Maruf Bepary
  */
 export interface StreamRequestPayload {
   chatId: string;
@@ -30,6 +31,7 @@ export interface StreamRequestPayload {
 /**
  * Builds the JSON-serialisable request body for the /api/chat SSE endpoint.
  * This is a pure data transform — no side effects.
+ * @author Maruf Bepary
  */
 export function buildStreamRequestBody(params: {
   chatId: string;

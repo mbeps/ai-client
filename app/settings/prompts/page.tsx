@@ -12,6 +12,8 @@ import { CreatePromptDialog } from "./_components/create-prompt-dialog";
  * Prompts listing page — client component displaying all user-defined prompt shortcuts.
  * Features: searchable grid of prompt cards (by title/shortcut/content), create new prompt.
  * Prompts are reusable slash-commands (e.g., `/shortcut`) that prepend content to AI calls.
+ *
+ * @author Maruf Bepary
  */
 export default function PromptsPage() {
   const prompts = useAppStore((state) => state.prompts);

@@ -32,11 +32,12 @@ import {
 } from "@/schemas/auth/reset-password";
 
 /**
- * Password reset page component driven by a signed token in the URL.
- * Reads `token` from search params; renders an invalid-link card when the token
- * is absent or `error` is present. On valid submission calls
- * `authClient.resetPassword` and redirects to the login page after 1 s.
+ * Password reset form component that completes the password recovery flow using a signed token.
+ * Reads `token` and `error` from URL search params; renders an invalid-link state when token is missing or error is present.
+ * On valid submission, calls `authClient.resetPassword`, shows success toast, and redirects to login after 1 second.
  *
+ * @author Maruf Bepary
+ * @see ForgotPassword for the form that initiates the password reset email flow
  */
 export default function ResetPasswordClient() {
   const router = useRouter();

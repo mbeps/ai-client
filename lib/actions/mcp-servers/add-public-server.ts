@@ -8,15 +8,15 @@ import { and, eq } from "drizzle-orm";
 /**
  * Adds a public MCP server to the current user's personal server list.
  * Fetches the source server, verifies it's public and enabled, and creates a copy for the user.
- *
  * IMPORTANT: Sensitive data (headers) are stripped during the copy process to ensure security.
  * Only core configuration (name, url) is duplicated.
+ * Runs on server only — invoked from client via Server Action.
  *
  * @param publicServerId - The source public MCP server ID to clone.
  * @returns The ID of the newly created personal MCP server.
  * @throws Error if the public server is not found, not enabled, or not public.
  * @throws Error if the user already owns the server (if validation is enabled).
- * @author GitHub Copilot
+ * @author Maruf Bepary
  */
 export async function addPublicServer(publicServerId: string): Promise<string> {
   const session = await requireSession();

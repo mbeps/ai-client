@@ -17,6 +17,17 @@ interface ThinkingDisplayProps {
   stepNumber?: number;
 }
 
+/**
+ * Displays extended reasoning or "thinking" output from models with chain-of-thought capabilities.
+ * Shows in a collapsible container with an animated loading state while streaming.
+ * Used in ResponseTimeline to show model reasoning steps before tool calls or responses.
+ *
+ * @param props.reasoning - The reasoning text or markdown content to display.
+ * @param props.isStreaming - Whether the reasoning is actively streaming.
+ * @param props.initialOpen - Whether to show the content expanded on first render.
+ * @param props.stepNumber - Optional step number for display (e.g. "Step 1").
+ * @author Maruf Bepary
+ */
 export function ThinkingDisplay({
   reasoning,
   isStreaming,
@@ -44,7 +55,7 @@ export function ThinkingDisplay({
         <CollapsibleTrigger
           className={cn(
             "flex items-center gap-2 p-3 w-full text-sm font-medium transition-colors hover:bg-muted/30 outline-none",
-            isOpen ? "border-b border-muted" : ""
+            isOpen ? "border-b border-muted" : "",
           )}
         >
           <div className="flex items-center gap-2 flex-1 text-muted-foreground">
@@ -61,7 +72,7 @@ export function ThinkingDisplay({
           <ChevronDown
             className={cn(
               "size-4 text-muted-foreground transition-transform duration-200",
-              isOpen ? "rotate-180" : ""
+              isOpen ? "rotate-180" : "",
             )}
           />
         </CollapsibleTrigger>
@@ -77,4 +88,3 @@ export function ThinkingDisplay({
     </div>
   );
 }
-

@@ -12,6 +12,19 @@ import {
 } from "@/schemas/providers/provider-registry";
 import { decodeProviderRecord } from "./utils";
 
+/**
+ * Exports providers and models for authenticated user with optional ID filtering.
+ * API keys NEVER exported (always null) for security. Headers decrypted, timestamp ISO 8601.
+ *
+ * @param [input] - Optional {providerIds} filter
+ * @returns RegistryExport with version 1, exportedAt, providers (apiKey=null), models
+ * @throws If input validation or session fails; ProviderKeyCorruptedError on header decryption failure
+ * @security API keys never exported; headers in memory only; treat export as sensitive
+ * @see {@link importProviderRegistry} for importing exported registries
+ * @see {@link decodeProviderRecord} for header decryption
+ * @author Maruf Bepary
+ */
+
 const PROVIDER_MODEL_TYPES = ["chat", "embedding", "both"] as const;
 
 function toProviderModelType(
@@ -20,6 +33,16 @@ function toProviderModelType(
   return PROVIDER_MODEL_TYPES.find((type) => type === value) ?? "chat";
 }
 
+/**
+ * Exports a provider registry for bulk provider and model management.
+ *
+ * @param {ExportProviderRegistryInput | undefined} [input] - Optional filter (providerIds)
+ * @returns {Promise<RegistryExport>} Complete registry export with all provider and model metadata
+ * @throws {Error} If decryption fails or input validation fails
+ *
+ * @see {@link importProviderRegistry} for importing
+ * @author Maruf Bepary
+ */
 export async function exportProviderRegistry(
   input?: ExportProviderRegistryInput,
 ): Promise<RegistryExport> {

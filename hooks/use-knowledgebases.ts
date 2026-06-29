@@ -8,10 +8,18 @@ import {
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**
- * Hook for managing knowledge base list fetching and state.
- * Replaces the removed knowledgebases store property.
+ * Fetches and manages knowledge base list with normalization and refresh control.
+ * Replaces the removed knowledgebases store slice. Automatically loads on mount.
+ * Provides both raw (with metadata counts) and normalized representations.
  *
- * @returns { knowledgebases: KnowledgebaseWithCount[], normalizedKnowledgebases: Knowledgebase[], isLoading: boolean, refresh: () => Promise<void> }
+ * Side effects: Fetches knowledge bases on mount, logs errors to console.
+ * Use case: KnowledgeBase selection components, KB availability detection.
+ * Constraint: Normalized form applies undefined to missing descriptions.
+ *
+ * @returns Object with knowledgebases (raw), normalizedKnowledgebases, isLoading state, refresh callback.
+ * @throws No exceptions thrown; errors logged and swallowed.
+ * @see listKnowledgebases server action for API contract.
+ * @author Maruf Bepary
  */
 export function useKnowledgebases() {
   const [knowledgebases, setKnowledgebases] = useState<

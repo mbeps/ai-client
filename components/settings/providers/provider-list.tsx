@@ -28,6 +28,16 @@ type ProviderListProps = {
   onRefresh: () => Promise<void>;
 };
 
+/**
+ * Lists all configured AI providers with search, edit, delete, and test controls.
+ * Shows model count per provider and enables toggling provider availability.
+ * Integrates with ProviderCard and ModelFormDialog for inline management.
+ *
+ * @param props.providers - Array of configured providers to display.
+ * @param props.models - Array of models (for counting models per provider).
+ * @param props.onRefresh - Callback to refresh the provider list after mutations.
+ * @author Maruf Bepary
+ */
 export function ProviderList({
   providers,
   models,

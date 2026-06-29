@@ -6,8 +6,11 @@ import { LinkedAccountsTab } from "../_components/account/linked-accounts-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
 /**
- * Linked accounts management page.
- * @returns Server-rendered linked accounts list.
+ * Profile page for managing linked OAuth accounts. Displays supported providers
+ * with link/unlink actions and shows currently connected accounts.
+ * Route: /profile/accounts. Protected by session auth.
+ *
+ * @author Maruf Bepary
  */
 export default async function LinkedAccountsPage() {
   const session = await auth.api.getSession({ headers: await headers() });

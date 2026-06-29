@@ -37,9 +37,10 @@ import { useState } from "react";
 import { passkeySchema, PasskeyForm } from "@/schemas/auth/passkey";
 
 /**
- * Displays existing passkeys and provides controls for creating or deleting them.
- * @param passkeys List of registered passkeys for the current user.
- * @returns Passkey management interface with modal creation flow.
+ * Manages user passkeys (WebAuthn credentials) with create and delete functionality.
+ * Lists registered passkeys with creation dates and provides a modal form to add new ones.
+ *
+ * @author Maruf Bepary
  */
 export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,8 +55,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
   const { isSubmitting } = form.formState;
 
   /**
-   * Creates a new WebAuthn passkey using Better Auth's passkey plugin.
-   * @param data Form payload containing the passkey label.
+   * Registers a new WebAuthn passkey via Better Auth and closes the modal on success.
    */
   async function handleAddPasskey(data: PasskeyForm) {
     await authClient.passkey.addPasskey(data, {
@@ -69,9 +69,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
     });
   }
   /**
-   * Removes an existing passkey and refreshes the passkey list.
-   * @param passkeyId Identifier for the passkey being removed.
-   * @returns Promise that resolves upon successful deletion.
+   * Deletes a passkey from the user's account and refreshes the list.
    */
   function handleDeletePasskey(passkeyId: string) {
     return authClient.passkey.deletePasskey(

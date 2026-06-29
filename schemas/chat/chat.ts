@@ -4,10 +4,14 @@ import { idField } from "../shared-fields";
 
 /**
  * Validates a message object for persistence to the database.
- * Enforces UUID format for id and parentId, ensures content is non-empty, and validates role enumeration.
+ * Enforces UUID format for id and parentId, ensures content is non-empty.
+ * Role enumeration constrains to valid message types (user, assistant, system).
+ * Metadata stores JSON-serialized tool calls and extended-thinking tokens.
  * Use when saving individual messages in a chat conversation tree structure.
  *
- * @see {@link lib/actions/chats/} for message persistence actions
+ * @see {@link lib/actions/chats/}} for message persistence actions
+ * @see {@link types/message/message.ts} for Message type
+ * @author Maruf Bepary
  */
 export const persistMessageSchema = z.object({
   id: idField,
@@ -19,10 +23,13 @@ export const persistMessageSchema = z.object({
 
 /**
  * Validates chat creation data from form input or API calls.
- * Title is optional (1-255 chars); projectId and assistantId are optional UUIDs for binding chats to projects or assistants.
+ * Title optional (1-255 chars); projectId and assistantId optional UUIDs for binding chats to resources.
+ * Null values allow chats without project or assistant association (standalone chats).
  * Use when creating a new conversation thread via createChat server action.
+ * Enables flexible chat organization via optional project/assistant scoping.
  *
  * @see {@link lib/actions/chats/create-chat.ts} for chat creation action
+ * @author Maruf Bepary
  */
 export const createChatSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -32,10 +39,12 @@ export const createChatSchema = z.object({
 
 /**
  * Validates chat title updates during rename operations.
- * Requires title to be non-empty and under 255 characters.
- * Use when renaming an existing chat conversation.
+ * Requires title to be non-empty (1-255 chars).
+ * Single-field schema for efficient rename requests.
+ * Use when renaming an existing chat conversation via renameChat server action.
  *
  * @see {@link lib/actions/chats/rename-chat.ts} for rename action
+ * @author Maruf Bepary
  */
 export const renameChatSchema = z.object({
   title: z.string().min(1).max(255),
@@ -44,9 +53,11 @@ export const renameChatSchema = z.object({
 /**
  * Validates chat project reassignment data when moving a chat between projects.
  * Accepts a valid UUID for projectId or null to remove project binding.
- * Use when reassigning a chat to a different project or unbinding it.
+ * Allows "unbinding" chats from projects (standalone mode) when null is provided.
+ * Use when reassigning a chat to a different project or unbinding it via moveChatserver action.
  *
  * @see {@link lib/actions/chats/move-chat.ts} for move action
+ * @author Maruf Bepary
  */
 export const moveChatSchema = z.object({
   projectId: idField.nullable(),
@@ -54,6 +65,11 @@ export const moveChatSchema = z.object({
 
 /**
  * Validates the full chat object for the store.
+ * Includes metadata for navigation and display (projectName, assistantName).
+ * currentLeafId tracks the active message in the tree for branching conversations.
+ * All fields required for complete chat state representation in Zustand store.
+ *
+ * @author Maruf Bepary
  */
 export const chatSchema = z.object({
   id: idField,
@@ -69,10 +85,13 @@ export const chatSchema = z.object({
 
 /**
  * Validates message metadata capturing AI reasoning, tool invocations, and results.
- * Stores optional tool calls array (with ids, names, args), tool results array, reasoning text, and model identifier.
- * Use when persisting extended message context with tool execution traces and AI thinking process.
+ * Stores optional tool calls array (with ids, names, args), tool results array.
+ * Reasoning text from extended-thinking models; model identifier for audit/versioning.
+ * All fields optional since not all messages have tools or reasoning.
+ * Use when persisting extended message context with tool execution traces and AI thinking.
  *
- * @see {@link lib/actions/chats/} for message persistence with metadata
+ * @see {@link lib/actions/chats/}} for message persistence with metadata
+ * @author Maruf Bepary
  */
 export const messageMetadataSchema = z.object({
   toolCalls: z

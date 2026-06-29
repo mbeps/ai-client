@@ -24,13 +24,13 @@ import { HelpCircle, LogIn } from "lucide-react";
 import { signInSchema, SignInForm } from "@/schemas/auth/sign-in";
 
 /**
- * Email/password sign-in form with passkey and password-reset shortcuts.
- * Redirects to `ROUTES.HOME` on success. Delegates to `openEmailVerificationTab`
- * when Better Auth returns `EMAIL_NOT_VERIFIED`, and to `openForgotPassword`
- * when the user activates the forgot-password link.
+ * Email/password sign-in form with integrated passkey button and password recovery link.
+ * Validates credentials with Zod schema, calls `authClient.signIn.email` on submit, and handles
+ * unverified email errors by delegating to email verification flow. Includes forgot-password shortcut.
  *
- * @param props.openEmailVerificationTab - Called with the email when verification is required
- * @param props.openForgotPassword - Switches the parent view to the forgot-password flow
+ * @param props.openEmailVerificationTab - Callback invoked with email when EMAIL_NOT_VERIFIED error occurs
+ * @param props.openForgotPassword - Callback to switch parent view to forgot-password form
+ * @author Maruf Bepary
  */
 export function SignInTab({
   openEmailVerificationTab,

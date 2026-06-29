@@ -36,13 +36,26 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 
+/**
+ * Props for SpreadsheetView artifact component.
+ * Accepts either JSON-formatted spreadsheet data or CSV content.
+ *
+ * @author Maruf Bepary
+ */
 export interface SpreadsheetViewProps {
+  /** Display title for the spreadsheet artifact. */
   title: string;
+  /** XLSX or CSV-formatted spreadsheet content to render and make searchable. */
   content: string;
 }
 
 /**
- * Maps CellStyle properties to Tailwind classes or inline styles.
+ * Converts CellStyle properties to Tailwind classes and inline CSS styles.
+ * Handles font weight, italics, text alignment, colors, and backgrounds.
+ *
+ * @param style - Cell styling object with optional bold, italic, alignment, colors
+ * @returns Object with Tailwind classes and inline CSS styles to apply to cell
+ * @author Maruf Bepary
  */
 function getCellStyle(style?: CellStyle) {
   if (!style) return {};
@@ -63,10 +76,12 @@ function getCellStyle(style?: CellStyle) {
 }
 
 /**
- * Spreadsheet reader that handles:
- * 1. Multi-sheet JSON (ArtifactSpreadsheetData)
- * 2. Legacy JSON Array (Sheet1 only)
- * 3. CSV string (Sheet1 only)
+ * Parses spreadsheet content in multiple formats and returns normalized data structure.
+ * Supports multi-sheet JSON, legacy JSON arrays, and CSV format with automatic fallback.
+ *
+ * @param content - Spreadsheet content as JSON string or CSV
+ * @returns Normalized ArtifactSpreadsheetData with sheets array; empty sheets on parse failure
+ * @author Maruf Bepary
  */
 function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
   return useMemo(() => {
@@ -112,6 +127,18 @@ function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
   }, [content]);
 }
 
+/**
+ * Renders multi-sheet spreadsheet artifacts with search, filtering, and XLSX export.
+ * Supports multiple format inputs (JSON multi-sheet, legacy arrays, CSV).
+ * Features global search, sheet navigation tabs, row indexing, and cell styling support.
+ * Used in ArtifactPanel for spreadsheet artifact display and editing.
+ *
+ * @param title - Display title for the spreadsheet
+ * @param content - Spreadsheet content (XLSX JSON, legacy array, or CSV format)
+ * @returns Tabbed spreadsheet viewer with search, sheet tabs, filtering, and export functionality
+ * @see useSpreadsheetData for content parsing logic
+ * @author Maruf Bepary
+ */
 export default function SpreadsheetView({
   title,
   content,

@@ -22,6 +22,22 @@ export type UseProvidersResult = {
   invalidate: () => void;
 };
 
+/**
+ * Fetches and caches AI provider list with stale detection and selective refresh.
+ * Uses provider-registry-cache for 30-minute stale window with 2-hour garbage collection.
+ * Subscribes to cache updates, automatically triggers load on missing/stale data.
+ * Retries once on transient failures; reports persistent errors in return object.
+ *
+ * Side effects: Fetches from cache or listProviders() server action, subscribes to cache.
+ * Use case: Provider selector components, model availability UI, provider registry UI.
+ * Constraint: Cache lifecycle is global; call invalidate() to force refresh across instances.
+ *
+ * @returns Object with providers array, loading/error states, staleness flag, refresh and invalidate methods.
+ * @throws No exceptions thrown; errors returned in error field.
+ * @see fetchProviderRegistryWithCache for cache implementation.
+ * @see useUserModels for model list hook with same caching pattern.
+ * @author Maruf Bepary
+ */
 export function useProviders(): UseProvidersResult {
   const [providers, setProviders] = useState<AiProviderRow[]>(
     () => getProviderRegistryCachedData<AiProviderRow[]>("providers") ?? [],

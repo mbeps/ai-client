@@ -1,6 +1,10 @@
 /**
  * Data model for rendered artifacts (generated content from AI).
  * Supports Markdown, Spreadsheet (JSON), HTML, and Mermaid diagram types.
+ * Includes optional messageId for tracking which message generated the artifact.
+ * Used for storing and rendering AI-generated content alongside chat.
+ *
+ * @author Maruf Bepary
  */
 export interface ArtifactData {
   /** Type of artifact: markdown, spreadsheet, html, or mermaid. */
@@ -18,6 +22,9 @@ export interface ArtifactData {
 
 /**
  * Data model for structured multi-sheet spreadsheet artifacts.
+ * Represents a complete workbook that can be exported or displayed.
+ *
+ * @author Maruf Bepary
  */
 export interface ArtifactSpreadsheetData {
   /** Array of sheets in the workbook. */
@@ -28,6 +35,9 @@ export interface ArtifactSpreadsheetData {
 
 /**
  * Interface representing a single sheet in an artifact spreadsheet.
+ * Contains the 2D data array and optional column metadata.
+ *
+ * @author Maruf Bepary
  */
 export interface ArtifactSheet {
   /** The unique name of the sheet. */
@@ -39,7 +49,10 @@ export interface ArtifactSheet {
 }
 
 /**
- * Interface for column-level metadata.
+ * Interface for column-level metadata in spreadsheets.
+ * Enables customization of column presentation (headers, widths).
+ *
+ * @author Maruf Bepary
  */
 export interface ColumnMetadata {
   /** The header label for the column. */
@@ -50,6 +63,9 @@ export interface ColumnMetadata {
 
 /**
  * Enhanced cell object with optional styling information.
+ * Allows fine-grained control over cell rendering in spreadsheets.
+ *
+ * @author Maruf Bepary
  */
 export interface CellObject {
   /** The actual value of the cell. */
@@ -60,6 +76,9 @@ export interface CellObject {
 
 /**
  * Style properties for rendering spreadsheet cells.
+ * Controls appearance and formatting of cell content.
+ *
+ * @author Maruf Bepary
  */
 export interface CellStyle {
   /** Renders text in bold. */

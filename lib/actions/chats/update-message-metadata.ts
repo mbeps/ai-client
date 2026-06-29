@@ -6,6 +6,15 @@ import { requireSession } from "@/lib/auth/require-session";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+/**
+ * Updates message metadata after validating user ownership of chat. Revalidates related paths.
+ *
+ * @async
+ * @param messageId - Message identifier to update
+ * @param metadata - New metadata JSON string or null
+ * @throws "Unauthorized" if message not owned by current user
+ * @author Maruf Bepary
+ */
 export async function updateMessageMetadata(
   messageId: string,
   metadata: string | null,
@@ -14,7 +23,7 @@ export async function updateMessageMetadata(
 
   // Ensure the message belongs to a chat owned by the user
   const [row] = await db
-    .select({ 
+    .select({
       messageId: message.id,
       userId: chat.userId,
       chatId: chat.id,
@@ -23,19 +32,13 @@ export async function updateMessageMetadata(
     })
     .from(message)
     .innerJoin(chat, eq(message.chatId, chat.id))
-    .where(and(
-      eq(message.id, messageId),
-      eq(chat.userId, session.user.id)
-    ));
+    .where(and(eq(message.id, messageId), eq(chat.userId, session.user.id)));
 
   if (!row) {
     throw new Error("Unauthorized");
   }
 
-  await db
-    .update(message)
-    .set({ metadata })
-    .where(eq(message.id, messageId));
+  await db.update(message).set({ metadata }).where(eq(message.id, messageId));
 
   revalidatePath(`/chats/${row.chatId}`);
   if (row.projectId) {

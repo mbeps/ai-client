@@ -4,6 +4,10 @@ import { logger } from "@/lib/logger";
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Tool call entry extracted from streaming response.
+ * @author Maruf Bepary
+ */
 export interface ToolCallEntry {
   toolCallId: string;
   toolName: string;

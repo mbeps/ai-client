@@ -14,12 +14,20 @@ export type HydratableResource =
   | "userSettings";
 
 /**
- * Standardised hook for hydrating essential resources into the Zustand store.
- * Triggers loaders only if the resource data is currently empty.
- * Consolidates repetitive useEffect logic found in layouts and detail pages.
+ * Orchestrates hydration of multiple resources into Zustand store during layout/page mounts.
+ * Triggers loaders only for empty resources, preventing duplicate fetches in React.StrictMode.
+ * Maps resource names to store loader functions (e.g. 'projects' -> loadProjects).
+ * Supports ephemeral resources like mcpPrompts (discovery-based, not persistent).
  *
- * @param resources - Array of resource keys to hydrate, including ephemeral ones like "mcpPrompts".
- * @returns { isLoading: boolean } - True if any requested resource is still loading.
+ * Side effects: Calls store loader functions, updates store state, logs errors to console.
+ * Use case: Layout pages initialising multiple stores, detail pages hydrating related resources.
+ * Constraint: Loaders are called unconditionally if resource empty; no selective refresh. Uses ref to prevent re-runs in StrictMode.
+ *
+ * @param resources - Array of resource keys to hydrate (e.g. ['projects', 'assistants', 'userSettings']).
+ * @returns Object with isLoading (true if any resource loading) and loadingResources array for tracking.
+ * @throws No exceptions thrown; loader errors logged and swallowed to prevent blocking other hydrations.
+ * @see useAppStore for store structure and loader function signatures.
+ * @author Maruf Bepary
  */
 export function useResourceHydration(resources: HydratableResource[]) {
   const store = useAppStore();

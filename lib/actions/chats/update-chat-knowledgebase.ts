@@ -6,11 +6,25 @@ import { chat } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
+/**
+ * Schema for validating chat knowledge base update requests.
+ * Ensures chatId is present and knowledgebaseId is either a valid string or null (to clear KB).
+ * @internal
+ * @type {z.ZodObject}
+ */
 const updateChatKnowledgebaseSchema = z.object({
   chatId: z.string().min(1),
   knowledgebaseId: z.string().nullable(),
 });
 
+/**
+ * Updates chat knowledge base after validating ownership. Pass null to disable RAG context.
+ *
+ * @async
+ * @param data - {chatId, knowledgebaseId} payload
+ * @throws "Not Found" if chat not owned by current user
+ * @author Maruf Bepary
+ */
 export async function updateChatKnowledgebase(
   data: z.infer<typeof updateChatKnowledgebaseSchema>,
 ): Promise<void> {

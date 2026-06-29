@@ -37,16 +37,29 @@ import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
 export const maxDuration = 60;
 
 /**
- * POST handler for the AI chat streaming pipeline.
- * Authenticates via Better Auth session, validates the request schema, fetches
- * Project/Assistant system prompts from the database, loads enabled MCP
- * servers, connects to them, and streams text responses using Vercel AI SDK's
- * `streamText` with tool support.
+ * Streams AI chat responses with model context, system prompts, MCP tool integration, and message persistence.
+ * Authenticates via Better Auth session, validates request schema, loads chat context (project, assistant,
+ * knowledgebases), registers MCP tools, and streams text via Server-Sent Events (SSE) using Vercel AI SDK.
  *
- * @see loadChatContext  — all DB queries
- * @see registerMcpTools — tool registration
- * @see handleStreamChunk — per-chunk SSE encoding
- * @see persistAssistantResponse — DB persistence of the assistant message
+ * **HTTP Method:** POST
+ *
+ * **Request Format:** JSON with chatId, userMessageId, messages, model, selectedServerIds, selectedTools,
+ * selectedAssistantId, selectedKbIds
+ *
+ * **Response Format:** Server-Sent Events (SSE) stream with chunk updates and final assistant message persisted to DB
+ *
+ * **Authentication:** Required (Better Auth session)
+ *
+ * **Real-time Pattern:** Streaming with per-chunk SSE encoding and async DB persistence
+ *
+ * **Integration Points:** Better Auth, Vercel AI SDK `streamText`, MCP tool registration, vision/tools capability
+ * guards, message assembly, system prompt building, artifact management
+ *
+ * @author Maruf Bepary
+ * @see {@link lib/chat/load-chat-context} for database context loading
+ * @see {@link lib/chat/register-mcp-tools} for MCP tool registration
+ * @see {@link lib/chat/stream-chunk-handler} for per-chunk SSE encoding
+ * @see {@link lib/chat/persist-response} for assistant message persistence
  */
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });

@@ -3,7 +3,7 @@
  * Provides a text encoder for consistent data framing and standard SSE headers.
  * Used in chat streaming and workflow execution routes.
  *
- * @author GitHub Copilot
+ * @author Maruf Bepary
  */
 
 /**

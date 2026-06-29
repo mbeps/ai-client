@@ -41,11 +41,12 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 
 /**
- * Translation workflow page providing AI-powered text translation.
- * Uses a highly space-efficient layout with standard Shadcn UI components.
- * Implements Zod validation via server action and maintains UI consistency.
+ * Translation workflow page providing AI-powered text and document translation.
+ * Client component supporting language selection, model selection, and file attachment processing.
+ * Implements real-time translation with support for direct text input or document extraction.
+ * Maintains copy-to-clipboard functionality and language pair swapping.
  *
- * @author Antigravity
+ * @author Maruf Bepary
  */
 export default function TranslationWorkflowPage() {
   const router = useRouter();

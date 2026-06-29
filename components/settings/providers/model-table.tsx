@@ -49,6 +49,18 @@ type ModelTableProps = {
   onRefresh: () => Promise<void>;
 };
 
+/**
+ * Table-based UI for managing AI models across all providers.
+ * Displays model metadata (name, provider, type) and provides inline actions
+ * (enable/disable, edit, delete, and test).
+ * Includes bulk actions like enabling/disabling all models or providers.
+ *
+ * @param props.models - Array of models to display and manage.
+ * @param props.providers - Available providers for assigning models.
+ * @param props.onRefresh - Callback to refresh model list after mutations.
+ * @author Maruf Bepary
+ */
+
 export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState("all");

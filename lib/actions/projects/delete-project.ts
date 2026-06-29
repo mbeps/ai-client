@@ -15,6 +15,7 @@ import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory"
  * @throws Error if database transaction fails or rolls back due to constraints.
  * @see createProject to create a new project.
  * @see updateProject to modify an existing project.
+ * @author Maruf Bepary
  */
 export const deleteProject = deleteEntityFactory({
   table: project,

@@ -10,6 +10,16 @@ interface ChatPageClientProps {
   initialMessage?: string;
 }
 
+/**
+ * Chat page client: Hydrate chat state and render streaming UI.
+ *
+ * Wrapper component that syncs server-fetched chat to Zustand store and renders
+ * full chat interface (ChatUI). Handles optional initial message pre-population for
+ * sharing chat state via URL search params. Manages hasSentInitial flag to prevent
+ * duplicate auto-send on re-renders.
+ *
+ * @author Maruf Bepary
+ */
 export function ChatPageClient({
   initialChat,
   initialMessage,

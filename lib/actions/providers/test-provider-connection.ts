@@ -13,6 +13,21 @@ export type ProviderConnectionResult = {
   error?: string;
 };
 
+/**
+ * Tests connectivity to an AI provider by making a test API call to the /models endpoint.
+ * Validates provider configuration (URL, credentials, headers) without throwing errors.
+ * Enforces SSRF URL guard checks to prevent server-side request forgery.
+ * Returns a result object with ok flag and optional error message for client-side error handling.
+ * Logs test results for debugging and audit purposes.
+ * Runs on server only — invoked from client to verify provider setup before saving.
+ *
+ * @param providerId - UUID of the provider to test; must be owned by the authenticated user.
+ * @returns ProviderConnectionResult object with ok (boolean) and optional error (string) message.
+ * @throws Error if session is not authenticated.
+ * @see createProvider to add a new provider.
+ * @see updateProvider to modify provider settings after testing.
+ * @author Maruf Bepary
+ */
 export async function testProviderConnection(
   providerId: string,
 ): Promise<ProviderConnectionResult> {

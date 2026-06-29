@@ -13,7 +13,7 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
  *
  * @returns Array of PublicMcpServer configurations.
  * @throws Error if session is not authenticated.
- * @author GitHub Copilot
+ * @author Maruf Bepary
  */
 export async function listPublicMcpServers(): Promise<PublicMcpServer[]> {
   const session = await requireSession();

@@ -81,6 +81,15 @@ function mapRunRowToRun(row: TransformRunRow): TransformRun {
   };
 }
 
+/**
+ * Transform run detail page showing real-time execution progress and results.
+ * Client component displaying execution timeline, step status, tool calls, and artifacts.
+ * Handles Server-Sent Events stream for live status updates and progress tracking.
+ * Supports approval gates for review-required steps and artifact panel for viewing intermediate/final outputs.
+ * Integrates with artifact download and attachment URL resolution.
+ *
+ * @author Maruf Bepary
+ */
 export default function TransformRunDetailPage() {
   const params = useParams();
   const router = useRouter();

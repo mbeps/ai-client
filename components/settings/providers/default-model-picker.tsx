@@ -46,6 +46,17 @@ function toItem(model: UserModelOption): ModelItem {
   };
 }
 
+/**
+ * Dropdown selectors for default chat and embedding models.
+ * Allows users to set which models to use by default across the application.
+ * Triggers cache invalidation on selection change.
+ *
+ * @param props.settings - Current user settings containing default model IDs.
+ * @param props.chatModels - Available chat models to select from.
+ * @param props.embeddingModels - Available embedding models to select from.
+ * @param props.onRefresh - Callback to refresh settings after model selection.
+ * @author Maruf Bepary
+ */
 export function DefaultModelPicker({
   settings,
   chatModels,

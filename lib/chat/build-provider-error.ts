@@ -16,6 +16,7 @@ import {
  * - `VisionNotSupportedError`   → 400 Bad Request
  * - `ToolsNotSupportedError`    → 400 Bad Request
  * - Unknown errors              → `null` (caller should log and return 400)
+ * @author Maruf Bepary
  */
 export function buildProviderErrorResponse(error: unknown): Response | null {
   if (

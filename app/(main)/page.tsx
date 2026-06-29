@@ -19,8 +19,8 @@ import { toast } from "sonner";
  * Route: /. Reads session user via Better Auth and creates new chat on submission.
  * Protected route — requires active authentication session.
  *
- * @returns Home page with quick actions, recent chats, and chat input form.
- * @see ChatPageClient for chat detail view after new chat creation.
+ * @author Maruf Bepary
+ * @see {@link ChatPageClient} for chat detail view after new chat creation.
  */
 export default function HomePage() {
   const router = useRouter();

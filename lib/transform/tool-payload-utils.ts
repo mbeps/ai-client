@@ -1,8 +1,8 @@
 /**
- * Pure utility functions for extracting and normalising tool payloads
- * from AI model tool call results. Used by the transform run route.
+ * Spreadsheet mutation tool names that modify workbooks in-place.
+ * Used to track whether a step produced workbook changes for persistence.
+ * @author Maruf Bepary
  */
-
 const SPREADSHEET_MUTATION_TOOL_NAMES = new Set([
   "write_cells",
   "write_multi_sheet",

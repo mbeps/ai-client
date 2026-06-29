@@ -6,7 +6,14 @@ const PREFIXED_EMBEDDING_MODELS = new Set([
 ]);
 
 /**
- * Embeds a search query using the required "query:" prefix.
+ * Embeds a search query using per-user provider with optional model-specific prefixes.
+ *
+ * @async
+ * @param text - Search query text to embed
+ * @param userId - User ID for provider resolution
+ * @returns Embedding vector
+ * @throws If provider not configured or embedding API fails
+ * @author Maruf Bepary
  */
 export async function embedQuery(
   text: string,
@@ -29,7 +36,14 @@ export async function embedQuery(
 }
 
 /**
- * Embeds document passages in batch using the required "passage:" prefix.
+ * Batch embeds document chunks using per-user provider. Returns empty array for empty input.
+ *
+ * @async
+ * @param texts - Document chunk texts to embed
+ * @param userId - User ID for provider resolution
+ * @returns Array of embedding vectors
+ * @throws If provider not configured or embedding API fails
+ * @author Maruf Bepary
  */
 export async function embedDocuments(
   texts: string[],

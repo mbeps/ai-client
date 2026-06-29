@@ -50,6 +50,13 @@ interface CreatePromptDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Create prompt dialog component — modal form for defining new prompt shortcuts.
+ * Handles validation (title, shortcut format, content) and submission via server action.
+ * Integrates with Zustand store to refresh prompts list on successful creation.
+ *
+ * @author Maruf Bepary
+ */
 export function CreatePromptDialog({
   open,
   onOpenChange,

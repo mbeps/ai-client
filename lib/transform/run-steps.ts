@@ -19,6 +19,10 @@ import type { TransformStep } from "@/types/transform/transform-agent";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 
+/**
+ * Configuration for running a sequence of transform agent steps.
+ * @author Maruf Bepary
+ */
 interface RunTransformStepsOptions {
   steps: TransformStep[];
   startFromStep: number;
@@ -42,6 +46,24 @@ interface RunTransformStepsOptions {
   emit: (data: any) => void;
 }
 
+/**
+ * Executes a transform agent run step-by-step with state accumulation and persistence.
+ * Orchestrates the flow: generate LLM response → extract tool calls → execute tools → save outputs.
+ * Emits real-time events (step-start, tool-call, step-complete, error) for UI streaming.
+ * Handles spreadsheet mutations, file uploads, and artifact persistence.
+ * Rate limit errors trigger retry logic and emit retryable events.
+ *
+ * State accumulation:
+ * - activeWorkbookFilePath tracks the current spreadsheet for tool reuse
+ * - currentOutputAttachmentIds tracks files generated in current step
+ * - Step outputs persisted to S3 and linked in transform_run record
+ *
+ * @param options - Step execution configuration (steps, run/agent rows, MCP tools, etc.)
+ * @throws {RateLimitError} On rate limit (triggers retry in caller)
+ * @see {@link lib/transform/lifecycle-service.ts} for run initialization
+ * @see {@link lib/transform/build-file-context.ts} for file context building
+ * @author Maruf Bepary
+ */
 export async function runTransformSteps({
   steps,
   startFromStep,

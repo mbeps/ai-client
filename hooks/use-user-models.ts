@@ -45,6 +45,24 @@ export type UseUserModelsResult = {
   invalidate: () => void;
 };
 
+/**
+ * Fetches, filters, and normalises user-accessible AI models with type filtering.
+ * Uses provider-registry-cache with 30-minute stale window.
+ * Returns both raw (unfiltered with provider metadata) and processed models (filtered by type, sorted).
+ * Filters by model type (chat, embedding, both) and enabled status (model + provider).
+ * Automatically loads on mount if cache empty or stale; retries once on failure.
+ *
+ * Side effects: Fetches from cache or listModels() server action, subscribes to cache updates.
+ * Use case: Model selector dropdowns, capability checking (tools, vision, reasoning), embedding model selection.
+ * Constraint: Cache is global; invalidate() affects all component instances. Type filter only applies to returned models.
+ *
+ * @param type - Model type filter: 'chat' (default), 'embedding', or 'both'. Only affects models array, not rawModels.
+ * @returns Object with models (filtered, sorted), rawModels (raw), loading/error states, staleness, refresh and invalidate methods.
+ * @throws No exceptions thrown; errors returned in error field.
+ * @see fetchProviderRegistryWithCache for cache implementation.
+ * @see useProviders for provider list hook with same caching pattern.
+ * @author Maruf Bepary
+ */
 export function useUserModels(
   type: ProviderModelType = "chat",
 ): UseUserModelsResult {

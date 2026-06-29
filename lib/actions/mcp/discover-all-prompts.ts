@@ -10,7 +10,12 @@ import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { logger } from "@/lib/logger";
 
 /**
- * Discovers prompts from all enabled MCP servers for the authenticated user.
+ * Discovers prompts from all enabled MCP servers (user-owned or public) in parallel.
+ * Per-server failures logged, don't block other servers. Returns aggregated results.
+ *
+ * @returns Array of DiscoveredPrompt; empty array if no servers enabled or all fail
+ * @throws If session cannot be established
+ * @author Maruf Bepary
  */
 export async function discoverAllPrompts(): Promise<DiscoveredPrompt[]> {
   const session = await requireSession();

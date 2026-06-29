@@ -21,10 +21,13 @@ import { Check } from "lucide-react";
 import { backupCodeSchema, BackupCodeForm } from "@/schemas/auth/backup-code";
 
 /**
- * Two-factor authentication fallback that accepts a static backup code.
- * Calls `authClient.twoFactor.verifyBackupCode`; redirects to `ROUTES.HOME` on success.
- * Shown as an alternative to the TOTP form on the 2FA challenge page.
+ * Two-factor authentication fallback component that validates a static backup code.
+ * Provides an alternative 2FA verification method when the user cannot access their authenticator app.
+ * Validates input with Zod schema, calls `authClient.twoFactor.verifyBackupCode` on submit,
+ * and redirects to home on success. Includes loading state and error toast notifications.
  *
+ * @author Maruf Bepary
+ * @see TotpForm for the primary TOTP-based 2FA verification
  */
 export function BackupCodeTab() {
   const router = useRouter();

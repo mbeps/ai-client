@@ -6,6 +6,7 @@ import { z } from "zod";
  * Validates database URL, authentication secrets, API keys, and storage configuration.
  * Optional OAuth credentials (GitHub, Discord) allow graceful fallback if not configured.
  *
+ * @author Maruf Bepary
  */
 const envSchema = z.object({
   // Database
@@ -58,6 +59,7 @@ const envSchema = z.object({
  * @example
  * import { env } from "@/lib/env";
  * const dbUrl = env.DATABASE_URL;  // Typed as string | undefined (based on schema)
+ * @author Maruf Bepary
  */
 export const env =
   typeof window === "undefined"

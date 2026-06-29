@@ -11,6 +11,7 @@ import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory"
  * @returns void
  * @throws Error with message "Not Found" when prompt does not exist or is not owned by user
  * @see listPrompts for viewing all prompts
+ * @author Maruf Bepary
  */
 export const deletePrompt = deleteEntityFactory({
   table: prompt,

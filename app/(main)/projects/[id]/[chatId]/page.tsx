@@ -9,6 +9,7 @@ import { ChatPageClient } from "@/components/chat/chat-page-client";
  * Verifies chat belongs to project; returns 404 if mismatch or chat not found.
  * Renders full chat interface with message tree, streaming, artifacts, and MCP tools.
  *
+ * @author Maruf Bepary
  * @see ProjectPage for parent project view
  * @see AssistantChatPage for equivalent assistant-scoped chat page
  */

@@ -11,9 +11,27 @@ import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 
-// The server type accepted by getMcpTools (mirror the parameter type)
+/**
+ * MCP server parameter type for tool registration.
+ * @author Maruf Bepary
+ */
 type McpServerParam = Parameters<typeof getMcpTools>[0][number];
 
+/**
+ * Registers MCP tools and built-in tools (manage_artifact, search_knowledgebase) for a chat request.
+ * Filters MCP tools by selectedTools list if provided.
+ * Handles failures gracefully, logging warnings but continuing with available tools.
+ * Registers a cleanup function to disconnect MCP servers after streaming completes.
+ *
+ * @param scopedServers - MCP servers available for this chat
+ * @param selectedTools - Optional list of tool IDs to include (e.g., "server:tool:name")
+ * @param isArtifactToolSelected - Whether to register the manage_artifact tool
+ * @param activeKbId - Knowledge base ID if available (for search_knowledgebase tool)
+ * @param userId - Authenticated user ID
+ * @returns Object with mcpTools dict, toolSourceMap (tool -> server name), and cleanup function
+ * @see {@link lib/chat/build-system-prompt.ts} for system prompt setup
+ * @author Maruf Bepary
+ */
 export async function registerMcpTools(
   scopedServers: McpServerParam[],
   selectedTools: string[] | undefined,

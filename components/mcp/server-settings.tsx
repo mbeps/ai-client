@@ -23,13 +23,9 @@ import { useAppStore } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
 
 /**
- * Settings panel for an MCP server with permanent deletion option.
- * Displays warning about deletion impact on assistants and chats.
- * Shows confirmation dialog before allowing deletion; redirects to tools list after deletion.
+ * Props for ServerSettings component.
  *
- * @param serverId - ID of the server to manage settings for; used in delete operation
- * @see {@link EditServerForm} for editing server configuration
- * @see {@link ServerOptions} for quick actions menu
+ * @interface ServerSettingsProps
  */
 export interface ServerSettingsProps {
   /**
@@ -39,6 +35,19 @@ export interface ServerSettingsProps {
   serverId: string;
 }
 
+/**
+ * Settings panel for managing an MCP server configuration.
+ * Displays public sharing toggle and permanent deletion option with confirmation.
+ * Shows warning about deletion impact on assistants and chats.
+ * Redirects to tools list after successful deletion.
+ *
+ * @param props - Component props
+ * @param props.serverId - ID of the server to manage settings for; used in delete and toggle operations
+ * @see {@link EditServerForm} for editing server configuration
+ * @see {@link ServerOptions} for quick actions menu
+ * @see {@link DeleteConfirmDialog} for deletion confirmation UX
+ * @author Maruf Bepary
+ */
 export function ServerSettings({ serverId }: ServerSettingsProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);

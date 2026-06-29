@@ -8,6 +8,12 @@ import {
 } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 
+/**
+ * All database context required for a single chat request.
+ * Lazy-loads projects, assistants, knowledge bases, and MCP servers.
+ * Resolves effective configuration considering request-level overrides.
+ * @author Maruf Bepary
+ */
 export type ChatContext = {
   /** The chat row — always present if the chat exists */
   chatRow: {
@@ -37,16 +43,23 @@ export type ChatContext = {
 };
 
 /**
- * Loads all database context needed for a chat request.
+ * Loads all database context needed for a chat request in minimal queries.
+ * **Query pattern**: Chat lookup runs first (sequential dependency).
+ * All remaining queries (project, assistant, servers, KB) run in parallel after.
  *
- * **Ordering**: the chat lookup runs first (sequential dependency — everything
- * else depends on the chat existing). All remaining queries run in parallel.
+ * Resolves effective KB, assistant, and server configuration by considering:
+ * - Chat-level associations
+ * - Project-level overrides
+ * - Request-level overrides (selectedKbIds, selectedAssistantId)
  *
- * @param chatId              The chat UUID
- * @param userId              The authenticated user's id
- * @param selectedServerIds   Optional list of MCP server ids to scope to
- * @param selectedKbIds       Optional KB override from the request body
- * @param selectedAssistantId Optional assistant override from the request body
+ * @param chatId - Chat UUID
+ * @param userId - Authenticated user ID for authorization
+ * @param selectedServerIds - Optional MCP server IDs to filter by
+ * @param selectedKbIds - Optional knowledge base override from request body
+ * @param selectedAssistantId - Optional assistant override from request body
+ * @returns All context needed for streaming: prompts, KB readiness, servers
+ * @throws {Error} "Chat not found" when chat doesn't exist or doesn't belong to user
+ * @author Maruf Bepary
  */
 export async function loadChatContext(
   chatId: string,

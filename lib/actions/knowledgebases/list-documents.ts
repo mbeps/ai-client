@@ -6,6 +6,15 @@ import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq, desc } from "drizzle-orm";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
+/**
+ * Lists KB documents (newest first) with status, chunk/token counts after validating ownership.
+ *
+ * @async
+ * @param kbId - Knowledge base UUID
+ * @returns Documents ordered by createdAt DESC
+ * @throws "Not Found" if KB not owned by current user
+ * @author Maruf Bepary
+ */
 export async function listDocuments(kbId: string): Promise<KbDocumentRow[]> {
   const session = await requireSession();
 

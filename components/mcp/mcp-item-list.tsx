@@ -18,10 +18,23 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import type { LucideIcon } from "lucide-react";
 
+/**
+ * Result type from MCP server discovery.
+ * Contains all tools and resources discovered from an MCP server.
+ *
+ * @typedef DiscoveryResult
+ */
 export type DiscoveryResult = Awaited<
   ReturnType<typeof discoverMcpServerTools>
 >;
 
+/**
+ * Props for McpItemList generic component.
+ * Provides flexible rendering of MCP server items (tools or resources).
+ *
+ * @interface McpItemListProps
+ * @template T - The item type being displayed (DiscoveredTool or DiscoveredResource)
+ */
 export interface McpItemListProps<T> {
   server: McpServer;
   icon: LucideIcon;
@@ -33,6 +46,25 @@ export interface McpItemListProps<T> {
   renderContent: (item: T) => React.ReactNode;
 }
 
+/**
+ * Generic component for rendering discovered MCP server items in an expandable accordion.
+ * Automatically fetches items on mount and supports manual refresh via retry button.
+ * Handles loading, error, and empty states gracefully with appropriate UI feedback.
+ *
+ * @template T - Item type (DiscoveredTool | DiscoveredResource)
+ * @param props - Component props
+ * @param props.server - MCP server to discover items from
+ * @param props.icon - Lucide icon component to display in accordion headers
+ * @param props.fetchItems - Function to extract items from DiscoveryResult
+ * @param props.getItemKey - Function to extract unique key from item
+ * @param props.getItemLabel - Function to extract display label from item
+ * @param props.itemKind - Human-readable item kind for UI messages
+ * @param props.emptyMessage - Message shown when no items are discovered
+ * @param props.renderContent - Function to render item details in accordion body
+ * @see {@link ToolList} for tool discovery example
+ * @see {@link ResourceList} for resource discovery example
+ * @author Maruf Bepary
+ */
 export function McpItemList<T>({
   server,
   icon: Icon,

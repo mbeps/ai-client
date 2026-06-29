@@ -41,6 +41,15 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Create Project Dialog: Form for initializing new workspaces.
+ *
+ * Allows users to define project name and optional description. Submits to server action,
+ * updates store, and closes dialog. Used as modal within ProjectsPage for project creation.
+ * Validates input and displays error toasts on failure.
+ *
+ * @author Maruf Bepary
+ */
 export function CreateProjectDialog({
   open,
   onOpenChange,

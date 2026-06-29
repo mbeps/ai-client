@@ -3,10 +3,15 @@ import { contentField, nameField, idField } from "../shared-fields";
 
 /**
  * Validates new slash-command prompt creation with title, content, and alphanumeric shortcut.
- * Title and content required (1-100 and 1-10000 chars); shortcut must match [a-zA-Z0-9._-]+ pattern for CLI-like trigger.
- * Use with createPrompt server action to register new AI prompt shortcuts prepended to message context.
+ * Title required (1-100 chars); content required (1-10,000 chars) with substantive minimum.
+ * Shortcut must match [a-zA-Z0-9._-]+ pattern for CLI-like trigger syntax (/shortcut-name).
+ * Shortcut max 50 chars; recommending concise names for discoverability.
+ * Use with createPrompt server action to register new AI prompt snippets.
+ * Prompts prepend content to message before sending to AI; not visible to users in final request.
  *
  * @see {@link lib/actions/prompts/create-prompt.ts} for creation action
+ * @see {@link types/prompt/prompt.ts} for database representation
+ * @author Maruf Bepary
  */
 export const createPromptSchema = z.object({
   title: nameField,
@@ -23,14 +28,22 @@ export const createPromptSchema = z.object({
 
 /**
  * Validates partial prompt updates allowing optional modification of all fields.
- * Use with updatePrompt server action to modify shortcut definitions without full re-entry.
+ * Enables independent updates of title, content, or shortcut without full re-entry.
+ * Omitted fields preserve existing values.
+ * Use with updatePrompt server action to modify shortcut definitions.
  *
  * @see {@link lib/actions/prompts/update-prompt.ts} for update action
+ * @author Maruf Bepary
  */
 export const updatePromptSchema = createPromptSchema.partial();
 
 /**
- * Validates the full prompt object as stored in the database.
+ * Validates the full prompt object as stored in the database and loaded in the store.
+ * Includes all fields from creation plus system metadata (id, userId, timestamps).
+ * Shortcut is unique per user; title and content are user-configurable.
+ * Use for type-safe store hydration and API serialization.
+ *
+ * @author Maruf Bepary
  */
 export const promptSchema = z.object({
   id: idField,

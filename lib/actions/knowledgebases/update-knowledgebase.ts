@@ -9,12 +9,22 @@ import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase
 import { z } from "zod";
 
 /**
- * Updates an existing knowledgebase's metadata (name and description).
- * Replaces renameKnowledgebase as the primary update mechanism for KB settings.
+ * Updates an existing knowledge base with partial field updates (name, description, indexStatus).
+ * Validates all inputs and enforces ownership check before updating database record.
+ * Allows manual status changes to trigger reindexing or mark index as stale.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param id - The unique ID of the knowledgebase to update.
- * @param data - The fields to update (name, description).
- * @returns The updated knowledgebase record.
+ * @param id - UUID of the knowledge base to update; must be owned by the authenticated user.
+ * @param data - Partial knowledge base update object (name, description, indexStatus fields).
+ * @returns The updated knowledge base record with all fields populated.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if id is not a valid UUID format.
+ * @throws ZodError if data fails schema validation against updateKnowledgebaseSchema.
+ * @throws Error if knowledge base is not found or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createKnowledgebase to create a new knowledge base.
+ * @see reindexKnowledgebase to trigger re-indexing.
+ * @author Maruf Bepary
  */
 export async function updateKnowledgebase(
   id: string,

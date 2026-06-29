@@ -1,9 +1,22 @@
 import type { ModelMessage } from "ai";
 
+/**
+ * Text content part for Vercel AI SDK model messages.
+ * @author Maruf Bepary
+ */
 type TextPart = { type: "text"; text: string };
+
+/**
+ * Image content part for Vercel AI SDK model messages.
+ * @author Maruf Bepary
+ */
 type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
 
-// The type of each item in the `messages` array from chatRequestSchema
+/**
+ * Chat message from the request, including attachments and metadata.
+ * Includes extracted text from documents and data URLs for images.
+ * @author Maruf Bepary
+ */
 type HistoryMessage = {
   role: string;
   content:
@@ -21,6 +34,18 @@ type HistoryMessage = {
   metadata?: string | null;
 };
 
+/**
+ * Converts raw chat history into Vercel AI SDK-compatible model messages.
+ * Handles complex multimodal content assembly:
+ * - Document attachments are converted to text parts with labels
+ * - Images are placed after text to maintain token efficiency
+ * - Assistant messages with tool calls are reconstructed with proper structure
+ * - Tool results are attached as tool-role messages for proper model consumption
+ *
+ * @param messages - Raw history from chat request
+ * @returns Messages formatted for Vercel AI SDK (text, images, tool calls, tool results)
+ * @author Maruf Bepary
+ */
 export function assembleModelMessages(
   messages: HistoryMessage[],
 ): ModelMessage[] {

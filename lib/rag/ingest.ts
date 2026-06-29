@@ -15,6 +15,16 @@ import {
   normalizeRateLimitMessage,
 } from "@/lib/utils/error-utils";
 
+/**
+ * Extracts, chunks, and embeds a KB document. Updates status from pending→processing→ready/failed.
+ * Marks document failed on empty extraction or rate limits, then re-throws.
+ *
+ * @async
+ * @param documentId - Document UUID to ingest
+ * @param userId - User ID for per-user embedding provider
+ * @throws If document not found, extraction fails, or rate limit exceeded
+ * @author Maruf Bepary
+ */
 export async function ingestDocument(
   documentId: string,
   userId: string,

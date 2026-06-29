@@ -10,6 +10,7 @@
  * @param capVision       Whether the resolved model supports vision
  * @returns `true` when the content is compatible with the model, `false` when
  *          the content requires vision but the model does not support it.
+ * @author Maruf Bepary
  */
 export function checkVisionSupport(
   messages: Array<{

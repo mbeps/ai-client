@@ -36,7 +36,17 @@ interface ProviderCardProps {
 
 /**
  * A specialized card for displaying and managing an AI Provider.
- * Displays provider name, base URL, and actions for editing, deleting, and toggling.
+ * Displays provider name, base URL, and actions for editing, deleting,and toggling.
+ * Includes buttons for testing connection and syncing available models.
+ *
+ * @param props.provider - The provider entity to display.
+ * @param props.isBusy - Whether the provider is currently processing an action.
+ * @param props.onEdit - Callback to edit the provider.
+ * @param props.onDelete - Callback to delete the provider.
+ * @param props.onToggle - Callback to enable/disable the provider.
+ * @param props.onTest - Callback to test the provider connection.
+ * @param props.onSync - Callback to sync available models from the provider.
+ * @author Maruf Bepary
  */
 export function ProviderCard({
   provider,

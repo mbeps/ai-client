@@ -24,15 +24,35 @@ import {
 } from "@/schemas/workflows/transform-agent";
 import type { TransformStep } from "@/types/transform/transform-agent";
 
+/**
+ * Props for TransformStepCard component.
+ *
+ * @author Maruf Bepary
+ */
 interface TransformStepCardProps {
+  /** Transformation step configuration to edit. */
   step: TransformStep;
+  /** Zero-based position index in the pipeline (used for display numbering). */
   index: number;
+  /** Callback to apply partial updates to the step (name, prompt, requiresReview). */
   onUpdate: (updates: Partial<TransformStep>) => void;
+  /** Callback fired when user removes the step from the pipeline. */
   onRemove: () => void;
 }
 
 /**
- * An editable card representing a single step in a transformation pipeline.
+ * Editable card representing a single step in a transformation pipeline.
+ * Provides inline name editing, prompt editing, and human review toggle.
+ * Supports drag-and-drop via grip handle (requires parent DragDropContext).
+ * Auto-syncs form state when step prop changes (e.g., during reordering).
+ * Validates name and prompt via transformStepSchema.
+ *
+ * @param step - TransformStep configuration to display and edit
+ * @param index - Zero-based step position (displayed as 1-based number)
+ * @param onUpdate - Callback with partial step updates when fields change
+ * @param onRemove - Callback when user clicks delete button
+ * @returns Editable card with name, prompt, review toggle, and action buttons
+ * @author Maruf Bepary
  */
 export function TransformStepCard({
   step,

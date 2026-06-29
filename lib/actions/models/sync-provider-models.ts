@@ -9,6 +9,23 @@ import { isBlockedUrl } from "@/lib/mcp/url-guard";
 import { decodeProviderRecord } from "@/lib/actions/providers/utils";
 import { ModelMalformedIdError } from "@/lib/constants/errors";
 
+/**
+ * Synchronises models from an external AI provider's /models endpoint.
+ * Fetches model listings via OpenAI-compatible API, inserts new models, skips existing ones.
+ * Enforces SSRF URL guard checks to prevent server-side request forgery attacks.
+ * Returns sync results with count of added/unchanged models and optional discovery limits.
+ * Logs sync operations for audit and troubleshooting purposes.
+ * Runs on server only — typically called when user adds or configures a new provider.
+ *
+ * @param providerId - UUID of the provider to sync models from; must be owned by the authenticated user.
+ * @returns Object with added (count of new models inserted), unchanged (count of skipped duplicates), limitExceeded (boolean if discovery capped), totalDiscovered (optional count).
+ * @throws Error if session is not authenticated.
+ * @throws Error if provider is not found or user does not own it (returns "Not Found").
+ * @throws Error if provider URL is blocked by SSRF guard (returns "Provider URL is blocked by SSRF guard").
+ * @throws Error if the /models endpoint returns error status or is unreachable.
+ * @see createModel to manually register a single model.
+ * @author Maruf Bepary
+ */
 export type SyncProviderModelsResult = {
   added: number;
   unchanged: number;

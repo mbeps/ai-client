@@ -13,6 +13,7 @@ import { twMerge } from "tailwind-merge";
  * cn("px-2", "px-4")  // "px-4" (last px- wins)
  * cn("p-4", { "p-2": true })  // "p-2"
  * cn(["m-1", "m-2"], isActive && "bg-blue-500")  // "m-2 bg-blue-500"
+ * @author Maruf Bepary
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

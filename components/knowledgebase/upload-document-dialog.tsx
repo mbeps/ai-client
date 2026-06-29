@@ -37,6 +37,17 @@ interface UploadDocumentDialogProps {
   onSuccess: (doc: KbDocumentRow) => void;
 }
 
+/**
+ * Modal dialog for uploading documents to a knowledgebase.
+ * Handles file selection, validation (size, type), and async upload/ingestion flow.
+ * Shows progress states and error messages. Integrates with embedding model selection.
+ *
+ * @param props.kbId - The knowledgebase ID to upload the document to.
+ * @param props.open - Whether the dialog is visible.
+ * @param props.onOpenChange - Callback to control dialog visibility.
+ * @param props.onSuccess - Callback invoked after successful upload with the document entity.
+ * @author Maruf Bepary
+ */
 export function UploadDocumentDialog({
   kbId,
   open,

@@ -15,6 +15,13 @@ const ALLOWED_MIME_TYPES = new Set([
 
 const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
+/**
+ * Sanitizes filename for S3 storage: removes non-alphanumeric chars, collapses underscores, truncates to 200 chars.
+ *
+ * @param name - Original filename
+ * @returns Sanitized filename safe for S3
+ * @author Maruf Bepary
+ */
 function sanitizeFilename(name: string): string {
   return name
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -22,6 +29,16 @@ function sanitizeFilename(name: string): string {
     .slice(0, 200);
 }
 
+/**
+ * Validates file (type, size), uploads to S3, creates pending document, marks KB stale.
+ * Supports PDF, text, Markdown up to 50MB.
+ *
+ * @async
+ * @param formData - {file: File, kbId: string}
+ * @returns Created document record with pending status
+ * @throws If file missing, KB not owned, MIME invalid, or size exceeds 50MB
+ * @author Maruf Bepary
+ */
 export async function uploadKbDocument(
   formData: FormData,
 ): Promise<KbDocumentRow> {

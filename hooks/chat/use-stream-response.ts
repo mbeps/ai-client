@@ -23,20 +23,24 @@ import {
 } from "@/lib/constants/errors";
 
 /**
- * Manages AI response streaming with tool integration and artifact generation.
- * Handles message persistence, attachment uploads, AI stream parsing (SSE protocol),
- * tool call tracking, reasoning token collection, and artifact detection.
- * Automatically creates message tree nodes and updates store optimistically.
- * Supports abort via stopStream() and integrates with useAppStore for state sync.
+ * Orchestrates AI response streaming with message persistence, tool integration, and artifact detection.
+ * Handles SSE (Server-Sent Events) parsing, attachment uploads, message tree creation, and store updates.
+ * Tracks tool call state (calling -> completed/failed) and reasoning token collection.
+ * Manages AbortController for stream cancellation; deduplicates tool calls by ID.
  *
- * Uses extracted sub-hooks for state, tool calls, and abort management,
- * and extracted pure functions for prompt resolution, attachment uploads,
- * and request body assembly -- keeping this file a thin coordinator.
+ * Side effects: Persists messages to database, uploads attachments to storage, updates Zustand store,
+ * calls onDone callback on stream completion, handles API errors via useApiError.
+ * Use case: Chat input submission, AI response generation with tool use and reasoning.
+ * Constraint: AbortController cleaned up on unmount; stopStream() must be called for graceful cancellation.
  *
  * @param chatId - Target chat session ID for message persistence.
- * @param options - Optional callbacks for completion and artifact discovery.
- * @returns Object with loading state, streaming content, tool calls, and streamResponse function.
- * @see ToolCallState for tool invocation tracking.
+ * @param options - Optional callbacks: onDone invoked with final content string on stream completion.
+ * @returns Object with isLoading state, streamingContent, activeToolCalls, streamResponse function for submission.
+ * @throws Errors from API are handled via handleApiError toast; stopStream() prevents recovery.
+ * @see useApiError for error handling and navigation on auth failures.
+ * @see buildStreamRequestBody for request body construction.
+ * @see parseSseStream for SSE parsing implementation.
+ * @author Maruf Bepary
  */
 export function useStreamResponse(
   chatId: string,

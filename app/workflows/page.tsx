@@ -28,6 +28,14 @@ const WORKFLOWS = [
   },
 ];
 
+/**
+ * Workflows hub page providing entry point to all available workflows.
+ * Displays workflow types including Translation and Spreadsheets Automation.
+ * Renders grid of workflow cards with descriptions and navigation links.
+ *
+ * @author Maruf Bepary
+ */
+
 export default function WorkflowsPage() {
   return (
     <div className="space-y-6">

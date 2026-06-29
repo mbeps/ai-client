@@ -32,9 +32,10 @@ type TwoFactorData = {
 };
 
 /**
- * Manages enabling or disabling TOTP-based two-factor authentication.
- * @param isEnabled Flag indicating whether 2FA is already active.
- * @returns Two-factor form that switches between enable and disable states.
+ * Form for enabling or disabling TOTP-based two-factor authentication with password verification.
+ * When enabling, displays QR code and backup codes. This is a sensitive operation requiring password confirmation.
+ *
+ * @author Maruf Bepary
  */
 export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(
@@ -49,8 +50,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   const { isSubmitting } = form.formState;
 
   /**
-   * Disables two-factor authentication after verifying the user's password.
-   * @param data Form payload containing the account password.
+   * Disables 2FA after password verification via Better Auth.
    */
   async function handleDisableTwoFactorAuth(data: TwoFactorAuthForm) {
     await authClient.twoFactor.disable(
@@ -70,8 +70,7 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
   }
 
   /**
-   * Enables two-factor authentication and displays verification instructions.
-   * @param data Form payload containing the account password.
+   * Enables 2FA and displays TOTP QR code and backup codes for user verification.
    */
   async function handleEnableTwoFactorAuth(data: TwoFactorAuthForm) {
     const result = await authClient.twoFactor.enable({
@@ -148,11 +147,10 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
 }
 
 /**
- * Verifies a newly enabled TOTP setup and reveals backup codes.
- * @param totpURI QR code value produced by Better Auth.
- * @param backupCodes Codes that can be used when the authenticator is unavailable.
- * @param onDone Callback invoked when the verification flow completes.
- * @returns Verification form and backup code viewer.
+ * Renders QR code with TOTP setup form and displays backup codes after successful verification.
+ * Users enter the 6-digit code from their authenticator app to finalize 2FA activation.
+ *
+ * @author Maruf Bepary
  */
 function QRCodeVerify({
   totpURI,
@@ -169,8 +167,7 @@ function QRCodeVerify({
   const { isSubmitting } = form.formState;
 
   /**
-   * Verifies the TOTP code entered by the user to finalize 2FA setup.
-   * @param data Form payload containing the 6-digit token.
+   * Submits TOTP verification code to complete 2FA setup and display backup codes.
    */
   async function handleQrCode(data: QrForm) {
     await authClient.twoFactor.verifyTotp(

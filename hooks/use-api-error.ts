@@ -19,10 +19,18 @@ import {
 import { ROUTES } from "@/constants/routes";
 
 /**
- * Hook to handle API-related errors consistently across the application.
- * Specifically detects missing API key errors and provides a shortcut to settings.
+ * Centralises API error handling with feature-specific error codes and user feedback.
+ * Detects capability errors (vision, tools, reasoning, structured output),
+ * model sync limits, API key errors, rate limits, and authorization failures.
+ * Automatically shows toast notifications with actionable guidance.
  *
- * @returns Object containing error handling methods.
+ * Side effects: Displays toast notifications, navigates to settings on API key error.
+ *
+ * @returns Object with handleApiError method for processing API error responses.
+ * @throws No exceptions thrown; errors are handled and returned as boolean flags.
+ * @see useEntityOptions for entity mutation error handling.
+ * @see https://sonner.emilkowal.ski for toast notification patterns.
+ * @author Maruf Bepary
  */
 export function useApiError() {
   const router = useRouter();
