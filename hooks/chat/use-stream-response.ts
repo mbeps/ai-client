@@ -4,10 +4,8 @@ import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { buildStreamRequestBody } from "@/lib/chat/build-stream-request-body";
-import {
-  resolveMcpPrompt,
-  resolveSlashPrompt,
-} from "@/lib/chat/resolve-stream-prompts";
+import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
+import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
 import { processAttachments } from "@/lib/chat/upload-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
