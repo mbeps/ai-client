@@ -1,7 +1,7 @@
 import { validateFile } from "./validate-file";
 import { extractPdf, extractPlainText } from "./extract-document";
 import type { Attachment } from "@/types/attachment/attachment";
-import { ALLOWED_IMAGE_TYPES } from "./constants";
+import { ALLOWED_IMAGE_TYPES } from "../../constants/attachments";
 import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/spreadsheet-types";
 
 /**

@@ -8,7 +8,7 @@ import {
   MAX_IMAGES_PER_MESSAGE,
   MAX_IMAGE_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "./constants";
+} from "../../constants/attachments";
 import { resolveMimeType } from "./resolve-mime-type";
 
 /**

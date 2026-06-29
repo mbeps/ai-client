@@ -1,5 +1,3 @@
-// TODO: Move to ./constants
-
 /**
  * File attachment type and size constraints for the chat application.
  * Defines allowed MIME types, maximum file sizes, and limits on attachment counts.

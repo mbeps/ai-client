@@ -14,7 +14,7 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "@/lib/attachments/constants";
+} from "@/constants/attachments";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 
 const ALLOWED_TYPES = new Set([
