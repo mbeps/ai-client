@@ -5,10 +5,8 @@ import { generateText } from "ai";
 import { requireSession } from "@/lib/auth/require-session";
 import { translateRequestSchema } from "@/schemas/workflows/workflows";
 import { PROMPTS } from "@/constants/prompts";
-import {
-  resolveDefaultChatProvider,
-  resolveProviderForModel,
-} from "@/lib/chat/resolve-provider";
+import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { resolveProviderForModel } from "@/lib/chat/resolve-provider-for-model";
 import {
   ProviderNotConfiguredError,
   RateLimitError,

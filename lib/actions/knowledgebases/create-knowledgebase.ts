@@ -3,7 +3,7 @@
 import { knowledgebase } from "@/drizzle/schema";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
-import { resolveEmbeddingProvider } from "@/lib/chat/resolve-provider";
+import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import { z } from "zod";
 

@@ -18,6 +18,7 @@ import {
 import type { TransformStep } from "@/types/transform/transform-agent";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
+import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 
 /**
  * Configuration for running a sequence of transform agent steps.
@@ -38,7 +39,7 @@ interface RunTransformStepsOptions {
   };
   userId: string;
   allServers: any[];
-  resolvedProvider: any;
+  resolvedProvider: ResolvedProvider;
   kbContext: string;
   runMcpTools: Record<string, any>;
   runToolSourceMap: Record<string, string>;
@@ -124,22 +125,19 @@ export async function runTransformSteps({
       ...(step.toolIds || []),
     ]);
 
-    const filteredEntries = Object.entries(runMcpTools).filter(
-      ([toolName]) => {
-        const source = runToolSourceMap[toolName];
-        const isInternal = source === "Internal" || source === "System";
-        const fromAllowedServer =
-          isInternal || stepServerNames.has(source);
+    const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) => {
+      const source = runToolSourceMap[toolName];
+      const isInternal = source === "Internal" || source === "System";
+      const fromAllowedServer = isInternal || stepServerNames.has(source);
 
-        if (!fromAllowedServer) return false;
-        if (allowedToolIds.size === 0) return true;
+      if (!fromAllowedServer) return false;
+      if (allowedToolIds.size === 0) return true;
 
-        return Array.from(allowedToolIds).some((id) => {
-          const [, type, name] = id.split(":");
-          return type === "tool" && name === toolName;
-        });
-      },
-    );
+      return Array.from(allowedToolIds).some((id) => {
+        const [, type, name] = id.split(":");
+        return type === "tool" && name === toolName;
+      });
+    });
 
     const filteredTools = Object.fromEntries(filteredEntries);
     const toolSourceMap = Object.fromEntries(
@@ -239,18 +237,24 @@ export async function runTransformSteps({
             }
 
             const formattedResult =
-              typeof toolResultPayload === "object" && toolResultPayload !== null
+              typeof toolResultPayload === "object" &&
+              toolResultPayload !== null
                 ? JSON.stringify(toolResultPayload, null, 2)
                 : toolResultPayload;
 
             if (tr.toolName === "manage_artifact") {
-              const extractedArtifact = extractArtifactFromToolPayload(toolResultPayload);
+              const extractedArtifact =
+                extractArtifactFromToolPayload(toolResultPayload);
               if (extractedArtifact) {
                 stepArtifact = extractedArtifact;
               } else {
                 logger.warn(
                   "[Transform AI] manage_artifact result had no extractable artifact",
-                  { runId: runRow.id, stepIndex: i, payloadType: typeof toolResultPayload },
+                  {
+                    runId: runRow.id,
+                    stepIndex: i,
+                    payloadType: typeof toolResultPayload,
+                  },
                   userId,
                 );
               }
@@ -327,7 +331,8 @@ export async function runTransformSteps({
     ) {
       const downloadToolSource = runToolSourceMap.download_file;
       const canUseDownloadTool =
-        typeof downloadToolSource === "string" && stepServerNames.has(downloadToolSource);
+        typeof downloadToolSource === "string" &&
+        stepServerNames.has(downloadToolSource);
 
       if (canUseDownloadTool) {
         const downloadTool = runMcpTools.download_file as {
@@ -336,7 +341,9 @@ export async function runTransformSteps({
 
         if (typeof downloadTool.execute === "function") {
           try {
-            const downloaded = await downloadTool.execute({ file_path: activeWorkbookFilePath });
+            const downloaded = await downloadTool.execute({
+              file_path: activeWorkbookFilePath,
+            });
             const downloadPayload = extractDownloadFilePayload(downloaded);
 
             if (downloadPayload) {
@@ -344,7 +351,10 @@ export async function runTransformSteps({
                 {
                   kind: "download",
                   fileContent: downloadPayload.fileContent,
-                  filename: downloadPayload.filename || currentAttachmentRows[0]?.name || `step-${i + 1}-output.xlsx`,
+                  filename:
+                    downloadPayload.filename ||
+                    currentAttachmentRows[0]?.name ||
+                    `step-${i + 1}-output.xlsx`,
                   stepIndex: i,
                 },
                 userId,
@@ -374,7 +384,11 @@ export async function runTransformSteps({
       }
     }
 
-    if (stepHasSpreadsheetMutations && activeWorkbookFilePath && !stepPersistedSpreadsheetOutput) {
+    if (
+      stepHasSpreadsheetMutations &&
+      activeWorkbookFilePath &&
+      !stepPersistedSpreadsheetOutput
+    ) {
       const errorMessage = `Step "${step.name}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
 
       await db
@@ -395,7 +409,11 @@ export async function runTransformSteps({
       artifact: stepArtifact,
     });
 
-    logger.info("[Transform AI] Step completed", { runId: runRow.id, stepIndex: i }, userId);
+    logger.info(
+      "[Transform AI] Step completed",
+      { runId: runRow.id, stepIndex: i },
+      userId,
+    );
   }
 
   return { success: true, currentOutputAttachmentIds };

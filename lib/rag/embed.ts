@@ -1,5 +1,5 @@
 import { embed, embedMany } from "ai";
-import { resolveEmbeddingProvider } from "@/lib/chat/resolve-provider";
+import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
 
 const PREFIXED_EMBEDDING_MODELS = new Set([
   "nvidia/llama-nemotron-embed-vl-1b-v2:free",

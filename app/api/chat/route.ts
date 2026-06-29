@@ -6,10 +6,8 @@ import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import {
-  resolveDefaultChatProvider,
-  resolveProvider,
-} from "@/lib/chat/resolve-provider";
+import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getPresignedUrl } from "@/lib/storage/s3-client";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";

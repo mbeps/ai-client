@@ -3,10 +3,8 @@ import { headers } from "next/headers";
 import { db } from "@/drizzle/db";
 import { transformRun, mcpServer } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import {
-  resolveDefaultChatProvider,
-  resolveProvider,
-} from "@/lib/chat/resolve-provider";
+import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { hybridSearch } from "@/lib/rag/retrieve";
 import {
