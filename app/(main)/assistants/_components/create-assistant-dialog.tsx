@@ -24,20 +24,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/constants/prompts";
+import { createAssistantSchema } from "@/schemas/assistant/assistant";
 import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// TODO: Move to schema
-const schema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  prompt: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<typeof createAssistantSchema>;
 
 interface CreateAssistantDialogProps {
   open: boolean;
@@ -62,18 +56,14 @@ export function CreateAssistantDialog({
   const loadAssistants = useAppStore((state) => state.loadAssistants);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(createAssistantSchema),
     defaultValues: { name: "", description: "", prompt: "" },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      await createAssistant({
-        name: values.name,
-        description: values.description || undefined,
-        prompt: values.prompt || undefined,
-      });
+      await createAssistant(values);
       toast.success("Assistant created");
       form.reset();
       onOpenChange(false);
