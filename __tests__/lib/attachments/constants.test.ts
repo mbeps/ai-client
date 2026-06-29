@@ -8,7 +8,7 @@ import {
   MAX_SPREADSHEET_SIZE_BYTES,
   MAX_IMAGES_PER_MESSAGE,
   MAX_ATTACHMENTS_PER_MESSAGE,
-} from "@/lib/attachments/constants";
+} from "@/constants/attachments";
 
 describe("attachment constants", () => {
   describe("ALLOWED_IMAGE_TYPES", () => {
