@@ -1,52 +1,9 @@
 import { logger } from "@/lib/logger";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/**
- * Tool call entry extracted from streaming response.
- * @author Maruf Bepary
- */
-export interface ToolCallEntry {
-  toolCallId: string;
-  toolName: string;
-  args: unknown;
-  serverName?: string;
-}
-
-export interface ToolResultEntry {
-  toolCallId: string;
-  toolName: string;
-  result: unknown;
-}
-
-export interface StreamState {
-  fullText: string;
-  fullReasoning: string;
-  toolCalls: ToolCallEntry[];
-  toolResults: ToolResultEntry[];
-}
-
-/** The shape of a single SSE event produced by `result.fullStream`. */
-export type StreamChunk =
-  | { type: "text-delta"; text: string }
-  | { type: "tool-call"; toolCallId: string; toolName: string; input: unknown }
-  | {
-      type: "tool-result";
-      toolCallId: string;
-      toolName: string;
-      output: unknown;
-    }
-  | { type: "reasoning-delta"; text: string }
-  | { type: "error"; error: unknown };
-
-export interface StreamChunkResult {
-  /** SSE-payload to enqueue, or `null` when nothing should be sent */
-  ssePayload: Record<string, unknown> | null;
-  /** Partial state updates to merge into the accumulator */
-  stateUpdates: Partial<StreamState>;
-}
+import { ToolCallEntry } from "@/types/chat/tool-call";
+import { ToolResultEntry } from "@/types/chat/tool-result";
+import { StreamState } from "@/types/chat/stream-state";
+import { StreamChunk } from "@/types/chat/stream-chunk";
+import { StreamChunkResult } from "@/types/chat/stream-chunk-result";
 
 // ---------------------------------------------------------------------------
 // Handler

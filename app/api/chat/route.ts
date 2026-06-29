@@ -26,10 +26,8 @@ import {
 } from "@/lib/chat/load-chat-context";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
-import {
-  handleStreamChunk,
-  type StreamState,
-} from "@/lib/chat/stream-chunk-handler";
+import { handleStreamChunk } from "@/lib/chat/stream-chunk-handler";
+import { type StreamState } from "@/types/chat/stream-state";
 import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
 
 export const maxDuration = 60;
