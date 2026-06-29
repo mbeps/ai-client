@@ -1,7 +1,7 @@
 "use client";
 
 import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { reconstructThread } from "@/lib/chat/message-tree-utils";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { buildStreamRequestBody } from "@/lib/chat/build-stream-request-body";
 import {

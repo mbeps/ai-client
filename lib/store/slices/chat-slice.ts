@@ -1,9 +1,7 @@
 import { StateCreator } from "zustand";
-import {
-  getDeepestLeaf,
-  insertMessage,
-  removeMessageSubtree,
-} from "@/lib/chat/message-tree-utils";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { insertMessage } from "@/lib/chat/insert-message";
+import { removeMessageSubtree } from "@/lib/chat/remove-message-subtree";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
 import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";

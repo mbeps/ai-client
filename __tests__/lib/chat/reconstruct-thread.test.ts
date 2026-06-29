@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reconstructThread } from "@/lib/chat/message-tree-utils";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import type { Message } from "@/types/message/message";
 
 function makeMessage(partial: Partial<Message> & { id: string }): Message {

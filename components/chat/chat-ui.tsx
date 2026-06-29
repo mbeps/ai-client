@@ -2,10 +2,8 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
-import {
-  getDeepestLeaf,
-  reconstructThread,
-} from "@/lib/chat/message-tree-utils";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
 import { extractCitations } from "@/lib/store/mappers/message-mapper";
 import type { Attachment } from "@/types/attachment/attachment";
