@@ -36,6 +36,30 @@ function isAssistantItem(item: MentionItem): item is MentionAssistantItem {
   return !("shortcut" in item);
 }
 
+/**
+ * Manages mention/slash-command UI state and filtering for chat input.
+ * Supports two triggers: '/' for prompts (local + MCP) and '@' for assistants.
+ * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
+ * Tracks cursor position and selected items; inserts mention into input on selection.
+ * Supports pre-selection of prompt/assistant for initial state (e.g. edit flows).
+ *
+ * Side effects: Updates input textarea, modifies text at cursor position, manages keyboard listeners.
+ * Use case: Chat input mention autocomplete; MCP prompt + assistant discovery and selection.
+ * Constraint: Requires ref to textarea element for cursor tracking; selected items are read-only (selection via keyboard only).
+ *
+ * @param input - Current input text value.
+ * @param setInput - Callback to update input text.
+ * @param textareaRef - Ref to textarea element for cursor tracking and insertion.
+ * @param activeChatAssistantId - Optional ID of chat's associated assistant (disables '@' mention for that assistant).
+ * @param initialSelectedPromptId - Optional prompt ID to pre-select (for edit flows).
+ * @param initialSelectedAssistantId - Optional assistant ID to pre-select (for edit flows).
+ * @param canMentionAssistant - Whether '@' mention should be enabled (default: true).
+ * @param selectedServerIds - Optional set of enabled MCP server IDs to filter MCP prompts.
+ * @returns Object with open trigger state, filtered items, selection index, handlers (handleInputChange, handleSelectItem, etc.).
+ * @throws No exceptions thrown; all state changes are safe.
+ * @see useMentionCommands for type definitions and usage patterns.
+ * @author Maruf Bepary
+ */
 export function useMentionCommands(
   input: string,
   setInput: (value: string) => void,

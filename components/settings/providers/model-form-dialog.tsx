@@ -47,6 +47,17 @@ type ModelFormDialogProps = {
   onSaved?: () => void;
 };
 
+/**
+ * Modal dialog for creating or editing AI models within a provider.
+ * Allows configuration of model name, ID, type (chat/embedding), and model-specific capabilities.
+ *
+ * @param props.open - Whether the dialog is visible.
+ * @param props.onOpenChange - Callback to control dialog visibility.
+ * @param props.providers - Available providers to assign the model to.
+ * @param props.model - Optional existing model to edit; omit for create mode.
+ * @param props.onSaved - Optional callback invoked after successful save.
+ * @author Maruf Bepary
+ */
 export function ModelFormDialog({
   open,
   onOpenChange,

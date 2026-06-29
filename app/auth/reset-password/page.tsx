@@ -8,12 +8,13 @@ export const metadata = {
 };
 
 /**
- * Password reset page with client-rendered form wrapped in Suspense boundary.
- * Route: /auth/reset-password. Public route. Reads reset token from URL search params.
- * User navigates here via password reset email link from Forgot Password flow.
+ * Password reset completion page that processes signed reset tokens from password reset emails.
+ * Server-rendered page that wraps client-rendered form in Suspense boundary to enable useSearchParams.
+ * Reads reset token and error state from URL search params; feature flag controlled.
+ * Security: Validates token signature; shows invalid-link state for expired or tampered tokens.
  *
- * @returns Reset form with token validation and new password confirmation.
- * @see LoginPage for Forgot Password flow that sends reset email.
+ * @author Maruf Bepary
+ * @see ForgotPassword for the form that initiates the password reset email flow
  */
 export default function ResetPasswordPage() {
   if (!env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD) {

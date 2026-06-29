@@ -23,11 +23,12 @@ import {
 } from "@/schemas/auth/forgot-password";
 
 /**
- * Form that sends a Better Auth password reset email to the supplied address.
- * On success, a Sonner toast confirms dispatch; the reset link redirects to
- * `ROUTES.AUTH.RESET_PASSWORD`. Includes a Back button to return to sign-in.
+ * Forgot password form that initiates the password reset flow by sending a reset email.
+ * Validates email with Zod schema, calls `authClient.requestPasswordReset`, and shows success/error toasts.
+ * Includes a Back button to return to sign-in. Reset link redirects to reset-password page with a signed token.
  *
- * @param props.openSignInTab - Callback that switches the parent view back to sign-in
+ * @param props.openSignInTab - Callback to switch parent view back to sign-in tab
+ * @author Maruf Bepary
  */
 export function ForgotPassword({
   openSignInTab,

@@ -38,6 +38,24 @@ interface MessageActionsProps {
   hasArtifact?: boolean;
 }
 
+/**
+ * Action menu for messages (copy, regenerate, fork, edit, delete, and branch navigation).
+ * Renders as icon buttons with tooltips in the message bubble hover area.
+ * Supports message editing, branching between alternative responses, and artifact preview.
+ *
+ * @param props.message - The message entity.
+ * @param props.isUser - Whether the message is from a user (affects available actions).
+ * @param props.contentToCopy - Text content to copy to clipboard.
+ * @param props.onEdit - Optional callback to edit the message.
+ * @param props.onDelete - Callback to delete the message.
+ * @param props.onRegenerate - Optional callback to regenerate an AI response.
+ * @param props.siblings - Alternative responses to navigate between (branching).
+ * @param props.currentSiblingIndex - Index of the current response in siblings.
+ * @param props.onNavigateBranch - Callback to switch to another sibling response.
+ * @param props.onShowArtifact - Optional callback to preview an artifact.
+ * @param props.hasArtifact - Whether the message has an associated artifact.
+ * @author Maruf Bepary
+ */
 export function MessageActions({
   message,
   isUser,

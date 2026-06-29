@@ -6,6 +6,7 @@ import { ComponentProps, ElementType } from "react";
  * Extend this tuple to add new providers; the type system propagates the change
  * automatically to `SupportedOAuthProvider` and `SUPPORTED_OAUTH_PROVIDER_DETAILS`.
  *
+ * @author Maruf Bepary
  */
 export const SUPPORTED_OAUTH_PROVIDERS = ["github", "discord"] as const;
 export type SupportedOAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
@@ -14,6 +15,7 @@ export type SupportedOAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
  * Display metadata for each supported OAuth provider.
  * Consumed by the login page to render labelled, branded sign-in buttons.
  *
+ * @author Maruf Bepary
  */
 export const SUPPORTED_OAUTH_PROVIDER_DETAILS: Record<
   SupportedOAuthProvider,

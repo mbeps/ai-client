@@ -6,10 +6,25 @@ import { knowledgebase } from "@/drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
+/**
+ * KB record with denormalized documentCount computed via SQL subquery (no N+1).
+ *
+ * @typedef {Object} KnowledgebaseWithCount
+ * @property {KnowledgebaseRow} - All base KB fields
+ * @property {number} documentCount - Total documents in KB
+ */
 export type KnowledgebaseWithCount = KnowledgebaseRow & {
   documentCount: number;
 };
 
+/**
+ * Lists user KBs with document counts (newest first). Uses SQL subquery to avoid N+1.
+ *
+ * @async
+ * @returns KBs with counts ordered by updatedAt DESC
+ * @throws If session authentication fails
+ * @author Maruf Bepary
+ */
 export async function listKnowledgebases(): Promise<KnowledgebaseWithCount[]> {
   const session = await requireSession();
 

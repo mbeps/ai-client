@@ -14,12 +14,13 @@ const TAB_VALUES = {
 } as const;
 
 /**
- * Two-factor authentication challenge page for users with 2FA enabled.
- * Route: /auth/2fa. Server-rendered; redirects fully authenticated users to home.
- * Requires intermediate auth session with pending 2FA verification.
+ * Two-factor authentication (2FA) challenge page that completes the login flow for users with 2FA enabled.
+ * Server-rendered page that validates user has an intermediate auth session pending 2FA verification.
+ * Displays TOTP authenticator code entry and backup code verification as alternative fallback methods.
+ * Security: Redirects pre-authenticated users away from this page; requires pending 2FA challenge state.
  *
- * @returns Challenge page with TOTP authenticator and backup code tabs.
- * @see LoginPage for initial email/password authentication flow.
+ * @author Maruf Bepary
+ * @see TwoFactorPage for initial email/password authentication flow
  */
 export default async function TwoFactorPage() {
   const session = await auth.api.getSession({ headers: await headers() });

@@ -6,8 +6,11 @@ import { SessionsTab } from "../_components/session/sessions-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
 /**
- * Sessions management page.
- * @returns Server-rendered active sessions list.
+ * Active sessions management page. Displays devices and browser sessions with revocation controls.
+ * Users can view metadata (browser, OS, timestamps) and revoke other active devices.
+ * Route: /profile/sessions. Protected by session auth.
+ *
+ * @author Maruf Bepary
  */
 export default async function SessionsPage() {
   const session = await auth.api.getSession({ headers: await headers() });

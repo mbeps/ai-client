@@ -10,6 +10,22 @@ import {
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 
+/**
+ * Creates a new AI provider configuration for the authenticated user.
+ * Encrypts sensitive fields (API key and custom headers) before storing in database.
+ * Supports OpenAI-compatible providers with customisable base URLs and authentication headers.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param input - Provider configuration object validated against createProviderSchema (name, baseUrl, apiKey required; headers optional).
+ * @returns The newly created provider record with encrypted credentials.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if data fails schema validation (e.g., name or baseUrl missing).
+ * @throws Error if database insertion fails due to constraints or connection issues.
+ * @see updateProvider to modify provider settings.
+ * @see testProviderConnection to verify provider connectivity.
+ * @see deleteProvider to remove a provider.
+ * @author Maruf Bepary
+ */
 export async function createProvider(
   input: CreateProviderInput,
 ): Promise<AiProviderRow> {

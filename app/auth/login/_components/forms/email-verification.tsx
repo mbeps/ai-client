@@ -7,11 +7,12 @@ import { Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Post-registration panel that prompts users to verify their email address.
- * Enforces a 30-second cooldown between resend attempts using a countdown timer.
- * Shown automatically after sign-up when `user.emailVerified` is `false`.
+ * Post-registration email verification panel that prompts users to confirm their email address.
+ * Enforces a 30-second resend cooldown to prevent spam, with a countdown timer showing remaining wait time.
+ * Calls `authClient.sendVerificationEmail` and shows success toast. Displayed when `emailVerified` is false.
  *
- * @param props.email - Address to send the verification link to
+ * @param props.email - Email address to send the verification link to
+ * @author Maruf Bepary
  */
 export function EmailVerification({ email }: { email: string }) {
   const [timeToNextResend, setTimeToNextResend] = useState(30);

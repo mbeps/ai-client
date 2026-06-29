@@ -22,6 +22,14 @@ type ProviderSettingsClientProps = {
   initialSettings: UserSettingsRow | null;
 };
 
+/**
+ * Main client component for provider and model management in Settings.
+ * Organizes tabs for Providers, Models, Default Models, and Import/Export.
+ * Handles loading states and data refresh across all sub-components.
+ *
+ * @param props.initialSettings - Server-rendered user settings.
+ * @author Maruf Bepary
+ */
 export function ProviderSettingsClient({
   initialSettings,
 }: ProviderSettingsClientProps) {

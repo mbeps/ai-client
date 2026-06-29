@@ -38,6 +38,15 @@ interface CreateKnowledgebaseDialogProps {
   onSuccess?: () => void;
 }
 
+/**
+ * Create Knowledgebase Dialog: Form for initializing new document collections.
+ *
+ * Allows users to define KB name and select embedding model. Validates user has at least
+ * one embedding model configured. Submits to server action, closes dialog, and triggers
+ * refresh callback. Displays error toast on failure.
+ *
+ * @author Maruf Bepary
+ */
 export function CreateKnowledgebaseDialog({
   open,
   onOpenChange,

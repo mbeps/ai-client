@@ -13,7 +13,9 @@ import { toast } from "sonner";
 import { Server, Plus, Search, Globe, Loader2 } from "lucide-react";
 
 /**
- * Props for the PublicServerDiscovery component.
+ * Props for PublicServerDiscovery component.
+ *
+ * @interface PublicServerDiscoveryProps
  */
 interface PublicServerDiscoveryProps {
   /** Callback fired after successfully adding a server. */
@@ -23,10 +25,17 @@ interface PublicServerDiscoveryProps {
 }
 
 /**
- * PublicServerDiscovery component enables users to find and add community-shared MCP servers.
- * It fetches the list of available public servers and provides an "Add" button for each.
+ * Component for discovering and adding community-shared MCP servers.
+ * Fetches the list of available public servers from the app store and provides UI to search,
+ * filter, and add servers to the user's personal collection with duplicate prevention.
+ * Handles loading states and error recovery with automatic store sync after successful additions.
  *
- * @author GitHub Copilot
+ * @param props - Component props
+ * @param props.onSuccess - Optional callback fired after successfully adding a server
+ * @param props.onClose - Optional callback to close parent dialog/drawer
+ * @see {@link DiscoverCommunityToolsDialog} for modal wrapper
+ * @see {@link AddServerDialog} for adding custom servers
+ * @author Maruf Bepary
  */
 export function PublicServerDiscovery({
   onSuccess,

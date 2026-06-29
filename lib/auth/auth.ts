@@ -20,6 +20,7 @@ import { env } from "@/lib/env";
  *
  * @see {@link https://better-auth.com/docs} for configuration options
  * @see {@link lib/auth/auth-client.ts} for client-side usage
+ * @author Maruf Bepary
  */
 export const auth = betterAuth({
   appName: "Better Auth Demo",

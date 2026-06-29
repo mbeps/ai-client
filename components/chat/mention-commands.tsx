@@ -27,6 +27,19 @@ interface MentionCommandsProps {
   className?: string;
 }
 
+/**
+ * Dropdown menu for mention commands (prompts via `/` and assistants via `@`).
+ * Renders items with icons, names, and optional badges.
+ * Navigates with keyboard arrows and closes on selection or escape.
+ *
+ * @param props.items - Array of promptsor assistants to display.
+ * @param props.trigger - Trigger character ('/' for prompts, '@' for assistants).
+ * @param props.selectedIndex - Current keyboard selection index.
+ * @param props.onSelect - Callback when user selects an item.
+ * @param props.onClose - Callback to close the menu.
+ * @param props.className - Optional CSS classes for positioning.
+ * @author Maruf Bepary
+ */
 export function MentionCommands({
   items,
   trigger,

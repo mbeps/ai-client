@@ -12,7 +12,9 @@ import { PublicServerDiscovery } from "./public-server-discovery";
 import { Globe } from "lucide-react";
 
 /**
- * Dialog wrapper for the PublicServerDiscovery component.
+ * Props for DiscoverCommunityToolsDialog component.
+ *
+ * @interface DiscoverCommunityToolsDialogProps
  */
 interface DiscoverCommunityToolsDialogProps {
   /** Controls dialog visibility. */
@@ -22,10 +24,15 @@ interface DiscoverCommunityToolsDialogProps {
 }
 
 /**
- * DiscoverCommunityToolsDialog allows users to browse and add community-shared MCP servers
- * through a focused modal experience.
+ * Dialog wrapper for discovering and adding community-shared MCP servers.
+ * Allows users to browse and add public MCP servers through a focused modal experience.
  *
- * @author GitHub Copilot
+ * @param props - Component props
+ * @param props.open - Whether the dialog is visible
+ * @param props.onOpenChange - Callback fired when dialog open state changes
+ * @see {@link PublicServerDiscovery} for the discovery implementation
+ * @see {@link AddServerDialog} for adding custom servers
+ * @author Maruf Bepary
  */
 export function DiscoverCommunityToolsDialog({
   open,

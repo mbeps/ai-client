@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation";
 import { Fingerprint } from "lucide-react";
 
 /**
- * Sign-in button that triggers the WebAuthn passkey flow.
- * Calls `authClient.signIn.passkey` with `autoFill: false` so the browser
- * prompt is displayed on explicit interaction only. Redirects to `ROUTES.HOME`
- * on success and refreshes the active session.
+ * Sign-in button that initiates passwordless WebAuthn passkey authentication.
+ * Provides a secure, phishing-resistant authentication method using platform-specific credentials.
+ * Sets `autoFill: false` to display the browser WebAuthn dialog only on explicit button interaction.
+ * Refetches the session and redirects to home on successful authentication.
  *
+ * @author Maruf Bepary
+ * @see SocialAuthButtons for OAuth-based sign-in alternatives
  */
 export function PasskeyButton() {
   const router = useRouter();

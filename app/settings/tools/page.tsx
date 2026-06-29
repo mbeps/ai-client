@@ -13,8 +13,10 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 
 /**
  * Tools/MCP servers listing page — client component displaying all configured MCP servers.
- * Features: searchable grid of MCP server cards, add new server configuration, manage tool availability.
+ * Features: searchable grid of MCP server cards, add new server configuration, discover community tools.
  * MCP servers provide external tools and resources that can be used in chat interactions.
+ *
+ * @author Maruf Bepary
  */
 export default function ToolsPage() {
   const mcpServers = useAppStore((state) => state.mcpServers);

@@ -4,6 +4,14 @@ import { requireSession } from "@/lib/auth/require-session";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { ProviderSettingsClient } from "@/components/settings/providers/provider-settings-client";
 
+/**
+ * Provider settings page — server component for managing AI provider integrations.
+ * Route: /settings/providers. Features: configure providers (OpenRouter, Ollama, Groq, Azure, DeepSeek, etc),
+ * manage API keys, set default model, registry import/export.
+ *
+ * @author Maruf Bepary
+ * @see ProviderSettingsClient for client-side configuration UI
+ */
 export default async function ProviderSettingsPage() {
   await requireSession();
   const settings = await getUserSettings();

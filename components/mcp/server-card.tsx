@@ -9,13 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { ServerOptions } from "./server-options";
 
 /**
- * Card component displaying an MCP server with name and status indicator.
- * Navigates to server detail page on click. Shows URL description as secondary text.
- * Includes ServerOptions menu for rename, toggle, and delete actions.
+ * Props for ServerCard component.
  *
- * @see {@link ServerOptions} for available actions menu
- * @see {@link ResourceList} for server resources view
- * @see {@link ToolList} for server tools view
+ * @interface ServerCardProps
  */
 interface ServerCardProps {
   /**
@@ -24,6 +20,19 @@ interface ServerCardProps {
   server: McpServer;
 }
 
+/**
+ * Card component displaying an MCP server with name and status indicator.
+ * Navigates to server detail page on click. Shows URL description as secondary text.
+ * Includes ServerOptions menu for rename, toggle, and delete actions.
+ * Provides visual feedback with hover state and server enabled/disabled status.
+ *
+ * @param props - Component props
+ * @param props.server - MCP server to display
+ * @see {@link ServerOptions} for available actions menu
+ * @see {@link ResourceList} for server resources view
+ * @see {@link ToolList} for server tools view
+ * @author Maruf Bepary
+ */
 export function ServerCard({ server }: ServerCardProps) {
   const router = useRouter();
 

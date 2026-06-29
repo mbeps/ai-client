@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 import { AccountDeletion } from "../_components/account/account-deletion";
 
 /**
- * Danger zone page for critical actions.
- * @returns Server-rendered account deletion section.
+ * Danger zone page for critical account actions including permanent account deletion.
+ * Requires email confirmation to prevent accidental data loss.
+ * Route: /profile/danger. Protected by session auth.
+ *
+ * @author Maruf Bepary
  */
 export default async function DangerZonePage() {
   const session = await auth.api.getSession({ headers: await headers() });

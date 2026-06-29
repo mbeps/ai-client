@@ -14,6 +14,15 @@ import { parseProviderHeaders } from "@/lib/actions/providers/utils";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 import { logger } from "@/lib/logger";
 
+/**
+ * Resolved AI provider with decrypted credentials and initialized SDK.
+ * Contains the provider configuration, model details, and ready-to-use AI SDK instance.
+ * Returned by all resolve functions after credential decryption and validation.
+ *
+ * @see resolveProviderForModel for resolution by model ID
+ * @see resolveProvider for universal resolution
+ * @author Maruf Bepary
+ */
 export type ResolvedProvider = {
   sdkProvider: ReturnType<typeof createOpenAI>;
   modelId: string;
@@ -22,6 +31,15 @@ export type ResolvedProvider = {
   apiKey: string | null;
 };
 
+/**
+ * Builds an initialized OpenAI-compatible SDK provider instance.
+ * Validates API key is present before initializing the provider.
+ *
+ * @param input - Provider configuration with name, baseURL, apiKey, and headers
+ * @returns Initialized OpenAI SDK provider instance
+ * @throws {ProviderNotConfiguredError} When API key is missing or empty
+ * @author Maruf Bepary
+ */
 function buildSdkProvider(input: {
   providerName: string;
   baseUrl: string;
@@ -41,6 +59,20 @@ function buildSdkProvider(input: {
   });
 }
 
+/**
+ * Decrypts an encrypted provider field (API key, headers) with error handling.
+ * Returns fallback value if field is empty. Logs decryption errors with context.
+ * Throws ProviderKeyCorruptedError if decryption fails, indicating data corruption.
+ *
+ * @param value - Encrypted field value from database
+ * @param fallback - Default value to return if field is empty (e.g., "{}" for headers)
+ * @param field - Field name for error logging context
+ * @param providerId - Provider ID for error context
+ * @param userId - User ID for audit logging
+ * @returns Decrypted field value or fallback
+ * @throws {ProviderKeyCorruptedError} When decryption fails, indicating corrupted data
+ * @author Maruf Bepary
+ */
 function decryptProviderField(
   value: string | null,
   fallback: string | null,
@@ -65,6 +97,20 @@ function decryptProviderField(
   }
 }
 
+/**
+ * Resolves an AI provider and model for a chat request by looking up user settings.
+ * Decrypts stored API keys and provider credentials, validates they exist,
+ * and initializes an OpenAI-compatible SDK provider instance.
+ * Throws ProviderNotConfiguredError if provider/model not found or API key missing.
+ *
+ * @param userId - Authenticated user ID
+ * @param requestedModelId - Model ID to resolve (e.g., "openai/gpt-4o")
+ * @returns Resolved provider with initialized SDK, model row, and decrypted API key
+ * @throws {ProviderNotConfiguredError} When provider/model not found or not configured
+ * @throws {ProviderKeyCorruptedError} When API key decryption fails
+ * @see {@link lib/utils/encryption.ts} for decryption mechanism
+ * @author Maruf Bepary
+ */
 export async function resolveProviderForModel(
   userId: string,
   requestedModelId: string,
@@ -111,8 +157,16 @@ export async function resolveProviderForModel(
 
 /**
  * Resolves a provider and model using the internal UUID (aiModel.id).
- * This is safer than resolving by modelId (string) when multiple providers
- * might offer the same model ID.
+ * More reliable than resolving by modelId (string) when multiple providers offer the same model ID.
+ * Checks that both provider and model are enabled before returning.
+ *
+ * @param userId - Authenticated user ID
+ * @param recordId - UUID of the aiModel database record
+ * @returns Resolved provider with initialized SDK and decrypted credentials
+ * @throws {ProviderNotConfiguredError} When record not found or provider/model disabled
+ * @throws {ProviderKeyCorruptedError} When credential decryption fails
+ * @see resolveProvider for universal resolution by UUID or model ID
+ * @author Maruf Bepary
  */
 export async function resolveProviderByRecordId(
   userId: string,
@@ -147,8 +201,17 @@ export async function resolveProviderByRecordId(
 
 /**
  * Universal resolver that tries to find a model by record ID (UUID) first,
- * then falls back to resolving by modelId (slug) for backward compatibility
- * or when only the slug is known.
+ * then falls back to resolving by modelId (slug) for backward compatibility.
+ * Detects UUID format and attempts UUID lookup before slug-based lookup.
+ *
+ * @param userId - Authenticated user ID
+ * @param modelIdentifier - Either a UUID (aiModel.id) or model slug (e.g., "openai/gpt-4o")
+ * @returns Resolved provider with initialized SDK and decrypted credentials
+ * @throws {ProviderNotConfiguredError} When model not found or provider not configured
+ * @throws {ProviderKeyCorruptedError} When credential decryption fails
+ * @see resolveProviderForModel for slug-only resolution
+ * @see resolveProviderByRecordId for UUID-only resolution
+ * @author Maruf Bepary
  */
 export async function resolveProvider(
   userId: string,
@@ -175,6 +238,17 @@ export async function resolveProvider(
   return resolveProviderForModel(userId, modelIdentifier);
 }
 
+/**
+ * Constructs a ResolvedProvider by decrypting provider credentials and initializing the SDK.
+ * Handles decryption of API key and custom headers, validates URL for SSRF, and logs resolution.
+ *
+ * @param row - Database query result with provider and model rows
+ * @param userId - Authenticated user ID for audit logging
+ * @returns Complete ResolvedProvider with initialized SDK, decrypted key, and model metadata
+ * @throws {ProviderKeyCorruptedError} When credential decryption fails
+ * @throws {ProviderNotConfiguredError} When URL is blocked by security policy
+ * @author Maruf Bepary
+ */
 function buildResolvedProvider(
   row: { provider: AiProviderRow; model: AiModelRow },
   userId: string,
@@ -216,6 +290,18 @@ function buildResolvedProvider(
   };
 }
 
+/**
+ * Resolves the default chat model configured in user settings.
+ * Falls back to the first available enabled chat model if default is not found or fails.
+ * Logs resolution and fallback events for debugging.
+ *
+ * @param userId - Authenticated user ID
+ * @returns Resolved default chat provider or first available fallback
+ * @throws {ProviderNotConfiguredError} When no chat model is configured or enabled
+ * @throws {ProviderKeyCorruptedError} When credential decryption fails
+ * @see resolveEmbeddingProvider for embedding model resolution
+ * @author Maruf Bepary
+ */
 export async function resolveDefaultChatProvider(
   userId: string,
 ): Promise<ResolvedProvider> {
@@ -266,6 +352,18 @@ export async function resolveDefaultChatProvider(
   return resolveProviderByRecordId(userId, fallback.id);
 }
 
+/**
+ * Resolves the default embedding model configured in user settings.
+ * Falls back to the first available enabled embedding model if default is not found or fails.
+ * Logs resolution and fallback events for debugging.
+ *
+ * @param userId - Authenticated user ID
+ * @returns Resolved default embedding provider or first available fallback
+ * @throws {ProviderNotConfiguredError} When no embedding model is configured or enabled
+ * @throws {ProviderKeyCorruptedError} When credential decryption fails
+ * @see resolveDefaultChatProvider for chat model resolution
+ * @author Maruf Bepary
+ */
 export async function resolveEmbeddingProvider(
   userId: string,
 ): Promise<ResolvedProvider> {

@@ -15,6 +15,19 @@ interface ResponseTimelineProps {
   isLatest?: boolean;
 }
 
+/**
+ * Displays a timeline of response processing steps: thinking (reasoning), tool calls, and results.
+ * Renders each step in a collapsible format with streaming indicators.
+ * Used in MessageBubble to show model reasoning and tool execution details.
+ *
+ * @param props.reasoning - Extended thinking/reasoning text from the model.
+ * @param props.isStreamingReasoning - Whether reasoning is currently streaming.
+ * @param props.toolCalls - Array of tools the model intends to call.
+ * @param props.toolResults - Results returned from tool executions.
+ * @param props.activeToolCalls - Real-time tool execution state during streaming.
+ * @param props.isLatest - Whether this is the latest message (affects auto-expand behavior).
+ * @author Maruf Bepary
+ */
 export function ResponseTimeline({
   reasoning,
   isStreamingReasoning,

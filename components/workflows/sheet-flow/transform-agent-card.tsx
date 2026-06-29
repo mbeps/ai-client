@@ -14,13 +14,25 @@ import type { TransformAgent } from "@/types/transform/transform-agent";
 import { TransformAgentOptions } from "./transform-agent-options";
 import { EntityCard } from "@/components/shared/entity-card";
 
+/**
+ * Props for TransformAgentCard component.
+ *
+ * @author Maruf Bepary
+ */
 interface TransformAgentCardProps {
+  /** Transformation agent to display. */
   agent: TransformAgent;
 }
 
 /**
- * A space-efficient card for displaying a transformation agent in a list.
- * Features a single-row layout with actions on the right.
+ * Displays a transformation agent in a horizontal card layout within a list.
+ * Shows agent name, step count badge, description, and action buttons.
+ * Features configure and run actions via tooltips, plus dropdown menu with rename/delete options.
+ * Used in agent list views.
+ *
+ * @param agent - TransformAgent to render
+ * @returns Horizontal card with agent details, actions, and menu options
+ * @author Maruf Bepary
  */
 export function TransformAgentCard({ agent }: TransformAgentCardProps) {
   return (

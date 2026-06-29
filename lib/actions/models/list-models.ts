@@ -7,6 +7,21 @@ import { requireSession } from "@/lib/auth/require-session";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-row";
 import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 
+/**
+ * Fetches all AI models for the authenticated user with optional filtering.
+ * Joins with provider table to include provider metadata (name, enabled status).
+ * When filtering by type (chat/embedding), also ensures the provider is enabled.
+ * Returns models sorted by provider name, then model label.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param filters - Optional filtering criteria: providerId (filter by specific provider), type ("chat", "embedding", or "both"), isEnabled (filter by enable status).
+ * @returns Array of models with provider metadata; empty array if no matches found.
+ * @throws Error if session is not authenticated.
+ * @throws Error if database query fails due to connection issues.
+ * @see createModel to register a new model.
+ * @see updateModel to modify model properties.
+ * @author Maruf Bepary
+ */
 export async function listModels(filters?: {
   providerId?: string;
   type?: ProviderModelType;

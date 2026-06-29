@@ -23,8 +23,11 @@ import {
 } from "@/schemas/auth/change-password";
 
 /**
- * Form that lets users update credentials and optionally revoke other sessions.
- * @returns Controlled password change form component.
+ * React Hook Form for changing account password with current password verification.
+ * Includes optional checkbox to revoke all other active sessions for security.
+ * This is a sensitive operation that requires password validation.
+ *
+ * @author Maruf Bepary
  */
 export function ChangePasswordForm() {
   const form = useForm<ChangePasswordFormData>({
@@ -39,8 +42,7 @@ export function ChangePasswordForm() {
   const { isSubmitting } = form.formState;
 
   /**
-   * Submits a Better Auth password change request.
-   * @param data Form payload containing the current and new password.
+   * Submits password change to Better Auth and resets the form on success.
    */
   async function handlePasswordChange(data: ChangePasswordFormData) {
     await authClient.changePassword(data, {

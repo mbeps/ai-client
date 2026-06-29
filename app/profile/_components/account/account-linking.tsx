@@ -16,9 +16,10 @@ import { useRouter } from "next/navigation";
 type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
 
 /**
- * Lists linked OAuth accounts and offers buttons to link or unlink providers.
- * @param currentAccounts Accounts currently associated with the user.
- * @returns Account linking layout composed of provider cards.
+ * Lists linked OAuth accounts and provides link/unlink buttons for all supported OAuth providers.
+ * Displays currently linked accounts with unlink actions and available providers for linking.
+ *
+ * @author Maruf Bepary
  */
 export function AccountLinking({
   currentAccounts,
@@ -65,10 +66,9 @@ export function AccountLinking({
 }
 
 /**
- * Provider-specific card that shows link status and actions.
- * @param provider OAuth provider identifier.
- * @param account Optional linked account metadata.
- * @returns Card component with link or unlink button.
+ * Renders a provider-specific card with link/unlink actions and account connection details.
+ *
+ * @author Maruf Bepary
  */
 function AccountCard({
   provider,
@@ -88,8 +88,7 @@ function AccountCard({
   };
 
   /**
-   * Begins the social account linking flow.
-   * @returns Promise that resolves when the linking redirect completes.
+   * Initiates OAuth linking flow via Better Auth.
    */
   function linkAccount() {
     return authClient.linkSocial({
@@ -99,8 +98,7 @@ function AccountCard({
   }
 
   /**
-   * Unlinks the current social account and refreshes profile data.
-   * @returns Promise describing the unlink operation result.
+   * Unlinks the OAuth account and triggers a page refresh to update the account list.
    */
   function unlinkAccount() {
     if (account == null) {

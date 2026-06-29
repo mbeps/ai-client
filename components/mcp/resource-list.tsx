@@ -8,13 +8,9 @@ import type { McpServer } from "@/types/mcp/mcp-server";
 import { Badge } from "@/components/ui/badge";
 
 /**
- * Displays resources discovered from an MCP server in an expandable accordion.
- * Auto-fetches resources on mount; supports manual refresh. Shows URI, description, and MIME type per resource.
- * Handles loading, error, and empty states gracefully.
+ * Props for ResourceList component.
  *
- * @param server - MCP server to discover resources from; discovery is keyed by server.id
- * @see {@link ToolList} for displaying server tools
- * @see {@link ServerCard} for server overview
+ * @interface ResourceListProps
  */
 export interface ResourceListProps {
   /**
@@ -71,6 +67,18 @@ function renderResourceContent(res: DiscoveredResource) {
   );
 }
 
+/**
+ * Displays resources discovered from an MCP server in an expandable accordion.
+ * Auto-fetches resources on mount; supports manual refresh. Shows URI, description, and MIME type per resource.
+ * Handles loading, error, and empty states gracefully with retry capability.
+ *
+ * @param props - Component props
+ * @param props.server - MCP server to discover resources from; discovery is keyed by server.id
+ * @see {@link ToolList} for displaying server tools
+ * @see {@link ServerCard} for server overview
+ * @see {@link McpItemList} for generic item list implementation
+ * @author Maruf Bepary
+ */
 export function ResourceList({ server }: ResourceListProps) {
   return (
     <McpItemList<DiscoveredResource>

@@ -27,12 +27,9 @@ import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-serv
 import { useRouter } from "next/navigation";
 
 /**
- * Form for editing an existing Model Context Protocol server configuration.
- * Displays configuration fields and persists changes via direct Server Action.
+ * Props for EditServerForm component.
  *
- * @param server - MCP server to edit; determines which fields are displayed
- * @see {@link AddServerDialog} for creating new servers
- * @see {@link ServerSettings} for server-specific settings and deletion
+ * @interface EditServerFormProps
  */
 export interface EditServerFormProps {
   /**
@@ -41,6 +38,18 @@ export interface EditServerFormProps {
   server: McpServer;
 }
 
+/**
+ * Form for editing an existing Model Context Protocol server configuration.
+ * Displays all configuration fields and persists changes via Server Action.
+ * Provides real-time validation and success/error feedback via toast notifications.
+ *
+ * @param props - Component props
+ * @param props.server - MCP server to edit; determines which fields are displayed
+ * @see {@link AddServerDialog} for creating new servers
+ * @see {@link ServerSettings} for server-specific settings and deletion
+ * @see {@link ServerFormFields} for reusable form field components
+ * @author Maruf Bepary
+ */
 export function EditServerForm({ server }: EditServerFormProps) {
   const router = useRouter();
 

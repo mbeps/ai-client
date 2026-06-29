@@ -33,6 +33,23 @@ interface AttachmentsMenuProps {
   supportsTools?: boolean;
 }
 
+/**
+ * Menu providing options to upload files, add knowledgebases, and select MCP tools.
+ * Renders conditionally based on model capabilities (vision support, tool support).
+ * Used in ChatInput for attachment and integration management.
+ *
+ * @param props.servers - Available MCP servers for tool selection.
+ * @param props.fileInputRef - Reference to hidden file input element.
+ * @param props.selectedTools - Set of selected tool IDs.
+ * @param props.onToggleTool - Callback to toggle individual tool selection.
+ * @param props.onBulkSelect - Callback to bulk-select tools from a server.
+ * @param props.knowledgebases - Available knowledgebases to add.
+ * @param props.selectedKbs - Set of selected knowledgebase IDs.
+ * @param props.onToggleKb - Callback to toggle knowledgebase selection.
+ * @param props.supportsVision - Whether the model supports vision (image attachments).
+ * @param props.supportsTools - Whether the model supports MCP tools.
+ * @author Maruf Bepary
+ */
 export const AttachmentsMenu = ({
   servers,
   fileInputRef,

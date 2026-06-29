@@ -5,7 +5,7 @@ import { attachment, message, chat } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { requireSession } from "@/lib/auth/require-session";
 
-export type CloneAttachmentResult = {
+type CloneAttachmentResult = {
   id: string;
   key: string;
   name: string;

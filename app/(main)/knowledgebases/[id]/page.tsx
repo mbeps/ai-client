@@ -51,6 +51,15 @@ import { AlertTriangle, AlertCircle, RefreshCw, Database } from "lucide-react";
 import { useUserModels } from "@/hooks/use-user-models";
 import { cn } from "@/lib/utils";
 
+/**
+ * Knowledgebase detail page: Upload documents and manage embeddings.
+ *
+ * Route: /knowledgebases/[id]. Displays KB metadata, lists documents with upload UI,
+ * and provides reindexing/deletion controls. Uses SidebarTabs for Overview/Documents/Settings.
+ * Handles document upload, embedding status tracking, and KB lifecycle management.
+ *
+ * @author Maruf Bepary
+ */
 export default function KnowledgebasePage() {
   const params = useParams();
   const router = useRouter();

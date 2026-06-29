@@ -9,8 +9,9 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  * Requires active session — redirects unauthenticated users to login.
  * Route group: /settings/general, /settings/app, /settings/profile, /settings/prompts, /settings/tools.
  *
- * @param children - Settings sub-page content.
+ * @param children Settings sub-page content.
  * @returns Settings scaffold with sidebar and centered content area.
+ * @author Maruf Bepary
  * @see AuthenticatedLayout for session validation and auth guards.
  */
 export default function SettingsLayout({

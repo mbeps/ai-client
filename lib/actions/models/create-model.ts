@@ -11,6 +11,23 @@ import {
 } from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
+/**
+ * Registers a new AI model under an existing provider configuration.
+ * Validates input against createModelSchema and inserts a new model record with metadata (context window, capabilities).
+ * Logs the operation for audit purposes.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param input - Model configuration object validated against createModelSchema (providerId, modelId, label, modelType required; optional capability and dimension fields).
+ * @returns The newly created model record with all fields populated and isManuallyAdded=true.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if data fails schema validation (e.g., providerId is missing).
+ * @throws Error if provider does not exist or user does not own it (returns "Not Found").
+ * @throws Error if database insertion fails due to constraints or connection issues.
+ * @see listModels to fetch all models for a user.
+ * @see updateModel to modify model metadata.
+ * @author Maruf Bepary
+ */
+
 export async function createModel(
   input: CreateModelInput,
 ): Promise<AiModelRow> {

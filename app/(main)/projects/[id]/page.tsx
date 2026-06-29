@@ -70,6 +70,7 @@ import {
  * Features: edit name/description/global system prompt, view related chats, delete project, create new chats.
  * Shows 404 if project not found.
  *
+ * @author Maruf Bepary
  * @see ProjectChatPage for individual chat within a project
  */
 export default function ProjectPage() {

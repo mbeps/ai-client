@@ -31,12 +31,13 @@ const TAB_VALUES = {
 type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];
 
 /**
- * Authentication entry point combining sign-in, sign-up, email verification, and password recovery.
- * Route: /auth/login. Public route. Redirects authenticated users to home page.
- * Supports OAuth (GitHub, Discord), email/password, and passkey authentication.
+ * Main authentication entry point supporting multiple sign-in and sign-up methods.
+ * Client-rendered page with tabbed interface for sign-in, sign-up, email verification, and password recovery.
+ * Supports OAuth (GitHub, Discord), email/password with validation, and WebAuthn passkey authentication.
+ * Security: Redirects authenticated users to home; handles email verification and 2FA delegation.
  *
- * @returns Tabbed auth interface with sign-in, sign-up, and recovery flows.
- * @see TwoFactorPage for TOTP/backup code challenges when 2FA is enabled.
+ * @author Maruf Bepary
+ * @see TwoFactorPage for TOTP/backup code challenges when 2FA is enabled
  */
 export default function LoginPage() {
   const router = useRouter();

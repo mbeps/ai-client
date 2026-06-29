@@ -26,6 +26,14 @@ function downloadJson(filename: string, content: object): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Provides buttons to export and import the complete provider registry and model configurations.
+ * Allows users to backup their setup or migrate between environments.
+ *
+ * @param props.providers - Current list of providers to include in export.
+ * @param props.onRefresh - Callback to refresh after import.
+ * @author Maruf Bepary
+ */
 export function ImportExportPanel({
   providers,
   onRefresh,

@@ -16,9 +16,15 @@ import {
 } from "@/lib/utils/error-utils";
 
 /**
- * Re-indexes all documents in a knowledgebase.
- * This is used when the default embedding model has changed.
- * It reuses existing S3 files to avoid re-uploading.
+ * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.
+ * Marks KB as indexing, processes ready docs, breaks on rate limits (prevents cascading requests).
+ * Returns {processedCount, failedCount} summary. Skips if KB already ready.
+ *
+ * @async
+ * @param kbId - Knowledge base UUID to re-index
+ * @returns {processedCount, failedCount} re-indexing summary
+ * @throws "Not Found" if KB not owned by current user
+ * @author Maruf Bepary
  */
 export async function reindexKnowledgebase(kbId: string) {
   const session = await requireSession();

@@ -43,6 +43,18 @@ type ServerContent = {
   error: string | null;
 };
 
+/**
+ * List component for discovering and selecting MCP tools from multiple servers.
+ * Dynamically fetches tools on server expansion, displays loading states and errors.
+ * Supports bulk selection per server and individual tool toggling with search filtering.
+ *
+ * @param props.servers - Array of MCP servers to discover tools from.
+ * @param props.selectedTools - Set of selected tool IDs (format: 'serverId:toolName').
+ * @param props.onToggleTool - Callback to toggle a single tool's selection.
+ * @param props.onBulkSelect - Callback to bulk-select or deselect all tools from a server.
+ * @param props.className - Optional CSS classes for styling.
+ * @author Maruf Bepary
+ */
 export function ToolPickerList({
   servers,
   selectedTools,

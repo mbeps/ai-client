@@ -9,10 +9,13 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 /**
  * Lists all MCP servers configured by the authenticated user.
  * Returns servers ordered by most recently updated first.
+ * Includes both enabled and disabled servers, and personal and imported public servers.
+ * Runs on server only — invoked from client via Server Action.
  *
  * @returns Array of MCP server configurations (name, type, connection details, enabled status).
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if database query fails due to connection issues.
+ * @author Maruf Bepary
  */
 export async function listMcpServers(): Promise<McpServerRow[]> {
   const session = await requireSession();

@@ -7,6 +7,14 @@ import { listTransformAgents } from "@/lib/actions/transform-agents/list-transfo
 
 import { TransformAgentCard } from "@/components/workflows/sheet-flow/transform-agent-card";
 
+/**
+ * Spreadsheets Automation agents list page.
+ * Server component fetching and displaying all transform agents for the current user.
+ * Allows creation of new agents and displays agent cards with metadata.
+ * Empty state guides users to create their first transformation agent.
+ *
+ * @author Maruf Bepary
+ */
 export default async function TransformAgentsPage() {
   const rows = await listTransformAgents();
   const agents = rows.map((row) => {

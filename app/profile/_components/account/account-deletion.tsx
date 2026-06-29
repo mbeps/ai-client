@@ -6,8 +6,12 @@ import { ROUTES } from "@/constants/routes";
 import { UserX } from "lucide-react";
 
 /**
- * Danger zone button that starts the Better Auth account deletion flow.
- * @returns Action button that emails a confirmation link.
+ * Displays a destructive action button that initiates the Better Auth account deletion flow.
+ * Sends a confirmation email to prevent accidental deletion. This is a sensitive operation
+ * that permanently removes the account and all associated data upon confirmation.
+ *
+ * @returns Destructive action button with "Are you sure?" confirmation.
+ * @author Maruf Bepary
  */
 export function AccountDeletion() {
   return (

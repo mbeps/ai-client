@@ -8,8 +8,7 @@ import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
  * Renders workflow sidebar navigation within AuthenticatedLayout.
  * Requires active session — redirects unauthenticated users to login.
  *
- * @param children - Workflow sub-page content.
- * @returns Workflow scaffold with sidebar and centered content area.
+ * @author Maruf Bepary
  */
 export default function WorkflowsLayout({
   children,

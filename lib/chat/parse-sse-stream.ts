@@ -1,5 +1,10 @@
 import { logger } from "@/lib/logger";
-// Typed SSE event union — mirrors what the chat route emits
+
+/**
+ * Typed SSE event union — mirrors what the chat route emits
+ *
+ * @author Maruf Bepary
+ */
 export type SseEvent =
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
@@ -21,6 +26,7 @@ export type SseEvent =
  * Handles chunked reads, incomplete-line buffering, and malformed lines gracefully.
  *
  * @param body - ReadableStream from a fetch response (response.body)
+ * @author Maruf Bepary
  */
 export async function* parseSseStream(
   body: ReadableStream<Uint8Array>,

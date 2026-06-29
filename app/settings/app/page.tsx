@@ -4,6 +4,14 @@ import { PageHeader } from "@/components/page-header";
 import { requireSession } from "@/lib/auth/require-session";
 import { Settings2 } from "lucide-react";
 
+/**
+ * Application general settings page — server component for managing global app preferences.
+ * Route: /settings/app. Features: default system prompt configuration, application-wide customizations.
+ * Settings are persisted to database and affect all chat interactions.
+ *
+ * @author Maruf Bepary
+ * @see GlobalPromptForm for configuration form component
+ */
 export default async function SettingsPage() {
   await requireSession();
   const settings = await getUserSettings();

@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 
+/**
+ * Props for ModelCapabilityBanner component.
+ *
+ * @author Maruf Bepary
+ */
 interface ModelCapabilityBannerProps {
+  /** Whether all providers are disabled or no models are configured. */
   hasNoModels: boolean;
 }
 
 /**
- * Displays a warning banner when no AI models are available.
- * Prompts the user to configure a provider in Settings.
+ * Displays an alert banner when no AI models are available for chat.
+ * Shows warning message and "Configure" link to provider settings.
+ * Returns null if models are available (no rendering).
+ *
+ * @param hasNoModels - Whether all providers disabled or no models exist
+ * @returns Warning banner with configure link, or null if models available
+ * @author Maruf Bepary
  */
 export function ModelCapabilityBanner({
   hasNoModels,

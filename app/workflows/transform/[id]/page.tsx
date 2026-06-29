@@ -73,6 +73,14 @@ import { listKnowledgebases } from "@/lib/actions/knowledgebases/list-knowledgeb
 import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
 
+/**
+ * Transform agent editor page supporting create/edit/delete operations.
+ * Client component managing agent configuration including steps, tools, knowledge bases, and model selection.
+ * Provides tabbed interface for step definition, global prompt, knowledge base selection, tool configuration, and run history.
+ * Integrates with transform run creation and file upload functionality.
+ *
+ * @author Maruf Bepary
+ */
 export default function AgentEditorPage() {
   const params = useParams();
   const router = useRouter();

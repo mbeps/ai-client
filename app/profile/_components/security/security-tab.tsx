@@ -9,10 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { env } from "@/lib/env";
 
 /**
- * Server component that aggregates password, 2FA, and passkey management data.
- * @param email Email address used for password setup flows.
- * @param isTwoFactorEnabled Current two-factor state for the user.
- * @returns Stacked security settings for password, 2FA, and passkeys.
+ * Server component aggregating password, two-factor authentication, and passkey management.
+ * Conditionally displays password change or setup based on account type and feature flags.
+ * Includes 2FA toggle and WebAuthn passkey management.
+ *
+ * @author Maruf Bepary
  */
 export async function SecurityTab({
   email,

@@ -7,6 +7,7 @@ import { ROUTES } from "@/constants/routes";
  * Protected route — requires active authentication.
  *
  * @returns Never returns; always redirects to /settings/app.
+ * @author Maruf Bepary
  * @see SettingsLayout for parent layout with sidebar.
  */
 export default function SettingsPage() {

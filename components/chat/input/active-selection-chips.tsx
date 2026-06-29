@@ -20,6 +20,9 @@ interface ActiveSelectionChipsProps {
  * Renders pill/badge chips at the top of the chat input showing
  * the currently selected assistant, prompt, and knowledge bases.
  * Each chip includes a remove button.
+ * @param props - Configuration for selected entities and remove callbacks.
+ * @returns Row of chips or null if nothing is selected.
+ * @author Maruf Bepary
  */
 export function ActiveSelectionChips({
   selectedAssistant,

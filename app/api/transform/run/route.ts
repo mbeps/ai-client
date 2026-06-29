@@ -30,6 +30,31 @@ const requestSchema = z.discriminatedUnion("type", [
   startTransformRunSchema.extend({ type: z.literal("start") }),
 ]);
 
+/**
+ * Executes data transformation workflows with step-by-step orchestration and real-time progress streaming.
+ * Authenticates via Better Auth session, validates request type (new/resume/start), initializes transform run
+ * lifecycle, assembles file context from RAG retrieval, registers MCP tools, and streams transformation steps
+ * via Server-Sent Events (SSE).
+ *
+ * **HTTP Method:** POST
+ *
+ * **Request Format:** JSON with discriminated union type ("new", "resume", or "start") and workflow configuration
+ *
+ * **Response Format:** Server-Sent Events (SSE) stream with step progress updates and final run result
+ *
+ * **Authentication:** Required (Better Auth session)
+ *
+ * **Async Pattern:** Long-running workflow (300s timeout) with step-by-step streaming and MCP tool cleanup
+ *
+ * **Integration Points:** Better Auth, workflow lifecycle service, MCP tool registration, RAG hybrid search,
+ * file context assembly, transform step orchestration
+ *
+ * @author Maruf Bepary
+ * @see {@link lib/transform/lifecycle-service} for transform run initialization
+ * @see {@link lib/transform/build-file-context} for file context assembly
+ * @see {@link lib/transform/run-steps} for step orchestration
+ * @see {@link lib/rag/retrieve} for RAG knowledge base retrieval
+ */
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
@@ -130,7 +155,8 @@ export async function POST(req: Request) {
             ),
           );
 
-        const model = (parsed.data as { model?: string }).model ?? agentRow.modelId ?? null;
+        const model =
+          (parsed.data as { model?: string }).model ?? agentRow.modelId ?? null;
         const resolvedProvider = model
           ? await resolveProvider(session.user.id, model)
           : await resolveDefaultChatProvider(session.user.id);
@@ -144,7 +170,9 @@ export async function POST(req: Request) {
               kbIds.map((id) =>
                 hybridSearch(
                   id,
-                  agentRow.globalContext || agentRow.description || agentRow.name,
+                  agentRow.globalContext ||
+                    agentRow.description ||
+                    agentRow.name,
                   session.user.id,
                   3,
                 ),
@@ -152,17 +180,25 @@ export async function POST(req: Request) {
             );
             const allChunks = results.flat();
             if (allChunks.length > 0) {
-              kbContext = "\n\nKnowledge Base Context:\n" + allChunks.map((c) => c.content).join("\n---\n");
+              kbContext =
+                "\n\nKnowledge Base Context:\n" +
+                allChunks.map((c) => c.content).join("\n---\n");
             }
           } catch (err) {
-            logger.warn("[Transform AI] KB retrieval failed", { err }, session.user.id);
+            logger.warn(
+              "[Transform AI] KB retrieval failed",
+              { err },
+              session.user.id,
+            );
           }
         }
 
         /* ── 6. Register MCP tools ────────────────────────────────── */
         const anyArtifactToolSelected =
           (agentRow.tools || []).includes("internal:tool:manage_artifact") ||
-          steps.some((s) => (s.toolIds || []).includes("internal:tool:manage_artifact"));
+          steps.some((s) =>
+            (s.toolIds || []).includes("internal:tool:manage_artifact"),
+          );
 
         const {
           mcpTools: runMcpTools,
@@ -214,10 +250,20 @@ export async function POST(req: Request) {
         await runMcpCleanup();
         controller.close();
       } catch (err) {
-        logger.error("[Transform AI] Run failed", err as Error, undefined, session.user.id);
-        emit({ type: "error", message: "Transform execution failed unexpectedly" });
+        logger.error(
+          "[Transform AI] Run failed",
+          err as Error,
+          undefined,
+          session.user.id,
+        );
+        emit({
+          type: "error",
+          message: "Transform execution failed unexpectedly",
+        });
         await runMcpCleanup();
-        try { controller.close(); } catch {}
+        try {
+          controller.close();
+        } catch {}
       }
     },
   });

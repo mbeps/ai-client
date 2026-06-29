@@ -41,6 +41,19 @@ interface KnowledgebasePickerProps {
 
 /**
  * Core picker component for selecting knowledge bases.
+ * Supports single and multiple selection modes with search filtering.
+ * Used in ChatInput to add knowledgebases to message context.
+ *
+ * @param props.knowledgebases - List of available knowledgebases to select from.
+ * @param props.mode - Selection mode: 'single' for exclusive, 'multiple' for multi-select.
+ * @param props.selectedIds - Set of currently selected knowledgebase IDs.
+ * @param props.onSelect - Callback invoked when selection changes.
+ * @param props.className - Optional CSS classes for styling.
+ * @param props.maxHeight - Maximum height of the picker container.
+ * @param props.showIcons - Whether to show knowledgebase icons.
+ * @param props.allowEmpty - Whether to allow deselecting all items (single mode only).
+ * @param props.emptyLabel - Label shown when nothing is selected.
+ * @author Maruf Bepary
  */
 export function KnowledgebasePicker({
   knowledgebases,

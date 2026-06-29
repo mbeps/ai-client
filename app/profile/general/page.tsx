@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 import { ProfileUpdateForm } from "../_components/profile/profile-update-form";
 
 /**
- * General profile settings page.
- * @returns Server-rendered profile update form.
+ * General profile settings page for updating user name and viewing email address.
+ * Renders profile update form with validation via Better Auth.
+ * Route: /profile/general. Protected by session auth.
+ *
+ * @author Maruf Bepary
  */
 export default async function GeneralProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });

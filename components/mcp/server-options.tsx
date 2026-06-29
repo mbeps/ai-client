@@ -10,10 +10,29 @@ import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
+/**
+ * Props for ServerOptions component.
+ *
+ * @interface ServerOptionsProps
+ */
 export interface ServerOptionsProps {
+  /** The MCP server to manage options for. */
   server: McpServer;
 }
 
+/**
+ * Options menu component for MCP server actions.
+ * Provides rename, toggle enable/disable, and delete operations through a context menu.
+ * Handles mobile vs desktop UX patterns automatically.
+ * All operations trigger app store refresh and router updates.
+ *
+ * @param props - Component props
+ * @param props.server - The MCP server to manage options for
+ * @see {@link ServerCard} for server display with options
+ * @see {@link ServerSettings} for detailed settings panel
+ * @see {@link BaseEntityOptions} for base menu implementation
+ * @author Maruf Bepary
+ */
 export function ServerOptions({ server }: ServerOptionsProps) {
   const router = useRouter();
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);

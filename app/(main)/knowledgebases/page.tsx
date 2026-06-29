@@ -14,6 +14,15 @@ import { useUserModels } from "@/hooks/use-user-models";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 
+/**
+ * Knowledgebases page: Manage RAG document collections.
+ *
+ * Route: /knowledgebases. Displays searchable grid of knowledge bases (document collections).
+ * Each KB shows document count and embedding model used. Validates that user has embedding
+ * model configured before allowing creation. Protected route with create dialog for new KBs.
+ *
+ * @author Maruf Bepary
+ */
 export default function KnowledgebasesPage() {
   const router = useRouter();
   const { models } = useUserModels("embedding");

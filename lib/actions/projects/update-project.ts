@@ -9,11 +9,21 @@ import { updateProjectSchema } from "@/schemas/project/project";
 import { z } from "zod";
 
 /**
- * Updates an existing project's metadata or system prompt.
+ * Updates an existing project with partial field updates (name, description, globalPrompt, tools, knowledgebaseId).
+ * Validates all inputs and enforces ownership check before updating database record.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param id - The unique ID of the project to update.
- * @param data - The fields to update (name, description, globalPrompt).
- * @returns The updated project record.
+ * @param id - UUID of the project to update; must be owned by the authenticated user.
+ * @param data - Partial project update object (name, description, globalPrompt, tools, knowledgebaseId fields).
+ * @returns The updated project record with all fields populated.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if id is not a valid UUID format.
+ * @throws ZodError if data fails schema validation against updateProjectSchema.
+ * @throws Error if project is not found or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createProject to create a new project.
+ * @see deleteProject to remove a project.
+ * @author Maruf Bepary
  */
 export async function updateProject(
   id: string,

@@ -11,13 +11,18 @@ import { z } from "zod";
 
 /**
  * Updates or initializes application-wide settings for the authenticated user.
- * Specifically manages global preferences such as the global system prompt.
+ * Specifically manages global preferences such as the global system prompt and default model selections.
  * Uses an upsert pattern based on userId to ensure only one setting row exists per user.
+ * Revalidates cache after update to reflect changes immediately.
+ * Runs on server only — invoked from client via Server Action.
  *
- * @param data - Setting values validated against userSettingsSchema
- * @returns The updated or newly created user settings record
- * @throws {Error} "Unauthorized" if no session exists
- * @throws {ZodError} If input data fails validation
+ * @param data - Setting values validated against userSettingsSchema (globalSystemPrompt, defaultChatModelId, defaultEmbeddingModelId fields).
+ * @returns The updated or newly created user settings record.
+ * @throws Error if session is not authenticated (returns "Unauthorized").
+ * @throws ZodError if input data fails validation against userSettingsSchema.
+ * @throws Error if database upsert fails due to constraints or connection issues.
+ * @see getUserSettings to fetch current user settings.
+ * @author Maruf Bepary
  */
 export async function updateUserSettings(
   data: z.infer<typeof userSettingsSchema>,

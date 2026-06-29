@@ -5,6 +5,15 @@ import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 
+/**
+ * Toggles provider enabled/disabled state after validating user ownership.
+ * Updates isEnabled flag and updatedAt timestamp.
+ *
+ * @param providerId - Provider identifier
+ * @param enabled - Desired enabled state
+ * @throws "Not Found" if provider not owned by current user
+ * @author Maruf Bepary
+ */
 export async function toggleProvider(
   providerId: string,
   enabled: boolean,

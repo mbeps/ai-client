@@ -11,6 +11,25 @@ import {
 } from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
+/**
+ * Updates one or more AI models with partial field updates (label, type, context window, capabilities, enabled status).
+ * Accepts a single modelId string or array of modelIds for batch updates.
+ * Validates input against updateModelSchema and applies only non-undefined fields to database.
+ * Logs update events for audit purposes.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param modelIdOrIds - UUID of a single model or array of UUIDs to update; all must be owned by the authenticated user.
+ * @param input - Partial model update object (any combination of label, modelType, contextWindow, embeddingDimensions, capabilities, isEnabled).
+ * @returns Array of updated model records; empty array if modelIdOrIds is empty.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if data fails schema validation against updateModelSchema.
+ * @throws Error if no matching models found for the given IDs (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createModel to register a new model.
+ * @see updateModel is a backward-compatibility wrapper for single model updates.
+ * @author Maruf Bepary
+ */
+
 export async function updateModels(
   modelIdOrIds: string | string[],
   input: UpdateModelInput,

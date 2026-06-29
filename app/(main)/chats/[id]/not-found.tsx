@@ -1,3 +1,11 @@
+/**
+ * Chat not found page: 404 fallback for missing or inaccessible chats.
+ *
+ * Renders when chat UUID doesn't exist or user lacks ownership permission.
+ * Provides navigation link back to chat list and contextual 404 message.
+ *
+ * @author Maruf Bepary
+ */
 import { NotFoundPage } from "@/components/shared/not-found-page";
 
 export default function ChatNotFound() {

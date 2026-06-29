@@ -8,13 +8,28 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
+/**
+ * Props for TransformRunCard component.
+ *
+ * @author Maruf Bepary
+ */
 interface TransformRunCardProps {
+  /** Transform run execution record to display. */
   run: TransformRunRow;
+  /** ID of the parent transformation agent. */
   agentId: string;
 }
 
 /**
- * A compact card component for displaying a transform run in a history list.
+ * Displays a single transformation run execution record as a clickable card.
+ * Shows execution timestamp, status badge (completed/failed/pending), dry-run indicator, and relative time.
+ * Links to the run details page when clicked.
+ * Used in agent run history lists.
+ *
+ * @param run - TransformRunRow with execution data and status
+ * @param agentId - Parent agent ID for linking to run details
+ * @returns Clickable card linking to run details with status and timing information
+ * @author Maruf Bepary
  */
 export function TransformRunCard({ run, agentId }: TransformRunCardProps) {
   return (

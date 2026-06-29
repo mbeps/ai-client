@@ -11,6 +11,24 @@ import {
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";
 
+/**
+ * Updates an existing AI provider configuration with partial field updates.
+ * Re-encrypts sensitive fields (API key, headers) if provided.
+ * If API key or headers are not included in update, existing encrypted values are preserved.
+ * Enforces ownership check before modifying provider.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param providerId - UUID of the provider to update; must be owned by the authenticated user.
+ * @param input - Partial provider update object (name, baseUrl, apiKey, headers, isEnabled, requiresKey).
+ * @returns The updated provider record with encrypted credentials.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if data fails schema validation against updateProviderSchema.
+ * @throws Error if provider is not found or user does not own it (returns "Not Found").
+ * @throws Error if database update fails due to constraints or connection issues.
+ * @see createProvider to add a new provider.
+ * @see testProviderConnection to verify provider connectivity after update.
+ * @author Maruf Bepary
+ */
 export async function updateProvider(
   providerId: string,
   input: UpdateProviderInput,

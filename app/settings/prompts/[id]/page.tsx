@@ -37,6 +37,7 @@ import {
  * Features: edit title/shortcut/content, save changes, delete prompt, validation and error handling.
  * Shows 404 if prompt not found.
  *
+ * @author Maruf Bepary
  * @see PromptsPage for parent prompts list
  */
 export default function PromptDetailPage() {
