@@ -1,4 +1,4 @@
-import { DiscordIcon, GitHubIcon } from "@/components/auth/icons/o-auth-icons";
+import { GitBranch, MessageSquare } from "lucide-react";
 import { ComponentProps, ElementType } from "react";
 
 /**
@@ -21,6 +21,6 @@ export const SUPPORTED_OAUTH_PROVIDER_DETAILS: Record<
   SupportedOAuthProvider,
   { name: string; Icon: ElementType<ComponentProps<"svg">> }
 > = {
-  discord: { name: "Discord", Icon: DiscordIcon },
-  github: { name: "GitHub", Icon: GitHubIcon },
+  discord: { name: "Discord", Icon: MessageSquare },
+  github: { name: "GitHub", Icon: GitBranch },
 };
