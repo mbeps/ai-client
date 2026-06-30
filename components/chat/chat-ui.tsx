@@ -15,7 +15,7 @@ import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
 import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { parseMessageMetadata } from "@/lib/store/mappers/message-mapper";
-import type { ArtifactData } from "@/types/artifact/artifact";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { useState } from "react";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 

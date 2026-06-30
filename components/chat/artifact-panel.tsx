@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ArtifactData } from "@/types/artifact/artifact";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import {
   Check,
   ChevronLeft,

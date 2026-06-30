@@ -12,7 +12,7 @@ import {
   resumeTransformRunSchema,
   startTransformRunSchema,
 } from "@/schemas/workflows/transform-agent";
-import type { TransformStep } from "@/types/transform/transform-agent";
+import { type TransformStep } from "@/types/transform/transform-step";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";

@@ -21,12 +21,10 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  ArtifactSheet,
-  ArtifactSpreadsheetData,
-  CellObject,
-  CellStyle,
-} from "@/types/artifact/artifact";
+import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
+import type { ArtifactSpreadsheetData } from "@/types/artifact/artifact-spreadsheet-data";
+import type { CellObject } from "@/types/artifact/cell-object";
+import type { CellStyle } from "@/types/artifact/cell-style";
 import { cn } from "@/lib/utils";
 import {
   useReactTable,

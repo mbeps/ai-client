@@ -13,7 +13,7 @@ import { extractUploadedFilePath } from "@/lib/transform/extract-uploaded-file-p
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";
 import { extractDownloadFilePayload } from "@/lib/transform/extract-download-file-payload";
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
-import type { TransformStep } from "@/types/transform/transform-agent";
+import { type TransformStep } from "@/types/transform/transform-step";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";

@@ -22,7 +22,7 @@ import {
   transformStepSchema,
   type TransformStepInput,
 } from "@/schemas/workflows/transform-agent";
-import type { TransformStep } from "@/types/transform/transform-agent";
+import { type TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Props for TransformStepCard component.

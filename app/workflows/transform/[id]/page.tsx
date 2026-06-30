@@ -63,7 +63,7 @@ import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-s
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ModelSelector } from "@/components/shared/model-selector";
 
-import type { TransformStep } from "@/types/transform/transform-agent";
+import { type TransformStep } from "@/types/transform/transform-step";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
