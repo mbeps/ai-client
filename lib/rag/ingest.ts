@@ -4,7 +4,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
-import { chunkText } from "./chunk";
+import { chunkText } from "./chunk-text";
 import { embedDocuments } from "./embed";
 import {
   RagExtractionEmptyError,

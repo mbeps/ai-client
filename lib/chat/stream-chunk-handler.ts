@@ -5,10 +5,6 @@ import { StreamState } from "@/types/chat/stream-state";
 import { StreamChunk } from "@/types/chat/stream-chunk";
 import { StreamChunkResult } from "@/types/chat/stream-chunk-result";
 
-// ---------------------------------------------------------------------------
-// Handler
-// ---------------------------------------------------------------------------
-
 /**
  * Processes a single SSE chunk from the Vercel AI SDK's `fullStream` and
  * returns both the SSE data to enqueue and any state that should be

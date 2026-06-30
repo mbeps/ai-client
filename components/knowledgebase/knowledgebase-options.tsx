@@ -1,4 +1,5 @@
 "use client";
+
 import { Edit2, Trash2 } from "lucide-react";
 import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
