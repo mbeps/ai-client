@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { chunkText } from "@/lib/rag/chunk-text";
+import { CHUNK_CONSTANTS } from "../../../constants/chunk";
+import { chunkText } from "../../../lib/rag/chunk-text";
 
 describe("chunkText", () => {
   it("returns empty array for empty string", () => {
@@ -38,8 +39,10 @@ describe("chunkText", () => {
   });
 
   it("all chunks are non-empty strings", () => {
-    const text = "A long document. ".repeat(100);
+    // Provide a large enough text to ensure multiple chunks with defaults
+    const text = "A long document. ".repeat(CHUNK_CONSTANTS.DEFAULT_CHARS / 5);
     const chunks = chunkText(text);
+    expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every((c) => c.trim().length > 0)).toBe(true);
   });
 });

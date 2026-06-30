@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
-import { hybridSearch } from "@/lib/rag/retrieve";
+import { hybridSearch } from "@/lib/rag/hybrid-search";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,

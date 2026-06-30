@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger";
 import { tool } from "ai";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
-import { hybridSearch } from "@/lib/rag/retrieve";
+import { hybridSearch } from "@/lib/rag/hybrid-search";
 import {
   manageArtifactSchema,
   searchKnowledgeBaseSchema,

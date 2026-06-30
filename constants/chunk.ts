@@ -21,8 +21,16 @@ const DEFAULT_OVERLAP = 200; // ~50 tokens
  */
 const SEPARATORS = ["\n\n", "\n", ". ", " ", ""];
 
+/**
+ * RRF (Reciprocal Rank Fusion) constant for hybrid search scoring.
+ * Balances vector and full-text search rankings using: 1 / (k + rank)
+ * @author Maruf Bepary
+ */
+const RRF_K = 60;
+
 export const CHUNK_CONSTANTS = {
   DEFAULT_CHARS,
   DEFAULT_OVERLAP,
   SEPARATORS,
+  RRF_K,
 } as const;

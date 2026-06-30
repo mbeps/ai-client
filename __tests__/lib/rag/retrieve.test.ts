@@ -15,21 +15,20 @@ vi.mock("@/lib/env", () => ({
 vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/rag/embed", () => ({ embedQuery: vi.fn() }));
 
-import { applyRRF, hybridSearch } from "@/lib/rag/retrieve";
-
-type Row = {
-  id: string;
-  content: string;
-  document_id: string;
-  chunk_index: number;
-};
+import { CHUNK_CONSTANTS } from "../../../constants/chunk";
+import { applyRRF } from "../../../lib/rag/apply-rrf";
+import { hybridSearch } from "../../../lib/rag/hybrid-search";
+import { type RawChunkRow } from "../../../types/rag/raw-chunk-row";
+import { type ChunkResult } from "../../../types/rag/chunk-result";
 
 describe("applyRRF", () => {
-  const makeRow = (id: string): Row => ({
+  const makeRow = (id: string): RawChunkRow => ({
     id,
     content: `Content of ${id}`,
     document_id: "doc-1",
     chunk_index: 0,
+    document_name: "test.md",
+    s3_key: "test-key",
   });
 
   it("returns empty array for empty inputs", () => {
@@ -39,7 +38,7 @@ describe("applyRRF", () => {
   it("gives higher score to chunks appearing in both lists", () => {
     const vectorRows = [makeRow("a"), makeRow("b"), makeRow("c")];
     const ftsRows = [makeRow("b"), makeRow("d")];
-    const results = applyRRF(vectorRows, ftsRows, 5);
+    const results: ChunkResult[] = applyRRF(vectorRows, ftsRows, 5);
     const bResult = results.find((r) => r.id === "b");
     const aResult = results.find((r) => r.id === "a");
     expect(bResult).toBeDefined();
@@ -49,9 +48,9 @@ describe("applyRRF", () => {
   });
 
   it("respects rank position — rank 1 scores higher than rank 20", () => {
-    // 1/(60+1) vs 1/(60+20)
-    const score1 = 1 / (60 + 1);
-    const score20 = 1 / (60 + 20);
+    // 1/(k+1) vs 1/(k+20)
+    const score1 = 1 / (CHUNK_CONSTANTS.RRF_K + 1);
+    const score20 = 1 / (CHUNK_CONSTANTS.RRF_K + 20);
     expect(score1).toBeGreaterThan(score20);
   });
 
