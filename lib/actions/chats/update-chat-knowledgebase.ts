@@ -5,17 +5,7 @@ import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-
-/**
- * Schema for validating chat knowledge base update requests.
- * Ensures chatId is present and knowledgebaseId is either a valid string or null (to clear KB).
- * @internal
- * @type {z.ZodObject}
- */
-const updateChatKnowledgebaseSchema = z.object({
-  chatId: z.string().min(1),
-  knowledgebaseId: z.string().nullable(),
-});
+import { updateChatKnowledgebaseSchema } from "@/schemas/chat/chat";
 
 /**
  * Updates chat knowledge base after validating ownership. Pass null to disable RAG context.

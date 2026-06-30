@@ -238,3 +238,17 @@ export const searchKnowledgeBaseSchema = z.object({
       "Search query to find relevant information in the knowledge base. Be specific and focused.",
     ),
 });
+
+/**
+ * Validates chat knowledge base update requests.
+ * Accepts a valid UUID for chatId and a valid UUID (or null) for knowledgebaseId.
+ * Null value allows disabling RAG context for the chat.
+ * Use when associating or disassociating a knowledge base with a chat via updateChatKnowledgebase action.
+ *
+ * @see {@link lib/actions/chats/update-chat-knowledgebase.ts} for update action
+ * @author Maruf Bepary
+ */
+export const updateChatKnowledgebaseSchema = z.object({
+  chatId: idField,
+  knowledgebaseId: idField.nullable(),
+});
