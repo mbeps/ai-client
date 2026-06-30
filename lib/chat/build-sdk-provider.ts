@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { ProviderNotConfiguredError } from "@/lib/constants/errors";
+import { ProviderNotConfiguredError } from "@/constants/errors";
 
 /**
  * Builds an initialized OpenAI-compatible SDK provider instance.

@@ -10,7 +10,7 @@ import { ingestDocument } from "@/lib/rag/ingest";
 import {
   RagExtractionEmptyError,
   ProviderNotConfiguredError,
-} from "@/lib/constants/errors";
+} from "@/constants/errors";
 
 const ingestKbDocumentSchema = z.object({
   documentId: z.string().uuid("Invalid document ID format"),

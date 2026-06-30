@@ -7,7 +7,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard";
 import { decodeProviderRecord } from "@/lib/actions/providers/utils";
-import { ModelMalformedIdError } from "@/lib/constants/errors";
+import { ModelMalformedIdError } from "@/constants/errors";
 
 /**
  * Synchronises models from an external AI provider's /models endpoint.

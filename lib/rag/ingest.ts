@@ -6,10 +6,7 @@ import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk-text";
 import { embedDocuments } from "./embed";
-import {
-  RagExtractionEmptyError,
-  RateLimitError,
-} from "@/lib/constants/errors";
+import { RagExtractionEmptyError, RateLimitError } from "@/constants/errors";
 import {
   isRateLimitError,
   normalizeRateLimitMessage,

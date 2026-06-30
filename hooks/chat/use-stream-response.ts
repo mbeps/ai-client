@@ -18,7 +18,7 @@ import { useApiError } from "@/hooks/use-api-error";
 import {
   RATE_LIMIT_ERROR_CODE,
   UNAUTHORIZED_ERROR_CODE,
-} from "@/lib/constants/errors";
+} from "@/constants/errors";
 
 /**
  * Orchestrates AI response streaming with message persistence, tool integration, and artifact detection.

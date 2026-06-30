@@ -3,7 +3,7 @@ import {
   VisionNotSupportedError,
   ToolsNotSupportedError,
   RATE_LIMIT_ERROR_CODE,
-} from "@/lib/constants/errors";
+} from "@/constants/errors";
 import {
   isRateLimitError,
   normalizeRateLimitMessage,

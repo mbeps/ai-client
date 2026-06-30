@@ -15,7 +15,7 @@ import {
   RATE_LIMIT_ERROR_CODE,
   UNAUTHORIZED_ERROR_CODE,
   UNAUTHORIZED_ERROR_MESSAGE,
-} from "@/lib/constants/errors";
+} from "@/constants/errors";
 import { ROUTES } from "@/constants/routes";
 
 /**

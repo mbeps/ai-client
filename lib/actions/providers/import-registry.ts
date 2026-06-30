@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
-import { ModelDuplicateImportError } from "@/lib/constants/errors";
+import { ModelDuplicateImportError } from "@/constants/errors";
 import {
   importProviderRegistryInputSchema,
   type ImportProviderRegistryInput,

@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
-import { ProviderNotConfiguredError } from "@/lib/constants/errors";
+import { ProviderNotConfiguredError } from "@/constants/errors";
 import { logger } from "@/lib/logger";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";

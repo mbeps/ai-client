@@ -1,6 +1,6 @@
 import { decrypt } from "@/lib/utils/encryption";
 import { logger } from "@/lib/logger";
-import { ProviderKeyCorruptedError } from "@/lib/constants/errors";
+import { ProviderKeyCorruptedError } from "@/constants/errors";
 
 /**
  * Decrypts an encrypted provider field (API key, headers) with error handling.

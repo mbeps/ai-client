@@ -2,10 +2,7 @@ import { logger } from "@/lib/logger";
 import { db } from "@/drizzle/db";
 import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed";
-import {
-  KnowledgebaseNotReadyError,
-  RateLimitError,
-} from "@/lib/constants/errors";
+import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
 import { knowledgebase } from "@/drizzle/schema";
 import {
   isRateLimitError,

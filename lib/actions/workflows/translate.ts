@@ -7,10 +7,7 @@ import { translateRequestSchema } from "@/schemas/workflows/workflows";
 import { PROMPTS } from "@/constants/prompts";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProviderForModel } from "@/lib/chat/resolve-provider-for-model";
-import {
-  ProviderNotConfiguredError,
-  RateLimitError,
-} from "@/lib/constants/errors";
+import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
 import {
   isRateLimitError,
   normalizeRateLimitMessage,

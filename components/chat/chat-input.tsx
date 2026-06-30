@@ -24,7 +24,7 @@ import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
 import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
 import { processAttachment } from "@/lib/attachments/process-attachment";
-import { AttachmentVisionUnsupportedError } from "@/lib/constants/errors";
+import { AttachmentVisionUnsupportedError } from "@/constants/errors";
 import { useApiError } from "@/hooks/use-api-error";
 import { toast } from "sonner";
 

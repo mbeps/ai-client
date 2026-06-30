@@ -3,7 +3,7 @@ import { transformRun, attachment } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { generateText, stepCountIs } from "ai";
 import { logger } from "@/lib/logger";
-import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
+import { RATE_LIMIT_ERROR_CODE } from "@/constants/errors";
 import {
   isRateLimitError,
   normalizeRateLimitMessage,

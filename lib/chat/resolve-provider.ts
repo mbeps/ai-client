@@ -1,4 +1,4 @@
-import { ProviderNotConfiguredError } from "@/lib/constants/errors";
+import { ProviderNotConfiguredError } from "@/constants/errors";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";
 import { resolveProviderForModel } from "./resolve-provider-for-model";
