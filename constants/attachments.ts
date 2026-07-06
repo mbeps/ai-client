@@ -37,6 +37,28 @@ export const ALLOWED_SPREADSHEET_TYPES = new Set([
 ]);
 
 /**
+ * File extensions that identify spreadsheet files.
+ * Used for client-side validation and file type checking.
+ * Supports: Excel (.xlsx, .xlsm, .xls) and CSV formats.
+ */
+export const SPREADSHEET_EXTENSIONS = new Set([
+  ".xlsx",
+  ".xlsm",
+  ".xls",
+  ".csv",
+]);
+
+/**
+ * Mapping of file extensions to their corresponding spreadsheet MIME types.
+ */
+export const MIME_BY_EXT: Record<string, string> = {
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
+  ".xls": "application/vnd.ms-excel",
+  ".csv": "text/csv",
+};
+
+/**
  * Maximum file size for images: 2 MB.
  * Enforced per-image with max 3 images per message.
  */

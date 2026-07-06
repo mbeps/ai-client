@@ -1,4 +1,5 @@
-import { getExtension, MIME_BY_EXT } from "@/lib/attachments/spreadsheet-types";
+import { MIME_BY_EXT } from "@/constants/attachments";
+import { getExtension } from "@/lib/attachments/get-extension";
 
 /**
  * Resolves the effective MIME type for a file by checking file.type first,
