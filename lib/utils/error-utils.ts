@@ -1,4 +1,4 @@
-import { RATE_LIMIT_ERROR_CODE, RateLimitError } from "@/constants/errors";
+import { RateLimitError } from "@/constants/errors";
 
 /**
  * Checks if a given error is a rate limit error (429).

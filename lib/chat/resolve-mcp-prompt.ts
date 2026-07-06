@@ -1,5 +1,3 @@
-import { toast } from "sonner";
-
 /**
  * Fetches an MCP prompt from a remote server and returns its text content.
  * Handles different content shapes (string, { type: "text", text }, { text }).
