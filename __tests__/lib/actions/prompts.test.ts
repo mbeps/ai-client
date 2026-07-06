@@ -223,7 +223,9 @@ describe("deletePrompt", () => {
 
   it("deletes the prompt and resolves without error", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
-    await expect(deletePrompt(VALID_UUID)).resolves.toBeUndefined();
+    await expect(deletePrompt(VALID_UUID)).resolves.toEqual({
+      deletedCount: 1,
+    });
     expect(chainable.delete).toHaveBeenCalledOnce();
   });
 

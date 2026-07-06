@@ -25,7 +25,7 @@ export const createKnowledgebaseSchema = z.object({
  * Validates knowledgebase rename operations with only the new name field.
  * Requires name to be non-empty and under 100 characters.
  * Quick name changes without modifying description or documents.
- * Use with renameKnowledgebase server action for efficient name updates.
+ * Use with updateKnowledgebase server action for efficient name updates.
  *
  * @see {@link schemas/shared-fields.ts} for renameSchema definition
  * @author Maruf Bepary

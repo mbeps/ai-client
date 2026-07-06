@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger";
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
-import { cloneAttachment } from "@/lib/actions/attachments/clone-attachment";
+import { cloneAttachmentsBatch } from "@/lib/actions/attachments/clone-attachments-batch";
 import type { Attachment } from "@/types/attachment/attachment";
 import { toast } from "sonner";
 
@@ -54,34 +54,32 @@ export async function cloneAttachments(
   attachments: Attachment[],
   newMessageId: string,
 ): Promise<Attachment[]> {
-  const cloned: Attachment[] = [];
+  const attachmentsToClone = attachments.filter((att) => att.key);
+  if (attachmentsToClone.length === 0) return [];
 
-  for (const att of attachments) {
-    if (!att.key) continue;
+  try {
+    const ids = attachmentsToClone.map((att) => att.id);
+    const results = await cloneAttachmentsBatch(ids, newMessageId);
 
-    try {
-      const result = await cloneAttachment(att.id, newMessageId);
-      cloned.push({
-        ...att,
+    return results.map((result) => {
+      const original = attachmentsToClone.find((a) => a.key === result.key);
+      return {
+        ...original!,
         id: result.id,
         key: result.key,
-        extractedText: result.extractedText ?? att.extractedText,
-      });
-    } catch (err) {
-      logger.error("[Chat] Attachment clone failed:", err);
-      toast.error(
-        `Failed to clone "${att.name}". It will not be sent to the AI.`,
-      );
-    }
+        extractedText: result.extractedText ?? original?.extractedText,
+      } as Attachment;
+    });
+  } catch (err) {
+    logger.error("[Chat] Attachment batch clone failed:", err);
+    toast.error("Failed to clone attachments. They will not be sent to the AI.");
+    return [];
   }
-
-  return cloned;
 }
 
 /**
  * Processes attachments for a message, cloning existing ones and uploading new ones.
- * Each attachment is handled individually: if it has an S3 `key` it's cloned,
- * otherwise it's uploaded fresh.
+ * Existing attachments (with key) are cloned in batch; new ones are uploaded individually.
  *
  * @param attachments - Array of attachments to process.
  * @param messageId - The message ID to associate attachments with.
@@ -92,29 +90,17 @@ export async function processAttachments(
   messageId: string,
 ): Promise<Attachment[]> {
   const result: Attachment[] = [];
+  const toClone = attachments.filter((att) => att.key);
+  const toUpload = attachments.filter((att) => !att.key);
 
-  for (const att of attachments) {
-    if (att.key) {
-      // Already in S3 → clone DB record
-      try {
-        const cloned = await cloneAttachment(att.id, messageId);
-        result.push({
-          ...att,
-          id: cloned.id,
-          key: cloned.key,
-          extractedText: cloned.extractedText ?? att.extractedText,
-        });
-      } catch (err) {
-        logger.error("[Chat] Attachment clone failed:", err);
-        toast.error(
-          `Failed to clone "${att.name}". It will not be sent to the AI.`,
-        );
-      }
-    } else {
-      // New file → upload to S3 + insert DB record
-      const uploaded = await uploadSingleAttachment(att, messageId);
-      if (uploaded) result.push(uploaded);
-    }
+  if (toClone.length > 0) {
+    const cloned = await cloneAttachments(toClone, messageId);
+    result.push(...cloned);
+  }
+
+  for (const att of toUpload) {
+    const uploaded = await uploadSingleAttachment(att, messageId);
+    if (uploaded) result.push(uploaded);
   }
 
   return result;

@@ -204,7 +204,10 @@ describe("deleteProject", () => {
   const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
   it("runs a transaction to unlink chats and delete project", async () => {
-    await expect(deleteProject(VALID_UUID)).resolves.toBeUndefined();
+    chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
+    await expect(deleteProject(VALID_UUID)).resolves.toEqual({
+      deletedCount: 1,
+    });
     expect(chainable.transaction).toHaveBeenCalledOnce();
     expect(chainable.update).toHaveBeenCalledOnce(); // unlink chats
     expect(chainable.delete).toHaveBeenCalledOnce(); // delete project

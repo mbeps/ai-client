@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 
 /**
@@ -6,12 +6,13 @@ import { db } from "@/drizzle/db";
  * Returns a filter expression that matches the item ID and the user's ID.
  *
  * @param table - The Drizzle table object (must have .id and .userId columns)
- * @param id - The ID of the resource being accessed
+ * @param idOrIds - The ID or IDs of the resources being accessed
  * @param userId - The ID of the authenticated user
  * @returns An 'and' expression for ownership validation
  */
-function whereOwner(table: any, id: string, userId: string) {
-  return and(eq(table.id, id), eq(table.userId, userId));
+function whereOwner(table: any, idOrIds: string | string[], userId: string) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  return and(inArray(table.id, ids), eq(table.userId, userId));
 }
 
 /**
@@ -59,24 +60,29 @@ async function getOwnedResource<T extends { userId: string }>(
 }
 
 /**
- * Deletes a resource after first unbinding it from another record (e.g., clearing a project_id from chats).
+ * Deletes one or more resources after first unbinding them from another record (e.g., clearing a project_id from chats).
  *
  * @param resourceTable - The table containing the resource to delete
- * @param id - The ID of the resource
+ * @param idOrIds - The ID or IDs of the resources
  * @param userId - The ID of the user
  * @param unbindOptions - Configuration for the unbind step (table and field to clear)
  */
 export async function deleteResourceWithUnbind(
   resourceTable: any,
-  id: string,
+  idOrIds: string | string[],
   userId: string,
   unbindOptions: { table: any; field: any },
 ) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+
   return await db.transaction(async (tx) => {
     // If the unbind table has a userId field, we should filter by it too.
     const unbindWhere = unbindOptions.table.userId
-      ? and(eq(unbindOptions.field, id), eq(unbindOptions.table.userId, userId))
-      : eq(unbindOptions.field, id);
+      ? and(
+          inArray(unbindOptions.field, ids),
+          eq(unbindOptions.table.userId, userId),
+        )
+      : inArray(unbindOptions.field, ids);
 
     await tx
       .update(unbindOptions.table)
@@ -85,6 +91,7 @@ export async function deleteResourceWithUnbind(
 
     return await tx
       .delete(resourceTable)
-      .where(whereOwner(resourceTable, id, userId));
+      .where(whereOwner(resourceTable, ids, userId))
+      .returning({ id: resourceTable.id });
   });
 }

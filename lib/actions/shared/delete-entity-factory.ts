@@ -1,6 +1,6 @@
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
 
 /**
@@ -20,6 +20,11 @@ export interface DeleteEntityConfig {
     /** The foreign-key column on the related table to clear (e.g. `chat.projectId`). */
     field: any;
   };
+  /**
+   * Optional hook to run after the deletion is successful.
+   * Receives the user ID and the IDs of the deleted entities.
+   */
+  onDelete?: (userId: string, ids: string[]) => Promise<void>;
 }
 
 /**
@@ -34,24 +39,53 @@ export interface DeleteEntityConfig {
  * ```
  */
 export function deleteEntityFactory(config: DeleteEntityConfig) {
-  return async function remove(id: string): Promise<void> {
+  return async function remove(
+    idOrIds: string | string[],
+  ): Promise<{ deletedCount: number }> {
     const session = await requireSession();
+    const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
 
-    if (config.unbind) {
-      await deleteResourceWithUnbind(config.table, id, session.user.id, {
-        table: config.unbind.table,
-        field: config.unbind.field,
-      });
-      return;
+    if (ids.length === 0) {
+      return { deletedCount: 0 };
     }
 
-    const [row] = await db
+    if (config.unbind) {
+      const results = await deleteResourceWithUnbind(
+        config.table,
+        ids,
+        session.user.id,
+        {
+          table: config.unbind.table,
+          field: config.unbind.field,
+        },
+      );
+
+      const deletedCount = results.length;
+      if (deletedCount === 0) throw new Error("Not Found");
+
+      if (config.onDelete) {
+        await config.onDelete(session.user.id, ids);
+      }
+
+      return { deletedCount };
+    }
+
+    const results = await db
       .delete(config.table)
       .where(
-        and(eq(config.table.id, id), eq(config.table.userId, session.user.id)),
+        and(inArray(config.table.id, ids), eq(config.table.userId, session.user.id)),
       )
       .returning({ id: config.table.id });
 
-    if (!row) throw new Error("Not Found");
+    if (results.length === 0) throw new Error("Not Found");
+
+    if (config.onDelete) {
+      await config.onDelete(
+        session.user.id,
+        results.map((r) => r.id),
+      );
+    }
+
+    return { deletedCount: results.length };
   };
 }

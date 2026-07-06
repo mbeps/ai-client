@@ -4,12 +4,12 @@ import { project, chat } from "@/drizzle/schema";
 import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**
- * Deletes a project and unbinds it from all chats for the authenticated user.
+ * Deletes one or more projects and unbinds them from all chats for the authenticated user.
  * Uses a database transaction to ensure both the chat unlink and project deletion succeed or both fail.
  * Runs on server only — never call from client components.
  *
- * @param id - UUID of the project to delete; must be owned by the authenticated user.
- * @returns void (no return value).
+ * @param idOrIds - UUID or array of UUIDs of the projects to delete; must be owned by the authenticated user.
+ * @returns { deletedCount: number } - The number of projects successfully deleted.
  * @throws Error if session is not authenticated (requireSession call fails).
  * @throws Error if project is not found or user does not own it (ownership check enforced via session).
  * @throws Error if database transaction fails or rolls back due to constraints.
