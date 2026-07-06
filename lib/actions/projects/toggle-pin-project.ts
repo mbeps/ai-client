@@ -21,7 +21,6 @@ import type { ProjectRow } from "@/types/project/project-row";
  * @see listProjects to fetch all projects.
  * @author Maruf Bepary
  */
-
 export async function togglePinProject(id: string): Promise<ProjectRow> {
   const session = await requireSession();
 

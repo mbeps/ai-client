@@ -28,7 +28,6 @@ import type { AiModelRow } from "@/types/provider/ai-model-row";
  * @see createModel to register a new model.
  * @author Maruf Bepary
  */
-
 export async function updateModels(
   modelIdOrIds: string | string[],
   input: UpdateModelInput,
