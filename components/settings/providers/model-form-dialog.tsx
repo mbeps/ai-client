@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createModel } from "@/lib/actions/models/create-model";
-import { updateModel } from "@/lib/actions/models/update-model";
+import { updateModels } from "@/lib/actions/models/update-model";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
@@ -131,7 +131,7 @@ export function ModelFormDialog({
       };
 
       if (isEdit && model) {
-        await updateModel(model.id, {
+        await updateModels(model.id, {
           label: payload.label,
           modelType: payload.modelType,
           contextWindow: payload.contextWindow,

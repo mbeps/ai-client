@@ -24,7 +24,7 @@ import type { AiModelRow } from "@/types/provider/ai-model-row";
  * @throws Error if provider does not exist or user does not own it (returns "Not Found").
  * @throws Error if database insertion fails due to constraints or connection issues.
  * @see listModels to fetch all models for a user.
- * @see updateModel to modify model metadata.
+ * @see updateModels to modify model metadata.
  * @author Maruf Bepary
  */
 

@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { deleteModel } from "@/lib/actions/models/delete-model";
-import { updateModels, updateModel } from "@/lib/actions/models/update-model";
+import { updateModels } from "@/lib/actions/models/update-model";
 import { ModelFormDialog } from "@/components/settings/providers/model-form-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
@@ -448,7 +448,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                         disabled={isBusy}
                         onCheckedChange={(checked) =>
                           void runModelAction(model.id, async () => {
-                            await updateModel(model.id, { isEnabled: checked });
+                            await updateModels(model.id, { isEnabled: checked });
                           })
                         }
                       />

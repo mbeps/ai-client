@@ -26,7 +26,6 @@ import type { AiModelRow } from "@/types/provider/ai-model-row";
  * @throws Error if no matching models found for the given IDs (returns "Not Found").
  * @throws Error if database update fails due to constraints or connection issues.
  * @see createModel to register a new model.
- * @see updateModel is a backward-compatibility wrapper for single model updates.
  * @author Maruf Bepary
  */
 
@@ -84,16 +83,5 @@ export async function updateModels(
     throw new Error("Not Found");
   }
 
-  return updated;
-}
-
-/**
- * Backward compatibility wrapper for single model update.
- */
-export async function updateModel(
-  modelId: string,
-  input: UpdateModelInput,
-): Promise<AiModelRow> {
-  const [updated] = await updateModels(modelId, input);
   return updated;
 }

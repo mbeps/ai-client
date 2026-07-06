@@ -19,7 +19,7 @@ import type { ProviderModelType } from "@/schemas/providers/provider-registry";
  * @throws Error if session is not authenticated.
  * @throws Error if database query fails due to connection issues.
  * @see createModel to register a new model.
- * @see updateModel to modify model properties.
+ * @see updateModels to modify model properties.
  * @author Maruf Bepary
  */
 export async function listModels(filters?: {
