@@ -4,7 +4,7 @@ import type { Attachment } from "@/types/attachment/attachment";
  * Payload sent to the /api/chat SSE endpoint.
  * @author Maruf Bepary
  */
-export interface StreamRequestPayload {
+interface StreamRequestPayload {
   chatId: string;
   userMessageId: string;
   messages: Array<{

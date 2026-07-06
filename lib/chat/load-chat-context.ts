@@ -14,7 +14,7 @@ import { eq, and, or } from "drizzle-orm";
  * Resolves effective configuration considering request-level overrides.
  * @author Maruf Bepary
  */
-export type ChatContext = {
+type ChatContext = {
   /** The chat row — always present if the chat exists */
   chatRow: {
     id: string;

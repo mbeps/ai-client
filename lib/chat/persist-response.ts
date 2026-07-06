@@ -2,7 +2,7 @@ import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 
-export type PersistAssistantResponseParams = {
+type PersistAssistantResponseParams = {
   chatId: string;
   assistantMessageId: string;
   content: string;

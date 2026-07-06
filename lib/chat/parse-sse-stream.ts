@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
  *
  * @author Maruf Bepary
  */
-export type SseEvent =
+type SseEvent =
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; args?: unknown }
