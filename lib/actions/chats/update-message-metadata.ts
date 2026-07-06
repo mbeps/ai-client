@@ -5,6 +5,7 @@ import { chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Updates message metadata after validating user ownership of chat. Revalidates related paths.
@@ -40,11 +41,11 @@ export async function updateMessageMetadata(
 
   await db.update(message).set({ metadata }).where(eq(message.id, messageId));
 
-  revalidatePath(`/chats/${row.chatId}`);
+  revalidatePath(ROUTES.CHATS.detail(row.chatId));
   if (row.projectId) {
-    revalidatePath(`/projects/${row.projectId}/${row.chatId}`);
+    revalidatePath(ROUTES.PROJECTS.chat(row.projectId, row.chatId));
   }
   if (row.assistantId) {
-    revalidatePath(`/assistants/${row.assistantId}/${row.chatId}`);
+    revalidatePath(ROUTES.ASSISTANTS.chat(row.assistantId, row.chatId));
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ROUTES } from "@/constants/routes";
 import { ErrorPage } from "@/components/shared/error-page";
 
 /**
@@ -23,7 +24,7 @@ export default function ChatError({
       reset={reset}
       heading="Failed to load chat"
       fallbackDescription="This chat could not be loaded. Please try again."
-      linkHref="/chats"
+      linkHref={ROUTES.CHATS.path}
       linkLabel="Back to chats"
     />
   );

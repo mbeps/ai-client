@@ -6,6 +6,7 @@
  *
  * @author Maruf Bepary
  */
+import { ROUTES } from "@/constants/routes";
 import { NotFoundPage } from "@/components/shared/not-found-page";
 
 export default function ProjectNotFound() {
@@ -13,7 +14,7 @@ export default function ProjectNotFound() {
     <NotFoundPage
       title="Project not found"
       description="This project does not exist or you don't have access to it."
-      linkHref="/projects"
+      linkHref={ROUTES.PROJECTS.path}
       linkLabel="Back to projects"
     />
   );

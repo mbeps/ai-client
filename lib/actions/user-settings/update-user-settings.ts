@@ -5,6 +5,7 @@ import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
 import { userSettingsSchema } from "@/schemas/user/user-settings";
 import { revalidatePath } from "next/cache";
+import { ROUTES } from "@/constants/routes";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -56,7 +57,7 @@ export async function updateUserSettings(
     settingsId: row.id,
   });
 
-  revalidatePath("/settings/app");
+  revalidatePath(ROUTES.SETTINGS.APP.path);
 
   return row;
 }
