@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument, kbChunk } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
+import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";

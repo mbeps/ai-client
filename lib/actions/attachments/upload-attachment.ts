@@ -5,7 +5,8 @@ import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment, message, chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { uploadObject, ensureBucket } from "@/lib/storage/s3-client";
+import { uploadObject } from "@/lib/storage/upload-object";
+import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { z } from "zod";
 import {
   ALLOWED_IMAGE_TYPES,

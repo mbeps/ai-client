@@ -6,7 +6,7 @@
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { inArray } from "drizzle-orm";
-import { getPresignedUrl } from "@/lib/storage/s3-client";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /** A row from the attachment table that we pass around during the run. */
 export type AttachmentRow = typeof attachment.$inferSelect;

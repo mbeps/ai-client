@@ -14,7 +14,7 @@ import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
-import { uploadObject } from "@/lib/storage/s3-client";
+import { uploadObject } from "@/lib/storage/upload-object";
 import { logger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 

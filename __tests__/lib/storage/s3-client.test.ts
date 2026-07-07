@@ -46,15 +46,13 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
     .mockResolvedValue("https://example.com/presigned-url?token=abc"),
 }));
 
-import {
-  uploadObject,
-  deleteObject,
-  deleteObjects,
-  getPresignedUrl,
-  downloadObject,
-  ensureBucket,
-  S3_BUCKET,
-} from "@/lib/storage/s3-client";
+import { S3_BUCKET } from "@/lib/storage/s3-instance";
+import { uploadObject } from "@/lib/storage/upload-object";
+import { deleteObject } from "@/lib/storage/delete-object";
+import { deleteObjects } from "@/lib/storage/delete-objects";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
+import { downloadObject } from "@/lib/storage/download-object";
+import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

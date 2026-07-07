@@ -8,7 +8,7 @@ import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { getPresignedUrl } from "@/lib/storage/s3-client";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { logger } from "@/lib/logger";
 import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
 import {

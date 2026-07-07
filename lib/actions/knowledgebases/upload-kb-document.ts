@@ -4,7 +4,8 @@ import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import { uploadObject, ensureBucket } from "@/lib/storage/s3-client";
+import { uploadObject } from "@/lib/storage/upload-object";
+import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ALLOWED_MIME_TYPES = new Set([

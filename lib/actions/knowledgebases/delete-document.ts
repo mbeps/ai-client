@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
+import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { z } from "zod";
