@@ -9,14 +9,18 @@ import { MCP_TIMEOUT_MS } from "@/constants/mcp";
  * Builds the appropriate transport, then creates the client with a shared timeout.
  *
  * @param server - MCP server configuration
- * @param label - Descriptive label used in timeout error messages
+ * @param label - Optional descriptive label used in timeout error messages. Defaults to "connect to [server.name]" if omitted.
  * @returns Connected MCP client ready for tool/resource discovery
  * @throws {Error} When connection times out or transport creation fails
  */
 export async function createConnectedClient(
   server: McpServerConfig,
-  label: string,
+  label?: string,
 ): Promise<Awaited<ReturnType<typeof createMCPClient>>> {
   const transport = await buildTransport(server);
-  return withTimeout(createMCPClient({ transport }), MCP_TIMEOUT_MS, label);
+  return withTimeout(
+    createMCPClient({ transport }),
+    MCP_TIMEOUT_MS,
+    label ?? `connect to ${server.name}`,
+  );
 }
