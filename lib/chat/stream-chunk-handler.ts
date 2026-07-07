@@ -80,17 +80,18 @@ export function handleStreamChunk(
         },
         meta?.userId,
       );
+      const result = (chunk as any).result ?? (chunk as any).output;
       const newEntry: ToolResultEntry = {
         toolCallId: chunk.toolCallId,
         toolName: chunk.toolName,
-        result: chunk.output,
+        result: result,
       };
       return {
         ssePayload: {
           type: "tool-result",
           toolCallId: chunk.toolCallId,
           toolName: chunk.toolName,
-          result: chunk.output,
+          result: result,
         },
         stateUpdates: { toolResults: [...state.toolResults, newEntry] },
       };

@@ -208,9 +208,7 @@ export async function runTransformSteps({
           }
           for (const tr of stepInfo.toolResults) {
             const serverName = toolSourceMap[tr.toolName];
-            const toolResultPayload =
-              (tr as { result?: unknown; output?: unknown }).result ??
-              (tr as { result?: unknown; output?: unknown }).output;
+            const toolResultPayload = (tr as any).result ?? (tr as any).output;
 
             if (isSpreadsheetMutationTool(tr.toolName)) {
               stepHasSpreadsheetMutations = true;
