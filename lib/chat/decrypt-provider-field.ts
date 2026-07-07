@@ -1,4 +1,4 @@
-import { decrypt } from "@/lib/utils/encryption";
+import { decrypt } from "@/lib/encryption/decrypt";
 import { logger } from "@/lib/logger";
 import { ProviderKeyCorruptedError } from "@/constants/errors";
 
