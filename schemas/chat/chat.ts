@@ -168,6 +168,9 @@ export const chatRequestSchema = z.object({
   selectedKbIds: z.array(idField).max(5).optional(),
 });
 
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+export type ChatRequest = z.infer<typeof chatRequestSchema>;
+
 /**
  * Base fields for manage_artifact tool to avoid code duplication in the union schema.
  */

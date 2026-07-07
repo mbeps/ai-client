@@ -1,33 +1,26 @@
 import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
-import { streamText, stepCountIs, type ModelMessage } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { chatRequestSchema } from "@/schemas/chat/chat";
-import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
-import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { logger } from "@/lib/logger";
 import { SSE_HEADERS } from "@/constants/sse";
-import { encodeSSE } from "@/lib/encode-sse";
 import {
   VisionNotSupportedError,
   ToolsNotSupportedError,
-  RATE_LIMIT_ERROR_CODE,
 } from "@/constants/errors";
-import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
-import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import {
   loadChatContext,
   ChatNotFoundError,
 } from "@/lib/chat/load-chat-context";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
-import { handleStreamChunk } from "@/lib/chat/stream-chunk-handler";
-import { type StreamState } from "@/types/chat/stream-state";
 import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
+import { getAttachmentUrls } from "@/lib/chat/attachments/get-attachment-urls";
+import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
+import { createChatStream } from "@/lib/chat/chat-stream";
 
 export const maxDuration = 60;
 
@@ -153,41 +146,15 @@ export async function POST(req: Request) {
     }
 
     // --- Prepare messages ---
-    const processedMessages = assembleModelMessages(history);
-
-    // Identify attachments in the latest user message for
-    // Tool/Model-based access via presigned URLs
-    const lastUserMessage = history.filter((m) => m.role === "user").pop();
-    const messageAttachments =
-      lastUserMessage?.attachments?.filter((a) => a.key) ?? [];
-
-    // Generate presigned S3 URLs for all file types (images, documents,
-    // spreadsheets) to enable Tool/Model-based access
-    const attachmentUrls = await Promise.all(
-      messageAttachments.map(async (a) => {
-        const url = await getPresignedUrl(a.key!);
-        return { name: a.name, url };
-      }),
-    );
-
-    const systemMessages = buildSystemPrompt(
+    const attachmentUrls = await getAttachmentUrls(history);
+    const finalMessages = prepareChatMessages({
+      history,
       globalSystemPrompt,
-      ctx.projectRow?.globalPrompt,
-      ctx.assistantRow?.prompt,
-      ctx.kbIsReady,
+      projectPrompt: ctx.projectRow?.globalPrompt,
+      assistantPrompt: ctx.assistantRow?.prompt,
+      kbIsReady: ctx.kbIsReady,
       attachmentUrls,
-    );
-    const finalMessages: ModelMessage[] = [
-      ...systemMessages,
-      ...processedMessages,
-    ];
-
-    if (finalMessages.length === 0) {
-      finalMessages.push({
-        role: "system",
-        content: "You are a helpful AI assistant.",
-      });
-    }
+    });
 
     const isToolCallingModel = !!resolvedModelRow?.capTools;
     if (!isToolCallingModel && hasMcpTools) {
@@ -195,9 +162,6 @@ export async function POST(req: Request) {
     }
 
     // --- Stream AI response ---
-    // Use .chat() to force the Chat Completions API endpoint (/chat/completions)
-    // rather than the OpenAI Responses API (/responses), which OpenRouter does
-    // not support.
     const result = streamText({
       model: resolved.sdkProvider.chat(resolvedModelId),
       messages: finalMessages,
@@ -206,111 +170,13 @@ export async function POST(req: Request) {
       abortSignal: req.signal,
     });
 
-    const assistantMessageId = crypto.randomUUID();
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        // Mutable accumulator for stream state
-        const streamState: StreamState = {
-          fullText: "",
-          fullReasoning: "",
-          toolCalls: [],
-          toolResults: [],
-        };
-
-        try {
-          for await (const chunk of result.fullStream) {
-            const { ssePayload, stateUpdates } = handleStreamChunk(
-              chunk as any,
-              streamState,
-              {
-                chatId,
-                userId: session.user.id,
-                toolSourceMap,
-              },
-            );
-
-            // Merge state updates
-            if (stateUpdates.fullText !== undefined)
-              streamState.fullText = stateUpdates.fullText;
-            if (stateUpdates.fullReasoning !== undefined)
-              streamState.fullReasoning = stateUpdates.fullReasoning;
-            if (stateUpdates.toolCalls !== undefined)
-              streamState.toolCalls = stateUpdates.toolCalls;
-            if (stateUpdates.toolResults !== undefined)
-              streamState.toolResults = stateUpdates.toolResults;
-
-            if (ssePayload) {
-              controller.enqueue(encodeSSE(ssePayload));
-            }
-          }
-        } catch (error: any) {
-          logger.error("[Chat API Error]", error, { chatId }, session.user.id);
-          let message = "An error occurred during generation";
-          let code = "ERROR";
-
-          if (isRateLimitError(error)) {
-            message = normalizeRateLimitMessage(error);
-            code = RATE_LIMIT_ERROR_CODE;
-          }
-
-          controller.enqueue(encodeSSE({ type: "error", message, code }));
-          return;
-        }
-
-        if (
-          !streamState.fullText &&
-          streamState.toolCalls.length === 0 &&
-          !streamState.fullReasoning
-        ) {
-          controller.enqueue(
-            encodeSSE({ type: "error", message: "No response from model" }),
-          );
-          return;
-        }
-
-        // --- Persist assistant response ---
-        const metadataObj: Record<string, unknown> = {};
-        if (streamState.toolCalls.length > 0) {
-          metadataObj.toolCalls = streamState.toolCalls;
-          metadataObj.toolResults = streamState.toolResults;
-        }
-        if (streamState.fullReasoning) {
-          metadataObj.reasoning = streamState.fullReasoning;
-        }
-        metadataObj.model = resolvedModelId;
-        const metadata =
-          Object.keys(metadataObj).length > 0
-            ? JSON.stringify(metadataObj)
-            : null;
-
-        await persistAssistantResponse({
-          chatId,
-          assistantMessageId,
-          content: streamState.fullText,
-          parentId: userMessageId,
-          metadata,
-        });
-
-        logger.info(
-          "[Chat API] Response completed",
-          {
-            chatId,
-            assistantMessageId,
-            textLength: streamState.fullText.length,
-            toolCallsCount: streamState.toolCalls.length,
-          },
-          session.user.id,
-        );
-
-        controller.enqueue(
-          encodeSSE({
-            type: "done",
-            id: assistantMessageId,
-            metadata: metadata ? JSON.parse(metadata) : undefined,
-          }),
-        );
-      },
+    const stream = createChatStream({
+      result,
+      chatId,
+      userId: session.user.id,
+      userMessageId,
+      resolvedModelId,
+      toolSourceMap,
     });
 
     return new Response(stream, { headers: SSE_HEADERS });
