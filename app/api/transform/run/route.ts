@@ -15,7 +15,8 @@ import {
 import { type TransformStep } from "@/types/transform/transform-step";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
-import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
+import { SSE_HEADERS } from "@/constants/sse";
+import { encodeSSE } from "@/lib/encode-sse";
 import { initTransformRun } from "@/lib/transform/lifecycle-service";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { runTransformSteps } from "@/lib/transform/run-steps";

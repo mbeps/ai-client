@@ -10,7 +10,8 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { logger } from "@/lib/logger";
-import { encodeSSE, SSE_HEADERS } from "@/lib/utils/sse";
+import { SSE_HEADERS } from "@/constants/sse";
+import { encodeSSE } from "@/lib/encode-sse";
 import {
   VisionNotSupportedError,
   ToolsNotSupportedError,
