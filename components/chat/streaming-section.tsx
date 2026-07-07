@@ -1,7 +1,7 @@
 "use client";
 
 import type { ToolCallState } from "@/types/tool/tool-call";
-import type { Citation } from "@/lib/store/mappers/message-mapper";
+import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 import { MessageBubble } from "./message-bubble";

@@ -11,7 +11,7 @@ import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chat
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 
-import { mapMessageFromDb } from "../mappers/message-mapper";
+import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
 import type { AppState } from "@/types/app/app-state";
 import type { Message } from "@/types/message/message";
 import type { Chat } from "@/types/chat/chat";

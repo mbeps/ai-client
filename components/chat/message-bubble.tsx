@@ -14,11 +14,9 @@ import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ResponseTimeline } from "./message/response-timeline";
 import { MessageActions } from "./message/message-actions";
-import {
-  parseMessageMetadata,
-  extractCitations,
-  type Citation,
-} from "@/lib/store/mappers/message-mapper";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { extractCitations } from "@/lib/chat/extract-citations";
+import type { Citation } from "@/types/chat/citation";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CitationsList } from "./message/citations-list";
 import { ChatInput } from "./chat-input";

@@ -29,3 +29,15 @@ export interface ToolCallEntry {
    */
   serverName?: string;
 }
+
+/**
+ * Represents a single AI tool invocation within a message context.
+ * Used to track MCP server tools and their arguments during message execution.
+ *
+ * @typedef {Object} ToolCall
+ * @property {string} toolCallId - Unique identifier for this specific tool invocation, used to match results
+ * @property {string} toolName - Name of the tool being called (e.g., "search_knowledge_base", "create_file")
+ * @property {unknown} args - Serialized arguments passed to the tool; structure depends on tool implementation
+ * @property {string} [serverName] - Optional MCP server name that hosts this tool (e.g., "mcp-filesystem", "mcp-memory")
+ */
+export type ToolCall = ToolCallEntry;

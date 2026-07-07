@@ -1,6 +1,7 @@
 "use client";
 
-import type { ToolCall, ToolResult } from "@/lib/store/mappers/message-mapper";
+import type { ToolCall } from "@/types/chat/tool-call";
+import type { ToolResult } from "@/types/chat/tool-result";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import { ThinkingDisplay } from "./thinking-display";
 import { ToolCallDisplay } from "./tool-call-display";

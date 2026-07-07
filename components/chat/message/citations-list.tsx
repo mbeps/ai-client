@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { FileText } from "lucide-react";
-import { Citation } from "@/lib/store/mappers/message-mapper";
+import { Citation } from "@/types/chat/citation";
 import { useMemo } from "react";
 
 interface CitationsListProps {
