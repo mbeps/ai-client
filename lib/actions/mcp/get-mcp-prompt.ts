@@ -6,7 +6,8 @@ import { mcpServer } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
 import { withMcpServer } from "@/lib/mcp/with-mcp-server";
 import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
-import { withTimeout, MCP_TIMEOUT_MS } from "@/lib/mcp/timeout-utils";
+import { withTimeout } from "@/lib/mcp/with-timeout";
+import { MCP_TIMEOUT_MS } from "@/constants/mcp";
 import { logger } from "@/lib/logger";
 
 /**

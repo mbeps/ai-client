@@ -1,6 +1,7 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { buildTransport } from "./build-transport";
-import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
+import { withTimeout } from "@/lib/mcp/with-timeout";
+import { MCP_TIMEOUT_MS } from "@/constants/mcp";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
 import { logger } from "@/lib/logger";

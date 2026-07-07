@@ -1,5 +1,6 @@
 import { withMcpServer } from "./with-mcp-server";
-import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
+import { withTimeout } from "@/lib/mcp/with-timeout";
+import { MCP_TIMEOUT_MS } from "@/constants/mcp";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
