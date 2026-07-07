@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**
@@ -14,11 +13,5 @@ import type { AssistantRow } from "@/types/assistant/assistant-row";
  * @throws Error when session is invalid or user is not authenticated
  */
 export async function listAssistants(): Promise<AssistantRow[]> {
-  const session = await requireSession();
-
-  return db
-    .select()
-    .from(assistant)
-    .where(eq(assistant.userId, session.user.id))
-    .orderBy(desc(assistant.updatedAt));
+  return listOwnedResources(assistant);
 }

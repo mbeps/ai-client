@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
@@ -20,11 +19,5 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * @author Maruf Bepary
  */
 export async function listChats(): Promise<ChatRow[]> {
-  const session = await requireSession();
-
-  return db
-    .select()
-    .from(chat)
-    .where(eq(chat.userId, session.user.id))
-    .orderBy(desc(chat.updatedAt));
+  return listOwnedResources(chat);
 }

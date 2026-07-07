@@ -35,24 +35,26 @@ const chainable = vi.hoisted(() => {
   ]) {
     c[m] = vi.fn();
   }
-  c.where = vi.fn();
-  c.orderBy = vi.fn();
+  c.where = vi.fn().mockImplementation(() => c);
+  c.orderBy = vi.fn().mockImplementation(() => c);
+  c.limit = vi.fn().mockImplementation(() => c);
+  c.offset = vi.fn().mockImplementation(() => c);
+  c.$dynamic = vi.fn().mockImplementation(() => c);
   c.returning = vi.fn();
   c.transaction = vi.fn();
+
   for (const m of [
     "select",
     "from",
     "leftJoin",
-    "limit",
     "insert",
     "values",
     "update",
     "set",
     "delete",
   ]) {
-    c[m].mockReturnValue(c);
+    c[m].mockImplementation(() => c);
   }
-  c.where.mockReturnValue(c);
   c.orderBy.mockResolvedValue([]);
   c.returning.mockResolvedValue([]);
   c.transaction.mockImplementation(

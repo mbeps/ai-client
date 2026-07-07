@@ -1,9 +1,9 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
+import { desc } from "drizzle-orm";
 import type { ProjectRow } from "@/types/project/project-row";
 
 /**
@@ -20,11 +20,7 @@ import type { ProjectRow } from "@/types/project/project-row";
  * @author Maruf Bepary
  */
 export async function listProjects(): Promise<ProjectRow[]> {
-  const session = await requireSession();
-
-  return db
-    .select()
-    .from(project)
-    .where(eq(project.userId, session.user.id))
-    .orderBy(desc(project.isPinned), desc(project.updatedAt));
+  return listOwnedResources(project, {
+    orderBy: (t) => [desc(t.isPinned), desc(t.updatedAt)],
+  });
 }
