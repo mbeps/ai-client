@@ -1,11 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
+import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
 import { z } from "zod";
 
 /**
@@ -26,38 +24,17 @@ import { z } from "zod";
  * @see reindexKnowledgebase to trigger re-indexing.
  * @author Maruf Bepary
  */
-export async function updateKnowledgebase(
-  id: string,
-  data: z.infer<typeof updateKnowledgebaseSchema>,
-): Promise<KnowledgebaseRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validatedId = z.string().uuid().parse(id);
-  const validatedData = updateKnowledgebaseSchema.parse(data);
-
-  const updateData: Record<string, any> = {
-    updatedAt: new Date(),
-  };
-
-  if (validatedData.name !== undefined) updateData.name = validatedData.name;
-  if (validatedData.description !== undefined)
-    updateData.description = validatedData.description ?? null;
-
-  const [row] = await db
-    .update(knowledgebase)
-    .set(updateData)
-    .where(
-      and(
-        eq(knowledgebase.id, validatedId),
-        eq(knowledgebase.userId, session.user.id),
-      ),
-    )
-    .returning();
-
-  if (!row) {
-    throw new Error("Not Found");
-  }
-
-  return row as KnowledgebaseRow;
-}
+export const updateKnowledgebase = updateEntityFactory<
+  z.infer<typeof updateKnowledgebaseSchema>,
+  KnowledgebaseRow
+>({
+  table: knowledgebase,
+  schema: updateKnowledgebaseSchema,
+  mapValues: (data) => {
+    const values: Record<string, any> = {};
+    if (data.name !== undefined) values.name = data.name;
+    if (data.description !== undefined)
+      values.description = data.description ?? null;
+    return values;
+  },
+});

@@ -1,11 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 import { updateAssistantSchema } from "@/schemas/assistant/assistant";
+import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
 import { z } from "zod";
 
 /**
@@ -25,32 +23,17 @@ import { z } from "zod";
  * @see deleteAssistant to remove an assistant.
  * @author Maruf Bepary
  */
-export async function updateAssistant(
-  id: string,
-  data: z.infer<typeof updateAssistantSchema>,
-): Promise<AssistantRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validatedId = z.string().uuid().parse(id);
-  const validatedData = updateAssistantSchema.parse(data);
-
-  const [row] = await db
-    .update(assistant)
-    .set({
-      name: validatedData.name,
-      description: validatedData.description ?? null,
-      prompt: validatedData.prompt ?? null,
-      tools: validatedData.tools ?? [],
-      avatar: validatedData.avatar ?? null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(eq(assistant.id, validatedId), eq(assistant.userId, session.user.id)),
-    )
-    .returning();
-
-  if (!row) throw new Error("Not Found");
-
-  return row;
-}
+export const updateAssistant = updateEntityFactory<
+  z.infer<typeof updateAssistantSchema>,
+  AssistantRow
+>({
+  table: assistant,
+  schema: updateAssistantSchema,
+  mapValues: (data) => ({
+    name: data.name,
+    description: data.description ?? null,
+    prompt: data.prompt ?? null,
+    tools: data.tools ?? [],
+    avatar: data.avatar ?? null,
+  }),
+});

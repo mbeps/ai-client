@@ -1,11 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
 import type { ProjectRow } from "@/types/project/project-row";
 import { updateProjectSchema } from "@/schemas/project/project";
+import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
 import { z } from "zod";
 
 /**
@@ -25,36 +23,22 @@ import { z } from "zod";
  * @see deleteProject to remove a project.
  * @author Maruf Bepary
  */
-export async function updateProject(
-  id: string,
-  data: z.infer<typeof updateProjectSchema>,
-): Promise<ProjectRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validatedId = z.string().uuid().parse(id);
-  const validatedData = updateProjectSchema.parse(data);
-
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
-
-  if (validatedData.name !== undefined) updateData.name = validatedData.name;
-  if (validatedData.description !== undefined)
-    updateData.description = validatedData.description ?? null;
-  if (validatedData.globalPrompt !== undefined)
-    updateData.globalPrompt = validatedData.globalPrompt ?? null;
-  if (validatedData.tools !== undefined) updateData.tools = validatedData.tools;
-  if (validatedData.knowledgebaseId !== undefined)
-    updateData.knowledgebaseId = validatedData.knowledgebaseId ?? null;
-
-  const [row] = await db
-    .update(project)
-    .set(updateData)
-    .where(
-      and(eq(project.id, validatedId), eq(project.userId, session.user.id)),
-    )
-    .returning();
-
-  if (!row) throw new Error("Not Found");
-
-  return row;
-}
+export const updateProject = updateEntityFactory<
+  z.infer<typeof updateProjectSchema>,
+  ProjectRow
+>({
+  table: project,
+  schema: updateProjectSchema,
+  mapValues: (data) => {
+    const values: Record<string, any> = {};
+    if (data.name !== undefined) values.name = data.name;
+    if (data.description !== undefined)
+      values.description = data.description ?? null;
+    if (data.globalPrompt !== undefined)
+      values.globalPrompt = data.globalPrompt ?? null;
+    if (data.tools !== undefined) values.tools = data.tools;
+    if (data.knowledgebaseId !== undefined)
+      values.knowledgebaseId = data.knowledgebaseId ?? null;
+    return values;
+  },
+});
