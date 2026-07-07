@@ -1,5 +1,5 @@
 import { createMCPClient } from "@ai-sdk/mcp";
-import { isBlockedUrl } from "./url-guard";
+import { isBlockedUrl } from "./url-guard/is-blocked-url";
 import { z } from "zod";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
@@ -15,7 +15,7 @@ const headersSchema = z.record(z.string(), z.string());
  * @returns Configured MCP transport ready for createMCPClient()
  * @throws {Error} When required URL is missing, JSON fields are invalid, or HTTP URL points to blocked address
  * @see {@link discover-tools.ts} for how this transport is used in tool discovery
- * @see {@link url-guard.ts} for blocked URL patterns
+ * @see {@link url-guard/is-blocked-url.ts} for blocked URL patterns
  */
 export async function buildTransport(
   server: McpServerConfig,

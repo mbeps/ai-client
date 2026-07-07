@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isBlockedUrlSync } from "@/lib/mcp/url-guard-core";
+import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 import { jsonObjectSchema, idField } from "../shared-fields";
 
 /**

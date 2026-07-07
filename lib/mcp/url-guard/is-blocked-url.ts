@@ -1,13 +1,8 @@
-import { resolveHostname } from "./dns-resolver";
-import {
-  isBlockedUrlSync,
-  isIpLiteral,
-  isBlockedIPv4,
-  isBlockedIPv6,
-} from "./url-guard-core";
-
-// Re-export core sync validation for backward compatibility
-export { isBlockedUrlSync };
+import { resolveHostname } from "../dns-resolver";
+import { isBlockedUrlSync } from "./is-blocked-url-sync";
+import { isIpLiteral } from "./is-ip-literal";
+import { isBlockedIPv4 } from "./is-blocked-ipv4";
+import { isBlockedIPv6 } from "./is-blocked-ipv6";
 
 /**
  * SSRF protection: validates whether a URL should be blocked due to pointing to internal/private addresses.

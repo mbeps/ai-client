@@ -3,7 +3,7 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { ROUTES } from "@/constants/routes";
 import { ProviderNotConfiguredError } from "@/constants/errors";
-import { isBlockedUrl } from "@/lib/mcp/url-guard";
+import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { buildResolvedProvider } from "./build-resolved-provider";
 

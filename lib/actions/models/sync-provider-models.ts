@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
-import { isBlockedUrl } from "@/lib/mcp/url-guard";
+import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/actions/providers/utils";
 import { ModelMalformedIdError } from "@/constants/errors";
 
