@@ -13,7 +13,7 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 vi.mock("@/drizzle/db", () => ({ db: {} }));
-vi.mock("@/lib/rag/embed", () => ({ embedQuery: vi.fn() }));
+vi.mock("@/lib/rag/embed-query", () => ({ embedQuery: vi.fn() }));
 
 import { CHUNK_CONSTANTS } from "../../../constants/chunk";
 import { applyRRF } from "../../../lib/rag/apply-rrf";

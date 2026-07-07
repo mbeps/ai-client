@@ -5,7 +5,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, S3_BUCKET } from "@/lib/storage/s3-client";
 import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk-text";
-import { embedDocuments } from "./embed";
+import { embedDocuments } from "./embed-documents";
 import { RagExtractionEmptyError, RateLimitError } from "@/constants/errors";
 import {
   isRateLimitError,
