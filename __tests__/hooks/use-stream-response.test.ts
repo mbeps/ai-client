@@ -75,7 +75,7 @@ vi.mock("@/lib/actions/chats/persist-message", () => ({
   persistMessage: mockPersistMessage,
 }));
 
-vi.mock("@/lib/chat/upload-attachments", () => ({
+vi.mock("@/lib/chat/attachments/process-attachments", () => ({
   processAttachments: mockProcessAttachments,
 }));
 

@@ -6,7 +6,7 @@ import { parseSseStream } from "@/lib/chat/parse-sse-stream";
 import { buildStreamRequestBody } from "@/lib/chat/build-stream-request-body";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
-import { processAttachments } from "@/lib/chat/upload-attachments";
+import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";

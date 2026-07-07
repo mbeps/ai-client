@@ -18,7 +18,7 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-import { processAttachments } from "@/lib/chat/upload-attachments";
+import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import type { Attachment } from "@/types/attachment/attachment";
 
 // ─── Mock logger and server actions ───────────────────────────────────────
@@ -81,7 +81,10 @@ describe("processAttachments", () => {
       const att = makeAttachment({ id: "att-1", key: "uploads/existing.pdf" });
       const result = await processAttachments([att], "msg-1");
 
-      expect(mockCloneAttachmentsBatch).toHaveBeenCalledWith(["att-1"], "msg-1");
+      expect(mockCloneAttachmentsBatch).toHaveBeenCalledWith(
+        ["att-1"],
+        "msg-1",
+      );
       expect(mockUploadAttachment).not.toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("cloned-1");
