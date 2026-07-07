@@ -1,12 +1,8 @@
 import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import { db } from "@/drizzle/db";
-import { transformRun, mcpServer } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
-import { hybridSearch } from "@/lib/rag/hybrid-search";
+import { transformRun } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 import {
   createTransformRunSchema,
   resumeTransformRunSchema,
@@ -20,6 +16,7 @@ import { encodeSSE } from "@/lib/encode-sse";
 import { initTransformRun } from "@/lib/transform/lifecycle-service";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { runTransformSteps } from "@/lib/transform/run-steps";
+import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
 export const maxDuration = 300;
 
@@ -143,76 +140,23 @@ export async function POST(req: Request) {
           }
         }
 
-        /* ── 4. Resolving model/provider & MCP servers ────────────── */
-        const allServers = await db
-          .select()
-          .from(mcpServer)
-          .where(
-            and(
-              eq(mcpServer.userId, session.user.id),
-              eq(mcpServer.enabled, true),
-            ),
-          );
-
-        const model =
-          (parsed.data as { model?: string }).model ?? agentRow.modelId ?? null;
-        const resolvedProvider = model
-          ? await resolveProvider(session.user.id, model)
-          : await resolveDefaultChatProvider(session.user.id);
-
-        /* ── 5. Global KB context ─────────────────────────────────── */
-        let kbContext = "";
-        if (agentRow.knowledgeBaseIds && agentRow.knowledgeBaseIds.length > 0) {
-          try {
-            const kbIds = agentRow.knowledgeBaseIds;
-            const results = await Promise.all(
-              kbIds.map((id) =>
-                hybridSearch(
-                  id,
-                  agentRow.globalContext ||
-                    agentRow.description ||
-                    agentRow.name,
-                  session.user.id,
-                  3,
-                ),
-              ),
-            );
-            const allChunks = results.flat();
-            if (allChunks.length > 0) {
-              kbContext =
-                "\n\nKnowledge Base Context:\n" +
-                allChunks.map((c) => c.content).join("\n---\n");
-            }
-          } catch (err) {
-            logger.warn(
-              "[Transform AI] KB retrieval failed",
-              { err },
-              session.user.id,
-            );
-          }
-        }
-
-        /* ── 6. Register MCP tools ────────────────────────────────── */
-        const anyArtifactToolSelected =
-          (agentRow.tools || []).includes("internal:tool:manage_artifact") ||
-          steps.some((s) =>
-            (s.toolIds || []).includes("internal:tool:manage_artifact"),
-          );
-
+        /* ── 4. Load Context (Servers, Provider, KB, MCP Tools) ─── */
         const {
+          allServers,
+          resolvedProvider,
+          kbContext,
           mcpTools: runMcpTools,
           toolSourceMap: runToolSourceMap,
           mcpCleanup,
-        } = await registerMcpTools(
-          allServers as any,
-          undefined,
-          anyArtifactToolSelected,
-          null,
-          session.user.id,
-        );
+        } = await loadTransformContext({
+          userId: session.user.id,
+          agentRow: agentRow as any,
+          modelOverride: (parsed.data as { model?: string }).model,
+        });
+
         runMcpCleanup = mcpCleanup;
 
-        /* ── 7. Delegate Step Execution ───────────────────────────── */
+        /* ── 5. Delegate Step Execution ───────────────────────────── */
         const stepResult = await runTransformSteps({
           steps,
           startFromStep,
