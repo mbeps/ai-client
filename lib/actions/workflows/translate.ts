@@ -8,10 +8,8 @@ import { PROMPTS } from "@/constants/prompts";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProviderForModel } from "@/lib/chat/resolve-provider-for-model";
 import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 
 /**
  * Server action to translate text using AI with optional source language detection.

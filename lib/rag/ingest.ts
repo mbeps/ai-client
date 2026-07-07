@@ -7,10 +7,8 @@ import { extractTextFromBuffer } from "./extract-text-server";
 import { chunkText } from "./chunk-text";
 import { embedDocuments } from "./embed-documents";
 import { RagExtractionEmptyError, RateLimitError } from "@/constants/errors";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 
 /**
  * Extracts, chunks, and embeds a KB document. Updates status from pending→processing→ready/failed.

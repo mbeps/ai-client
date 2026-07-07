@@ -4,10 +4,8 @@ import {
   ToolsNotSupportedError,
   RATE_LIMIT_ERROR_CODE,
 } from "@/constants/errors";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 
 /**
  * Maps known application errors to structured HTTP error responses.

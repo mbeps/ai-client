@@ -4,10 +4,8 @@ import { eq } from "drizzle-orm";
 import { generateText, stepCountIs } from "ai";
 import { logger } from "@/lib/logger";
 import { RATE_LIMIT_ERROR_CODE } from "@/constants/errors";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 import { extractUploadedFilePath } from "@/lib/transform/extract-uploaded-file-path";
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";

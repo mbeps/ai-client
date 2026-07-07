@@ -10,10 +10,8 @@ import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
 import { logger } from "@/lib/logger";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 
 /**
  * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.

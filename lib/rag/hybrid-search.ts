@@ -4,10 +4,8 @@ import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed-query";
 import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
 import { knowledgebase } from "@/drizzle/schema";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import { applyRRF } from "./apply-rrf";
 import { type ChunkResult } from "@/types/rag/chunk-result";
 import { type RawChunkRow } from "@/types/rag/raw-chunk-row";
