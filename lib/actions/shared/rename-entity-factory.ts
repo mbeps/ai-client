@@ -1,7 +1,7 @@
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { whereOwner } from "@/lib/db/where-owner";
 
 /**
  * Configuration for creating a Server Action that renames an owned row.
@@ -47,12 +47,7 @@ export function renameEntityFactory<TResult>(config: RenameEntityConfig) {
     const [updated] = await db
       .update(config.table)
       .set({ [nameField]: resolvedName, updatedAt: new Date() })
-      .where(
-        and(
-          eq(config.table.id, resolvedId),
-          eq(config.table.userId, session.user.id),
-        ),
-      )
+      .where(whereOwner(config.table, resolvedId, session.user.id))
       .returning();
 
     if (!updated) throw new Error("Not Found");

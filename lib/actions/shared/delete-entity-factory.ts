@@ -1,7 +1,7 @@
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { and, eq, inArray } from "drizzle-orm";
-import { deleteResourceWithUnbind } from "@/lib/utils/db-helpers";
+import { deleteResourceWithUnbind } from "@/lib/db/delete-resource-with-unbind";
+import { whereOwner } from "@/lib/db/where-owner";
 
 /**
  * Configuration for creating a Server Action that deletes an owned row.
@@ -72,9 +72,7 @@ export function deleteEntityFactory(config: DeleteEntityConfig) {
 
     const results = await db
       .delete(config.table)
-      .where(
-        and(inArray(config.table.id, ids), eq(config.table.userId, session.user.id)),
-      )
+      .where(whereOwner(config.table, ids, session.user.id))
       .returning({ id: config.table.id });
 
     if (results.length === 0) throw new Error("Not Found");
