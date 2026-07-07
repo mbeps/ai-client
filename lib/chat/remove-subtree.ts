@@ -1,4 +1,4 @@
-import type { Message } from "@/types/message/message";
+import type { MessageMap } from "@/types/message/message-map";
 
 /**
  * Recursively removes a message and all its descendants from the message map.
@@ -9,10 +9,10 @@ import type { Message } from "@/types/message/message";
  * @returns Object containing the updated message map and the deleted message's
  *          parentId (used by the caller to determine the new currentLeafId).
  */
-export function removeMessageSubtree(
-  messages: Record<string, Message>,
+export function removeSubtree(
+  messages: MessageMap,
   messageId: string,
-): { updatedMessages: Record<string, Message>; parentId: string | null } {
+): { updatedMessages: MessageMap; parentId: string | null } {
   const updated = { ...messages };
 
   const deleteRecursive = (id: string) => {

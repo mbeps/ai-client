@@ -1,4 +1,5 @@
 import type { Message } from "@/types/message/message";
+import type { MessageMap } from "@/types/message/message-map";
 
 /**
  * Inserts a new message into the message map and updates the parent's
@@ -9,9 +10,9 @@ import type { Message } from "@/types/message/message";
  * @returns New message map with the message added and parent updated.
  */
 export function insertMessage(
-  messages: Record<string, Message>,
+  messages: MessageMap,
   newMessage: Message,
-): Record<string, Message> {
+): MessageMap {
   const updated = { ...messages, [newMessage.id]: newMessage };
   if (newMessage.parentId && updated[newMessage.parentId]) {
     updated[newMessage.parentId] = {
