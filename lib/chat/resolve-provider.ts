@@ -1,7 +1,6 @@
 import { ProviderNotConfiguredError } from "@/constants/errors";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";
-import { resolveProviderForModel } from "./resolve-provider-for-model";
+import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 /**
  * Universal resolver that tries to find a model by record ID (UUID) first,
@@ -13,8 +12,6 @@ import { resolveProviderForModel } from "./resolve-provider-for-model";
  * @returns Resolved provider with initialized SDK and decrypted credentials
  * @throws {ProviderNotConfiguredError} When model not found or provider not configured
  * @throws {ProviderKeyCorruptedError} When credential decryption fails
- * @see resolveProviderForModel for slug-only resolution
- * @see resolveProviderByRecordId for UUID-only resolution
  * @author Maruf Bepary
  */
 export async function resolveProvider(
@@ -28,7 +25,9 @@ export async function resolveProvider(
 
   if (isUuid) {
     try {
-      return await resolveProviderByRecordId(userId, modelIdentifier);
+      return await fetchProviderWithModel(userId, {
+        recordId: modelIdentifier,
+      });
     } catch (err) {
       // If it looks like a UUID but isn't in our DB as an ID,
       // maybe it's actually a model slug that happens to look like a UUID
@@ -39,5 +38,5 @@ export async function resolveProvider(
     }
   }
 
-  return resolveProviderForModel(userId, modelIdentifier);
+  return fetchProviderWithModel(userId, { modelId: modelIdentifier });
 }

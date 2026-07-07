@@ -4,7 +4,7 @@ import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
 import { ProviderNotConfiguredError } from "@/constants/errors";
 import { logger } from "@/lib/logger";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";
+import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 /**
  * Resolves the default chat model configured in user settings.
@@ -15,7 +15,6 @@ import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";
  * @returns Resolved default chat provider or first available fallback
  * @throws {ProviderNotConfiguredError} When no chat model is configured or enabled
  * @throws {ProviderKeyCorruptedError} When credential decryption fails
- * @see resolveEmbeddingProvider for embedding model resolution
  * @author Maruf Bepary
  */
 export async function resolveDefaultChatProvider(
@@ -28,16 +27,13 @@ export async function resolveDefaultChatProvider(
 
   if (settings?.defaultChatModelId) {
     try {
-      return await resolveProviderByRecordId(
-        userId,
-        settings.defaultChatModelId,
-      );
+      return await fetchProviderWithModel(userId, {
+        recordId: settings.defaultChatModelId,
+      });
     } catch (err) {
-      logger.warn(
-        "Failed to resolve default chat model, falling back",
-        { error: err instanceof Error ? err.message : String(err) },
-        userId,
-      );
+      logger.warn("Failed to resolve default chat model, falling back", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -63,7 +59,7 @@ export async function resolveDefaultChatProvider(
     );
   }
 
-  logger.warn("Falling back to first available chat model", { userId }, userId);
+  logger.warn("Falling back to first available chat model", { userId });
 
-  return resolveProviderByRecordId(userId, fallback.id);
+  return fetchProviderWithModel(userId, { recordId: fallback.id });
 }

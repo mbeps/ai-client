@@ -1,9 +1,5 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@/drizzle/db";
-import { aiModel, aiProvider } from "@/drizzle/schema";
-import { ProviderNotConfiguredError } from "@/constants/errors";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { buildResolvedProvider } from "./build-resolved-provider";
+import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 /**
  * Resolves a provider and model using the internal UUID (aiModel.id).
@@ -22,29 +18,5 @@ export async function resolveProviderByRecordId(
   userId: string,
   recordId: string,
 ): Promise<ResolvedProvider> {
-  const rows = await db
-    .select({
-      provider: aiProvider,
-      model: aiModel,
-    })
-    .from(aiModel)
-    .innerJoin(aiProvider, eq(aiModel.providerId, aiProvider.id))
-    .where(
-      and(
-        eq(aiModel.id, recordId),
-        eq(aiModel.userId, userId),
-        eq(aiModel.isEnabled, true),
-        eq(aiProvider.isEnabled, true),
-      ),
-    );
-
-  const row = rows[0];
-
-  if (!row) {
-    throw new ProviderNotConfiguredError(
-      `Model record '${recordId}' is not configured or enabled.`,
-    );
-  }
-
-  return buildResolvedProvider(row, userId);
+  return fetchProviderWithModel(userId, { recordId });
 }
