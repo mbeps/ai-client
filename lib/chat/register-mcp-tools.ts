@@ -157,13 +157,29 @@ export async function registerMcpTools(
         description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
         parameters: searchKnowledgeBaseSchema,
         // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-        execute: async ({ query }: { query?: string }) => {
-          const normalizedQuery = query?.trim();
+        execute: async (args: any) => {
+          const { query } = args;
+          const normalizedQuery = (query || "").trim();
+
           if (!normalizedQuery) {
-            return { results: [], resultCount: 0 };
+            return {
+              success: false,
+              error:
+                "Missing mandatory 'query' parameter. Search requires a specific keyword or phrase.",
+            };
           }
 
           const results = await hybridSearch(kbId, normalizedQuery, userId, 5);
+
+          if (results.length === 0) {
+            return {
+              success: true,
+              results: [],
+              resultCount: 0,
+              message: `No results found for '${normalizedQuery}'. Try using different keywords or broader search terms.`,
+            };
+          }
+
           return {
             results: results.map((r) => ({
               content: r.content,

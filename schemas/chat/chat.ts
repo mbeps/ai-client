@@ -231,16 +231,42 @@ export const manageArtifactSchema = z.union([
     .pipe(z.object(manageArtifactBaseFields)),
 ]);
 
-export const searchKnowledgeBaseSchema = z.object({
-  query: z
+export const searchKnowledgeBaseSchema = z.union([
+  z.object({
+    query: z
+      .string()
+      .trim()
+      .max(500)
+      .optional()
+      .default("")
+      .describe(
+        "Search query to find relevant information in the knowledge base. Be specific and focused.",
+      ),
+  }),
+  // Some models might wrap it in a search_knowledge_base object
+  z
+    .object({
+      search_knowledge_base: z.object({
+        query: z.string().trim().max(500).optional().default(""),
+      }),
+    })
+    .transform((val) => val.search_knowledge_base),
+  // Handle JSON string input
+  z
     .string()
-    .trim()
-    .min(1)
-    .max(500)
-    .describe(
-      "Search query to find relevant information in the knowledge base. Be specific and focused.",
+    .transform((str) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        return null;
+      }
+    })
+    .pipe(
+      z.object({
+        query: z.string().trim().max(500).optional().default(""),
+      }),
     ),
-});
+]);
 
 /**
  * Validates chat knowledge base update requests.

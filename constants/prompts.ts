@@ -30,7 +30,12 @@ export const PROMPTS = {
     },
     SEARCH_KNOWLEDGE_BASE: {
       DESCRIPTION:
-        "Search the knowledge base for relevant information. Call this when the user asks about their documents, references specific topics that may be in the knowledge base, or when you need domain-specific context not already in the conversation. Formulate a focused, specific search query — avoid overly broad queries. After retrieving results, synthesise the information into your response. Do not call this tool for general knowledge questions.",
+        "Search the knowledge base for relevant information using semantic search. " +
+        "CRITICAL: A specific 'query' is mandatory. Search requires a specific keyword or phrase to match against documents. " +
+        "Listing all documents or broad browsing is NOT supported. " +
+        "Call this when the user asks about their documents, references specific topics that may be in the knowledge base, or when you need domain-specific context not already in the conversation. " +
+        "Formulate a focused, specific search query — avoid overly broad queries. " +
+        "After retrieving results, synthesise the information into your response. Do not call this tool for general knowledge questions.",
     },
   },
   SCHEMA: {
