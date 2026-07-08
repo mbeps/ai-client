@@ -159,9 +159,11 @@ export async function loadChatContext(
 
   // 4. Filter servers by selection if provided
   const filteredServers =
-    selectedServerIds && selectedServerIds.length > 0
-      ? servers.filter((s) => selectedServerIds.includes(s.id))
-      : servers;
+    selectedServerIds === undefined
+      ? servers // Default to all enabled servers
+      : selectedServerIds.length === 0
+        ? [] // Explicitly no MCP servers
+        : servers.filter((s) => selectedServerIds.includes(s.id));
 
   return {
     chatRow,

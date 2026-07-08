@@ -51,7 +51,16 @@ export async function registerMcpTools(
     try {
       const result = await getMcpTools(scopedServers);
 
-      if (selectedTools && selectedTools.length > 0) {
+      if (selectedTools === undefined) {
+        // Fallback for missing selection: include all tools from eligible servers
+        mcpTools = result.tools;
+        toolSourceMap = { ...result.toolSourceMap };
+      } else if (selectedTools.length === 0) {
+        // Explicitly empty selection: no MCP tools
+        mcpTools = {};
+        toolSourceMap = {};
+      } else {
+        // Selective filtering
         const filteredTools: Record<string, any> = {};
         for (const [name, toolDef] of Object.entries(result.tools)) {
           const isSelected = selectedTools.some((id) => {
@@ -64,9 +73,6 @@ export async function registerMcpTools(
           }
         }
         mcpTools = filteredTools;
-      } else {
-        mcpTools = result.tools;
-        toolSourceMap = { ...result.toolSourceMap };
       }
 
       mcpCleanup = result.cleanup;
