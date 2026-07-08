@@ -37,6 +37,7 @@ const chainable = vi.hoisted(() => {
   }
   c.where = vi.fn();
   c.orderBy = vi.fn();
+  c.$dynamic = vi.fn();
   c.returning = vi.fn();
   c.transaction = vi.fn();
   for (const m of [
@@ -102,6 +103,7 @@ beforeEach(() => {
   chainable.set.mockReturnValue(chainable);
   chainable.delete.mockReturnValue(chainable);
   chainable.where.mockImplementation(() => chainable);
+  chainable.$dynamic.mockImplementation(() => chainable);
   chainable.orderBy.mockResolvedValue([]);
   chainable.returning.mockResolvedValue([]);
   chainable.transaction.mockImplementation(

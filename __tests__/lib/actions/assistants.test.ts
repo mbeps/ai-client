@@ -106,6 +106,7 @@ beforeEach(() => {
   chainable.set.mockReturnValue(chainable);
   chainable.delete.mockReturnValue(chainable);
   chainable.where.mockImplementation(() => chainable);
+  chainable.$dynamic.mockImplementation(() => chainable);
   chainable.orderBy.mockResolvedValue([]);
   chainable.returning.mockResolvedValue([]);
   chainable.transaction.mockImplementation(
