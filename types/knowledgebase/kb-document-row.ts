@@ -1,5 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a document indexed in a knowledge base from the Drizzle schema.
@@ -10,4 +11,4 @@ import type { kbDocument } from "@/drizzle/schemas/kb-document-schema";
  * @see {@link types/attachment/attachment-row.ts} for uploaded files
  * @author Maruf Bepary
  */
-export type KbDocumentRow = InferSelectModel<typeof kbDocument>;
+export type KbDocumentRow = InferSelectModel<typeof kbDocument> & TimedResource;

@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { assistant } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of an AI assistant persona from the Drizzle schema.
@@ -11,4 +12,4 @@ import { assistant } from "@/drizzle/schema";
  * @see {@link types/chat/chat-row.ts} for chats that reference this assistant
  * @author Maruf Bepary
  */
-export type AssistantRow = InferSelectModel<typeof assistant>;
+export type AssistantRow = InferSelectModel<typeof assistant> & TimedResource;

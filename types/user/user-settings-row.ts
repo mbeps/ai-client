@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { userSettings } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of user-wide settings from the Drizzle schema.
@@ -9,4 +10,5 @@ import { userSettings } from "@/drizzle/schema";
  * @see {@link schemas/user/user-settings.ts} for validation schema
  * @author Maruf Bepary
  */
-export type UserSettingsRow = InferSelectModel<typeof userSettings>;
+export type UserSettingsRow = InferSelectModel<typeof userSettings> &
+  TimedResource;

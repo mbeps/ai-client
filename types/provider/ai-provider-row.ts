@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { aiProvider } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a user-configured OpenAI-compatible AI provider.
@@ -10,4 +11,4 @@ import { aiProvider } from "@/drizzle/schema";
  * @see {@link types/provider/ai-model-row.ts} for models from this provider
  * @author Maruf Bepary
  */
-export type AiProviderRow = InferSelectModel<typeof aiProvider>;
+export type AiProviderRow = InferSelectModel<typeof aiProvider> & TimedResource;

@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { attachment } from "@/drizzle/schema";
+import { BaseResource } from "../shared/resource";
 
 /**
  * Database representation of an uploaded file (image, PDF, text, spreadsheet) linked to a message.
@@ -11,4 +12,7 @@ import { attachment } from "@/drizzle/schema";
  * @see {@link types/message/message-row.ts} for messages that contain attachments
  * @author Maruf Bepary
  */
-export type AttachmentRow = InferSelectModel<typeof attachment>;
+export type AttachmentRow = InferSelectModel<typeof attachment> &
+  BaseResource & {
+    createdAt: Date;
+  };

@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { prompt } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a reusable prompt snippet from the Drizzle schema.
@@ -9,4 +10,4 @@ import { prompt } from "@/drizzle/schema";
  * @see {@link types/prompt/prompt.ts} for enriched Prompt type
  * @author Maruf Bepary
  */
-export type PromptRow = InferSelectModel<typeof prompt>;
+export type PromptRow = InferSelectModel<typeof prompt> & TimedResource;

@@ -1,5 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { knowledgebase } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a knowledge base from the Drizzle schema.
@@ -10,4 +11,5 @@ import type { knowledgebase } from "@/drizzle/schema";
  * @see {@link types/knowledgebase/kb-document-row.ts} for documents in this KB
  * @author Maruf Bepary
  */
-export type KnowledgebaseRow = InferSelectModel<typeof knowledgebase>;
+export type KnowledgebaseRow = InferSelectModel<typeof knowledgebase> &
+  TimedResource;

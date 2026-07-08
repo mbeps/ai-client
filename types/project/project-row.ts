@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { project } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a user project (chat group with shared system prompt) from the Drizzle schema.
@@ -10,4 +11,4 @@ import { project } from "@/drizzle/schema";
  * @see {@link types/chat/chat-row.ts} for chats in this project
  * @author Maruf Bepary
  */
-export type ProjectRow = InferSelectModel<typeof project>;
+export type ProjectRow = InferSelectModel<typeof project> & TimedResource;

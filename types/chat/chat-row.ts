@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { chat } from "@/drizzle/schema";
+import { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a chat session from the Drizzle schema.
@@ -11,4 +12,4 @@ import { chat } from "@/drizzle/schema";
  * @see {@link types/message/message-row.ts} for individual message rows
  * @author Maruf Bepary
  */
-export type ChatRow = InferSelectModel<typeof chat>;
+export type ChatRow = InferSelectModel<typeof chat> & TimedResource;

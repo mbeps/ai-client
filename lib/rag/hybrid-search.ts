@@ -79,7 +79,7 @@ export async function hybridSearch(
       ORDER BY c.embedding <=> ${embeddingLiteral}::vector
       LIMIT 20
     `)
-  ).rows as RawChunkRow[];
+  ).rows as unknown as RawChunkRow[];
 
   let ftsRows: RawChunkRow[] = [];
   try {
@@ -99,7 +99,7 @@ export async function hybridSearch(
         ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${normalizedQuery})) DESC
         LIMIT 20
       `)
-    ).rows as RawChunkRow[];
+    ).rows as unknown as RawChunkRow[];
   } catch (err) {
     logger.error("[RAG] FTS query failed:", err);
     ftsRows = [];

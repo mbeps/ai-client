@@ -1,5 +1,6 @@
 import { type InferSelectModel } from "drizzle-orm";
 import { message } from "@/drizzle/schema";
+import { BaseResource } from "../shared/resource";
 
 /**
  * Database representation of a message in a branching conversation tree from the Drizzle schema.
@@ -11,4 +12,7 @@ import { message } from "@/drizzle/schema";
  * @see {@link types/chat/chat-row.ts} for parent chat row
  * @author Maruf Bepary
  */
-export type MessageRow = InferSelectModel<typeof message>;
+export type MessageRow = InferSelectModel<typeof message> &
+  BaseResource & {
+    createdAt: Date;
+  };
