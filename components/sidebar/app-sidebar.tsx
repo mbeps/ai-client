@@ -50,7 +50,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, sortByUpdatedAt } from "@/lib/utils";
 
 import { ChatOptions } from "@/components/chat/chat-options";
 
@@ -75,10 +75,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const createNewChat = useCreateChat();
   const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
-  const recentChats = Object.values(chats)
-    .filter((chat) => !chat.projectId)
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-    .slice(0, 20);
+  const recentChats = sortByUpdatedAt(
+    Object.values(chats).filter((chat) => !chat.projectId),
+  ).slice(0, 20);
 
   React.useEffect(() => {
     listChats()

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { PROMPTS } from "@/constants/prompts";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
+import { sortByUpdatedAt } from "@/lib/utils";
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
 import {
@@ -101,11 +102,11 @@ export default function AssistantPage() {
   );
 
   const filteredChats = useMemo(() => {
-    return chats
-      .filter((chat) =>
+    return sortByUpdatedAt(
+      chats.filter((chat) =>
         chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      ),
+    );
   }, [chats, searchQuery]);
 
   // Load assistant-specific chats on mount

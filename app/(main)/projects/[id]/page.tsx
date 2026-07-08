@@ -2,6 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
+import { sortByUpdatedAt } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -126,11 +127,11 @@ export default function ProjectPage() {
   );
 
   const filteredChats = useMemo(() => {
-    return chats
-      .filter((chat) =>
+    return sortByUpdatedAt(
+      chats.filter((chat) =>
         chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      ),
+    );
   }, [chats, searchQuery]);
 
   // Load project-specific chats on mount if not already loaded into store

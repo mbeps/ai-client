@@ -15,6 +15,7 @@ import {
 import { useAppStore } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
 import { format } from "date-fns";
+import { getPathSegments } from "@/lib/utils";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
@@ -137,7 +138,7 @@ export function DynamicBreadcrumbs() {
   // Resolve IDs that aren't in state
   React.useEffect(() => {
     let ignore = false;
-    const segments = pathname.split("/").filter(Boolean);
+    const segments = getPathSegments(pathname);
 
     const resolveAll = async () => {
       const updates: Record<string, string> = {};
@@ -226,7 +227,7 @@ export function DynamicBreadcrumbs() {
   ]);
 
   // Split pathname into segments and remove empty strings
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = getPathSegments(pathname);
 
   if (segments.length === 0) return null;
 

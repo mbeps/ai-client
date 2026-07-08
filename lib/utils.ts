@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { TimedResource } from "@/types/shared/resource";
 
 /**
  * Intelligently merges Tailwind CSS class names, resolving conflicts and deduplicating utilities.
@@ -17,4 +18,26 @@ import { twMerge } from "tailwind-merge";
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export interface SortableResource {
+  id: string;
+  updatedAt: Date;
+}
+
+/**
+ * Sorts an array of resources by their updatedAt timestamp in descending order (newest first).
+ * Does not mutate the original array.
+ */
+export function sortByUpdatedAt<T extends SortableResource>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
+}
+
+/**
+ * Extracts non-empty segments from a URL pathname.
+ */
+export function getPathSegments(pathname: string): string[] {
+  return pathname.split("/").filter(Boolean);
 }

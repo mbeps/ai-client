@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Search } from "lucide-react";
+import { SortableResource, sortByUpdatedAt } from "@/lib/utils";
 
-interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
+interface ResourceListPageProps<T extends SortableResource> {
   /** Leading icon for the page type. */
   icon: React.ReactNode;
   /** Page heading. */
@@ -40,7 +41,7 @@ interface ResourceListPageProps<T extends { id: string; updatedAt: Date }> {
  * Handles search, sorting by updatedAt, and optional custom filtering.
  *
  */
-export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
+export function ResourceListPage<T extends SortableResource>({
   icon,
   title,
   description,
@@ -67,9 +68,7 @@ export function ResourceListPage<T extends { id: string; updatedAt: Date }>({
     return matchesSearch && matchesCustom;
   });
 
-  const sorted = [...filtered].sort(
-    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-  );
+  const sorted = sortByUpdatedAt(filtered);
 
   return (
     <div className="page-container">

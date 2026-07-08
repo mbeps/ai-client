@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { getPathSegments } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { ChatOptions } from "@/components/chat/chat-options";
@@ -20,7 +21,7 @@ export function EntityOptions() {
   const { chats, projects, assistants } = useAppStore();
   const { normalizedKnowledgebases } = useKnowledgebases();
 
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = getPathSegments(pathname);
   if (segments.length === 0) return null;
 
   // Walk backward through URL segments to find the most specific entity ID

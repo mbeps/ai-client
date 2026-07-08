@@ -1,9 +1,8 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { getOwnedResource } from "@/lib/db/get-owned-resource";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 /**
@@ -12,7 +11,7 @@ import type { TransformRunRow } from "@/types/transform/transform-run-row";
  * Returns input, output, status, and execution metadata.
  * Runs on server only — invoked from client via Server Action.
  *
- * @param runId - UUID of the run to retrieve; must be associated with an agent owned by the authenticated user.
+ * @param id - UUID of the run to retrieve; must be associated with an agent owned by the authenticated user.
  * @returns The transform run record with all execution details.
  * @throws Error if session is not authenticated.
  * @throws Error if run is not found or user does not own the associated agent (returns "Not Found").
@@ -24,12 +23,5 @@ export async function getTransformRun(
   id: string,
 ): Promise<TransformRunRow | null> {
   const session = await requireSession();
-  const rows = await db
-    .select()
-    .from(transformRun)
-    .where(
-      and(eq(transformRun.id, id), eq(transformRun.userId, session.user.id)),
-    )
-    .limit(1);
-  return rows[0] ?? null;
+  return getOwnedResource<TransformRunRow>(transformRun, id, session.user.id);
 }
