@@ -232,6 +232,13 @@
       "when": 1782297144177,
       "tag": "0032_slippery_susan_delgado",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783515313949,
+      "tag": "0033_add_kb_document_status_message",
+      "breakpoints": true
     }
   ]
 }
