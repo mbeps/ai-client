@@ -40,10 +40,14 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP: z
+  ALLOW_PRIVATE_NETWORK_MCP: z
     .string()
     .optional()
     .transform((v) => v === "true"),
+  PRESIGNED_URL_EXPIRY_SECONDS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 3600)),
   NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD: z
     .string()
     .optional()
@@ -65,8 +69,6 @@ export const env =
   typeof window === "undefined"
     ? envSchema.parse(process.env)
     : (envSchema.partial().parse({
-        NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP:
-          process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP,
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
           process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
       }) as z.infer<typeof envSchema>);

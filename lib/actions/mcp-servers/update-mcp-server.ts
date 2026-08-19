@@ -32,10 +32,13 @@ export async function updateMcpServer(
   const parsed = updateMcpServerSchema.parse(data);
 
   const values = buildServerConfig(parsed);
+  // SEC-07: empty headers string means "no change" — preserve existing headers
+  const { headers: _h, ...restValues } = values;
+  const updateFields = parsed.headers === "" ? restValues : values;
 
   const [updated] = await db
     .update(mcpServer)
-    .set({ ...values, updatedAt: new Date() })
+    .set({ ...updateFields, updatedAt: new Date() })
     .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
     .returning();
 

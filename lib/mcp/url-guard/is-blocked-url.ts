@@ -35,7 +35,7 @@ export async function isBlockedUrl(rawUrl: string): Promise<boolean> {
   if (isIpLiteral(hostname)) return false;
 
   // If internal access is explicitly allowed, skip DNS resolution too
-  if (process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP === "true") {
+  if (process.env.ALLOW_PRIVATE_NETWORK_MCP === "true") {
     return false;
   }
 

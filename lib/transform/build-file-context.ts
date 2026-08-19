@@ -5,7 +5,7 @@
 
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
-import { inArray } from "drizzle-orm";
+import { inArray, and, eq } from "drizzle-orm";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /** A row from the attachment table that we pass around during the run. */
@@ -38,7 +38,12 @@ export async function buildFileContext(
   const attachmentRows = await db
     .select()
     .from(attachment)
-    .where(inArray(attachment.id, inputAttachmentIds));
+    .where(
+      and(
+        inArray(attachment.id, inputAttachmentIds),
+        eq(attachment.userId, userId),
+      ),
+    );
 
   if (attachmentRows.length === 0) {
     return { fileContext: "", attachmentRows: [] };

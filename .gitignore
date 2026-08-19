@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+tmp/**
 
 # debug
 npm-debug.log*
@@ -43,7 +44,7 @@ next-env.d.ts
 .github/copilot-instructions.md
 
 
-docs/**
+subagents/**
 scripts/hash-password.js
 reports/**
 **.xlsx
@@ -52,5 +53,6 @@ wiki/**
 GEMINI.md
 CLAUDE.md
 AGENT.md
-.github/instructions/convensions.instructions.md
-.github/instructions/graphify.instructions.md
+.github/**
+!.github/workflows/**
+evaluations/**

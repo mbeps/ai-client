@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     }
 
     // --- Prepare messages ---
-    const attachmentUrls = await getAttachmentUrls(history);
+    const attachmentUrls = await getAttachmentUrls(history, session.user.id);
     const finalMessages = prepareChatMessages({
       history,
       globalSystemPrompt,

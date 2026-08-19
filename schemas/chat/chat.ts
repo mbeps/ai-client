@@ -121,12 +121,12 @@ export const messageMetadataSchema = z.object({
  * Supports complex content parts and optional file attachments.
  */
 export const chatMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+  role: z.enum(["user", "assistant"]),
   content: z.union([
     z.string(),
     z.array(
       z.union([
-        z.object({ type: z.literal("text"), text: z.string() }),
+        z.object({ type: z.literal("text"), text: z.string().max(32768) }),
         z.object({
           type: z.literal("image"),
           image: z.union([z.string().url(), z.string()]),
@@ -145,7 +145,7 @@ export const chatMessageSchema = z.object({
         mimeType: z.string().max(100).optional(),
         type: z.enum(["image", "document", "spreadsheet"]).optional(),
         dataUrl: z.string().optional(),
-        extractedText: z.string().optional(),
+        extractedText: z.string().max(50000).optional(),
         key: z.string().max(1024).optional(),
       }),
     )

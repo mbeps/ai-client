@@ -56,7 +56,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
   const defaultValues: UpdateMcpServer = {
     name: server.name,
     url: server.url ?? "",
-    headers: server.headers ?? "",
+    headers: "", // SEC-07: never pre-populate; enter a new value to replace saved headers
     isPublic: server.isPublic,
   };
 
@@ -82,7 +82,13 @@ export function EditServerForm({ server }: EditServerFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardContent className="p-0 space-y-6">
-            <ServerFormFields form={form} styled />
+            <ServerFormFields
+              form={form}
+              styled
+              headerPlaceholder={
+                server.headers ? "Saved — enter new value to update" : undefined
+              }
+            />
           </CardContent>
 
           <div className="flex justify-end pt-4 border-t">

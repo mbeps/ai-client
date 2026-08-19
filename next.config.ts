@@ -10,13 +10,14 @@ const CSP = [
   `default-src 'self'`,
   `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https:`,
+  `img-src 'self' data: blob:`,
   `font-src 'self' data:`,
   `connect-src 'self' https:`,
   `frame-src 'self'`,
   `object-src 'none'`,
   `media-src 'self'`,
   `worker-src 'self' blob:`,
+  `frame-ancestors 'none'`,
 ].join("; ");
 
 /**

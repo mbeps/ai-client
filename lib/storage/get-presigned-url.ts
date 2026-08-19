@@ -1,5 +1,6 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "@/lib/env";
 import { s3Client, S3_BUCKET } from "./s3-instance";
 
 /**
@@ -14,10 +15,11 @@ import { s3Client, S3_BUCKET } from "./s3-instance";
  * @throws {Error} When URL signing fails (invalid key, credentials, etc.)
  * @see {@link message-bubble.tsx} for presigned URL fetching on component mount
  */
-export async function getPresignedUrl(key: string, expiresIn = 3600) {
+export async function getPresignedUrl(key: string, expiresIn?: number) {
+  const expiry = expiresIn ?? env.PRESIGNED_URL_EXPIRY_SECONDS ?? 3600;
   return getSignedUrl(
     s3Client,
     new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }),
-    { expiresIn },
+    { expiresIn: expiry },
   );
 }

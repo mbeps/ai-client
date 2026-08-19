@@ -5,6 +5,11 @@ import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { randomUUID } from "crypto";
+import {
+  ALLOWED_SPREADSHEET_TYPES,
+  MAX_SPREADSHEET_SIZE_BYTES,
+} from "@/constants/attachments";
+import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 
 /**
  * Uploads multiple input files for a transform run to S3 and creates attachment records.
@@ -27,6 +32,15 @@ export async function uploadRunInput(
   const results: { id: string; name: string }[] = [];
 
   for (const file of files) {
+    const resolvedMimeType = resolveMimeType(file);
+    if (!ALLOWED_SPREADSHEET_TYPES.has(resolvedMimeType)) {
+      throw new Error(
+        `File type "${resolvedMimeType || "unknown"}" is not supported. Only spreadsheet files are allowed.`,
+      );
+    }
+    if (file.size > MAX_SPREADSHEET_SIZE_BYTES) {
+      throw new Error(`File "${file.name}" exceeds the maximum size of 50 MB.`);
+    }
     const id = randomUUID();
     const key = `transform-inputs/${session.user.id}/${id}-${file.name}`;
     const buffer = Buffer.from(await file.arrayBuffer());

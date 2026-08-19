@@ -210,24 +210,24 @@ describe("isBlockedUrl", () => {
     });
   });
 
-  describe("NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
+  describe("ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
     it("blocks localhost by default (env=false)", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "false";
+      process.env.ALLOW_PRIVATE_NETWORK_MCP = "false";
       expect(await isBlockedUrl("http://localhost")).toBe(true);
     });
 
     it("allows localhost when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
       expect(await isBlockedUrl("http://localhost")).toBe(false);
     });
 
     it("allows private IPv4 when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
       expect(await isBlockedUrl("http://192.168.1.1")).toBe(false);
     });
 
     it("still blocks unparseable URLs even when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
       expect(await isBlockedUrl("not-a-url")).toBe(true);
     });
   });
