@@ -1,0 +1,2 @@
+ALTER TABLE "attachment" ADD CONSTRAINT "attachment_transform_run_id_transform_run_id_fk" FOREIGN KEY ("transform_run_id") REFERENCES "public"."transform_run"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "attachment_transform_run_id_idx" ON "attachment" USING btree ("transform_run_id");

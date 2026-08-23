@@ -85,6 +85,16 @@ export async function runTransformSteps({
     let stepHasSpreadsheetMutations = false;
     let stepPersistedSpreadsheetOutput = false;
 
+    // Heartbeat: keep updatedAt fresh so stuck-run sweeps don't kill active runs
+    try {
+      await db
+        .update(transformRun)
+        .set({ updatedAt: new Date() })
+        .where(eq(transformRun.id, runRow.id));
+    } catch {
+      logger.warn("[Transform AI] Heartbeat update failed", undefined, userId);
+    }
+
     // Update current step index
     await db
       .update(transformRun)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { getTableColumns } from "drizzle-orm";
-import { chat, message } from "@/drizzle/schemas/chat-schema";
+import { getTableColumns, getTableName } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
+import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
 import {
   transformAgent,
   transformRun,
@@ -30,6 +31,28 @@ describe("transform-agent-schema", () => {
       expect(col.onUpdateFn).toBeDefined();
     },
   );
+});
+
+describe("attachment.transformRunId FK (A-H5)", () => {
+  it("references transform_run with onDelete set null and is indexed", () => {
+    const { foreignKeys, indexes } = getTableConfig(attachment);
+    const fk = foreignKeys.find(
+      (f) =>
+        getTableName(f.reference().foreignColumns[0].table) === "transform_run",
+    );
+    expect(fk).toBeDefined();
+    const ref = fk!.reference();
+    expect(ref.columns[0].name).toBe("transform_run_id");
+    expect(ref.foreignColumns[0].name).toBe("id");
+    expect(fk!.onDelete).toBe("set null");
+    expect(
+      indexes.some((i) =>
+        i.config.columns.some(
+          (c) => "name" in c && c.name === "transform_run_id",
+        ),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("kb-chunk-schema", () => {

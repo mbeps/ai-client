@@ -80,8 +80,9 @@ export async function uploadKbDocument(
 
   await ensureBucket();
   const buffer = Buffer.from(await file.arrayBuffer());
-  await uploadObject(s3Key, buffer, mimeType);
 
+  // DB-first: insert the row, then upload; compensate by deleting the row if
+  // S3 fails so a failed upload never leaves a dangling pending document.
   const [row] = await db
     .insert(kbDocument)
     .values({
@@ -95,6 +96,13 @@ export async function uploadKbDocument(
       status: "pending",
     })
     .returning();
+
+  try {
+    await uploadObject(s3Key, buffer, mimeType);
+  } catch (err) {
+    await db.delete(kbDocument).where(eq(kbDocument.id, documentId));
+    throw err;
+  }
 
   await db
     .update(knowledgebase)

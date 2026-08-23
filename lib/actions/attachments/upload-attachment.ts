@@ -93,8 +93,8 @@ export async function uploadAttachment(formData: FormData) {
   const key = `attachments/${session.user.id}/${id}-${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  await uploadObject(key, buffer, mimeType);
-
+  // DB-first: insert the row, then upload; compensate by deleting the row if
+  // S3 fails so a failed upload never leaves a dangling attachment record.
   const [row] = await db
     .insert(attachment)
     .values({
@@ -108,6 +108,13 @@ export async function uploadAttachment(formData: FormData) {
       extractedText: extractedText || null,
     })
     .returning();
+
+  try {
+    await uploadObject(key, buffer, mimeType);
+  } catch (err) {
+    await db.delete(attachment).where(eq(attachment.id, id));
+    throw err;
+  }
 
   return row;
 }

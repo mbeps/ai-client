@@ -181,6 +181,7 @@ export async function POST(req: Request) {
       userMessageId,
       resolvedModelId,
       toolSourceMap,
+      mcpCleanup,
     });
 
     return new Response(stream, { headers: SSE_HEADERS });

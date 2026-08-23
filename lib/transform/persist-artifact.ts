@@ -13,7 +13,7 @@ import { randomUUID } from "crypto";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { logger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
@@ -98,10 +98,8 @@ export async function persistTransformArtifact(
     const mimeType =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    // 1. Upload to S3
-    await uploadObject(s3Key, xlsxBuffer, mimeType);
-
-    // 2. DB record
+    // 1. DB record first, then upload; compensate by deleting the row if S3
+    // fails so a failed upload never leaves a dangling attachment record.
     await db.insert(attachment).values({
       id: outputAttachmentId,
       userId,
@@ -112,11 +110,21 @@ export async function persistTransformArtifact(
       key: s3Key,
     });
 
-    // 3. Update the run record output state
-    // Persist in run record so resume logic picks up the latest workbook
+    try {
+      await uploadObject(s3Key, xlsxBuffer, mimeType);
+    } catch (err) {
+      await db.delete(attachment).where(eq(attachment.id, outputAttachmentId));
+      throw err;
+    }
+
+    // 2. Update the run record output state
+    // Persist in run record so resume logic picks up the latest workbook.
+    // Atomic append — concurrent steps must not overwrite each other's ids.
     await db
       .update(transformRun)
-      .set({ outputAttachmentIds: [outputAttachmentId] })
+      .set({
+        outputAttachmentIds: sql`array_append(output_attachment_ids, ${outputAttachmentId})`,
+      })
       .where(eq(transformRun.id, runId));
 
     const attachmentRow: AttachmentRow = {

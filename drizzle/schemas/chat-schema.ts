@@ -7,6 +7,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
+import { transformRun } from "./transform-agent-schema";
 
 /**
  * Stores chat sessions scoped to users, optional projects, and optional assistants.
@@ -77,7 +78,9 @@ export const attachment = pgTable(
     messageId: text("message_id").references(() => message.id, {
       onDelete: "cascade",
     }),
-    transformRunId: text("transform_run_id"),
+    transformRunId: text("transform_run_id").references(() => transformRun.id, {
+      onDelete: "set null",
+    }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -90,6 +93,7 @@ export const attachment = pgTable(
   },
   (table) => [
     index("attachment_message_id_idx").on(table.messageId),
+    index("attachment_transform_run_id_idx").on(table.transformRunId),
     index("attachment_user_id_idx").on(table.userId),
     index("attachment_key_idx").on(table.key),
   ],

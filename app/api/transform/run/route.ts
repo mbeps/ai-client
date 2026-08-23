@@ -13,12 +13,18 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { SSE_HEADERS } from "@/constants/sse";
 import { encodeSSE } from "@/lib/encode-sse";
-import { initTransformRun } from "@/lib/transform/lifecycle-service";
+import {
+  initTransformRun,
+  resetStuckRuns,
+} from "@/lib/transform/lifecycle-service";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
 export const maxDuration = 300;
+
+// ponytail: hardcoded stale-run threshold; upgrade path = env/config if needed
+const STUCK_RUN_MAX_AGE_MINUTES = 10;
 
 const requestSchema = z.discriminatedUnion("type", [
   createTransformRunSchema.extend({ type: z.literal("new") }),
@@ -79,7 +85,12 @@ export async function POST(req: Request) {
         }
       };
 
+      let runId: string | undefined;
+
       try {
+        /* ── 0. Sweep stuck runs ─────────────────────────────────── */
+        await resetStuckRuns(STUCK_RUN_MAX_AGE_MINUTES);
+
         /* ── 1. Lifecycle ─────────────────────────────────────────── */
         const {
           run: runRow,
@@ -92,6 +103,7 @@ export async function POST(req: Request) {
         );
 
         emit({ type: "transform-start", runId: runRow.id });
+        runId = runRow.id;
 
         /* ── 2. Parse & sort steps ───────────────────────────────── */
         let steps: TransformStep[] = [];
@@ -199,6 +211,18 @@ export async function POST(req: Request) {
           undefined,
           session.user.id,
         );
+        // Best-effort: mark the run failed so it doesn't stay stuck in "running"
+        if (runId) {
+          try {
+            await db
+              .update(transformRun)
+              .set({
+                status: "failed",
+                errorMessage: "Transform execution failed unexpectedly",
+              })
+              .where(eq(transformRun.id, runId));
+          } catch {}
+        }
         emit({
           type: "error",
           message: "Transform execution failed unexpectedly",

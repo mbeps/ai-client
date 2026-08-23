@@ -111,6 +111,9 @@ export default function TransformRunDetailPage() {
   const [isMobile, setIsMobile] = useState(false);
   const hasStartedStream = useRef(false);
   const activeStepIndexRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -355,10 +358,15 @@ export default function TransformRunDetailPage() {
 
   const startStream = useCallback(
     (body: object) => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const { signal } = controller;
+
       fetch("/api/transform/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal,
       })
         .then((res) => {
           if (!res.body) return;
@@ -366,10 +374,14 @@ export default function TransformRunDetailPage() {
           const decoder = new TextDecoder();
 
           function read() {
+            if (signal.aborted) {
+              reader.cancel().catch(() => {});
+              return;
+            }
             reader
               .read()
               .then(({ done, value }) => {
-                if (done) return;
+                if (done || signal.aborted) return;
                 const text = decoder.decode(value, { stream: true });
                 const lines = text.split("\n");
                 for (const line of lines) {
@@ -384,12 +396,14 @@ export default function TransformRunDetailPage() {
                 read();
               })
               .catch(() => {
+                if (signal.aborted) return;
                 setStreamError("Connection error");
               });
           }
           read();
         })
         .catch(() => {
+          if (signal.aborted) return;
           setStreamError("Failed to connect to run engine");
         });
     },

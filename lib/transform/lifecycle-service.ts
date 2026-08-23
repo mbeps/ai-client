@@ -6,7 +6,7 @@
 
 import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 /** Shape returned by initTransformRun. */
@@ -44,6 +44,28 @@ export async function initTransformRun(
   }
 
   return initExistingRun(type, body, userId);
+}
+
+/**
+ * Marks runs stuck in `running` (no heartbeat for longer than maxAgeMinutes) as failed.
+ * Returns the number of rows updated.
+ */
+export async function resetStuckRuns(maxAgeMinutes: number): Promise<number> {
+  const stale = await db
+    .update(transformRun)
+    .set({ status: "failed", errorMessage: "Run timed out" })
+    .where(
+      and(
+        eq(transformRun.status, "running"),
+        lt(
+          transformRun.updatedAt,
+          sql`now() - ${`${maxAgeMinutes} minutes`}::interval`,
+        ),
+      ),
+    )
+    .returning({ id: transformRun.id });
+
+  return stale.length;
 }
 
 /* ── internal helpers ────────────────────────────────────────────────── */

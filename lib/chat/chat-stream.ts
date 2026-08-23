@@ -16,6 +16,7 @@ interface CreateChatStreamOptions {
   resolvedModelId: string;
   toolSourceMap: Record<string, string>;
   assistantMessageId?: string;
+  mcpCleanup?: () => Promise<void>;
 }
 
 /**
@@ -31,6 +32,7 @@ export function createChatStream(options: CreateChatStreamOptions) {
     resolvedModelId,
     toolSourceMap,
     assistantMessageId = crypto.randomUUID(),
+    mcpCleanup,
   } = options;
 
   return new ReadableStream({
@@ -40,6 +42,24 @@ export function createChatStream(options: CreateChatStreamOptions) {
         fullReasoning: "",
         toolCalls: [],
         toolResults: [],
+      };
+
+      let cleanupDone = false;
+      const runCleanup = async () => {
+        if (!cleanupDone) {
+          cleanupDone = true;
+          await mcpCleanup?.();
+        }
+      };
+
+      // Swallow enqueue throws (client disconnected): the stream is dead, but
+      // cleanup must still run so MCP connections are not leaked.
+      const safeEnqueue = (payload: ReturnType<typeof encodeSSE>) => {
+        try {
+          controller.enqueue(payload);
+        } catch {
+          // stream already closed/cancelled by the consumer
+        }
       };
 
       try {
@@ -60,7 +80,7 @@ export function createChatStream(options: CreateChatStreamOptions) {
             streamState.toolResults = stateUpdates.toolResults;
 
           if (ssePayload) {
-            controller.enqueue(encodeSSE(ssePayload));
+            safeEnqueue(encodeSSE(ssePayload));
           }
         }
       } catch (err: any) {
@@ -73,7 +93,8 @@ export function createChatStream(options: CreateChatStreamOptions) {
           code = RATE_LIMIT_ERROR_CODE;
         }
 
-        controller.enqueue(encodeSSE({ type: "error", message, code }));
+        safeEnqueue(encodeSSE({ type: "error", message, code }));
+        await runCleanup();
         controller.close();
         return;
       }
@@ -83,9 +104,10 @@ export function createChatStream(options: CreateChatStreamOptions) {
         streamState.toolCalls.length === 0 &&
         !streamState.fullReasoning
       ) {
-        controller.enqueue(
+        safeEnqueue(
           encodeSSE({ type: "error", message: "No response from model" }),
         );
+        await runCleanup();
         controller.close();
         return;
       }
@@ -101,16 +123,32 @@ export function createChatStream(options: CreateChatStreamOptions) {
       }
       metadataObj.model = resolvedModelId;
 
-      await persistAssistantResponse({
-        chatId,
-        assistantMessageId,
-        content: streamState.fullText,
-        parentId: userMessageId ?? undefined,
-        metadata:
-          Object.keys(metadataObj).length > 0
-            ? JSON.stringify(metadataObj)
-            : null,
-      });
+      try {
+        await persistAssistantResponse({
+          chatId,
+          assistantMessageId,
+          content: streamState.fullText,
+          parentId: userMessageId ?? undefined,
+          metadata:
+            Object.keys(metadataObj).length > 0
+              ? JSON.stringify(metadataObj)
+              : null,
+        });
+      } catch (err) {
+        logger.error("[Chat Stream] Failed to persist response", err, {
+          chatId,
+        });
+        safeEnqueue(
+          encodeSSE({
+            type: "error",
+            message: "Failed to save response",
+            code: "PERSIST_ERROR",
+          }),
+        );
+        await runCleanup();
+        controller.close();
+        return;
+      }
 
       logger.info(
         "[Chat Stream] Response completed",
@@ -123,7 +161,7 @@ export function createChatStream(options: CreateChatStreamOptions) {
         userId,
       );
 
-      controller.enqueue(
+      safeEnqueue(
         encodeSSE({
           type: "done",
           id: assistantMessageId,
@@ -132,6 +170,7 @@ export function createChatStream(options: CreateChatStreamOptions) {
         }),
       );
 
+      await runCleanup();
       controller.close();
     },
   });
