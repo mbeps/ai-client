@@ -14,7 +14,12 @@ import type { Attachment } from "@/types/attachment/attachment";
 export function buildChatFromRows(row: ChatWithMessages): Chat {
   const messages: Record<string, Message> = {};
 
-  for (const m of row.messages) {
+  // childrenIds must be populated in createdAt order regardless of row input order
+  const sorted = [...row.messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+
+  for (const m of sorted) {
     messages[m.id] = {
       id: m.id,
       role: m.role as "user" | "assistant",
@@ -27,7 +32,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     };
   }
 
-  for (const m of row.messages) {
+  for (const m of sorted) {
     if (m.parentId && messages[m.parentId]) {
       messages[m.parentId].childrenIds.push(m.id);
     }

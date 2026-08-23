@@ -1,4 +1,5 @@
 import { db } from "@/drizzle/db";
+import { env } from "@/lib/env";
 import { mcpServer } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -59,7 +60,7 @@ export async function loadTransformContext({
               id,
               agentRow.globalContext || agentRow.description || agentRow.name,
               userId,
-              3,
+              env.TRANSFORM_TOP_K,
             ),
           ),
         );

@@ -56,6 +56,10 @@ export const message = pgTable(
     parentId: text("parent_id"),
     metadata: text("metadata"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [index("message_chat_id_idx").on(table.chatId)],
 );

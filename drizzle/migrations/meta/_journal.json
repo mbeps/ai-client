@@ -239,6 +239,27 @@
       "when": 1783515313949,
       "tag": "0033_add_kb_document_status_message",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1787509993613,
+      "tag": "0034_add_message_updated_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1787510010000,
+      "tag": "0035_repair_search_vector",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787510020000,
+      "tag": "0036_embedding_dimension_configurable",
+      "breakpoints": true
     }
   ]
 }

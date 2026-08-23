@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { isBlockedIPv4 } from "./is-blocked-ipv4";
 import { isBlockedIPv6 } from "./is-blocked-ipv6";
 
@@ -19,7 +20,7 @@ export function isBlockedUrlSync(rawUrl: string): boolean {
   // If internal access is allowed via environment config, bypass guard checks
   // SECURITY: Access process.env directly instead of importing @/lib/env to prevent
   // leaking server-side environment variable validation to the client bundle.
-  if (process.env.ALLOW_PRIVATE_NETWORK_MCP === "true") {
+  if (env.ALLOW_PRIVATE_NETWORK_MCP === true) {
     return false;
   }
 

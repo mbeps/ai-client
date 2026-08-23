@@ -1,10 +1,11 @@
 import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
+import { env } from "@/lib/env";
 
 /**
  * Maximum characters to extract from documents before truncation.
  * Prevents extremely large documents from bloating AI context.
  */
-const MAX_DOCUMENT_CHARS = 50_000;
+const MAX_DOCUMENT_CHARS = env.MAX_DOCUMENT_CHARS;
 
 /**
  * Extracts text content from a PDF file using the unified extraction helper.

@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { resolveHostname } from "../dns-resolver";
 import { isBlockedUrlSync } from "./is-blocked-url-sync";
 import { isIpLiteral } from "./is-ip-literal";
@@ -35,7 +36,7 @@ export async function isBlockedUrl(rawUrl: string): Promise<boolean> {
   if (isIpLiteral(hostname)) return false;
 
   // If internal access is explicitly allowed, skip DNS resolution too
-  if (process.env.ALLOW_PRIVATE_NETWORK_MCP === "true") {
+  if (env.ALLOW_PRIVATE_NETWORK_MCP === true) {
     return false;
   }
 

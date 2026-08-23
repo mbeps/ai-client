@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
 import { db } from "@/drizzle/db";
 import { sql, eq } from "drizzle-orm";
 import { embedQuery } from "./embed-query";
@@ -31,7 +32,7 @@ export async function hybridSearch(
   kbId: string,
   query: string,
   userId: string,
-  topK = 5,
+  topK = env.RAG_TOP_K,
 ): Promise<ChunkResult[]> {
   const normalizedQuery = query.trim();
 

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth/auth";
+import { env } from "@/lib/env";
 import { headers } from "next/headers";
 import { streamText, stepCountIs } from "ai";
 import { chatRequestSchema } from "@/schemas/chat/chat";
@@ -166,7 +167,10 @@ export async function POST(req: Request) {
       model: resolved.sdkProvider.chat(resolvedModelId),
       messages: finalMessages,
       tools: isToolCallingModel && hasMcpTools ? mcpTools : undefined,
-      stopWhen: isToolCallingModel && hasMcpTools ? stepCountIs(10) : undefined,
+      stopWhen:
+        isToolCallingModel && hasMcpTools
+          ? stepCountIs(env.CHAT_MAX_STEPS)
+          : undefined,
       abortSignal: req.signal,
     });
 

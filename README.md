@@ -205,7 +205,7 @@ CLIENT_SECRET_DISCORD=your-discord-oauth-secret
   - Keep secure; never commit to version control
 - **`BETTER_AUTH_URL`** (required) — Auth callback URL (`http://localhost:3000` for dev)
 - **`NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD`** — Set to `false` to disable email/password credential authentication; defaults to `true`
-- **`NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP`** — Set to `true` to allow connecting to Localhost/Private MCP servers during development (bypasses SSRF guard)
+- **`ALLOW_PRIVATE_NETWORK_MCP`** — Set to `true` to allow connecting to Localhost/Private MCP servers during development (bypasses SSRF guard). Server-only.
 
 **Storage**
 - **`S3_ENDPOINT`** — MinIO/S3 endpoint URL (default: `http://localhost:9000`)

@@ -21,6 +21,50 @@ const envSchema = z.object({
   CLIENT_SECRET_DISCORD: z.string().optional(),
 
   // AI
+  EMBEDDING_DIMENSIONS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 2048)),
+  EMBEDDING_BATCH_SIZE: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 96)),
+  CHAT_MAX_HISTORY_TURNS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 50)),
+  RAG_TOP_K: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 5)),
+  TRANSFORM_TOP_K: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 3)),
+  MAX_DOCUMENT_CHARS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 500000)),
+  DEFAULT_CHUNK_SIZE: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 1600)),
+  DEFAULT_CHUNK_OVERLAP: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 200)),
+  CHAT_MAX_STEPS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 10)),
+  RATE_LIMIT_CHAT_RPM: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 20)),
+  RATE_LIMIT_UPLOAD_RPM: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 30)),
 
   // Email
   POSTMARK_SERVER_TOKEN: z.string().min(1),
@@ -30,6 +74,10 @@ const envSchema = z.object({
   ENCRYPTION_SECRET: z.string().min(1),
 
   // Storage
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .optional()
+    .transform((v) => v !== "false"),
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string(),
   S3_ACCESS_KEY: z.string().min(1),

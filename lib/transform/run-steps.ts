@@ -1,4 +1,5 @@
 import { db } from "@/drizzle/db";
+import { env } from "@/lib/env";
 import { transformRun, attachment } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { generateText, stepCountIs } from "ai";
@@ -190,7 +191,7 @@ export async function runTransformSteps({
           { role: "user", content: "Please execute the task." },
         ],
         tools: filteredTools,
-        stopWhen: stepCountIs(10),
+        stopWhen: stepCountIs(env.CHAT_MAX_STEPS),
         maxRetries: 1,
       });
 

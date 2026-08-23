@@ -35,7 +35,7 @@ export const transformAgent = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index("transform_agent_user_id_idx").on(table.userId)],
@@ -72,7 +72,7 @@ export const transformRun = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [

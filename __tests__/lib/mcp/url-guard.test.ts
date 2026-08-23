@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
+import { env } from "@/lib/env";
 
 // Mock DNS resolver to return controlled results, avoiding network dependency in tests
 const { mockDnsResolver } = vi.hoisted(() => ({
@@ -16,9 +17,12 @@ describe("isBlockedUrl", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    // SSRF guard reads the parsed env object; default to blocked
+    vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(false);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     process.env = originalEnv;
   });
 
@@ -211,23 +215,24 @@ describe("isBlockedUrl", () => {
   });
 
   describe("ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
+    // is-blocked-url* now reads the parsed `env` object, so stub it directly
     it("blocks localhost by default (env=false)", async () => {
-      process.env.ALLOW_PRIVATE_NETWORK_MCP = "false";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(false);
       expect(await isBlockedUrl("http://localhost")).toBe(true);
     });
 
     it("allows localhost when env is true", async () => {
-      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("http://localhost")).toBe(false);
     });
 
     it("allows private IPv4 when env is true", async () => {
-      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("http://192.168.1.1")).toBe(false);
     });
 
     it("still blocks unparseable URLs even when env is true", async () => {
-      process.env.ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("not-a-url")).toBe(true);
     });
   });

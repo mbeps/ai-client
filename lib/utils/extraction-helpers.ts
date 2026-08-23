@@ -12,7 +12,10 @@ import { extractText, getDocumentProxy } from "unpdf";
 export async function extractDocumentContent(
   input: Buffer | Uint8Array | File,
   mimeType: string,
-  limit: number = 50000,
+  // ponytail: sole caller passes env.MAX_DOCUMENT_CHARS; NaN default makes a
+  // future caller without an explicit limit fail loudly instead of silently
+  // using a stale value.
+  limit: number = Number.NaN,
 ): Promise<string> {
   let buffer: Uint8Array;
 
