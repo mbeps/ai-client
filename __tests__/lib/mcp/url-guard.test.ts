@@ -349,6 +349,27 @@ describe("isBlockedUrl", () => {
       await isBlockedUrl("http://localhost");
       expect(mockDnsResolver).not.toHaveBeenCalled();
     });
+
+    // DNS rebinding hardening (F-03/SEC-05): resolveHostname returns [] when
+    // both A and AAAA lookups fail gracefully — an empty result must block,
+    // not allow.
+    it("blocks hostname resolving to empty address list (silent DNS failure)", async () => {
+      mockDnsResolver.mockResolvedValue([]);
+      expect(await isBlockedUrl("http://empty-dns.example.com")).toBe(true);
+    });
+
+    it("blocks hostname whose resolved addresses include a private IP mixed with public IPs", async () => {
+      mockDnsResolver.mockResolvedValue(["93.184.216.34", "10.0.0.5"]);
+      expect(await isBlockedUrl("http://mixed.example.com")).toBe(true);
+    });
+
+    it("re-checks every resolved address on each call (no cached trust)", async () => {
+      mockDnsResolver
+        .mockResolvedValueOnce(["93.184.216.34"]) // first call: public → allowed
+        .mockResolvedValueOnce(["192.168.1.1"]); // second call: rotated DNS → blocked
+      expect(await isBlockedUrl("http://rotating.example.com")).toBe(false);
+      expect(await isBlockedUrl("http://rotating.example.com")).toBe(true);
+    });
   });
 });
 
