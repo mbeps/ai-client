@@ -236,9 +236,8 @@ export const searchKnowledgeBaseSchema = z.union([
     query: z
       .string()
       .trim()
+      .min(1)
       .max(500)
-      .optional()
-      .default("")
       .describe(
         "Search query to find relevant information in the knowledge base. Be specific and focused.",
       ),
@@ -247,7 +246,7 @@ export const searchKnowledgeBaseSchema = z.union([
   z
     .object({
       search_knowledge_base: z.object({
-        query: z.string().trim().max(500).optional().default(""),
+        query: z.string().trim().min(1).max(500),
       }),
     })
     .transform((val) => val.search_knowledge_base),
@@ -263,7 +262,7 @@ export const searchKnowledgeBaseSchema = z.union([
     })
     .pipe(
       z.object({
-        query: z.string().trim().max(500).optional().default(""),
+        query: z.string().trim().min(1).max(500),
       }),
     ),
 ]);

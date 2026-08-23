@@ -28,7 +28,10 @@ const envSchema = z.object({
   EMBEDDING_BATCH_SIZE: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 96)),
+    .transform((v) => (v ? parseInt(v, 10) : 96))
+    // A batch size < 1 would make the batching loop in embed-documents spin
+    // forever; clamp to a safe minimum at the trust boundary.
+    .transform((v) => Math.max(1, v)),
   CHAT_MAX_HISTORY_TURNS: z
     .string()
     .optional()

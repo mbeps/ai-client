@@ -35,6 +35,19 @@ export function splitRecursive(
         // Carry overlap from end of current into next chunk
         const overlapText = current.slice(-overlap);
         current = overlapText + sep + piece;
+        // Guard against overlap accumulation: if the carried chunk already
+        // exceeds the target, flush it instead of letting it compound.
+        if (piece.length > chunkSize || current.length >= chunkSize) {
+          chunks.push(
+            ...splitRecursive(
+              piece,
+              separators.slice(separators.indexOf(sep) + 1),
+              chunkSize,
+              overlap,
+            ),
+          );
+          current = "";
+        }
       } else {
         // piece alone exceeds chunkSize — recurse with next separator
         const sepIdx = separators.indexOf(sep);

@@ -2,6 +2,7 @@ import {
   pgTable,
   text,
   integer,
+  boolean,
   timestamp,
   index,
   uniqueIndex,
@@ -36,6 +37,7 @@ export const kbDocument = pgTable(
     statusMessage: text("status_message"),
     chunkCount: integer("chunk_count").notNull().default(0),
     tokenCount: integer("token_count").notNull().default(0),
+    truncated: boolean("truncated").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

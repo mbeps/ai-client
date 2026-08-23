@@ -135,6 +135,7 @@ export async function POST(req: Request) {
       selectedTools,
       !!isArtifactToolSelected,
       ctx.activeKbId,
+      ctx.kbIsReady,
       session.user.id,
     );
     mcpCleanup = registeredCleanup;

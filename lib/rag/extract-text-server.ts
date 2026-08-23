@@ -1,10 +1,11 @@
 import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
+import { env } from "@/lib/env";
 
-// Larger limit for ingestion (not constrained by AI context window)
-const MAX_CHARS = 500_000;
+/** Character limit for KB ingestion extraction (not constrained by AI context window). */
+export const MAX_DOCUMENT_CHARS_LIMIT = env.MAX_DOCUMENT_CHARS;
 
 /**
- * Extracts text from documents (PDF, text, Markdown) up to 500K characters for KB ingestion.
+ * Extracts text from documents (PDF, text, Markdown) up to MAX_DOCUMENT_CHARS for KB ingestion.
  *
  * @async
  * @param buffer - File content
@@ -17,5 +18,5 @@ export async function extractTextFromBuffer(
   buffer: Buffer,
   mimeType: string,
 ): Promise<string> {
-  return extractDocumentContent(buffer, mimeType, MAX_CHARS);
+  return extractDocumentContent(buffer, mimeType, MAX_DOCUMENT_CHARS_LIMIT);
 }

@@ -1,4 +1,5 @@
 import { embedMany } from "ai";
+import { env } from "@/lib/env";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
 import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
 
@@ -27,9 +28,13 @@ export async function embedDocuments(
     ? texts.map((t) => `passage: ${t}`)
     : texts;
 
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values,
-  });
+  // Embedding providers cap the number of values per request; split into
+  // batches and concatenate in order.
+  const embeddings: number[][] = [];
+  for (let i = 0; i < values.length; i += env.EMBEDDING_BATCH_SIZE) {
+    const batch = values.slice(i, i + env.EMBEDDING_BATCH_SIZE);
+    const result = await embedMany({ model: embeddingModel, values: batch });
+    embeddings.push(...result.embeddings);
+  }
   return embeddings;
 }

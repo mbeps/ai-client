@@ -2,13 +2,11 @@
 
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { knowledgebase, kbDocument, kbChunk } from "@/drizzle/schema";
+import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
-import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
-import { chunkText } from "@/lib/rag/chunk-text";
-import { embedDocuments } from "@/lib/rag/embed-documents";
+import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
 import { logger } from "@/lib/logger";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
@@ -85,54 +83,7 @@ export async function reindexKnowledgebase(kbId: string) {
 
       const buffer = Buffer.from(await s3Res.Body!.transformToByteArray());
 
-      // Extract text
-      const text = await extractTextFromBuffer(buffer, doc.mimeType);
-      if (!text.trim()) {
-        await db
-          .update(kbDocument)
-          .set({
-            status: "failed",
-            statusMessage: "Document contains no readable text.",
-            updatedAt: new Date(),
-          })
-          .where(eq(kbDocument.id, doc.id));
-        failedCount++;
-        continue;
-      }
-
-      // Chunk and embed
-      const chunks = chunkText(text);
-      const embeddings = await embedDocuments(chunks, session.user.id);
-
-      // Atomic update for the document's chunks
-      // We delete existing chunks and insert new ones
-      await db.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
-
-      if (chunks.length > 0) {
-        await db.insert(kbChunk).values(
-          chunks.map((content, i) => ({
-            id: crypto.randomUUID(),
-            documentId: doc.id,
-            kbId,
-            content,
-            embedding: embeddings[i],
-            chunkIndex: i,
-            tokenCount: Math.round(content.length / 4),
-          })),
-        );
-      }
-
-      // Update document metadata
-      await db
-        .update(kbDocument)
-        .set({
-          chunkCount: chunks.length,
-          tokenCount: chunks.reduce((s, c) => s + Math.round(c.length / 4), 0),
-          status: "ready", // Explicitly ensure it's "ready"
-          statusMessage: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(kbDocument.id, doc.id));
+      await ingestDocumentPipeline(doc, buffer, session.user.id);
 
       processedCount++;
     } catch (err) {

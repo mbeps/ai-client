@@ -7,9 +7,6 @@ import {
   searchKnowledgeBaseSchema,
 } from "@/schemas/chat/chat";
 import { PROMPTS } from "@/constants/prompts";
-import { db } from "@/drizzle/db";
-import { knowledgebase } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
 
 /**
  * MCP server parameter type for tool registration.
@@ -27,6 +24,7 @@ type McpServerParam = Parameters<typeof getMcpTools>[0][number];
  * @param selectedTools - Optional list of tool IDs to include (e.g., "server:tool:name")
  * @param isArtifactToolSelected - Whether to register the manage_artifact tool
  * @param activeKbId - Knowledge base ID if available (for search_knowledgebase tool)
+ * @param kbIsReady - Whether the active knowledge base has finished indexing
  * @param userId - Authenticated user ID
  * @returns Object with mcpTools dict, toolSourceMap (tool -> server name), and cleanup function
  * @see {@link lib/chat/build-system-prompt.ts} for system prompt setup
@@ -37,6 +35,7 @@ export async function registerMcpTools(
   selectedTools: string[] | undefined,
   isArtifactToolSelected: boolean,
   activeKbId: string | null,
+  kbIsReady: boolean,
   userId: string,
 ): Promise<{
   mcpTools: Record<string, any>;
@@ -143,56 +142,47 @@ export async function registerMcpTools(
     });
   }
 
-  if (activeKbId) {
+  if (activeKbId && kbIsReady) {
     const kbId = activeKbId;
-    const [kb] = await db
-      .select({ indexStatus: knowledgebase.indexStatus })
-      .from(knowledgebase)
-      .where(eq(knowledgebase.id, kbId))
-      .limit(1);
+    toolSourceMap["search_knowledge_base"] = "System";
+    mcpTools["search_knowledge_base"] = tool({
+      description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
+      parameters: searchKnowledgeBaseSchema,
+      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
+      execute: async (args: any) => {
+        const { query } = args;
+        const normalizedQuery = (query || "").trim();
 
-    if (kb && kb.indexStatus === "ready") {
-      toolSourceMap["search_knowledge_base"] = "System";
-      mcpTools["search_knowledge_base"] = tool({
-        description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
-        parameters: searchKnowledgeBaseSchema,
-        // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-        execute: async (args: any) => {
-          const { query } = args;
-          const normalizedQuery = (query || "").trim();
-
-          if (!normalizedQuery) {
-            return {
-              success: false,
-              error:
-                "Missing mandatory 'query' parameter. Search requires a specific keyword or phrase.",
-            };
-          }
-
-          const results = await hybridSearch(kbId, normalizedQuery, userId, 5);
-
-          if (results.length === 0) {
-            return {
-              success: true,
-              results: [],
-              resultCount: 0,
-              message: `No results found for '${normalizedQuery}'. Try using different keywords or broader search terms.`,
-            };
-          }
-
+        if (!normalizedQuery) {
           return {
-            results: results.map((r) => ({
-              content: r.content,
-              relevanceScore: r.score,
-              documentId: r.documentId,
-              documentName: r.documentName,
-              s3Key: r.s3Key,
-            })),
-            resultCount: results.length,
+            success: false,
+            error:
+              "Missing mandatory 'query' parameter. Search requires a specific keyword or phrase.",
           };
-        },
-      });
-    }
+        }
+
+        const results = await hybridSearch(kbId, normalizedQuery, userId, 5);
+
+        if (results.length === 0) {
+          return {
+            success: true,
+            results: [],
+            resultCount: 0,
+            message: `No results found for '${normalizedQuery}'. Try using different keywords or broader search terms.`,
+          };
+        }
+
+        return {
+          results: results.map((r) => ({
+            content: r.content,
+            relevanceScore: r.score,
+            documentId: r.documentId,
+            documentName: r.documentName,
+          })),
+          resultCount: results.length,
+        };
+      },
+    });
   }
 
   return { mcpTools, toolSourceMap, mcpCleanup };

@@ -10,6 +10,7 @@ import { ingestDocument } from "@/lib/rag/ingest";
 import {
   RagExtractionEmptyError,
   ProviderNotConfiguredError,
+  RateLimitError,
 } from "@/constants/errors";
 
 const ingestKbDocumentSchema = z.object({
@@ -61,6 +62,10 @@ export async function ingestKbDocument(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { success: false, error: "Invalid input data" };
+    }
+
+    if (error instanceof RateLimitError) {
+      return { success: false, error: error.message };
     }
 
     if (

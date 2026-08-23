@@ -267,6 +267,13 @@
       "when": 1787514150619,
       "tag": "0037_add_attachment_transform_run_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1787514150620,
+      "tag": "0038_add_kb_document_truncated",
+      "breakpoints": true
     }
   ]
 }

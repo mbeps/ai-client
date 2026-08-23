@@ -105,6 +105,7 @@ export async function loadTransformContext({
     undefined,
     effectiveArtifactToolSelected,
     null,
+    false,
     userId,
   );
 
