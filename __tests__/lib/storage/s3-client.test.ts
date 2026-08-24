@@ -52,7 +52,6 @@ import { deleteObject } from "@/lib/storage/delete-object";
 import { deleteObjects } from "@/lib/storage/delete-objects";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { downloadObject } from "@/lib/storage/download-object";
-import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -234,8 +233,14 @@ describe("downloadObject", () => {
 });
 
 describe("ensureBucket", () => {
-  beforeEach(() => {
+  // Reset module cache before each test so bucketVerified starts false
+  let ensureBucket: () => Promise<void>;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
+    const mod = await import("@/lib/storage/ensure-bucket");
+    ensureBucket = mod.ensureBucket;
   });
 
   it("does nothing when bucket already exists (HeadBucket succeeds)", async () => {

@@ -1,12 +1,12 @@
 "use server";
 
-import { basename } from "path";
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { attachment, message, chat } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import { z } from "zod";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -89,7 +89,7 @@ export async function uploadAttachment(formData: FormData) {
   // Using the client's ID keeps the store and DB in sync without a separate lookup.
   const candidateId = z.string().uuid().safeParse(clientAttachmentId);
   const id = candidateId.success ? candidateId.data : crypto.randomUUID();
-  const safeName = basename(file.name);
+  const safeName = sanitiseFilename(file.name);
   const key = `attachments/${session.user.id}/${id}-${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 

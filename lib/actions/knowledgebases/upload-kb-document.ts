@@ -6,6 +6,7 @@ import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -15,20 +16,6 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
-
-/**
- * Sanitizes filename for S3 storage: removes non-alphanumeric chars, collapses underscores, truncates to 200 chars.
- *
- * @param name - Original filename
- * @returns Sanitized filename safe for S3
- * @author Maruf Bepary
- */
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_{2,}/g, "_")
-    .slice(0, 200);
-}
 
 /**
  * Validates file (type, size), uploads to S3, creates pending document, marks KB stale.
@@ -75,7 +62,7 @@ export async function uploadKbDocument(
   }
 
   const documentId = crypto.randomUUID();
-  const safeName = sanitizeFilename(file.name);
+  const safeName = sanitiseFilename(file.name);
   const s3Key = `kb/${kbId}/${documentId}/${safeName}`;
 
   await ensureBucket();

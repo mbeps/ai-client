@@ -12,6 +12,7 @@ import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/acti
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 
 import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
+import { ALLOWED_SPREADSHEET_TYPES } from "@/constants/attachments";
 import type { AppState } from "@/types/app/app-state";
 import type { Message } from "@/types/message/message";
 import type { Chat } from "@/types/chat/chat";
@@ -266,9 +267,14 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         .filter((a) => a.messageId === m.id)
         .map((att) => {
           const isImage = att.mimeType.startsWith("image/");
+          const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(att.mimeType);
           return {
             id: att.id,
-            type: isImage ? "image" : "document",
+            type: isImage
+              ? "image"
+              : isSpreadsheet
+                ? "spreadsheet"
+                : "document",
             name: att.name,
             mimeType: att.mimeType,
             sizeBytes: att.size,

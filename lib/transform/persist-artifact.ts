@@ -15,6 +15,7 @@ import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { uploadObject } from "@/lib/storage/upload-object";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import { logger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 
@@ -91,7 +92,9 @@ export async function persistTransformArtifact(
       outputName = `step-${input.stepIndex + 1}-output.xlsx`;
     } else {
       xlsxBuffer = Buffer.from(input.fileContent, "base64");
-      outputName = input.filename || `step-${input.stepIndex + 1}-output.xlsx`;
+      outputName = input.filename
+        ? sanitiseFilename(input.filename)
+        : `step-${input.stepIndex + 1}-output.xlsx`;
     }
 
     const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
