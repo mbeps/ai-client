@@ -1,52 +1,41 @@
 import { type ModelMessage } from "ai";
-import { type ChatMessage } from "@/schemas/chat/chat";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
-import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { type ThreadMessage } from "@/lib/chat/load-thread-from-db";
 
 interface MessageOrchestrationOptions {
-  history: ChatMessage[];
-  globalSystemPrompt?: string | null;
-  projectPrompt?: string | null;
-  assistantPrompt?: string | null;
+  history: ThreadMessage[];
   kbIsReady?: boolean;
-  attachmentUrls?: { name: string; url: string }[];
 }
 
 /**
  * Orchestrates the final set of messages to be sent to the AI model.
- * Combines system prompts (global, project, assistant, KB) and processed history.
+ * Converts the thread history into model messages and truncates to the most
+ * recent `env.CHAT_MAX_HISTORY_TURNS` entries (the last message is always
+ * kept, with a warning logged on truncation). The system prompt is NOT
+ * included here — the route passes it separately via `streamText({ system })`.
  */
 export function prepareChatMessages(
   options: MessageOrchestrationOptions,
 ): ModelMessage[] {
-  const {
-    history,
-    globalSystemPrompt,
-    projectPrompt,
-    assistantPrompt,
-    kbIsReady,
-    attachmentUrls,
-  } = options;
+  const { history, kbIsReady } = options;
+
+  // kbIsReady is accepted for call-site symmetry with the route's context —
+  // the KB instruction now lives in the system prompt (buildSystemPrompt).
+  void kbIsReady;
 
   const processedMessages = assembleModelMessages(history);
 
-  const systemMessages = buildSystemPrompt(
-    globalSystemPrompt,
-    projectPrompt,
-    assistantPrompt,
-    !!kbIsReady,
-    attachmentUrls,
-  );
-
-  const finalMessages: ModelMessage[] = [
-    ...systemMessages,
-    ...processedMessages,
-  ];
-
-  if (finalMessages.length === 0) {
-    finalMessages.push({
-      role: "system",
-      content: "You are a helpful AI assistant.",
+  // ponytail: "turns" == assembled model messages; a token-weighted budget would
+  // be smarter. Upgrade path: tokenizer-based trimming per provider.
+  const limit = Math.max(1, env.CHAT_MAX_HISTORY_TURNS);
+  let finalMessages = processedMessages;
+  if (processedMessages.length > limit) {
+    finalMessages = processedMessages.slice(-limit);
+    logger.warn("[Chat API] History truncated", {
+      originalCount: processedMessages.length,
+      keptCount: limit,
     });
   }
 

@@ -1,19 +1,20 @@
-import type { ModelMessage } from "ai";
 import { PROMPTS } from "@/constants/prompts";
 
 /**
- * Builds the system prompt message for a chat request by composing multiple prompt layers.
+ * Builds the system prompt for a chat request by composing multiple prompt layers.
  * Merges global app prompts, project-level prompts, assistant-specific prompts,
  * and adds knowledge base / attachment instructions as needed.
- * All parts are joined with double newlines for clarity.
- * Defaults to generic helpful assistant prompt if no custom prompts provided.
+ * Non-empty layers are joined with `\n\n---\n\n` delimiters so the model can
+ * distinguish prompt sources. Defaults to a generic helpful assistant prompt if
+ * no custom prompts are provided. Returns a plain string — the route passes it
+ * to `streamText({ system })` (AI SDK native system parameter).
  *
  * @param globalPrompt - Global application system prompt (optional)
  * @param projectPrompt - Project-specific system prompt (optional)
  * @param assistantPrompt - Assistant-specific system prompt (optional)
  * @param hasKnowledgeBase - Whether knowledge base tool is available
  * @param attachmentUrls - Presigned URLs for spreadsheet files to load via MCP
- * @returns Array with single system message for model
+ * @returns Composed system prompt string
  * @see {@link lib/chat/register-mcp-tools.ts} for MCP tool registration
  * @author Maruf Bepary
  */
@@ -23,7 +24,7 @@ export function buildSystemPrompt(
   assistantPrompt: string | null | undefined,
   hasKnowledgeBase: boolean,
   attachmentUrls?: { name: string; url: string }[],
-): ModelMessage[] {
+): string {
   const systemParts: string[] = [];
 
   if (globalPrompt?.trim()) {
@@ -53,5 +54,5 @@ export function buildSystemPrompt(
     systemParts.push("You are a helpful AI assistant.");
   }
 
-  return [{ role: "system", content: systemParts.join("\n\n") }];
+  return systemParts.join("\n\n---\n\n");
 }

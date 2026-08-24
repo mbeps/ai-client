@@ -2,6 +2,9 @@ import {
   ProviderNotConfiguredError,
   VisionNotSupportedError,
   ToolsNotSupportedError,
+  ContextWindowExceededError,
+  ContentFilterError,
+  InvalidApiKeyError,
   RATE_LIMIT_ERROR_CODE,
 } from "@/constants/errors";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
@@ -10,17 +13,24 @@ import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-mess
 /**
  * Maps known application errors to structured HTTP error responses.
  *
- * - `ProviderNotConfiguredError` → 412 Precondition Failed
- * - `VisionNotSupportedError`   → 400 Bad Request
- * - `ToolsNotSupportedError`    → 400 Bad Request
- * - Unknown errors              → `null` (caller should log and return 400)
+ * - `ProviderNotConfiguredError`       → 412 Precondition Failed
+ * - `VisionNotSupportedError`          → 400 Bad Request
+ * - `ToolsNotSupportedError`           → 400 Bad Request
+ * - `ContextWindowExceededError`       → 400 Bad Request
+ * - `ContentFilterError`               → 400 Bad Request
+ * - `InvalidApiKeyError`               → 401 Unauthorized
+ * - Rate limit errors                  → 429 Too Many Requests
+ * - Unknown errors                     → `null` (caller should log and return 500)
  * @author Maruf Bepary
  */
 export function buildProviderErrorResponse(error: unknown): Response | null {
   if (
     error instanceof ProviderNotConfiguredError ||
     error instanceof VisionNotSupportedError ||
-    error instanceof ToolsNotSupportedError
+    error instanceof ToolsNotSupportedError ||
+    error instanceof ContextWindowExceededError ||
+    error instanceof ContentFilterError ||
+    error instanceof InvalidApiKeyError
   ) {
     return Response.json(
       {
@@ -28,7 +38,10 @@ export function buildProviderErrorResponse(error: unknown): Response | null {
         code: error.code,
       },
       {
-        status: error instanceof ProviderNotConfiguredError ? 412 : 400,
+        status:
+          error instanceof ProviderNotConfiguredError
+            ? 412
+            : ((error as { status?: number }).status ?? 400),
       },
     );
   }

@@ -23,6 +23,16 @@ export const MODEL_MALFORMED_ID_ERROR_CODE = "MODEL_MALFORMED_ID" as const;
 /** Error code for rate limiting (HTTP 429). */
 export const RATE_LIMIT_ERROR_CODE = "RATE_LIMIT" as const;
 
+/** Error code for provider context window exceeded. */
+export const CONTEXT_WINDOW_EXCEEDED_ERROR_CODE =
+  "CONTEXT_WINDOW_EXCEEDED" as const;
+
+/** Error code for provider content filter rejection. */
+export const CONTENT_FILTER_ERROR_CODE = "CONTENT_FILTER" as const;
+
+/** Error code for invalid provider API key. */
+export const INVALID_API_KEY_ERROR_CODE = "INVALID_API_KEY" as const;
+
 /** Error code for unauthorized access or expired session. */
 export const UNAUTHORIZED_ERROR_CODE = "UNAUTHORIZED" as const;
 
@@ -62,6 +72,60 @@ export class ProviderNotConfiguredError extends Error {
   constructor(message = "No AI provider/model configured for this request") {
     super(message);
     this.name = "ProviderNotConfiguredError";
+  }
+}
+
+/**
+ * Error thrown when the request exceeds the model's context window.
+ * Mapped from provider errors mentioning context length limits (HTTP 400).
+ *
+ * @author Maruf Bepary
+ */
+export class ContextWindowExceededError extends Error {
+  readonly code = CONTEXT_WINDOW_EXCEEDED_ERROR_CODE;
+  readonly status = 400;
+
+  constructor(
+    message = "This conversation is too long for the selected model. Start a new chat or use a model with a larger context window.",
+  ) {
+    super(message);
+    this.name = "ContextWindowExceededError";
+  }
+}
+
+/**
+ * Error thrown when the provider's content filter blocks the request or response.
+ * Mapped from provider errors mentioning content filtering (HTTP 400).
+ *
+ * @author Maruf Bepary
+ */
+export class ContentFilterError extends Error {
+  readonly code = CONTENT_FILTER_ERROR_CODE;
+  readonly status = 400;
+
+  constructor(
+    message = "The AI provider blocked this content. Try rephrasing your message.",
+  ) {
+    super(message);
+    this.name = "ContentFilterError";
+  }
+}
+
+/**
+ * Error thrown when the configured provider API key is invalid or rejected.
+ * Mapped from provider errors about invalid credentials (HTTP 401).
+ *
+ * @author Maruf Bepary
+ */
+export class InvalidApiKeyError extends Error {
+  readonly code = INVALID_API_KEY_ERROR_CODE;
+  readonly status = 401;
+
+  constructor(
+    message = "The API key for this provider is invalid. Please update it in Settings > App.",
+  ) {
+    super(message);
+    this.name = "InvalidApiKeyError";
   }
 }
 

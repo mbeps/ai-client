@@ -8,7 +8,6 @@ import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { logger } from "@/lib/logger";
-import { SSE_HEADERS } from "@/constants/sse";
 import {
   VisionNotSupportedError,
   ToolsNotSupportedError,
@@ -19,49 +18,46 @@ import {
 } from "@/lib/chat/load-chat-context";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
-import { getAttachmentUrls } from "@/lib/chat/attachments/get-attachment-urls";
+import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
-import { createChatStream } from "@/lib/chat/chat-stream";
+import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { createChatStream, type FinishRef } from "@/lib/chat/chat-stream";
 
 export const maxDuration = 60;
 
 /**
- * Streams AI chat responses with model context, system prompts, MCP tool integration, and message persistence.
- * Authenticates via Better Auth session, validates request schema, loads chat context (project, assistant,
- * knowledgebases), registers MCP tools, and streams text via Server-Sent Events (SSE) using Vercel AI SDK.
+ * Streams AI chat responses with server-side history reconstruction, model
+ * context, system prompts, MCP tool integration, and message persistence.
+ *
+ * The client sends only identifiers (`chatId`, `userMessageId`, selections) —
+ * never message history. The server reconstructs the active branch from the
+ * database (trust boundary: clients cannot inject `role:"system"` messages or
+ * unowned attachment keys) and streams via an AI SDK UI message stream.
  *
  * **HTTP Method:** POST
  *
- * **Request Format:** JSON with chatId, userMessageId, messages, model, selectedServerIds, selectedTools,
- * selectedAssistantId, selectedKbIds
+ * **Request Format:** JSON with chatId, userMessageId, model?, selectedServerIds?,
+ * selectedTools?, selectedAssistantId?, selectedKbIds?
  *
- * **Response Format:** Server-Sent Events (SSE) stream with chunk updates and final assistant message persisted to DB
+ * **Response Format:** AI SDK UI message stream (start chunk carries the
+ * server-assigned assistant message id; assistant response persisted to DB on
+ * stream finish)
  *
  * **Authentication:** Required (Better Auth session)
  *
- * **Real-time Pattern:** Streaming with per-chunk SSE encoding and async DB persistence
- *
- * **Integration Points:** Better Auth, Vercel AI SDK `streamText`, MCP tool registration, vision/tools capability
- * guards, message assembly, system prompt building, artifact management
- *
  * @author Maruf Bepary
- * @see {@link lib/chat/load-chat-context} for database context loading
- * @see {@link lib/chat/register-mcp-tools} for MCP tool registration
- * @see {@link lib/chat/stream-chunk-handler} for per-chunk SSE encoding
- * @see {@link lib/chat/persist-response} for assistant message persistence
+ * @see {@link lib/chat/load-thread-from-db} for server-side history reconstruction
+ * @see {@link lib/chat/chat-stream} for UI message stream wrapping
  */
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Unauthorized", { status: 401 });
 
-  // Fetch user settings (global system prompt)
-  const userSettings = await getUserSettings().catch(() => null);
-  const globalSystemPrompt = userSettings?.globalSystemPrompt;
-
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
-    logger.error(
+    logger.warn(
       "[Chat API] Invalid request:",
       JSON.stringify(parsed.error.format(), null, 2),
     );
@@ -74,7 +70,6 @@ export async function POST(req: Request) {
   const {
     chatId,
     userMessageId,
-    messages: history,
     model: requestedModel,
     selectedServerIds,
     selectedTools,
@@ -85,15 +80,22 @@ export async function POST(req: Request) {
   // Ensure model is undefined if empty or whitespace-only
   const model =
     requestedModel && requestedModel.trim() !== "" ? requestedModel : undefined;
+  const userId = session.user.id;
 
   let mcpCleanup: () => Promise<void> = async () => {};
 
   try {
-    // --- Resolve AI provider & model ---
-    const resolved = model
-      ? await resolveProvider(session.user.id, model)
-      : await resolveDefaultChatProvider(session.user.id);
+    // Independent I/O — run concurrently (ARCH-02)
+    const [userSettings, resolved, ctx, thread] = await Promise.all([
+      getUserSettings().catch(() => null),
+      model
+        ? resolveProvider(userId, model)
+        : resolveDefaultChatProvider(userId),
+      loadChatContext(chatId, userId, selectedServerIds, selectedKbIds, selectedAssistantId),
+      loadThreadFromDb(chatId, userMessageId, userId),
+    ]);
 
+    const globalSystemPrompt = userSettings?.globalSystemPrompt;
     const resolvedModelRow = {
       capVision: resolved.modelRow.capVision,
       capTools: resolved.modelRow.capTools,
@@ -102,33 +104,17 @@ export async function POST(req: Request) {
 
     logger.info(
       "[Chat API] Request initialized",
-      {
-        chatId,
-        userMessageId,
-        model,
-        selectedServerIds,
-        selectedAssistantId,
-      },
-      session.user.id,
+      { chatId, userMessageId, model, selectedServerIds, selectedAssistantId },
+      userId,
     );
 
-    // --- Load database context (parallelised queries) ---
-    const ctx = await loadChatContext(
-      chatId,
-      session.user.id,
-      selectedServerIds,
-      selectedKbIds,
-      selectedAssistantId,
-    );
-
-    // --- Register MCP tools ---
+    // --- Register MCP tools (depends on ctx) ---
     const isArtifactToolSelected = selectedTools?.includes(
       "internal:tool:manage_artifact",
     );
 
     const {
       mcpTools,
-      toolSourceMap,
       mcpCleanup: registeredCleanup,
     } = await registerMcpTools(
       ctx.servers as any,
@@ -136,27 +122,25 @@ export async function POST(req: Request) {
       !!isArtifactToolSelected,
       ctx.activeKbId,
       ctx.kbIsReady,
-      session.user.id,
+      userId,
     );
     mcpCleanup = registeredCleanup;
 
     const hasMcpTools = Object.keys(mcpTools).length > 0;
 
-    // --- Verify model capabilities ---
-    if (!checkVisionSupport(history, !!resolvedModelRow?.capVision)) {
+    // --- Verify model capabilities against the DB-reconstructed thread ---
+    if (!checkVisionSupport(thread as any, !!resolvedModelRow?.capVision)) {
       throw new VisionNotSupportedError();
     }
 
-    // --- Prepare messages ---
-    const attachmentUrls = await getAttachmentUrls(history, session.user.id);
-    const finalMessages = prepareChatMessages({
-      history,
-      globalSystemPrompt,
-      projectPrompt: ctx.projectRow?.globalPrompt,
-      assistantPrompt: ctx.assistantRow?.prompt,
-      kbIsReady: ctx.kbIsReady,
-      attachmentUrls,
-    });
+    // Spreadsheet attachments need presigned URLs in the system prompt so the
+    // MCP file bridge can fetch them.
+    const spreadsheetUrls = thread
+      .flatMap((m) => m.attachments ?? [])
+      .filter((a) => a.type === "spreadsheet")
+      .map((a) => ({ name: a.name, url: a.url }));
+
+    const finalMessages = prepareChatMessages({ history: thread });
 
     const isToolCallingModel = !!resolvedModelRow?.capTools;
     if (!isToolCallingModel && hasMcpTools) {
@@ -164,8 +148,17 @@ export async function POST(req: Request) {
     }
 
     // --- Stream AI response ---
+    const finishRef: FinishRef = { current: null };
     const result = streamText({
       model: resolved.sdkProvider.chat(resolvedModelId),
+      // System prompt passed natively — never spoofable via messages[]
+      system: buildSystemPrompt(
+        globalSystemPrompt,
+        ctx.projectRow?.globalPrompt,
+        ctx.assistantRow?.prompt,
+        ctx.kbIsReady,
+        spreadsheetUrls,
+      ),
       messages: finalMessages,
       tools: isToolCallingModel && hasMcpTools ? mcpTools : undefined,
       stopWhen:
@@ -173,45 +166,64 @@ export async function POST(req: Request) {
           ? stepCountIs(env.CHAT_MAX_STEPS)
           : undefined,
       abortSignal: req.signal,
+      onFinish: (finish) => {
+        // SDK v6 may deliver reasoning as parts — normalise to a string
+        const rawReasoning = finish.reasoning;
+        const reasoning =
+          typeof rawReasoning === "string"
+            ? rawReasoning
+            : Array.isArray(rawReasoning)
+              ? rawReasoning.map((p) => p.text ?? "").join("")
+              : "";
+        finishRef.current = {
+          text: finish.text,
+          reasoning,
+          toolCalls: (finish.toolCalls as unknown[]) ?? [],
+          toolResults: (finish.toolResults as unknown[]) ?? [],
+          finishReason: finish.finishReason,
+        };
+      },
     });
 
-    const stream = createChatStream({
+    return createChatStream({
       result,
       chatId,
-      userId: session.user.id,
+      userId,
       userMessageId,
       resolvedModelId,
-      toolSourceMap,
       mcpCleanup,
+      finishRef,
+      abortSignal: req.signal,
     });
-
-    return new Response(stream, { headers: SSE_HEADERS });
   } catch (error: unknown) {
     await mcpCleanup();
 
-    // Known application errors
+    // Known application errors → structured responses
     const knownResponse = buildProviderErrorResponse(error);
     if (knownResponse) return knownResponse;
 
-    // Chat not found
+    // Duck-type raw provider errors (context window, content filter, API key)
+    // into classified classes so users get actionable statuses, not a 500.
+    const classified = classifyProviderError(error);
+    const classifiedResponse = classified
+      ? buildProviderErrorResponse(classified)
+      : null;
+    if (classifiedResponse) return classifiedResponse;
+
     if (error instanceof ChatNotFoundError) {
       return new Response("Not Found", { status: 404 });
     }
 
-    // Generic / unexpected errors
-    const typedError =
-      error instanceof Error ? error : new Error(String(error));
+    // Unclassified errors are server faults: log everything, expose nothing.
     logger.error(
-      "[Chat API] Request setup failed",
-      typedError,
+      "[Chat API] Request failed",
+      error instanceof Error ? error : new Error(String(error)),
       { chatId },
-      session.user.id,
+      userId,
     );
     return Response.json(
-      {
-        error: typedError.message || "An error occurred during chat setup.",
-      },
-      { status: 400 },
+      { error: "An internal error occurred." },
+      { status: 500 },
     );
   }
 }

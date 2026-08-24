@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockHandleStreamChunk = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/chat/stream-chunk-handler", () => ({
-  handleStreamChunk: mockHandleStreamChunk,
+// ── mock the ai module: capture createUIMessageStream config ─────────────────
+const uiStreamCaptures = vi.hoisted(() => ({
+  config: null as any,
+  responseInit: null as any,
+}));
+
+vi.mock("ai", () => ({
+  createUIMessageStream: (config: any) => {
+    uiStreamCaptures.config = config;
+    return `fake-ui-stream` as any;
+  },
+  createUIMessageStreamResponse: (init: any) => {
+    uiStreamCaptures.responseInit = init;
+    return new Response("ui-stream-response") as any;
+  },
 }));
 
 const mockPersist = vi.hoisted(() => vi.fn());
@@ -16,91 +28,162 @@ vi.mock("@/lib/logger", () => ({
 
 import { createChatStream } from "@/lib/chat/chat-stream";
 
-function fakeResult(chunks: unknown[], errorAt?: number) {
-  return {
-    fullStream: {
-      async *[Symbol.asyncIterator]() {
-        for (let i = 0; i < chunks.length; i++) {
-          if (errorAt === i) throw new Error("boom");
-          yield chunks[i];
-        }
-        if (errorAt === chunks.length) throw new Error("boom");
-      },
-    },
-  } as any;
-}
-
-async function readSSE(stream: ReadableStream): Promise<string[]> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    text += decoder.decode(value, { stream: true });
-  }
-  return text
-    .split("\n\n")
-    .filter(Boolean)
-    .map((block) => block.replace(/^data: /, ""));
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockHandleStreamChunk.mockReturnValue({
-    ssePayload: new TextEncoder().encode("x"),
-    stateUpdates: { fullText: "hello" },
-  });
-});
-
 function baseOptions(overrides: Record<string, unknown> = {}) {
   return {
-    result: fakeResult([{ type: "text-delta" }, { type: "text-delta" }]),
+    result: {} as any,
     chatId: "chat-1",
     userId: "user-1",
-    userMessageId: null,
+    userMessageId: "user-msg-1",
     resolvedModelId: "gpt-test",
     toolSourceMap: {},
+    finishRef: { current: null } as { current: any },
     ...overrides,
   };
 }
 
-describe("createChatStream mcpCleanup + persist error handling", () => {
-  it("success: mcpCleanup called exactly once; done event present", async () => {
-    const mcpCleanup = vi.fn().mockResolvedValue(undefined);
-    const events = await readSSE(
-      createChatStream(baseOptions({ mcpCleanup })) as ReadableStream,
-    );
+function fakeWriter() {
+  return { write: vi.fn(), merge: vi.fn() };
+}
 
-    expect(mcpCleanup).toHaveBeenCalledTimes(1);
-    const parsed = events.map((e) => JSON.parse(e));
-    expect(parsed.at(-1)?.type).toBe("done");
+beforeEach(() => {
+  vi.clearAllMocks();
+  uiStreamCaptures.config = null;
+  uiStreamCaptures.responseInit = null;
+  mockPersist.mockResolvedValue(undefined);
+});
+
+describe("createChatStream (UI message stream)", () => {
+  it("returns a Response built via createUIMessageStreamResponse with the UI stream", async () => {
+    const response = createChatStream(baseOptions());
+
+    expect(uiStreamCaptures.config).toBeTruthy();
+    expect(uiStreamCaptures.responseInit.stream).toBe("fake-ui-stream");
+    expect(response).toBeInstanceOf(Response);
   });
 
-  it("stream error mid-loop: mcpCleanup still called once; error SSE emitted", async () => {
-    const mcpCleanup = vi.fn().mockResolvedValue(undefined);
-    const events = await readSSE(
-      createChatStream(
-        baseOptions({ mcpCleanup, result: fakeResult([{}], 1) }),
-      ) as ReadableStream,
-    );
+  it("execute writes start chunk and merges result.toUIMessageStream()", async () => {
+    const toUIMessageStream = vi.fn().mockReturnValue("inner-stream");
+    const writer = fakeWriter();
 
-    expect(mcpCleanup).toHaveBeenCalledTimes(1);
-    const parsed = events.map((e) => JSON.parse(e));
-    expect(parsed.some((e) => e.type === "error")).toBe(true);
-    expect(parsed.some((e) => e.type === "done")).toBe(false);
+    createChatStream(
+      baseOptions({
+        result: { toUIMessageStream } as any,
+        assistantMessageId: "assistant-1",
+      }),
+    );
+    await uiStreamCaptures.config.execute({ writer });
+
+    expect(writer.write).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "start", messageId: "assistant-1" }),
+    );
+    expect(writer.merge).toHaveBeenCalledWith("inner-stream");
   });
 
-  it("persistAssistantResponse rejects: PERSIST_ERROR emitted, no done, cleanup called", async () => {
+  it("generates an assistantMessageId when none is provided", async () => {
+    const writer = fakeWriter();
+    createChatStream(
+      baseOptions({ result: { toUIMessageStream: vi.fn() } as any }),
+    );
+    await uiStreamCaptures.config.execute({ writer });
+
+    const startCall = writer.write.mock.calls[0][0];
+    expect(startCall.messageId).toBeTruthy();
+  });
+
+  it("onFinish persists accumulated content from finishRef with metadata", async () => {
+    const finishRef = {
+      current: {
+        text: "final answer",
+        reasoning: "thinking...",
+        toolCalls: [{ toolCallId: "t1", toolName: "search", args: {} }],
+        toolResults: [{ toolCallId: "t1", toolName: "search", result: [] }],
+        finishReason: "stop",
+      },
+    };
+
+    createChatStream(baseOptions({ finishRef }));
+    await uiStreamCaptures.config.onFinish({} as any);
+
+    expect(mockPersist).toHaveBeenCalledTimes(1);
+    const call = mockPersist.mock.calls[0][0];
+    expect(call.chatId).toBe("chat-1");
+    expect(call.content).toBe("final answer");
+    expect(call.parentId).toBe("user-msg-1");
+    const metadata = JSON.parse(call.metadata);
+    expect(metadata.model).toBe("gpt-test");
+    expect(metadata.reasoning).toBe("thinking...");
+    expect(metadata.toolCalls).toHaveLength(1);
+  });
+
+  it("onFinish persists only the model in metadata when there is no reasoning or tools", async () => {
+    const finishRef = {
+      current: {
+        text: "plain answer",
+        reasoning: "",
+        toolCalls: [],
+        toolResults: [],
+        finishReason: "stop",
+      },
+    };
+    createChatStream(baseOptions({ finishRef }));
+    await uiStreamCaptures.config.onFinish({} as any);
+
+    expect(mockPersist).toHaveBeenCalledTimes(1);
+    // Model is always persisted — the UI displays it on assistant messages.
+    expect(JSON.parse(mockPersist.mock.calls[0][0].metadata)).toEqual({
+      model: "gpt-test",
+    });
+  });
+
+  it("onFinish skips persistence when finishRef holds no data", async () => {
+    createChatStream(baseOptions());
+    await uiStreamCaptures.config.onFinish({} as any);
+
+    expect(mockPersist).not.toHaveBeenCalled();
+  });
+
+  it("onFinish swallows persist failures (best-effort)", async () => {
     mockPersist.mockRejectedValue(new Error("db down"));
+    const finishRef = {
+      current: {
+        text: "answer",
+        reasoning: "",
+        toolCalls: [],
+        toolResults: [],
+        finishReason: "stop",
+      },
+    };
+    createChatStream(baseOptions({ finishRef }));
+
+    await expect(
+      uiStreamCaptures.config.onFinish({} as any),
+    ).resolves.toBeUndefined();
+  });
+
+  it("cleanup runs exactly once across abort + onError + onFinish", async () => {
     const mcpCleanup = vi.fn().mockResolvedValue(undefined);
-    const events = await readSSE(
-      createChatStream(baseOptions({ mcpCleanup })) as ReadableStream,
+    const controller = new AbortController();
+
+    createChatStream(
+      baseOptions({ mcpCleanup, abortSignal: controller.signal }),
     );
 
-    const parsed = events.map((e) => JSON.parse(e));
-    expect(parsed.some((e) => e.code === "PERSIST_ERROR")).toBe(true);
-    expect(parsed.some((e) => e.type === "done")).toBe(false);
+    // All three exit paths fire
+    controller.abort();
+    await uiStreamCaptures.config.onError(new Error("boom"));
+    await uiStreamCaptures.config.onFinish({} as any);
+    // Give the abort listener a tick
+    await new Promise((r) => setTimeout(r, 0));
+
     expect(mcpCleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("onError returns a generic message for unknown errors (no raw leak)", async () => {
+    createChatStream(baseOptions());
+    const message = uiStreamCaptures.config.onError(new Error("secret db dsn"));
+
+    expect(message).not.toContain("secret db dsn");
+    expect(typeof message).toBe("string");
+    expect(message.length).toBeGreaterThan(0);
   });
 });

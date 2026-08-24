@@ -117,58 +117,25 @@ export const messageMetadataSchema = z.object({
 });
 
 /**
- * Validates a message object sent in a chat request.
- * Supports complex content parts and optional file attachments.
+ * Validates the POST request body for the chat API endpoint.
+ * The client sends only identifiers — the full message thread is loaded
+ * server-side from the database (loadThreadFromDb), so no `messages` array
+ * is accepted. Strict object: unknown fields (including legacy `messages`)
+ * fail validation.
  */
-export const chatMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  content: z.union([
-    z.string(),
-    z.array(
-      z.union([
-        z.object({ type: z.literal("text"), text: z.string().max(32768) }),
-        z.object({
-          type: z.literal("image"),
-          image: z.union([z.string().url(), z.string()]),
-          mimeType: z.string().optional(),
-        }),
-      ]),
-    ),
-  ]),
-  id: idField.optional(),
-  parentId: idField.optional(),
-  attachments: z
-    .array(
-      z.object({
-        id: idField,
-        name: z.string().min(1).max(255),
-        mimeType: z.string().max(100).optional(),
-        type: z.enum(["image", "document", "spreadsheet"]).optional(),
-        dataUrl: z.string().optional(),
-        extractedText: z.string().max(50000).optional(),
-        key: z.string().max(1024).optional(),
-      }),
-    )
-    .optional(),
-  metadata: z.string().nullable().optional(),
-});
+export const chatRequestSchema = z
+  .object({
+    chatId: idField,
+    userMessageId: idField,
+    model: z.string().max(100).optional(),
+    selectedServerIds: z.array(z.string()).max(20).optional(),
+    selectedTools: z.array(z.string()).max(100).optional(),
+    selectedAssistantId: idField.optional(),
+    selectedPromptId: idField.optional(),
+    selectedKbIds: z.array(idField).max(5).optional(),
+  })
+  .strict();
 
-/**
- * Validates the full POST request body for the chat API endpoint.
- * Includes chatId, message history, model selection, and MCP tool/resource selections.
- */
-export const chatRequestSchema = z.object({
-  chatId: idField,
-  userMessageId: idField.optional(),
-  model: z.string().max(100).optional(),
-  messages: z.array(chatMessageSchema).max(500),
-  selectedServerIds: z.array(z.string()).max(20).optional(),
-  selectedTools: z.array(z.string()).max(100).optional(),
-  selectedAssistantId: idField.optional(),
-  selectedKbIds: z.array(idField).max(5).optional(),
-});
-
-export type ChatMessage = z.infer<typeof chatMessageSchema>;
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
 /**
