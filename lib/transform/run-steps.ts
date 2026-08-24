@@ -95,10 +95,10 @@ export async function runTransformSteps({
       logger.warn("[Transform AI] Heartbeat update failed", undefined, userId);
     }
 
-    // Update current step index
+    // Update current step index as array index so resume logic (currentStepIndex + 1) is correct
     await db
       .update(transformRun)
-      .set({ currentStepIndex: step.order })
+      .set({ currentStepIndex: i })
       .where(eq(transformRun.id, runRow.id));
 
     emit({
@@ -389,11 +389,8 @@ export async function runTransformSteps({
       }
     }
 
-    if (
-      stepHasSpreadsheetMutations &&
-      activeWorkbookFilePath &&
-      !stepPersistedSpreadsheetOutput
-    ) {
+    // Fail-safe: mutations occurred but no spreadsheet output was saved — prevent silent data loss
+    if (stepHasSpreadsheetMutations && !stepPersistedSpreadsheetOutput) {
       const errorMessage = `Step "${step.name}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
 
       await db
@@ -419,7 +416,29 @@ export async function runTransformSteps({
       { runId: runRow.id, stepIndex: i },
       userId,
     );
+
+    // Human review gate: pause before continuing to the next step
+    if (step.requiresReview) {
+      await db
+        .update(transformRun)
+        .set({ status: "awaiting_review", currentStepIndex: i })
+        .where(eq(transformRun.id, runRow.id));
+
+      emit({
+        type: "transform-review-required",
+        runId: runRow.id,
+        stepIndex: i,
+      });
+
+      logger.info(
+        "[Transform AI] Paused for human review",
+        { runId: runRow.id, stepIndex: i },
+        userId,
+      );
+
+      return { success: true, paused: true, currentOutputAttachmentIds };
+    }
   }
 
-  return { success: true, currentOutputAttachmentIds };
+  return { success: true, paused: false, currentOutputAttachmentIds };
 }

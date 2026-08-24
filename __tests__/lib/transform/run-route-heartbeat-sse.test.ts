@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── env must be mocked before any module that reads it ──────────────────────
 vi.mock("@/lib/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
@@ -35,43 +34,44 @@ const chainable = vi.hoisted(() => {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
-
 vi.mock("@/lib/auth/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
-
 vi.mock("@/lib/transform/lifecycle-service", () => ({
   initTransformRun: vi.fn(),
   resetStuckRuns: vi.fn().mockResolvedValue(0),
-  validateStepOrders: vi.fn(),
+  validateStepOrders: vi.fn(), // no-op; valid orders in all test cases
 }));
-
 vi.mock("@/lib/transform/run-steps", () => ({
   runTransformSteps: vi.fn(),
+}));
+vi.mock("@/lib/transform/load-transform-context", () => ({
+  loadTransformContext: vi.fn().mockResolvedValue({
+    allServers: [],
+    resolvedProvider: { sdkProvider: { chat: () => () => {} }, modelId: "m" },
+    kbContext: "",
+    mcpTools: {},
+    toolSourceMap: {},
+    mcpCleanup: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 import { auth } from "@/lib/auth/auth";
 import { initTransformRun } from "@/lib/transform/lifecycle-service";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 import { POST } from "@/app/api/transform/run/route";
-import { transformRun } from "@/drizzle/schema";
 
-function makeRequest(body: unknown): Request {
+function makeRequest(body: unknown) {
   return new Request("http://localhost/api/transform/run", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-const validBody = {
-  type: "new",
-  agentId: "11111111-1111-4111-8111-111111111111",
-};
-
-describe("POST /api/transform/run — outer catch failure handling", () => {
+describe("POST /api/transform/run — SSE heartbeat (T6.4)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // re-link chainable implementations after clearAllMocks
+    vi.useRealTimers();
     for (const m of ["select", "from", "insert", "values", "update", "set"]) {
       chainable[m].mockImplementation(() => chainable);
     }
@@ -83,69 +83,55 @@ describe("POST /api/transform/run — outer catch failure handling", () => {
       user: { id: "user-1" },
       session: { id: "session-1" },
     } as any);
-  });
 
-  it("marks the run failed in DB when execution throws unexpectedly", async () => {
     vi.mocked(initTransformRun).mockResolvedValue({
-      run: { id: "run-1" },
-      agent: { steps: "[]", requiresFileUpload: false },
-      startFromStep: 0,
-    } as any);
-    // steps parsed as [] would complete immediately; force a post-init throw
-    // by making the schema-driven empty-steps path irrelevant: use an agent
-    // whose steps JSON is valid but make runTransformSteps throw via a
-    // non-empty steps list.
-    vi.mocked(initTransformRun).mockResolvedValue({
-      run: { id: "run-1" },
+      run: { id: "run-hb" },
       agent: {
-        steps: JSON.stringify([{ order: 0, name: "s1", mcpServerIds: [] }]),
+        steps: JSON.stringify([
+          { order: 0, name: "s0", mcpServerIds: [], requiresReview: false },
+        ]),
         requiresFileUpload: false,
       },
       startFromStep: 0,
     } as any);
-    vi.mocked(runTransformSteps).mockRejectedValue(new Error("boom"));
 
-    const res = await POST(makeRequest(validBody));
-    // consume the SSE stream so the handler runs to completion
-    await res.text();
-
-    const failUpdateCall = chainable.set.mock.calls.find(
-      (call) =>
-        JSON.stringify(call[0]) ===
-        JSON.stringify({
-          status: "failed",
-          errorMessage: "Transform execution failed unexpectedly",
-        }),
-    );
-    expect(failUpdateCall).toBeDefined();
-    expect(chainable.update).toHaveBeenCalledWith(transformRun);
-  });
-
-  it("does not throw when no run row exists yet (failure before init)", async () => {
-    vi.mocked(initTransformRun).mockRejectedValue(new Error("early boom"));
-
-    const res = await POST(makeRequest(validBody));
-    await expect(res.text()).resolves.toContain(
-      "Transform execution failed unexpectedly",
-    );
-  });
-
-  it("happy path still completes the run", async () => {
-    const runRow = { id: "run-1" };
-    vi.mocked(initTransformRun).mockResolvedValue({
-      run: runRow,
-      agent: { steps: "[]", requiresFileUpload: false },
-      startFromStep: 0,
-    } as any);
     vi.mocked(runTransformSteps).mockResolvedValue({
       success: true,
+      paused: false,
       currentOutputAttachmentIds: [],
     } as any);
+  });
 
-    const res = await POST(makeRequest(validBody));
+  it("calls setInterval with 25000ms during route execution", async () => {
+    const setIntervalSpy = vi.spyOn(global, "setInterval");
+    const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+
+    const res = await POST(
+      makeRequest({
+        type: "new",
+        agentId: "11111111-1111-4111-8111-111111111111",
+      }),
+    );
+    await res.text();
+
+    // The heartbeat setInterval should be called with 25_000ms
+    const heartbeatCall = setIntervalSpy.mock.calls.find(
+      ([, ms]) => ms === 25_000,
+    );
+    expect(heartbeatCall).toBeDefined();
+
+    // clearInterval should be called to clean up
+    expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it("still emits transform-complete on success", async () => {
+    const res = await POST(
+      makeRequest({
+        type: "new",
+        agentId: "11111111-1111-4111-8111-111111111111",
+      }),
+    );
     const text = await res.text();
-
     expect(text).toContain("transform-complete");
-    expect(chainable.set).toHaveBeenCalledWith({ status: "completed" });
   });
 });

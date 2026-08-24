@@ -16,6 +16,7 @@ import { encodeSSE } from "@/lib/encode-sse";
 import {
   initTransformRun,
   resetStuckRuns,
+  validateStepOrders,
 } from "@/lib/transform/lifecycle-service";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { runTransformSteps } from "@/lib/transform/run-steps";
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
           steps = [];
         }
         steps = [...steps].sort((a, b) => a.order - b.order);
+        validateStepOrders(steps.map((s) => s.order));
 
         if (steps.length === 0) {
           await db
@@ -169,22 +171,43 @@ export async function POST(req: Request) {
         runMcpCleanup = mcpCleanup;
 
         /* ── 5. Delegate Step Execution ───────────────────────────── */
-        const stepResult = await runTransformSteps({
-          steps,
-          startFromStep,
-          runRow,
-          agentRow: agentRow as any,
-          userId: session.user.id,
-          allServers: allServers as any,
-          resolvedProvider,
-          kbContext,
-          runMcpTools,
-          runToolSourceMap,
-          initialAttachmentRows: currentAttachmentRows,
-          emit,
-        });
+        // ponytail: in-process only; multi-instance needs Redis-backed approach
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(new TextEncoder().encode(": keep-alive\n\n"));
+          } catch {
+            // stream already closed
+          }
+        }, 25_000);
+
+        let stepResult: Awaited<ReturnType<typeof runTransformSteps>>;
+        try {
+          stepResult = await runTransformSteps({
+            steps,
+            startFromStep,
+            runRow,
+            agentRow: agentRow as any,
+            userId: session.user.id,
+            allServers: allServers as any,
+            resolvedProvider,
+            kbContext,
+            runMcpTools,
+            runToolSourceMap,
+            initialAttachmentRows: currentAttachmentRows,
+            emit,
+          });
+        } finally {
+          clearInterval(heartbeat);
+        }
 
         if (!stepResult.success) {
+          await runMcpCleanup();
+          controller.close();
+          return;
+        }
+
+        // Run paused for human review — status already set to awaiting_review in run-steps
+        if (stepResult.paused) {
           await runMcpCleanup();
           controller.close();
           return;

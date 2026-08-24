@@ -67,7 +67,9 @@ export function TransformAgentCard({ agent }: TransformAgentCardProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button size="icon" className="h-8 w-8" asChild>
-                <Link href={ROUTES.WORKFLOWS.TRANSFORM.detail(agent.id)}>
+                <Link
+                  href={`${ROUTES.WORKFLOWS.TRANSFORM.detail(agent.id)}?tab=runs`}
+                >
                   <PlayCircle className="h-4 w-4" />
                 </Link>
               </Button>

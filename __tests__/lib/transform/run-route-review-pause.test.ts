@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ── env must be mocked before any module that reads it ──────────────────────
 vi.mock("@/lib/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
@@ -35,28 +34,34 @@ const chainable = vi.hoisted(() => {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
-
 vi.mock("@/lib/auth/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
-
 vi.mock("@/lib/transform/lifecycle-service", () => ({
   initTransformRun: vi.fn(),
   resetStuckRuns: vi.fn().mockResolvedValue(0),
-  validateStepOrders: vi.fn(),
+  validateStepOrders: vi.fn(), // no-op; valid orders in all test cases
 }));
-
 vi.mock("@/lib/transform/run-steps", () => ({
   runTransformSteps: vi.fn(),
+}));
+vi.mock("@/lib/transform/load-transform-context", () => ({
+  loadTransformContext: vi.fn().mockResolvedValue({
+    allServers: [],
+    resolvedProvider: { sdkProvider: { chat: () => () => {} }, modelId: "m" },
+    kbContext: "",
+    mcpTools: {},
+    toolSourceMap: {},
+    mcpCleanup: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 import { auth } from "@/lib/auth/auth";
 import { initTransformRun } from "@/lib/transform/lifecycle-service";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 import { POST } from "@/app/api/transform/run/route";
-import { transformRun } from "@/drizzle/schema";
 
-function makeRequest(body: unknown): Request {
+function makeRequest(body: unknown) {
   return new Request("http://localhost/api/transform/run", {
     method: "POST",
     body: JSON.stringify(body),
@@ -68,10 +73,9 @@ const validBody = {
   agentId: "11111111-1111-4111-8111-111111111111",
 };
 
-describe("POST /api/transform/run — outer catch failure handling", () => {
+describe("POST /api/transform/run — review gate pause handling (T6.1)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // re-link chainable implementations after clearAllMocks
     for (const m of ["select", "from", "insert", "values", "update", "set"]) {
       chainable[m].mockImplementation(() => chainable);
     }
@@ -83,62 +87,44 @@ describe("POST /api/transform/run — outer catch failure handling", () => {
       user: { id: "user-1" },
       session: { id: "session-1" },
     } as any);
-  });
 
-  it("marks the run failed in DB when execution throws unexpectedly", async () => {
     vi.mocked(initTransformRun).mockResolvedValue({
-      run: { id: "run-1" },
-      agent: { steps: "[]", requiresFileUpload: false },
-      startFromStep: 0,
-    } as any);
-    // steps parsed as [] would complete immediately; force a post-init throw
-    // by making the schema-driven empty-steps path irrelevant: use an agent
-    // whose steps JSON is valid but make runTransformSteps throw via a
-    // non-empty steps list.
-    vi.mocked(initTransformRun).mockResolvedValue({
-      run: { id: "run-1" },
+      run: { id: "run-pause" },
       agent: {
-        steps: JSON.stringify([{ order: 0, name: "s1", mcpServerIds: [] }]),
+        steps: JSON.stringify([
+          { order: 0, name: "step-0", mcpServerIds: [], requiresReview: true },
+        ]),
         requiresFileUpload: false,
       },
       startFromStep: 0,
     } as any);
-    vi.mocked(runTransformSteps).mockRejectedValue(new Error("boom"));
-
-    const res = await POST(makeRequest(validBody));
-    // consume the SSE stream so the handler runs to completion
-    await res.text();
-
-    const failUpdateCall = chainable.set.mock.calls.find(
-      (call) =>
-        JSON.stringify(call[0]) ===
-        JSON.stringify({
-          status: "failed",
-          errorMessage: "Transform execution failed unexpectedly",
-        }),
-    );
-    expect(failUpdateCall).toBeDefined();
-    expect(chainable.update).toHaveBeenCalledWith(transformRun);
   });
 
-  it("does not throw when no run row exists yet (failure before init)", async () => {
-    vi.mocked(initTransformRun).mockRejectedValue(new Error("early boom"));
-
-    const res = await POST(makeRequest(validBody));
-    await expect(res.text()).resolves.toContain(
-      "Transform execution failed unexpectedly",
-    );
-  });
-
-  it("happy path still completes the run", async () => {
-    const runRow = { id: "run-1" };
-    vi.mocked(initTransformRun).mockResolvedValue({
-      run: runRow,
-      agent: { steps: "[]", requiresFileUpload: false },
-      startFromStep: 0,
-    } as any);
+  it("does NOT mark run as completed when runTransformSteps returns paused:true", async () => {
     vi.mocked(runTransformSteps).mockResolvedValue({
       success: true,
+      paused: true,
+      currentOutputAttachmentIds: [],
+    } as any);
+
+    const res = await POST(makeRequest(validBody));
+    const text = await res.text();
+
+    // No transform-complete event
+    expect(text).not.toContain("transform-complete");
+
+    // status should NOT be updated to "completed"
+    const completedCall = chainable.set.mock.calls.find(
+      ([arg]) =>
+        arg !== null && typeof arg === "object" && arg.status === "completed",
+    );
+    expect(completedCall).toBeUndefined();
+  });
+
+  it("emits transform-complete when run succeeds without pausing", async () => {
+    vi.mocked(runTransformSteps).mockResolvedValue({
+      success: true,
+      paused: false,
       currentOutputAttachmentIds: [],
     } as any);
 
@@ -146,6 +132,5 @@ describe("POST /api/transform/run — outer catch failure handling", () => {
     const text = await res.text();
 
     expect(text).toContain("transform-complete");
-    expect(chainable.set).toHaveBeenCalledWith({ status: "completed" });
   });
 });
