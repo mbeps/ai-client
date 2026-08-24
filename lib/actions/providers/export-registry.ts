@@ -14,7 +14,8 @@ import { decodeProviderRecord } from "./utils";
 
 /**
  * Exports providers and models for authenticated user with optional ID filtering.
- * API keys NEVER exported (always null) for security. Headers decrypted, timestamp ISO 8601.
+ * API keys NEVER exported (always null) for security. Headers are NOT exported
+ * (decrypted plaintext auth headers must never leave the server). Timestamp ISO 8601.
  *
  * @param [input] - Optional {providerIds} filter
  * @returns RegistryExport with version 1, exportedAt, providers (apiKey=null), models
@@ -77,7 +78,6 @@ export async function exportProviderRegistry(
     version: "1",
     exportedAt: new Date().toISOString(),
     providers: providers.map((provider) => {
-      const decoded = decodeProviderRecord(provider);
       const providerModels = models.filter(
         (model) => model.providerId === provider.id,
       );
@@ -87,7 +87,6 @@ export async function exportProviderRegistry(
         baseUrl: provider.baseUrl,
         requiresKey: provider.requiresKey,
         apiKey: null,
-        headers: decoded.headers,
         isEnabled: provider.isEnabled,
         models: providerModels.map((model) => ({
           modelId: model.modelId,

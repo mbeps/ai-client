@@ -42,6 +42,10 @@ export async function buildTransport(
   return {
     type: "http" as const,
     url: server.url,
+    // SSRF hardening: fetch follows redirects without re-validating the
+    // destination IP, so a public URL could 302 to 169.254.169.254 etc.
+    // Reject redirects outright — isBlockedUrl() only validated the original URL.
+    redirect: "error" as const,
     ...(headers && { headers }),
   };
 }

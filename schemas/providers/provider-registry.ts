@@ -133,7 +133,7 @@ const registryProviderSchema = z.object({
   baseUrl: z.string().url().max(1024),
   requiresKey: z.boolean(),
   apiKey: z.string().nullable().optional(),
-  headers: providerHeadersSchema.optional().default({}),
+  headers: providerHeadersSchema.optional(),
   isEnabled: z.boolean().optional(),
   models: z.array(registryModelSchema).max(500),
 });

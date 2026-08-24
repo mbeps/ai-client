@@ -54,6 +54,7 @@ export function buildProviderErrorResponse(error: unknown): Response | null {
       },
       {
         status: 429,
+        headers: { "Retry-After": "60" },
       },
     );
   }

@@ -113,13 +113,16 @@ export async function loadThreadFromDb(
     await Promise.all(
       attRows.map(async (a) => {
         if (a.messageId === null) return;
-        const url = await getPresignedUrl(a.key);
+        const type = typeFromMime(a.mimeType);
+        // Only images need eager presigned URLs (vision model messages);
+        // other types are resolved on demand via the get_file_url tool.
+        const url = type === "image" ? await getPresignedUrl(a.key) : "";
         const list = byMessage.get(a.messageId) ?? [];
         list.push({
           id: a.id,
           name: a.name,
           url,
-          type: typeFromMime(a.mimeType),
+          type,
           extractedText: a.extractedText,
         });
         byMessage.set(a.messageId, list);

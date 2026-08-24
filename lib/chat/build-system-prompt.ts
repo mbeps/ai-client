@@ -13,7 +13,7 @@ import { PROMPTS } from "@/constants/prompts";
  * @param projectPrompt - Project-specific system prompt (optional)
  * @param assistantPrompt - Assistant-specific system prompt (optional)
  * @param hasKnowledgeBase - Whether knowledge base tool is available
- * @param attachmentUrls - Presigned URLs for spreadsheet files to load via MCP
+ * @param hasAttachments - Whether the thread has file attachments
  * @returns Composed system prompt string
  * @see {@link lib/chat/register-mcp-tools.ts} for MCP tool registration
  * @author Maruf Bepary
@@ -23,7 +23,7 @@ export function buildSystemPrompt(
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
   hasKnowledgeBase: boolean,
-  attachmentUrls?: { name: string; url: string }[],
+  hasAttachments?: boolean,
 ): string {
   const systemParts: string[] = [];
 
@@ -41,12 +41,9 @@ export function buildSystemPrompt(
     systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
   }
 
-  if (attachmentUrls && attachmentUrls.length > 0) {
-    const fileList = attachmentUrls
-      .map((a) => `[${a.name}]: ${a.url}`)
-      .join("\n");
+  if (hasAttachments) {
     systemParts.push(
-      `The user has attached spreadsheet files. Use the upload_file tool with the provided URL to load each file before processing:\n${fileList}`,
+      "The user has attached files to this conversation. Use the get_file_url tool to obtain download links for uploaded files when you need them.",
     );
   }
 

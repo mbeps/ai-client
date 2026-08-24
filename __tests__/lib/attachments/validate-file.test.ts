@@ -28,223 +28,223 @@ function makeAttachment(
 
 describe("validateFile", () => {
   describe("total attachment quota (5 max)", () => {
-    it("rejects when there are already 5 attachments", () => {
+    it("rejects when there are already 5 attachments", async () => {
       const attachments = Array.from({ length: 5 }, () =>
         makeAttachment("document"),
       );
       const file = makeFile("doc.pdf", "application/pdf");
-      const result = validateFile(file, attachments);
+      const result = await validateFile(file, attachments);
       expect(result.valid).toBe(false);
       if (!result.valid)
         expect(result.reason).toMatch(/Maximum 5 attachments per message/);
     });
 
-    it("allows when there are 4 existing attachments", () => {
+    it("allows when there are 4 existing attachments", async () => {
       const attachments = Array.from({ length: 4 }, () =>
         makeAttachment("document"),
       );
       const file = makeFile("doc.pdf", "application/pdf", 1024);
-      const result = validateFile(file, attachments);
+      const result = await validateFile(file, attachments);
       expect(result.valid).toBe(true);
     });
   });
 
   describe("unsupported file types", () => {
-    it("rejects .exe files", () => {
+    it("rejects .exe files", async () => {
       const file = makeFile("virus.exe", "application/octet-stream");
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toMatch(/not supported/);
     });
 
-    it("rejects .zip files", () => {
+    it("rejects .zip files", async () => {
       const file = makeFile("archive.zip", "application/zip");
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
     });
 
-    it("rejects audio files", () => {
+    it("rejects audio files", async () => {
       const file = makeFile("song.mp3", "audio/mpeg");
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
     });
 
-    it("rejects video files", () => {
+    it("rejects video files", async () => {
       const file = makeFile("video.mp4", "video/mp4");
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
     });
 
-    it("includes 'unknown' in reason when MIME type is empty", () => {
+    it("includes 'unknown' in reason when MIME type is empty", async () => {
       const file = makeFile("mystery", "");
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toMatch(/unknown/);
     });
   });
 
   describe("image files", () => {
-    it("accepts image/png", () => {
+    it("accepts image/png", async () => {
       const file = makeFile("photo.png", "image/png");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts image/jpeg", () => {
+    it("accepts image/jpeg", async () => {
       const file = makeFile("photo.jpg", "image/jpeg");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts image/gif", () => {
+    it("accepts image/gif", async () => {
       const file = makeFile("anim.gif", "image/gif");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts image/webp", () => {
+    it("accepts image/webp", async () => {
       const file = makeFile("img.webp", "image/webp");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("rejects image exceeding 2 MB", () => {
+    it("rejects image exceeding 2 MB", async () => {
       const file = makeFile("big.png", "image/png", 2 * MB + 1);
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toMatch(/2 MB limit/);
     });
 
-    it("accepts image exactly at 2 MB", () => {
+    it("accepts image exactly at 2 MB", async () => {
       const file = makeFile("exact.png", "image/png", 2 * MB);
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("rejects a 4th image when 3 images already attached", () => {
+    it("rejects a 4th image when 3 images already attached", async () => {
       const attachments = Array.from({ length: 3 }, () =>
         makeAttachment("image"),
       );
       const file = makeFile("extra.png", "image/png");
-      const result = validateFile(file, attachments);
+      const result = await validateFile(file, attachments);
       expect(result.valid).toBe(false);
       if (!result.valid)
         expect(result.reason).toMatch(/Maximum 3 images per message/);
     });
 
-    it("accepts a 3rd image when only 2 images already attached", () => {
+    it("accepts a 3rd image when only 2 images already attached", async () => {
       const attachments = Array.from({ length: 2 }, () =>
         makeAttachment("image"),
       );
       const file = makeFile("third.png", "image/png");
-      expect(validateFile(file, attachments).valid).toBe(true);
+      expect((await validateFile(file, attachments)).valid).toBe(true);
     });
   });
 
   describe("document files", () => {
-    it("accepts application/pdf", () => {
+    it("accepts application/pdf", async () => {
       const file = makeFile("report.pdf", "application/pdf");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts text/plain", () => {
+    it("accepts text/plain", async () => {
       const file = makeFile("readme.txt", "text/plain");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts text/markdown by MIME type", () => {
+    it("accepts text/markdown by MIME type", async () => {
       const file = makeFile("notes.md", "text/markdown");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts .md extension with no MIME type via extension fallback", () => {
+    it("accepts .md extension with no MIME type via extension fallback", async () => {
       const file = makeFile("notes.md", "");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("rejects document exceeding 20 MB", () => {
+    it("rejects document exceeding 20 MB", async () => {
       const file = makeFile("large.pdf", "application/pdf", 20 * MB + 1);
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toMatch(/20 MB limit/);
     });
 
-    it("accepts document exactly at 20 MB", () => {
+    it("accepts document exactly at 20 MB", async () => {
       const file = makeFile("exact.pdf", "application/pdf", 20 * MB);
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("includes filename in rejection reason for oversized document", () => {
+    it("includes filename in rejection reason for oversized document", async () => {
       const file = makeFile("my-report.pdf", "application/pdf", 25 * MB);
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toContain("my-report.pdf");
     });
   });
 
   describe("spreadsheet files", () => {
-    it("accepts .xlsx by MIME type", () => {
+    it("accepts .xlsx by MIME type", async () => {
       const mime =
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const file = makeFile("data.xlsx", mime);
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts .xls by MIME type", () => {
+    it("accepts .xls by MIME type", async () => {
       const file = makeFile("data.xls", "application/vnd.ms-excel");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts text/csv", () => {
+    it("accepts text/csv", async () => {
       const file = makeFile("export.csv", "text/csv");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts .xlsx extension with no MIME type via extension fallback", () => {
+    it("accepts .xlsx extension with no MIME type via extension fallback", async () => {
       const file = makeFile("data.xlsx", "");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts .xls extension with no MIME type via extension fallback", () => {
+    it("accepts .xls extension with no MIME type via extension fallback", async () => {
       const file = makeFile("data.xls", "");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("accepts .csv extension with no MIME type via extension fallback", () => {
+    it("accepts .csv extension with no MIME type via extension fallback", async () => {
       const file = makeFile("data.csv", "");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("rejects spreadsheet exceeding 50 MB", () => {
+    it("rejects spreadsheet exceeding 50 MB", async () => {
       const mime =
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const file = makeFile("huge.xlsx", mime, 50 * MB + 1);
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toMatch(/50 MB limit/);
     });
 
-    it("accepts spreadsheet exactly at 50 MB", () => {
+    it("accepts spreadsheet exactly at 50 MB", async () => {
       const mime =
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const file = makeFile("exact.xlsx", mime, 50 * MB);
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
 
-    it("includes filename in rejection reason for oversized spreadsheet", () => {
+    it("includes filename in rejection reason for oversized spreadsheet", async () => {
       const mime =
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       const file = makeFile("my-data.xlsx", mime, 60 * MB);
-      const result = validateFile(file, []);
+      const result = await validateFile(file, []);
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.reason).toContain("my-data.xlsx");
     });
   });
 
   describe("empty attachment list", () => {
-    it("works correctly with an empty existing attachments array", () => {
+    it("works correctly with an empty existing attachments array", async () => {
       const file = makeFile("test.png", "image/png");
-      expect(validateFile(file, []).valid).toBe(true);
+      expect((await validateFile(file, [])).valid).toBe(true);
     });
   });
 
   describe("mixed attachment quota edge cases", () => {
-    it("counts non-image attachments toward total but not image limit", () => {
+    it("counts non-image attachments toward total but not image limit", async () => {
       // 2 images + 2 docs = 4 total; adding 1 more image should be fine (image count = 2)
       const attachments = [
         makeAttachment("image"),
@@ -253,10 +253,10 @@ describe("validateFile", () => {
         makeAttachment("document"),
       ];
       const file = makeFile("third.png", "image/png");
-      expect(validateFile(file, attachments).valid).toBe(true);
+      expect((await validateFile(file, attachments)).valid).toBe(true);
     });
 
-    it("rejects when total quota is hit even if image limit is not", () => {
+    it("rejects when total quota is hit even if image limit is not", async () => {
       // 1 image + 4 docs = 5 total; adding another image hits total limit
       const attachments = [
         makeAttachment("image"),
@@ -266,7 +266,7 @@ describe("validateFile", () => {
         makeAttachment("document"),
       ];
       const file = makeFile("extra.png", "image/png");
-      const result = validateFile(file, attachments);
+      const result = await validateFile(file, attachments);
       expect(result.valid).toBe(false);
       if (!result.valid)
         expect(result.reason).toMatch(/Maximum 5 attachments per message/);

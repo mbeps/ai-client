@@ -29,11 +29,12 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     expect(result.startsWith("\n")).toBe(false);
   });
 
-  it("appends spreadsheet attachment instructions with URLs", () => {
+  it("mentions get_file_url tool and contains no URLs when files are present", () => {
     const result = buildSystemPrompt(null, null, null, false, [
       { name: "data.xlsx", url: "https://example.com/signed" },
     ]);
-    expect(result).toContain("[data.xlsx]: https://example.com/signed");
+    expect(result).toContain("get_file_url");
+    expect(result).not.toContain("http");
   });
 
   it("falls back to a default prompt when all layers are empty", () => {

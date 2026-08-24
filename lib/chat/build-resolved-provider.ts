@@ -49,6 +49,7 @@ export function buildResolvedProvider(
       providerName: row.provider.name,
       baseUrl: row.provider.baseUrl,
       apiKey: decryptedApiKey,
+      requiresKey: row.provider.requiresKey,
       headers,
     }),
     modelId: row.model.modelId,

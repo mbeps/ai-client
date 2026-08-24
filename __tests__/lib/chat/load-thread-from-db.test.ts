@@ -95,34 +95,49 @@ describe("loadThreadFromDb", () => {
     ).rejects.toThrow(/not found/i);
   });
 
-  it("includes attachments with presigned URLs scoped to the user", async () => {
+  it("signs URLs only for image attachments; other types get no URL", async () => {
     chainable.__queueWhere([{ id: "chat-1" }]);
     chainable.__queueWhere([
-      { id: "root", role: "user", content: "see file", parentId: null },
+      { id: "root", role: "user", content: "see files", parentId: null },
     ]);
     chainable.__queueWhere([
       {
         id: "att-1",
+        messageId: "root",
+        name: "pic.png",
+        mimeType: "image/png",
+        key: "uploads/user-1/pic.png",
+      },
+      {
+        id: "att-2",
         messageId: "root",
         name: "report.pdf",
         mimeType: "application/pdf",
         key: "uploads/user-1/report.pdf",
       },
     ]);
-    mockGetPresignedUrl.mockResolvedValueOnce("https://example.com/report");
+    mockGetPresignedUrl.mockResolvedValueOnce("https://example.com/pic");
 
     const thread = await loadThreadFromDb("chat-1", "root", "user-1");
 
-    expect(mockGetPresignedUrl).toHaveBeenCalledWith(
-      "uploads/user-1/report.pdf",
-    );
-    expect(thread[0].attachments).toEqual([
-      {
-        id: "att-1",
-        name: "report.pdf",
-        url: "https://example.com/report",
-        type: "document",
-      },
-    ]);
+    // Only the image is eagerly signed (vision messages need it)
+    expect(mockGetPresignedUrl).toHaveBeenCalledTimes(1);
+    expect(mockGetPresignedUrl).toHaveBeenCalledWith("uploads/user-1/pic.png");
+    const atts = thread[0].attachments!;
+    expect(atts).toHaveLength(2);
+    expect(atts).toContainEqual({
+      id: "att-1",
+      name: "pic.png",
+      url: "https://example.com/pic",
+      type: "image",
+      extractedText: undefined,
+    });
+    expect(atts).toContainEqual({
+      id: "att-2",
+      name: "report.pdf",
+      url: "",
+      type: "document",
+      extractedText: undefined,
+    });
   });
 });

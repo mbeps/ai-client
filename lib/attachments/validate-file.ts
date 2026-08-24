@@ -29,10 +29,10 @@ type ValidationResult = { valid: true } | { valid: false; reason: string };
  * @see {@link constants.ts} for allowed types and size limits
  * @see {@link process-attachment.ts} for next processing step after validation passes
  */
-export function validateFile(
+export async function validateFile(
   file: File,
   existingAttachments: Attachment[],
-): ValidationResult {
+): Promise<ValidationResult> {
   if (existingAttachments.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
     return {
       valid: false,
@@ -40,7 +40,7 @@ export function validateFile(
     };
   }
 
-  const resolvedType = resolveMimeType(file);
+  const resolvedType = await resolveMimeType(file);
   const isImage = ALLOWED_IMAGE_TYPES.has(resolvedType);
   const isDocument = ALLOWED_DOCUMENT_TYPES.has(resolvedType);
   const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(resolvedType);

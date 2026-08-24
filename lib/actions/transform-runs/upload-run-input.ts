@@ -10,6 +10,8 @@ import {
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/constants/attachments";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { env } from "@/lib/env";
 
 /**
  * Uploads multiple input files for a transform run to S3 and creates attachment records.
@@ -28,11 +30,20 @@ export async function uploadRunInput(
   formData: FormData,
 ): Promise<{ id: string; name: string }[]> {
   const session = await requireSession();
+
+  const { allowed, retryAfterSeconds } = checkRateLimit(
+    `upload:${session.user.id}`,
+    env.RATE_LIMIT_UPLOAD_RPM,
+  );
+  if (!allowed) {
+    throw new Error(`Too many uploads. Retry in ${retryAfterSeconds}s.`);
+  }
+
   const files = formData.getAll("files") as File[];
   const results: { id: string; name: string }[] = [];
 
   for (const file of files) {
-    const resolvedMimeType = resolveMimeType(file);
+    const resolvedMimeType = await resolveMimeType(file);
     if (!ALLOWED_SPREADSHEET_TYPES.has(resolvedMimeType)) {
       throw new Error(
         `File type "${resolvedMimeType || "unknown"}" is not supported. Only spreadsheet files are allowed.`,
@@ -44,7 +55,8 @@ export async function uploadRunInput(
     const id = randomUUID();
     const key = `transform-inputs/${session.user.id}/${id}-${file.name}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await uploadObject(key, buffer, file.type || "application/octet-stream");
+    // Persist the sniffed MIME type, never the client-supplied file.type.
+    await uploadObject(key, buffer, resolvedMimeType);
 
     const [row] = await db
       .insert(attachment)
@@ -54,7 +66,7 @@ export async function uploadRunInput(
         transformRunId: null,
         userId: session.user.id,
         name: file.name,
-        mimeType: file.type || "application/octet-stream",
+        mimeType: resolvedMimeType,
         size: file.size,
         key,
       })

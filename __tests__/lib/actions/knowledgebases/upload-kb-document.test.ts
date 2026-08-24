@@ -136,4 +136,14 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
       expect.objectContaining({ indexStatus: "stale" }),
     );
   });
+
+  it("rejects a file whose sniffed magic bytes are a disallowed type (T9.8)", async () => {
+    // Claims text/plain but bytes are a ZIP archive → sniffs as xlsx, not allowed for KBs.
+    const zipBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
+    const fd = new FormData();
+    fd.append("file", new File([zipBytes], "doc.txt", { type: "text/plain" }));
+    fd.append("kbId", DOC_ROW.kbId);
+
+    await expect(uploadKbDocument(fd)).rejects.toThrow(/not supported/i);
+  });
 });

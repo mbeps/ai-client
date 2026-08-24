@@ -7,7 +7,10 @@ import { and, eq } from "drizzle-orm";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { env } from "@/lib/env";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -32,6 +35,14 @@ export async function uploadKbDocument(
 ): Promise<KbDocumentRow> {
   const session = await requireSession();
 
+  const { allowed, retryAfterSeconds } = checkRateLimit(
+    `upload:${session.user.id}`,
+    env.RATE_LIMIT_UPLOAD_RPM,
+  );
+  if (!allowed) {
+    throw new Error(`Too many uploads. Retry in ${retryAfterSeconds}s.`);
+  }
+
   const file = formData.get("file") as File | null;
   const kbId = formData.get("kbId") as string | null;
 
@@ -50,7 +61,8 @@ export async function uploadKbDocument(
 
   if (!kb) throw new Error("Not Found");
 
-  const mimeType = file.type || "application/octet-stream";
+  // Magic-byte-sniffed type is authoritative; rejects spoofed Content-Type.
+  const mimeType = await resolveMimeType(file);
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
     throw new Error(
       `File type "${mimeType}" is not supported. Use PDF, plain text, or Markdown.`,

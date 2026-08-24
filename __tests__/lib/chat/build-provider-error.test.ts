@@ -52,4 +52,10 @@ describe("buildProviderErrorResponse — new provider error classes (T4A.7)", ()
   it("returns null for unknown errors (caller decides 500)", () => {
     expect(buildProviderErrorResponse(new Error("mystery"))).toBeNull();
   });
+
+  it("maps rate limit errors to 429 with Retry-After header", () => {
+    const res = buildProviderErrorResponse(new Error("rate limit exceeded"));
+    expect(res?.status).toBe(429);
+    expect(res?.headers.get("Retry-After")).toBe("60");
+  });
 });

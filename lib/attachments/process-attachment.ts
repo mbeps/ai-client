@@ -40,7 +40,7 @@ export async function processAttachment(
     });
   }
 
-  const validation = validateFile(file, existingAttachments);
+  const validation = await validateFile(file, existingAttachments);
   if (!validation.valid) {
     throw new Error(validation.reason);
   }

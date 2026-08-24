@@ -17,6 +17,8 @@ import {
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/constants/attachments";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { env } from "@/lib/env";
 
 const ALLOWED_TYPES = new Set([
   ...ALLOWED_IMAGE_TYPES,
@@ -43,6 +45,14 @@ const ALLOWED_TYPES = new Set([
 export async function uploadAttachment(formData: FormData) {
   const session = await requireSession();
 
+  const { allowed, retryAfterSeconds } = checkRateLimit(
+    `upload:${session.user.id}`,
+    env.RATE_LIMIT_UPLOAD_RPM,
+  );
+  if (!allowed) {
+    throw new Error(`Too many uploads. Retry in ${retryAfterSeconds}s.`);
+  }
+
   const file = formData.get("file") as File | null;
   const messageId = formData.get("messageId") as string | null;
   const clientAttachmentId = formData.get("attachmentId") as string | null;
@@ -65,7 +75,7 @@ export async function uploadAttachment(formData: FormData) {
     throw new Error("Forbidden");
   }
 
-  const mimeType = resolveMimeType(file);
+  const mimeType = await resolveMimeType(file);
 
   if (!ALLOWED_TYPES.has(mimeType)) {
     throw new Error(`File type "${mimeType || "unknown"}" is not supported.`);

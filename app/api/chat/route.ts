@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth/auth";
 import { env } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import { streamText, stepCountIs } from "ai";
 import { chatRequestSchema } from "@/schemas/chat/chat";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -82,6 +84,17 @@ export async function POST(req: Request) {
     requestedModel && requestedModel.trim() !== "" ? requestedModel : undefined;
   const userId = session.user.id;
 
+  const rateLimit = checkRateLimit(`chat:${userId}`, env.RATE_LIMIT_CHAT_RPM);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: "Rate limit exceeded" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
   let mcpCleanup: () => Promise<void> = async () => {};
 
   try {
@@ -91,7 +104,13 @@ export async function POST(req: Request) {
       model
         ? resolveProvider(userId, model)
         : resolveDefaultChatProvider(userId),
-      loadChatContext(chatId, userId, selectedServerIds, selectedKbIds, selectedAssistantId),
+      loadChatContext(
+        chatId,
+        userId,
+        selectedServerIds,
+        selectedKbIds,
+        selectedAssistantId,
+      ),
       loadThreadFromDb(chatId, userMessageId, userId),
     ]);
 
@@ -113,10 +132,7 @@ export async function POST(req: Request) {
       "internal:tool:manage_artifact",
     );
 
-    const {
-      mcpTools,
-      mcpCleanup: registeredCleanup,
-    } = await registerMcpTools(
+    const { mcpTools, mcpCleanup: registeredCleanup } = await registerMcpTools(
       ctx.servers as any,
       selectedTools,
       !!isArtifactToolSelected,
@@ -133,12 +149,13 @@ export async function POST(req: Request) {
       throw new VisionNotSupportedError();
     }
 
-    // Spreadsheet attachments need presigned URLs in the system prompt so the
-    // MCP file bridge can fetch them.
-    const spreadsheetUrls = thread
+    // File attachments are resolved on demand via the get_file_url tool —
+    // presigned URLs are no longer embedded in the system prompt (ATT-06).
+    const fileAttachments = thread
       .flatMap((m) => m.attachments ?? [])
-      .filter((a) => a.type === "spreadsheet")
-      .map((a) => ({ name: a.name, url: a.url }));
+      .map((a) => ({ name: a.name, key: (a as any).key, type: a.type }))
+      .filter((a) => a.key);
+    const hasFileAttachments = fileAttachments.length > 0;
 
     const finalMessages = prepareChatMessages({ history: thread });
 
@@ -157,10 +174,18 @@ export async function POST(req: Request) {
         ctx.projectRow?.globalPrompt,
         ctx.assistantRow?.prompt,
         ctx.kbIsReady,
-        spreadsheetUrls,
+        hasFileAttachments,
       ),
       messages: finalMessages,
-      tools: isToolCallingModel && hasMcpTools ? mcpTools : undefined,
+      tools:
+        isToolCallingModel && (hasMcpTools || hasFileAttachments)
+          ? {
+              ...(hasFileAttachments
+                ? registerFileUrlTool(fileAttachments)
+                : {}),
+              ...(hasMcpTools ? mcpTools : {}),
+            }
+          : undefined,
       stopWhen:
         isToolCallingModel && hasMcpTools
           ? stepCountIs(env.CHAT_MAX_STEPS)
