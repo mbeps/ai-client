@@ -191,7 +191,9 @@ export function ChatUI({
   }, [thread]);
 
   const activeArtifact =
-    artifactIndex >= 0 ? allArtifacts[artifactIndex] : null;
+    artifactIndex >= 0 && artifactIndex < allArtifacts.length
+      ? allArtifacts[artifactIndex]
+      : null;
 
   // Auto-open when artifacts appear
   if (allArtifacts.length !== prevArtifactsLength) {
@@ -255,7 +257,8 @@ export function ChatUI({
           meta.toolResults.forEach((tr: any) => {
             if (
               tr.toolName === "manage_artifact" &&
-              tr.result?.artifact?.content === activeArtifact.content
+              tr.result?.artifact?.id &&
+              tr.result.artifact.id === activeArtifact.id
             ) {
               tr.result.artifact.content = newContent;
               updated = true;

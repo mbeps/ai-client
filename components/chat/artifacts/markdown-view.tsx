@@ -49,7 +49,6 @@ function BlockNoteEditor({
     <div className="h-full w-full bg-background p-4 overflow-y-auto custom-scrollbar">
       <BlockNoteView
         editor={editor}
-        theme="light"
         onChange={() => {
           if (onUpdate) {
             if (timerRef.current) clearTimeout(timerRef.current);

@@ -29,7 +29,7 @@ export default function HtmlView({ content }: HtmlViewProps) {
       <iframe
         srcDoc={content}
         className="w-full h-full border-none"
-        sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+        sandbox="allow-scripts allow-forms allow-popups"
         title="HTML Preview"
       />
     </div>

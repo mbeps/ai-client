@@ -120,6 +120,7 @@ export async function registerMcpTools(
               : "markdown";
 
           const normalizedArgs = {
+            id: crypto.randomUUID(),
             type: inferredType,
             title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
             content,
