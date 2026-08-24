@@ -42,7 +42,7 @@ type ChatSlice = Pick<
   | "moveChatDb"
   | "createChatDb"
   | "deleteChatDb"
-  | "setKnowledgebase"
+  | "setKnowledgebaseDb"
   | "setCurrentLeafDb"
   | "resetChatState"
 >;
@@ -69,13 +69,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   addMessage: (
     chatId,
-    role,
-    content,
-    parentId,
-    id,
-    metadata,
-    attachments,
-    reasoning,
+    { role, content, parentId, id, metadata, attachments, reasoning },
   ) => {
     const newMessageId = id ?? crypto.randomUUID();
     set((state) => {
@@ -386,7 +380,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     }
   },
 
-  setKnowledgebase: async (chatId, kbId) => {
+  setKnowledgebaseDb: async (chatId, kbId) => {
     const previous = get();
     set((state) => {
       const chat = state.chats[chatId];

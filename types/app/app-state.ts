@@ -112,23 +112,20 @@ export type AppState = {
    * Uses parentId to enable tree structure for branching conversations.
    *
    * @param chatId - ID of the chat to add message to
-   * @param role - Message author role (user or assistant)
-   * @param content - Message text content
-   * @param parentId - ID of parent message for tree structure, null for root
-   * @param id - Optional custom message ID; auto-generated if not provided
-   * @param metadata - Optional JSON-serialized metadata (tool calls, reasoning tokens)
-   * @param attachments - Optional array of file attachments
-   * @param reasoning - Optional model reasoning output (extended thinking)
+   * @param input - Message fields (role, content, parentId and optional id,
+   * metadata, attachments, reasoning)
    */
   addMessage: (
     chatId: string,
-    role: "user" | "assistant",
-    content: string,
-    parentId: string | null,
-    id?: string,
-    metadata?: string | null,
-    attachments?: Attachment[],
-    reasoning?: string,
+    input: {
+      role: "user" | "assistant";
+      content: string;
+      parentId: string | null;
+      id?: string;
+      metadata?: string | null;
+      attachments?: Attachment[];
+      reasoning?: string;
+    },
   ) => void;
 
   /**
@@ -321,7 +318,7 @@ export type AppState = {
    * @param kbId - Knowledge base ID to bind, or null to unbind
    * @returns Promise resolving when change completes on server
    */
-  setKnowledgebase: (chatId: string, kbId: string | null) => Promise<void>;
+  setKnowledgebaseDb: (chatId: string, kbId: string | null) => Promise<void>;
 
   resetEntityState: () => void;
   resetChatState: () => void;

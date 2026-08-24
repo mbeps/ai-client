@@ -121,7 +121,6 @@ export function assembleModelMessages(
                 type: "tool-result",
                 toolCallId: tr.toolCallId,
                 toolName: tr.toolName,
-                result: rawResult,
                 output: { type: "json", value: rawResult },
               };
             });

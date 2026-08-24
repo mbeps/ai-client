@@ -92,9 +92,7 @@ describe("useStreamResponse (useChat-backed)", () => {
     const { result } = renderHook(() => useStreamResponse("chat-1"));
 
     let resolvePersist!: () => void;
-    mockPersist.mockReturnValue(
-      new Promise<void>((r) => (resolvePersist = r)),
-    );
+    mockPersist.mockReturnValue(new Promise<void>((r) => (resolvePersist = r)));
 
     const p = result.current.streamResponse("user-msg-1", "hello", null);
     // Flush the synchronous part of streamResponse (reaches the persist await)
@@ -148,15 +146,14 @@ describe("useStreamResponse (useChat-backed)", () => {
       await result.current.streamResponse("user-msg-1", "hello", "parent-1");
     });
 
-    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
-      "chat-1",
-      "user",
-      "hello",
-      "parent-1",
-      "user-msg-1",
-      expect.any(String),
-      [],
-    );
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
+      role: "user",
+      content: "hello",
+      parentId: "parent-1",
+      id: "user-msg-1",
+      metadata: expect.any(String),
+      attachments: [],
+    });
   });
 
   it("onFinish syncs the assistant message into the store with the server-assigned id", async () => {
@@ -184,16 +181,14 @@ describe("useStreamResponse (useChat-backed)", () => {
       });
     });
 
-    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
-      "chat-1",
-      "assistant",
-      "answer",
-      "parent-1",
-      "server-assistant-id",
-      expect.stringContaining("thinking"),
-      undefined,
-      "thinking",
-    );
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
+      role: "assistant",
+      content: "answer",
+      parentId: "parent-1",
+      id: "server-assistant-id",
+      metadata: expect.stringContaining("thinking"),
+      reasoning: "thinking",
+    });
   });
 
   it("onFinish skips syncing when the assistant produced no content", async () => {
@@ -253,7 +248,12 @@ describe("useStreamResponse (useChat-backed)", () => {
     expect(result.current.streamingReasoning).toBe("hmm");
     expect(result.current.isStreamingReasoning).toBe(false);
     expect(result.current.activeToolCalls).toEqual([
-      { toolCallId: "t1", toolName: "search", args: { q: "x" }, status: "calling" },
+      {
+        toolCallId: "t1",
+        toolName: "search",
+        args: { q: "x" },
+        status: "calling",
+      },
       {
         toolCallId: "t2",
         toolName: "search",

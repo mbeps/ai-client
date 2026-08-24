@@ -1,7 +1,5 @@
 export const PROMPTS = {
   SYSTEM: {
-    FILE_BRIDGE_SPREADSHEET_ACCESS_TEMPLATE: (lines: string): string =>
-      `## File Access\nIMPORTANT: The user has attached spreadsheet files. They have been downloaded to the local filesystem for you to analyse using the available Excel MCP tools. You MUST use the Excel MCP tools (e.g. get_workbook_metadata, read_cells, profile_data, etc.) to read and analyse these files. Do NOT ask the user for a file path — the paths are provided below. Pass the exact path to the file_path parameter of any Excel MCP tool call:\n${lines}`,
     KNOWLEDGE_BASE_TOOL_INSTRUCTION:
       "A knowledge base is attached to this conversation with company-specific documents and domain context. " +
       "ALWAYS search the knowledge base first when answering questions, unless the query is clearly off-topic or requires only common knowledge. " +

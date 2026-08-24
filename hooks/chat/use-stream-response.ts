@@ -31,9 +31,7 @@ function partsText(message: UIMessage | undefined, type: string): string {
  * Maps streaming tool parts to the ToolCallState shape the rendering tree uses.
  * @author Maruf Bepary
  */
-function activeToolCallsFrom(
-  message: UIMessage | undefined,
-): ToolCallState[] {
+function activeToolCallsFrom(message: UIMessage | undefined): ToolCallState[] {
   if (!message) return [];
   return message.parts.flatMap((p) => {
     const part = p as any;
@@ -167,11 +165,14 @@ export function useStreamResponse(
   // typing of the transport boundary fights duplicated type identity. The
   // transport's runtime behaviour is covered by tests instead. State-lazy
   // init keeps the transport identity stable without touching refs in render.
-  const [transport] = useState<any>(() => new DefaultChatTransport({
-    api: "/api/chat",
-    // Identifier-only body — the server rebuilds history from the DB.
-    prepareSendMessagesRequest: async ({ body }) => ({ body: body ?? {} }),
-  }));
+  const [transport] = useState<any>(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        // Identifier-only body — the server rebuilds history from the DB.
+        prepareSendMessagesRequest: async ({ body }) => ({ body: body ?? {} }),
+      }),
+  );
 
   const chat = useChat<UIMessage>({
     id: chatId,
@@ -207,16 +208,14 @@ export function useStreamResponse(
           })),
       });
 
-      addMessage(
-        chatId,
-        "assistant",
-        text,
-        pendingRef.current.parentId,
-        message.id,
+      addMessage(chatId, {
+        role: "assistant",
+        content: text,
+        parentId: pendingRef.current.parentId,
+        id: message.id,
         metadata,
-        undefined,
-        reasoning || undefined,
-      );
+        reasoning: reasoning || undefined,
+      });
       options?.onDone?.(text);
     },
   });
@@ -292,15 +291,14 @@ export function useStreamResponse(
     const userMsgMetadata = JSON.stringify(metadataObj);
 
     // 3. Optimistic store insert
-    addMessage(
-      chatId,
-      "user",
-      fullContent,
+    addMessage(chatId, {
+      role: "user",
+      content: fullContent,
       parentId,
-      userMsgId,
-      userMsgMetadata,
+      id: userMsgId,
+      metadata: userMsgMetadata,
       attachments,
-    );
+    });
 
     // 4. Persist BEFORE the API call — the server reads this row to rebuild
     //    the thread; a missing row would silently truncate context.
@@ -314,7 +312,9 @@ export function useStreamResponse(
       });
     } catch (err) {
       console.error("Failed to persist message:", err);
-      toast.error("Message may not have been saved. Please check your connection.");
+      toast.error(
+        "Message may not have been saved. Please check your connection.",
+      );
     }
 
     // 5. Upload attachments

@@ -57,7 +57,7 @@ export function ChatUI({
   const chat = useAppStore((state) => state.chats[chatId]);
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
-  const setKnowledgebase = useAppStore((state) => state.setKnowledgebase);
+  const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
@@ -279,9 +279,9 @@ export function ChatUI({
   const handleKbChange = useCallback(
     (kbIds: string[]) => {
       const kbId = kbIds[0] ?? null;
-      setKnowledgebase(chatId, kbId);
+      setKnowledgebaseDb(chatId, kbId);
     },
-    [chatId, setKnowledgebase],
+    [chatId, setKnowledgebaseDb],
   );
 
   // Streaming state
