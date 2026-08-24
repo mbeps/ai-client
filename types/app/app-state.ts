@@ -322,4 +322,7 @@ export type AppState = {
    * @returns Promise resolving when change completes on server
    */
   setKnowledgebase: (chatId: string, kbId: string | null) => Promise<void>;
+
+  resetEntityState: () => void;
+  resetChatState: () => void;
 };

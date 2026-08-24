@@ -25,6 +25,8 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 
 /**
  * Sidebar for the /settings section.
@@ -121,6 +123,9 @@ export function SettingsSidebar({
             <SidebarMenuButton
               onClick={async () => {
                 await authClient.signOut();
+                useAppStore.getState().resetEntityState();
+                useAppStore.getState().resetChatState();
+                hydratedResources.clear();
                 router.push(ROUTES.AUTH.LOGIN.path);
               }}
               className="text-destructive hover:text-destructive focus:text-destructive"

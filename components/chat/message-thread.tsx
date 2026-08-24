@@ -5,6 +5,7 @@ import type { Message } from "@/types/message/message";
 import type { Chat } from "@/types/chat/chat";
 import type { Attachment } from "@/types/attachment/attachment";
 import { MessageBubble } from "./message-bubble";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 
 /**
  * Props for the MessageThread component.
@@ -52,6 +53,7 @@ export function MessageThread({
   onNavigateBranch,
   onShowArtifact,
 }: MessageThreadProps) {
+  const { knowledgebases } = useKnowledgebases();
   const handleNavigateBranch = useCallback(
     (siblingId: string) => {
       onNavigateBranch(siblingId);
@@ -98,6 +100,7 @@ export function MessageThread({
             reasoning={msg.reasoning}
             isStreamingReasoning={false}
             onShowArtifact={() => onShowArtifact(msg.id)}
+            knowledgebases={knowledgebases}
           />
         );
       })}

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/lib/store";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -290,6 +291,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuItem
                   onClick={async () => {
                     await authClient.signOut();
+                    useAppStore.getState().resetEntityState();
+                    useAppStore.getState().resetChatState();
+                    hydratedResources.clear();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
                   className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"

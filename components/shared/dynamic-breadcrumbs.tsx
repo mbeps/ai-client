@@ -59,11 +59,11 @@ const UUID_REGEX =
 export function DynamicBreadcrumbs() {
   const pathname = usePathname();
   const {
-    chats,
     projects,
     assistants,
     prompts,
     mcpServers,
+    publicMcpServers,
     transformAgents,
     loadProjects,
     loadPrompts,
@@ -73,11 +73,11 @@ export function DynamicBreadcrumbs() {
     loadTransformAgents,
   } = useAppStore(
     useShallow((state) => ({
-      chats: state.chats,
       projects: state.projects,
       assistants: state.assistants,
       prompts: state.prompts,
       mcpServers: state.mcpServers,
+      publicMcpServers: state.publicMcpServers,
       transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
@@ -86,6 +86,16 @@ export function DynamicBreadcrumbs() {
       loadPublicMcpServers: state.loadPublicMcpServers,
       loadTransformAgents: state.loadTransformAgents,
     })),
+  );
+
+  // Narrow subscription: only the single chat whose ID appears in the current URL
+  const pathSegments = React.useMemo(
+    () => getPathSegments(pathname),
+    [pathname],
+  );
+  const chatId = pathSegments.find((seg) => UUID_REGEX.test(seg)) ?? null;
+  const currentChatData = useAppStore((s) =>
+    chatId ? s.chats[chatId] : undefined,
   );
 
   const [resolvedLabels, setResolvedLabels] = React.useState<
@@ -120,10 +130,12 @@ export function DynamicBreadcrumbs() {
     }
   }, [mcpServers.length, loadMcpServers]);
 
-  // Load Public MCP servers
+  // Load Public MCP servers — guard prevents re-fetch on every mount
   React.useEffect(() => {
-    loadPublicMcpServers().catch(() => {});
-  }, [loadPublicMcpServers]);
+    if (publicMcpServers.length === 0) {
+      loadPublicMcpServers().catch(() => {});
+    }
+  }, [publicMcpServers.length, loadPublicMcpServers]);
 
   // Load transform agents if on a transform workflow path
   React.useEffect(() => {
@@ -152,7 +164,7 @@ export function DynamicBreadcrumbs() {
             prompts.some((p) => p.id === segment) ||
             mcpServers.some((s) => s.id === segment) ||
             transformAgents.some((a) => a.id === segment) ||
-            chats[segment];
+            (chatId === segment && !!currentChatData);
 
           if (
             UUID_REGEX.test(segment) &&
@@ -222,38 +234,39 @@ export function DynamicBreadcrumbs() {
     prompts,
     mcpServers,
     transformAgents,
-    chats,
+    chatId,
+    currentChatData,
     resolvedLabels,
   ]);
 
-  // Split pathname into segments and remove empty strings
-  const segments = getPathSegments(pathname);
-
-  if (segments.length === 0) return null;
+  // Use path segments computed above (pathSegments)
+  if (pathSegments.length === 0) return null;
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {segments.map((segment, index) => {
-          const href = `/${segments.slice(0, index + 1).join("/")}`;
-          const isLast = index === segments.length - 1;
+        {pathSegments.map((segment, index) => {
+          const href = `/${pathSegments.slice(0, index + 1).join("/")}`;
+          const isLast = index === pathSegments.length - 1;
 
-          const currentChat = chats[segment];
+          const isChatSegment = chatId === segment;
 
           // Map segment to label or capitalise it
           const label =
-            currentChat?.title ||
+            (isChatSegment ? currentChatData?.title : undefined) ||
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
             mcpServers.find((s) => s.id === segment)?.name ||
             transformAgents.find((a) => a.id === segment)?.name ||
             resolvedLabels[segment] ||
-            // Fallback for project/assistant names from chat object
-            Object.values(chats).find((c) => c.projectId === segment)
-              ?.projectName ||
-            Object.values(chats).find((c) => c.assistantId === segment)
-              ?.assistantName ||
+            // Fallback: project/assistant name from the current chat
+            (currentChatData?.projectId === segment
+              ? currentChatData?.projectName
+              : undefined) ||
+            (currentChatData?.assistantId === segment
+              ? currentChatData?.assistantName
+              : undefined) ||
             ROUTE_LABELS[segment.toLowerCase()] ||
             segment.charAt(0).toUpperCase() +
               segment.slice(1).replace(/-/g, " ");

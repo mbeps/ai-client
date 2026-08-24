@@ -887,3 +887,53 @@ describe("ChatSlice — loadChats branch coverage", () => {
     expect(msg.childrenIds).toHaveLength(0);
   });
 });
+
+// ─── T5.3 scoped rollback ──────────────────────────────────────────────────
+describe("T5.3 scoped rollback does not clobber entity state", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("renameChatDb failure preserves projects array", async () => {
+    useAppStore.setState((s) => ({
+      ...s,
+      projects: [
+        {
+          id: "p1",
+          name: "Project 1",
+          userId: "u1",
+          description: "",
+          isPinned: false,
+          globalPrompt: "",
+          tools: [],
+          knowledgebaseId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    }));
+    useAppStore.setState((s) => ({
+      ...s,
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "old",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    }));
+    vi.mocked(renameChatAction).mockRejectedValueOnce(new Error("DB error"));
+    await useAppStore
+      .getState()
+      .renameChatDb("chat1", "new title")
+      .catch(() => {});
+    expect(useAppStore.getState().projects).toHaveLength(1);
+    expect(useAppStore.getState().projects[0].id).toBe("p1");
+  });
+});

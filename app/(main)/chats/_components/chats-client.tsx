@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "@/lib/store";
 import { MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,9 @@ interface ChatsClientProps {
  * @param props.initialChats - The list of chats from the server.
  */
 export function ChatsClient({ initialChats }: ChatsClientProps) {
-  const { chats: storeChats, upsertChat } = useAppStore();
+  const { chats: storeChats, upsertChat } = useAppStore(
+    useShallow((s) => ({ chats: s.chats, upsertChat: s.upsertChat })),
+  );
   const createNewChat = useCreateChat();
   const [filter, setFilter] = useState("all");
 

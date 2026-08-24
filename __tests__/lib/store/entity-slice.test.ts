@@ -214,3 +214,60 @@ describe("EntitySlice — MCP Servers", () => {
     });
   });
 });
+
+// ─── T5.4 reset actions ────────────────────────────────────────────────────
+describe("T5.4 resetEntityState clears entity state", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("resets all entity arrays and userSettings to defaults", async () => {
+    vi.mocked(listProjectsAction).mockResolvedValueOnce([
+      {
+        id: "p1",
+        userId: "u1",
+        name: "P1",
+        description: null,
+        isPinned: false,
+        globalPrompt: null,
+        tools: [],
+        knowledgebaseId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    await useAppStore.getState().loadProjects();
+    expect(useAppStore.getState().projects).toHaveLength(1);
+    useAppStore.getState().resetEntityState();
+    expect(useAppStore.getState().projects).toHaveLength(0);
+    expect(useAppStore.getState().assistants).toHaveLength(0);
+    expect(useAppStore.getState().prompts).toHaveLength(0);
+    expect(useAppStore.getState().mcpServers).toHaveLength(0);
+    expect(useAppStore.getState().publicMcpServers).toHaveLength(0);
+    expect(useAppStore.getState().transformAgents).toHaveLength(0);
+    expect(useAppStore.getState().mcpPrompts).toHaveLength(0);
+    expect(useAppStore.getState().userSettings).toBeNull();
+  });
+
+  it("resetChatState clears chats", () => {
+    useAppStore.setState((s) => ({
+      ...s,
+      chats: {
+        c1: {
+          id: "c1",
+          title: "Chat",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    }));
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(1);
+    useAppStore.getState().resetChatState();
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(0);
+  });
+});

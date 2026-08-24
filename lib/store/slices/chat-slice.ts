@@ -43,6 +43,7 @@ type ChatSlice = Pick<
   | "deleteChatDb"
   | "setKnowledgebase"
   | "setCurrentLeafDb"
+  | "resetChatState"
 >;
 
 /**
@@ -152,7 +153,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await deleteMessageAction(chatId, messageId, newLeafId);
     } catch (error) {
-      set(previous);
+      set({ chats: previous.chats });
       throw error;
     }
   },
@@ -175,7 +176,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateCurrentLeafAction(chatId, leafId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -229,7 +230,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateMessageMetadataAction(messageId, metadata);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -323,7 +324,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await renameChatAction(id, title);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -346,7 +347,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await moveChatAction(id, projectId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -375,7 +376,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await deleteChat(chatId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -394,7 +395,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
+  },
+
+  resetChatState: () => {
+    set({ chats: {} });
   },
 });

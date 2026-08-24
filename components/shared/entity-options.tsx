@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { getPathSegments } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
+import { useShallow } from "zustand/react/shallow";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { ChatOptions } from "@/components/chat/chat-options";
 import { ProjectOptions } from "@/components/project/project-options";
@@ -18,7 +19,13 @@ import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-o
  */
 export function EntityOptions() {
   const pathname = usePathname();
-  const { chats, projects, assistants } = useAppStore();
+  const { chats, projects, assistants } = useAppStore(
+    useShallow((s) => ({
+      chats: s.chats,
+      projects: s.projects,
+      assistants: s.assistants,
+    })),
+  );
   const { normalizedKnowledgebases } = useKnowledgebases();
 
   const segments = getPathSegments(pathname);

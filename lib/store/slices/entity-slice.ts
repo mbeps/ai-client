@@ -43,6 +43,7 @@ type EntitySlice = Pick<
   | "loadMcpServers"
   | "loadPublicMcpServers"
   | "loadMcpPrompts"
+  | "resetEntityState"
 >;
 
 export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
@@ -163,4 +164,17 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         updatedAt: new Date(r.updatedAt),
       }) as any,
   ),
+
+  resetEntityState: () => {
+    set({
+      projects: [],
+      assistants: [],
+      prompts: [],
+      mcpServers: [],
+      publicMcpServers: [],
+      transformAgents: [],
+      mcpPrompts: [],
+      userSettings: null,
+    });
+  },
 });

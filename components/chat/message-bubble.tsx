@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import type { Message } from "@/types/message/message";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
@@ -65,6 +65,8 @@ interface MessageBubbleProps {
   streamingCitations?: Citation[];
   /** Tool invocations currently in flight during streaming. */
   activeToolCalls?: ToolCallState[];
+  /** Knowledge bases available for display in KB chips. */
+  knowledgebases?: KnowledgebaseWithCount[];
 }
 
 /**
@@ -98,6 +100,7 @@ export function MessageBubble({
   onShowArtifact,
   streamingCitations,
   activeToolCalls,
+  knowledgebases = [],
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -118,7 +121,6 @@ export function MessageBubble({
     return extractCitations(rawToolData.toolResults);
   }, [rawToolData, streamingCitations]);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const { knowledgebases } = useKnowledgebases();
   const promptMeta = isUser ? rawPromptMeta : null;
   const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
   const toolData = isUser ? null : rawToolData;

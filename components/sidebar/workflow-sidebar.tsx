@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/constants/routes";
 import { authClient } from "@/lib/auth/auth-client";
+import { useAppStore } from "@/lib/store";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import {
   ChevronLeft,
   ChevronsUpDown,
@@ -187,6 +189,9 @@ export function WorkflowSidebar({
                 <DropdownMenuItem
                   onClick={async () => {
                     await authClient.signOut();
+                    useAppStore.getState().resetEntityState();
+                    useAppStore.getState().resetChatState();
+                    hydratedResources.clear();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
                   className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
