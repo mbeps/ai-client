@@ -215,6 +215,47 @@ describe("EntitySlice — MCP Servers", () => {
   });
 });
 
+// ─── MED-04 loadError state ────────────────────────────────────────────────
+describe("EntitySlice — loadError", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("sets loadError and preserves prior entity data on loader rejection", async () => {
+    useAppStore.setState({ projects: [{ id: "p1" }] } as never);
+    vi.mocked(listProjectsAction).mockRejectedValueOnce(new Error("boom"));
+
+    await useAppStore.getState().loadProjects();
+
+    expect(useAppStore.getState().loadError).toBe("Failed to load projects");
+    expect(useAppStore.getState().projects).toEqual([{ id: "p1" }]);
+  });
+
+  it("clears loadError on successful load", async () => {
+    useAppStore.setState({ loadError: "Failed to load projects" });
+    vi.mocked(listProjectsAction).mockResolvedValueOnce([makeProjectRow("p1")]);
+
+    await useAppStore.getState().loadProjects();
+
+    expect(useAppStore.getState().loadError).toBeNull();
+    expect(useAppStore.getState().projects).toHaveLength(1);
+  });
+
+  it("resetEntityState clears loadError", () => {
+    useAppStore.setState({ loadError: "Failed to load assistants" });
+    useAppStore.getState().resetEntityState();
+    expect(useAppStore.getState().loadError).toBeNull();
+  });
+
+  it("does not reject when the loader fails", async () => {
+    vi.mocked(listAssistantsAction).mockRejectedValueOnce(new Error("boom"));
+    await expect(
+      useAppStore.getState().loadAssistants(),
+    ).resolves.toBeUndefined();
+  });
+});
+
 // ─── T5.4 reset actions ────────────────────────────────────────────────────
 describe("T5.4 resetEntityState clears entity state", () => {
   beforeEach(() => {

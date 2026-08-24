@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth-schema";
 
 export const knowledgebase = pgTable(
@@ -23,5 +24,11 @@ export const knowledgebase = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("knowledgebase_user_id_idx").on(table.userId)],
+  (table) => [
+    index("knowledgebase_user_id_idx").on(table.userId),
+    check(
+      "kb_knowledgebase_index_status_check",
+      sql`${table.indexStatus} in ('ready', 'stale', 'indexing')`,
+    ),
+  ],
 );

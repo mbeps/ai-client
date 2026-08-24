@@ -39,7 +39,7 @@ export const PROMPTS = {
   SCHEMA: {
     MANAGE_ARTIFACT: {
       TYPE_DESCRIPTION:
-        "The type of artifact: 'markdown', 'spreadsheet', 'html', or 'mermaid'",
+        "The type of artifact. Must be one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'. Any other value will be rejected.",
       TITLE_DESCRIPTION: "The title of the artifact",
       CONTENT_DESCRIPTION:
         'The content of the artifact. For spreadsheet, provide a multi-sheet JSON object like { "sheets": [{ "name": "Sheet1", "data": [["A1", "B1"], ["A2", "B2"]] }] }. Values in data can be simple types or objects { "v": value, "s": { "bold": true } }. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code.',

@@ -142,7 +142,9 @@ export type ChatRequest = z.infer<typeof chatRequestSchema>;
  * Base fields for manage_artifact tool to avoid code duplication in the union schema.
  */
 const manageArtifactBaseFields = {
-  type: z.string().describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
+  type: z
+    .enum(["markdown", "spreadsheet", "html", "mermaid"])
+    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
   id: z.string().optional().describe("Unique identifier for the artifact."),
   title: z
     .string()

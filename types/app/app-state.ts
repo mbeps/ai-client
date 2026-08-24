@@ -86,6 +86,12 @@ export type AppState = {
    */
   mcpPrompts: DiscoveredPrompt[];
 
+  /**
+   * Error message from the most recent entity load failure, or null.
+   * Shared across all entity loaders; cleared on next successful load or reset.
+   */
+  loadError: string | null;
+
   // ---- Transform Agent Actions ----
 
   /**

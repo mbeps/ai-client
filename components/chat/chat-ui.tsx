@@ -177,15 +177,17 @@ export function ChatUI({
           }
         } catch {}
       }
-      const mermaidMatch = msg.content.match(/```mermaid\n([\s\S]*?)```/);
-      if (mermaidMatch) {
+      const mermaidMatches = [
+        ...msg.content.matchAll(/```mermaid\n([\s\S]*?)```/g),
+      ];
+      mermaidMatches.forEach((m, i) => {
         artifacts.push({
           type: "mermaid",
-          title: "Mermaid Diagram",
-          content: mermaidMatch[1].trim(),
+          title: i === 0 ? "Mermaid Diagram" : `Mermaid Diagram ${i + 1}`,
+          content: m[1].trim(),
           messageId: msg.id,
         });
-      }
+      });
     });
     return artifacts;
   }, [thread]);
@@ -208,38 +210,15 @@ export function ChatUI({
 
   const handleShowArtifact = useCallback(
     (msgId: string) => {
-      let foundIndex = -1;
-      let artifactCounter = 0;
-
-      for (const msg of thread) {
-        let msgArtifactsCount = 0;
-        if (msg.metadata) {
-          try {
-            const meta = JSON.parse(msg.metadata);
-            if (Array.isArray(meta.toolResults)) {
-              msgArtifactsCount = meta.toolResults.filter(
-                (tr: any) => tr.toolName === "manage_artifact",
-              ).length;
-            }
-          } catch {}
-        }
-        if (msgArtifactsCount === 0 && msg.content.includes("```mermaid")) {
-          msgArtifactsCount = 1;
-        }
-
-        if (msg.id === msgId) {
-          foundIndex = artifactCounter;
-          break;
-        }
-        artifactCounter += msgArtifactsCount;
-      }
-
-      if (foundIndex >= 0) {
-        setArtifactIndex(foundIndex);
+      // Look up directly in allArtifacts so the index matches the panel's data
+      // source (ponytail: single source of truth instead of a parallel count walk).
+      const idx = allArtifacts.findIndex((a) => a.messageId === msgId);
+      if (idx >= 0) {
+        setArtifactIndex(idx);
         setIsArtifactOpen(true);
       }
     },
-    [thread],
+    [allArtifacts],
   );
 
   const handleUpdateArtifact = useCallback(

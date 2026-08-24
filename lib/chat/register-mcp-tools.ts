@@ -88,8 +88,6 @@ export async function registerMcpTools(
       // @ts-expect-error Vercel AI SDK type mismatch with internal tools
       execute: async (args: any) => {
         try {
-          const VALID_TYPES = ["markdown", "spreadsheet", "html", "mermaid"];
-
           // For spreadsheets the AI may pass `sheets` as a top-level arg instead of
           // embedding the JSON in `content`. Serialize it so the viewer can parse it.
           let content = args.content || args.text || "";
@@ -112,16 +110,10 @@ export async function registerMcpTools(
             }
           }
 
-          // If no type is given but sheets are present, infer spreadsheet.
-          const inferredType = VALID_TYPES.includes(args.type)
-            ? args.type
-            : args.sheets || content.includes('"sheets":')
-              ? "spreadsheet"
-              : "markdown";
-
           const normalizedArgs = {
             id: crypto.randomUUID(),
-            type: inferredType,
+            // Schema validates type at parse time, so args.type is always valid here.
+            type: args.type,
             title: args.title || PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE,
             content,
           };

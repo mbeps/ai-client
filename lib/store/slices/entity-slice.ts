@@ -20,8 +20,13 @@ const createEntityLoader = <K extends keyof AppState, R>(
   mapper: (row: R) => AppState[K] extends (infer T)[] ? T : never,
 ) => {
   return async () => {
-    const rows = await listAction();
-    set({ [key]: rows.map(mapper) } as Partial<AppState>);
+    try {
+      const rows = await listAction();
+      set({ [key]: rows.map(mapper), loadError: null } as Partial<AppState>);
+    } catch {
+      // ponytail: single shared error field; per-entity errors only if needed later
+      set({ loadError: `Failed to load ${String(key)}` });
+    }
   };
 };
 
@@ -35,6 +40,7 @@ type EntitySlice = Pick<
   | "publicMcpServers"
   | "transformAgents"
   | "mcpPrompts"
+  | "loadError"
   | "loadTransformAgents"
   | "loadProjects"
   | "loadAssistants"
@@ -57,6 +63,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   publicMcpServers: [],
   transformAgents: [],
   mcpPrompts: [],
+  loadError: null,
 
   loadMcpPrompts: async () => {
     const prompts = await discoverAllPrompts();
@@ -175,6 +182,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       transformAgents: [],
       mcpPrompts: [],
       userSettings: null,
+      loadError: null,
     });
   },
 });

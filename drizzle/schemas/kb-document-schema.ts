@@ -6,7 +6,9 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth-schema";
 import { knowledgebase } from "./knowledgebase-schema";
 
@@ -47,5 +49,9 @@ export const kbDocument = pgTable(
   (table) => [
     index("kb_document_kb_id_idx").on(table.kbId),
     uniqueIndex("kb_document_s3_key_idx").on(table.s3Key),
+    check(
+      "kb_document_status_check",
+      sql`${table.status} in ('pending', 'processing', 'ready', 'failed')`,
+    ),
   ],
 );

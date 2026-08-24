@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { useAppStore } from "@/lib/store";
 import { Search } from "lucide-react";
 import { SortableResource, sortByUpdatedAt } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ export function ResourceListPage<T extends SortableResource>({
   renderList,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
+  const loadError = useAppStore((state) => state.loadError);
 
   useEffect(() => {
     onMount?.();
@@ -91,6 +93,12 @@ export function ResourceListPage<T extends SortableResource>({
         </div>
         {extraFilters}
       </div>
+
+      {loadError && (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {loadError}
+        </p>
+      )}
 
       {sorted.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
