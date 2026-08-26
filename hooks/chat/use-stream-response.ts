@@ -181,6 +181,8 @@ export function useStreamResponse(
       console.error("Stream error:", error);
       toast.error(error.message || "Failed to generate response");
     },
+    // useChat's chat-level callback is still `onFinish` in @ai-sdk/react 4.x
+    // (only streamText/generateText renamed to onEnd).
     onFinish: async ({ message, isAbort, isError }) => {
       if (isError || isAbort) return;
 

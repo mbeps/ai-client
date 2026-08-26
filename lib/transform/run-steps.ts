@@ -2,7 +2,7 @@ import { db } from "@/drizzle/db";
 import { env } from "@/lib/env";
 import { transformRun, attachment } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
-import { generateText, stepCountIs } from "ai";
+import { generateText, isStepCount } from "ai";
 import { logger } from "@/lib/logger";
 import { RATE_LIMIT_ERROR_CODE } from "@/constants/errors";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
@@ -196,12 +196,11 @@ export async function runTransformSteps({
     try {
       const result = await generateText({
         model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: "Please execute the task." },
-        ],
+        // v7 rejects role:"system" messages in messages[] by default.
+        instructions: systemPrompt,
+        messages: [{ role: "user", content: "Please execute the task." }],
         tools: filteredTools,
-        stopWhen: stepCountIs(env.CHAT_MAX_STEPS),
+        stopWhen: isStepCount(env.CHAT_MAX_STEPS),
         maxRetries: 1,
       });
 

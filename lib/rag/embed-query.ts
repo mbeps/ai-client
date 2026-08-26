@@ -17,9 +17,7 @@ export async function embedQuery(
   userId: string,
 ): Promise<number[]> {
   const resolved = await resolveEmbeddingProvider(userId);
-  const embeddingModel = resolved.sdkProvider.textEmbeddingModel(
-    resolved.modelId,
-  );
+  const embeddingModel = resolved.sdkProvider.embeddingModel(resolved.modelId);
 
   const value = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId)
     ? `query: ${text}`

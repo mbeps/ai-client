@@ -5,7 +5,7 @@ const embedManyMock = vi.hoisted(() => vi.fn());
 vi.mock("ai", () => ({ embedMany: embedManyMock }));
 vi.mock("@/lib/chat/resolve-embedding-provider", () => ({
   resolveEmbeddingProvider: vi.fn().mockResolvedValue({
-    sdkProvider: { textEmbeddingModel: vi.fn() },
+    sdkProvider: { embeddingModel: vi.fn() },
     modelId: "test-model",
   }),
 }));

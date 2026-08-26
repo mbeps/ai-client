@@ -7,10 +7,14 @@ import type { ModelMessage } from "ai";
 type TextPart = { type: "text"; text: string };
 
 /**
- * Image content part for Vercel AI SDK model messages.
+ * File content part for Vercel AI SDK v7 model messages.
  * @author Maruf Bepary
  */
-type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
+type FilePart = {
+  type: "file";
+  data: { type: "url"; url: string };
+  mediaType: string;
+};
 
 /**
  * Chat message from the request, including attachments and metadata.
@@ -51,7 +55,7 @@ export function assembleModelMessages(
 ): ModelMessage[] {
   return messages.flatMap((m) => {
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
-      const parts: Array<TextPart | ImagePart> = [];
+      const parts: Array<TextPart | FilePart> = [];
 
       for (const att of m.attachments) {
         if (att.type === "document" && att.extractedText) {
@@ -70,9 +74,9 @@ export function assembleModelMessages(
         // Server-reconstructed threads carry presigned URLs.
         if (att.type === "image" && att.url) {
           parts.push({
-            type: "image",
-            image: att.url,
-            mimeType: att.mimeType,
+            type: "file",
+            data: { type: "url", url: att.url },
+            mediaType: att.mimeType ?? "image",
           });
         }
       }

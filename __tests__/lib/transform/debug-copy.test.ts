@@ -21,7 +21,7 @@ vi.mock("@/lib/env", () => ({
 
 vi.mock("ai", () => ({
   generateText: vi.fn().mockResolvedValue({ text: "step done", steps: [] }),
-  isStepCount: vi.fn(),
+  stepCountIs: vi.fn(),
 }));
 vi.mock("@/lib/transform/build-file-context", () => ({
   buildFileContext: vi.fn(),
@@ -64,7 +64,6 @@ describe("runTransformSteps — human review gate (T6.1)", () => {
     chainable.where.mockImplementation(() => chainable);
   });
 
-  it("emits transform-review-required when step requiresReview is true", async () => {
     const steps = [
       {
         order: 0,
@@ -92,7 +91,6 @@ describe("runTransformSteps — human review gate (T6.1)", () => {
     expect(reviewEvent.stepIndex).toBe(0);
   });
 
-  it("updates DB status to awaiting_review with array index as currentStepIndex", async () => {
     const steps = [
       {
         order: 99, // order differs from array index intentionally
@@ -144,7 +142,6 @@ describe("runTransformSteps — human review gate (T6.1)", () => {
     expect(result).toMatchObject({ success: true, paused: true });
   });
 
-  it("does not execute subsequent steps after a review pause", async () => {
     const steps = [
       {
         order: 0,
@@ -178,7 +175,6 @@ describe("runTransformSteps — human review gate (T6.1)", () => {
     expect(step1StartEvents).toHaveLength(0);
   });
 
-  it("still emits transform-step-complete before the review event", async () => {
     const steps = [
       {
         order: 0,
@@ -208,3 +204,6 @@ describe("runTransformSteps — human review gate (T6.1)", () => {
     expect(reviewIdx).toBeGreaterThan(completeIdx);
   });
 });
+
+  });
+})

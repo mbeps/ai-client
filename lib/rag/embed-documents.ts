@@ -20,9 +20,7 @@ export async function embedDocuments(
   if (texts.length === 0) return [];
 
   const resolved = await resolveEmbeddingProvider(userId);
-  const embeddingModel = resolved.sdkProvider.textEmbeddingModel(
-    resolved.modelId,
-  );
+  const embeddingModel = resolved.sdkProvider.embeddingModel(resolved.modelId);
 
   const values = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId)
     ? texts.map((t) => `passage: ${t}`)

@@ -1,6 +1,7 @@
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
+  toUIMessageStream,
   type StreamTextResult,
 } from "ai";
 import { logger } from "@/lib/logger";
@@ -25,7 +26,7 @@ export interface FinishRef {
 }
 
 interface CreateChatStreamOptions {
-  result: StreamTextResult<any, any>;
+  result: StreamTextResult<any, any, any>;
   chatId: string;
   userId: string;
   userMessageId?: string | null;
@@ -110,7 +111,11 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.write({ type: "start", messageId: assistantMessageId } as any);
-      writer.merge(result.toUIMessageStream());
+      // Stateless merge: the project writes its own `start` chunk carrying the
+      // server-assigned message id, so the SDK must not emit a second one.
+      writer.merge(
+        toUIMessageStream({ stream: result.stream, sendStart: false }),
+      );
     },
     onError: (error) => {
       logger.error("[Chat Stream Error]", error, { chatId }, userId);
@@ -118,7 +123,7 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
       // Never leak raw provider/server errors to the client.
       return "An error occurred during generation.";
     },
-    onFinish: async () => {
+    onEnd: async () => {
       await persistOnce();
       await runCleanup();
     },
@@ -134,36 +139,40 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
  * callbacks (the ref may not be populated yet when the UI stream finishes).
  * @author Maruf Bepary
  */
-async function persistResultIn(
-  options: {
-    result: StreamTextResult<any, any>;
-    finishRef: FinishRef;
-    chatId: string;
-    userId: string;
-    userMessageId?: string | null;
-    resolvedModelId: string;
-    assistantMessageId: string;
-  },
-): Promise<void> {
-  const { result, finishRef, chatId, userId, userMessageId, resolvedModelId, assistantMessageId } = options;
+async function persistResultIn(options: {
+  result: StreamTextResult<any, any, any>;
+  finishRef: FinishRef;
+  chatId: string;
+  userId: string;
+  userMessageId?: string | null;
+  resolvedModelId: string;
+  assistantMessageId: string;
+}): Promise<void> {
+  const {
+    result,
+    finishRef,
+    chatId,
+    userId,
+    userMessageId,
+    resolvedModelId,
+    assistantMessageId,
+  } = options;
 
   let finish = finishRef.current;
   if (!finish || (!finish.text && !finish.reasoning)) {
     // ponytail: awaits the full result even on client abort; acceptable
     // because persistence is best-effort and bounded by maxDuration.
-    // SDK exposes PromiseLike (not Promise) — wrap for .catch support
-    const toPromise = <T,>(p: PromiseLike<T>): Promise<T> => Promise.resolve(p);
-    const [text, reasoning, toolCalls, toolResults] = await Promise.all([
-      toPromise(result.text).catch(() => undefined),
-      toPromise(result.reasoning).catch(() => undefined),
-      toPromise(result.toolCalls).catch(() => []),
-      toPromise(result.toolResults).catch(() => []),
-    ]);
+    // SDK exposes PromiseLike (not Promise) — wrap for .catch support.
+    // v7 top-level toolCalls/toolResults aggregate across steps while
+    // text/reasoning are final-step only; finalStep preserves the v6
+    // final-step-only shape the message tree expects.
+    const toPromise = <T>(p: PromiseLike<T>): Promise<T> => Promise.resolve(p);
+    const finalStep = await toPromise(result.finalStep).catch(() => undefined);
     finish = {
-      text,
-      reasoning: reasoningToString(reasoning),
-      toolCalls: toolCalls as unknown[],
-      toolResults: toolResults as unknown[],
+      text: finalStep?.text,
+      reasoning: reasoningToString(finalStep?.reasoning),
+      toolCalls: (finalStep?.toolCalls as unknown[]) ?? [],
+      toolResults: (finalStep?.toolResults as unknown[]) ?? [],
     };
   }
 
@@ -187,7 +196,9 @@ async function persistResultIn(
       content: finish.text ?? "",
       parentId: userMessageId ?? undefined,
       metadata:
-        Object.keys(metadataObj).length > 0 ? JSON.stringify(metadataObj) : null,
+        Object.keys(metadataObj).length > 0
+          ? JSON.stringify(metadataObj)
+          : null,
     });
     logger.info(
       "[Chat Stream] Response completed",

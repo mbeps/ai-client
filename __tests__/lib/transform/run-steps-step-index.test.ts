@@ -21,7 +21,7 @@ vi.mock("@/lib/env", () => ({
 
 vi.mock("ai", () => ({
   generateText: vi.fn().mockResolvedValue({ text: "ok", steps: [] }),
-  stepCountIs: vi.fn(),
+  isStepCount: vi.fn(),
 }));
 vi.mock("@/lib/transform/build-file-context", () => ({
   buildFileContext: vi.fn(),

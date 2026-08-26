@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { env } from "@/lib/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { headers } from "next/headers";
-import { streamText, stepCountIs } from "ai";
+import { streamText, isStepCount } from "ai";
 import { chatRequestSchema } from "@/schemas/chat/chat";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: resolved.sdkProvider.chat(resolvedModelId),
       // System prompt passed natively — never spoofable via messages[]
-      system: buildSystemPrompt(
+      instructions: buildSystemPrompt(
         globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
         ctx.assistantRow?.prompt,
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
           : undefined,
       stopWhen:
         isToolCallingModel && hasMcpTools
-          ? stepCountIs(env.CHAT_MAX_STEPS)
+          ? isStepCount(env.CHAT_MAX_STEPS)
           : undefined,
       abortSignal: req.signal,
       // Client aborts don't reliably fire onFinish — capture partial content
@@ -203,20 +203,22 @@ export async function POST(req: Request) {
           finishReason: "abort",
         };
       },
-      onFinish: (finish) => {
+      onEnd: (finish) => {
         // SDK v6 may deliver reasoning as parts — normalise to a string
         const rawReasoning = finish.reasoning;
         const reasoning =
           typeof rawReasoning === "string"
             ? rawReasoning
             : Array.isArray(rawReasoning)
-              ? rawReasoning.map((p) => p.text ?? "").join("")
+              ? rawReasoning.map((p) => (p as any).text ?? "").join("")
               : "";
+        // v7 event toolCalls/toolResults aggregate across steps; finalStep
+        // restores the v6 final-step-only shape the message tree expects.
         finishRef.current = {
           text: finish.text,
           reasoning,
-          toolCalls: (finish.toolCalls as unknown[]) ?? [],
-          toolResults: (finish.toolResults as unknown[]) ?? [],
+          toolCalls: (finish.finalStep.toolCalls as unknown[]) ?? [],
+          toolResults: (finish.finalStep.toolResults as unknown[]) ?? [],
           finishReason: finish.finishReason,
         };
       },

@@ -6,6 +6,8 @@ const uiStreamCaptures = vi.hoisted(() => ({
   responseInit: null as any,
 }));
 
+const toUIMessageStreamMock = vi.hoisted(() => vi.fn());
+
 vi.mock("ai", () => ({
   createUIMessageStream: (config: any) => {
     uiStreamCaptures.config = config;
@@ -15,6 +17,7 @@ vi.mock("ai", () => ({
     uiStreamCaptures.responseInit = init;
     return new Response("ui-stream-response") as any;
   },
+  toUIMessageStream: toUIMessageStreamMock,
 }));
 
 const mockPersist = vi.hoisted(() => vi.fn());
@@ -61,13 +64,14 @@ describe("createChatStream (UI message stream)", () => {
     expect(response).toBeInstanceOf(Response);
   });
 
-  it("execute writes start chunk and merges result.toUIMessageStream()", async () => {
-    const toUIMessageStream = vi.fn().mockReturnValue("inner-stream");
+  it("execute writes start chunk and merges the SDK toUIMessageStream()", async () => {
+    const stream = { symbol: "fixture-stream" };
+    toUIMessageStreamMock.mockReturnValue("inner-stream");
     const writer = fakeWriter();
 
     createChatStream(
       baseOptions({
-        result: { toUIMessageStream } as any,
+        result: { stream } as any,
         assistantMessageId: "assistant-1",
       }),
     );
@@ -76,21 +80,22 @@ describe("createChatStream (UI message stream)", () => {
     expect(writer.write).toHaveBeenCalledWith(
       expect.objectContaining({ type: "start", messageId: "assistant-1" }),
     );
+    expect(toUIMessageStreamMock).toHaveBeenCalledWith(
+      expect.objectContaining({ stream, sendStart: false }),
+    );
     expect(writer.merge).toHaveBeenCalledWith("inner-stream");
   });
 
   it("generates an assistantMessageId when none is provided", async () => {
     const writer = fakeWriter();
-    createChatStream(
-      baseOptions({ result: { toUIMessageStream: vi.fn() } as any }),
-    );
+    createChatStream(baseOptions({ result: { stream: {} } as any }));
     await uiStreamCaptures.config.execute({ writer });
 
     const startCall = writer.write.mock.calls[0][0];
     expect(startCall.messageId).toBeTruthy();
   });
 
-  it("onFinish persists accumulated content from finishRef with metadata", async () => {
+  it("onEnd persists accumulated content from finishRef with metadata", async () => {
     const finishRef = {
       current: {
         text: "final answer",
@@ -102,7 +107,7 @@ describe("createChatStream (UI message stream)", () => {
     };
 
     createChatStream(baseOptions({ finishRef }));
-    await uiStreamCaptures.config.onFinish({} as any);
+    await uiStreamCaptures.config.onEnd({} as any);
 
     expect(mockPersist).toHaveBeenCalledTimes(1);
     const call = mockPersist.mock.calls[0][0];
@@ -115,7 +120,7 @@ describe("createChatStream (UI message stream)", () => {
     expect(metadata.toolCalls).toHaveLength(1);
   });
 
-  it("onFinish persists only the model in metadata when there is no reasoning or tools", async () => {
+  it("onEnd persists only the model in metadata when there is no reasoning or tools", async () => {
     const finishRef = {
       current: {
         text: "plain answer",
@@ -126,7 +131,7 @@ describe("createChatStream (UI message stream)", () => {
       },
     };
     createChatStream(baseOptions({ finishRef }));
-    await uiStreamCaptures.config.onFinish({} as any);
+    await uiStreamCaptures.config.onEnd({} as any);
 
     expect(mockPersist).toHaveBeenCalledTimes(1);
     // Model is always persisted — the UI displays it on assistant messages.
@@ -135,14 +140,14 @@ describe("createChatStream (UI message stream)", () => {
     });
   });
 
-  it("onFinish skips persistence when finishRef holds no data", async () => {
+  it("onEnd skips persistence when finishRef holds no data", async () => {
     createChatStream(baseOptions());
-    await uiStreamCaptures.config.onFinish({} as any);
+    await uiStreamCaptures.config.onEnd({} as any);
 
     expect(mockPersist).not.toHaveBeenCalled();
   });
 
-  it("onFinish swallows persist failures (best-effort)", async () => {
+  it("onEnd swallows persist failures (best-effort)", async () => {
     mockPersist.mockRejectedValue(new Error("db down"));
     const finishRef = {
       current: {
@@ -156,11 +161,11 @@ describe("createChatStream (UI message stream)", () => {
     createChatStream(baseOptions({ finishRef }));
 
     await expect(
-      uiStreamCaptures.config.onFinish({} as any),
+      uiStreamCaptures.config.onEnd({} as any),
     ).resolves.toBeUndefined();
   });
 
-  it("cleanup runs exactly once across abort + onError + onFinish", async () => {
+  it("cleanup runs exactly once across abort + onError + onEnd", async () => {
     const mcpCleanup = vi.fn().mockResolvedValue(undefined);
     const controller = new AbortController();
 
@@ -171,7 +176,7 @@ describe("createChatStream (UI message stream)", () => {
     // All three exit paths fire
     controller.abort();
     await uiStreamCaptures.config.onError(new Error("boom"));
-    await uiStreamCaptures.config.onFinish({} as any);
+    await uiStreamCaptures.config.onEnd({} as any);
     // Give the abort listener a tick
     await new Promise((r) => setTimeout(r, 0));
 
