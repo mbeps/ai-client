@@ -6,7 +6,6 @@ import { type ThreadMessage } from "@/lib/chat/load-thread-from-db";
 
 interface MessageOrchestrationOptions {
   history: ThreadMessage[];
-  kbIsReady?: boolean;
 }
 
 /**
@@ -19,11 +18,7 @@ interface MessageOrchestrationOptions {
 export function prepareChatMessages(
   options: MessageOrchestrationOptions,
 ): ModelMessage[] {
-  const { history, kbIsReady } = options;
-
-  // kbIsReady is accepted for call-site symmetry with the route's context —
-  // the KB instruction now lives in the system prompt (buildSystemPrompt).
-  void kbIsReady;
+  const { history } = options;
 
   const processedMessages = assembleModelMessages(history);
 
@@ -33,6 +28,13 @@ export function prepareChatMessages(
   let finalMessages = processedMessages;
   if (processedMessages.length > limit) {
     finalMessages = processedMessages.slice(-limit);
+    // A flat slice can land between an assistant tool-call message and its
+    // trailing role:"tool" result — providers reject orphaned results (400).
+    // Invariant: a tool result always immediately follows its call, so dropping
+    // leading orphan tool messages is sufficient to keep pairs intact.
+    while (finalMessages.length > 0 && finalMessages[0].role === "tool") {
+      finalMessages = finalMessages.slice(1);
+    }
     logger.warn("[Chat API] History truncated", {
       originalCount: processedMessages.length,
       keptCount: limit,

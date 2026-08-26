@@ -24,8 +24,10 @@ const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
   for (const m of [
     "select",
+    "selectDistinct",
     "from",
     "leftJoin",
+    "innerJoin",
     "limit",
     "insert",
     "values",
@@ -45,8 +47,10 @@ const chainable = vi.hoisted(() => {
 
   for (const m of [
     "select",
+    "selectDistinct",
     "from",
     "leftJoin",
+    "innerJoin",
     "insert",
     "values",
     "update",
@@ -111,8 +115,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   // Reset chainable methods to defaults
   chainable.select.mockReturnValue(chainable);
+  chainable.selectDistinct.mockReturnValue(chainable);
   chainable.from.mockReturnValue(chainable);
   chainable.leftJoin.mockReturnValue(chainable);
+  chainable.innerJoin.mockReturnValue(chainable);
   chainable.limit.mockReturnValue(chainable);
   chainable.insert.mockReturnValue(chainable);
   chainable.values.mockReturnValue(chainable);
@@ -229,12 +235,24 @@ describe("deleteChat", () => {
   const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
   it("deletes the chat and resolves without error", async () => {
+    // First where() resolves the attachment-key collection query, second is
+    // the ownership-checked delete (which chains .returning)
+    chainable.where
+      .mockResolvedValueOnce([{ key: "k1" }])
+      .mockImplementationOnce(() => ({
+        ...chainable,
+        returning: chainable.returning,
+      }));
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deleteChat(VALID_UUID)).resolves.toBeUndefined();
     expect(chainable.delete).toHaveBeenCalledOnce();
   });
 
   it("throws 'Not Found' when chat does not exist or is not owned", async () => {
+    chainable.where.mockResolvedValueOnce([]).mockImplementationOnce(() => ({
+      ...chainable,
+      returning: chainable.returning,
+    }));
     chainable.returning.mockResolvedValueOnce([]);
     await expect(deleteChat(VALID_UUID)).rejects.toThrow("Not Found");
   });

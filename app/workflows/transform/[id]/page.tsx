@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { toggleSetItem } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
@@ -258,15 +259,7 @@ export default function AgentEditorPage() {
 
   const toggleTool = (serverId: string, toolName: string) => {
     const toolId = `${serverId}:tool:${toolName}`;
-    setTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(toolId)) {
-        next.delete(toolId);
-      } else {
-        next.add(toolId);
-      }
-      return next;
-    });
+    setTools((prev) => toggleSetItem(prev, toolId));
   };
 
   const toggleAllTools = (

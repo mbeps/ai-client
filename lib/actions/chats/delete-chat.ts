@@ -2,9 +2,10 @@
 
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { attachment, chat, message } from "@/drizzle/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
 
 /**
  * Deletes a chat and all associated messages (CASCADE) for the authenticated user.
@@ -26,10 +27,20 @@ export async function deleteChat(chatId: string): Promise<void> {
   // Validate inputs
   const validatedChatId = z.string().uuid().parse(chatId);
 
+  // Collect distinct attachment keys before rows cascade away (keys may be
+  // shared with cloned messages, so deletion is refcounted afterwards)
+  const keys = await db
+    .selectDistinct({ key: attachment.key })
+    .from(attachment)
+    .innerJoin(message, eq(attachment.messageId, message.id))
+    .where(eq(message.chatId, validatedChatId));
+
   const [deleted] = await db
     .delete(chat)
     .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
     .returning({ id: chat.id });
 
   if (!deleted) throw new Error("Not Found");
+
+  await sweepOrphanedAttachmentKeys(keys.map((k) => k.key));
 }

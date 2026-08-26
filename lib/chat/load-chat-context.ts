@@ -142,7 +142,12 @@ export async function loadChatContext(
       return db
         .select({ indexStatus: knowledgebase.indexStatus })
         .from(knowledgebase)
-        .where(eq(knowledgebase.id, activeKbId))
+        .where(
+          and(
+            eq(knowledgebase.id, activeKbId),
+            eq(knowledgebase.userId, userId),
+          ),
+        )
         .limit(1)
         .then((rows) => rows[0] ?? null);
     })(),

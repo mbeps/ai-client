@@ -130,6 +130,7 @@ describe("loadThreadFromDb", () => {
       name: "pic.png",
       url: "https://example.com/pic",
       type: "image",
+      key: "uploads/user-1/pic.png",
       extractedText: undefined,
     });
     expect(atts).toContainEqual({
@@ -137,6 +138,7 @@ describe("loadThreadFromDb", () => {
       name: "report.pdf",
       url: "",
       type: "document",
+      key: "uploads/user-1/report.pdf",
       extractedText: undefined,
     });
   });

@@ -34,7 +34,13 @@ export async function uploadSingleAttachment(
     }
 
     const data = await uploadAttachment(formData);
-    return { ...attachment, key: data.key };
+    // Strip client-side blobs once the S3 key exists — the UI preview only
+    // needs dataUrl pre-upload, and rawFile/dataUrl must not leak into
+    // persisted messages or store state.
+    const { rawFile: _rawFile, ...rest } = attachment;
+    // ponytail: dataUrl is required on Attachment (shared type), so an empty
+    // string is used as the "stripped" sentinel instead of omitting the field.
+    return { ...rest, dataUrl: "", key: data.key };
   } catch (err) {
     logger.error("[Chat] Attachment upload failed:", err);
     toast.error(

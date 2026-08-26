@@ -43,22 +43,23 @@ export async function ingestDocumentPipeline(
   const chunks = chunkText(text);
   const embeddings = await embedDocuments(chunks, userId);
 
-  // Delete any existing chunks (safe re-ingest)
-  await db.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
-
-  // Insert chunks
+  // Replace chunks atomically: delete old + insert new in one transaction so a
+  // failed insert cannot leave the document with no (or duplicated) chunks.
   // searchVector is a GENERATED ALWAYS column — do NOT include it in INSERT
-  await db.insert(kbChunk).values(
-    chunks.map((content, i) => ({
-      id: crypto.randomUUID(),
-      documentId: doc.id,
-      kbId: doc.kbId,
-      content,
-      embedding: embeddings[i],
-      chunkIndex: i,
-      tokenCount: Math.round(content.length / 4),
-    })),
-  );
+  await db.transaction(async (tx) => {
+    await tx.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
+    await tx.insert(kbChunk).values(
+      chunks.map((content, i) => ({
+        id: crypto.randomUUID(),
+        documentId: doc.id,
+        kbId: doc.kbId,
+        content,
+        embedding: embeddings[i],
+        chunkIndex: i,
+        tokenCount: Math.round(content.length / 4),
+      })),
+    );
+  });
 
   const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
 

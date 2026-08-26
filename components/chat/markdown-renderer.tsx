@@ -5,8 +5,53 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
+import { defaultSchema } from "hast-util-sanitize";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
+/**
+ * Sanitisation schema: defaultSchema already covers GFM task-list checkboxes
+ * (`input[type=checkbox]` with `checked`/`disabled`). Extended only for KaTeX
+ * output — class names on span/div/code and the MathML tags KaTeX emits.
+ */
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames ?? []),
+    "math",
+    "semantics",
+    "mrow",
+    "mi",
+    "mo",
+    "mn",
+    "ms",
+    "mtext",
+    "msup",
+    "msub",
+    "msubsup",
+    "mfrac",
+    "msqrt",
+    "mroot",
+    "munder",
+    "mover",
+    "munderover",
+    "mphantom",
+    "menclose",
+    "mstyle",
+    "mtable",
+    "mtr",
+    "mtd",
+    "mspace",
+    "annotation",
+  ],
+  attributes: {
+    ...defaultSchema.attributes,
+    span: [...(defaultSchema.attributes?.span ?? []), "className"],
+    div: [...(defaultSchema.attributes?.div ?? []), "className"],
+    code: [...(defaultSchema.attributes?.code ?? []), "className"],
+  },
+};
 
 /**
  * Client-side Mermaid diagram renderer component.
@@ -77,31 +122,39 @@ export function MarkdownRenderer({ content }: { content: string }) {
     <div className="prose prose-stone dark:prose-invert max-w-none break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeRaw, rehypeKatex]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, sanitizeSchema],
+          rehypeKatex,
+        ]}
         components={{
-          code({ node, inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || "");
-            const language = match ? match[1] : "";
-
-            if (!inline && language === "mermaid") {
-              return (
-                <MermaidBlock chart={String(children).replace(/\n$/, "")} />
-              );
-            }
-
-            return !inline ? (
-              <div className="relative my-4 rounded-lg bg-muted p-4 overflow-x-auto">
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              </div>
-            ) : (
+          // react-markdown v10 no longer passes an `inline` prop: bare `code`
+          // elements are inline spans, fenced blocks arrive wrapped in `pre`.
+          code({ node, className, children, ...props }: any) {
+            return (
               <code
-                className="bg-muted px-1.5 py-0.5 rounded-sm text-sm font-mono"
+                className={
+                  "bg-muted px-1.5 py-0.5 rounded-sm text-sm font-mono " +
+                  (className ?? "")
+                }
                 {...props}
               >
                 {children}
               </code>
+            );
+          },
+          pre({ node, children, ...props }: any) {
+            // Fenced mermaid blocks arrive as <pre><code class="language-mermaid">
+            const codeEl = Array.isArray(children) ? children[0] : children;
+            const cls: string = codeEl?.props?.className ?? "";
+            if (/language-mermaid/.test(cls)) {
+              const chart = String(codeEl.props.children).replace(/\n$/, "");
+              return <MermaidBlock chart={chart} />;
+            }
+            return (
+              <div className="relative my-4 rounded-lg bg-muted p-4 overflow-x-auto">
+                <pre {...props}>{children}</pre>
+              </div>
             );
           },
           // Customizing other elements for better Shadcn-like appearance

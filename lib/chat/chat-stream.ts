@@ -80,12 +80,32 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
     }
   };
 
+  // Persist exactly once across all exit paths.
+  let persisted = false;
+  const persistOnce = async () => {
+    if (persisted) return;
+    persisted = true;
+    await persistResultIn({
+      result,
+      finishRef,
+      chatId,
+      userId,
+      userMessageId,
+      resolvedModelId,
+      assistantMessageId,
+    });
+  };
+
   // Client aborts don't reliably fire stream onFinish — hook the signal so
-  // MCP connections are never leaked. ponytail: relies on abortSignal being
-  // wired to req.signal; upgrade path: SDK-level onAbort callback if added.
-  abortSignal?.addEventListener("abort", () => void runCleanup(), {
-    once: true,
-  });
+  // partial content is persisted (via the route's onAbort-populated finishRef)
+  // and MCP connections are never leaked.
+  abortSignal?.addEventListener(
+    "abort",
+    () => {
+      void persistOnce().finally(() => runCleanup());
+    },
+    { once: true },
+  );
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -99,15 +119,7 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
       return "An error occurred during generation.";
     },
     onFinish: async () => {
-      await persistResultIn({
-        result,
-        finishRef,
-        chatId,
-        userId,
-        userMessageId,
-        resolvedModelId,
-        assistantMessageId,
-      });
+      await persistOnce();
       await runCleanup();
     },
   });

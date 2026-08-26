@@ -44,7 +44,10 @@ export async function isBlockedUrl(rawUrl: string): Promise<boolean> {
     const addresses = await resolveHostnameWithTimeout(hostname);
     // DNS rebinding hardening (F-03/SEC-05): an empty result means resolution
     // silently failed — treat like a hard failure and block. Each call
-    // re-resolves, so rotated DNS between check and fetch is caught here.
+    // re-resolves, so this covers DNS rotation at check time only.
+    // ponytail: a TOCTOU window remains between this check and the actual
+    // fetch (DNS could rotate afterwards). Accepted residual risk; IP pinning
+    // is deferred until needed.
     if (addresses.length === 0) return true;
     for (const addr of addresses) {
       if (isBlockedIPv4(addr) || isBlockedIPv6(addr)) return true;

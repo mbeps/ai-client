@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cn } from "@/lib/utils";
+import { cn, toggleSetItem } from "@/lib/utils";
 
 describe("cn", () => {
   it("returns a single class name unchanged", () => {
@@ -56,5 +56,21 @@ describe("cn", () => {
 
   it("handles nested arrays", () => {
     expect(cn(["a", ["b", "c"]])).toBe("a b c");
+  });
+});
+
+describe("toggleSetItem", () => {
+  it("adds an absent item", () => {
+    expect(toggleSetItem(new Set(["a"]), "b")).toEqual(new Set(["a", "b"]));
+  });
+
+  it("removes a present item", () => {
+    expect(toggleSetItem(new Set(["a", "b"]), "a")).toEqual(new Set(["b"]));
+  });
+
+  it("does not mutate the original set", () => {
+    const original = new Set(["a"]);
+    toggleSetItem(original, "a");
+    expect(original).toEqual(new Set(["a"]));
   });
 });

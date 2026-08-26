@@ -6,7 +6,7 @@ import { toast } from "sonner";
 /**
  * Clones existing attachment DB records for a new message.
  * Used during regeneration / branching where files already exist in S3.
- * Skips attachments that don't have a `key` (fresh uploads go through uploadAttachments).
+ * Skips attachments that don't have a `key`.
  *
  * @param attachments - The list of attachments to clone.
  * @param newMessageId - The ID of the new message to associate with cloned attachments.

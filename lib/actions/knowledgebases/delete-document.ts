@@ -10,10 +10,12 @@ import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { z } from "zod";
 
 /**
- * Deletes a document from a knowledge base and marks the knowledge base as needing re-indexing.
+ * Deletes a document from a knowledge base.
  * Validates document and knowledge base ownership before deletion.
- * Cascade-deletes the S3 object key reference (actual S3 cleanup handled separately).
- * Automatically sets knowledge base indexStatus to "stale" to trigger re-embedding.
+ * Deletes the database row first, then removes the S3 object. If the S3
+ * deletion fails, the document row is already gone — the S3 object becomes
+ * orphaned but the knowledge base record stays consistent.
+ * Does not change `indexStatus`; re-indexing is handled elsewhere.
  * Runs on server only — invoked from client via Server Action.
  *
  * @param kbId - UUID of the knowledge base containing the document; must be owned by the authenticated user.

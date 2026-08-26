@@ -153,7 +153,7 @@ export async function POST(req: Request) {
     // presigned URLs are no longer embedded in the system prompt (ATT-06).
     const fileAttachments = thread
       .flatMap((m) => m.attachments ?? [])
-      .map((a) => ({ name: a.name, key: (a as any).key, type: a.type }))
+      .map((a) => ({ name: a.name, key: a.key, type: a.type }))
       .filter((a) => a.key);
     const hasFileAttachments = fileAttachments.length > 0;
 
@@ -191,6 +191,18 @@ export async function POST(req: Request) {
           ? stepCountIs(env.CHAT_MAX_STEPS)
           : undefined,
       abortSignal: req.signal,
+      // Client aborts don't reliably fire onFinish — capture partial content
+      // into finishRef so the shared persistence path can save what was
+      // generated before the abort.
+      onAbort: ({ steps }) => {
+        const text = steps.map((s) => s.text).join("");
+        if (!text && !finishRef.current) return;
+        finishRef.current = {
+          ...(finishRef.current ?? {}),
+          text: text || finishRef.current?.text,
+          finishReason: "abort",
+        };
+      },
       onFinish: (finish) => {
         // SDK v6 may deliver reasoning as parts — normalise to a string
         const rawReasoning = finish.reasoning;

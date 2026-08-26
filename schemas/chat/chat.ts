@@ -136,8 +136,6 @@ export const chatRequestSchema = z
   })
   .strict();
 
-export type ChatRequest = z.infer<typeof chatRequestSchema>;
-
 /**
  * Base fields for manage_artifact tool to avoid code duplication in the union schema.
  */

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { PROMPTS } from "@/constants/prompts";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
-import { sortByUpdatedAt } from "@/lib/utils";
+import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 import { ROUTES } from "@/constants/routes";
 import { useAppStore } from "@/lib/store";
 import {
@@ -150,12 +150,7 @@ export default function AssistantPage() {
 
   const onToggleTool = (serverId: string, toolName: string) => {
     const id = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedTools((prev) => toggleSetItem(prev, id));
   };
 
   const onBulkSelect = (

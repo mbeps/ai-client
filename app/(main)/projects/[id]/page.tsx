@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
-import { sortByUpdatedAt } from "@/lib/utils";
+import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -172,12 +172,7 @@ export default function ProjectPage() {
 
   const onToggleTool = (serverId: string, toolName: string) => {
     const id = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedTools((prev) => toggleSetItem(prev, id));
   };
 
   const onBulkSelect = (

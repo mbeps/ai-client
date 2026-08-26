@@ -13,6 +13,8 @@ export type ThreadAttachment = {
   name: string;
   url: string;
   type: string;
+  /** S3 object key — used by the get_file_url tool for on-demand resolution. */
+  key: string;
   extractedText?: string | null;
 };
 
@@ -123,6 +125,7 @@ export async function loadThreadFromDb(
           name: a.name,
           url,
           type,
+          key: a.key,
           extractedText: a.extractedText,
         });
         byMessage.set(a.messageId, list);

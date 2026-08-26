@@ -37,6 +37,20 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
+// Transaction: db.transaction(cb) must invoke cb with a tx that supports
+// delete/insert chains; a tx failure propagates (rollback semantics).
+chainable.transaction = vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
+  const tx = {
+    delete: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    }),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockResolvedValue([]),
+    }),
+  };
+  return cb(tx);
+});
+
 vi.mock("@/lib/rag/extract-text-server", () => ({
   MAX_DOCUMENT_CHARS_LIMIT: 100,
   extractTextFromBuffer: vi.fn(),
@@ -52,6 +66,7 @@ vi.mock("@/lib/rag/embed-documents", () => ({
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
+import { kbChunk } from "@/drizzle/schema";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
@@ -94,26 +109,46 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
       "user-1",
     );
 
-    // delete old chunks for this document
-    expect(chainable.delete).toHaveBeenCalled();
-
-    // insert values: one per chunk with doc/kb ids, index, token estimate
-    const inserted = chainable.values.mock.calls[0][0];
-    expect(inserted).toHaveLength(2);
-    expect(inserted[0]).toMatchObject({
-      documentId: "doc-1",
-      kbId: "kb-1",
-      content: "chunk-a",
-      embedding: [0.1],
-      chunkIndex: 0,
-      tokenCount: Math.round("chunk-a".length / 4),
-    });
-    expect(inserted[1].chunkIndex).toBe(1);
+    // delete+insert ran inside a transaction
+    expect(chainable.transaction).toHaveBeenCalledTimes(1);
 
     expect(result).toEqual({
       chunkCount: 2,
       tokenCount: Math.round(("chunk-a" + "chunk-b").length / 4),
     });
+  });
+
+  it("runs delete before insert inside the transaction and rolls back on insert failure", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
+
+    // Capture the tx passed to the callback and force insert failure
+    let capturedTx: any;
+    (chainable.transaction as any).mockImplementationOnce(
+      async (cb: (tx: any) => Promise<unknown>) => {
+        capturedTx = {
+          delete: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+          insert: vi.fn().mockReturnValue({
+            values: vi.fn().mockRejectedValue(new Error("insert failed")),
+          }),
+        };
+        return cb(capturedTx);
+      },
+    );
+
+    await expect(
+      ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1"),
+    ).rejects.toThrow("insert failed");
+
+    // Both statements were issued against the same tx, delete first
+    expect(capturedTx.delete).toHaveBeenCalledWith(kbChunk);
+    expect(capturedTx.insert).toHaveBeenCalledWith(kbChunk);
+    expect(capturedTx.delete.mock.invocationCallOrder[0]).toBeLessThan(
+      capturedTx.insert.mock.invocationCallOrder[0],
+    );
   });
 
   it("marks the document ready with counts on final update", async () => {

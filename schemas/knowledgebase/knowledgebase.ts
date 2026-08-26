@@ -3,7 +3,6 @@ import {
   nameField,
   descriptionField,
   idField,
-  renameSchema,
 } from "../shared-fields";
 
 /**
@@ -22,17 +21,6 @@ export const createKnowledgebaseSchema = z.object({
 });
 
 /**
- * Validates knowledgebase rename operations with only the new name field.
- * Requires name to be non-empty and under 100 characters.
- * Quick name changes without modifying description or documents.
- * Use with updateKnowledgebase server action for efficient name updates.
- *
- * @see {@link schemas/shared-fields.ts} for renameSchema definition
- * @author Maruf Bepary
- */
-export const renameKnowledgebaseSchema = renameSchema;
-
-/**
  * Validates updates to an existing knowledgebase.
  * Includes optional name and description for selective field updates.
  * Omitted fields preserve existing values.
@@ -41,22 +29,6 @@ export const renameKnowledgebaseSchema = renameSchema;
  * @author Maruf Bepary
  */
 export const updateKnowledgebaseSchema = createKnowledgebaseSchema.partial();
-
-/**
- * Validates document addition to a knowledgebase.
- * Includes knowledgebase ID, file metadata (name, mimetype, size), and S3 storage key.
- * Size enforced at 50MB max per file; mimeType helps validate and render document types.
- * Use when uploading documents (PDF, TXT, XLSX) to a knowledge base.
- *
- * @author Maruf Bepary
- */
-export const addDocumentSchema = z.object({
-  kbId: idField,
-  name: z.string().min(1).max(255),
-  mimeType: z.string().min(1).max(100),
-  size: z.number().int().positive().max(50_000_000),
-  s3Key: z.string().min(1).max(1024),
-});
 
 /**
  * Validates document deletion from a knowledgebase.

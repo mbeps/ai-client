@@ -2,9 +2,10 @@
 
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { chat, message } from "@/drizzle/schema";
+import { chat, message, attachment } from "@/drizzle/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
 
 /**
  * Recursively deletes a message and all its children/descendants from the tree.
@@ -65,6 +66,13 @@ export async function deleteMessage(
   };
   collect(validatedMessageId);
 
+  // Collect attachment keys before rows cascade away (keys may be shared with
+  // cloned messages, so deletion is refcounted afterwards)
+  const keys = await db
+    .selectDistinct({ key: attachment.key })
+    .from(attachment)
+    .where(inArray(attachment.messageId, toDelete));
+
   // Bulk delete — attachment rows cascade-delete automatically via FK
   if (toDelete.length > 0) {
     await db.delete(message).where(inArray(message.id, toDelete));
@@ -75,4 +83,6 @@ export async function deleteMessage(
     .update(chat)
     .set({ currentLeafId: validatedNewLeafId, updatedAt: new Date() })
     .where(eq(chat.id, validatedChatId));
+
+  await sweepOrphanedAttachmentKeys(keys.map((k) => k.key));
 }

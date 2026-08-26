@@ -20,6 +20,14 @@ describe("registerFileUrlTool", () => {
     expect(tools.get_file_url).toBeDefined();
   });
 
+  it("advertises a non-empty inputSchema with fileName", () => {
+    const tools = registerFileUrlTool([]);
+    const tool = tools.get_file_url as any;
+
+    expect(tool.inputSchema).toBeDefined();
+    expect("fileName" in (tool.inputSchema.shape ?? {})).toBe(true);
+  });
+
   it("returns a presigned url for a known file name", async () => {
     mockGetPresignedUrl.mockResolvedValue("https://example.com/signed");
     const tools = registerFileUrlTool([

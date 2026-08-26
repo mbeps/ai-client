@@ -29,11 +29,10 @@ export function registerFileUrlTool(attachments: FileUrlAttachment[]) {
         "Get a temporary download URL for a file the user uploaded to this conversation. " +
         "Use this when you need a downloadable link for a user-uploaded file, e.g. to pass " +
         "to another tool that fetches files by URL.",
-      parameters: z.object({
+      inputSchema: z.object({
         fileName: z.string().min(1).describe("Exact name of the uploaded file"),
       }),
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async ({ fileName }: { fileName: string }) => {
+      execute: async ({ fileName }) => {
         const att = attachments.find((a) => a.name === fileName);
         if (!att) return { error: "File not found" };
         return { url: await getPresignedUrl(att.key) };

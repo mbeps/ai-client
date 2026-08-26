@@ -25,7 +25,6 @@ type HistoryMessage = {
   attachments?: Array<{
     id: string;
     type?: string;
-    dataUrl?: string;
     url?: string;
     name: string;
     mimeType?: string;
@@ -68,13 +67,11 @@ export function assembleModelMessages(
       }
 
       for (const att of m.attachments) {
-        // Server-reconstructed threads carry presigned URLs; client-side
-        // history carries inline data URLs. Both are valid image sources.
-        const imageSource = att.dataUrl ?? att.url;
-        if (att.type === "image" && imageSource) {
+        // Server-reconstructed threads carry presigned URLs.
+        if (att.type === "image" && att.url) {
           parts.push({
             type: "image",
-            image: imageSource,
+            image: att.url,
             mimeType: att.mimeType,
           });
         }

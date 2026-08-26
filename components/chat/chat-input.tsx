@@ -27,6 +27,7 @@ import { processAttachment } from "@/lib/attachments/process-attachment";
 import { AttachmentVisionUnsupportedError } from "@/constants/errors";
 import { useApiError } from "@/hooks/use-api-error";
 import { toast } from "sonner";
+import { toggleSetItem } from "@/lib/utils";
 
 /**
  * Props for the ChatInput component.
@@ -253,15 +254,9 @@ export function ChatInput({
   const toggleTool = useCallback((serverId: string, toolName: string) => {
     const toolId = `${serverId}:tool:${toolName}`;
     setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(toolId)) next.delete(toolId);
-      else {
-        next.add(toolId);
-        setSelectedServerIds((prevServers) =>
-          new Set(prevServers).add(serverId),
-        );
-      }
-      return next;
+      if (prev.has(toolId)) return toggleSetItem(prev, toolId);
+      setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+      return toggleSetItem(prev, toolId);
     });
   }, []);
 

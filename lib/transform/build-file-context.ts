@@ -77,24 +77,3 @@ export async function buildFileContext(
   return { fileContext, attachmentRows };
 }
 
-/**
- * Builds the per-step file context, taking the active workbook into account.
- * If a workbook is already loaded in the MCP session, returns a short
- * instruction to reuse it; otherwise delegates to the URL-based builder.
- */
-export function buildPerStepFileContext(
-  activeWorkbookFilePath: string | null,
-  currentAttachmentRows: AttachmentRow[],
-): string {
-  if (activeWorkbookFilePath) {
-    return `A workbook is already loaded in the MCP session for this run. Reuse this exact file path for spreadsheet tools: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
-  }
-
-  if (currentAttachmentRows.length === 0) {
-    return "";
-  }
-
-  // The URL-based builder is async, so this is a placeholder —
-  // the actual async variant is used in the step loop.
-  return "";
-}

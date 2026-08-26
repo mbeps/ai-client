@@ -62,10 +62,12 @@ export async function registerMcpTools(
         // Selective filtering
         const filteredTools: Record<string, any> = {};
         for (const [name, toolDef] of Object.entries(result.tools)) {
-          const isSelected = selectedTools.some((id) => {
-            const [, type, tName] = id.split(":");
-            return type === "tool" && tName === name;
-          });
+          // Full-id match keeps selection server-scoped when duplicate tool
+          // names exist across servers. getMcpTools merges by bare name
+          // (first server wins), so toolSourceMap identifies the owner.
+          const isSelected = selectedTools.includes(
+            `${result.toolSourceMap[name]}:tool:${name}`,
+          );
           if (isSelected) {
             filteredTools[name] = toolDef;
             toolSourceMap[name] = result.toolSourceMap[name];
@@ -84,13 +86,14 @@ export async function registerMcpTools(
     toolSourceMap["manage_artifact"] = "Internal";
     mcpTools["manage_artifact"] = tool({
       description: PROMPTS.TOOLS.MANAGE_ARTIFACT.DESCRIPTION,
-      parameters: manageArtifactSchema,
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async (args: any) => {
+      inputSchema: manageArtifactSchema,
+      execute: async (args) => {
         try {
           // For spreadsheets the AI may pass `sheets` as a top-level arg instead of
           // embedding the JSON in `content`. Serialize it so the viewer can parse it.
-          let content = args.content || args.text || "";
+          // ponytail: `text` is not in the advertised schema but some models still send it.
+          let content =
+            args.content || (args as { text?: string }).text || "";
 
           // If sheets are provided directly, use them to build the content
           if (args.sheets && Array.isArray(args.sheets)) {
@@ -140,9 +143,8 @@ export async function registerMcpTools(
     toolSourceMap["search_knowledge_base"] = "System";
     mcpTools["search_knowledge_base"] = tool({
       description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
-      parameters: searchKnowledgeBaseSchema,
-      // @ts-expect-error Vercel AI SDK type mismatch with internal tools
-      execute: async (args: any) => {
+      inputSchema: searchKnowledgeBaseSchema,
+      execute: async (args) => {
         const { query } = args;
         const normalizedQuery = (query || "").trim();
 

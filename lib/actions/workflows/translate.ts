@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { translateRequestSchema } from "@/schemas/workflows/workflows";
 import { PROMPTS } from "@/constants/prompts";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { resolveProviderForModel } from "@/lib/chat/resolve-provider-for-model";
+import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
@@ -42,7 +42,7 @@ export async function translateText(input: unknown) {
   } = parsed.data;
 
   const resolved = modelId
-    ? await resolveProviderForModel(session.user.id, modelId)
+    ? await fetchProviderWithModel(session.user.id, { modelId })
     : await resolveDefaultChatProvider(session.user.id);
 
   const sourceDesc =
