@@ -392,6 +392,12 @@ describe("isBlockedUrlSync", () => {
     expect(isBlockedUrlSync("http://192.168.1.1")).toBe(true);
   });
 
+  it("blocks CGNAT 100.64.0.0/10 IP (sync)", () => {
+    expect(isBlockedUrlSync("http://100.64.0.1")).toBe(true);
+    expect(isBlockedUrlSync("http://100.127.255.255")).toBe(true);
+    expect(isBlockedUrlSync("http://100.128.0.1")).toBe(false);
+  });
+
   it("allows public IP (sync)", () => {
     expect(isBlockedUrlSync("http://8.8.8.8")).toBe(false);
   });

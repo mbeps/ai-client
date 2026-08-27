@@ -103,7 +103,10 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
   abortSignal?.addEventListener(
     "abort",
     () => {
-      void persistOnce().finally(() => runCleanup());
+      // Yield to allow streamText.onAbort to populate finishRef.current
+      setTimeout(() => {
+        void persistOnce().finally(() => runCleanup());
+      }, 0);
     },
     { once: true },
   );
@@ -163,16 +166,18 @@ async function persistResultIn(options: {
     // ponytail: awaits the full result even on client abort; acceptable
     // because persistence is best-effort and bounded by maxDuration.
     // SDK exposes PromiseLike (not Promise) — wrap for .catch support.
-    // v7 top-level toolCalls/toolResults aggregate across steps while
-    // text/reasoning are final-step only; finalStep preserves the v6
-    // final-step-only shape the message tree expects.
+    // In AI SDK v7, top-level toolCalls/toolResults aggregate across all steps.
     const toPromise = <T>(p: PromiseLike<T>): Promise<T> => Promise.resolve(p);
-    const finalStep = await toPromise(result.finalStep).catch(() => undefined);
+    const [finalStep, toolCalls, toolResults] = await Promise.all([
+      toPromise(result.finalStep).catch(() => undefined),
+      toPromise(result.toolCalls).catch(() => []),
+      toPromise(result.toolResults).catch(() => []),
+    ]);
     finish = {
       text: finalStep?.text,
       reasoning: reasoningToString(finalStep?.reasoning),
-      toolCalls: (finalStep?.toolCalls as unknown[]) ?? [],
-      toolResults: (finalStep?.toolResults as unknown[]) ?? [],
+      toolCalls: (toolCalls as unknown[]) ?? [],
+      toolResults: (toolResults as unknown[]) ?? [],
     };
   }
 
@@ -183,8 +188,16 @@ async function persistResultIn(options: {
 
   const metadataObj: Record<string, any> = {};
   if ((finish.toolCalls?.length ?? 0) > 0) {
-    metadataObj.toolCalls = finish.toolCalls;
-    metadataObj.toolResults = finish.toolResults;
+    metadataObj.toolCalls = (finish.toolCalls ?? []).map((tc: any) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      args: tc.args ?? tc.input,
+    }));
+    metadataObj.toolResults = (finish.toolResults ?? []).map((tr: any) => ({
+      toolCallId: tr.toolCallId,
+      toolName: tr.toolName,
+      result: tr.result ?? tr.output,
+    }));
   }
   if (finish.reasoning) metadataObj.reasoning = finish.reasoning;
   metadataObj.model = resolvedModelId;

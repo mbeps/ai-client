@@ -51,6 +51,16 @@ describe("provider error predicates (T4A.7)", () => {
       expect(isInvalidApiKey(new Error(message))).toBe(true);
     });
 
+    it("matches error objects with status or statusCode 401", () => {
+      expect(
+        isInvalidApiKey({ statusCode: 401, message: "Unauthorized" }),
+      ).toBe(true);
+      expect(
+        isInvalidApiKey({ status: 401, message: "Custom provider failure" }),
+      ).toBe(true);
+      expect(isInvalidApiKey({ lastError: { statusCode: 401 } })).toBe(true);
+    });
+
     it("does not match rate limit errors", () => {
       expect(isInvalidApiKey(new Error("rate limit exceeded"))).toBe(false);
     });

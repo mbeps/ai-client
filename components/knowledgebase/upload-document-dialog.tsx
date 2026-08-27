@@ -81,9 +81,8 @@ export function UploadDocumentDialog({
     const selected = e.target.files?.[0] ?? null;
     if (!selected) return;
     if (selected.size > MAX_SIZE_BYTES) {
-      setError(`File exceeds the ${MAX_SIZE_MB} MB limit.`);
-      setFile(null);
-      return;
+      const message = `File exceeds the ${MAX_SIZE_MB} MB limit.`;
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
     setError(null);
     setFile(selected);

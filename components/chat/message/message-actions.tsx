@@ -95,24 +95,30 @@ export function MessageActions({
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            disabled={currentSiblingIndex === 0}
-            onClick={() =>
-              onNavigateBranch(siblings[currentSiblingIndex - 1].id)
-            }
+            disabled={currentSiblingIndex <= 0}
+            onClick={() => {
+              const prev = siblings[currentSiblingIndex - 1];
+              if (prev?.id) onNavigateBranch(prev.id);
+            }}
           >
             <ChevronLeft className="h-3 w-3" />
           </Button>
           <span>
-            {currentSiblingIndex + 1} / {siblings.length}
+            {currentSiblingIndex >= 0 ? currentSiblingIndex + 1 : 1} /{" "}
+            {siblings.length}
           </span>
           <Button
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            disabled={currentSiblingIndex === siblings.length - 1}
-            onClick={() =>
-              onNavigateBranch(siblings[currentSiblingIndex + 1].id)
+            disabled={
+              currentSiblingIndex < 0 ||
+              currentSiblingIndex >= siblings.length - 1
             }
+            onClick={() => {
+              const next = siblings[currentSiblingIndex + 1];
+              if (next?.id) onNavigateBranch(next.id);
+            }}
           >
             <ChevronRight className="h-3 w-3" />
           </Button>

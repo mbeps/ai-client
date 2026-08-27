@@ -187,7 +187,7 @@ export async function POST(req: Request) {
             }
           : undefined,
       stopWhen:
-        isToolCallingModel && hasMcpTools
+        isToolCallingModel && (hasMcpTools || hasFileAttachments)
           ? isStepCount(env.CHAT_MAX_STEPS)
           : undefined,
       abortSignal: req.signal,
@@ -212,13 +212,12 @@ export async function POST(req: Request) {
             : Array.isArray(rawReasoning)
               ? rawReasoning.map((p) => (p as any).text ?? "").join("")
               : "";
-        // v7 event toolCalls/toolResults aggregate across steps; finalStep
-        // restores the v6 final-step-only shape the message tree expects.
+        // In AI SDK v7, finish.toolCalls and finish.toolResults aggregate across all steps.
         finishRef.current = {
           text: finish.text,
           reasoning,
-          toolCalls: (finish.finalStep.toolCalls as unknown[]) ?? [],
-          toolResults: (finish.finalStep.toolResults as unknown[]) ?? [],
+          toolCalls: (finish.toolCalls as unknown[]) ?? [],
+          toolResults: (finish.toolResults as unknown[]) ?? [],
           finishReason: finish.finishReason,
         };
       },

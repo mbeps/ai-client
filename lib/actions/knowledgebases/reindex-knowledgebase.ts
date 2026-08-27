@@ -40,11 +40,6 @@ export async function reindexKnowledgebase(kbId: string) {
     throw new Error("Not Found");
   }
 
-  // If already ready, nothing to do
-  if (kb.indexStatus === "ready") {
-    return { processedCount: 0, failedCount: 0 };
-  }
-
   // 2. Mark as indexing
   await db
     .update(knowledgebase)
@@ -55,17 +50,17 @@ export async function reindexKnowledgebase(kbId: string) {
     })
     .where(eq(knowledgebase.id, kbId));
 
-  // Also reset status message for documents being re-indexed
+  // Reset status message for all documents being re-indexed
   await db
     .update(kbDocument)
     .set({ statusMessage: null })
-    .where(and(eq(kbDocument.kbId, kbId), eq(kbDocument.status, "ready")));
+    .where(eq(kbDocument.kbId, kbId));
 
-  // 3. Get all "ready" documents to re-index
+  // 3. Get all documents in KB to re-index
   const docs = await db
     .select()
     .from(kbDocument)
-    .where(and(eq(kbDocument.kbId, kbId), eq(kbDocument.status, "ready")));
+    .where(eq(kbDocument.kbId, kbId));
 
   let processedCount = 0;
   let failedCount = 0;

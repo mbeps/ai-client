@@ -28,7 +28,7 @@ export function checkRateLimit(
   }
 
   if (timestamps.length >= limitPerMinute) {
-    const oldest = timestamps[0];
+    const oldest = timestamps[0] ?? now;
     return {
       allowed: false,
       retryAfterSeconds: Math.max(

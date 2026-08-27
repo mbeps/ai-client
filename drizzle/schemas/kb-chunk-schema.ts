@@ -8,14 +8,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { kbDocument } from "./kb-document-schema";
 
-// ponytail: reads process.env directly because drizzle-kit imports this file at generate time,
-// where the full server env parse in lib/env would fail on missing required vars.
-// Changing EMBEDDING_DIMENSIONS requires generating a NEW migration — migration 0036 pins vector(2048).
-const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 2048);
-
 const vectorType = customType<{ data: number[] | null; driverData: string }>({
   dataType() {
-    return `vector(${EMBEDDING_DIMENSIONS})`;
+    return "vector";
   },
   toDriver(value) {
     if (!value) return "[]";

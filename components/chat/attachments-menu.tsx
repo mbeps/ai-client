@@ -47,11 +47,11 @@ interface AttachmentsMenuProps {
  * @param props.selectedKbs - Set of selected knowledgebase IDs.
  * @param props.onToggleKb - Callback to toggle knowledgebase selection.
  * @param props.supportsVision - Whether the model supports vision (image attachments).
- * @param props.supportsTools - Whether the model supports MCP tools.
+ * @param props.supportsTools - Whether the model supports tool calling (MCP and internal tools).
  * @author Maruf Bepary
  */
 export const AttachmentsMenu = ({
-  servers,
+  servers = [],
   fileInputRef,
   selectedTools,
   onToggleTool,
@@ -94,7 +94,7 @@ export const AttachmentsMenu = ({
             variant="ghost"
             size="sm"
             className="justify-start w-full"
-            disabled={!servers || !supportsTools}
+            disabled={!supportsTools}
           >
             <Wrench className="mr-2 h-4 w-4" />
             {supportsTools ? "Select Tools" : "Tools Unsupported"}
@@ -108,7 +108,7 @@ export const AttachmentsMenu = ({
 
           {toolsOpen && (
             <ToolPickerList
-              servers={servers || []}
+              servers={servers}
               selectedTools={selectedTools}
               onToggleTool={onToggleTool}
               onBulkSelect={onBulkSelect}

@@ -56,7 +56,8 @@ export function splitRecursive(
           chunks.push(...splitRecursive(piece, nextSeps, chunkSize, overlap));
         } else {
           // Force-split at character level
-          for (let i = 0; i < piece.length; i += chunkSize - overlap) {
+          const step = Math.max(1, chunkSize - overlap);
+          for (let i = 0; i < piece.length; i += step) {
             const slice = piece.slice(i, i + chunkSize);
             if (slice) chunks.push(slice);
           }

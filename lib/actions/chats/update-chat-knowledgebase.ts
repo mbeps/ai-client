@@ -2,7 +2,7 @@
 
 import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
+import { chat, knowledgebase } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { updateChatKnowledgebaseSchema } from "@/schemas/chat/chat";
@@ -12,7 +12,7 @@ import { updateChatKnowledgebaseSchema } from "@/schemas/chat/chat";
  *
  * @async
  * @param data - {chatId, knowledgebaseId} payload
- * @throws "Not Found" if chat not owned by current user
+ * @throws "Not Found" if chat or knowledgebase not owned by current user
  * @author Maruf Bepary
  */
 export async function updateChatKnowledgebase(
@@ -21,6 +21,22 @@ export async function updateChatKnowledgebase(
   const session = await requireSession();
 
   const validated = updateChatKnowledgebaseSchema.parse(data);
+
+  if (validated.knowledgebaseId) {
+    const [kb] = await db
+      .select({ id: knowledgebase.id })
+      .from(knowledgebase)
+      .where(
+        and(
+          eq(knowledgebase.id, validated.knowledgebaseId),
+          eq(knowledgebase.userId, session.user.id),
+        ),
+      );
+
+    if (!kb) {
+      throw new Error("Not Found");
+    }
+  }
 
   const [row] = await db
     .update(chat)

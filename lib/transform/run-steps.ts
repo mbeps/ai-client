@@ -314,6 +314,7 @@ export async function runTransformSteps({
         currentOutputAttachmentIds = persisted.outputAttachmentIds;
         stepPersistedSpreadsheetOutput = true;
         currentAttachmentRows = [persisted.attachmentRow];
+        activeWorkbookFilePath = null;
 
         logger.info(
           "[Transform AI] Active workbook replaced with step output",

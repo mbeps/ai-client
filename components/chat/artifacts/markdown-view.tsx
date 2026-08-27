@@ -45,6 +45,12 @@ function BlockNoteEditor({
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return (
     <div className="h-full w-full bg-background p-4 overflow-y-auto custom-scrollbar">
       <BlockNoteView
@@ -52,9 +58,15 @@ function BlockNoteEditor({
         onChange={() => {
           if (onUpdate) {
             if (timerRef.current) clearTimeout(timerRef.current);
-            timerRef.current = setTimeout(() => {
-              const markdown = editor.blocksToMarkdownLossy(editor.document);
-              onUpdate(markdown);
+            timerRef.current = setTimeout(async () => {
+              try {
+                const markdown = await editor.blocksToMarkdownLossy(
+                  editor.document,
+                );
+                onUpdate(markdown);
+              } catch (e) {
+                console.error("Failed to serialize markdown blocks", e);
+              }
             }, 1000);
           }
         }}
@@ -86,6 +98,7 @@ export default function MarkdownView({
   // not on every content update, to avoid re-parsing while typing.
   useEffect(() => {
     let cancelled = false;
+    setParsedBlocks(null);
 
     async function parseMarkdown() {
       try {

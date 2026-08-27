@@ -120,6 +120,51 @@ describe("createChatStream (UI message stream)", () => {
     expect(metadata.toolCalls).toHaveLength(1);
   });
 
+  it("onEnd normalizes AI SDK v7 input and output properties into args and result", async () => {
+    const finishRef = {
+      current: {
+        text: "artifact ready",
+        reasoning: "",
+        toolCalls: [
+          {
+            toolCallId: "t1",
+            toolName: "manage_artifact",
+            input: { type: "spreadsheet" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "t1",
+            toolName: "manage_artifact",
+            output: { success: true },
+          },
+        ],
+        finishReason: "stop",
+      },
+    };
+
+    createChatStream(baseOptions({ finishRef }));
+    await uiStreamCaptures.config.onEnd({} as any);
+
+    expect(mockPersist).toHaveBeenCalledTimes(1);
+    const call = mockPersist.mock.calls[0][0];
+    const metadata = JSON.parse(call.metadata);
+    expect(metadata.toolCalls).toEqual([
+      {
+        toolCallId: "t1",
+        toolName: "manage_artifact",
+        args: { type: "spreadsheet" },
+      },
+    ]);
+    expect(metadata.toolResults).toEqual([
+      {
+        toolCallId: "t1",
+        toolName: "manage_artifact",
+        result: { success: true },
+      },
+    ]);
+  });
+
   it("onEnd persists only the model in metadata when there is no reasoning or tools", async () => {
     const finishRef = {
       current: {

@@ -89,6 +89,7 @@ import { moveChat } from "@/lib/actions/chats/move-chat";
 import { getChat } from "@/lib/actions/chats/get-chat";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { updateCurrentLeaf } from "@/lib/actions/chats/update-current-leaf";
+import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 
 const CHAT_ROW = {
   id: "chat-1",
@@ -495,5 +496,38 @@ describe("updateCurrentLeaf", () => {
     await expect(updateCurrentLeaf(CHAT_UUID, LEAF_UUID)).rejects.toThrow(
       "Unauthorized",
     );
+  });
+});
+
+// ── updateChatKnowledgebase ──────────────────────────────────────────────────
+describe("updateChatKnowledgebase", () => {
+  const CHAT_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+  const KB_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d480";
+
+  it("updates knowledgebaseId when KB is owned by user", async () => {
+    chainable.where
+      .mockResolvedValueOnce([{ id: KB_UUID }]) // KB ownership check passes
+      .mockImplementationOnce(() => chainable);
+    chainable.returning.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+
+    await expect(
+      updateChatKnowledgebase({ chatId: CHAT_UUID, knowledgebaseId: KB_UUID }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws 'Not Found' when knowledgebase is not owned by user", async () => {
+    chainable.where.mockResolvedValueOnce([]); // KB check returns empty
+
+    await expect(
+      updateChatKnowledgebase({ chatId: CHAT_UUID, knowledgebaseId: KB_UUID }),
+    ).rejects.toThrow("Not Found");
+  });
+
+  it("allows setting knowledgebaseId to null without checking KB table", async () => {
+    chainable.returning.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+
+    await expect(
+      updateChatKnowledgebase({ chatId: CHAT_UUID, knowledgebaseId: null }),
+    ).resolves.toBeUndefined();
   });
 });

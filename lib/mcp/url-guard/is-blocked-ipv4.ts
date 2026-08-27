@@ -25,6 +25,14 @@ export function isBlockedIPv4(ip: string): boolean {
     return true;
   // 192.168.0.0/16 — private
   if (octets[0] === 192 && octets[1] === 168) return true;
+  // 100.64.0.0/10 — Carrier-Grade NAT (RFC 6598)
+  if (
+    octets[0] === 100 &&
+    octets[1] !== undefined &&
+    octets[1] >= 64 &&
+    octets[1] <= 127
+  )
+    return true;
   // 169.254.0.0/16 — link-local / cloud metadata (AWS: 169.254.169.254)
   if (octets[0] === 169 && octets[1] === 254) return true;
   // 0.0.0.0 — unspecified address

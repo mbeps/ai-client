@@ -56,8 +56,6 @@ describe("attachment.transformRunId FK (A-H5)", () => {
 });
 
 describe("kb-chunk-schema", () => {
-  it("embedding dataType is dimensioned vector", () => {
-    const col = getTableColumns(kbChunk).embedding;
-    expect(col.getSQLType()).toMatch(/^vector\(\d+\)$/);
+  it("embedding dataType is unconstrained vector", () => {
+    expect(col.getSQLType()).toBe("vector");
   });
-});

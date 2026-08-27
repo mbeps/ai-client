@@ -35,17 +35,38 @@ function activeToolCallsFrom(message: UIMessage | undefined): ToolCallState[] {
   if (!message) return [];
   return message.parts.flatMap((p) => {
     const part = p as any;
-    if (part.type !== "dynamic-tool" && !part.type?.startsWith?.("tool-")) {
+    if (
+      part.type !== "dynamic-tool" &&
+      !part.type?.startsWith?.("tool-") &&
+      part.type !== "tool-invocation"
+    ) {
       return [];
     }
-    const state = part.state ?? "input-available";
+    const invocation = part.toolInvocation ?? part;
+    const toolCallId = invocation.toolCallId ?? part.toolCallId;
+    const toolName =
+      invocation.toolName ??
+      part.toolName ??
+      (typeof part.type === "string" && part.type.startsWith("tool-")
+        ? part.type.slice(5)
+        : "");
+    const args = invocation.args ?? invocation.input ?? part.args ?? part.input;
+    const result =
+      invocation.result ?? invocation.output ?? part.result ?? part.output;
+    const hasResult = result !== undefined;
+    const state =
+      part.state ??
+      invocation.state ??
+      (hasResult ? "output-available" : "input-available");
+    const isComplete =
+      state === "output-available" || state === "result" || hasResult;
     return [
       {
-        toolCallId: part.toolCallId,
-        toolName: part.toolName,
-        args: part.input,
-        status: state === "output-available" ? "complete" : "calling",
-        result: part.output,
+        toolCallId,
+        toolName,
+        args,
+        status: isComplete ? "complete" : "calling",
+        result,
       } as ToolCallState,
     ];
   });
@@ -157,9 +178,9 @@ export function useStreamResponse(
   // Mutable per-request context read by onFinish without re-creating the
   // transport — keeps the useChat instance stable across renders.
   const pendingRef = useRef<{
-    parentId: string | null;
+    userMessageId: string | null;
     model: string;
-  }>({ parentId: null, model: "" });
+  }>({ userMessageId: null, model: "" });
 
   // ponytail: @ai-sdk/react bundles its own copy of `ai` types, so strict
   // typing of the transport boundary fights duplicated type identity. The
@@ -183,37 +204,39 @@ export function useStreamResponse(
     },
     // useChat's chat-level callback is still `onFinish` in @ai-sdk/react 4.x
     // (only streamText/generateText renamed to onEnd).
-    onFinish: async ({ message, isAbort, isError }) => {
-      if (isError || isAbort) return;
+    onFinish: async ({ message, isError }) => {
+      if (isError) return;
 
       const text = partsText(message, "text");
       const reasoning = partsText(message, "reasoning");
-      if (!text && !reasoning) return;
-
       const completedTools = activeToolCallsFrom(message).filter(
         (tc) => tc.status === "complete",
       );
+
+      // On abort or normal finish, persist if there is text, reasoning, or completed tools
+      if (!text && !reasoning && completedTools.length === 0) return;
+
       const metadata = JSON.stringify({
         model: pendingRef.current.model,
         reasoning,
         toolCalls: completedTools.map((tc) => ({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          args: JSON.stringify(tc.args),
+          args: tc.args,
         })),
         toolResults: completedTools
           .filter((tc) => tc.result !== undefined)
           .map((tc) => ({
             toolCallId: tc.toolCallId,
             toolName: tc.toolName,
-            result: JSON.stringify(tc.result),
+            result: tc.result,
           })),
       });
 
       addMessage(chatId, {
         role: "assistant",
         content: text,
-        parentId: pendingRef.current.parentId,
+        parentId: pendingRef.current.userMessageId,
         id: message.id,
         metadata,
         reasoning: reasoning || undefined,
@@ -232,15 +255,17 @@ export function useStreamResponse(
     return undefined;
   }, [messages]);
 
-  const isLoading = status === "submitted" || status === "streaming";
-  const streamingReasoning =
-    status === "ready" ? null : partsText(lastAssistant, "reasoning") || null;
-  const streamingContent =
-    status === "ready" ? null : partsText(lastAssistant, "text") || null;
+  const isStreaming = status === "submitted" || status === "streaming";
+  const isLoading = isStreaming;
+  const streamingReasoning = isStreaming
+    ? partsText(lastAssistant, "reasoning") || null
+    : null;
+  const streamingContent = isStreaming
+    ? partsText(lastAssistant, "text") || null
+    : null;
   const isStreamingReasoning =
-    status !== "ready" && !!streamingReasoning && !streamingContent;
-  const activeToolCalls =
-    status === "ready" ? [] : activeToolCallsFrom(lastAssistant);
+    isStreaming && !!streamingReasoning && !streamingContent;
+  const activeToolCalls = isStreaming ? activeToolCallsFrom(lastAssistant) : [];
 
   const stopStream = useCallback(() => stop(), [stop]);
 
@@ -273,7 +298,7 @@ export function useStreamResponse(
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
   ): Promise<string> => {
-    pendingRef.current = { parentId, model };
+    pendingRef.current = { userMessageId: userMsgId, model };
 
     // 1. Build metadata object
     const metadataObj = buildMetadata(

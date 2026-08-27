@@ -1,4 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
+  isBlockedUrl: vi.fn().mockResolvedValue(false),
+}));
+
 import { buildTransport } from "@/lib/mcp/build-transport";
 
 describe("buildTransport — SSRF redirect hardening (T9.5)", () => {

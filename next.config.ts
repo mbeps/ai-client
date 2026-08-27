@@ -25,6 +25,11 @@ const CSP = [
  * and HTTP security headers for all routes.
  */
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

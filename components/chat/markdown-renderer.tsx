@@ -68,6 +68,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
 
   useEffect(() => {
     const renderChart = async () => {
+      setError("");
       try {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, theme: "default" });

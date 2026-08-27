@@ -75,12 +75,37 @@ export async function persistTransformArtifact(
       const parsed = JSON.parse(artifactContent);
       const workbook = XLSX.utils.book_new();
 
-      for (const sheet of (parsed.sheets ?? []) as Array<{
-        name?: string;
-        data?: unknown[][];
-      }>) {
-        const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
-        XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+      if (Array.isArray(parsed)) {
+        const ws = XLSX.utils.aoa_to_sheet(parsed);
+        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as any).data)
+      ) {
+        const ws = XLSX.utils.aoa_to_sheet((parsed as any).data);
+        XLSX.utils.book_append_sheet(
+          workbook,
+          ws,
+          (parsed as any).name ?? "Sheet1",
+        );
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as any).sheets)
+      ) {
+        for (const sheet of (parsed as any).sheets as Array<{
+          name?: string;
+          data?: unknown[][];
+        }>) {
+          const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
+          XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+        }
+      }
+
+      if (workbook.SheetNames.length === 0) {
+        const ws = XLSX.utils.aoa_to_sheet([]);
+        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
       }
 
       xlsxBuffer = Buffer.from(

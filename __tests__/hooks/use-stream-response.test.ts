@@ -184,11 +184,75 @@ describe("useStreamResponse (useChat-backed)", () => {
     expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
       role: "assistant",
       content: "answer",
-      parentId: "parent-1",
+      parentId: "user-msg-1",
       id: "server-assistant-id",
       metadata: expect.stringContaining("thinking"),
       reasoning: "thinking",
     });
+  });
+
+  it("onFinish syncs completed tool calls and results as raw objects in metadata", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "generate artifact",
+        null,
+      );
+    });
+
+    mockStoreState.addMessage.mockClear();
+
+    await act(async () => {
+      await chatState.config.onFinish({
+        message: {
+          id: "server-assistant-id",
+          role: "assistant",
+          parts: [
+            {
+              type: "dynamic-tool",
+              toolName: "manage_artifact",
+              toolCallId: "tc-1",
+              state: "output-available",
+              input: { type: "spreadsheet", title: "Test" },
+              output: {
+                success: true,
+                artifact: { id: "art-1", type: "spreadsheet" },
+              },
+            },
+            { type: "text", text: "I made the spreadsheet." },
+          ],
+        },
+        isAbort: false,
+        isError: false,
+        isDisconnect: false,
+        messages: [],
+      });
+    });
+
+    expect(mockStoreState.addMessage).toHaveBeenCalledTimes(1);
+    const addedCall = mockStoreState.addMessage.mock.calls[0][1];
+    expect(addedCall.content).toBe("I made the spreadsheet.");
+    expect(addedCall.parentId).toBe("user-msg-1");
+    const meta = JSON.parse(addedCall.metadata);
+    expect(meta.toolCalls).toEqual([
+      {
+        toolCallId: "tc-1",
+        toolName: "manage_artifact",
+        args: { type: "spreadsheet", title: "Test" },
+      },
+    ]);
+    expect(meta.toolResults).toEqual([
+      {
+        toolCallId: "tc-1",
+        toolName: "manage_artifact",
+        result: {
+          success: true,
+          artifact: { id: "art-1", type: "spreadsheet" },
+        },
+      },
+    ]);
   });
 
   it("onFinish skips syncing when the assistant produced no content", async () => {

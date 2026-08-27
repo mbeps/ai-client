@@ -2,6 +2,7 @@ import type { Chat } from "@/types/chat/chat";
 import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 import type { Message } from "@/types/message/message";
 import type { Attachment } from "@/types/attachment/attachment";
+import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 
 /**
  * Reconstructs a message tree structure from flattened database rows.
@@ -43,10 +44,17 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     const msg = messages[att.messageId];
     if (msg) {
       const isImage = att.mimeType.startsWith("image/");
+      const isSpreadsheet = checkIsSpreadsheet(att.name, att.mimeType);
+      const type = isImage
+        ? "image"
+        : isSpreadsheet
+          ? "spreadsheet"
+          : "document";
+
       msg.attachments = msg.attachments || [];
       (msg.attachments as Attachment[]).push({
         id: att.id,
-        type: isImage ? "image" : "document",
+        type,
         name: att.name,
         mimeType: att.mimeType,
         sizeBytes: att.size,

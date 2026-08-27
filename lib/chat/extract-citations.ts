@@ -16,9 +16,21 @@ export function extractCitations(toolResults: ToolResult[]): Citation[] {
 
   for (const tr of toolResults) {
     if (tr.toolName === "search_knowledge_base") {
-      const data = tr.result as { results?: Citation[] };
-      if (Array.isArray(data?.results)) {
-        citations.push(...data.results);
+      const raw = tr.result ?? (tr as any).output;
+      let data: unknown = raw;
+      if (typeof raw === "string") {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = null;
+        }
+      }
+      if (
+        data &&
+        typeof data === "object" &&
+        Array.isArray((data as any).results)
+      ) {
+        citations.push(...(data as any).results);
       }
     }
   }

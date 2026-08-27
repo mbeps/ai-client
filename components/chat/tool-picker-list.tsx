@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ToolPickerListProps {
-  servers: (McpServer | PublicMcpServer)[];
+  servers?: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
   onBulkSelect: (
@@ -56,7 +56,7 @@ type ServerContent = {
  * @author Maruf Bepary
  */
 export function ToolPickerList({
-  servers,
+  servers = [],
   selectedTools,
   onToggleTool,
   onBulkSelect,

@@ -54,6 +54,12 @@ export function assembleModelMessages(
   messages: HistoryMessage[],
 ): ModelMessage[] {
   return messages.flatMap((m) => {
+    // In AI SDK v7, system instructions are supplied via `instructions:` option.
+    // Explicit system messages in `messages[]` trigger InvalidPromptError.
+    if (m.role === "system") {
+      return [];
+    }
+
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
       const parts: Array<TextPart | FilePart> = [];
 
@@ -102,11 +108,20 @@ export function assembleModelMessages(
           }
 
           for (const tc of meta.toolCalls) {
+            let parsedInput = tc.args ?? tc.input;
+            if (typeof parsedInput === "string") {
+              try {
+                parsedInput = JSON.parse(parsedInput);
+              } catch {
+                // Keep raw string if parsing fails
+              }
+            }
             parts.push({
               type: "tool-call",
               toolCallId: tc.toolCallId,
               toolName: tc.toolName,
-              args: typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args,
+              input: parsedInput,
+              args: parsedInput,
             });
           }
 
@@ -114,15 +129,27 @@ export function assembleModelMessages(
 
           if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
             const resultParts = meta.toolResults.map((tr: any) => {
-              const rawResult =
-                typeof tr.result === "string"
-                  ? JSON.parse(tr.result)
-                  : tr.result;
+              const raw = tr.result ?? tr.output;
+              let outputValue = raw;
+              let isJson = typeof raw === "object" && raw !== null;
+
+              if (typeof raw === "string") {
+                try {
+                  outputValue = JSON.parse(raw);
+                  isJson = true;
+                } catch {
+                  outputValue = raw;
+                  isJson = false;
+                }
+              }
+
               return {
                 type: "tool-result",
                 toolCallId: tr.toolCallId,
                 toolName: tr.toolName,
-                output: { type: "json", value: rawResult },
+                output: isJson
+                  ? { type: "json", value: outputValue }
+                  : { type: "text", value: String(outputValue ?? "") },
               };
             });
             msgs.push({ role: "tool", content: resultParts });

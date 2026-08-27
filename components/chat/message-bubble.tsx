@@ -16,6 +16,7 @@ import { ResponseTimeline } from "./message/response-timeline";
 import { MessageActions } from "./message/message-actions";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { extractCitations } from "@/lib/chat/extract-citations";
+import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 import type { Citation } from "@/types/chat/citation";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CitationsList } from "./message/citations-list";
@@ -45,6 +46,8 @@ interface MessageBubbleProps {
     serverIds: string[],
     toolIds: string[],
     promptId?: string,
+    assistantId?: string,
+    kbs?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -69,21 +72,6 @@ interface MessageBubbleProps {
   knowledgebases?: KnowledgebaseWithCount[];
 }
 
-/**
- * Renders a single message within the conversation thread.
- * User messages display as plain pre-wrapped text; assistant messages render via
- * MarkdownRenderer with support for tool calls, reasoning tokens, and artifacts.
- * Shows left/right navigation arrows on hover when siblings exist for branching.
- * Supports inline editing (creates new sibling), deletion, and regeneration.
- * Fetches and caches presigned URLs for attachments on mount.
- *
- * @param props - Message data, callbacks, and siblings for branch navigation.
- * @returns Avatar, message content, optional thinking display, attachments, and actions.
- * @see MarkdownRenderer for assistant message content rendering.
- * @see ToolCallDisplay for visualizing tool invocations.
- * @see ThinkingDisplay for streaming reasoning output.
- * @see MessageActions for edit/delete/regenerate UI.
- */
 export function MessageBubble({
   message,
   isLatest,
@@ -134,11 +122,13 @@ export function MessageBubble({
   }, [isUser, parsedModelId]);
 
   const hasArtifact = useMemo(() => {
+    const hasMermaid = /```mermaid/i.test(message.content);
+    if (hasMermaid) return true;
     if (!toolData) return false;
     return toolData.toolResults.some(
-      (tr) => tr.toolName === "manage_artifact" && (tr.result as any)?.artifact,
+      (tr) => !!extractArtifactFromToolResult(tr),
     );
-  }, [toolData]);
+  }, [message.content, toolData]);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -164,9 +154,24 @@ export function MessageBubble({
             </AvatarFallback>
           )}
         </Avatar>
-        <div className="font-semibold text-sm">
-          {isUser ? "You" : "Assistant"}
-        </div>
+        <span className="font-semibold text-sm">
+          {isUser ? "You" : modelName ? modelName : "Assistant"}
+        </span>
+        {promptEntry && (
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+            <Command className="h-3 w-3" />
+            {promptEntry.title}
+          </span>
+        )}
+        {selectedKbIds.length > 0 && (
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Database className="h-3 w-3" />
+            {selectedKbIds
+              .map((id) => knowledgebases.find((kb) => kb.id === id)?.name)
+              .filter(Boolean)
+              .join(", ") || `${selectedKbIds.length} knowledgebases`}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -230,8 +235,9 @@ export function MessageBubble({
                     model,
                     serverIds,
                     toolIds,
-                    _resources,
                     promptId,
+                    assistantId,
+                    kbs,
                   ) => {
                     onEdit(
                       message.id,
@@ -241,6 +247,8 @@ export function MessageBubble({
                       serverIds,
                       toolIds,
                       promptId,
+                      assistantId,
+                      kbs,
                     );
                     setIsEditing(false);
                   }}

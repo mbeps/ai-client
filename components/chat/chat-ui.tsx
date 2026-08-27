@@ -15,6 +15,7 @@ import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
 import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { useState } from "react";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
@@ -170,15 +171,16 @@ export function ChatUI({
           const meta = JSON.parse(msg.metadata);
           if (Array.isArray(meta.toolResults)) {
             meta.toolResults.forEach((tr: any) => {
-              if (tr.toolName === "manage_artifact" && tr.result?.artifact) {
-                artifacts.push({ ...tr.result.artifact, messageId: msg.id });
+              const art = extractArtifactFromToolResult(tr);
+              if (art) {
+                artifacts.push({ ...art, messageId: msg.id });
               }
             });
           }
         } catch {}
       }
       const mermaidMatches = [
-        ...msg.content.matchAll(/```mermaid\n([\s\S]*?)```/g),
+        ...msg.content.matchAll(/```mermaid\s*\n([\s\S]*?)```/g),
       ];
       mermaidMatches.forEach((m, i) => {
         artifacts.push({
@@ -197,13 +199,17 @@ export function ChatUI({
       ? allArtifacts[artifactIndex]
       : null;
 
-  // Auto-open when artifacts appear
+  // Auto-open when artifacts appear and clamp active index
   if (allArtifacts.length !== prevArtifactsLength) {
     setPrevArtifactsLength(allArtifacts.length);
     if (allArtifacts.length > 0 && !isArtifactOpen && artifactIndex === -1) {
       setArtifactIndex(allArtifacts.length - 1);
       setIsArtifactOpen(true);
     } else if (allArtifacts.length > 0 && artifactIndex === -1) {
+      setArtifactIndex(allArtifacts.length - 1);
+    } else if (allArtifacts.length === 0) {
+      setArtifactIndex(-1);
+    } else if (artifactIndex >= allArtifacts.length) {
       setArtifactIndex(allArtifacts.length - 1);
     }
   }
@@ -234,13 +240,31 @@ export function ChatUI({
 
         if (Array.isArray(meta.toolResults)) {
           meta.toolResults.forEach((tr: any) => {
-            if (
-              tr.toolName === "manage_artifact" &&
-              tr.result?.artifact?.id &&
-              tr.result.artifact.id === activeArtifact.id
-            ) {
-              tr.result.artifact.content = newContent;
-              updated = true;
+            if (tr.toolName === "manage_artifact") {
+              const raw = tr.result ?? tr.output;
+              const isString = typeof raw === "string";
+              let parsed = raw;
+              if (isString) {
+                try {
+                  parsed = JSON.parse(raw);
+                } catch {
+                  parsed = null;
+                }
+              }
+              if (parsed && typeof parsed === "object") {
+                const target = parsed.artifact ?? parsed;
+                if (target?.id === activeArtifact.id) {
+                  target.content = newContent;
+                  if (isString) {
+                    tr.result = JSON.stringify(parsed);
+                  } else if (tr.result !== undefined) {
+                    tr.result = parsed;
+                  } else {
+                    tr.output = parsed;
+                  }
+                  updated = true;
+                }
+              }
             }
           });
         }
@@ -337,7 +361,7 @@ export function ChatUI({
       handleSend(
         initialMessage,
         [],
-        "",
+        initialModelId || "",
         initialServerIds,
         initialSelectedTools,
         undefined,
@@ -350,6 +374,7 @@ export function ChatUI({
     initialMessage,
     handleSend,
     onInitialMessageSent,
+    initialModelId,
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
@@ -390,6 +415,7 @@ export function ChatUI({
     toolIds: string[],
     promptId?: string,
     assistantId?: string,
+    selectedKbIds?: string[],
   ) => {
     const msg = chat?.messages[id];
     if (!msg) return;
@@ -403,6 +429,7 @@ export function ChatUI({
       toolIds,
       promptId,
       assistantId,
+      selectedKbIds,
     );
   };
 
@@ -415,6 +442,10 @@ export function ChatUI({
 
     let promptId: string | undefined;
     let assistantId: string | undefined;
+    let model: string = "";
+    let serverIds: string[] = [];
+    let toolIds: string[] = [];
+    let selectedKbIds: string[] = [];
     let userContent = parentMsg.content;
 
     if (parentMsg.metadata) {
@@ -427,6 +458,18 @@ export function ChatUI({
         if (meta.assistantId) {
           assistantId = meta.assistantId;
         }
+        if (meta.model) {
+          model = meta.model;
+        }
+        if (Array.isArray(meta.selectedServerIds)) {
+          serverIds = meta.selectedServerIds;
+        }
+        if (Array.isArray(meta.selectedTools)) {
+          toolIds = meta.selectedTools;
+        }
+        if (Array.isArray(meta.selectedKbIds)) {
+          selectedKbIds = meta.selectedKbIds;
+        }
       } catch {}
     }
 
@@ -435,11 +478,12 @@ export function ChatUI({
       userContent,
       parentMsg.parentId,
       parentMsg.attachments,
-      "",
-      [],
-      [],
+      model,
+      serverIds,
+      toolIds,
       promptId,
       assistantId,
+      selectedKbIds,
     );
   };
 

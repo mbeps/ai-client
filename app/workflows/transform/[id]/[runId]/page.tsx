@@ -208,22 +208,29 @@ export default function TransformRunDetailPage() {
           );
           break;
 
-        case "transform-step-start":
-          activeStepIndexRef.current = event.stepIndex as number;
-          setStepStates((prev: Record<number, StepState>) => ({
-            ...prev,
-            [event.stepIndex as number]: {
+        case "transform-step-start": {
+          const stepIndex = event.stepIndex as number;
+          activeStepIndexRef.current = stepIndex;
+          setStepStates((prev: Record<number, StepState>) => {
+            const updated = { ...prev };
+            // Mark any previous step indices as completed so reviewed steps do not stay in awaiting_review
+            for (let i = 0; i < stepIndex; i++) {
+              if (updated[i]) {
+                updated[i] = { ...updated[i], status: "completed" };
+              }
+            }
+            updated[stepIndex] = {
               status: "running",
               toolCalls: [],
               toolResults: [],
-            },
-          }));
+            };
+            return updated;
+          });
           setRun((prev: TransformRun | null) =>
-            prev
-              ? { ...prev, currentStepIndex: event.stepIndex as number }
-              : prev,
+            prev ? { ...prev, currentStepIndex: stepIndex } : prev,
           );
           break;
+        }
 
         case "tool-call":
           if (activeStepIndexRef.current !== null) {
@@ -412,7 +419,7 @@ export default function TransformRunDetailPage() {
 
   useEffect(() => {
     if (!run || !agent || hasStartedStream.current) return;
-    if (run.status !== "pending" && run.status !== "running") return;
+    if (run.status !== "pending") return;
 
     hasStartedStream.current = true;
     startStream({ type: "start", runId: run.id });

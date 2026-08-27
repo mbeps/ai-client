@@ -137,7 +137,7 @@ export async function POST(req: Request) {
           const inputIds: string[] = runRow.inputAttachmentIds;
           const stageIds =
             startFromStep > 0 && currentOutputIds.length > 0
-              ? currentOutputIds
+              ? [currentOutputIds[currentOutputIds.length - 1]]
               : inputIds;
 
           const ctx = await buildFileContext(stageIds, session.user.id);
