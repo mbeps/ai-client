@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { useUserModels, type UserModelOption } from "@/hooks/use-user-models";
-import { BrainCircuit, Info, Sparkles } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -156,12 +156,9 @@ export function ModelSelector({
                     >
                       <div className="flex flex-col gap-3">
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                            <span className="text-xs font-semibold">
-                              {m.label}
-                            </span>
-                          </div>
+                          <span className="text-xs font-semibold">
+                            {m.label}
+                          </span>
                           <span className="text-[10px] text-muted-foreground">
                             {m.providerName}
                           </span>
