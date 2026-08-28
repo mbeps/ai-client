@@ -32,9 +32,7 @@ interface PublicServerDiscoveryProps {
  *
  * @param props - Component props
  * @param props.onSuccess - Optional callback fired after successfully adding a server
- * @param props.onClose - Optional callback to close parent dialog/drawer
- * @see {@link DiscoverCommunityToolsDialog} for modal wrapper
- * @see {@link AddServerDialog} for adding custom servers
+ * @param props.onClose - Optional callback to close parent view
  * @author Maruf Bepary
  */
 export function PublicServerDiscovery({

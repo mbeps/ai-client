@@ -225,7 +225,9 @@ export default function SkillDetailPage() {
     }
 
     if (cleanPath.toLowerCase() === "skill.md") {
-      toast.error("SKILL.md is the main instruction file. Edit it in General tab.");
+      toast.error(
+        "SKILL.md is the main instruction file. Edit it in General tab.",
+      );
       return;
     }
 
@@ -295,7 +297,8 @@ export default function SkillDetailPage() {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Skill Configuration</h3>
             <p className="text-sm text-muted-foreground">
-              Modify the skill name, progressive disclosure description, and instructions.
+              Modify the skill name, progressive disclosure description, and
+              instructions.
             </p>
           </div>
 
@@ -304,13 +307,14 @@ export default function SkillDetailPage() {
               <div className="space-y-0.5">
                 <label className="text-sm font-medium">Enable Skill</label>
                 <p className="text-xs text-muted-foreground">
-                  When enabled, this skill will appear in slash commands and progressive disclosure tool calls.
+                  When enabled, this skill will appear in slash commands and
+                  progressive disclosure tool calls.
                 </p>
               </div>
               <Switch checked={enabled} onCheckedChange={setEnabled} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Display Name</label>
                 <Input
@@ -375,7 +379,8 @@ export default function SkillDetailPage() {
             <div className="space-y-1">
               <h3 className="text-lg font-semibold">Bundled Subfiles</h3>
               <p className="text-sm text-muted-foreground">
-                Supporting scripts, templates, or documentation bundled inside this skill package.
+                Supporting scripts, templates, or documentation bundled inside
+                this skill package.
               </p>
             </div>
             <Button onClick={openAddFileDialog} className="gap-2">
@@ -393,10 +398,16 @@ export default function SkillDetailPage() {
                 <div className="space-y-1">
                   <p className="font-medium text-sm">No subfiles yet</p>
                   <p className="text-xs text-muted-foreground max-w-sm">
-                    Add supporting reference markdown, code scripts, schemas, or templates that the model can inspect when using this skill.
+                    Add supporting reference markdown, code scripts, schemas, or
+                    templates that the model can inspect when using this skill.
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={openAddFileDialog} className="mt-2 gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openAddFileDialog}
+                  className="mt-2 gap-1.5"
+                >
                   <Plus className="h-4 w-4" />
                   Add First Subfile
                 </Button>
@@ -469,7 +480,8 @@ export default function SkillDetailPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Deleting this skill will permanently remove it from your skills library and slash commands.
+                Deleting this skill will permanently remove it from your skills
+                library and slash commands.
               </p>
               <Button
                 variant="destructive"
@@ -492,7 +504,8 @@ export default function SkillDetailPage() {
               {editingFileIndex !== null ? "Edit Subfile" : "Add Subfile"}
             </DialogTitle>
             <DialogDescription>
-              Specify the relative path inside the skill package (e.g. <code>references/guide.md</code>) and its contents.
+              Specify the relative path inside the skill package (e.g.{" "}
+              <code>references/guide.md</code>) and its contents.
             </DialogDescription>
           </DialogHeader>
 

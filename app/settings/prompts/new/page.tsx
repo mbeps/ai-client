@@ -1,18 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -24,12 +15,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PROMPTS } from "@/constants/prompts";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { ChevronLeft, Command, Plus, X } from "lucide-react";
 import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import { PageHeader } from "@/components/page-header";
+import { ROUTES } from "@/constants/routes";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -45,64 +39,62 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-interface CreatePromptDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 /**
- * Create prompt dialog component — modal form for defining new prompt shortcuts.
- * Handles validation (title, shortcut format, content) and submission via server action.
- * Integrates with Zustand store to refresh prompts list on successful creation.
+ * Dedicated page for creating a new custom prompt shortcut.
+ * Provides a spacious editor layout for managing large prompt templates.
  *
  * @author Maruf Bepary
  */
-export function CreatePromptDialog({
-  open,
-  onOpenChange,
-}: CreatePromptDialogProps) {
+export default function NewPromptPage() {
   const router = useRouter();
   const loadPrompts = useAppStore((state) => state.loadPrompts);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { title: "", shortcut: "", content: "" },
   });
 
+  const { isSubmitting } = form.formState;
+
   const onSubmit = async (values: FormValues) => {
-    setIsSubmitting(true);
     try {
       await createPrompt({
-        title: values.title,
-        shortcut: values.shortcut,
-        content: values.content,
+        title: values.title.trim(),
+        shortcut: values.shortcut.trim(),
+        content: values.content.trim(),
       });
       toast.success("Prompt created");
-      router.refresh();
-      loadPrompts();
-      form.reset();
-      onOpenChange(false);
-    } catch {
-      toast.error("Failed to create prompt");
-    } finally {
-      setIsSubmitting(false);
+      await loadPrompts();
+      router.push(ROUTES.SETTINGS.PROMPTS.path);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create prompt";
+      toast.error(message);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>New Prompt</DialogTitle>
-          <DialogDescription>
-            Create a custom prompt shortcut to quickly insert text into your
-            chats.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="page-container max-w-4xl mx-auto py-8">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
+      >
+        <ChevronLeft className="mr-1 h-4 w-4" />
+        Back to Prompts
+      </Button>
+
+      <PageHeader
+        icon={<Command className="h-8 w-8 text-primary" />}
+        title="New Prompt"
+        description="Create a custom prompt shortcut to quickly insert text into your chats."
+      />
+
+      <div className="mt-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <FormField
                 control={form.control}
                 name="title"
@@ -143,6 +135,7 @@ export function CreatePromptDialog({
                 )}
               />
             </div>
+
             <FormField
               control={form.control}
               name="content"
@@ -154,7 +147,7 @@ export function CreatePromptDialog({
                       placeholder={
                         PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_CREATE
                       }
-                      className="min-h-[200px] max-h-[400px] overflow-y-auto"
+                      className="min-h-[300px] max-h-[600px] overflow-y-auto font-mono text-sm"
                       {...field}
                     />
                   </FormControl>
@@ -165,30 +158,29 @@ export function CreatePromptDialog({
                 </FormItem>
               )}
             />
-            <DialogFooter>
+
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
                 disabled={isSubmitting}
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  "Creating..."
-                ) : (
-                  <>
+                <LoadingSwap isLoading={isSubmitting}>
+                  <div className="flex items-center">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Prompt
-                  </>
-                )}
+                  </div>
+                </LoadingSwap>
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

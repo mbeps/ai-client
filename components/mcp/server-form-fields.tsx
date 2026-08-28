@@ -31,14 +31,13 @@ interface ServerFormFieldsProps<T extends FieldValues> {
 /**
  * Renders shared form fields for MCP server configuration.
  * Shows HTTP connection fields (name, url, headers) and public sharing toggle.
- * Used by both AddServerDialog and EditServerForm to eliminate duplicate JSX.
+ * Used by NewMcpServerPage and EditServerForm to eliminate duplicate JSX.
  * Supports optional styling variant for edit forms.
  *
  * @template T - React Hook Form field values type
  * @param props - Component props
  * @param props.form - React Hook Form instance
  * @param props.styled - When true, applies `bg-background font-mono` classes (edit form variant)
- * @see {@link AddServerDialog} for adding servers
  * @see {@link EditServerForm} for editing servers
  * @author Maruf Bepary
  */

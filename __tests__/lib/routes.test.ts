@@ -46,8 +46,36 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.SETTINGS.TOOLS.path).toBe("/settings/tools");
   });
 
+  it("SETTINGS.TOOLS.new path", () => {
+    expect(ROUTES.SETTINGS.TOOLS.new).toBe("/settings/tools/new");
+  });
+
   it("SETTINGS.PROMPTS path", () => {
     expect(ROUTES.SETTINGS.PROMPTS.path).toBe("/settings/prompts");
+  });
+
+  it("SETTINGS.PROMPTS.new path", () => {
+    expect(ROUTES.SETTINGS.PROMPTS.new).toBe("/settings/prompts/new");
+  });
+
+  it("SETTINGS.SKILLS path", () => {
+    expect(ROUTES.SETTINGS.SKILLS.path).toBe("/settings/skills");
+  });
+
+  it("SETTINGS.SKILLS.new path", () => {
+    expect(ROUTES.SETTINGS.SKILLS.new).toBe("/settings/skills/new");
+  });
+
+  it("TOOLS.new path", () => {
+    expect(ROUTES.TOOLS.new).toBe("/settings/tools/new");
+  });
+
+  it("PROMPTS.new path", () => {
+    expect(ROUTES.PROMPTS.new).toBe("/settings/prompts/new");
+  });
+
+  it("SKILLS.new path", () => {
+    expect(ROUTES.SKILLS.new).toBe("/settings/skills/new");
   });
 
   it("PROFILE path", () => {

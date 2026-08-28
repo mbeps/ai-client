@@ -93,23 +93,39 @@ export const ROUTES = {
     TOOLS: {
       path: `${SETTINGS_BASE}/tools` as const,
       name: "Tools",
+      new: `${SETTINGS_BASE}/tools/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
     },
     PROMPTS: {
       path: `${SETTINGS_BASE}/prompts` as const,
       name: "Prompts",
+      new: `${SETTINGS_BASE}/prompts/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/prompts/${id}` as const,
     },
     SKILLS: {
       path: `${SETTINGS_BASE}/skills` as const,
       name: "Skills",
+      new: `${SETTINGS_BASE}/skills/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
     },
   },
   TOOLS: {
     path: `${SETTINGS_BASE}/tools` as const,
     name: "Tools",
+    new: `${SETTINGS_BASE}/tools/new` as const,
     detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
+  },
+  PROMPTS: {
+    path: `${SETTINGS_BASE}/prompts` as const,
+    name: "Prompts",
+    new: `${SETTINGS_BASE}/prompts/new` as const,
+    detail: (id: string) => `${SETTINGS_BASE}/prompts/${id}` as const,
+  },
+  SKILLS: {
+    path: `${SETTINGS_BASE}/skills` as const,
+    name: "Skills",
+    new: `${SETTINGS_BASE}/skills/new` as const,
+    detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
   },
   PROFILE: {
     path: PROFILE_BASE,
