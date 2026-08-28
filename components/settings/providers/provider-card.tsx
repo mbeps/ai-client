@@ -5,7 +5,6 @@ import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
   Settings2,
   Trash2,
-  Globe,
   MoreVertical,
   RefreshCw,
   Activity,
@@ -61,7 +60,6 @@ export function ProviderCard({
     <EntityCard
       horizontal
       className="shadow-none border hover:bg-muted/30 cursor-default"
-      icon={<Globe className="h-5 w-5 text-primary" />}
       title={<span className="font-semibold">{provider.name}</span>}
       description={provider.baseUrl}
       rightActions={

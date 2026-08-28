@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Server } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -43,9 +42,6 @@ export function ServerCard({ server }: ServerCardProps) {
     >
       <div className="flex justify-between items-start gap-4">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <Server className="h-5 w-5 text-primary" />
-          </div>
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h3 className="font-semibold leading-none truncate">

@@ -8,8 +8,8 @@ import React from "react";
  * Props for the EntityCard component.
  */
 interface EntityCardProps {
-  /** Icon to display in the top-left circle. */
-  icon: React.ReactNode;
+  /** Optional icon to display in the top-left circle. */
+  icon?: React.ReactNode;
   /** Title of the card. Can be a string or React content (for badges/pins). */
   title: React.ReactNode;
   /** Primary description text. */
@@ -63,9 +63,11 @@ export function EntityCard({
         )}
       >
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            {icon}
-          </div>
+          {icon && (
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              {icon}
+            </div>
+          )}
           <div className="space-y-1 flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <div className="font-semibold leading-none truncate flex-1 min-w-0">
