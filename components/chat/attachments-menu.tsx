@@ -1,10 +1,18 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Paperclip, Database, Wrench, Check, X } from "lucide-react";
+import {
+  Paperclip,
+  Database,
+  Wrench,
+  Check,
+  X,
+  BrainCircuit,
+} from "lucide-react";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { Skill } from "@/types/skill/skill";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +23,7 @@ import {
 import { useState } from "react";
 import { ToolPickerList } from "./tool-picker-list";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
+import { SkillsPickerDialog } from "./skills-picker";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -29,25 +38,16 @@ interface AttachmentsMenuProps {
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
+  skills?: Skill[];
+  selectedSkills?: Set<string>;
+  onToggleSkill?: (id: string) => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
 }
 
 /**
- * Menu providing options to upload files, add knowledgebases, and select MCP tools.
- * Renders conditionally based on model capabilities (vision support, tool support).
- * Used in ChatInput for attachment and integration management.
+ * Menu providing options to upload files, add knowledgebases, select skills, and select MCP tools.
  *
- * @param props.servers - Available MCP servers for tool selection.
- * @param props.fileInputRef - Reference to hidden file input element.
- * @param props.selectedTools - Set of selected tool IDs.
- * @param props.onToggleTool - Callback to toggle individual tool selection.
- * @param props.onBulkSelect - Callback to bulk-select tools from a server.
- * @param props.knowledgebases - Available knowledgebases to add.
- * @param props.selectedKbs - Set of selected knowledgebase IDs.
- * @param props.onToggleKb - Callback to toggle knowledgebase selection.
- * @param props.supportsVision - Whether the model supports vision (image attachments).
- * @param props.supportsTools - Whether the model supports tool calling (MCP and internal tools).
  * @author Maruf Bepary
  */
 export const AttachmentsMenu = ({
@@ -59,6 +59,9 @@ export const AttachmentsMenu = ({
   knowledgebases,
   selectedKbs,
   onToggleKb,
+  skills = [],
+  selectedSkills = new Set(),
+  onToggleSkill,
   supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
@@ -74,6 +77,21 @@ export const AttachmentsMenu = ({
       >
         <Paperclip className="mr-2 h-4 w-4" /> Upload File
       </Button>
+
+      {onToggleSkill && (
+        <SkillsPickerDialog
+          skills={skills}
+          selectedSkills={selectedSkills}
+          onToggleSkill={onToggleSkill}
+          trigger={
+            <Button variant="ghost" size="sm" className="justify-start w-full">
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              Select Skills
+              {selectedSkills.size > 0 ? ` (${selectedSkills.size})` : ""}
+            </Button>
+          }
+        />
+      )}
 
       <KnowledgebasePickerDialog
         knowledgebases={knowledgebases || []}

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { X, Bot, Command, Database, Zap } from "lucide-react";
+import { X, Bot, Command, Database, Zap, BrainCircuit } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { Skill } from "@/types/skill/skill";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 
 interface ActiveSelectionChipsProps {
@@ -11,17 +12,19 @@ interface ActiveSelectionChipsProps {
   selectedPrompt: MentionPromptItem | null;
   selectedKbs: Set<string>;
   knowledgebases: Knowledgebase[];
+  selectedSkills?: Set<string>;
+  skills?: Skill[];
   onRemoveAssistant: () => void;
   onRemovePrompt: () => void;
   onRemoveKb: (id: string) => void;
+  onRemoveSkill?: (id: string) => void;
 }
 
 /**
  * Renders pill/badge chips at the top of the chat input showing
- * the currently selected assistant, prompt, and knowledge bases.
+ * the currently selected assistant, prompt, knowledge bases, and agent skills.
  * Each chip includes a remove button.
- * @param props - Configuration for selected entities and remove callbacks.
- * @returns Row of chips or null if nothing is selected.
+ *
  * @author Maruf Bepary
  */
 export function ActiveSelectionChips({
@@ -29,11 +32,19 @@ export function ActiveSelectionChips({
   selectedPrompt,
   selectedKbs,
   knowledgebases,
+  selectedSkills = new Set(),
+  skills = [],
   onRemoveAssistant,
   onRemovePrompt,
   onRemoveKb,
+  onRemoveSkill,
 }: ActiveSelectionChipsProps) {
-  if (!selectedAssistant && !selectedPrompt && selectedKbs.size === 0) {
+  if (
+    !selectedAssistant &&
+    !selectedPrompt &&
+    selectedKbs.size === 0 &&
+    selectedSkills.size === 0
+  ) {
     return null;
   }
 
@@ -86,6 +97,30 @@ export function ActiveSelectionChips({
           </button>
         </div>
       )}
+
+      {Array.from(selectedSkills).map((skillId) => {
+        const item = skills.find((s) => s.id === skillId || s.name === skillId);
+        return (
+          <div
+            key={skillId}
+            className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+          >
+            <BrainCircuit className="h-3 w-3 text-primary shrink-0" />
+            <span className="truncate max-w-[160px]">
+              /{item?.name ?? item?.displayName ?? skillId}
+            </span>
+            {onRemoveSkill && (
+              <button
+                type="button"
+                onClick={() => onRemoveSkill(skillId)}
+                className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
 
       {Array.from(selectedKbs).map((kbId) => {
         const kb = knowledgebases.find((k) => k.id === kbId);

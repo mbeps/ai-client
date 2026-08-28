@@ -12,6 +12,7 @@ export type HydratableResource =
   | "projects"
   | "assistants"
   | "prompts"
+  | "skills"
   | "mcpServers"
   | "publicMcpServers"
   | "transformAgents"
@@ -40,6 +41,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
       projects: s.projects,
       assistants: s.assistants,
       prompts: s.prompts,
+      skills: s.skills,
       mcpServers: s.mcpServers,
       publicMcpServers: s.publicMcpServers,
       transformAgents: s.transformAgents,
@@ -48,6 +50,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
       loadProjects: s.loadProjects,
       loadAssistants: s.loadAssistants,
       loadPrompts: s.loadPrompts,
+      loadSkills: s.loadSkills,
       loadMcpServers: s.loadMcpServers,
       loadPublicMcpServers: s.loadPublicMcpServers,
       loadTransformAgents: s.loadTransformAgents,

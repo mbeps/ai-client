@@ -19,6 +19,7 @@ import { AttachmentsMenu } from "./attachments-menu";
 import { MentionCommands } from "./mention-commands";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useUserModels } from "@/hooks/use-user-models";
+import { useAppStore } from "@/lib/store";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
@@ -36,8 +37,7 @@ import { toggleSetItem } from "@/lib/utils";
 interface ChatInputProps {
   /**
    * Callback invoked when user submits a message with content, attachments,
-   * model selection, and MCP server/tool/resource selections.
-   * Called after validation confirms non-empty content or attachments.
+   * model selection, MCP tools, knowledgebases, and skills.
    */
   onSend: (
     content: string,
@@ -48,6 +48,7 @@ interface ChatInputProps {
     selectedPromptId?: string,
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
+    selectedSkillIds?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -86,6 +87,9 @@ interface ChatInputProps {
   /** Initial knowledgebase IDs to select. */
   initialSelectedKbs?: string[];
 
+  /** Initial skill IDs to select. */
+  initialSelectedSkillIds?: string[];
+
   /** Callback invoked when the user toggles a knowledge base selection. */
   onKnowledgebaseChange?: (kbIds: string[]) => void;
 
@@ -101,16 +105,9 @@ interface ChatInputProps {
 
 /**
  * Comprehensive message input component with file upload, model selection,
- * and MCP tool/resource picker. Supports drag-and-drop file attachment,
- * slash-command prompts, auto-expanding textarea, and multi-server tool selection.
- * Validates file count (3 images, 5 total) and size limits (2/20/50 MB).
- * Integrates with ToolPickerDialog for server/tool/resource management.
+ * MCP tools, knowledgebases, and agent skills.
  *
- * @param props - Callbacks, loading state, and available MCP servers.
- * @returns Input form with textarea, attachments menu, model picker, and send button.
- * @see usePromptCommands for slash-command handling.
- * @see processAttachment for file validation and metadata extraction.
- * @see ToolPickerDialog for MCP server/tool UI.
+ * @author Maruf Bepary
  */
 export function ChatInput({
   onSend,
@@ -126,6 +123,7 @@ export function ChatInput({
   initialSelectedPromptId,
   initialSelectedAssistantId,
   initialSelectedKbs = [],
+  initialSelectedSkillIds = [],
   onKnowledgebaseChange,
   activeChatAssistantId,
   canMentionAssistant = true,
@@ -138,6 +136,7 @@ export function ChatInput({
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
 
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
+  const skills = useAppStore((state) => state.skills);
 
   // -- Derived model capabilities --
   const selectedModelObj = useMemo(
@@ -161,7 +160,7 @@ export function ChatInput({
   const isMobile = useIsMobile();
   const { handleApiError } = useApiError();
 
-  // -- File Upload Logic (Inlined) --
+  // -- File Upload Logic --
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
   const [isDragging, setIsDragging] = useState(false);
@@ -224,7 +223,7 @@ export function ChatInput({
     [addFiles],
   );
 
-  // -- MCP Selection Logic (Inlined) --
+  // -- MCP Selection Logic --
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
     new Set(initialSelectedServerIds),
   );
@@ -280,7 +279,7 @@ export function ChatInput({
     [],
   );
 
-  // -- KB Selection Logic (Inlined) --
+  // -- KB Selection Logic --
   const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
     new Set(initialSelectedKbs),
   );
@@ -309,6 +308,23 @@ export function ChatInput({
     [onKnowledgebaseChange],
   );
 
+  // -- Skills Selection Logic --
+  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(
+    new Set(initialSelectedSkillIds),
+  );
+
+  const handleToggleSkill = useCallback((id: string) => {
+    setSelectedSkills((prev) => toggleSetItem(prev, id));
+  }, []);
+
+  const handleRemoveSkill = useCallback((id: string) => {
+    setSelectedSkills((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   const {
     openTrigger,
     setOpenTrigger,
@@ -330,6 +346,7 @@ export function ChatInput({
     initialSelectedAssistantId,
     canMentionAssistant,
     selectedServerIds,
+    (skill) => setSelectedSkills((prev) => new Set(prev).add(skill.id)),
   );
 
   useEffect(() => {
@@ -374,7 +391,8 @@ export function ChatInput({
       (input.trim() ||
         attachments.length > 0 ||
         selectedPrompt ||
-        selectedAssistant) &&
+        selectedAssistant ||
+        selectedSkills.size > 0) &&
       !isLoading
     ) {
       onSend(
@@ -386,11 +404,13 @@ export function ChatInput({
         selectedPrompt?.id,
         selectedAssistant?.id,
         Array.from(selectedKbs),
+        Array.from(selectedSkills),
       );
       setInput("");
       clearAttachments();
       setSelectedPrompt(null);
       setSelectedAssistant(null);
+      setSelectedSkills(new Set());
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -442,9 +462,12 @@ export function ChatInput({
         selectedPrompt={selectedPrompt}
         selectedKbs={selectedKbs}
         knowledgebases={knowledgebases}
+        selectedSkills={selectedSkills}
+        skills={skills}
         onRemoveAssistant={() => setSelectedAssistant(null)}
         onRemovePrompt={() => setSelectedPrompt(null)}
         onRemoveKb={handleRemoveKb}
+        onRemoveSkill={handleRemoveSkill}
       />
 
       <ModelCapabilityBanner hasNoModels={hasNoModels} />
@@ -470,7 +493,7 @@ export function ChatInput({
         placeholder={
           hasNoModels
             ? "Set up a provider to start chatting..."
-            : "Ask anything... Use / for commands, @ for assistant"
+            : "Ask anything... Use / for skills and prompts, @ for assistant"
         }
         className="min-h-[40px] resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent p-0 overflow-y-auto"
         rows={1}
@@ -501,6 +524,9 @@ export function ChatInput({
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
                   onToggleKb={handleToggleKb}
+                  skills={skills}
+                  selectedSkills={selectedSkills}
+                  onToggleSkill={handleToggleSkill}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -528,6 +554,9 @@ export function ChatInput({
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
                   onToggleKb={handleToggleKb}
+                  skills={skills}
+                  selectedSkills={selectedSkills}
+                  onToggleSkill={handleToggleSkill}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -582,6 +611,7 @@ export function ChatInput({
                   attachments.length === 0 &&
                   !selectedPrompt &&
                   !selectedAssistant &&
+                  selectedSkills.size === 0 &&
                   selectedKbs.size === 0)
               }
             >

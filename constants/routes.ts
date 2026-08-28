@@ -100,6 +100,11 @@ export const ROUTES = {
       name: "Prompts",
       detail: (id: string) => `${SETTINGS_BASE}/prompts/${id}` as const,
     },
+    SKILLS: {
+      path: `${SETTINGS_BASE}/skills` as const,
+      name: "Skills",
+      detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
+    },
   },
   TOOLS: {
     path: `${SETTINGS_BASE}/tools` as const,

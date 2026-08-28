@@ -5,12 +5,15 @@ import {
   assistant,
   mcpServer,
   knowledgebase,
+  skill,
 } from "@/drizzle/schema";
 import { eq, and, or } from "drizzle-orm";
+import type { SkillSummary } from "@/types/skill/skill";
+import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * All database context required for a single chat request.
- * Lazy-loads projects, assistants, knowledge bases, and MCP servers.
+ * Lazy-loads projects, assistants, knowledge bases, MCP servers, and Agent Skills.
  * Resolves effective configuration considering request-level overrides.
  * @author Maruf Bepary
  */
@@ -40,24 +43,24 @@ type ChatContext = {
     url: string;
     headers: string | null;
   }>;
+  /** Available skills for progressive disclosure catalog */
+  availableSkills: SkillSummary[];
+  /** Pre-selected skills to inject directly */
+  selectedSkills: SkillRow[];
 };
 
 /**
  * Loads all database context needed for a chat request in minimal queries.
  * **Query pattern**: Chat lookup runs first (sequential dependency).
- * All remaining queries (project, assistant, servers, KB) run in parallel after.
- *
- * Resolves effective KB, assistant, and server configuration by considering:
- * - Chat-level associations
- * - Project-level overrides
- * - Request-level overrides (selectedKbIds, selectedAssistantId)
+ * All remaining queries (project, assistant, servers, KB, skills) run in parallel after.
  *
  * @param chatId - Chat UUID
  * @param userId - Authenticated user ID for authorization
  * @param selectedServerIds - Optional MCP server IDs to filter by
  * @param selectedKbIds - Optional knowledge base override from request body
  * @param selectedAssistantId - Optional assistant override from request body
- * @returns All context needed for streaming: prompts, KB readiness, servers
+ * @param selectedSkillIds - Optional skill IDs to manually inject
+ * @returns All context needed for streaming: prompts, KB readiness, servers, skills
  * @throws {Error} "Chat not found" when chat doesn't exist or doesn't belong to user
  * @author Maruf Bepary
  */
@@ -67,6 +70,7 @@ export async function loadChatContext(
   selectedServerIds?: string[],
   selectedKbIds?: string[],
   selectedAssistantId?: string,
+  selectedSkillIds?: string[],
 ): Promise<ChatContext> {
   // 1. Chat lookup (sequential — everything below depends on it)
   const [chatRow] = await db
@@ -84,74 +88,86 @@ export async function loadChatContext(
   }
 
   // 2. Parallel queries that depend on chatRow
-  const [projectRow, assistantRow, servers, kbRow] = await Promise.all([
-    // Project lookup (if applicable)
-    chatRow.projectId
-      ? db
-          .select({
-            globalPrompt: project.globalPrompt,
-            knowledgebaseId: project.knowledgebaseId,
-          })
-          .from(project)
-          .where(
-            and(eq(project.id, chatRow.projectId), eq(project.userId, userId)),
-          )
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
-
-    // Assistant lookup (if applicable)
-    (() => {
-      const effectiveAssistantId =
-        chatRow.assistantId || selectedAssistantId || null;
-      return effectiveAssistantId
+  const [projectRow, assistantRow, servers, kbRow, userSkills] =
+    await Promise.all([
+      // Project lookup (if applicable)
+      chatRow.projectId
         ? db
-            .select({ prompt: assistant.prompt })
-            .from(assistant)
+            .select({
+              globalPrompt: project.globalPrompt,
+              knowledgebaseId: project.knowledgebaseId,
+            })
+            .from(project)
             .where(
               and(
-                eq(assistant.id, effectiveAssistantId),
-                eq(assistant.userId, userId),
+                eq(project.id, chatRow.projectId),
+                eq(project.userId, userId),
               ),
             )
             .limit(1)
             .then((rows) => rows[0] ?? null)
-        : Promise.resolve(null);
-    })(),
+        : Promise.resolve(null),
 
-    // Enabled MCP servers for this user
-    db
-      .select({
-        id: mcpServer.id,
-        name: mcpServer.name,
-        url: mcpServer.url,
-        headers: mcpServer.headers,
-      })
-      .from(mcpServer)
-      .where(
-        and(
-          or(eq(mcpServer.userId, userId), eq(mcpServer.isPublic, true)),
-          eq(mcpServer.enabled, true),
-        ),
-      ),
+      // Assistant lookup (if applicable)
+      (() => {
+        const effectiveAssistantId =
+          chatRow.assistantId || selectedAssistantId || null;
+        return effectiveAssistantId
+          ? db
+              .select({ prompt: assistant.prompt })
+              .from(assistant)
+              .where(
+                and(
+                  eq(assistant.id, effectiveAssistantId),
+                  eq(assistant.userId, userId),
+                ),
+              )
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null);
+      })(),
 
-    // KB readiness check (if applicable)
-    (() => {
-      const activeKbId = selectedKbIds?.[0] ?? chatRow.knowledgebaseId ?? null;
-      if (!activeKbId) return Promise.resolve(null);
-      return db
-        .select({ indexStatus: knowledgebase.indexStatus })
-        .from(knowledgebase)
+      // Enabled MCP servers for this user
+      db
+        .select({
+          id: mcpServer.id,
+          name: mcpServer.name,
+          url: mcpServer.url,
+          headers: mcpServer.headers,
+        })
+        .from(mcpServer)
         .where(
           and(
-            eq(knowledgebase.id, activeKbId),
-            eq(knowledgebase.userId, userId),
+            or(eq(mcpServer.userId, userId), eq(mcpServer.isPublic, true)),
+            eq(mcpServer.enabled, true),
           ),
-        )
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
-    })(),
-  ]);
+        ),
+
+      // KB readiness check (if applicable)
+      (() => {
+        const activeKbId = selectedKbIds?.[0] ?? chatRow.knowledgebaseId ?? null;
+        if (!activeKbId) return Promise.resolve(null);
+        return db
+          .select({ indexStatus: knowledgebase.indexStatus })
+          .from(knowledgebase)
+          .where(
+            and(
+              eq(knowledgebase.id, activeKbId),
+              eq(knowledgebase.userId, userId),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null);
+      })(),
+
+      // Enabled user skills
+      db
+        .select()
+        .from(skill)
+        .where(and(eq(skill.userId, userId), eq(skill.enabled, true))) as Promise<
+        SkillRow[]
+      >,
+    ]);
 
   // 3. Derive composite values
   const activeKbId =
@@ -170,6 +186,22 @@ export async function loadChatContext(
         ? [] // Explicitly no MCP servers
         : servers.filter((s) => selectedServerIds.includes(s.id));
 
+  // 5. Build available skills summary & match selected skills
+  const availableSkills: SkillSummary[] = userSkills.map((s) => ({
+    name: s.name,
+    displayName: s.displayName,
+    description: s.description,
+  }));
+
+  const selectedSkills: SkillRow[] =
+    selectedSkillIds && selectedSkillIds.length > 0
+      ? userSkills.filter(
+          (s) =>
+            selectedSkillIds.includes(s.id) ||
+            selectedSkillIds.includes(s.name),
+        )
+      : [];
+
   return {
     chatRow,
     projectRow,
@@ -177,6 +209,8 @@ export async function loadChatContext(
     kbIsReady,
     assistantRow,
     servers: filteredServers,
+    availableSkills,
+    selectedSkills,
   };
 }
 

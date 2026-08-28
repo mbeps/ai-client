@@ -6,6 +6,7 @@ import { streamText, isStepCount } from "ai";
 import { chatRequestSchema } from "@/schemas/chat/chat";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
+import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
     selectedServerIds,
     selectedTools,
     selectedAssistantId,
+    selectedSkillIds,
     selectedKbIds,
   } = parsed.data;
 
@@ -110,6 +112,7 @@ export async function POST(req: Request) {
         selectedServerIds,
         selectedKbIds,
         selectedAssistantId,
+        selectedSkillIds,
       ),
       loadThreadFromDb(chatId, userMessageId, userId),
     ]);
@@ -123,7 +126,14 @@ export async function POST(req: Request) {
 
     logger.info(
       "[Chat API] Request initialized",
-      { chatId, userMessageId, model, selectedServerIds, selectedAssistantId },
+      {
+        chatId,
+        userMessageId,
+        model,
+        selectedServerIds,
+        selectedAssistantId,
+        selectedSkillIds,
+      },
       userId,
     );
 
@@ -143,6 +153,7 @@ export async function POST(req: Request) {
     mcpCleanup = registeredCleanup;
 
     const hasMcpTools = Object.keys(mcpTools).length > 0;
+    const hasSkills = ctx.availableSkills.length > 0;
 
     // --- Verify model capabilities against the DB-reconstructed thread ---
     if (!checkVisionSupport(thread as any, !!resolvedModelRow?.capVision)) {
@@ -164,6 +175,9 @@ export async function POST(req: Request) {
       throw new ToolsNotSupportedError();
     }
 
+    const hasAnyTools =
+      isToolCallingModel && (hasMcpTools || hasFileAttachments || hasSkills);
+
     // --- Stream AI response ---
     const finishRef: FinishRef = { current: null };
     const result = streamText({
@@ -175,21 +189,19 @@ export async function POST(req: Request) {
         ctx.assistantRow?.prompt,
         ctx.kbIsReady,
         hasFileAttachments,
+        ctx.availableSkills,
+        ctx.selectedSkills,
+        isToolCallingModel,
       ),
       messages: finalMessages,
-      tools:
-        isToolCallingModel && (hasMcpTools || hasFileAttachments)
-          ? {
-              ...(hasFileAttachments
-                ? registerFileUrlTool(fileAttachments)
-                : {}),
-              ...(hasMcpTools ? mcpTools : {}),
-            }
-          : undefined,
-      stopWhen:
-        isToolCallingModel && (hasMcpTools || hasFileAttachments)
-          ? isStepCount(env.CHAT_MAX_STEPS)
-          : undefined,
+      tools: hasAnyTools
+        ? {
+            ...(hasFileAttachments ? registerFileUrlTool(fileAttachments) : {}),
+            ...(hasSkills ? registerSkillTool(userId) : {}),
+            ...(hasMcpTools ? mcpTools : {}),
+          }
+        : undefined,
+      stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
       abortSignal: req.signal,
       // Client aborts don't reliably fire onFinish — capture partial content
       // into finishRef so the shared persistence path can save what was

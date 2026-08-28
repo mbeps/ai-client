@@ -18,3 +18,4 @@ export * from "./schemas/knowledgebase-schema";
 export * from "./schemas/kb-document-schema";
 export * from "./schemas/kb-chunk-schema";
 export * from "./schemas/user-settings-schema";
+export * from "./schemas/skill-schema";

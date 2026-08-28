@@ -41,4 +41,59 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     const result = buildSystemPrompt(null, null, null, false);
     expect(result.length).toBeGreaterThan(0);
   });
+
+  it("injects available skills catalog when tool calling is supported", () => {
+    const availableSkills = [
+      {
+        name: "clean-code",
+        displayName: "Clean Code",
+        description: "Pragmatic code quality.",
+      },
+    ];
+    const result = buildSystemPrompt(
+      null,
+      null,
+      null,
+      false,
+      false,
+      availableSkills,
+      [],
+      true,
+    );
+    expect(result).toContain("<available_skills>");
+    expect(result).toContain("<name>clean-code</name>");
+    expect(result).toContain("load_skill");
+  });
+
+  it("injects pre-selected skills with instructions and bundled files", () => {
+    const selectedSkills = [
+      {
+        id: "s1",
+        userId: "u1",
+        name: "frontend-design",
+        displayName: "Frontend Design",
+        description: "UI standards",
+        content: "# Frontend Guidelines",
+        files: [{ path: "references/theme.md", content: "Theme rules" }],
+        enabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    const result = buildSystemPrompt(
+      null,
+      null,
+      null,
+      false,
+      false,
+      [],
+      selectedSkills,
+      true,
+    );
+    expect(result).toContain(
+      "## Active Skill: Frontend Design (frontend-design)",
+    );
+    expect(result).toContain("# Frontend Guidelines");
+    expect(result).toContain("Theme rules");
+  });
 });

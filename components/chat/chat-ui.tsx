@@ -72,6 +72,7 @@ export function ChatUI({
     "assistants",
     "projects",
     "prompts",
+    "skills",
     "mcpPrompts",
     "userSettings",
   ]);
@@ -327,6 +328,7 @@ export function ChatUI({
       selectedPromptId?: string,
       selectedAssistantId?: string,
       selectedKbIds: string[] = [],
+      selectedSkillIds: string[] = [],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -339,6 +341,7 @@ export function ChatUI({
         selectedPromptId,
         selectedAssistantId,
         selectedKbIds,
+        selectedSkillIds,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -367,6 +370,7 @@ export function ChatUI({
         undefined,
         chat.assistantId || undefined,
         initialKbIds,
+        [],
       );
     }
   }, [
@@ -416,6 +420,7 @@ export function ChatUI({
     promptId?: string,
     assistantId?: string,
     selectedKbIds?: string[],
+    selectedSkillIds?: string[],
   ) => {
     const msg = chat?.messages[id];
     if (!msg) return;
@@ -430,6 +435,7 @@ export function ChatUI({
       promptId,
       assistantId,
       selectedKbIds,
+      selectedSkillIds,
     );
   };
 
@@ -446,6 +452,7 @@ export function ChatUI({
     let serverIds: string[] = [];
     let toolIds: string[] = [];
     let selectedKbIds: string[] = [];
+    let selectedSkillIds: string[] = [];
     let userContent = parentMsg.content;
 
     if (parentMsg.metadata) {
@@ -470,6 +477,9 @@ export function ChatUI({
         if (Array.isArray(meta.selectedKbIds)) {
           selectedKbIds = meta.selectedKbIds;
         }
+        if (Array.isArray(meta.selectedSkillIds)) {
+          selectedSkillIds = meta.selectedSkillIds;
+        }
       } catch {}
     }
 
@@ -484,6 +494,7 @@ export function ChatUI({
       promptId,
       assistantId,
       selectedKbIds,
+      selectedSkillIds,
     );
   };
 

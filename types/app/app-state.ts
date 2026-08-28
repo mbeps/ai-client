@@ -13,6 +13,7 @@ import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
+import type { Skill } from "@/types/skill/skill";
 
 /**
  * Global application state shape for the Zustand store.
@@ -48,6 +49,12 @@ export type AppState = {
    * Power-user snippets for efficient input and common tasks.
    */
   prompts: Prompt[];
+
+  /**
+   * All user-defined Agent Skills.
+   * Modular packages of procedural knowledge and instructions adhering to Open Agent Skills format.
+   */
+  skills: Skill[];
 
   /**
    * Application-wide user settings.
@@ -241,6 +248,14 @@ export type AppState = {
    * @returns Promise resolving when prompts are loaded
    */
   loadPrompts: () => Promise<void>;
+
+  /**
+   * Loads all Agent Skills for the current user from the server.
+   * Populates skills array for skill catalog, mention commands, and management.
+   *
+   * @returns Promise resolving when skills are loaded
+   */
+  loadSkills: () => Promise<void>;
 
   /**
    * Loads user-wide settings (global prompt, default model, preferences) from the server.

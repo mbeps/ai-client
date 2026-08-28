@@ -7,6 +7,7 @@ import {
   transformRun,
 } from "@/drizzle/schemas/transform-agent-schema";
 import { kbChunk } from "@/drizzle/schemas/kb-chunk-schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 
 describe("chat-schema", () => {
   it("message table has updatedAt with onUpdate", () => {
@@ -57,5 +58,23 @@ describe("attachment.transformRunId FK (A-H5)", () => {
 
 describe("kb-chunk-schema", () => {
   it("embedding dataType is unconstrained vector", () => {
+    const col = getTableColumns(kbChunk).embedding;
     expect(col.getSQLType()).toBe("vector");
   });
+});
+
+describe("skill-schema", () => {
+  it("defines skill table with proper columns", () => {
+    const cols = getTableColumns(skill);
+    expect(cols.id).toBeDefined();
+    expect(cols.userId).toBeDefined();
+    expect(cols.name).toBeDefined();
+    expect(cols.displayName).toBeDefined();
+    expect(cols.description).toBeDefined();
+    expect(cols.content).toBeDefined();
+    expect(cols.files).toBeDefined();
+    expect(cols.enabled).toBeDefined();
+    expect(cols.createdAt).toBeDefined();
+    expect(cols.updatedAt).toBeDefined();
+  });
+});

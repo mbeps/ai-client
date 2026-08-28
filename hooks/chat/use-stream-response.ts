@@ -82,6 +82,7 @@ function buildMetadata(
   selectedTools: string[],
   selectedAssistantId?: string,
   selectedKbIds?: string[],
+  selectedSkillIds?: string[],
 ): Record<string, unknown> {
   const metadataObj: Record<string, unknown> = {
     model,
@@ -91,6 +92,9 @@ function buildMetadata(
   if (selectedAssistantId) metadataObj.assistantId = selectedAssistantId;
   if (selectedKbIds && selectedKbIds.length > 0) {
     metadataObj.selectedKbIds = selectedKbIds;
+  }
+  if (selectedSkillIds && selectedSkillIds.length > 0) {
+    metadataObj.selectedSkillIds = selectedSkillIds;
   }
   return metadataObj;
 }
@@ -144,6 +148,7 @@ interface StreamRequestOptions {
   selectedServerIds?: string[];
   selectedTools?: string[];
   selectedAssistantId?: string;
+  selectedSkillIds?: string[];
   selectedKbIds?: string[];
 }
 
@@ -297,6 +302,7 @@ export function useStreamResponse(
     selectedPromptId?: string,
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
+    selectedSkillIds: string[] = [],
   ): Promise<string> => {
     pendingRef.current = { userMessageId: userMsgId, model };
 
@@ -307,6 +313,7 @@ export function useStreamResponse(
       selectedTools,
       selectedAssistantId,
       selectedKbIds,
+      selectedSkillIds,
     );
 
     // 2. Resolve prompt content (MCP / slash-command)
@@ -365,6 +372,7 @@ export function useStreamResponse(
             selectedServerIds,
             selectedTools,
             selectedAssistantId,
+            selectedSkillIds,
             selectedKbIds,
           } satisfies StreamRequestOptions,
         },

@@ -19,6 +19,7 @@ import { getPathSegments } from "@/lib/utils";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
+import { getSkill } from "@/lib/actions/skills/get-skill";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -30,6 +31,7 @@ const ROUTE_LABELS: Record<string, string> = {
   assistants: "Assistants",
   knowledgebases: "Knowledge Bases",
   tools: "Tools",
+  skills: "Skills",
   profile: "Profile",
   security: "Security",
   sessions: "Sessions",
@@ -62,12 +64,14 @@ export function DynamicBreadcrumbs() {
     projects,
     assistants,
     prompts,
+    skills,
     mcpServers,
     publicMcpServers,
     transformAgents,
     loadProjects,
     loadPrompts,
     loadAssistants,
+    loadSkills,
     loadMcpServers,
     loadPublicMcpServers,
     loadTransformAgents,
@@ -76,12 +80,14 @@ export function DynamicBreadcrumbs() {
       projects: state.projects,
       assistants: state.assistants,
       prompts: state.prompts,
+      skills: state.skills,
       mcpServers: state.mcpServers,
       publicMcpServers: state.publicMcpServers,
       transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
       loadAssistants: state.loadAssistants,
+      loadSkills: state.loadSkills,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
       loadTransformAgents: state.loadTransformAgents,
@@ -123,6 +129,13 @@ export function DynamicBreadcrumbs() {
     }
   }, [prompts.length, loadPrompts]);
 
+  // Load skills if not available
+  React.useEffect(() => {
+    if (skills.length === 0) {
+      loadSkills().catch(() => {});
+    }
+  }, [skills.length, loadSkills]);
+
   // Load MCP servers if not available
   React.useEffect(() => {
     if (mcpServers.length === 0) {
@@ -162,6 +175,7 @@ export function DynamicBreadcrumbs() {
             projects.some((p) => p.id === segment) ||
             assistants.some((a) => a.id === segment) ||
             prompts.some((p) => p.id === segment) ||
+            skills.some((s) => s.id === segment) ||
             mcpServers.some((s) => s.id === segment) ||
             transformAgents.some((a) => a.id === segment) ||
             (chatId === segment && !!currentChatData);
@@ -213,6 +227,17 @@ export function DynamicBreadcrumbs() {
                 console.error("Failed to resolve knowledgebase label:", err);
               }
             }
+            // 4. Check if it's a Skill segment (URL: /settings/skills/[id])
+            else if (prevSegment === "skills") {
+              try {
+                const skill = await getSkill(segment);
+                if (skill) {
+                  updates[segment] = skill.displayName || skill.name;
+                }
+              } catch (err) {
+                console.error("Failed to resolve skill label:", err);
+              }
+            }
           }
         }),
       );
@@ -232,6 +257,7 @@ export function DynamicBreadcrumbs() {
     projects,
     assistants,
     prompts,
+    skills,
     mcpServers,
     transformAgents,
     chatId,
@@ -257,6 +283,8 @@ export function DynamicBreadcrumbs() {
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
+            skills.find((s) => s.id === segment)?.displayName ||
+            skills.find((s) => s.id === segment)?.name ||
             mcpServers.find((s) => s.id === segment)?.name ||
             transformAgents.find((a) => a.id === segment)?.name ||
             resolvedLabels[segment] ||

@@ -4,6 +4,7 @@ import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-
 import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
 import { listProjects } from "@/lib/actions/projects/list-projects";
 import { listPrompts } from "@/lib/actions/prompts/list-prompts";
+import { listSkills } from "@/lib/actions/skills/list-skills";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
@@ -35,6 +36,7 @@ type EntitySlice = Pick<
   | "projects"
   | "assistants"
   | "prompts"
+  | "skills"
   | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
@@ -45,6 +47,7 @@ type EntitySlice = Pick<
   | "loadProjects"
   | "loadAssistants"
   | "loadPrompts"
+  | "loadSkills"
   | "loadUserSettings"
   | "loadMcpServers"
   | "loadPublicMcpServers"
@@ -58,6 +61,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   projects: [],
   assistants: [],
   prompts: [],
+  skills: [],
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
@@ -143,6 +147,19 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     updatedAt: new Date(row.updatedAt),
   })),
 
+  loadSkills: createEntityLoader(set, "skills", listSkills, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    displayName: row.displayName,
+    description: row.description,
+    content: row.content,
+    files: (row.files as any) ?? [],
+    enabled: row.enabled,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
+
   loadMcpServers: createEntityLoader(
     set,
     "mcpServers",
@@ -177,6 +194,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       projects: [],
       assistants: [],
       prompts: [],
+      skills: [],
       mcpServers: [],
       publicMcpServers: [],
       transformAgents: [],

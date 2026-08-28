@@ -3,61 +3,64 @@
 import { useAppStore } from "@/lib/store";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Assistant } from "@/types/assistant/assistant";
+import type { Skill } from "@/types/skill/skill";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { useCallback, useMemo, useState, type RefObject } from "react";
 
 export type MentionTrigger = "/" | "@" | null;
 
 export type MentionPromptItem =
-  | (Prompt & { isMcp: false })
+  | (Prompt & { isMcp: false; isSkill?: false })
   | (DiscoveredPrompt & {
       id: string;
       title: string;
       shortcut: string;
       sourceServer: string;
       isMcp: true;
+      isSkill?: false;
     });
 
-export type MentionAssistantItem = Assistant & { isMcp: false };
+export type MentionSkillItem = Skill & {
+  isSkill: true;
+  isMcp: false;
+};
 
-export type MentionItem = MentionPromptItem | MentionAssistantItem;
+export type MentionAssistantItem = Assistant & {
+  isMcp: false;
+  isSkill?: false;
+};
+
+export type MentionItem =
+  | MentionPromptItem
+  | MentionAssistantItem
+  | MentionSkillItem;
 
 /**
  * Type guard for MentionPromptItem
  */
-function isPromptItem(item: MentionItem): item is MentionPromptItem {
-  return "shortcut" in item;
+export function isPromptItem(item: MentionItem): item is MentionPromptItem {
+  return "shortcut" in item && !("isSkill" in item && (item as any).isSkill);
+}
+
+/**
+ * Type guard for MentionSkillItem
+ */
+export function isSkillItem(item: MentionItem): item is MentionSkillItem {
+  return "isSkill" in item && (item as any).isSkill === true;
 }
 
 /**
  * Type guard for MentionAssistantItem
  */
-function isAssistantItem(item: MentionItem): item is MentionAssistantItem {
-  return !("shortcut" in item);
+export function isAssistantItem(item: MentionItem): item is MentionAssistantItem {
+  return !("shortcut" in item) && !("isSkill" in item);
 }
 
 /**
  * Manages mention/slash-command UI state and filtering for chat input.
- * Supports two triggers: '/' for prompts (local + MCP) and '@' for assistants.
+ * Supports two triggers: '/' for prompts and skills, and '@' for assistants.
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
- * Tracks cursor position and selected items; inserts mention into input on selection.
- * Supports pre-selection of prompt/assistant for initial state (e.g. edit flows).
  *
- * Side effects: Updates input textarea, modifies text at cursor position, manages keyboard listeners.
- * Use case: Chat input mention autocomplete; MCP prompt + assistant discovery and selection.
- * Constraint: Requires ref to textarea element for cursor tracking; selected items are read-only (selection via keyboard only).
- *
- * @param input - Current input text value.
- * @param setInput - Callback to update input text.
- * @param textareaRef - Ref to textarea element for cursor tracking and insertion.
- * @param activeChatAssistantId - Optional ID of chat's associated assistant (disables '@' mention for that assistant).
- * @param initialSelectedPromptId - Optional prompt ID to pre-select (for edit flows).
- * @param initialSelectedAssistantId - Optional assistant ID to pre-select (for edit flows).
- * @param canMentionAssistant - Whether '@' mention should be enabled (default: true).
- * @param selectedServerIds - Optional set of enabled MCP server IDs to filter MCP prompts.
- * @returns Object with open trigger state, filtered items, selection index, handlers (handleInputChange, handleSelectItem, etc.).
- * @throws No exceptions thrown; all state changes are safe.
- * @see useMentionCommands for type definitions and usage patterns.
  * @author Maruf Bepary
  */
 export function useMentionCommands(
@@ -69,9 +72,11 @@ export function useMentionCommands(
   initialSelectedAssistantId?: string,
   canMentionAssistant: boolean = true,
   selectedServerIds?: Set<string>,
+  onSelectSkill?: (skill: Skill) => void,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
+  const skills = useAppStore((state) => state.skills);
   const mcpPrompts = useAppStore((state) => state.mcpPrompts);
 
   const [openTrigger, setOpenTrigger] = useState<MentionTrigger>(null);
@@ -83,7 +88,7 @@ export function useMentionCommands(
     useState<MentionPromptItem | null>(() => {
       if (!initialSelectedPromptId) return null;
       const local = prompts.find((p) => p.id === initialSelectedPromptId);
-      if (local) return { ...local, isMcp: false };
+      if (local) return { ...local, isMcp: false, isSkill: false };
 
       const mcp = mcpPrompts.find(
         (p) => `mcp:${p.serverId}:${p.name}` === initialSelectedPromptId,
@@ -96,6 +101,7 @@ export function useMentionCommands(
           shortcut: mcp.name,
           sourceServer: mcp.serverName,
           isMcp: true,
+          isSkill: false,
         };
       }
       return null;
@@ -112,21 +118,29 @@ export function useMentionCommands(
     const q = commandQuery.toLowerCase();
 
     if (openTrigger === "/") {
+      const matchingSkills = skills
+        .filter(
+          (s) =>
+            s.enabled &&
+            (s.name.toLowerCase().includes(q) ||
+              s.displayName.toLowerCase().includes(q) ||
+              (s.description && s.description.toLowerCase().includes(q))),
+        )
+        .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
+
       const local = prompts
         .filter(
           (p) =>
             p.shortcut.toLowerCase().includes(q) ||
             p.title.toLowerCase().includes(q),
         )
-        .map((p): MentionPromptItem => ({ ...p, isMcp: false }));
+        .map((p): MentionPromptItem => ({ ...p, isMcp: false, isSkill: false }));
 
       const mcp = mcpPrompts
         .filter((p) => {
-          // Filter by enabled servers if provided
           if (selectedServerIds && !selectedServerIds.has(p.serverId)) {
             return false;
           }
-
           return (
             p.name.toLowerCase().includes(q) ||
             p.serverName.toLowerCase().includes(q) ||
@@ -141,10 +155,11 @@ export function useMentionCommands(
             shortcut: p.name,
             sourceServer: p.serverName,
             isMcp: true,
+            isSkill: false,
           }),
         );
 
-      return [...local, ...mcp];
+      return [...matchingSkills, ...local, ...mcp];
     }
 
     if (openTrigger === "@") {
@@ -154,12 +169,13 @@ export function useMentionCommands(
             a.name.toLowerCase().includes(q) ||
             (a.description && a.description.toLowerCase().includes(q)),
         )
-        .map((a): MentionAssistantItem => ({ ...a, isMcp: false }));
+        .map((a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }));
     }
 
     return [];
   }, [
     commandQuery,
+    skills,
     prompts,
     mcpPrompts,
     assistants,
@@ -238,7 +254,9 @@ export function useMentionCommands(
         setInput(newInput);
 
         if (openTrigger === "/") {
-          if (isPromptItem(item)) {
+          if (isSkillItem(item)) {
+            onSelectSkill?.(item);
+          } else if (isPromptItem(item)) {
             setSelectedPrompt(item);
           }
         } else if (openTrigger === "@") {
@@ -257,7 +275,7 @@ export function useMentionCommands(
         }, 0);
       }
     },
-    [input, cursorPosition, setInput, textareaRef, openTrigger],
+    [input, cursorPosition, setInput, textareaRef, openTrigger, onSelectSkill],
   );
 
   const handleKeyDown = useCallback(

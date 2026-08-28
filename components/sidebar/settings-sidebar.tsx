@@ -20,6 +20,7 @@ import {
   LogOut,
   Command,
   Database,
+  BrainCircuit,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -62,6 +63,11 @@ export function SettingsSidebar({
       href: ROUTES.SETTINGS.PROMPTS.path,
       icon: Command,
     },
+    {
+      name: "Skills",
+      href: ROUTES.SETTINGS.SKILLS.path,
+      icon: BrainCircuit,
+    },
   ];
 
   return (
@@ -102,7 +108,9 @@ export function SettingsSidebar({
                     (item.name === "Providers" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
                     (item.name === "Prompts" &&
-                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path))
+                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path)) ||
+                    (item.name === "Skills" &&
+                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path))
                   }
                   tooltip={item.name}
                 >

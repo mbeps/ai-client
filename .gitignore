@@ -41,7 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.github/copilot-instructions.md
+.github/**
 
 
 subagents/**

@@ -132,6 +132,7 @@ export const chatRequestSchema = z
     selectedTools: z.array(z.string()).max(100).optional(),
     selectedAssistantId: idField.optional(),
     selectedPromptId: idField.optional(),
+    selectedSkillIds: z.array(z.string()).max(20).optional(),
     selectedKbIds: z.array(idField).max(5).optional(),
   })
   .strict();
