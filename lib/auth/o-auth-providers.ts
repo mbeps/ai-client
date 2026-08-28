@@ -1,5 +1,5 @@
-import { GitBranch, MessageSquare } from "lucide-react";
 import { ComponentProps, ElementType } from "react";
+import { FaDiscord, FaGithub, FaGoogle } from "react-icons/fa6";
 
 /**
  * OAuth providers enabled in the application.
@@ -8,7 +8,11 @@ import { ComponentProps, ElementType } from "react";
  *
  * @author Maruf Bepary
  */
-export const SUPPORTED_OAUTH_PROVIDERS = ["github", "discord"] as const;
+export const SUPPORTED_OAUTH_PROVIDERS = [
+  "google",
+  "github",
+  "discord",
+] as const;
 export type SupportedOAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
 
 /**
@@ -21,6 +25,7 @@ export const SUPPORTED_OAUTH_PROVIDER_DETAILS: Record<
   SupportedOAuthProvider,
   { name: string; Icon: ElementType<ComponentProps<"svg">> }
 > = {
-  discord: { name: "Discord", Icon: MessageSquare },
-  github: { name: "GitHub", Icon: GitBranch },
+  google: { name: "Google", Icon: FaGoogle },
+  github: { name: "GitHub", Icon: FaGithub },
+  discord: { name: "Discord", Icon: FaDiscord },
 };

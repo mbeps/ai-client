@@ -60,6 +60,10 @@ export const auth = betterAuth({
       clientId: env.CLIENT_ID_DISCORD!,
       clientSecret: env.CLIENT_SECRET_DISCORD!,
     },
+    google: {
+      clientId: env.CLIENT_ID_GOOGLE!,
+      clientSecret: env.CLIENT_SECRET_GOOGLE!,
+    },
   },
   session: {
     // JWT-based stateless sessions with encrypted cookies

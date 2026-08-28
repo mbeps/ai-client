@@ -1,7 +1,6 @@
 "use client";
 
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/lib/auth/o-auth-providers";
 
 /**
- * Renders OAuth sign-in buttons for all configured social providers (GitHub, Discord, etc.).
+ * Renders OAuth sign-in buttons for all configured social providers (Google, GitHub, Discord).
  * Maps over `SUPPORTED_OAUTH_PROVIDERS` to dynamically render buttons with provider branding.
  * Each button triggers OAuth flow with home page as the callback destination.
  *
@@ -24,6 +23,7 @@ export function SocialAuthButtons() {
     return (
       <BetterAuthActionButton
         variant="outline"
+        className="w-full"
         key={provider}
         action={() => {
           return authClient.signIn.social({

@@ -19,6 +19,8 @@ const envSchema = z.object({
   CLIENT_SECRET_GITHUB: z.string().optional(),
   CLIENT_ID_DISCORD: z.string().optional(),
   CLIENT_SECRET_DISCORD: z.string().optional(),
+  CLIENT_ID_GOOGLE: z.string().optional(),
+  CLIENT_SECRET_GOOGLE: z.string().optional(),
 
   // AI
   EMBEDDING_DIMENSIONS: z
