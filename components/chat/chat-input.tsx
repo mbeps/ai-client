@@ -137,6 +137,8 @@ export function ChatInput({
 
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
   const skills = useAppStore((state) => state.skills);
+  const prompts = useAppStore((state) => state.prompts);
+  const mcpPrompts = useAppStore((state) => state.mcpPrompts);
 
   // -- Derived model capabilities --
   const selectedModelObj = useMemo(
@@ -527,6 +529,10 @@ export function ChatInput({
                   skills={skills}
                   selectedSkills={selectedSkills}
                   onToggleSkill={handleToggleSkill}
+                  prompts={prompts}
+                  mcpPrompts={mcpPrompts}
+                  selectedPrompt={selectedPrompt}
+                  onSelectPrompt={setSelectedPrompt}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -557,6 +563,10 @@ export function ChatInput({
                   skills={skills}
                   selectedSkills={selectedSkills}
                   onToggleSkill={handleToggleSkill}
+                  prompts={prompts}
+                  mcpPrompts={mcpPrompts}
+                  selectedPrompt={selectedPrompt}
+                  onSelectPrompt={setSelectedPrompt}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />

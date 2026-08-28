@@ -8,11 +8,15 @@ import {
   Check,
   X,
   BrainCircuit,
+  SquareTerminal,
 } from "lucide-react";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { Skill } from "@/types/skill/skill";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +28,7 @@ import { useState } from "react";
 import { ToolPickerList } from "./tool-picker-list";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
 import { SkillsPickerDialog } from "./skills-picker";
+import { PromptPickerDialog } from "./prompt-picker";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -41,12 +46,16 @@ interface AttachmentsMenuProps {
   skills?: Skill[];
   selectedSkills?: Set<string>;
   onToggleSkill?: (id: string) => void;
+  prompts?: Prompt[];
+  mcpPrompts?: DiscoveredPrompt[];
+  selectedPrompt?: MentionPromptItem | null;
+  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
 }
 
 /**
- * Menu providing options to upload files, add knowledgebases, select skills, and select MCP tools.
+ * Menu providing options to upload files, add knowledgebases, select skills, select prompts, and select MCP tools.
  *
  * @author Maruf Bepary
  */
@@ -62,6 +71,10 @@ export const AttachmentsMenu = ({
   skills = [],
   selectedSkills = new Set(),
   onToggleSkill,
+  prompts = [],
+  mcpPrompts = [],
+  selectedPrompt = null,
+  onSelectPrompt,
   supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
@@ -88,6 +101,22 @@ export const AttachmentsMenu = ({
               <BrainCircuit className="mr-2 h-4 w-4" />
               Select Skills
               {selectedSkills.size > 0 ? ` (${selectedSkills.size})` : ""}
+            </Button>
+          }
+        />
+      )}
+
+      {onSelectPrompt && (
+        <PromptPickerDialog
+          prompts={prompts}
+          mcpPrompts={mcpPrompts}
+          selectedPrompt={selectedPrompt}
+          onSelectPrompt={onSelectPrompt}
+          trigger={
+            <Button variant="ghost" size="sm" className="justify-start w-full">
+              <SquareTerminal className="mr-2 h-4 w-4" />
+              Select Prompt
+              {selectedPrompt ? " (1)" : ""}
             </Button>
           }
         />
