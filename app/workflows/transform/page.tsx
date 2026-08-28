@@ -8,7 +8,7 @@ import { listTransformAgents } from "@/lib/actions/transform-agents/list-transfo
 import { TransformAgentCard } from "@/components/workflows/sheet-flow/transform-agent-card";
 
 /**
- * Spreadsheets Automation agents list page.
+ * Step-by-Step Automations agents list page.
  * Server component fetching and displaying all transform agents for the current user.
  * Allows creation of new agents and displays agent cards with metadata.
  * Empty state guides users to create their first transformation agent.
@@ -44,8 +44,8 @@ export default async function TransformAgentsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={<Zap className="h-8 w-8 text-amber-500" />}
-        title="Spreadsheets Automation"
-        description="Manage your automated spreadsheet transformation agents."
+        title={ROUTES.WORKFLOWS.TRANSFORM.name}
+        description="Manage your automated step-by-step transformation agents."
         action={
           <Button asChild>
             <Link href={ROUTES.WORKFLOWS.TRANSFORM.new}>

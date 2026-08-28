@@ -42,7 +42,7 @@ const ROUTE_LABELS: Record<string, string> = {
   prompts: "Prompts",
   workflows: "Workflows",
   translation: "Translation",
-  transform: "Spreadsheets Automation",
+  transform: "Step-by-Step Automations",
   new: "New",
 };
 

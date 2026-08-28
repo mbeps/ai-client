@@ -19,9 +19,9 @@ const WORKFLOWS = [
     color: "text-blue-500",
   },
   {
-    name: "Spreadsheets Automation",
+    name: ROUTES.WORKFLOWS.TRANSFORM.name,
     description:
-      "Automate multi-step spreadsheet transformations with AI and human review gates.",
+      "Automate multi-step transformations with AI and human review gates.",
     href: ROUTES.WORKFLOWS.TRANSFORM.path,
     icon: Zap,
     color: "text-amber-500",
@@ -30,7 +30,7 @@ const WORKFLOWS = [
 
 /**
  * Workflows hub page providing entry point to all available workflows.
- * Displays workflow types including Translation and Spreadsheets Automation.
+ * Displays workflow types including Translation and Step-by-Step Automations.
  * Renders grid of workflow cards with descriptions and navigation links.
  *
  * @author Maruf Bepary

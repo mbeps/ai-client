@@ -66,7 +66,7 @@ export function WorkflowSidebar({
       icon: Languages,
     },
     {
-      name: "Spreadsheets Automation",
+      name: ROUTES.WORKFLOWS.TRANSFORM.name,
       href: ROUTES.WORKFLOWS.TRANSFORM.path,
       icon: Zap,
     },

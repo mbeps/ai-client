@@ -74,4 +74,13 @@ describe("DynamicBreadcrumbs", () => {
     expect(screen.getByText("Skills")).toBeDefined();
     expect(screen.getByText("AI SDK NextJS")).toBeDefined();
   });
+
+  it("renders Step-by-Step Automations in breadcrumb for /workflows/transform", () => {
+    mockPathname.mockReturnValue("/workflows/transform");
+
+    render(<DynamicBreadcrumbs />);
+
+    expect(screen.getByText("Workflows")).toBeDefined();
+    expect(screen.getByText("Step-by-Step Automations")).toBeDefined();
+  });
 });

@@ -115,6 +115,14 @@ describe("ROUTES — Workflows", () => {
   it("WORKFLOWS.TRANSLATION path", () => {
     expect(ROUTES.WORKFLOWS.TRANSLATION.path).toBe("/workflows/translation");
   });
+
+  it("WORKFLOWS.TRANSFORM path", () => {
+    expect(ROUTES.WORKFLOWS.TRANSFORM.path).toBe("/workflows/transform");
+  });
+
+  it("WORKFLOWS.TRANSFORM.new path", () => {
+    expect(ROUTES.WORKFLOWS.TRANSFORM.new).toBe("/workflows/transform/new");
+  });
 });
 
 describe("ROUTES — dynamic helpers", () => {
@@ -164,6 +172,18 @@ describe("ROUTES — dynamic helpers", () => {
     expect(ROUTES.TOOLS.detail("tool-xyz")).toBe("/settings/tools/tool-xyz");
   });
 
+  it("WORKFLOWS.TRANSFORM.detail returns correct path", () => {
+    expect(ROUTES.WORKFLOWS.TRANSFORM.detail("agent-123")).toBe(
+      "/workflows/transform/agent-123",
+    );
+  });
+
+  it("WORKFLOWS.TRANSFORM.runs returns correct path", () => {
+    expect(ROUTES.WORKFLOWS.TRANSFORM.runs("agent-123", "run-456")).toBe(
+      "/workflows/transform/agent-123/run-456",
+    );
+  });
+
   it("dynamic helpers handle IDs with special chars", () => {
     expect(ROUTES.CHATS.detail("some/complex-id")).toBe(
       "/chats/some/complex-id",
@@ -190,5 +210,9 @@ describe("ROUTES — name properties", () => {
 
   it("KNOWLEDGEBASES has correct name", () => {
     expect(ROUTES.KNOWLEDGEBASES.name).toBe("Knowledge Bases");
+  });
+
+  it("WORKFLOWS.TRANSFORM has correct name", () => {
+    expect(ROUTES.WORKFLOWS.TRANSFORM.name).toBe("Step-by-Step Automations");
   });
 });
