@@ -2,7 +2,6 @@
 
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { NotFoundMessage } from "@/components/not-found-message";
 import { Button } from "@/components/ui/button";
 import {
   SidebarTabs,
@@ -31,7 +30,7 @@ import { AssistantPromptTab } from "@/components/assistant/assistant-prompt-tab"
 import { AssistantSettingsTab } from "@/components/assistant/assistant-settings-tab";
 import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
@@ -125,7 +124,9 @@ export default function AssistantPage() {
     );
   }
 
-  if (!assistant) return <NotFoundMessage entity="Assistant" />;
+  if (!assistant) {
+    notFound();
+  }
 
   const handleNewChat = () => createNewChat("New Chat", undefined, assistantId);
 

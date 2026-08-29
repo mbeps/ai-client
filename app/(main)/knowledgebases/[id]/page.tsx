@@ -1,6 +1,5 @@
 "use client";
 
-import { NotFoundMessage } from "@/components/not-found-message";
 import { Button } from "@/components/ui/button";
 import {
   Upload,
@@ -10,7 +9,7 @@ import {
   Shield,
   AlertCircle,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { listDocuments } from "@/lib/actions/knowledgebases/list-documents";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
@@ -179,7 +178,9 @@ export default function KnowledgebasePage() {
     );
   }
 
-  if (!kb) return <NotFoundMessage entity="Knowledgebase" />;
+  if (!kb) {
+    notFound();
+  }
 
   return (
     <div className="page-container-detail">

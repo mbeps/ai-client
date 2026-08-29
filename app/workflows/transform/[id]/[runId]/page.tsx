@@ -16,7 +16,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -484,15 +484,7 @@ export default function TransformRunDetailPage() {
   }
 
   if (!run || !agent) {
-    return (
-      <div className="flex h-[50vh] flex-col items-center justify-center space-y-4">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <h2 className="text-xl font-semibold">Run not found</h2>
-        <Button asChild>
-          <Link href={ROUTES.WORKFLOWS.TRANSFORM.path}>Back to Agents</Link>
-        </Button>
-      </div>
-    );
+    notFound();
   }
 
   const statusColors: Record<string, string> = {

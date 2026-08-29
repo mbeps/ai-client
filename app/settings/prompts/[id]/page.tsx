@@ -2,10 +2,9 @@
 
 import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { Loader2, Command, Settings, Shield } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
-import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import {
@@ -70,7 +69,9 @@ export default function PromptDetailPage() {
     );
   }
 
-  if (!prompt) return <NotFoundMessage entity="Prompt" />;
+  if (!prompt) {
+    notFound();
+  }
 
   const handleSave = async (values: PromptFormValues) => {
     setSavingSettings(true);

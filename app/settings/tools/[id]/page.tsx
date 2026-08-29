@@ -4,7 +4,6 @@ import { EditServerForm } from "@/components/mcp/edit-server-form";
 import { ResourceList } from "@/components/mcp/resource-list";
 import { ServerSettings } from "@/components/mcp/server-settings";
 import { ToolList } from "@/components/mcp/tool-list";
-import { NotFoundMessage } from "@/components/not-found-message";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -28,7 +27,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
@@ -60,7 +59,9 @@ export default function McpServerPage() {
     }),
   );
 
-  if (!server) return <NotFoundMessage entity="MCP Server" />;
+  if (!server) {
+    notFound();
+  }
 
   const handleToggle = async () => {
     try {

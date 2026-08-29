@@ -25,7 +25,7 @@ import {
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import { toast } from "sonner";
@@ -120,9 +120,7 @@ export default function AgentEditorPage() {
       try {
         const agent = await getTransformAgent(id);
         if (!agent && mounted) {
-          toast.error("Agent not found");
-          router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
-          return;
+          notFound();
         }
         if (agent && mounted) {
           setName(agent.name);

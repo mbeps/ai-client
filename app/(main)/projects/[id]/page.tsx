@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import {
   SidebarTabs,
   SidebarTabsList,
@@ -29,7 +29,6 @@ import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
 import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { ROUTES } from "@/constants/routes";
-import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
@@ -135,7 +134,9 @@ export default function ProjectPage() {
     );
   }
 
-  if (!project) return <NotFoundMessage entity="Project" />;
+  if (!project) {
+    notFound();
+  }
 
   const handleNewChat = () => createNewChat("New Chat", projectId);
 

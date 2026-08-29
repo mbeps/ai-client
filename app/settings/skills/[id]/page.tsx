@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -13,7 +13,6 @@ import {
   Shield,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
-import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
@@ -93,7 +92,9 @@ export default function SkillDetailPage() {
     );
   }
 
-  if (!skill) return <NotFoundMessage entity="Skill" />;
+  if (!skill) {
+    notFound();
+  }
 
   const handleSave = async (updatedFiles?: SkillBundledFile[]) => {
     const cleanName = name.trim().toLowerCase();
