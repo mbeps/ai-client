@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Server, Plus, Search, Globe, Loader2 } from "lucide-react";
+import { Server, Plus, Search, Globe, Loader2, Check, X } from "lucide-react";
 
 /**
  * Props for PublicServerDiscovery component.
@@ -183,7 +183,10 @@ export function PublicServerDiscovery({
                       {isAdding ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : isAlreadyAdded ? (
-                        "Added"
+                        <>
+                          <Check className="mr-1.5 h-3.5 w-3.5" />
+                          Added
+                        </>
                       ) : (
                         <>
                           <Plus className="h-4 w-4" />
@@ -200,6 +203,7 @@ export function PublicServerDiscovery({
               <p className="text-muted-foreground">No public servers found.</p>
               {search && (
                 <Button variant="link" onClick={() => setSearch("")}>
+                  <X className="mr-1 h-3.5 w-3.5" />
                   Clear search
                 </Button>
               )}

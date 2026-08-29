@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, X } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
 
 type RenameFormData = z.infer<typeof renameSchema>;
 
@@ -104,7 +104,9 @@ export function RenameDialog({
                 autoFocus
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
               )}
             </div>
           </div>
@@ -120,7 +122,10 @@ export function RenameDialog({
             </Button>
             <Button type="submit" disabled={loading || !isDirty}>
               {loading ? (
-                "Saving..."
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />

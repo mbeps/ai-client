@@ -14,6 +14,7 @@ import {
   FileText,
   X,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -212,6 +213,7 @@ export default function TranslationWorkflowPage() {
             className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
             onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
+            <Settings className="mr-1.5 h-3 w-3" />
             Go to Settings
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Settings } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -41,7 +41,10 @@ export function ModelCapabilityBanner({
         className="h-8 text-xs border-amber-500/20 hover:bg-amber-500/10 text-amber-600 font-medium"
         asChild
       >
-        <Link href={ROUTES.SETTINGS.PROVIDERS.path}>Configure</Link>
+        <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
+          <Settings className="mr-1.5 h-3.5 w-3.5" />
+          Configure
+        </Link>
       </Button>
     </div>
   );

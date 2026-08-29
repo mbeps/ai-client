@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Save } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 
 export interface SkillGeneralTabProps {
   displayName: string;
@@ -94,7 +94,10 @@ export function SkillGeneralTab({
       <div>
         <Button onClick={onSave} disabled={isSaving}>
           {isSaving ? (
-            "Saving..."
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />

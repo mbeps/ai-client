@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Files, Plus, Save } from "lucide-react";
+import { Files, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkillSubfileCard } from "@/components/skill/skill-subfile-card";
 import type { SkillBundledFile } from "@/types/skill/skill";
@@ -128,7 +128,10 @@ export function SkillSubfilesManager({
         <div>
           <Button onClick={() => onSaveFiles(files)} disabled={isSaving}>
             {isSaving ? (
-              "Saving..."
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />

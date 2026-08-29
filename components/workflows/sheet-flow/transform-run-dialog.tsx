@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, X } from "lucide-react";
 
 export interface TransformRunDialogProps {
   open: boolean;
@@ -91,6 +91,7 @@ export function TransformRunDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
           <Button

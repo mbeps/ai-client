@@ -3,7 +3,14 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { FileArchive, FileText, CheckCircle2, Upload, X } from "lucide-react";
+import {
+  FileArchive,
+  FileText,
+  CheckCircle2,
+  Upload,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -122,6 +129,7 @@ export function SkillBundleUploader({
                 setSelectedFile(null);
               }}
             >
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
               Choose another file
             </Button>
           </>

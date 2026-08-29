@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,8 +29,7 @@ import { createAssistantSchema } from "@/schemas/assistant/assistant";
 import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Plus, X, Loader2 } from "lucide-react";
 
 type FormValues = z.infer<typeof createAssistantSchema>;
 
@@ -150,7 +150,10 @@ export function CreateAssistantDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  "Creating..."
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />

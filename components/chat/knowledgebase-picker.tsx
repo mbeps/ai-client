@@ -220,7 +220,12 @@ export function KnowledgebasePickerDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Select Knowledge Bases</Button>}
+        {trigger || (
+          <Button>
+            <Database className="mr-2 h-4 w-4" />
+            Select Knowledge Bases
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-3 border-b">

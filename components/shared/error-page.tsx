@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import { RotateCcw, ArrowLeft, type LucideIcon } from "lucide-react";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -37,8 +37,8 @@ export function ErrorPage({
   fallbackDescription,
   linkHref,
   linkLabel,
-  linkIcon: LinkIcon,
-  resetIcon: ResetIcon,
+  linkIcon: LinkIcon = ArrowLeft,
+  resetIcon: ResetIcon = RotateCcw,
 }: ErrorPageProps) {
   useEffect(() => {
     console.error(error);

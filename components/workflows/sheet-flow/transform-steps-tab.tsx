@@ -47,6 +47,7 @@ export function TransformStepsTab({
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
             <p>No steps defined for this agent.</p>
             <Button variant="link" onClick={onAddStep}>
+              <Plus className="mr-1 h-4 w-4" />
               Add your first step
             </Button>
           </div>

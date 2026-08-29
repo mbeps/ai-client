@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { ActionButton } from "@/components/ui/action-button";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Save } from "lucide-react";
 
 interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;
@@ -84,7 +85,10 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
                 }
               }}
             >
-              Save Changes
+              <div className="flex items-center">
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </div>
             </ActionButton>
           </div>
         </form>

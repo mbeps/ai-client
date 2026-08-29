@@ -142,7 +142,12 @@ export function SkillsPickerDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Select Skills</Button>}
+        {trigger || (
+          <Button>
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            Select Skills
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-3 border-b">

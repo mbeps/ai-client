@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus, Edit2, X, Loader2, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -303,10 +303,26 @@ export function ModelFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            {isSaving ? "Saving..." : isEdit ? "Save Changes" : "Create Model"}
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : isEdit ? (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Model
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

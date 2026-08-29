@@ -34,7 +34,7 @@ import {
   LogOut,
   Settings,
   User,
-  Zap,
+  List,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,7 +68,7 @@ export function WorkflowSidebar({
     {
       name: ROUTES.WORKFLOWS.TRANSFORM.name,
       href: ROUTES.WORKFLOWS.TRANSFORM.path,
-      icon: Zap,
+      icon: List,
     },
   ];
 

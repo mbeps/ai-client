@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createProject } from "@/lib/actions/projects/create-project";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const schema = z.object({
@@ -135,7 +135,10 @@ export function CreateProjectDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  "Creating..."
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />

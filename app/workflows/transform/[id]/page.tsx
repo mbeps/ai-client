@@ -13,7 +13,6 @@ import { ROUTES } from "@/constants/routes";
 import {
   ArrowLeft,
   Save,
-  Zap,
   Loader2,
   Settings,
   Database,
@@ -333,7 +332,7 @@ export default function AgentEditorPage() {
         </Link>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Zap className="h-5 w-5" />
+            <List className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-xl font-semibold">
@@ -388,6 +387,7 @@ export default function AgentEditorPage() {
             className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
             onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
+            <Settings className="mr-1.5 h-3 w-3" />
             Go to Settings
           </Button>
         </div>

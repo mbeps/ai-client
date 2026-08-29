@@ -213,7 +213,12 @@ export function PromptPickerDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Select Prompt</Button>}
+        {trigger || (
+          <Button>
+            <SquareTerminal className="mr-2 h-4 w-4" />
+            Select Prompt
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pb-3 border-b">
@@ -258,6 +263,7 @@ export function PromptPickerDialog({
                     onClick={() => onSelectPrompt(null)}
                     className="text-xs h-8"
                   >
+                    <X className="mr-1 h-3.5 w-3.5" />
                     Clear
                   </Button>
                 )}

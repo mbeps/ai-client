@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Languages, Zap } from "lucide-react";
+import { Languages, List } from "lucide-react";
 import Link from "next/link";
 
 const WORKFLOWS = [
@@ -23,7 +23,7 @@ const WORKFLOWS = [
     description:
       "Automate multi-step transformations with AI and human review gates.",
     href: ROUTES.WORKFLOWS.TRANSFORM.path,
-    icon: Zap,
+    icon: List,
     color: "text-amber-500",
   },
 ];

@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Loader2, Upload } from "lucide-react";
+import { AlertCircle, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
 import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
@@ -179,6 +179,7 @@ export function UploadDocumentDialog({
             onClick={() => handleOpenChange(false)}
             disabled={isLoading}
           >
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
           <Button

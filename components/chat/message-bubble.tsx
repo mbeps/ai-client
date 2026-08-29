@@ -9,7 +9,7 @@ import type { Message } from "@/types/message/message";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import { ROUTES } from "@/constants/routes";
-import { Bot, Command, Database, User } from "lucide-react";
+import { Bot, Command, Database, User, Check, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { ResponseTimeline } from "./message/response-timeline";
@@ -268,6 +268,7 @@ export function MessageBubble({
                       onClick={handleCancel}
                       className="cursor-pointer"
                     >
+                      <X className="mr-1.5 h-3.5 w-3.5" />
                       Cancel
                     </Button>
                     <Button
@@ -280,6 +281,7 @@ export function MessageBubble({
                       }
                       className="cursor-pointer"
                     >
+                      <Check className="mr-1.5 h-3.5 w-3.5" />
                       Save & Submit
                     </Button>
                   </div>

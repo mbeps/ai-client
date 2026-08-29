@@ -1,6 +1,6 @@
 import { ROUTES } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings2, Zap } from "lucide-react";
+import { Plus, Settings2, List } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
@@ -43,7 +43,7 @@ export default async function TransformAgentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={<Zap className="h-8 w-8 text-amber-500" />}
+        icon={<List className="h-8 w-8 text-amber-500" />}
         title={ROUTES.WORKFLOWS.TRANSFORM.name}
         description="Manage your automated step-by-step transformation agents."
         action={

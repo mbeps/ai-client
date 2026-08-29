@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowledgebase";
 import { toast } from "sonner";
-import { Plus, X, AlertCircle } from "lucide-react";
+import { Plus, X, AlertCircle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { useUserModels } from "@/hooks/use-user-models";
@@ -147,7 +147,10 @@ export function CreateKnowledgebaseDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting || hasNoModels}>
                 {isSubmitting ? (
-                  "Creating..."
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
