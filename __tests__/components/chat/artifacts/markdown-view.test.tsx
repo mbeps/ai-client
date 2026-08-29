@@ -15,6 +15,14 @@ vi.mock("@blocknote/mantine", () => ({
   },
 }));
 
+vi.mock("@blocknote/core", () => ({
+  BlockNoteEditor: {
+    create: () => ({
+      tryParseMarkdownToBlocks: vi.fn().mockResolvedValue([]),
+    }),
+  },
+}));
+
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
 

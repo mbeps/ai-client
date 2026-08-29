@@ -14,7 +14,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PROMPTS } from "@/constants/prompts";
 import { toast } from "sonner";
@@ -143,12 +143,13 @@ export default function NewPromptPage() {
                 <FormItem>
                   <FormLabel>Prompt Content</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <MarkdownTabEditor
                       placeholder={
                         PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_CREATE
                       }
-                      className="min-h-[300px] max-h-[600px] overflow-y-auto font-mono text-sm"
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      minHeight="min-h-[300px]"
                     />
                   </FormControl>
                   <FormDescription>

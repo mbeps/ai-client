@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Loader2, Trash2, Command, Save, Settings } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
@@ -190,10 +190,10 @@ export default function PromptDetailPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Prompt Content</label>
-              <Textarea
+              <MarkdownTabEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[300px] max-h-[500px] overflow-y-auto"
+                onChange={setContent}
+                minHeight="min-h-[300px]"
                 placeholder={
                   PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
                 }

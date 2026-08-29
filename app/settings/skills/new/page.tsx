@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { createSkill } from "@/lib/actions/skills/create-skill";
 import { importSkillFile } from "@/lib/actions/skills/import-skill";
@@ -268,10 +268,11 @@ export default function NewSkillPage() {
                   <FormItem>
                     <FormLabel>Instructions Content (Markdown)</FormLabel>
                     <FormControl>
-                      <Textarea
+                      <MarkdownTabEditor
                         placeholder="# Skill\n\n## Role\nDescribe what this skill does..."
-                        className="min-h-[300px] max-h-[600px] overflow-y-auto font-mono text-sm"
-                        {...field}
+                        value={field.value}
+                        onChange={field.onChange}
+                        minHeight="min-h-[300px]"
                       />
                     </FormControl>
                     <FormMessage />

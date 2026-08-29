@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -351,10 +351,10 @@ export default function SkillDetailPage() {
               <label className="text-sm font-medium">
                 Instructions & Guidelines (Markdown)
               </label>
-              <Textarea
+              <MarkdownTabEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[300px] max-h-[600px] overflow-y-auto font-mono text-sm"
+                onChange={setContent}
+                minHeight="min-h-[300px]"
               />
             </div>
           </div>
@@ -522,11 +522,12 @@ export default function SkillDetailPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">File Content</label>
-              <Textarea
+              <MarkdownTabEditor
                 placeholder="# Reference Documentation..."
                 value={fileContent}
-                onChange={(e) => setFileContent(e.target.value)}
-                className="min-h-[250px] max-h-[450px] font-mono text-sm"
+                onChange={setFileContent}
+                minHeight="min-h-[250px]"
+                maxHeight="max-h-[450px]"
               />
             </div>
           </div>
