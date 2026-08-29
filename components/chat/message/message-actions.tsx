@@ -131,6 +131,7 @@ export function MessageActions({
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            aria-label="Copy markdown"
             onClick={handleCopy}
           >
             {copied ? (
@@ -150,6 +151,7 @@ export function MessageActions({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              aria-label="Edit message"
               onClick={() =>
                 onEdit?.(message.id, editContent ?? message.content)
               }
@@ -167,6 +169,7 @@ export function MessageActions({
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+            aria-label="Delete message"
             onClick={() => onDelete(message.id)}
           >
             <Trash2 className="h-3 w-3" />
@@ -182,6 +185,7 @@ export function MessageActions({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              aria-label="Regenerate response"
               onClick={() => onRegenerate(message.id)}
               disabled={hasNoModels}
             >
@@ -201,6 +205,7 @@ export function MessageActions({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              aria-label="Show artifact"
               onClick={onShowArtifact}
             >
               <Maximize2 className="h-3 w-3" />

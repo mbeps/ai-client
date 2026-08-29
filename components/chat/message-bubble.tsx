@@ -20,7 +20,8 @@ import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-
 import type { Citation } from "@/types/chat/citation";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CitationsList } from "./message/citations-list";
-import { ChatInput } from "./chat-input";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Button } from "@/components/ui/button";
 
 /**
  * Props for the MessageBubble component.
@@ -108,7 +109,6 @@ export function MessageBubble({
     if (!rawToolData) return [];
     return extractCitations(rawToolData.toolResults);
   }, [rawToolData, streamingCitations]);
-  const mcpServers = useAppStore((state) => state.mcpServers);
   const promptMeta = isUser ? rawPromptMeta : null;
   const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
   const toolData = isUser ? null : rawToolData;
@@ -130,7 +130,40 @@ export function MessageBubble({
     );
   }, [message.content, toolData]);
 
+  const initialContent = promptMeta ? promptMeta.userContent : message.content;
   const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(initialContent);
+
+  const handleStartEdit = () => {
+    setEditContent(promptMeta ? promptMeta.userContent : message.content);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (
+      !editContent.trim() &&
+      (!message.attachments || message.attachments.length === 0)
+    ) {
+      return;
+    }
+    onEdit(
+      message.id,
+      editContent,
+      message.attachments || [],
+      parsedModelId || "",
+      parsedServerIds || [],
+      parsedToolIds || [],
+      promptMeta?.promptId,
+      assistantId || undefined,
+      selectedKbIds,
+    );
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(promptMeta ? promptMeta.userContent : message.content);
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -219,43 +252,38 @@ export function MessageBubble({
                 </div>
               )}
               {isEditing ? (
-                <ChatInput
-                  initialValue={
-                    promptMeta ? promptMeta.userContent : message.content
-                  }
-                  initialModelId={parsedModelId || undefined}
-                  initialAttachments={message.attachments || []}
-                  initialSelectedServerIds={parsedServerIds || []}
-                  initialSelectedTools={parsedToolIds || []}
-                  initialSelectedPromptId={promptMeta?.promptId}
-                  submitLabel="Save"
-                  onSend={(
-                    content,
-                    attachments,
-                    model,
-                    serverIds,
-                    toolIds,
-                    promptId,
-                    assistantId,
-                    kbs,
-                  ) => {
-                    onEdit(
-                      message.id,
-                      content,
-                      attachments,
-                      model,
-                      serverIds,
-                      toolIds,
-                      promptId,
-                      assistantId,
-                      kbs,
-                    );
-                    setIsEditing(false);
-                  }}
-                  onCancel={() => setIsEditing(false)}
-                  servers={mcpServers.filter((s) => s.enabled)}
-                  canMentionAssistant={isFirst && !assistantId}
-                />
+                <div className="space-y-3 w-full my-2">
+                  <MarkdownTabEditor
+                    value={editContent}
+                    onChange={setEditContent}
+                    placeholder="Edit your message..."
+                    minHeight="min-h-[140px]"
+                    maxHeight="max-h-[500px]"
+                    defaultTab="rich"
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                      className="cursor-pointer"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={
+                        !editContent.trim() &&
+                        (!message.attachments ||
+                          message.attachments.length === 0)
+                      }
+                      className="cursor-pointer"
+                    >
+                      Save & Submit
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <MarkdownRenderer
                   content={
@@ -275,7 +303,7 @@ export function MessageBubble({
             message={message}
             isUser={isUser}
             contentToCopy={message.content}
-            onEdit={() => setIsEditing(true)}
+            onEdit={handleStartEdit}
             onDelete={onDelete}
             siblings={siblings}
             currentSiblingIndex={currentSiblingIndex}
