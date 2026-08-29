@@ -6,6 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+import { Spinner } from "@/components/ui/spinner";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -43,8 +44,8 @@ export function AuthenticatedLayout({
 
   if (isPending || !session) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        Loading...
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Spinner size="xl" />
       </div>
     );
   }
