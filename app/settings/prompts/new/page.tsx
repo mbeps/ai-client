@@ -1,43 +1,18 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { LoadingSwap } from "@/components/ui/loading-swap";
-import { PROMPTS } from "@/constants/prompts";
-import { toast } from "sonner";
-import { ChevronLeft, Command, Plus, X } from "lucide-react";
+import { ChevronLeft, Command, Plus } from "lucide-react";
 import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { PageHeader } from "@/components/page-header";
 import { ROUTES } from "@/constants/routes";
-
-const schema = z.object({
-  title: z.string().min(1, "Title is required"),
-  shortcut: z
-    .string()
-    .min(1, "Shortcut is required")
-    .regex(
-      /^[a-zA-Z0-9._-]+$/,
-      "Only letters, numbers, '.', '-', and '_' are allowed",
-    ),
-  content: z.string().min(1, "Content is required"),
-});
-
-type FormValues = z.infer<typeof schema>;
+import { toast } from "sonner";
+import {
+  PromptForm,
+  type PromptFormValues,
+} from "@/components/prompt/prompt-form";
 
 /**
  * Dedicated page for creating a new custom prompt shortcut.
@@ -48,15 +23,10 @@ type FormValues = z.infer<typeof schema>;
 export default function NewPromptPage() {
   const router = useRouter();
   const loadPrompts = useAppStore((state) => state.loadPrompts);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { title: "", shortcut: "", content: "" },
-  });
-
-  const { isSubmitting } = form.formState;
-
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: PromptFormValues) => {
+    setIsSubmitting(true);
     try {
       await createPrompt({
         title: values.title.trim(),
@@ -70,6 +40,8 @@ export default function NewPromptPage() {
       const message =
         error instanceof Error ? error.message : "Failed to create prompt";
       toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -92,95 +64,13 @@ export default function NewPromptPage() {
       />
 
       <div className="mt-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Code Review Expert" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="shortcut"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Shortcut</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center">
-                        <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
-                          /
-                        </div>
-                        <Input
-                          placeholder="brief"
-                          className="rounded-l-none"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      The trigger command. Only letters, numbers, <code>.</code>
-                      , <code>-</code>, and <code>_</code> allowed.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prompt Content</FormLabel>
-                  <FormControl>
-                    <MarkdownTabEditor
-                      placeholder={
-                        PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_CREATE
-                      }
-                      value={field.value}
-                      onChange={field.onChange}
-                      minHeight="min-h-[300px]"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    The instructions that will be injected into your chat.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
-                disabled={isSubmitting}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                <LoadingSwap isLoading={isSubmitting}>
-                  <div className="flex items-center">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Prompt
-                  </div>
-                </LoadingSwap>
-              </Button>
-            </div>
-          </form>
-        </Form>
+        <PromptForm
+          onSubmit={onSubmit}
+          onCancel={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
+          submitLabel="Create Prompt"
+          submitIcon={<Plus className="mr-2 h-4 w-4" />}
+          isSubmitting={isSubmitting}
+        />
       </div>
     </div>
   );

@@ -2,31 +2,22 @@
 
 import { useAppStore } from "@/lib/store";
 import { useParams, useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Switch } from "@/components/ui/switch";
 import {
   Loader2,
-  Trash2,
   BrainCircuit,
-  Save,
   Settings,
   Files,
-  Plus,
   Download,
+  Shield,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
+import { SkillGeneralTab } from "@/components/skill/skill-general-tab";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -65,19 +56,17 @@ export default function SkillDetailPage() {
   const loadSkills = useAppStore((state) => state.loadSkills);
 
   const [loading, setLoading] = useState(skills.length === 0);
-  const [name, setName] = useState(skill?.name ?? "");
   const [displayName, setDisplayName] = useState(skill?.displayName ?? "");
+  const [name, setName] = useState(skill?.name ?? "");
   const [description, setDescription] = useState(skill?.description ?? "");
   const [content, setContent] = useState(skill?.content ?? "");
   const [enabled, setEnabled] = useState(skill?.enabled ?? true);
-  const [files, setFiles] = useState<SkillBundledFile[]>(
-    (skill?.files as SkillBundledFile[]) ?? [],
-  );
+  const [files, setFiles] = useState<SkillBundledFile[]>(skill?.files ?? []);
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (skills.length === 0) {
@@ -87,12 +76,12 @@ export default function SkillDetailPage() {
 
   useEffect(() => {
     if (skill) {
+      setDisplayName(skill.displayName ?? "");
       setName(skill.name);
-      setDisplayName(skill.displayName);
-      setDescription(skill.description);
+      setDescription(skill.description ?? "");
       setContent(skill.content);
       setEnabled(skill.enabled);
-      setFiles((skill.files as SkillBundledFile[]) ?? []);
+      setFiles(skill.files ?? []);
     }
   }, [skill]);
 
@@ -107,51 +96,69 @@ export default function SkillDetailPage() {
   if (!skill) return <NotFoundMessage entity="Skill" />;
 
   const handleSave = async (updatedFiles?: SkillBundledFile[]) => {
-    if (
-      !name.trim() ||
-      !displayName.trim() ||
-      !description.trim() ||
-      !content.trim()
-    ) {
-      toast.error("Name, display name, description, and content are required");
+    const cleanName = name.trim().toLowerCase();
+    if (!cleanName) {
+      toast.error("Skill slug is required");
       return;
     }
 
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name.trim())) {
+    if (!/^[a-z0-9-]+$/.test(cleanName)) {
       toast.error(
-        "Skill slug must be lowercase alphanumeric with hyphens (e.g. clean-code)",
+        "Skill slug can only contain lowercase letters, numbers, and hyphens",
       );
       return;
     }
 
-    const filesToSave = updatedFiles ?? files;
+    if (!content.trim()) {
+      toast.error("Skill instructions content is required");
+      return;
+    }
 
     setSavingSettings(true);
     try {
+      const filesToSave = updatedFiles ?? files;
       await updateSkill(skillId, {
-        name: name.trim(),
-        displayName: displayName.trim(),
-        description: description.trim(),
+        name: cleanName,
+        displayName: displayName.trim() || undefined,
+        description: description.trim() || undefined,
         content,
-        files: filesToSave,
         enabled,
+        files: filesToSave,
       });
+
+      if (updatedFiles) {
+        setFiles(updatedFiles);
+      }
+
       await loadSkills();
-      toast.success("Skill saved successfully");
+      toast.success("Skill saved");
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save skill");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save skill");
     } finally {
       setSavingSettings(false);
     }
   };
 
   const handleSaveFiles = async (updatedFiles: SkillBundledFile[]) => {
-    setFiles(updatedFiles);
     await handleSave(updatedFiles);
   };
 
-  const handleExportZip = async () => {
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteSkill(skillId);
+      toast.success("Skill deleted");
+      await loadSkills();
+      router.refresh();
+      router.push(ROUTES.SETTINGS.SKILLS.path);
+    } catch {
+      toast.error("Failed to delete skill");
+      setDeleting(false);
+    }
+  };
+
+  const handleExport = async () => {
     setExporting(true);
     try {
       const { filename, base64 } = await exportSkillZip(skillId);
@@ -162,31 +169,19 @@ export default function SkillDetailPage() {
       }
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`Exported ${filename}`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to export skill bundle");
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Skill package downloaded");
+    } catch {
+      toast.error("Failed to export skill bundle");
     } finally {
       setExporting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteSkill(skillId);
-      await loadSkills();
-      toast.success("Skill deleted");
-      router.refresh();
-      router.push(ROUTES.SETTINGS.SKILLS.path);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete skill");
-      setDeleting(false);
     }
   };
 
@@ -195,17 +190,23 @@ export default function SkillDetailPage() {
       <PageHeader
         icon={<BrainCircuit className="h-8 w-8 text-primary" />}
         title={skill.displayName || skill.name}
-        description={`Agent Skill /${skill.name}`}
+        description={`Slash command: /${skill.name}`}
         action={
-          <Button
-            variant="outline"
-            onClick={handleExportZip}
-            disabled={exporting}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {exporting ? "Exporting..." : "Export Bundle (.zip)"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-1.5" />
+              )}
+              Export Bundle
+            </Button>
+          </div>
         }
       />
 
@@ -217,93 +218,39 @@ export default function SkillDetailPage() {
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="files">
             <Files className="w-4 h-4 mr-2" />
-            Subfiles ({files.length})
+            Files ({files.length})
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Shield className="w-4 h-4 mr-2" />
             Danger Zone
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
         {/* General Settings Tab */}
         <SidebarTabsContent value="general" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Skill Configuration</h3>
-            <p className="text-sm text-muted-foreground">
-              Modify the skill name, progressive disclosure description, and
-              instructions.
-            </p>
+          <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
+            <div className="space-y-0.5">
+              <label className="text-sm font-medium">Enable Skill</label>
+              <p className="text-xs text-muted-foreground">
+                When enabled, this skill will appear in slash commands and
+                progressive disclosure tool calls.
+              </p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
-              <div className="space-y-0.5">
-                <label className="text-sm font-medium">Enable Skill</label>
-                <p className="text-xs text-muted-foreground">
-                  When enabled, this skill will appear in slash commands and
-                  progressive disclosure tool calls.
-                </p>
-              </div>
-              <Switch checked={enabled} onCheckedChange={setEnabled} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Display Name</label>
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Skill Slug</label>
-                <div className="flex items-center">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
-                    /
-                  </div>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="rounded-l-none font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief summary used by AI for progressive disclosure routing..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Instructions & Guidelines (Markdown)
-              </label>
-              <MarkdownTabEditor
-                value={content}
-                onChange={setContent}
-                minHeight="min-h-[300px]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Button onClick={() => handleSave()} disabled={savingSettings}>
-              {savingSettings ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
+          <SkillGeneralTab
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            name={name}
+            onNameChange={setName}
+            description={description}
+            onDescriptionChange={setDescription}
+            content={content}
+            onContentChange={setContent}
+            onSave={() => handleSave()}
+            isSaving={savingSettings}
+          />
         </SidebarTabsContent>
 
         {/* Subfiles Management Tab */}
@@ -317,28 +264,12 @@ export default function SkillDetailPage() {
 
         {/* Danger Zone Tab */}
         <SidebarTabsContent value="danger">
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible actions for this agent skill.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Deleting this skill will permanently remove it from your skills
-                library and slash commands.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Skill
-              </Button>
-            </CardContent>
-          </Card>
+          <DangerZoneCard
+            consequences="Deleting this skill will permanently remove it from your skills library and slash commands."
+            buttonLabel="Delete Skill"
+            onDelete={() => setShowDeleteDialog(true)}
+            isDeleting={deleting}
+          />
         </SidebarTabsContent>
       </SidebarTabs>
 

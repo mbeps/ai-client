@@ -3,21 +3,15 @@
 import { useAppStore } from "@/lib/store";
 import { PROMPTS } from "@/constants/prompts";
 import { useParams, useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Loader2, Trash2, Command, Save, Settings } from "lucide-react";
+import { Loader2, Command, Settings, Shield } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import {
+  PromptForm,
+  type PromptFormValues,
+} from "@/components/prompt/prompt-form";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -55,13 +49,9 @@ export default function PromptDetailPage() {
 
   const prompts = useAppStore((state) => state.prompts);
   const prompt = prompts.find((p) => p.id === promptId);
-
   const loadPrompts = useAppStore((state) => state.loadPrompts);
 
   const [loading, setLoading] = useState(prompts.length === 0);
-  const [title, setTitle] = useState(prompt?.title ?? "");
-  const [shortcut, setShortcut] = useState(prompt?.shortcut ?? "/");
-  const [content, setContent] = useState(prompt?.content ?? "");
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -71,14 +61,6 @@ export default function PromptDetailPage() {
       loadPrompts().finally(() => setLoading(false));
     }
   }, [loadPrompts, prompts.length]);
-
-  useEffect(() => {
-    if (prompt) {
-      setTitle(prompt.title);
-      setShortcut(prompt.shortcut);
-      setContent(prompt.content);
-    }
-  }, [prompt]);
 
   if (loading) {
     return (
@@ -90,27 +72,16 @@ export default function PromptDetailPage() {
 
   if (!prompt) return <NotFoundMessage entity="Prompt" />;
 
-  const handleSave = async () => {
-    if (!title.trim() || !shortcut.trim() || !content.trim()) {
-      toast.error("Title, shortcut, and content are required");
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9._-]+$/.test(shortcut)) {
-      toast.error(
-        "Shortcut can only contain letters, numbers, '.', '-', and '_'",
-      );
-      return;
-    }
-
+  const handleSave = async (values: PromptFormValues) => {
     setSavingSettings(true);
     try {
       await updatePrompt(promptId, {
-        title,
-        shortcut,
-        content,
+        title: values.title.trim(),
+        shortcut: values.shortcut.trim(),
+        content: values.content.trim(),
       });
       toast.success("Prompt saved");
+      await loadPrompts();
       router.refresh();
     } catch {
       toast.error("Failed to save prompt");
@@ -124,6 +95,7 @@ export default function PromptDetailPage() {
     try {
       await deletePrompt(promptId);
       toast.success("Prompt deleted");
+      await loadPrompts();
       router.refresh();
       router.push(ROUTES.SETTINGS.PROMPTS.path);
     } catch {
@@ -147,7 +119,7 @@ export default function PromptDetailPage() {
             General
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Shield className="w-4 h-4 mr-2" />
             Danger Zone
           </SidebarTabsTrigger>
         </SidebarTabsList>
@@ -160,84 +132,31 @@ export default function PromptDetailPage() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Title</label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Shortcut</label>
-                <div className="flex items-center">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
-                    /
-                  </div>
-                  <Input
-                    value={shortcut}
-                    onChange={(e) => setShortcut(e.target.value)}
-                    placeholder="brief"
-                    className="rounded-l-none"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  The trigger command. Only letters, numbers, <code>.</code>,{" "}
-                  <code>-</code>, and <code>_</code> allowed.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Prompt Content</label>
-              <MarkdownTabEditor
-                value={content}
-                onChange={setContent}
-                minHeight="min-h-[300px]"
-                placeholder={
-                  PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Button onClick={handleSave} disabled={savingSettings}>
-              {savingSettings ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
+          <PromptForm
+            key={prompt.id}
+            defaultValues={{
+              title: prompt.title,
+              shortcut: prompt.shortcut,
+              content: prompt.content,
+            }}
+            onSubmit={handleSave}
+            placeholderContent={
+              PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
+            }
+            submitLabel="Save Changes"
+            isSubmitting={savingSettings}
+          />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="danger">
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible actions for this prompt.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Deleting this prompt will permanently remove it from your
-                shortcuts. This action cannot be undone.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Prompt
-              </Button>
-            </CardContent>
-          </Card>
+          <DangerZoneCard
+            title="Danger Zone"
+            description="Irreversible actions for this prompt."
+            consequences="Deleting this prompt will permanently remove it from your shortcuts. This action cannot be undone."
+            buttonLabel="Delete Prompt"
+            onDelete={() => setShowDeleteDialog(true)}
+            isDeleting={deleting}
+          />
         </SidebarTabsContent>
       </SidebarTabs>
 

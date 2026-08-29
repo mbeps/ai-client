@@ -1,10 +1,8 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { PROMPTS } from "@/constants/prompts";
 import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   SidebarTabs,
   SidebarTabsList,
@@ -12,58 +10,36 @@ import {
   SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Library,
   Loader2,
   MessageSquare,
   MessageSquarePlus,
   Settings,
-  Save,
-  Trash2,
-  Search,
   FileText,
   Shield,
   Wrench,
+  FolderKanban,
 } from "lucide-react";
-import { ToolPickerList } from "@/components/chat/tool-picker-list";
-
+import { ProjectChatsTab } from "@/components/project/project-chats-tab";
+import { ProjectKnowledgebaseTab } from "@/components/project/project-knowledgebase-tab";
+import { ProjectPromptTab } from "@/components/project/project-prompt-tab";
+import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
+import { ProjectToolsTab } from "@/components/project/project-tools-tab";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
-import { EmptyState } from "@/components/empty-state";
-import { ChatCard } from "@/components/chat/chat-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
-import {
-  listKnowledgebases,
-  type KnowledgebaseWithCount,
-} from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { useState, useEffect, useMemo } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { toast } from "sonner";
-import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 /**
  * Project detail page — client component for viewing and editing project configuration.
@@ -89,13 +65,8 @@ export default function ProjectPage() {
   const loadProjects = useAppStore((state) => state.loadProjects);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
-  const {
-    normalizedKnowledgebases,
-    isLoading: loadingKbs,
-    refresh: refreshKbs,
-  } = useKnowledgebases();
+  const { normalizedKnowledgebases } = useKnowledgebases();
 
   // Centralised hydration for all required entities
   const { isLoading: hydrationLoading } = useResourceHydration([
@@ -136,7 +107,6 @@ export default function ProjectPage() {
 
   // Load project-specific chats on mount if not already loaded into store
   useEffect(() => {
-    // Only load chats if they seem missing for this project in the global store
     if (chats.length === 0) {
       setLoadingChats(true);
       listChats()
@@ -155,8 +125,7 @@ export default function ProjectPage() {
     }
   }, [project]);
 
-  const loading =
-    hydrationLoading || loadingKbs || (projects.length === 0 && !project);
+  const loading = hydrationLoading || (projects.length === 0 && !project);
 
   if (loading) {
     return (
@@ -170,31 +139,6 @@ export default function ProjectPage() {
 
   const handleNewChat = () => createNewChat("New Chat", projectId);
 
-  const onToggleTool = (serverId: string, toolName: string) => {
-    const id = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => toggleSetItem(prev, id));
-  };
-
-  const onBulkSelect = (
-    serverId: string,
-    toolNames: string[],
-    select: boolean,
-  ) => {
-    if (select) {
-      setSelectedTools((prev) => {
-        const next = new Set(prev);
-        toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
-        return next;
-      });
-    } else {
-      setSelectedTools((prev) => {
-        const next = new Set(prev);
-        toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
-        return next;
-      });
-    }
-  };
-
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
@@ -204,10 +148,11 @@ export default function ProjectPage() {
         globalPrompt,
         tools: Array.from(selectedTools),
       });
+      toast.success("Project settings saved");
+      await loadProjects();
       router.refresh();
-      toast.success("Settings saved");
     } catch {
-      toast.error("Failed to save settings");
+      toast.error("Failed to save project settings");
     } finally {
       setSavingSettings(false);
     }
@@ -216,22 +161,54 @@ export default function ProjectPage() {
   const handleSaveKb = async () => {
     setSavingKb(true);
     try {
-      await updateProject(projectId, { knowledgebaseId: selectedKbId });
+      await updateProject(projectId, {
+        name,
+        description,
+        globalPrompt,
+        knowledgebaseId: selectedKbId,
+        tools: Array.from(selectedTools),
+      });
+      toast.success("Knowledge base associated");
+      await loadProjects();
       router.refresh();
-      toast.success("Knowledge base saved");
     } catch {
-      toast.error("Failed to save knowledge base");
+      toast.error("Failed to associate knowledge base");
     } finally {
       setSavingKb(false);
     }
+  };
+
+  const onToggleTool = (serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => toggleSetItem(prev, toolId));
+  };
+
+  const onBulkSelect = (
+    serverId: string,
+    toolNames: string[],
+    enabled: boolean,
+  ) => {
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      toolNames.forEach((name) => {
+        const toolId = `${serverId}:tool:${name}`;
+        if (enabled) {
+          next.add(toolId);
+        } else {
+          next.delete(toolId);
+        }
+      });
+      return next;
+    });
   };
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
       await deleteProject(projectId);
-      router.refresh();
       toast.success("Project deleted");
+      await loadProjects();
+      router.refresh();
       router.push(ROUTES.PROJECTS.path);
     } catch {
       toast.error("Failed to delete project");
@@ -242,15 +219,21 @@ export default function ProjectPage() {
   return (
     <div className="page-container">
       <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
-        <div>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <p className="text-muted-foreground">{project.description}</p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <FolderKanban className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">{project.name}</h1>
+            <p className="text-muted-foreground">{project.description}</p>
+          </div>
         </div>
         <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
           <MessageSquarePlus className="mr-2 h-4 w-4" />
           New Chat
         </Button>
       </div>
+
       <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="chats">
@@ -279,185 +262,64 @@ export default function ProjectPage() {
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
-        <SidebarTabsContent value="chats" className="space-y-4">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search chats..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredChats.map((chat) => (
-              <ChatCard key={chat.id} chat={chat} />
-            ))}
-            {filteredChats.length === 0 && (
-              <EmptyState
-                message={
-                  searchQuery
-                    ? "No chats match your search."
-                    : "No chats in this project yet."
-                }
-              />
-            )}
-          </div>
+        <SidebarTabsContent value="chats">
+          <ProjectChatsTab
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            filteredChats={filteredChats}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="knowledge" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Knowledge Base</h3>
-            <p className="text-sm text-muted-foreground">
-              Attach a knowledge base to provide context to the AI in all chats
-              within this project.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <KnowledgebasePicker
-              knowledgebases={normalizedKnowledgebases}
-              mode="single"
-              selectedIds={new Set(selectedKbId ? [selectedKbId] : [])}
-              onSelect={(ids) => setSelectedKbId(Array.from(ids)[0] || null)}
-              className="max-w-2xl"
-              allowEmpty
-              emptyLabel="Do not use a knowledge base (None)"
-            />
-
-            <Button onClick={handleSaveKb} disabled={savingKb}>
-              {savingKb ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Knowledge Base
-                </>
-              )}
-            </Button>
-          </div>
+        <SidebarTabsContent value="knowledge">
+          <ProjectKnowledgebaseTab
+            knowledgebases={normalizedKnowledgebases}
+            selectedKbId={selectedKbId}
+            onSelectKbId={setSelectedKbId}
+            onSave={handleSaveKb}
+            isSaving={savingKb}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="prompt" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Global Prompt</h3>
-            <p className="text-sm text-muted-foreground">
-              Instructions injected as system prompts for all new chats in this
-              project.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <Textarea
-              value={globalPrompt}
-              onChange={(e) => setGlobalPrompt(e.target.value)}
-              rows={12}
-              placeholder={
-                PROMPTS.UI.EXAMPLES.PROJECT_GLOBAL_PROMPT_PLACEHOLDER_EDIT
-              }
-            />
-            <Button onClick={handleSaveSettings} disabled={savingSettings}>
-              {savingSettings ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Prompt
-                </>
-              )}
-            </Button>
-          </div>
+        <SidebarTabsContent value="prompt">
+          <ProjectPromptTab
+            globalPrompt={globalPrompt}
+            onGlobalPromptChange={setGlobalPrompt}
+            onSave={handleSaveSettings}
+            isSaving={savingSettings}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="settings" className="space-y-10">
-          <section className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Project Details</h3>
-              <p className="text-sm text-muted-foreground">
-                Manage the project name and description.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Project Name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <Button onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Details
-                  </>
-                )}
-              </Button>
-            </div>
-          </section>
+        <SidebarTabsContent value="settings">
+          <ProjectSettingsTab
+            name={name}
+            onNameChange={setName}
+            description={description}
+            onDescriptionChange={setDescription}
+            onSave={handleSaveSettings}
+            isSaving={savingSettings}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="tools" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Default Tools</h3>
-            <p className="text-sm text-muted-foreground">
-              Select tools and resources that should be enabled by default for
-              all new chats in this project.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div className="border rounded-md max-h-[500px] overflow-hidden flex flex-col">
-              <ToolPickerList
-                servers={mcpServers.filter((s) => s.enabled)}
-                selectedTools={selectedTools}
-                onToggleTool={onToggleTool}
-                onBulkSelect={onBulkSelect}
-              />
-            </div>
-
-            <Button onClick={handleSaveSettings} disabled={savingSettings}>
-              {savingSettings ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Tools
-                </>
-              )}
-            </Button>
-          </div>
+        <SidebarTabsContent value="tools">
+          <ProjectToolsTab
+            mcpServers={mcpServers}
+            selectedTools={selectedTools}
+            onToggleTool={onToggleTool}
+            onBulkSelect={onBulkSelect}
+            onSave={handleSaveSettings}
+            isSaving={savingSettings}
+          />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="danger">
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible actions for this project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Deleting this project will permanently remove it. Chats will be
-                dissociated but not deleted. This action cannot be undone.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Project
-              </Button>
-            </CardContent>
-          </Card>
+          <DangerZoneCard
+            title="Danger Zone"
+            description="Irreversible actions for this project."
+            consequences="Deleting this project will permanently remove it. Chats will be dissociated but not deleted. This action cannot be undone."
+            buttonLabel="Delete Project"
+            onDelete={() => setShowDeleteDialog(true)}
+            isDeleting={deleting}
+          />
         </SidebarTabsContent>
       </SidebarTabs>
 

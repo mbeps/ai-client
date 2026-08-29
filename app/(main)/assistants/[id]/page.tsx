@@ -1,17 +1,9 @@
 "use client";
 
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { EmptyState } from "@/components/empty-state";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   SidebarTabs,
   SidebarTabsList,
@@ -19,9 +11,6 @@ import {
   SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
 
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { PROMPTS } from "@/constants/prompts";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
@@ -33,21 +22,20 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Settings,
-  Save,
-  Trash2,
-  Search,
   FileText,
   Shield,
   Wrench,
 } from "lucide-react";
-import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { AssistantChatsTab } from "@/components/assistant/assistant-chats-tab";
+import { AssistantPromptTab } from "@/components/assistant/assistant-prompt-tab";
+import { AssistantSettingsTab } from "@/components/assistant/assistant-settings-tab";
+import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { toast } from "sonner";
-import { ChatCard } from "@/components/chat/chat-card";
 import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
 
@@ -74,7 +62,6 @@ export default function AssistantPage() {
   const loadAssistants = useAppStore((state) => state.loadAssistants);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   // Centralised hydration for required entities
   const { isLoading: hydrationLoading } = useResourceHydration([
@@ -126,13 +113,7 @@ export default function AssistantPage() {
       setPrompt(assistant.prompt ?? "");
       setSelectedTools(new Set(assistant.tools || []));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    assistant?.id,
-    assistant?.name,
-    assistant?.description,
-    assistant?.prompt,
-  ]);
+  }, [assistant]);
 
   const loading = hydrationLoading || (assistants.length === 0 && !assistant);
 
@@ -148,31 +129,6 @@ export default function AssistantPage() {
 
   const handleNewChat = () => createNewChat("New Chat", undefined, assistantId);
 
-  const onToggleTool = (serverId: string, toolName: string) => {
-    const id = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => toggleSetItem(prev, id));
-  };
-
-  const onBulkSelect = (
-    serverId: string,
-    toolNames: string[],
-    select: boolean,
-  ) => {
-    if (select) {
-      setSelectedTools((prev) => {
-        const next = new Set(prev);
-        toolNames.forEach((n) => next.add(`${serverId}:tool:${n}`));
-        return next;
-      });
-    } else {
-      setSelectedTools((prev) => {
-        const next = new Set(prev);
-        toolNames.forEach((n) => next.delete(`${serverId}:tool:${n}`));
-        return next;
-      });
-    }
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -182,21 +138,47 @@ export default function AssistantPage() {
         prompt,
         tools: Array.from(selectedTools),
       });
+      toast.success("Assistant updated");
+      await loadAssistants();
       router.refresh();
-      toast.success("Settings saved");
     } catch {
-      toast.error("Failed to save settings");
+      toast.error("Failed to update assistant");
     } finally {
       setSaving(false);
     }
+  };
+
+  const onToggleTool = (serverId: string, toolName: string) => {
+    const toolId = `${serverId}:tool:${toolName}`;
+    setSelectedTools((prev) => toggleSetItem(prev, toolId));
+  };
+
+  const onBulkSelect = (
+    serverId: string,
+    toolNames: string[],
+    enabled: boolean,
+  ) => {
+    setSelectedTools((prev) => {
+      const next = new Set(prev);
+      toolNames.forEach((name) => {
+        const toolId = `${serverId}:tool:${name}`;
+        if (enabled) {
+          next.add(toolId);
+        } else {
+          next.delete(toolId);
+        }
+      });
+      return next;
+    });
   };
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
       await deleteAssistant(assistantId);
-      router.refresh();
       toast.success("Assistant deleted");
+      await loadAssistants();
+      router.refresh();
       router.push(ROUTES.ASSISTANTS.path);
     } catch {
       toast.error("Failed to delete assistant");
@@ -221,6 +203,7 @@ export default function AssistantPage() {
           Chat with Assistant
         </Button>
       </div>
+
       <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="chats">
@@ -245,151 +228,54 @@ export default function AssistantPage() {
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
-        <SidebarTabsContent value="chats" className="space-y-4">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search chats..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredChats.map((chat) => (
-              <ChatCard key={chat.id} chat={chat} />
-            ))}
-            {filteredChats.length === 0 && (
-              <EmptyState
-                message={
-                  searchQuery
-                    ? "No chats match your search."
-                    : "No chats with this assistant yet."
-                }
-              />
-            )}
-          </div>
+        <SidebarTabsContent value="chats">
+          <AssistantChatsTab
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            filteredChats={filteredChats}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="prompt" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">System Prompt</h3>
-            <p className="text-sm text-muted-foreground">
-              Customize the persona and capabilities of this assistant.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={12}
-              placeholder={
-                PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
-              }
-            />
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Prompt
-                </>
-              )}
-            </Button>
-          </div>
+        <SidebarTabsContent value="prompt">
+          <AssistantPromptTab
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            onSave={handleSave}
+            isSaving={saving}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="settings" className="space-y-10">
-          <section className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Assistant Details</h3>
-              <p className="text-sm text-muted-foreground">
-                Manage the assistant name and description.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Assistant Name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Details
-                  </>
-                )}
-              </Button>
-            </div>
-          </section>
+        <SidebarTabsContent value="settings">
+          <AssistantSettingsTab
+            name={name}
+            onNameChange={setName}
+            description={description}
+            onDescriptionChange={setDescription}
+            onSave={handleSave}
+            isSaving={saving}
+          />
         </SidebarTabsContent>
 
-        <SidebarTabsContent value="tools" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Default Tools</h3>
-            <p className="text-sm text-muted-foreground">
-              Select tools and resources that should be enabled by default for
-              all new chats with this assistant.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div className="border rounded-md max-h-[500px] overflow-hidden flex flex-col">
-              <ToolPickerList
-                servers={mcpServers.filter((s) => s.enabled)}
-                selectedTools={selectedTools}
-                onToggleTool={onToggleTool}
-                onBulkSelect={onBulkSelect}
-              />
-            </div>
-
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Tools
-                </>
-              )}
-            </Button>
-          </div>
+        <SidebarTabsContent value="tools">
+          <AssistantToolsTab
+            mcpServers={mcpServers}
+            selectedTools={selectedTools}
+            onToggleTool={onToggleTool}
+            onBulkSelect={onBulkSelect}
+            onSave={handleSave}
+            isSaving={saving}
+          />
         </SidebarTabsContent>
 
         <SidebarTabsContent value="danger">
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible actions for this assistant.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Deleting this assistant will permanently remove it. This action
-                cannot be undone.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Assistant
-              </Button>
-            </CardContent>
-          </Card>
+          <DangerZoneCard
+            title="Danger Zone"
+            description="Irreversible actions for this assistant."
+            consequences="Deleting this assistant will permanently remove it. This action cannot be undone."
+            buttonLabel="Delete Assistant"
+            onDelete={() => setShowDeleteDialog(true)}
+            isDeleting={deleting}
+          />
         </SidebarTabsContent>
       </SidebarTabs>
 
