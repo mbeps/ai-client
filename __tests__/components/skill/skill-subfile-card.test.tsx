@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 
@@ -71,26 +71,7 @@ describe("SkillSubfileCard", () => {
     content: "# Setup instructions\nRun npm install.",
   };
 
-  it("renders in view mode by default with file path and rendered markdown", () => {
-    render(
-      <SkillSubfileCard
-        file={sampleFile}
-        onSave={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("setup.md")).toBeInTheDocument();
-    expect(screen.getByText("Setup instructions")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /edit subfile/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /delete subfile/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("switches to edit view when clicking the edit button", async () => {
+  it("is minimised by default and expands when clicking anywhere on the accordion header", async () => {
     const user = userEvent.setup();
     render(
       <SkillSubfileCard
@@ -100,28 +81,36 @@ describe("SkillSubfileCard", () => {
       />,
     );
 
-    const editBtn = screen.getByRole("button", { name: /edit subfile/i });
-    await user.click(editBtn);
+    // Header label visible
+    const trigger = screen.getByRole("button", { name: /setup\.md/i });
+    expect(trigger).toBeInTheDocument();
 
-    // Should now show input with file path and MarkdownTabEditor tabs
+    // Click anywhere on trigger to expand
+    await user.click(trigger);
+
+    // Direct editing view fields visible
     expect(screen.getByDisplayValue("setup.md")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /view preview/i }),
+      screen.getByRole("button", { name: /delete subfile/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /save subfile/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /rich text/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /raw text/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /preview/i })).toBeInTheDocument();
   });
 
-  it("saves changes and returns to view mode when clicking Save", async () => {
+  it("saves changes when clicking Save", async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn();
 
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={handleSave}
         onDelete={vi.fn()}
-        initialMode="edit"
       />,
     );
 
@@ -137,43 +126,34 @@ describe("SkillSubfileCard", () => {
     expect(textarea).toBeInTheDocument();
     fireEvent.change(textarea, { target: { value: "## New Setup Content" } });
 
-    const saveBtn = screen.getByRole("button", { name: /save/i });
+    const saveBtn = screen.getByRole("button", { name: /save subfile/i });
     await user.click(saveBtn);
 
     expect(handleSave).toHaveBeenCalledWith({
       path: "references/setup-guide.md",
       content: "## New Setup Content",
     });
-
-    // Returns to view mode
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /edit subfile/i }),
-      ).toBeInTheDocument();
-    });
   });
 
-  it("reverts changes and switches back to view mode on Cancel", async () => {
+  it("reverts changes on Reset", async () => {
     const user = userEvent.setup();
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={vi.fn()}
         onDelete={vi.fn()}
-        initialMode="edit"
       />,
     );
 
     const pathInput = screen.getByDisplayValue("setup.md");
     fireEvent.change(pathInput, { target: { value: "modified.md" } });
+    expect(screen.getByDisplayValue("modified.md")).toBeInTheDocument();
 
-    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
-    await user.click(cancelBtn);
+    const resetBtn = screen.getByRole("button", { name: /reset/i });
+    await user.click(resetBtn);
 
-    expect(
-      screen.getByRole("button", { name: /edit subfile/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("setup.md")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("setup.md")).toBeInTheDocument();
   });
 
   it("validates empty file path and prevents saving", async () => {
@@ -183,16 +163,16 @@ describe("SkillSubfileCard", () => {
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={handleSave}
         onDelete={vi.fn()}
-        initialMode="edit"
       />,
     );
 
     const pathInput = screen.getByDisplayValue("setup.md");
     fireEvent.change(pathInput, { target: { value: "   " } });
 
-    const saveBtn = screen.getByRole("button", { name: /save/i });
+    const saveBtn = screen.getByRole("button", { name: /save subfile/i });
     await user.click(saveBtn);
 
     expect(toast.error).toHaveBeenCalledWith(
@@ -208,16 +188,16 @@ describe("SkillSubfileCard", () => {
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={handleSave}
         onDelete={vi.fn()}
-        initialMode="edit"
       />,
     );
 
     const pathInput = screen.getByDisplayValue("setup.md");
     fireEvent.change(pathInput, { target: { value: "SKILL.md" } });
 
-    const saveBtn = screen.getByRole("button", { name: /save/i });
+    const saveBtn = screen.getByRole("button", { name: /save subfile/i });
     await user.click(saveBtn);
 
     expect(toast.error).toHaveBeenCalledWith(
@@ -233,17 +213,17 @@ describe("SkillSubfileCard", () => {
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={handleSave}
         onDelete={vi.fn()}
         existingPaths={["other.md", "setup.md", "references/guide.md"]}
-        initialMode="edit"
       />,
     );
 
     const pathInput = screen.getByDisplayValue("setup.md");
     fireEvent.change(pathInput, { target: { value: "references/guide.md" } });
 
-    const saveBtn = screen.getByRole("button", { name: /save/i });
+    const saveBtn = screen.getByRole("button", { name: /save subfile/i });
     await user.click(saveBtn);
 
     expect(toast.error).toHaveBeenCalledWith(
@@ -259,6 +239,7 @@ describe("SkillSubfileCard", () => {
     render(
       <SkillSubfileCard
         file={sampleFile}
+        defaultOpen={true}
         onSave={vi.fn()}
         onDelete={handleDelete}
       />,
@@ -277,9 +258,9 @@ describe("SkillSubfileCard", () => {
     render(
       <SkillSubfileCard
         file={{ path: "", content: "" }}
+        defaultOpen={true}
         onSave={vi.fn()}
         onDelete={vi.fn()}
-        initialMode="edit"
         onCancelNew={handleCancelNew}
       />,
     );

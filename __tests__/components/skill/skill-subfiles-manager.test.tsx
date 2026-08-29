@@ -79,7 +79,7 @@ describe("SkillSubfilesManager", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders subfiles list when files exist", () => {
+  it("renders subfiles list minimised by default when files exist", () => {
     render(<SkillSubfilesManager files={sampleFiles} onSaveFiles={vi.fn()} />);
 
     expect(screen.getByText("setup.md")).toBeInTheDocument();
@@ -96,9 +96,8 @@ describe("SkillSubfilesManager", () => {
     const addBtn = screen.getByRole("button", { name: /add subfile/i });
     await user.click(addBtn);
 
-    expect(
-      screen.getByPlaceholderText("references/guide.md"),
-    ).toBeInTheDocument();
+    const pathInputs = screen.getAllByPlaceholderText("references/guide.md");
+    expect(pathInputs.length).toBeGreaterThanOrEqual(1);
   });
 
   it("adds new subfile and calls onSaveFiles", async () => {
@@ -115,19 +114,19 @@ describe("SkillSubfilesManager", () => {
     const addBtn = screen.getByRole("button", { name: /add subfile/i });
     await user.click(addBtn);
 
-    const pathInput = screen.getByPlaceholderText("references/guide.md");
-    fireEvent.change(pathInput, { target: { value: "types.ts" } });
+    const pathInputs = screen.getAllByPlaceholderText("references/guide.md");
+    fireEvent.change(pathInputs[0], { target: { value: "types.ts" } });
 
-    const rawTab = screen.getByRole("tab", { name: /raw text/i });
-    await user.click(rawTab);
+    const rawTabs = screen.getAllByRole("tab", { name: /raw text/i });
+    await user.click(rawTabs[0]);
 
     const textarea = document.querySelector("textarea")!;
     fireEvent.change(textarea, {
       target: { value: "export type Foo = string;" },
     });
 
-    const saveBtn = screen.getByRole("button", { name: /^save$/i });
-    await user.click(saveBtn);
+    const saveBtns = screen.getAllByRole("button", { name: /save subfile/i });
+    await user.click(saveBtns[0]);
 
     expect(handleSaveFiles).toHaveBeenCalledWith([
       ...sampleFiles,
@@ -135,7 +134,7 @@ describe("SkillSubfilesManager", () => {
     ]);
   });
 
-  it("updates existing subfile and calls onSaveFiles", async () => {
+  it("updates existing subfile after expanding accordion and calls onSaveFiles", async () => {
     const user = userEvent.setup();
     const handleSaveFiles = vi.fn();
 
@@ -146,13 +145,14 @@ describe("SkillSubfilesManager", () => {
       />,
     );
 
-    const editBtns = screen.getAllByRole("button", { name: /edit subfile/i });
-    await user.click(editBtns[0]);
+    // Expand first accordion
+    const trigger = screen.getByRole("button", { name: /setup\.md/i });
+    await user.click(trigger);
 
     const pathInput = screen.getByDisplayValue("setup.md");
     fireEvent.change(pathInput, { target: { value: "setup-updated.md" } });
 
-    const saveBtn = screen.getByRole("button", { name: /^save$/i });
+    const saveBtn = screen.getByRole("button", { name: /save subfile/i });
     await user.click(saveBtn);
 
     expect(handleSaveFiles).toHaveBeenCalledWith([
@@ -161,7 +161,7 @@ describe("SkillSubfilesManager", () => {
     ]);
   });
 
-  it("deletes a subfile and calls onSaveFiles", async () => {
+  it("deletes a subfile after expanding accordion and calls onSaveFiles", async () => {
     const user = userEvent.setup();
     const handleSaveFiles = vi.fn();
 
@@ -172,10 +172,12 @@ describe("SkillSubfilesManager", () => {
       />,
     );
 
-    const deleteBtns = screen.getAllByRole("button", {
-      name: /delete subfile/i,
-    });
-    await user.click(deleteBtns[0]);
+    // Expand first accordion
+    const trigger = screen.getByRole("button", { name: /setup\.md/i });
+    await user.click(trigger);
+
+    const deleteBtn = screen.getByRole("button", { name: /delete subfile/i });
+    await user.click(deleteBtn);
 
     expect(handleSaveFiles).toHaveBeenCalledWith([sampleFiles[1]]);
   });

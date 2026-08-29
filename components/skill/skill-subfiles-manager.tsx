@@ -78,7 +78,7 @@ export function SkillSubfilesManager({
         {isAddingSubfile && (
           <SkillSubfileCard
             file={{ path: "", content: "" }}
-            initialMode="edit"
+            defaultOpen={true}
             onSave={handleAddSubfile}
             onDelete={() => setIsAddingSubfile(false)}
             onCancelNew={() => setIsAddingSubfile(false)}
