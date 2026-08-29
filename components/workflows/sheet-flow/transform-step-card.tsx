@@ -7,8 +7,8 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import {
   Form,
   FormControl,
@@ -174,14 +174,14 @@ export function TransformStepCard({
                     AI Prompt
                   </FormLabel>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        onUpdate({ prompt: e.target.value });
+                    <MarkdownTabEditor
+                      value={field.value}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        onUpdate({ prompt: value });
                       }}
                       placeholder="Instruct the AI on what to do in this step..."
-                      rows={3}
+                      minHeight="min-h-[160px]"
                     />
                   </FormControl>
                   <FormMessage />

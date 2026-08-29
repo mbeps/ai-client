@@ -1,7 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 
 export interface TransformContextTabProps {
   globalContext: string;
@@ -30,12 +30,11 @@ export function TransformContextTab({
       <div className="space-y-4 max-w-2xl">
         <div className="space-y-2">
           <Label htmlFor="globalContext">Background Context</Label>
-          <Textarea
-            id="globalContext"
+          <MarkdownTabEditor
             value={globalContext}
-            onChange={(e) => onGlobalContextChange(e.target.value)}
+            onChange={onGlobalContextChange}
             placeholder="e.g. This agent handles monthly financial reports. All currency values should be in USD..."
-            rows={10}
+            minHeight="min-h-[240px]"
           />
         </div>
       </div>
