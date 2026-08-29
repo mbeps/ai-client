@@ -14,29 +14,19 @@ import { Input } from "@/components/ui/input";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Loader2,
   Trash2,
   BrainCircuit,
   Save,
   Settings,
   Files,
-  FileCode,
   Plus,
   Download,
-  Pencil,
-  X,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { NotFoundMessage } from "@/components/not-found-message";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -83,12 +73,6 @@ export default function SkillDetailPage() {
   const [files, setFiles] = useState<SkillBundledFile[]>(
     (skill?.files as SkillBundledFile[]) ?? [],
   );
-
-  // Subfile dialog state
-  const [fileDialogOpen, setFileDialogOpen] = useState(false);
-  const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
-  const [filePath, setFilePath] = useState("");
-  const [fileContent, setFileContent] = useState("");
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -162,6 +146,11 @@ export default function SkillDetailPage() {
     }
   };
 
+  const handleSaveFiles = async (updatedFiles: SkillBundledFile[]) => {
+    setFiles(updatedFiles);
+    await handleSave(updatedFiles);
+  };
+
   const handleExportZip = async () => {
     setExporting(true);
     try {
@@ -199,62 +188,6 @@ export default function SkillDetailPage() {
       toast.error(err.message || "Failed to delete skill");
       setDeleting(false);
     }
-  };
-
-  const openAddFileDialog = () => {
-    setEditingFileIndex(null);
-    setFilePath("");
-    setFileContent("");
-    setFileDialogOpen(true);
-  };
-
-  const openEditFileDialog = (index: number) => {
-    const target = files[index];
-    if (!target) return;
-    setEditingFileIndex(index);
-    setFilePath(target.path);
-    setFileContent(target.content);
-    setFileDialogOpen(true);
-  };
-
-  const handleSaveSubfile = () => {
-    const cleanPath = filePath.trim().replace(/^\/+/, "");
-    if (!cleanPath) {
-      toast.error("File path is required (e.g. references/guide.md)");
-      return;
-    }
-
-    if (cleanPath.toLowerCase() === "skill.md") {
-      toast.error(
-        "SKILL.md is the main instruction file. Edit it in General tab.",
-      );
-      return;
-    }
-
-    let updatedFiles: SkillBundledFile[];
-    if (editingFileIndex !== null) {
-      updatedFiles = files.map((f, i) =>
-        i === editingFileIndex ? { path: cleanPath, content: fileContent } : f,
-      );
-    } else {
-      // Check duplicates
-      if (files.some((f) => f.path.toLowerCase() === cleanPath.toLowerCase())) {
-        toast.error(`A subfile with path "${cleanPath}" already exists.`);
-        return;
-      }
-      updatedFiles = [...files, { path: cleanPath, content: fileContent }];
-    }
-
-    setFiles(updatedFiles);
-    setFileDialogOpen(false);
-    handleSave(updatedFiles);
-  };
-
-  const handleDeleteSubfile = (index: number) => {
-    const updatedFiles = files.filter((_, i) => i !== index);
-    setFiles(updatedFiles);
-    handleSave(updatedFiles);
-    toast.success("Subfile removed");
   };
 
   return (
@@ -374,99 +307,12 @@ export default function SkillDetailPage() {
         </SidebarTabsContent>
 
         {/* Subfiles Management Tab */}
-        <SidebarTabsContent value="files" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Bundled Subfiles</h3>
-              <p className="text-sm text-muted-foreground">
-                Supporting scripts, templates, or documentation bundled inside
-                this skill package.
-              </p>
-            </div>
-            <Button onClick={openAddFileDialog} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Subfile
-            </Button>
-          </div>
-
-          {files.length === 0 ? (
-            <Card className="p-8 text-center border-dashed">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                  <Files className="h-5 w-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">No subfiles yet</p>
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Add supporting reference markdown, code scripts, schemas, or
-                    templates that the model can inspect when using this skill.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openAddFileDialog}
-                  className="mt-2 gap-1.5"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add First Subfile
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {files.map((file, idx) => (
-                <Card key={idx} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileCode className="h-4 w-4 text-primary shrink-0" />
-                      <span className="font-mono text-sm font-semibold truncate">
-                        {file.path}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditFileDialog(idx)}
-                        title="Edit subfile"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDeleteSubfile(idx)}
-                        title="Delete subfile"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <pre className="p-3 rounded-lg bg-muted text-xs font-mono overflow-x-auto max-h-[240px] overflow-y-auto whitespace-pre-wrap">
-                    {file.content}
-                  </pre>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {files.length > 0 && (
-            <div>
-              <Button onClick={() => handleSave()} disabled={savingSettings}>
-                {savingSettings ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+        <SidebarTabsContent value="files">
+          <SkillSubfilesManager
+            files={files}
+            onSaveFiles={handleSaveFiles}
+            isSaving={savingSettings}
+          />
         </SidebarTabsContent>
 
         {/* Danger Zone Tab */}
@@ -495,59 +341,6 @@ export default function SkillDetailPage() {
           </Card>
         </SidebarTabsContent>
       </SidebarTabs>
-
-      {/* Add / Edit Subfile Modal Dialog */}
-      <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingFileIndex !== null ? "Edit Subfile" : "Add Subfile"}
-            </DialogTitle>
-            <DialogDescription>
-              Specify the relative path inside the skill package (e.g.{" "}
-              <code>references/guide.md</code>) and its contents.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Relative File Path</label>
-              <Input
-                placeholder="references/guide.md"
-                value={filePath}
-                onChange={(e) => setFilePath(e.target.value)}
-                className="font-mono"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">File Content</label>
-              <MarkdownTabEditor
-                placeholder="# Reference Documentation..."
-                value={fileContent}
-                onChange={setFileContent}
-                minHeight="min-h-[250px]"
-                maxHeight="max-h-[450px]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setFileDialogOpen(false)}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSaveSubfile}>
-              <Save className="mr-2 h-4 w-4" />
-              {editingFileIndex !== null ? "Update Subfile" : "Add Subfile"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
