@@ -1,7 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { HelpCircle, LogIn } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,17 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { authClient } from "@/lib/auth/auth-client";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 import { env } from "@/lib/env";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { type SignInForm, signInSchema } from "@/schemas/auth/sign-in";
 import { PasskeyButton } from "../buttons/passkey-button";
-import { HelpCircle, LogIn } from "lucide-react";
-import { signInSchema, SignInForm } from "@/schemas/auth/sign-in";
 
 /**
  * Email/password sign-in form with integrated passkey button and password recovery link.
@@ -98,14 +98,14 @@ export function SignInTab({
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <FormLabel>Password</FormLabel>
                     <Button
                       onClick={openForgotPassword}
                       type="button"
                       variant="link"
                       size="sm"
-                      className="text-sm font-normal underline"
+                      className="font-normal text-sm underline"
                     >
                       <HelpCircle className="mr-2 h-4 w-4" />
                       Forgot password?

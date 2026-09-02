@@ -1,6 +1,6 @@
 import { embedMany } from "ai";
-import { env } from "@/lib/env";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { env } from "@/lib/env";
 import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
 
 /**

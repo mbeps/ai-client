@@ -57,7 +57,7 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
 
 const ATTACHMENT_ROW = {

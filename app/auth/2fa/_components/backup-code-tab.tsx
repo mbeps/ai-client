@@ -1,7 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,14 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { backupCodeSchema, BackupCodeForm } from "@/schemas/auth/backup-code";
+import { authClient } from "@/lib/auth/auth-client";
+import {
+  type BackupCodeForm,
+  backupCodeSchema,
+} from "@/schemas/auth/backup-code";
 
 /**
  * Two-factor authentication fallback component that validates a static backup code.

@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft, Command, Plus } from "lucide-react";
-import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { useRouter } from "next/navigation";
-import { useAppStore } from "@/lib/store";
-import { PageHeader } from "@/components/page-header";
-import { ROUTES } from "@/constants/routes";
+import { useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
 import {
   PromptForm,
   type PromptFormValues,
 } from "@/components/prompt/prompt-form";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/constants/routes";
+import { createPrompt } from "@/lib/actions/prompts/create-prompt";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dedicated page for creating a new custom prompt shortcut.
@@ -46,11 +46,11 @@ export default function NewPromptPage() {
   };
 
   return (
-    <div className="page-container max-w-4xl mx-auto py-8">
+    <div className="page-container mx-auto max-w-4xl py-8">
       <Button
         variant="ghost"
         size="sm"
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
       >
         <ChevronLeft className="mr-1 h-4 w-4" />

@@ -1,8 +1,8 @@
 "use client";
 
+import { RotateCcw, Wrench } from "lucide-react";
 import { ErrorPage } from "@/components/shared/error-page";
 import { ROUTES } from "@/constants/routes";
-import { RotateCcw, Wrench } from "lucide-react";
 
 /**
  * Tool error boundary page — displays error UI when MCP server detail page fails to load.

@@ -1,10 +1,10 @@
 "use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
-import { useRouter } from "next/navigation";
 import { Fingerprint } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 
 /**
  * Sign-in button that initiates passwordless WebAuthn passkey authentication.

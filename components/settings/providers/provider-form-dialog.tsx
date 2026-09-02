@@ -1,8 +1,9 @@
 "use client";
 
+import { Edit2, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2, X, Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { createProvider } from "@/lib/actions/providers/create-provider";
 import { updateProvider } from "@/lib/actions/providers/update-provider";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 /** Represents a custom HTTP header key-value pair for provider requests. */
@@ -230,8 +230,8 @@ export function ProviderFormDialog({
 
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <p className="text-sm font-medium">Requires API key</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-sm">Requires API key</p>
+              <p className="text-muted-foreground text-xs">
                 Disable for keyless providers such as local Ollama instances.
               </p>
             </div>
@@ -255,8 +255,8 @@ export function ProviderFormDialog({
 
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <p className="text-sm font-medium">Enabled</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-sm">Enabled</p>
+              <p className="text-muted-foreground text-xs">
                 Disabled providers stay configured but hidden from runtime
                 routing.
               </p>

@@ -1,11 +1,11 @@
-import { withMcpServer } from "./with-mcp-server";
-import { withTimeout } from "@/lib/mcp/with-timeout";
 import { MCP_TIMEOUT_MS } from "@/constants/mcp";
-import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import { logger } from "@/lib/logger";
+import { withTimeout } from "@/lib/mcp/with-timeout";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import { withMcpServer } from "./with-mcp-server";
 
 /**
  * Discovers all tools, resources, and prompts available from an MCP server.

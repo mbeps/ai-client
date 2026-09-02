@@ -1,7 +1,25 @@
 "use client";
 
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Search,
+  Sheet as SheetIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import * as xlsx from "xlsx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -10,29 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertCircle,
-  Download,
-  Search,
-  Sheet as SheetIcon,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
 import type { ArtifactSpreadsheetData } from "@/types/artifact/artifact-spreadsheet-data";
 import type { CellObject } from "@/types/artifact/cell-object";
 import type { CellStyle } from "@/types/artifact/cell-style";
-import { cn } from "@/lib/utils";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getFilteredRowModel,
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
 
 /**
  * Props for SpreadsheetView artifact component.
@@ -184,7 +184,9 @@ export default function SpreadsheetView({
       // Array of Objects
       const keySet = new Set<string>();
       activeSheet.data.forEach((row: any) => {
-        Object.keys(row).forEach((key) => keySet.add(key));
+        Object.keys(row).forEach((key) => {
+          keySet.add(key);
+        });
       });
       const headers = Array.from(keySet);
       return { headers, rows: activeSheet.data };
@@ -210,7 +212,7 @@ export default function SpreadsheetView({
               return (
                 <div
                   style={styles}
-                  className={cn("px-1 py-0.5 rounded", classes)}
+                  className={cn("rounded px-1 py-0.5", classes)}
                 >
                   {String(cellObj.v ?? "")}
                 </div>
@@ -223,7 +225,6 @@ export default function SpreadsheetView({
     ];
   }, [headers, columnHelper]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: rows,
     columns,
@@ -259,7 +260,7 @@ export default function SpreadsheetView({
 
   if (spreadsheetData.sheets.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center text-muted-foreground gap-2">
+      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
         <AlertCircle className="h-8 w-8" />
         <p>No valid spreadsheet data found.</p>
       </div>
@@ -267,14 +268,14 @@ export default function SpreadsheetView({
   }
 
   return (
-    <div className="flex h-full flex-col w-full bg-background relative overflow-hidden text-foreground">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-foreground">
       {/* Header with Search and Export */}
-      <div className="flex items-center justify-between p-2 border-b bg-muted/20 gap-2 shrink-0">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-muted/20 p-2">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search sheet..."
-            className="pl-8 h-9"
+            className="h-9 pl-8"
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
@@ -291,18 +292,18 @@ export default function SpreadsheetView({
       </div>
 
       {/* Grid Content */}
-      <ScrollArea className="flex-1 w-full relative">
+      <ScrollArea className="relative w-full flex-1">
         <div className="min-w-max p-4">
           <Table className="border bg-card">
-            <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
+            <TableHeader className="sticky top-0 z-10 bg-muted/50 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header, i) => (
                     <TableHead
                       key={header.id}
                       className={cn(
-                        "border-r font-semibold whitespace-nowrap px-4 py-2",
-                        i === 0 && "w-[50px] text-center bg-muted/50",
+                        "whitespace-nowrap border-r px-4 py-2 font-semibold",
+                        i === 0 && "w-[50px] bg-muted/50 text-center",
                       )}
                     >
                       {flexRender(
@@ -319,7 +320,7 @@ export default function SpreadsheetView({
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
-                    className="text-center text-muted-foreground py-8"
+                    className="py-8 text-center text-muted-foreground"
                   >
                     No matching results.
                   </TableCell>
@@ -331,9 +332,9 @@ export default function SpreadsheetView({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          "border-r whitespace-nowrap px-4 py-2",
+                          "whitespace-nowrap border-r px-4 py-2",
                           i === 0 &&
-                            "text-center text-xs text-muted-foreground bg-muted/10 font-medium",
+                            "bg-muted/10 text-center font-medium text-muted-foreground text-xs",
                         )}
                       >
                         {flexRender(
@@ -353,10 +354,10 @@ export default function SpreadsheetView({
 
       {/* Footer Sheet Navigation */}
       {spreadsheetData.sheets.length > 1 && (
-        <div className="flex items-center gap-1 p-1 bg-muted/30 border-t overflow-x-auto no-scrollbar shrink-0">
-          <div className="flex items-center px-2 py-1 gap-1 border-r text-muted-foreground">
+        <div className="no-scrollbar flex shrink-0 items-center gap-1 overflow-x-auto border-t bg-muted/30 p-1">
+          <div className="flex items-center gap-1 border-r px-2 py-1 text-muted-foreground">
             <SheetIcon className="h-3 w-3" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">
+            <span className="font-bold text-[10px] uppercase tracking-wider">
               Sheets
             </span>
           </div>
@@ -368,7 +369,7 @@ export default function SpreadsheetView({
                 setGlobalFilter(""); // Clear filter when switching sheets
               }}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
+                "whitespace-nowrap rounded-md px-3 py-1.5 font-medium text-xs transition-colors",
                 activeSheetIndex === idx
                   ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                   : "text-muted-foreground hover:bg-muted/50",

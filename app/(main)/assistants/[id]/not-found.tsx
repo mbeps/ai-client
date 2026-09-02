@@ -1,6 +1,6 @@
+import { Bot } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
 import { ROUTES } from "@/constants/routes";
-import { Bot } from "lucide-react";
 
 /**
  * Assistant not found page — displays 404 UI when requested assistant does not exist.

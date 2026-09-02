@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
 import { getTableColumns, getTableName } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
+import { describe, expect, it } from "vitest";
 import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
+import { kbChunk } from "@/drizzle/schemas/kb-chunk-schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import {
   transformAgent,
   transformRun,
 } from "@/drizzle/schemas/transform-agent-schema";
-import { kbChunk } from "@/drizzle/schemas/kb-chunk-schema";
-import { skill } from "@/drizzle/schemas/skill-schema";
 
 describe("chat-schema", () => {
   it("message table has updatedAt with onUpdate", () => {

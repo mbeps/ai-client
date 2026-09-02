@@ -1,17 +1,20 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -25,9 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject } from "@/lib/actions/projects/create-project";
 import { useAppStore } from "@/lib/store";
-import { toast } from "sonner";
-import { Plus, X, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),

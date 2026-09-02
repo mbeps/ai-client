@@ -22,9 +22,9 @@ export const metadata: Metadata = {
     "AI chat client with support for streaming, tools and knowledge bases.",
 };
 
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { PopoverProvider } from "@/components/ui/popover";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { PopoverProvider } from "@/components/ui/popover";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
  * Root layout providing global fonts (Geist), CSS, and UI providers.

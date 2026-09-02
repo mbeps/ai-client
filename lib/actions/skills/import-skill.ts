@@ -1,12 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
 import {
-  parseSkillMarkdown,
   extractSkillFromZip,
+  type ParsedSkill,
+  parseSkillMarkdown,
   sanitizeSkillSlug,
 } from "@/lib/skills/parser";
 import type { SkillRow } from "@/types/skill/skill-row";
@@ -28,7 +29,7 @@ export async function importSkillFile(formData: FormData): Promise<SkillRow> {
   const fileName = file.name.toLowerCase();
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  let parsedSkill;
+  let parsedSkill: ParsedSkill;
 
   if (fileName.endsWith(".zip")) {
     parsedSkill = extractSkillFromZip(buffer, file.name.replace(/\.zip$/i, ""));

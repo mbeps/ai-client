@@ -1,12 +1,12 @@
 "use client";
+import { Edit2, FolderOutput, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Trash2, FolderOutput, Edit2 } from "lucide-react";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
+import { ROUTES } from "@/constants/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { ROUTES } from "@/constants/routes";
-import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
-import { useEntityOptions } from "@/hooks/use-entity-options";
 
 /**
  * Options menu for a chat, providing Rename, Move, and Delete actions.

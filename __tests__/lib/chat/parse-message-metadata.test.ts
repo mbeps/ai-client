@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 
 describe("parseMessageMetadata", () => {

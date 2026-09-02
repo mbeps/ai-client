@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { prompt } from "@/drizzle/schema";
-import { createPromptSchema } from "@/schemas/prompt/prompt";
 import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import { createPromptSchema } from "@/schemas/prompt/prompt";
 import type { PromptRow } from "@/types/prompt/prompt-row";
-import { z } from "zod";
 
 /**
  * Creates a new reusable prompt for slash commands (/shortcut) for the authenticated user.

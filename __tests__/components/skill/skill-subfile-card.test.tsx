@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Mock CSS imports for jsdom
 vi.mock("katex/dist/katex.min.css", () => ({}));

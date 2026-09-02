@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import HtmlView from "@/components/chat/artifacts/html-view";
 
 describe("HtmlView — iframe sandbox (ART-01)", () => {

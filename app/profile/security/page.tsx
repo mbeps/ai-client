@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/constants/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/constants/routes";
+import { auth } from "@/lib/auth/auth";
+import { env } from "@/lib/env";
 import { SecurityTab } from "../_components/security/security-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
-import { env } from "@/lib/env";
 
 /**
  * Security settings page for password management, two-factor authentication, and passkeys.
@@ -20,7 +20,7 @@ export default async function SecurityPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Security</h2>
+        <h2 className="font-bold text-2xl tracking-tight">Security</h2>
         <p className="text-muted-foreground">
           {env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD
             ? "Manage your password, two-factor authentication, and account security."

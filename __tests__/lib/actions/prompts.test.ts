@@ -75,11 +75,11 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { requireSession } from "@/lib/auth/require-session";
 import { createPrompt } from "@/lib/actions/prompts/create-prompt";
-import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
+import { listPrompts } from "@/lib/actions/prompts/list-prompts";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
+import { requireSession } from "@/lib/auth/require-session";
 
 const PROMPT_ROW = {
   id: "prompt-1",

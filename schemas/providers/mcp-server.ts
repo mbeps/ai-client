@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
-import { jsonObjectSchema, idField } from "../shared-fields";
+import { idField, jsonObjectSchema } from "../shared-fields";
 
 /**
  * Validates MCP (Model Context Protocol) server configuration.

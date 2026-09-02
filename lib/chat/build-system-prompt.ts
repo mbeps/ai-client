@@ -1,5 +1,9 @@
 import { PROMPTS } from "@/constants/prompts";
-import type { Skill, SkillSummary, SkillBundledFile } from "@/types/skill/skill";
+import type {
+  Skill,
+  SkillBundledFile,
+  SkillSummary,
+} from "@/types/skill/skill";
 
 /**
  * Builds the system prompt for a chat request by composing multiple prompt layers.

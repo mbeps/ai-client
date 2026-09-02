@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── env must be mocked before any module that reads it ──────────────────────
 vi.mock("@/lib/env", () => ({
@@ -77,13 +77,13 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { requireSession } from "@/lib/auth/require-session";
 import { createSkill } from "@/lib/actions/skills/create-skill";
-import { listSkills } from "@/lib/actions/skills/list-skills";
-import { getSkill } from "@/lib/actions/skills/get-skill";
-import { updateSkill } from "@/lib/actions/skills/update-skill";
 import { deleteSkill } from "@/lib/actions/skills/delete-skill";
+import { getSkill } from "@/lib/actions/skills/get-skill";
+import { listSkills } from "@/lib/actions/skills/list-skills";
 import { toggleSkillEnabled } from "@/lib/actions/skills/toggle-skill";
+import { updateSkill } from "@/lib/actions/skills/update-skill";
+import { requireSession } from "@/lib/auth/require-session";
 
 const SKILL_ROW = {
   id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",

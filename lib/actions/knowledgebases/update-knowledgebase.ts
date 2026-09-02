@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { knowledgebase } from "@/drizzle/schema";
-import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
-import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
-import { z } from "zod";
+import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 /**
  * Updates an existing knowledge base with partial field updates (name, description, indexStatus).

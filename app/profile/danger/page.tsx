@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/constants/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/constants/routes";
+import { auth } from "@/lib/auth/auth";
 import { AccountDeletion } from "../_components/account/account-deletion";
 
 /**
@@ -18,7 +18,7 @@ export default async function DangerZonePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Danger Zone</h2>
+        <h2 className="font-bold text-2xl tracking-tight">Danger Zone</h2>
         <p className="text-muted-foreground">
           Critical actions that can have permanent consequences for your
           account.
@@ -26,10 +26,10 @@ export default async function DangerZonePage() {
       </div>
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium text-destructive">
+          <h3 className="font-medium text-destructive text-lg">
             Delete Account
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Permanently delete your account and all associated data. This action
             cannot be undone.
           </p>

@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { message } from "@/drizzle/schema";
-import { BaseResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { message } from "@/drizzle/schema";
+import type { BaseResource } from "../shared/resource";
 
 /**
  * Database representation of a message in a branching conversation tree from the Drizzle schema.

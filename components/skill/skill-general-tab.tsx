@@ -1,9 +1,9 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Loader2, Save } from "lucide-react";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Save, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export interface SkillGeneralTabProps {
   displayName: string;
@@ -38,17 +38,17 @@ export function SkillGeneralTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Skill Details</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Skill Details</h3>
+        <p className="text-muted-foreground text-sm">
           Update the skill identifier, description, and primary instruction
           rules.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Display Name</label>
+            <label className="font-medium text-sm">Display Name</label>
             <Input
               value={displayName}
               onChange={(e) => onDisplayNameChange(e.target.value)}
@@ -56,9 +56,9 @@ export function SkillGeneralTab({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Skill Slug</label>
+            <label className="font-medium text-sm">Skill Slug</label>
             <div className="flex items-center">
-              <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
+              <div className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted font-mono text-muted-foreground">
                 /
               </div>
               <Input
@@ -71,7 +71,7 @@ export function SkillGeneralTab({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
+          <label className="font-medium text-sm">Description</label>
           <Input
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
@@ -80,7 +80,7 @@ export function SkillGeneralTab({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label className="font-medium text-sm">
             Instructions & Guidelines (Markdown)
           </label>
           <MarkdownTabEditor

@@ -1,27 +1,27 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { authClient } from "@/lib/auth/auth-client";
+import { Bot, Check, Command, Database, User, X } from "lucide-react";
 import Link from "next/link";
-import { useAppStore } from "@/lib/store";
-import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
-import type { Message } from "@/types/message/message";
-import type { Attachment } from "@/types/attachment/attachment";
-import type { ToolCallState } from "@/types/tool/tool-call";
-import { ROUTES } from "@/constants/routes";
-import { Bot, Command, Database, User, Check, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { MarkdownRenderer } from "./markdown-renderer";
-import { ResponseTimeline } from "./message/response-timeline";
-import { MessageActions } from "./message/message-actions";
-import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
-import { extractCitations } from "@/lib/chat/extract-citations";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/constants/routes";
+import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
+import { authClient } from "@/lib/auth/auth-client";
 import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
+import { extractCitations } from "@/lib/chat/extract-citations";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { useAppStore } from "@/lib/store";
+import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
+import type { Message } from "@/types/message/message";
+import type { ToolCallState } from "@/types/tool/tool-call";
+import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CitationsList } from "./message/citations-list";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Button } from "@/components/ui/button";
+import { MessageActions } from "./message/message-actions";
+import { ResponseTimeline } from "./message/response-timeline";
 
 /**
  * Props for the MessageBubble component.
@@ -76,7 +76,7 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   isLatest,
-  isFirst,
+  isFirst: _isFirst,
   assistantId,
   onDelete,
   onEdit,
@@ -171,7 +171,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex flex-col gap-2 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
+      className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "rounded-lg bg-muted/30"}`}
     >
       <div className="flex items-center gap-2">
         <Avatar className="h-6 w-6">
@@ -195,13 +195,13 @@ export function MessageBubble({
           {isUser ? "You" : modelName ? modelName : "Assistant"}
         </span>
         {promptEntry && (
-          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs">
             <Command className="h-3 w-3" />
             {promptEntry.title}
           </span>
         )}
         {selectedKbIds.length > 0 && (
-          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
             <Database className="h-3 w-3" />
             {selectedKbIds
               .map((id) => knowledgebases.find((kb) => kb.id === id)?.name)
@@ -230,11 +230,11 @@ export function MessageBubble({
           {isUser ? (
             <div>
               {(promptMeta || selectedKbIds.length > 0) && (
-                <div className="flex flex-wrap items-center gap-2 mb-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   {promptMeta && (
                     <Link
                       href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
-                      className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+                      className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
                     >
                       <Command className="h-3 w-3" />/
                       {promptEntry?.shortcut ?? promptMeta.promptId}
@@ -246,7 +246,7 @@ export function MessageBubble({
                       <Link
                         key={kbId}
                         href={ROUTES.KNOWLEDGEBASES.detail(kbId)}
-                        className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
                       >
                         <Database className="h-3 w-3" />
                         {kb?.name ?? kbId}
@@ -256,7 +256,7 @@ export function MessageBubble({
                 </div>
               )}
               {isEditing ? (
-                <div className="space-y-3 w-full my-2">
+                <div className="my-2 w-full space-y-3">
                   <MarkdownTabEditor
                     value={editContent}
                     onChange={setEditContent}

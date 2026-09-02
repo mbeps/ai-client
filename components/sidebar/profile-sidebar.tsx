@@ -1,6 +1,18 @@
 "use client";
 
-import * as React from "react";
+import {
+  ChevronLeft,
+  Key,
+  LinkIcon,
+  LogOut,
+  Shield,
+  Trash2,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type * as React from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -12,25 +24,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  User,
-  Shield,
-  Key,
-  LinkIcon,
-  Trash2,
-  ChevronLeft,
-  LogOut,
-  Home,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
-import { useAppStore } from "@/lib/store";
 import { hydratedResources } from "@/hooks/use-resource-hydration";
+import { authClient } from "@/lib/auth/auth-client";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Sidebar for the /profile section.
@@ -102,7 +100,7 @@ export function ProfileSidebar({
                 <span className="truncate font-semibold">
                   {session?.user?.name}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-muted-foreground text-xs">
                   {session?.user?.email}
                 </span>
               </div>

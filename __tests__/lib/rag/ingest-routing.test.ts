@@ -58,10 +58,10 @@ vi.mock("@/lib/rag/ingest-pipeline", () => ({
   ingestDocumentPipeline: pipelineMock,
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { ingestDocument } from "@/lib/rag/ingest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowledgebase";
+import { ingestDocument } from "@/lib/rag/ingest";
 
 function fakeS3Body() {
   return {

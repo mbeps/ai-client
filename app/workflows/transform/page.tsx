@@ -1,11 +1,10 @@
-import { ROUTES } from "@/constants/routes";
-import { Button } from "@/components/ui/button";
-import { Plus, Settings2, List } from "lucide-react";
+import { List, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
-import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
-
+import { Button } from "@/components/ui/button";
 import { TransformAgentCard } from "@/components/workflows/sheet-flow/transform-agent-card";
+import { ROUTES } from "@/constants/routes";
+import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
 
 /**
  * Step-by-Step Automations agents list page.
@@ -56,7 +55,7 @@ export default async function TransformAgentsPage() {
         }
       />
 
-      <div className="grid gap-4 grid-cols-1">
+      <div className="grid grid-cols-1 gap-4">
         {agents.map((agent) => (
           <TransformAgentCard key={agent.id} agent={agent} />
         ))}
@@ -67,7 +66,7 @@ export default async function TransformAgentsPage() {
           <div className="rounded-full bg-muted p-4">
             <Settings2 className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h2 className="mt-4 text-xl font-semibold">No agents found</h2>
+          <h2 className="mt-4 font-semibold text-xl">No agents found</h2>
           <p className="mt-2 text-muted-foreground">
             Get started by creating your first transformation agent.
           </p>

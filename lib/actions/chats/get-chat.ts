@@ -1,15 +1,15 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
+  assistant,
+  attachment,
   chat,
   message,
-  attachment,
   project,
-  assistant,
 } from "@/drizzle/schema";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
 import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 
 /**

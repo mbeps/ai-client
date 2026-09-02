@@ -4,8 +4,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { logger } from "@/lib/logger";
+import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "./utils";
 
 export type ProviderConnectionResult = {

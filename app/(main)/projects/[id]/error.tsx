@@ -1,7 +1,7 @@
 "use client";
 
-import { ROUTES } from "@/constants/routes";
 import { ErrorPage } from "@/components/shared/error-page";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * Project page error boundary: Graceful error handling for failed project loads.

@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { skillSchema, skillFileSchema } from "@/schemas/skill/skill";
+import type { z } from "zod";
+import type { skillFileSchema, skillSchema } from "@/schemas/skill/skill";
 
 export type SkillBundledFile = z.infer<typeof skillFileSchema>;
 

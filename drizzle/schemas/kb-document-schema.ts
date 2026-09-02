@@ -1,14 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
+  index,
+  integer,
   pgTable,
   text,
-  integer,
-  boolean,
   timestamp,
-  index,
   uniqueIndex,
-  check,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 import { user } from "./auth-schema";
 import { knowledgebase } from "./knowledgebase-schema";
 

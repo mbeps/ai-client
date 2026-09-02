@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "@/types/message/message";
 
 // Mock CSS imports for jsdom
@@ -69,8 +69,8 @@ vi.mock("@/components/shared/markdown-tab-editor", () => ({
   ),
 }));
 
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 describe("MessageBubble message editing", () => {
   const mockUserMessage: Message = {

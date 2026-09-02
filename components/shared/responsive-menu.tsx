@@ -1,15 +1,8 @@
 "use client";
 
+import { MoreHorizontal, X } from "lucide-react";
 import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, X } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Drawer,
   DrawerClose,
@@ -19,6 +12,13 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface MenuItem {
   /** Display label shown to the user. */
@@ -82,7 +82,7 @@ export function ResponsiveMenu({
             <DrawerHeader className="text-left">
               <DrawerTitle>{title}</DrawerTitle>
             </DrawerHeader>
-            <div className="p-4 space-y-2">
+            <div className="space-y-2 p-4">
               {visibleItems.map((item, i) => (
                 <Button
                   key={i}

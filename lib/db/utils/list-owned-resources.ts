@@ -1,8 +1,8 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { desc, eq, type SQL } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { eq, desc, SQL } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
 
-export interface ListOwnedResourcesOptions<TTable extends any> {
+export interface ListOwnedResourcesOptions<TTable> {
   /**
    * Custom order by logic. Defaults to [desc(table.updatedAt)] if available.
    */
@@ -27,7 +27,7 @@ export interface ListOwnedResourcesOptions<TTable extends any> {
  * @returns Array of user-owned resources
  * @author Maruf Bepary
  */
-export async function listOwnedResources<TTable extends any, TRow = any>(
+export async function listOwnedResources<TTable, TRow = any>(
   table: TTable,
   options: ListOwnedResourcesOptions<TTable> = {},
 ): Promise<TRow[]> {

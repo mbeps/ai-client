@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { db } from "@/drizzle/db";
+import { chat } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
  * Updates the current leaf pointer for a chat session.
@@ -31,9 +31,7 @@ export async function updateCurrentLeaf(
   const [updated] = await db
     .update(chat)
     .set({ currentLeafId: validatedLeafId, updatedAt: new Date() })
-    .where(
-      and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
-    )
+    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
     .returning({ id: chat.id });
 
   if (!updated) throw new Error("Not Found");

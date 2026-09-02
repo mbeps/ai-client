@@ -1,26 +1,26 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Check,
   ChevronLeft,
   ChevronRight,
   Copy,
   Edit2,
+  Maximize2,
   RotateCcw,
   Trash2,
-  Maximize2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useUserModels } from "@/hooks/use-user-models";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
-import { useUserModels } from "@/hooks/use-user-models";
 import { MessageDetails } from "./message-details";
 
 interface MessageActionsProps {
@@ -83,16 +83,16 @@ export function MessageActions({
       setCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (_err) {
       toast.error("Failed to copy text");
     }
   };
 
   return (
-    <div className="flex items-center mt-2 gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+    <div className="mt-2 flex items-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
       {/* Branching Navigation */}
       {siblings.length > 1 && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2">
+        <div className="mr-2 flex items-center gap-1 text-muted-foreground text-xs">
           <Button
             variant="ghost"
             size="icon"

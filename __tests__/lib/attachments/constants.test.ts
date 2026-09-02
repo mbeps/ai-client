@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  ALLOWED_IMAGE_TYPES,
   ALLOWED_DOCUMENT_TYPES,
+  ALLOWED_IMAGE_TYPES,
   ALLOWED_SPREADSHEET_TYPES,
-  MAX_IMAGE_SIZE_BYTES,
-  MAX_DOCUMENT_SIZE_BYTES,
-  MAX_SPREADSHEET_SIZE_BYTES,
-  MAX_IMAGES_PER_MESSAGE,
   MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_DOCUMENT_SIZE_BYTES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGES_PER_MESSAGE,
+  MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/constants/attachments";
 
 describe("attachment constants", () => {

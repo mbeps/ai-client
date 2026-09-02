@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
-import type { Message } from "@/types/message/message";
-import type { Chat } from "@/types/chat/chat";
-import type { Attachment } from "@/types/attachment/attachment";
-import { MessageBubble } from "./message-bubble";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { Chat } from "@/types/chat/chat";
+import type { Message } from "@/types/message/message";
+import { MessageBubble } from "./message-bubble";
 
 /**
  * Props for the MessageThread component.
@@ -63,8 +63,8 @@ export function MessageThread({
 
   if (thread.length === 0) {
     return (
-      <div className="h-[50vh] flex flex-col items-center justify-center text-center opacity-50">
-        <h2 className="text-2xl font-bold mb-2">How can I help you today?</h2>
+      <div className="flex h-[50vh] flex-col items-center justify-center text-center opacity-50">
+        <h2 className="mb-2 font-bold text-2xl">How can I help you today?</h2>
         <p>Try asking for a diagram, math formula, or standard text.</p>
       </div>
     );

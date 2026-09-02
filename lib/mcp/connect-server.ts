@@ -1,9 +1,9 @@
-import { createConnectedClient } from "./create-connected-client";
-import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import type { McpConnection } from "@/types/mcp/mcp-connection";
-import { logger } from "@/lib/logger";
-import { withTimeout } from "./with-timeout";
 import { MCP_TIMEOUT_MS } from "@/constants/mcp";
+import { logger } from "@/lib/logger";
+import type { McpConnection } from "@/types/mcp/mcp-connection";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import { createConnectedClient } from "./create-connected-client";
+import { withTimeout } from "./with-timeout";
 
 /**
  * Connects to a single MCP server and retrieves its tools.

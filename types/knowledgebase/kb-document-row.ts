@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { kbDocument } from "@/drizzle/schemas/kb-document-schema";
-import { TimedResource } from "../shared/resource";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a document indexed in a knowledge base from the Drizzle schema.

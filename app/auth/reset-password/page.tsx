@@ -1,7 +1,7 @@
-import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { env } from "@/lib/env";
+import { Suspense } from "react";
 import { ROUTES } from "@/constants/routes";
+import { env } from "@/lib/env";
 import ResetPasswordForm from "./_components/reset-password-form";
 
 export const metadata = {

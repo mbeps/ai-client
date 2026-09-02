@@ -1,30 +1,21 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Save } from "lucide-react";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import {
-  updateMcpServerSchema,
-  type UpdateMcpServer,
-} from "@/schemas/providers/mcp-server";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Form } from "@/components/ui/form";
+import { LoadingSwap } from "@/components/ui/loading-swap";
 import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";
-import { useRouter } from "next/navigation";
+import {
+  type UpdateMcpServer,
+  updateMcpServerSchema,
+} from "@/schemas/providers/mcp-server";
+import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
  * Props for EditServerForm component.
@@ -78,10 +69,10 @@ export function EditServerForm({ server }: EditServerFormProps) {
   }
 
   return (
-    <Card className="border-none shadow-none bg-transparent">
+    <Card className="border-none bg-transparent shadow-none">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <CardContent className="p-0 space-y-6">
+          <CardContent className="space-y-6 p-0">
             <ServerFormFields
               form={form}
               styled
@@ -91,7 +82,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
             />
           </CardContent>
 
-          <div className="flex justify-end pt-4 border-t">
+          <div className="flex justify-end border-t pt-4">
             <Button
               type="submit"
               disabled={isSubmitting}

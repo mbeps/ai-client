@@ -1,5 +1,5 @@
-import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 import { env } from "@/lib/env";
+import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 
 /**
  * Maximum characters to extract from documents before truncation.

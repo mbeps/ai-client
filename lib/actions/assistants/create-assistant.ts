@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { assistant } from "@/drizzle/schema";
-import { createAssistantSchema } from "@/schemas/assistant/assistant";
 import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import { createAssistantSchema } from "@/schemas/assistant/assistant";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
-import { z } from "zod";
 
 /**
  * Creates a new AI assistant persona for the authenticated user.

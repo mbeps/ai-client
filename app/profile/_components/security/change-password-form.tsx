@@ -1,7 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Key } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -10,16 +14,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { Key } from "lucide-react";
-import { authClient } from "@/lib/auth/auth-client";
-import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { authClient } from "@/lib/auth/auth-client";
 import {
+  type ChangePasswordFormData,
   changePasswordSchema,
-  ChangePasswordFormData,
 } from "@/schemas/auth/change-password";
 
 /**
@@ -62,7 +62,7 @@ export function ChangePasswordForm() {
         className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(handlePasswordChange)}
       >
-        <div className="flex flex-col md:flex-row items-start gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row">
           <FormField
             control={form.control}
             name="currentPassword"
@@ -103,7 +103,7 @@ export function ChangePasswordForm() {
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <FormLabel className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Log out other sessions
               </FormLabel>
               <FormMessage />

@@ -1,5 +1,5 @@
-import { HeadBucketCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "./s3-instance";
+import { CreateBucketCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { S3_BUCKET, s3Client } from "./s3-instance";
 
 // ponytail: process-scoped cache; upgrade to distributed lock if multi-instance
 let bucketVerified = false;

@@ -1,4 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import type { createOpenAI } from "@ai-sdk/openai";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

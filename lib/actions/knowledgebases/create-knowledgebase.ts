@@ -1,11 +1,11 @@
 "use server";
 
+import type { z } from "zod";
 import { knowledgebase } from "@/drizzle/schema";
-import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
-import { z } from "zod";
 
 /**
  * Creates a new knowledge base for the authenticated user.

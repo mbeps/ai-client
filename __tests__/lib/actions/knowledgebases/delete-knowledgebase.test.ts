@@ -66,12 +66,12 @@ vi.mock("@/lib/storage/s3-instance", () => ({
   S3_BUCKET: "test-bucket",
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { kbDocument } from "@/drizzle/schema";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
 import { requireSession } from "@/lib/auth/require-session";
-import { kbDocument } from "@/drizzle/schema";
 
 describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
   let selectResult: unknown[] = [];

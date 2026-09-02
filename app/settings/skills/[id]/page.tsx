@@ -1,35 +1,35 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { useParams, useRouter, notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
-  Loader2,
   BrainCircuit,
-  Settings,
-  Files,
   Download,
+  Files,
+  Loader2,
+  Settings,
   Shield,
 } from "lucide-react";
-import { ROUTES } from "@/constants/routes";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
-import { SkillGeneralTab } from "@/components/skill/skill-general-tab";
-import { useState, useEffect } from "react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-import { updateSkill } from "@/lib/actions/skills/update-skill";
-import { deleteSkill } from "@/lib/actions/skills/delete-skill";
-import { exportSkillZip } from "@/lib/actions/skills/export-skill";
-import { useQueryState, parseAsString } from "nuqs";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
   SidebarTabs,
+  SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
-  SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
+import { SkillGeneralTab } from "@/components/skill/skill-general-tab";
+import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { ROUTES } from "@/constants/routes";
+import { deleteSkill } from "@/lib/actions/skills/delete-skill";
+import { exportSkillZip } from "@/lib/actions/skills/export-skill";
+import { updateSkill } from "@/lib/actions/skills/update-skill";
+import { useAppStore } from "@/lib/store";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
@@ -86,7 +86,7 @@ export default function SkillDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -187,7 +187,7 @@ export default function SkillDetailPage() {
   };
 
   return (
-    <div className="page-container max-w-4xl mx-auto py-8">
+    <div className="page-container mx-auto max-w-4xl py-8">
       <PageHeader
         icon={<BrainCircuit className="h-8 w-8 text-primary" />}
         title={skill.displayName || skill.name}
@@ -201,9 +201,9 @@ export default function SkillDetailPage() {
               disabled={exporting}
             >
               {exporting ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
-                <Download className="h-4 w-4 mr-1.5" />
+                <Download className="mr-1.5 h-4 w-4" />
               )}
               Export Bundle
             </Button>
@@ -214,25 +214,25 @@ export default function SkillDetailPage() {
       <SidebarTabs value={tab} onValueChange={setTab} className="mt-6 w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="general">
-            <Settings className="w-4 h-4 mr-2" />
+            <Settings className="mr-2 h-4 w-4" />
             General
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="files">
-            <Files className="w-4 h-4 mr-2" />
+            <Files className="mr-2 h-4 w-4" />
             Files ({files.length})
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
-            <Shield className="w-4 h-4 mr-2" />
+            <Shield className="mr-2 h-4 w-4" />
             Danger Zone
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
         {/* General Settings Tab */}
         <SidebarTabsContent value="general" className="space-y-6">
-          <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
+          <div className="flex items-center justify-between rounded-xl border bg-card p-4">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Enable Skill</label>
-              <p className="text-xs text-muted-foreground">
+              <label className="font-medium text-sm">Enable Skill</label>
+              <p className="text-muted-foreground text-xs">
                 When enabled, this skill will appear in slash commands and
                 progressive disclosure tool calls.
               </p>

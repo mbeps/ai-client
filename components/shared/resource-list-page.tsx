@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
-import { useAppStore } from "@/lib/store";
 import { Search } from "lucide-react";
-import { SortableResource, sortByUpdatedAt } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { Input } from "@/components/ui/input";
+import { useAppStore } from "@/lib/store";
+import { type SortableResource, sortByUpdatedAt } from "@/lib/utils";
 
 interface ResourceListPageProps<T extends SortableResource> {
   /** Leading icon for the page type. */
@@ -81,9 +81,9 @@ export function ResourceListPage<T extends SortableResource>({
         action={action}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center mb-6">
+      <div className="mb-6 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
             className="pl-9"
@@ -95,19 +95,19 @@ export function ResourceListPage<T extends SortableResource>({
       </div>
 
       {loadError && (
-        <p role="alert" className="mb-4 text-sm text-destructive">
+        <p role="alert" className="mb-4 text-destructive text-sm">
           {loadError}
         </p>
       )}
 
       {sorted.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <EmptyState message={emptyStateMessage} />
         </div>
       ) : renderList ? (
         renderList(sorted)
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {sorted.map((item) => (
             <div key={item.id}>{renderCard?.(item)}</div>
           ))}

@@ -1,14 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Edit2, GripVertical, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -17,12 +15,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Check, X, Edit2, Trash2, GripVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
-  transformStepSchema,
   type TransformStepInput,
+  transformStepSchema,
 } from "@/schemas/workflows/transform-agent";
-import { type TransformStep } from "@/types/transform/transform-step";
+import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Props for TransformStepCard component.
@@ -97,9 +97,9 @@ export function TransformStepCard({
 
   return (
     <Card className="relative overflow-hidden">
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+      <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
       <CardHeader className="flex flex-row items-center gap-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
           {index + 1}
         </div>
         <div className="flex-1">
@@ -124,7 +124,7 @@ export function TransformStepCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
                 onClick={handleApplyName}
               >
                 <Check className="h-4 w-4" />
@@ -132,7 +132,7 @@ export function TransformStepCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={handleCancelName}
               >
                 <X className="h-4 w-4" />
@@ -156,13 +156,13 @@ export function TransformStepCard({
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+              <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
             </>
           )}
         </div>
       </CardHeader>
       <Separator />
-      <CardContent className="py-1 space-y-4">
+      <CardContent className="space-y-4 py-1">
         <Form {...form}>
           <div className="space-y-4 py-3">
             <FormField
@@ -170,7 +170,7 @@ export function TransformStepCard({
               name="prompt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  <FormLabel className="font-bold text-muted-foreground text-xs uppercase tracking-wider">
                     AI Prompt
                   </FormLabel>
                   <FormControl>
@@ -195,10 +195,10 @@ export function TransformStepCard({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-semibold">
+                    <FormLabel className="font-semibold text-sm">
                       Human Review
                     </FormLabel>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Pause pipeline after this step for review.
                     </p>
                   </div>

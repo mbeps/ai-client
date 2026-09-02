@@ -1,24 +1,22 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
+import { extractCitations } from "@/lib/chat/extract-citations";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { useAppStore } from "@/lib/store";
-import { extractCitations } from "@/lib/chat/extract-citations";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
-import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ArtifactPanel } from "./artifact-panel";
-import { ChatInput } from "./chat-input";
 import { AssistantBar } from "./assistant-bar";
+import { ChatInput } from "./chat-input";
 import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
-import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
-import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
-import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
-import type { ArtifactData } from "@/types/artifact/artifact-data";
-import { useState } from "react";
-import { useResourceHydration } from "@/hooks/use-resource-hydration";
 
 /**
  * Props for the ChatUI component.
@@ -123,10 +121,14 @@ export function ChatUI({
 
     const combined = new Set<string>();
     if (projectTools) {
-      projectTools.forEach((t) => combined.add(t));
+      projectTools.forEach((t) => {
+        combined.add(t);
+      });
     }
     if (assistantTools) {
-      assistantTools.forEach((t) => combined.add(t));
+      assistantTools.forEach((t) => {
+        combined.add(t);
+      });
     }
     const combinedArray = Array.from(combined);
 
@@ -230,10 +232,10 @@ export function ChatUI({
 
   const handleUpdateArtifact = useCallback(
     (newContent: string) => {
-      if (!activeArtifact || !activeArtifact.messageId) return;
+      if (!activeArtifact?.messageId) return;
 
       const msg = chat?.messages[activeArtifact.messageId];
-      if (!msg || !msg.metadata) return;
+      if (!msg?.metadata) return;
 
       try {
         const meta = JSON.parse(msg.metadata);
@@ -350,11 +352,11 @@ export function ChatUI({
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load MCP servers once on mount
   useEffect(() => {
     if (mcpServers.length === 0) {
       loadMcpServers().catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -399,12 +401,7 @@ export function ChatUI({
 
   useEffect(() => {
     scrollToBottom();
-  }, [
-    chat?.currentLeafId,
-    streamingContent,
-    activeToolCalls.length,
-    scrollToBottom,
-  ]);
+  }, [scrollToBottom]);
 
   const handleDelete = (id: string) => {
     deleteMessageDb(chatId, id);
@@ -441,7 +438,7 @@ export function ChatUI({
 
   const handleRegenerate = async (id: string) => {
     const msg = chat?.messages[id];
-    if (!msg || msg.role !== "assistant" || !msg.parentId) return;
+    if (msg?.role !== "assistant" || !msg.parentId) return;
 
     const parentMsg = chat?.messages[msg.parentId];
     if (!parentMsg) return;
@@ -516,12 +513,12 @@ export function ChatUI({
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <AssistantBar assistantName={currentAssistant?.name} />
 
-        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
-          <div className="px-4 md:px-8 py-6">
-            <div className="max-w-4xl mx-auto space-y-6 pb-12">
+        <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
+          <div className="px-4 py-6 md:px-8">
+            <div className="mx-auto max-w-4xl space-y-6 pb-12">
               <MessageThread
                 thread={thread}
                 chat={chat}
@@ -544,8 +541,8 @@ export function ChatUI({
           </div>
         </ScrollArea>
 
-        <div className="px-4 md:px-8 pb-2 md:pb-4 shrink-0 bg-background/80 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto">
+        <div className="shrink-0 bg-background/80 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
+          <div className="mx-auto max-w-4xl">
             <ChatInput
               key={chatId}
               onSend={handleSend}

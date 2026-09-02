@@ -29,10 +29,10 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: hybridSearchMock,
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
-import { hybridSearch } from "@/lib/rag/hybrid-search";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
+import { hybridSearch } from "@/lib/rag/hybrid-search";
 
 const searchRows = [
   {
@@ -60,7 +60,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       "user-1",
     );
 
-    expect(mcpTools["search_knowledge_base"]).toBeDefined();
+    expect(mcpTools.search_knowledge_base).toBeDefined();
   });
 
   it("does NOT register search_knowledge_base when kbIsReady is false", async () => {
@@ -73,7 +73,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       "user-1",
     );
 
-    expect(mcpTools["search_knowledge_base"]).toBeUndefined();
+    expect(mcpTools.search_knowledge_base).toBeUndefined();
   });
 
   it("does NOT query the database for KB readiness (T3.4)", async () => {
@@ -92,7 +92,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       true,
       "user-1",
     );
-    const tool = mcpTools["search_knowledge_base"];
+    const tool = mcpTools.search_knowledge_base;
 
     const result = await tool.execute({ query: "test" }, {
       messages: [],
@@ -117,7 +117,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       true,
       "user-1",
     );
-    const tool = mcpTools["search_knowledge_base"] as any;
+    const tool = mcpTools.search_knowledge_base as any;
 
     expect(tool.inputSchema).toBeDefined();
     // Union of accepted arg shapes; at least one member exposes `query`
@@ -135,7 +135,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       false,
       "user-1",
     );
-    const tool = mcpTools["manage_artifact"] as any;
+    const tool = mcpTools.manage_artifact as any;
 
     expect(tool.inputSchema).toBeDefined();
     const members = tool.inputSchema.options ?? [tool.inputSchema];
@@ -168,7 +168,7 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
       "user-1",
     );
 
-    expect(mcpTools["shared_tool"]).toBeUndefined();
+    expect(mcpTools.shared_tool).toBeUndefined();
   });
 
   it("selecting with the owning server's full id enables the tool", async () => {
@@ -181,6 +181,6 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
       "user-1",
     );
 
-    expect(mcpTools["shared_tool"]).toBeDefined();
+    expect(mcpTools.shared_tool).toBeDefined();
   });
 });

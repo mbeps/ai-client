@@ -1,6 +1,6 @@
-import type { Message } from "@/types/message/message";
-import type { Attachment } from "@/types/attachment/attachment";
 import type { UserModelOption } from "@/hooks/use-user-models";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { Message } from "@/types/message/message";
 import { parseMessageMetadata } from "./parse-message-metadata";
 
 export interface ContextCategoryBreakdown {
@@ -76,11 +76,13 @@ export function formatTokens(tokens: number): string {
   }
   if (tokens < 1_000_000) {
     const k = tokens / 1000;
-    const formatted = k >= 100 ? Math.round(k).toString() : k.toFixed(1).replace(/\.0$/, "");
+    const formatted =
+      k >= 100 ? Math.round(k).toString() : k.toFixed(1).replace(/\.0$/, "");
     return `${formatted}K`;
   }
   const m = tokens / 1_000_000;
-  const formatted = m >= 10 ? Math.round(m).toString() : m.toFixed(1).replace(/\.0$/, "");
+  const formatted =
+    m >= 10 ? Math.round(m).toString() : m.toFixed(1).replace(/\.0$/, "");
   return `${formatted}M`;
 }
 
@@ -150,7 +152,9 @@ export function calculateContextUsage(
       if (parsed.toolData?.toolResults) {
         for (const tr of parsed.toolData.toolResults) {
           toolResultsTokens += estimateTokens(
-            typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result),
+            typeof tr.result === "string"
+              ? tr.result
+              : JSON.stringify(tr.result),
           );
         }
       }

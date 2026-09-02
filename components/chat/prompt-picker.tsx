@@ -1,10 +1,11 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, Search, SquareTerminal, X, Zap } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +14,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Prompt } from "@/types/prompt/prompt";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
-import { SquareTerminal, Zap, Search, Check, X } from "lucide-react";
-import { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ROUTES } from "@/constants/routes";
+import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import { cn } from "@/lib/utils";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { Prompt } from "@/types/prompt/prompt";
 
 interface PromptPickerProps {
   prompts: Prompt[];
@@ -100,7 +100,7 @@ export function PromptPicker({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search prompts..."
           value={search}
@@ -112,7 +112,7 @@ export function PromptPicker({
       <ScrollArea className="pr-4" style={{ maxHeight }}>
         <div className="space-y-2">
           {filteredItems.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
+            <div className="py-8 text-center text-muted-foreground text-sm">
               No prompts found.
             </div>
           ) : (
@@ -124,7 +124,7 @@ export function PromptPicker({
                 <div
                   key={item.id}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
+                    "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
                     isSelected && "border-primary bg-primary/5",
                   )}
                   onClick={() => handleToggle(item)}
@@ -136,29 +136,29 @@ export function PromptPicker({
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         {isMcp ? (
-                          <Zap className="h-4 w-4 text-amber-500 shrink-0" />
+                          <Zap className="h-4 w-4 shrink-0 text-amber-500" />
                         ) : (
-                          <SquareTerminal className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <SquareTerminal className="h-4 w-4 shrink-0 text-muted-foreground" />
                         )}
-                        <span className="font-medium text-sm leading-none truncate">
+                        <span className="truncate font-medium text-sm leading-none">
                           {item.title}
                         </span>
                       </div>
                       {isMcp ? (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1 py-0 h-4 max-w-[100px] truncate font-normal shrink-0"
+                          className="h-4 max-w-[100px] shrink-0 truncate px-1 py-0 font-normal text-[10px]"
                         >
                           {item.sourceServer}
                         </Badge>
                       ) : (
                         <Badge
                           variant="secondary"
-                          className="text-[10px] px-1 py-0 h-4 bg-muted text-muted-foreground shrink-0 font-mono"
+                          className="h-4 shrink-0 bg-muted px-1 py-0 font-mono text-[10px] text-muted-foreground"
                         >
                           {item.shortcut.startsWith("/")
                             ? item.shortcut
@@ -167,11 +167,11 @@ export function PromptPicker({
                       )}
                     </div>
                     {"description" in item && item.description ? (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-muted-foreground text-xs">
                         {item.description}
                       </p>
                     ) : "content" in item && item.content ? (
-                      <p className="text-xs text-muted-foreground line-clamp-2 font-mono">
+                      <p className="line-clamp-2 font-mono text-muted-foreground text-xs">
                         {item.content}
                       </p>
                     ) : null}
@@ -220,8 +220,8 @@ export function PromptPickerDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b">
+      <DialogContent className="flex max-w-md flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 pt-4 pb-3">
           <DialogTitle>Select Prompt</DialogTitle>
           <DialogDescription className="sr-only">
             Choose a prompt to use in your message
@@ -229,8 +229,8 @@ export function PromptPickerDialog({
         </DialogHeader>
 
         {totalCount === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            <SquareTerminal className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+            <SquareTerminal className="mx-auto mb-3 h-8 w-8 opacity-40" />
             <p className="mb-2">No prompts configured yet.</p>
             <Link
               href={ROUTES.SETTINGS.PROMPTS.path}
@@ -251,8 +251,8 @@ export function PromptPickerDialog({
               maxHeight="320px"
             />
 
-            <div className="px-4 py-3 border-t flex items-center justify-between bg-muted/20 shrink-0">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
+              <p className="text-muted-foreground text-xs">
                 <strong>{selectedPrompt ? 1 : 0}</strong> prompt selected
               </p>
               <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export function PromptPickerDialog({
                     variant="ghost"
                     size="sm"
                     onClick={() => onSelectPrompt(null)}
-                    className="text-xs h-8"
+                    className="h-8 text-xs"
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
                     Clear

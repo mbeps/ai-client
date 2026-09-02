@@ -1,13 +1,13 @@
 "use client";
-import { Trash2, Edit2, ExternalLink } from "lucide-react";
-import type { Prompt } from "@/types/prompt/prompt";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { Edit2, ExternalLink, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
+import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { useAppStore } from "@/lib/store";
+import type { Prompt } from "@/types/prompt/prompt";
 
 /**
  * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.

@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { transformAgent } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { transformAgent } from "@/drizzle/schema";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a transform agent (multi-step workflow) from the Drizzle schema.

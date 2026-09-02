@@ -1,8 +1,10 @@
 import { logger } from "@/lib/logger";
-import { ToolCall } from "@/types/chat/tool-call";
-import { ToolResult } from "@/types/chat/tool-result";
-import { ParsedMessageMetadata } from "@/types/message/metadata";
-import type { MessageUsage } from "@/types/message/metadata";
+import type { ToolCall } from "@/types/chat/tool-call";
+import type { ToolResult } from "@/types/chat/tool-result";
+import type {
+  MessageUsage,
+  ParsedMessageMetadata,
+} from "@/types/message/metadata";
 
 /**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.

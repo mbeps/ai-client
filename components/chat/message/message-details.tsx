@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import { format } from "date-fns";
 import { Info } from "lucide-react";
+import { useMemo } from "react";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
@@ -39,9 +39,9 @@ function DetailRow({
 }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="flex justify-between items-center py-2 border-b border-border last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-right">{value}</span>
+    <div className="flex items-center justify-between border-border border-b py-2 last:border-0">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <span className="text-right font-medium text-sm">{value}</span>
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function MessageDetails({ createdAt, metadata }: MessageDetailsProps) {
   const trigger = (
     <button
       type="button"
-      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded px-1 py-0.5"
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <Info className="h-3 w-3 shrink-0" />
       <span>

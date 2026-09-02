@@ -1,11 +1,10 @@
+import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { listProjects } from "@/lib/actions/projects/list-projects";
-import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-
-import { SearchClient } from "./_components/search-client";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 import type { ChatRow } from "@/types/chat/chat-row";
 import type { ProjectRow } from "@/types/project/project-row";
-import type { AssistantRow } from "@/types/assistant/assistant-row";
+import { SearchClient } from "./_components/search-client";
 
 /**
  * Global search page: Unified interface for finding chats, projects, and assistants.

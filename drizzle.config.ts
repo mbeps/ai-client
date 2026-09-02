@@ -1,5 +1,5 @@
-import { defineConfig } from "drizzle-kit"
-import { env } from "./lib/env"
+import { defineConfig } from "drizzle-kit";
+import { env } from "./lib/env";
 
 /**
  * Drizzle CLI configuration that points to the Better Auth schema.
@@ -11,4 +11,4 @@ export default defineConfig({
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-})
+});

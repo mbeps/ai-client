@@ -74,6 +74,8 @@ jobs:
 
       - name: Run Linter
         run: ${{ steps.detect-package-manager.outputs.manager }} run lint
+      - name: Run Biome CI
+        run: ${{ steps.detect-package-manager.outputs.runner }} biome ci --reporter=github .
 
   type-check:
     name: Type Check - Node ${{ matrix.node-version }}

@@ -1,15 +1,15 @@
-import { logger } from "@/lib/logger";
-import { env } from "@/lib/env";
-import { db } from "@/drizzle/db";
-import { sql, eq } from "drizzle-orm";
-import { embedQuery } from "./embed-query";
+import { eq, sql } from "drizzle-orm";
 import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
+import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
+import { env } from "@/lib/env";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { logger } from "@/lib/logger";
+import type { ChunkResult } from "@/types/rag/chunk-result";
+import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
 import { applyRRF } from "./apply-rrf";
-import { type ChunkResult } from "@/types/rag/chunk-result";
-import { type RawChunkRow } from "@/types/rag/raw-chunk-row";
+import { embedQuery } from "./embed-query";
 
 /**
  * Performs hybrid retrieval over a knowledge base using vector + full-text search.

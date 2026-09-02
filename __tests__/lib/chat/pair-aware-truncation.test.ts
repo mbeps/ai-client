@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/env", () => ({
   env: { CHAT_MAX_HISTORY_TURNS: 3 },
@@ -8,8 +8,8 @@ vi.mock("@/lib/logger", () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
-import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
 import type { ThreadMessage } from "@/lib/chat/load-thread-from-db";
+import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
 
 /**
  * Builds a thread where the truncation boundary (last 3 assembled messages)

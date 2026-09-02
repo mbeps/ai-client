@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -8,7 +9,6 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 import { aiProvider } from "./ai-provider-schema";
 import { user } from "./auth-schema";
 

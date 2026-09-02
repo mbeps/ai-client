@@ -1,8 +1,8 @@
+import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
+import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 import type { Message } from "@/types/message/message";
-import type { Attachment } from "@/types/attachment/attachment";
-import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 
 /**
  * Reconstructs a message tree structure from flattened database rows.

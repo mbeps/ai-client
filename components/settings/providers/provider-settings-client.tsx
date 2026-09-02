@@ -1,22 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Database, Boxes, Settings2, FileJson, Loader2 } from "lucide-react";
+import { Boxes, Database, FileJson, Loader2, Settings2 } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
+import { useState } from "react";
+import { DefaultModelPicker } from "@/components/settings/providers/default-model-picker";
+import { ImportExportPanel } from "@/components/settings/providers/import-export-panel";
+import { ModelTable } from "@/components/settings/providers/model-table";
+import { ProviderList } from "@/components/settings/providers/provider-list";
 import {
   SidebarTabs,
   SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
-import { useQueryState, parseAsString } from "nuqs";
 import { useProviders } from "@/hooks/use-providers";
 import { useUserModels } from "@/hooks/use-user-models";
-import { ProviderList } from "@/components/settings/providers/provider-list";
-import { ModelTable } from "@/components/settings/providers/model-table";
-import { DefaultModelPicker } from "@/components/settings/providers/default-model-picker";
-import { ImportExportPanel } from "@/components/settings/providers/import-export-panel";
-import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 type ProviderSettingsClientProps = {
   initialSettings: UserSettingsRow | null;
@@ -121,7 +121,7 @@ export function ProviderSettingsClient({
       {isLoading && (
         <div className="absolute top-4 right-4 z-50 flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="font-medium text-muted-foreground text-xs">
             Syncing registry...
           </span>
         </div>

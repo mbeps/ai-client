@@ -1,5 +1,8 @@
 "use client";
 
+import { Bot, BrainCircuit, SquareTerminal, Zap } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandEmpty,
@@ -7,18 +10,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import type { Assistant } from "@/types/assistant/assistant";
-import { cn } from "@/lib/utils";
 import {
-  type MentionTrigger,
-  type MentionItem,
-  isSkillItem,
-  isPromptItem,
   isAssistantItem,
+  isPromptItem,
+  isSkillItem,
+  type MentionItem,
+  type MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bot, Zap, SquareTerminal, BrainCircuit } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { Assistant } from "@/types/assistant/assistant";
 
 interface MentionCommandsProps {
   items: MentionItem[];
@@ -51,7 +51,7 @@ export function MentionCommands({
   return (
     <div
       className={cn(
-        "z-50 w-[380px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
+        "fade-in-0 zoom-in-95 z-50 w-[380px] animate-in overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
         className,
       )}
     >
@@ -71,17 +71,17 @@ export function MentionCommands({
                     value={item.id}
                     onSelect={() => onSelect(item)}
                     className={cn(
-                      "flex items-center gap-2 py-2 px-3",
+                      "flex items-center gap-2 px-3 py-2",
                       itemIndex === selectedIndex &&
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    <BrainCircuit className="h-4 w-4 text-primary shrink-0" />
-                    <div className="flex items-center justify-between w-full overflow-hidden">
-                      <span className="font-medium truncate">
+                    <BrainCircuit className="h-4 w-4 shrink-0 text-primary" />
+                    <div className="flex w-full items-center justify-between overflow-hidden">
+                      <span className="truncate font-medium">
                         {item.displayName || item.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono shrink-0 ml-2">
+                      <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                         /{item.name}
                       </span>
                     </div>
@@ -103,23 +103,23 @@ export function MentionCommands({
                     value={item.id}
                     onSelect={() => onSelect(item)}
                     className={cn(
-                      "flex items-center gap-2 py-2 px-3",
+                      "flex items-center gap-2 px-3 py-2",
                       itemIndex === selectedIndex &&
                         "bg-accent text-accent-foreground",
                     )}
                   >
                     {isMcp ? (
-                      <Zap className="h-4 w-4 text-amber-500 shrink-0" />
+                      <Zap className="h-4 w-4 shrink-0 text-amber-500" />
                     ) : (
-                      <SquareTerminal className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <SquareTerminal className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}
 
-                    <div className="flex items-center justify-between w-full overflow-hidden">
-                      <span className="font-medium truncate">
+                    <div className="flex w-full items-center justify-between overflow-hidden">
+                      <span className="truncate font-medium">
                         {isMcp ? (item as any).name : (item as any).title}
                       </span>
                       {!isMcp && (
-                        <span className="text-[10px] text-muted-foreground uppercase bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0">
+                        <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">
                           {(item as any).shortcut.startsWith("/")
                             ? (item as any).shortcut
                             : `/${(item as any).shortcut}`}
@@ -128,7 +128,7 @@ export function MentionCommands({
                       {isMcp && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1 py-0 h-4 ml-2 max-w-[100px] truncate font-normal"
+                          className="ml-2 h-4 max-w-[100px] truncate px-1 py-0 font-normal text-[10px]"
                         >
                           {(item as any).sourceServer}
                         </Badge>
@@ -150,7 +150,7 @@ export function MentionCommands({
                     value={item.id}
                     onSelect={() => onSelect(item)}
                     className={cn(
-                      "flex items-center gap-2 py-2 px-3",
+                      "flex items-center gap-2 px-3 py-2",
                       itemIndex === selectedIndex &&
                         "bg-accent text-accent-foreground",
                     )}
@@ -164,12 +164,12 @@ export function MentionCommands({
                       </AvatarFallback>
                     </Avatar>
 
-                    <div className="flex flex-col w-full overflow-hidden">
-                      <span className="font-medium truncate">
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">
                         {(item as Assistant).name}
                       </span>
                       {(item as Assistant).description && (
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="truncate text-muted-foreground text-xs">
                           {(item as Assistant).description}
                         </span>
                       )}

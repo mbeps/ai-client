@@ -1,15 +1,15 @@
 "use client";
 
+import {
+  AlertTriangle,
+  Database,
+  Loader2,
+  RefreshCw,
+  Save,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-  Save,
-  Loader2,
-  Database,
-  AlertTriangle,
-  RefreshCw,
-} from "lucide-react";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 export interface KbSettingsTabProps {
@@ -43,15 +43,15 @@ export function KbSettingsTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Knowledge Base Details</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Knowledge Base Details</h3>
+        <p className="text-muted-foreground text-sm">
           Manage the knowledge base name and description.
         </p>
       </div>
 
-      <div className="space-y-4 max-w-2xl">
+      <div className="max-w-2xl space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Name</label>
+          <label className="font-medium text-sm">Name</label>
           <Input
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
@@ -59,7 +59,7 @@ export function KbSettingsTab({
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
+          <label className="font-medium text-sm">Description</label>
           <Textarea
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
@@ -81,34 +81,34 @@ export function KbSettingsTab({
         </Button>
       </div>
 
-      <div className="pt-6 border-t">
-        <div className="space-y-1 mb-4">
-          <h3 className="text-lg font-semibold text-foreground">
+      <div className="border-t pt-6">
+        <div className="mb-4 space-y-1">
+          <h3 className="font-semibold text-foreground text-lg">
             Embedding Configuration
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Current embedding model and index status.
           </p>
         </div>
 
-        <div className="p-4 border rounded-xl bg-muted/20 space-y-3">
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
           <div className="space-y-1">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
               Global Embedding Model
             </div>
-            <div className="text-sm font-medium flex items-center gap-2">
+            <div className="flex items-center gap-2 font-medium text-sm">
               <Database className="h-4 w-4 text-primary" />
               {embeddingModelLabel}
             </div>
           </div>
 
           {kb.indexStatus === "stale" && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-blue-300">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700 text-xs dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-blue-300">
               <div className="flex items-center gap-1.5 font-semibold">
                 <AlertTriangle className="h-4 w-4" />
                 Re-index required
               </div>
-              <p className="mt-1.5 leading-relaxed text-amber-600 dark:text-amber-400">
+              <p className="mt-1.5 text-amber-600 leading-relaxed dark:text-amber-400">
                 Your embedding configuration has changed. Documents must be
                 re-indexed to ensure search accuracy.
               </p>
@@ -125,12 +125,12 @@ export function KbSettingsTab({
           )}
 
           {kb.indexStatus === "indexing" && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-700 text-xs dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
               <div className="flex items-center gap-1.5 font-semibold">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Indexing in progress
               </div>
-              <p className="mt-1.5 leading-relaxed text-blue-600 dark:text-blue-400">
+              <p className="mt-1.5 text-blue-600 leading-relaxed dark:text-blue-400">
                 Updating your search index. This may take a few minutes
                 depending on document size.
               </p>

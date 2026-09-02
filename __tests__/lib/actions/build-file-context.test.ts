@@ -42,8 +42,8 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 
 beforeEach(() => {

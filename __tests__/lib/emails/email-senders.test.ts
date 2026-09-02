@@ -24,10 +24,10 @@ vi.mock("postmark", () => ({
   }),
 }));
 
-import { sendWelcomeEmail } from "@/lib/emails/welcome-email";
+import { sendDeleteAccountVerificationEmail } from "@/lib/emails/delete-account-verification";
 import { sendEmailVerificationEmail } from "@/lib/emails/email-verification";
 import { sendPasswordResetEmail } from "@/lib/emails/password-reset-email";
-import { sendDeleteAccountVerificationEmail } from "@/lib/emails/delete-account-verification";
+import { sendWelcomeEmail } from "@/lib/emails/welcome-email";
 
 // ── sendWelcomeEmail ──────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 
 // ─── Hoisted mock variables (must run before vi.mock factories) ────────────
@@ -57,7 +57,7 @@ vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
 // ─── createChatDb mock via the store action ────────────────────────────────
 import { useAppStore } from "@/lib/store";
 
-const NOW = new Date().toISOString();
+const _NOW = new Date().toISOString();
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
 describe("useCreateChat", () => {

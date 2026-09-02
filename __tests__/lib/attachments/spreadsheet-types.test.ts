@@ -1,9 +1,9 @@
-import { getExtension } from "@/lib/attachments/get-extension";
-import { isSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 import {
   SPREADSHEET_EXTENSIONS,
   ALLOWED_SPREADSHEET_TYPES as SPREADSHEET_MIME_TYPES,
 } from "@/constants/attachments";
+import { getExtension } from "@/lib/attachments/get-extension";
+import { isSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 
 describe("getExtension", () => {
   it("returns .xlsx for a .xlsx filename", () => {

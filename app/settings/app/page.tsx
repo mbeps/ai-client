@@ -1,8 +1,8 @@
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import { GlobalPromptForm } from "@/components/settings/global-prompt-form";
-import { PageHeader } from "@/components/page-header";
-import { requireSession } from "@/lib/auth/require-session";
 import { Settings2 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { GlobalPromptForm } from "@/components/settings/global-prompt-form";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
  * Application general settings page — server component for managing global app preferences.

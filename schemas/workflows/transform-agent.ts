@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nameField, descriptionField, renameSchema } from "../shared-fields";
+import { descriptionField, nameField, renameSchema } from "../shared-fields";
 
 export const renameTransformAgentSchema = renameSchema;
 

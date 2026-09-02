@@ -1,42 +1,40 @@
 "use client";
 
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { Button } from "@/components/ui/button";
-import {
-  SidebarTabs,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-  SidebarTabsContent,
-} from "@/components/shared/sidebar-tabs";
-
-import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import { listChats } from "@/lib/actions/chats/list-chats";
-import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
-import { ROUTES } from "@/constants/routes";
-import { useAppStore } from "@/lib/store";
 import {
   Bot,
-  Loader2,
-  MessageSquarePlus,
-  MessageSquare,
-  Settings,
   FileText,
+  Loader2,
+  MessageSquare,
+  MessageSquarePlus,
+  Settings,
   Shield,
   Wrench,
 } from "lucide-react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AssistantChatsTab } from "@/components/assistant/assistant-chats-tab";
 import { AssistantPromptTab } from "@/components/assistant/assistant-prompt-tab";
 import { AssistantSettingsTab } from "@/components/assistant/assistant-settings-tab";
 import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
-
-import { useParams, useRouter, notFound } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
-import { useQueryState, parseAsString } from "nuqs";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/constants/routes";
+import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import { toast } from "sonner";
-import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
+import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
+import { listChats } from "@/lib/actions/chats/list-chats";
+import { useAppStore } from "@/lib/store";
+import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 
 /**
  * Assistant detail page — client component for viewing and editing assistant configuration.
@@ -68,7 +66,7 @@ export default function AssistantPage() {
     "mcpServers",
   ]);
 
-  const [loadingChats, setLoadingChats] = useState(false);
+  const [_loadingChats, setLoadingChats] = useState(false);
   const [name, setName] = useState(assistant?.name ?? "");
   const [description, setDescription] = useState(assistant?.description ?? "");
   const [prompt, setPrompt] = useState(assistant?.prompt ?? "");
@@ -96,6 +94,7 @@ export default function AssistantPage() {
   }, [chats, searchQuery]);
 
   // Load assistant-specific chats on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats on assistantId change
   useEffect(() => {
     if (chats.length === 0) {
       setLoadingChats(true);
@@ -103,7 +102,7 @@ export default function AssistantPage() {
         .then((rows) => loadChats(rows, []))
         .finally(() => setLoadingChats(false));
     }
-  }, [assistantId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [assistantId]);
 
   useEffect(() => {
     if (assistant) {
@@ -118,7 +117,7 @@ export default function AssistantPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -189,13 +188,13 @@ export default function AssistantPage() {
 
   return (
     <div className="page-container">
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Bot className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{assistant.name}</h1>
+            <h1 className="font-bold text-3xl">{assistant.name}</h1>
             <p className="text-muted-foreground">{assistant.description}</p>
           </div>
         </div>

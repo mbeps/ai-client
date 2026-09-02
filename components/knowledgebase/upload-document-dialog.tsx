@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { AlertCircle, Loader2, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,12 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Loader2, Upload, X } from "lucide-react";
-import { toast } from "sonner";
-import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
-import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
-import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { useUserModels } from "@/hooks/use-user-models";
+import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
+import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ACCEPTED_TYPES = ".pdf,.txt,.md";
 const MAX_SIZE_MB = 50;
@@ -81,7 +81,7 @@ export function UploadDocumentDialog({
     const selected = e.target.files?.[0] ?? null;
     if (!selected) return;
     if (selected.size > MAX_SIZE_BYTES) {
-      const message = `File exceeds the ${MAX_SIZE_MB} MB limit.`;
+      const _message = `File exceeds the ${MAX_SIZE_MB} MB limit.`;
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
     setError(null);
@@ -141,32 +141,32 @@ export function UploadDocumentDialog({
               onChange={handleFileChange}
               disabled={isLoading}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Supported: PDF, plain text (.txt), Markdown (.md) &middot; Max{" "}
               {MAX_SIZE_MB} MB
             </p>
           </div>
 
           {file && !error && (
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="truncate text-muted-foreground text-sm">
               Selected:{" "}
               <span className="font-medium text-foreground">{file.name}</span>
             </p>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           {statusLabel && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               {statusLabel}
             </div>
           )}
 
           {hasNoModels && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+            <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 p-2 dark:border-red-900/30 dark:bg-red-950/20">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
+              <p className="font-medium text-[11px] text-red-800 dark:text-red-200">
                 No embedding models configured. Please set up a provider first.
               </p>
             </div>

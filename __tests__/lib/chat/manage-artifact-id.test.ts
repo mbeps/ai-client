@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ─── Hoisted mocks ─────────────────────────────────────────────────────────
 const { mockHybridSearch, mockGetMcpTools } = vi.hoisted(() => ({
@@ -26,7 +26,7 @@ describe("manage_artifact — artifact identity (ART-02)", () => {
       false,
       "user-1",
     );
-    const tool = mcpTools["manage_artifact"];
+    const tool = mcpTools.manage_artifact;
     expect(tool).toBeDefined();
 
     // Pull the execute fn out of the AI SDK tool wrapper
@@ -46,7 +46,7 @@ describe("manage_artifact — artifact identity (ART-02)", () => {
       false,
       "user-1",
     );
-    const execute = (mcpTools["manage_artifact"] as any).execute;
+    const execute = (mcpTools.manage_artifact as any).execute;
 
     const a = await execute({ type: "markdown", content: "# a" });
     const b = await execute({ type: "markdown", content: "# b" });

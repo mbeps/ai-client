@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAppStore } from "@/lib/store";
 import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Creates new chat sessions and navigates to chat detail page.

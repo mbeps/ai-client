@@ -1,27 +1,27 @@
 "use client";
 
-import { EntityCard } from "@/components/shared/entity-card";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
-  Settings2,
-  Trash2,
+  Activity,
   MoreVertical,
   RefreshCw,
-  Activity,
+  Settings2,
+  Trash2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { EntityCard } from "@/components/shared/entity-card";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 interface ProviderCardProps {
   provider: AiProviderRow;
@@ -59,7 +59,7 @@ export function ProviderCard({
   return (
     <EntityCard
       horizontal
-      className="shadow-none border hover:bg-muted/30 cursor-default"
+      className="cursor-default border shadow-none hover:bg-muted/30"
       title={<span className="font-semibold">{provider.name}</span>}
       description={provider.baseUrl}
       rightActions={
@@ -96,7 +96,7 @@ export function ProviderCard({
             <TooltipContent>Sync Models</TooltipContent>
           </Tooltip>
 
-          <div className="flex items-center border-l pl-2 ml-1">
+          <div className="ml-1 flex items-center border-l pl-2">
             <Switch
               checked={provider.isEnabled}
               onCheckedChange={onToggle}

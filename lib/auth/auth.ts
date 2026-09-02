@@ -1,15 +1,15 @@
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@/drizzle/db";
-import { nextCookies } from "better-auth/next-js";
-import { sendPasswordResetEmail } from "../emails/password-reset-email";
-import { sendEmailVerificationEmail } from "../emails/email-verification";
 import { createAuthMiddleware } from "better-auth/api";
-import { sendWelcomeEmail } from "../emails/welcome-email";
-import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
+import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins/two-factor";
-import { passkey } from "@better-auth/passkey";
+import { db } from "@/drizzle/db";
 import { env } from "@/lib/env";
+import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
+import { sendEmailVerificationEmail } from "../emails/email-verification";
+import { sendPasswordResetEmail } from "../emails/password-reset-email";
+import { sendWelcomeEmail } from "../emails/welcome-email";
 
 /**
  * Better Auth server instance for all authentication operations. **SERVER-ONLY** — never import in client components.

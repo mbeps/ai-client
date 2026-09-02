@@ -1,13 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { knowledgebase, kbDocument } from "@/drizzle/schema";
-import { and, eq, inArray } from "drizzle-orm";
-import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "@/drizzle/db";
+import { kbDocument, knowledgebase } from "@/drizzle/schema";
+import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 const deleteKbRow = deleteEntityFactory({ table: knowledgebase });
 

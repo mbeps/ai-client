@@ -1,11 +1,11 @@
 "use client";
 
+import { Files, Loader2, Plus, Save } from "lucide-react";
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Files, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkillSubfileCard } from "@/components/skill/skill-subfile-card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface SkillSubfilesManagerProps {
@@ -58,8 +58,8 @@ export function SkillSubfilesManager({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold">Bundled Subfiles</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-semibold text-lg">Bundled Subfiles</h3>
+          <p className="text-muted-foreground text-sm">
             Supporting scripts, templates, or documentation bundled inside this
             skill package.
           </p>
@@ -97,14 +97,14 @@ export function SkillSubfilesManager({
         ))}
 
         {files.length === 0 && !isAddingSubfile && (
-          <Card className="p-8 text-center border-dashed">
+          <Card className="border-dashed p-8 text-center">
             <div className="flex flex-col items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <Files className="h-5 w-5" />
               </div>
               <div className="space-y-1">
                 <p className="font-medium text-sm">No subfiles yet</p>
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="max-w-sm text-muted-foreground text-xs">
                   Add supporting reference markdown, code scripts, schemas, or
                   templates that the model can inspect when using this skill.
                 </p>

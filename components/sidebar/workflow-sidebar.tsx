@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  ChevronLeft,
+  ChevronsUpDown,
+  Languages,
+  LayoutGrid,
+  List,
+  LogOut,
+  Settings,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -23,22 +36,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/constants/routes";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
 import { useAppStore } from "@/lib/store";
-import { hydratedResources } from "@/hooks/use-resource-hydration";
-import {
-  ChevronLeft,
-  ChevronsUpDown,
-  Languages,
-  LayoutGrid,
-  LogOut,
-  Settings,
-  User,
-  List,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import * as React from "react";
 
 /**
  * Sidebar for the /workflows section.
@@ -169,7 +169,7 @@ export function WorkflowSidebar({
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.PROFILE.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
@@ -178,7 +178,7 @@ export function WorkflowSidebar({
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.SETTINGS.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
@@ -194,7 +194,7 @@ export function WorkflowSidebar({
                     hydratedResources.clear();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
-                  className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+                  className="cursor-pointer focus:bg-destructive focus:text-destructive-foreground"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

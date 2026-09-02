@@ -1,5 +1,6 @@
 "use client";
 
+import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 import {
   FormControl,
   FormDescription,
@@ -9,9 +10,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import type { UseFormReturn, FieldValues, Path } from "react-hook-form";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Props for ServerFormFields component.
@@ -112,7 +112,7 @@ export function ServerFormFields<T extends FieldValues>({
         )}
       />
 
-      <div className="pt-4 border-t mt-6">
+      <div className="mt-6 border-t pt-4">
         <FormField
           control={form.control}
           name={"isPublic" as Path<T>}

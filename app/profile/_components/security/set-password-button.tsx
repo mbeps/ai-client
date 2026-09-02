@@ -1,9 +1,9 @@
 "use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
 import { Mail } from "lucide-react";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 
 /**
  * Action button that initiates password setup via email reset link for users without existing password.

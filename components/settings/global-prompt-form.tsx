@@ -1,12 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  userSettingsSchema,
-  type UserSettingsFormData as UserSettings,
-} from "@/schemas/user/user-settings";
-import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
+import { Save } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { ActionButton } from "@/components/ui/action-button";
 import {
   Form,
   FormControl,
@@ -16,9 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ActionButton } from "@/components/ui/action-button";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Save } from "lucide-react";
+import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
+import {
+  type UserSettingsFormData as UserSettings,
+  userSettingsSchema,
+} from "@/schemas/user/user-settings";
 
 interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;

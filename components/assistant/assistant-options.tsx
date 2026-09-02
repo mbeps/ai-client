@@ -1,15 +1,15 @@
 "use client";
 
-import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import type { Assistant } from "@/types/assistant/assistant";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { Edit2, MessageSquare, Settings2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
+import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { useAppStore } from "@/lib/store";
+import type { Assistant } from "@/types/assistant/assistant";
 
 /**
  * Dropdown/Drawer menu with New Chat, Manage, Rename, and Delete options for assistants.

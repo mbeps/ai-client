@@ -80,16 +80,16 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { requireSession } from "@/lib/auth/require-session";
 import { createChat } from "@/lib/actions/chats/create-chat";
-import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
-import { renameChat } from "@/lib/actions/chats/rename-chat";
-import { moveChat } from "@/lib/actions/chats/move-chat";
 import { getChat } from "@/lib/actions/chats/get-chat";
+import { listChats } from "@/lib/actions/chats/list-chats";
+import { moveChat } from "@/lib/actions/chats/move-chat";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { updateCurrentLeaf } from "@/lib/actions/chats/update-current-leaf";
+import { renameChat } from "@/lib/actions/chats/rename-chat";
 import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
+import { updateCurrentLeaf } from "@/lib/actions/chats/update-current-leaf";
+import { requireSession } from "@/lib/auth/require-session";
 
 const CHAT_ROW = {
   id: "chat-1",

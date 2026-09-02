@@ -33,8 +33,8 @@ vi.mock("@/lib/storage/upload-object", () => ({
   uploadObject: uploadObjectMock,
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { sql } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 
 describe("persistTransformArtifact (T2.5/T2.6)", () => {

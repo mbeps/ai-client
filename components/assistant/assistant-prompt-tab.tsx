@@ -1,8 +1,8 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/constants/prompts";
 
 export interface AssistantPromptTabProps {
@@ -26,8 +26,8 @@ export function AssistantPromptTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">System Prompt</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">System Prompt</h3>
+        <p className="text-muted-foreground text-sm">
           Customize the persona and capabilities of this assistant.
         </p>
       </div>

@@ -1,12 +1,12 @@
 "use client";
 
 import { Edit2, Trash2 } from "lucide-react";
-import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
-import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { useEntityOptions } from "@/hooks/use-entity-options";
 import { ROUTES } from "@/constants/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
+import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
+import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**
  * Dropdown/Drawer menu with Rename and Delete options for knowledgebases.

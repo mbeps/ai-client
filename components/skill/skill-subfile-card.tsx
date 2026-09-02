@@ -1,17 +1,17 @@
 "use client";
 
+import { FileCode, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import {
   Accordion,
+  AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { FileCode, Trash2, Save, X, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface SkillSubfileCardProps {
@@ -95,26 +95,26 @@ export function SkillSubfileCard({
     >
       <AccordionItem
         value="subfile"
-        className="rounded-lg border bg-card text-card-foreground shadow-2xs overflow-hidden px-4"
+        className="overflow-hidden rounded-lg border bg-card px-4 text-card-foreground shadow-2xs"
       >
         {/* Full-width Accordion Header Trigger */}
-        <AccordionTrigger className="hover:no-underline py-4 text-left cursor-pointer">
-          <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-            <FileCode className="h-4 w-4 text-primary shrink-0" />
-            <span className="font-mono text-sm font-semibold truncate">
+        <AccordionTrigger className="cursor-pointer py-4 text-left hover:no-underline">
+          <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
+            <FileCode className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate font-mono font-semibold text-sm">
               {filePath.trim() || file.path || "untitled.md"}
             </span>
           </div>
         </AccordionTrigger>
 
         {/* Subfile Editing Content */}
-        <AccordionContent className="pb-4 pt-1 space-y-4">
+        <AccordionContent className="space-y-4 pt-1 pb-4">
           <div className="flex items-center justify-between gap-2 pt-1 pb-1">
             <Button
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 gap-1.5"
+              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete Subfile
@@ -158,21 +158,21 @@ export function SkillSubfileCard({
 
           {/* File Path Input */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="font-medium text-muted-foreground text-xs">
               File Path
             </label>
             <Input
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
               placeholder="references/guide.md"
-              className="font-mono text-sm h-9 max-w-md"
+              className="h-9 max-w-md font-mono text-sm"
               autoFocus={!file.path}
             />
           </div>
 
           {/* Markdown Content Editor */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="font-medium text-muted-foreground text-xs">
               Content
             </label>
             <MarkdownTabEditor

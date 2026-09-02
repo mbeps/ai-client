@@ -1,7 +1,7 @@
 import { and, eq, type SQL } from "drizzle-orm";
+import { ProviderNotConfiguredError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { ProviderNotConfiguredError } from "@/constants/errors";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { buildResolvedProvider } from "./build-resolved-provider";

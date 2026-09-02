@@ -1,7 +1,7 @@
 "use client";
 
-import { SettingsSidebar } from "@/components/sidebar/settings-sidebar";
 import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
+import { SettingsSidebar } from "@/components/sidebar/settings-sidebar";
 
 /**
  * Authentication-guarded layout for all app settings routes.
@@ -24,7 +24,7 @@ export default function SettingsLayout({
       sidebar={<SettingsSidebar />}
       contentClassName="overflow-y-auto"
     >
-      <div className="max-w-7xl mx-auto w-full p-4 md:p-8">{children}</div>
+      <div className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</div>
     </AuthenticatedLayout>
   );
 }

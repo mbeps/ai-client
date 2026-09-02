@@ -17,7 +17,7 @@ export interface HtmlViewProps {
 export default function HtmlView({ content }: HtmlViewProps) {
   if (!content) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center text-muted-foreground gap-2">
+      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
         <AlertCircle className="h-8 w-8" />
         <p>No HTML content to display.</p>
       </div>
@@ -25,10 +25,10 @@ export default function HtmlView({ content }: HtmlViewProps) {
   }
 
   return (
-    <div className="flex h-full w-full bg-white relative">
+    <div className="relative flex h-full w-full bg-white">
       <iframe
         srcDoc={content}
-        className="w-full h-full border-none"
+        className="h-full w-full border-none"
         sandbox="allow-scripts allow-forms allow-popups"
         title="HTML Preview"
       />

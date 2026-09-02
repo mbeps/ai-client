@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "@/lib/store";
 
@@ -73,11 +73,15 @@ export function useResourceHydration(resources: HydratableResource[]) {
     if (toLoad.length === 0) return;
 
     // Mark as attempted to prevent duplicate calls in StrictMode
-    toLoad.forEach((res) => hydrationAttempted.current.add(res));
+    toLoad.forEach((res) => {
+      hydrationAttempted.current.add(res);
+    });
 
     setLoadingResources((prev) => {
       const next = new Set(prev);
-      toLoad.forEach((r) => next.add(r));
+      toLoad.forEach((r) => {
+        next.add(r);
+      });
       return next;
     });
 

@@ -1,15 +1,15 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { knowledgebase, kbDocument } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
-import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
-import { logger } from "@/lib/logger";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/drizzle/db";
+import { kbDocument, knowledgebase } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { logger } from "@/lib/logger";
+import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 /**
  * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.

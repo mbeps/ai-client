@@ -1,12 +1,22 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { CircleSlash, Edit2, Loader2, Play, Plus, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2, Play, CircleSlash, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ModelFormDialog } from "@/components/settings/providers/model-form-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -15,31 +25,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { deleteModel } from "@/lib/actions/models/delete-model";
 import { updateModels } from "@/lib/actions/models/update-model";
-import { ModelFormDialog } from "@/components/settings/providers/model-form-dialog";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -283,7 +277,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
       {/* Actions Row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {filteredModels.length}{" "}
             {filteredModels.length === 1 ? "model" : "models"} found
             {selectedIds.size > 0 && ` (${selectedIds.size} selected)`}
@@ -323,7 +317,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                className="h-7 px-2 text-destructive text-xs hover:bg-destructive/10"
                 disabled={busyModelId === "bulk"}
                 onClick={() => void handleBulkAction("delete")}
               >
@@ -396,7 +390,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                     <TableCell>
                       <div className="space-y-0.5">
                         <div className="font-medium">{model.label}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           {model.modelId}
                         </div>
                       </div>
@@ -425,7 +419,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                           !model.capVision &&
                           !model.capReasoning &&
                           !model.capStructuredOutput && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               none
                             </span>
                           )}
@@ -448,7 +442,9 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                         disabled={isBusy}
                         onCheckedChange={(checked) =>
                           void runModelAction(model.id, async () => {
-                            await updateModels(model.id, { isEnabled: checked });
+                            await updateModels(model.id, {
+                              isEnabled: checked,
+                            });
                           })
                         }
                       />
@@ -495,7 +491,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                 <TableRow>
                   <TableCell
                     colSpan={8}
-                    className="py-8 text-center text-sm text-muted-foreground"
+                    className="py-8 text-center text-muted-foreground text-sm"
                   >
                     No models found.
                   </TableCell>

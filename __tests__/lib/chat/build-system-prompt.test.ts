@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 
 describe("buildSystemPrompt (T4A.5 — plain string)", () => {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { contentField, nameField, idField } from "../shared-fields";
+import { contentField, idField, nameField } from "../shared-fields";
 
 /**
  * Validates new slash-command prompt creation with title, content, and alphanumeric shortcut.

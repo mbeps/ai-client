@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useResourceHydration,
   hydratedResources,
+  useResourceHydration,
 } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
 
@@ -100,7 +100,7 @@ beforeEach(() => {
 describe("useResourceHydration", () => {
   it("T5.6/T5.7: calls loadProjects when projects is empty", async () => {
     vi.mocked(listProjects).mockResolvedValueOnce([]);
-    const { result } = renderHook(() => useResourceHydration(["projects"]));
+    renderHook(() => useResourceHydration(["projects"]));
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));

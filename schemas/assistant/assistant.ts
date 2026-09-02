@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
-  nameField,
-  descriptionField,
   contentField,
+  descriptionField,
+  nameField,
   renameSchema,
 } from "../shared-fields";
 

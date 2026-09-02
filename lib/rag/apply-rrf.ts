@@ -1,6 +1,6 @@
 import { CHUNK_CONSTANTS } from "@/constants/chunk";
-import { type ChunkResult } from "@/types/rag/chunk-result";
-import { type RawChunkRow } from "@/types/rag/raw-chunk-row";
+import type { ChunkResult } from "@/types/rag/chunk-result";
+import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
 
 /**
  * Combines vector and full-text search results using Reciprocal Rank Fusion.

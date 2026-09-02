@@ -46,10 +46,10 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_SPREADSHEET_SIZE_BYTES } from "@/constants/attachments";
 import { uploadRunInput } from "@/lib/actions/transform-runs/upload-run-input";
 import { uploadObject } from "@/lib/storage/upload-object";
-import { MAX_SPREADSHEET_SIZE_BYTES } from "@/constants/attachments";
 
 function makeFile(name: string, type: string, sizeBytes: number): File {
   const content = new Uint8Array(sizeBytes);
@@ -71,7 +71,7 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
     });
   });
 
-  it("consults the rate limiter with upload:${userId} key", async () => {
+  it("consults the rate limiter with upload:userId key", async () => {
     const fd = makeFormData([
       makeFile(
         "data.xlsx",

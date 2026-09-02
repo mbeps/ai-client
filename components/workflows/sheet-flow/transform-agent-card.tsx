@@ -1,18 +1,18 @@
 "use client";
 
-import { ROUTES } from "@/constants/routes";
-import { Button } from "@/components/ui/button";
-import { Settings2, PlayCircle } from "lucide-react";
+import { PlayCircle, Settings2 } from "lucide-react";
 import Link from "next/link";
+import { EntityCard } from "@/components/shared/entity-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ROUTES } from "@/constants/routes";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import { TransformAgentOptions } from "./transform-agent-options";
-import { EntityCard } from "@/components/shared/entity-card";
 
 /**
  * Props for TransformAgentCard component.
@@ -41,10 +41,10 @@ export function TransformAgentCard({ agent }: TransformAgentCardProps) {
       icon={<Settings2 className="h-4 w-4 text-primary" />}
       title={
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold truncate">{agent.name}</h3>
+          <h3 className="truncate font-semibold text-base">{agent.name}</h3>
           <Badge
             variant="secondary"
-            className="h-5 px-1.5 text-[10px] font-medium"
+            className="h-5 px-1.5 font-medium text-[10px]"
           >
             {agent.steps.length} {agent.steps.length === 1 ? "step" : "steps"}
           </Badge>

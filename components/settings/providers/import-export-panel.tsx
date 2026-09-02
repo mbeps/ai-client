@@ -1,12 +1,12 @@
 "use client";
 
+import { Download, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Upload, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { exportProviderRegistry } from "@/lib/actions/providers/export-registry";
 import { importProviderRegistry } from "@/lib/actions/providers/import-registry";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ImportExportPanelProps = {
@@ -106,8 +106,8 @@ export function ImportExportPanel({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-base font-semibold">Import / Export</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-base">Import / Export</h3>
+        <p className="text-muted-foreground text-sm">
           Export provider registry snapshots or import model/provider
           definitions.
         </p>
@@ -147,7 +147,7 @@ export function ImportExportPanel({
 
         {providers.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="font-medium text-muted-foreground text-xs">
               Per-provider export
             </p>
             <div className="flex flex-wrap gap-2">

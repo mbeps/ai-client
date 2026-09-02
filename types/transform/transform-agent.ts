@@ -1,4 +1,4 @@
-import { type TransformStep } from "./transform-step";
+import type { TransformStep } from "./transform-step";
 
 /**
  * Normalized store representation of a Transform Agent pipeline.

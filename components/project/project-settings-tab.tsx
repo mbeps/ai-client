@@ -1,9 +1,9 @@
 "use client";
 
+import { Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
 
 export interface ProjectSettingsTabProps {
   name: string;
@@ -30,14 +30,14 @@ export function ProjectSettingsTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Project Details</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Project Details</h3>
+        <p className="text-muted-foreground text-sm">
           Manage the project name and description.
         </p>
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Project Name</label>
+          <label className="font-medium text-sm">Project Name</label>
           <Input
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
@@ -45,7 +45,7 @@ export function ProjectSettingsTab({
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
+          <label className="font-medium text-sm">Description</label>
           <Textarea
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}

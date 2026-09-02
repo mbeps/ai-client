@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  nameField,
-  descriptionField,
-  idField,
-} from "../shared-fields";
+import { descriptionField, idField, nameField } from "../shared-fields";
 
 /**
  * Validates new knowledgebase creation with name and optional description.

@@ -1,5 +1,8 @@
 "use client";
 
+import { Loader2, Shield, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,9 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, Shield } from "lucide-react";
-import { ReactNode } from "react";
 
 export interface DangerZoneCardProps {
   /** Title for the danger zone section. Defaults to "Danger Zone" */
@@ -46,14 +46,14 @@ export function DangerZoneCard({
   return (
     <Card className="border-destructive/50 shadow-none">
       <CardHeader>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="mb-1 flex items-center gap-2">
           <Shield className="h-5 w-5 text-destructive" />
           <CardTitle className="text-destructive">{title}</CardTitle>
         </div>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-sm text-muted-foreground">{consequences}</div>
+        <div className="text-muted-foreground text-sm">{consequences}</div>
         <Button
           variant="destructive"
           onClick={onDelete}

@@ -1,7 +1,7 @@
 "use client";
 
+import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import Image from "next/image";
-import { Download, FileText, FileSpreadsheet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -56,13 +56,13 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
   if (!attachments || attachments.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 mb-2">
+    <div className="mb-2 flex flex-wrap gap-2">
       {attachments.map((att) => {
         const displayUrl = att.url || att.dataUrl || resolvedUrls[att.id];
 
         if (att.type === "image") {
           return displayUrl ? (
-            <div key={att.id} className="relative group/att">
+            <div key={att.id} className="group/att relative">
               <Image
                 src={displayUrl}
                 alt={att.name}
@@ -71,14 +71,14 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
                 className="max-h-48 max-w-64 rounded-lg border object-cover"
                 unoptimized
               />
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white opacity-0 group-hover/att:opacity-100 transition-opacity">
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover/att:opacity-100">
                 {att.name}
               </span>
             </div>
           ) : (
             <div
               key={att.id}
-              className="h-48 w-64 rounded-lg border bg-muted/50 animate-pulse"
+              className="h-48 w-64 animate-pulse rounded-lg border bg-muted/50"
             />
           );
         }
@@ -90,18 +90,18 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
             href={displayUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs hover:bg-muted transition-colors"
+            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs transition-colors hover:bg-muted"
           >
-            <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <AttIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="max-w-[160px] truncate">{att.name}</span>
-            <Download className="h-3 w-3 text-muted-foreground shrink-0" />
+            <Download className="h-3 w-3 shrink-0 text-muted-foreground" />
           </a>
         ) : (
           <div
             key={att.id}
-            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs animate-pulse"
+            className="flex animate-pulse items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs"
           >
-            <AttIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <AttIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="max-w-[160px] truncate text-muted-foreground">
               {att.name}
             </span>

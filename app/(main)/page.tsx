@@ -1,18 +1,17 @@
 "use client";
 
+import { ArrowRight, Bot, Database, FolderOpen, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { useAppStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-
-import Link from "next/link";
-import { Bot, FolderOpen, Database, Sparkles, ArrowRight } from "lucide-react";
-import { authClient } from "@/lib/auth/auth-client";
+import { toast } from "sonner";
 import { ChatInput } from "@/components/chat/chat-input";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants/routes";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useUserModels } from "@/hooks/use-user-models";
-import { toast } from "sonner";
+import { authClient } from "@/lib/auth/auth-client";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -77,24 +76,24 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex flex-col items-center justify-between md:justify-center h-full px-4 py-6 md:py-12 overflow-y-auto">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="flex h-full flex-col items-center justify-between overflow-y-auto px-4 py-6 md:justify-center md:py-12">
         {/* Welcome heading and Quick Actions */}
-        <div className="flex flex-col items-center justify-center w-full flex-1 md:flex-initial">
-          <div className="text-center mb-8 md:mb-10 space-y-2">
-            <div className="flex items-center justify-center gap-2 mb-3">
+        <div className="flex w-full flex-1 flex-col items-center justify-center md:flex-initial">
+          <div className="mb-8 space-y-2 text-center md:mb-10">
+            <div className="mb-3 flex items-center justify-center gap-2">
               <Sparkles className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h1 className="font-bold text-3xl tracking-tight md:text-4xl">
               Hello, {session?.user?.name?.split(" ")[0] || "there"}
             </h1>
-            <p className="text-muted-foreground text-base md:text-lg">
+            <p className="text-base text-muted-foreground md:text-lg">
               How can I help you today?
             </p>
           </div>
 
           {/* Quick navigation */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8 w-full sm:w-auto justify-center">
+          <div className="mb-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
             {quickActions.map((action) => (
               <Link
                 key={action.href}
@@ -103,15 +102,15 @@ export default function HomePage() {
               >
                 <Button
                   variant="outline"
-                  className="gap-3 h-auto py-3 px-4 w-full sm:w-auto justify-between sm:justify-start"
+                  className="h-auto w-full justify-between gap-3 px-4 py-3 sm:w-auto sm:justify-start"
                 >
                   <div className="flex items-center gap-3">
                     <action.icon className="h-5 w-5 text-primary/80" />
                     <div className="text-left">
-                      <div className="text-sm font-semibold">
+                      <div className="font-semibold text-sm">
                         {action.label}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {action.description}
                       </div>
                     </div>
@@ -124,7 +123,7 @@ export default function HomePage() {
         </div>
 
         {/* Chat input */}
-        <div className="w-full max-w-3xl mt-auto md:mt-0 pb-2 md:pb-0">
+        <div className="mt-auto w-full max-w-3xl pb-2 md:mt-0 md:pb-0">
           <ChatInput onSend={handleStart} servers={enabledServers} />
         </div>
       </div>

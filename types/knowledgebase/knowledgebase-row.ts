@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { knowledgebase } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a knowledge base from the Drizzle schema.

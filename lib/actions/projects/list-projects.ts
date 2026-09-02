@@ -1,9 +1,8 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { desc } from "drizzle-orm";
 import { project } from "@/drizzle/schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
-import { desc } from "drizzle-orm";
 import type { ProjectRow } from "@/types/project/project-row";
 
 /**

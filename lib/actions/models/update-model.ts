@@ -6,8 +6,8 @@ import { aiModel } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import {
-  updateModelSchema,
   type UpdateModelInput,
+  updateModelSchema,
 } from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 

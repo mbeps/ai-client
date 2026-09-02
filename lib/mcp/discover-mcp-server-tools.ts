@@ -1,14 +1,14 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { eq, and, or } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import { discoverToolsAndResources } from "./discover-tools-and-resources";
 import { mcpServerRowToConfig } from "./mappers";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 
 /**
  * Discovers available tools, resources, and prompts exposed by an MCP server.

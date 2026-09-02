@@ -1,9 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
  * Adds a public MCP server to the current user's personal server list.

@@ -1,17 +1,17 @@
 "use server";
 
-import { z } from "zod";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import {
+  ProviderNotConfiguredError,
+  RagExtractionEmptyError,
+  RateLimitError,
+} from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { ingestDocument } from "@/lib/rag/ingest";
-import {
-  RagExtractionEmptyError,
-  ProviderNotConfiguredError,
-  RateLimitError,
-} from "@/constants/errors";
 
 const ingestKbDocumentSchema = z.object({
   documentId: z.string().uuid("Invalid document ID format"),

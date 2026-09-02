@@ -1,12 +1,11 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
-import type { ChatRow } from "@/types/chat/chat-row";
-import { createChatSchema } from "@/schemas/chat/chat";
-import { z } from "zod";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
+import { createChatSchema } from "@/schemas/chat/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
  * Creates a new chat session for the authenticated user.

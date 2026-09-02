@@ -296,4 +296,4 @@ npm start
 - [**Postmark**](https://postmark.com) — Transactional email service for reliable delivery
 - [**Node PostgreSQL**](https://node-postgres.com) — Node.js PostgreSQL client library
 - [**Turbopack**](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
-- [**ESLint**](https://eslint.org) — JavaScript linter for code quality and consistency
+- [**Biome**](https://biomejs.dev) — Fast formatter and linter for JavaScript, TypeScript, and JSX

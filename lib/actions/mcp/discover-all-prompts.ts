@@ -1,13 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { eq, and, or } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
+import { logger } from "@/lib/logger";
 import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
 import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import { logger } from "@/lib/logger";
 
 /**
  * Discovers prompts from all enabled MCP servers (user-owned or public) in parallel.
@@ -45,7 +45,9 @@ export async function discoverAllPrompts(): Promise<DiscoveredPrompt[]> {
   });
 
   const results = await Promise.all(discoveryPromises);
-  results.forEach((prompts) => allPrompts.push(...prompts));
+  results.forEach((prompts) => {
+    allPrompts.push(...prompts);
+  });
 
   return allPrompts;
 }

@@ -29,7 +29,7 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadChatContext } from "@/lib/chat/load-chat-context";
 
 beforeEach(() => {

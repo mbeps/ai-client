@@ -1,7 +1,7 @@
-import { createMCPClient } from "@ai-sdk/mcp";
-import { isBlockedUrl } from "./url-guard/is-blocked-url";
+import type { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import { isBlockedUrl } from "./url-guard/is-blocked-url";
 
 type MCPTransport = Parameters<typeof createMCPClient>[0]["transport"];
 

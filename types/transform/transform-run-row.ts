@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { transformRun } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { transformRun } from "@/drizzle/schema";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a transform run execution from the Drizzle schema.

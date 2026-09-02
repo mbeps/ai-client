@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
 
 // ─── Safety-net mocks (same pattern as chat-slice.test.ts) ─────────────────
@@ -120,8 +120,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(1);
     expect(atts[0].extractedText).toBe("Extracted PDF content here");
   });
@@ -137,8 +136,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(1);
     expect(atts[0].extractedText).toBeUndefined();
   });
@@ -159,8 +157,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(2);
     expect(atts[0].extractedText).toBe("First doc content");
     expect(atts[1].extractedText).toBe("Second doc content");
@@ -187,7 +184,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const msgs = useAppStore.getState().chats["c1"].messages;
+    const msgs = useAppStore.getState().chats.c1.messages;
     expect(msgs["msg-1"].attachments[0].extractedText).toBe("User doc text");
     expect(msgs["msg-2"].attachments[0].extractedText).toBe(
       "Assistant doc text",
@@ -212,7 +209,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
     );
 
     const att =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments[0];
+      useAppStore.getState().chats.c1.messages["msg-1"].attachments[0];
     expect(att.id).toBe("att-1");
     expect(att.name).toBe("report.pdf");
     expect(att.mimeType).toBe("application/pdf");

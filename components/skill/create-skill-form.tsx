@@ -1,7 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -13,12 +16,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { Switch } from "@/components/ui/switch";
 import { createSkillSchema } from "@/schemas/skill/skill";
-import { Plus, X } from "lucide-react";
-import { z } from "zod";
 
 const createSkillFormSchema = createSkillSchema.pick({
   name: true,
@@ -70,8 +70,8 @@ export function CreateSkillForm({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Skill Details</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Skill Details</h3>
+        <p className="text-muted-foreground text-sm">
           Define the skill identifier, description for progressive disclosure
           routing, and instructions.
         </p>
@@ -79,7 +79,7 @@ export function CreateSkillForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
               name="displayName"
@@ -102,7 +102,7 @@ export function CreateSkillForm({
                   <FormLabel>Skill Slug</FormLabel>
                   <FormControl>
                     <div className="flex items-center">
-                      <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted font-mono text-muted-foreground">
                         /
                       </div>
                       <Input

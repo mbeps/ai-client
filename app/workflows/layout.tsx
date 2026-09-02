@@ -1,7 +1,7 @@
 "use client";
 
-import { WorkflowSidebar } from "@/components/sidebar/workflow-sidebar";
 import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
+import { WorkflowSidebar } from "@/components/sidebar/workflow-sidebar";
 
 /**
  * Authentication-guarded layout for all workflow routes.
@@ -20,7 +20,7 @@ export default function WorkflowsLayout({
       sidebar={<WorkflowSidebar />}
       contentClassName="overflow-y-auto"
     >
-      <div className="max-w-7xl mx-auto w-full p-4 md:p-6">{children}</div>
+      <div className="mx-auto w-full max-w-7xl p-4 md:p-6">{children}</div>
     </AuthenticatedLayout>
   );
 }

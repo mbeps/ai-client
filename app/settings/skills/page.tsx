@@ -1,12 +1,12 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
 import { BrainCircuit, Plus, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { SkillCard } from "@/components/skill/skill-card";
-import { ResourceListPage } from "@/components/shared/resource-list-page";
-import { ROUTES } from "@/constants/routes";
 import Link from "next/link";
+import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { SkillCard } from "@/components/skill/skill-card";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Agent Skills listing page.
@@ -29,14 +29,14 @@ export default function SkillsPage() {
       searchPlaceholder="Search skills by name, slug, description..."
       onMount={loadSkills}
       action={
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button variant="outline" asChild className="w-full md:w-auto gap-2">
+        <div className="flex w-full items-center gap-2 md:w-auto">
+          <Button variant="outline" asChild className="w-full gap-2 md:w-auto">
             <Link href={`${ROUTES.SETTINGS.SKILLS.new}?tab=upload`}>
               <Upload className="h-4 w-4" />
               Upload Skill
             </Link>
           </Button>
-          <Button asChild className="w-full md:w-auto gap-2">
+          <Button asChild className="w-full gap-2 md:w-auto">
             <Link href={`${ROUTES.SETTINGS.SKILLS.new}?tab=create`}>
               <Plus className="h-4 w-4" />
               New Skill

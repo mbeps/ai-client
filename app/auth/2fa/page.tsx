@@ -1,12 +1,12 @@
+import { LifeBuoy, Smartphone } from "lucide-react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth/auth";
 import { ROUTES } from "@/constants/routes";
-import { TotpForm } from "./_components/totp-form";
+import { auth } from "@/lib/auth/auth";
 import { BackupCodeTab } from "./_components/backup-code-tab";
-import { LifeBuoy, Smartphone } from "lucide-react";
+import { TotpForm } from "./_components/totp-form";
 
 const TAB_VALUES = {
   TOTP: "totp",
@@ -29,15 +29,15 @@ export default async function TwoFactorPage() {
 
   return (
     <div className="my-6 px-4">
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="mx-auto w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
+          <CardTitle className="font-bold text-2xl">
             Two-Factor Authentication
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={TAB_VALUES.TOTP}>
-            <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsList className="mb-8 grid w-full grid-cols-2">
               <TabsTrigger
                 value={TAB_VALUES.TOTP}
                 className="flex items-center"

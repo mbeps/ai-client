@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import type { TransformStep } from "@/types/transform/transform-step";
 
@@ -26,7 +26,7 @@ export function TransformStepsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Steps</h3>
+        <h3 className="font-semibold text-lg">Steps</h3>
         <Button size="sm" variant="outline" onClick={onAddStep}>
           <Plus className="mr-2 h-4 w-4" /> Add Step
         </Button>

@@ -17,9 +17,9 @@ interface NotFoundMessageProps {
  */
 export function NotFoundMessage({ entity }: NotFoundMessageProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed rounded-lg bg-muted/20">
-      <FileQuestion className="h-10 w-10 mb-4 opacity-20" />
-      <p className="text-lg font-medium">{entity} not found</p>
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 py-12 text-muted-foreground">
+      <FileQuestion className="mb-4 h-10 w-10 opacity-20" />
+      <p className="font-medium text-lg">{entity} not found</p>
     </div>
   );
 }

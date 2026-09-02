@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 
 describe("sanitiseFilename", () => {
@@ -23,7 +23,7 @@ describe("sanitiseFilename", () => {
   });
 
   it("truncates names exceeding 200 characters", () => {
-    const longName = "a".repeat(210) + ".xlsx";
+    const longName = `${"a".repeat(210)}.xlsx`;
     expect(sanitiseFilename(longName).length).toBeLessThanOrEqual(200);
   });
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 // ─── Hoisted mock variables (must run before vi.mock factories) ────────────

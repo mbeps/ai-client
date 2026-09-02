@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("CSP headers in next.config.ts", () => {
   let configContent: string;

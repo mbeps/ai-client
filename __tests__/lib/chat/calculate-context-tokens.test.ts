@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
-import {
-  estimateTokens,
-  estimateAttachmentTokens,
-  formatTokens,
-  calculateContextUsage,
-} from "@/lib/chat/calculate-context-tokens";
-import type { Message } from "@/types/message/message";
-import type { Attachment } from "@/types/attachment/attachment";
+import { describe, expect, it } from "vitest";
 import type { UserModelOption } from "@/hooks/use-user-models";
+import {
+  calculateContextUsage,
+  estimateAttachmentTokens,
+  estimateTokens,
+  formatTokens,
+} from "@/lib/chat/calculate-context-tokens";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { Message } from "@/types/message/message";
 
 describe("calculate-context-tokens utility", () => {
   describe("estimateTokens", () => {
@@ -134,10 +134,18 @@ describe("calculate-context-tokens utility", () => {
           metadata: JSON.stringify({
             reasoning: "Let's formulate a nice story beginning",
             toolCalls: [
-              { toolCallId: "tc-1", toolName: "search", args: { query: "story themes" } },
+              {
+                toolCallId: "tc-1",
+                toolName: "search",
+                args: { query: "story themes" },
+              },
             ],
             toolResults: [
-              { toolCallId: "tc-1", toolName: "search", result: "Relevant story themes" },
+              {
+                toolCallId: "tc-1",
+                toolName: "search",
+                result: "Relevant story themes",
+              },
             ],
           }),
         },

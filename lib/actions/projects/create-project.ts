@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { project } from "@/drizzle/schema";
-import { createProjectSchema } from "@/schemas/project/project";
 import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import { createProjectSchema } from "@/schemas/project/project";
 import type { ProjectRow } from "@/types/project/project-row";
-import { z } from "zod";
 
 /**
  * Creates a new project for the authenticated user.

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import {
   PromptPicker,
   PromptPickerDialog,
 } from "@/components/chat/prompt-picker";
-import type { Prompt } from "@/types/prompt/prompt";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { Prompt } from "@/types/prompt/prompt";
 
 // Mock env
 vi.mock("@/lib/env", () => ({

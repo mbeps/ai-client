@@ -1,13 +1,13 @@
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
-  toUIMessageStream,
   type StreamTextResult,
+  toUIMessageStream,
 } from "ai";
-import { logger } from "@/lib/logger";
+import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
+import { logger } from "@/lib/logger";
 
 /**
  * Mutable holder the route's `streamText({ onFinish })` callback populates with

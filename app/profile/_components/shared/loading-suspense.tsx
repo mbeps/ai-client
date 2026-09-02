@@ -1,5 +1,5 @@
 import { Loader2Icon } from "lucide-react";
-import { ReactNode, Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 
 /**
  * Suspense boundary with a centered spinner fallback for async profile tab content.

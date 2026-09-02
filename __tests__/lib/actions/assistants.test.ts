@@ -76,12 +76,12 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { requireSession } from "@/lib/auth/require-session";
 import { createAssistant } from "@/lib/actions/assistants/create-assistant";
-import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
+import { listAssistants } from "@/lib/actions/assistants/list-assistants";
 import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { updateAssistant } from "@/lib/actions/assistants/update-assistant";
+import { requireSession } from "@/lib/auth/require-session";
 
 const ASSISTANT_ROW = {
   id: "asst-1",

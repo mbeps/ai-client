@@ -1,7 +1,7 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Label } from "@/components/ui/label";
 
 export interface TransformContextTabProps {
   globalContext: string;
@@ -20,14 +20,14 @@ export function TransformContextTab({
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Global Context</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Global Context</h3>
+        <p className="text-muted-foreground text-sm">
           Provide background information that applies to all steps in this
           transformation.
         </p>
       </div>
 
-      <div className="space-y-4 max-w-2xl">
+      <div className="max-w-2xl space-y-4">
         <div className="space-y-2">
           <Label htmlFor="globalContext">Background Context</Label>
           <MarkdownTabEditor

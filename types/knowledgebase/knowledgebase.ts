@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { knowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
+import type { z } from "zod";
+import type { knowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 
 /**
  * A named document collection providing AI context for projects and assistants.

@@ -1,7 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Mail } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,15 +14,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
-import { toast } from "sonner";
-import { ArrowLeft, Mail } from "lucide-react";
+import { authClient } from "@/lib/auth/auth-client";
 import {
+  type ForgotPasswordForm,
   forgotPasswordSchema,
-  ForgotPasswordForm,
 } from "@/schemas/auth/forgot-password";
 
 /**

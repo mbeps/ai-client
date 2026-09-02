@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { prompt } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { prompt } from "@/drizzle/schema";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a reusable prompt snippet from the Drizzle schema.

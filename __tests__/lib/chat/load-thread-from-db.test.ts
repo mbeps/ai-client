@@ -36,9 +36,9 @@ vi.mock("@/lib/storage/get-presigned-url", () => ({
   getPresignedUrl: mockGetPresignedUrl,
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
+import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -1,7 +1,7 @@
-import { logger } from "@/lib/logger";
-import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
-import type { Attachment } from "@/types/attachment/attachment";
 import { toast } from "sonner";
+import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
+import { logger } from "@/lib/logger";
+import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Uploads a single attachment by building the FormData and calling the server action.

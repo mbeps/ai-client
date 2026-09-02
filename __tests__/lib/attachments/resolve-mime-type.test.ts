@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 
 const enc = new TextEncoder();

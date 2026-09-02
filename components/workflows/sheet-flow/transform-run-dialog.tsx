@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2, Play, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Play, Loader2, X } from "lucide-react";
 
 export interface TransformRunDialogProps {
   open: boolean;
@@ -69,10 +69,10 @@ export function TransformRunDialog({
                 onChange={(e) =>
                   onRunFilesChange(Array.from(e.target.files ?? []))
                 }
-                className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:cursor-pointer"
+                className="block w-full text-muted-foreground text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-primary-foreground file:text-sm hover:file:cursor-pointer"
               />
               {runFiles.length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {runFiles.length} file
                   {runFiles.length !== 1 ? "s" : ""} selected
                 </p>
@@ -82,7 +82,7 @@ export function TransformRunDialog({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Dry Run Mode</Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Execute without saving output files.
               </p>
             </div>

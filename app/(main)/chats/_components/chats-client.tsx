@@ -1,9 +1,10 @@
 "use client";
 
+import { MessageSquare, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useAppStore } from "@/lib/store";
-import { MessageSquare, Plus } from "lucide-react";
+import { ChatCard } from "@/components/chat/chat-card";
+import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,9 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChatCard } from "@/components/chat/chat-card";
-import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
+import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
 
 interface ChatsClientProps {
@@ -37,7 +37,9 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
 
   // Sync initial server data into the store on mount
   useEffect(() => {
-    initialChats.forEach((chat) => upsertChat(chat));
+    initialChats.forEach((chat) => {
+      upsertChat(chat);
+    });
   }, [initialChats, upsertChat]);
 
   const allChats = Object.values(storeChats);
@@ -60,7 +62,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
       searchPlaceholder="Search chats..."
       action={
         <Button onClick={() => createNewChat()} className="w-full md:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           New Chat
         </Button>
       }

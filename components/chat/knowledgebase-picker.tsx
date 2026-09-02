@@ -1,10 +1,19 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertTriangle,
+  Check,
+  Database,
+  Loader2,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -12,20 +21,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
-import {
-  Database,
-  Search,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  Check,
-  X,
-} from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/utils";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 interface KnowledgebasePickerProps {
   knowledgebases: Knowledgebase[];
@@ -101,7 +101,7 @@ export function KnowledgebasePicker({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search knowledge bases..."
           value={search}
@@ -115,12 +115,12 @@ export function KnowledgebasePicker({
           {allowEmpty && mode === "single" && (
             <div
               className={cn(
-                "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
+                "group flex cursor-pointer items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
                 selectedIds.size === 0 && "border-primary bg-primary/5",
               )}
               onClick={clearSelection}
             >
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
                 <XCircle className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="font-medium text-sm">{emptyLabel}</div>
@@ -128,7 +128,7 @@ export function KnowledgebasePicker({
           )}
 
           {filteredKbs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
+            <div className="py-8 text-center text-muted-foreground text-sm">
               No knowledge bases found.
             </div>
           ) : (
@@ -140,9 +140,9 @@ export function KnowledgebasePicker({
                 <div
                   key={kb.id}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
+                    "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
                     selectedIds.has(kb.id) && "border-primary bg-primary/5",
-                    !isReady && "opacity-60 cursor-not-allowed",
+                    !isReady && "cursor-not-allowed opacity-60",
                   )}
                   onClick={() => isReady && handleToggle(kb.id)}
                 >
@@ -154,15 +154,15 @@ export function KnowledgebasePicker({
                       disabled={!isReady}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 flex gap-3">
+                  <div className="flex min-w-0 flex-1 gap-3">
                     {showIcons && (
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                         <Database className="h-4 w-4 text-primary" />
                       </div>
                     )}
-                    <div className="space-y-1 min-w-0">
+                    <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-sm leading-none truncate">
+                        <div className="truncate font-medium text-sm leading-none">
                           {kb.name}
                         </div>
                         {!isReady && (
@@ -170,7 +170,7 @@ export function KnowledgebasePicker({
                             variant={isIndexing ? "outline" : "warning"}
                             className={cn(
                               "h-3.5 px-1 text-[7px] uppercase",
-                              isIndexing && "text-blue-500 border-blue-200",
+                              isIndexing && "border-blue-200 text-blue-500",
                             )}
                           >
                             {isIndexing ? (
@@ -183,7 +183,7 @@ export function KnowledgebasePicker({
                         )}
                       </div>
                       {kb.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                        <p className="line-clamp-1 text-muted-foreground text-xs">
                           {kb.description}
                         </p>
                       )}
@@ -227,14 +227,14 @@ export function KnowledgebasePickerDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b">
+      <DialogContent className="flex max-w-md flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 pt-4 pb-3">
           <DialogTitle>Select Knowledge Bases</DialogTitle>
         </DialogHeader>
 
         {knowledgebases.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            <Database className="h-8 w-8 mx-auto mb-3 opacity-40" />
+          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+            <Database className="mx-auto mb-3 h-8 w-8 opacity-40" />
             <p className="mb-2">No knowledge bases available.</p>
             <Link
               href={ROUTES.KNOWLEDGEBASES.path}
@@ -261,8 +261,8 @@ export function KnowledgebasePickerDialog({
               showIcons={false}
             />
 
-            <div className="px-4 py-3 border-t flex items-center justify-between bg-muted/20 shrink-0">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
+              <p className="text-muted-foreground text-xs">
                 <strong>{selectedKbs.size}</strong>{" "}
                 {selectedKbs.size === 1 ? "knowledge base" : "knowledge bases"}{" "}
                 selected

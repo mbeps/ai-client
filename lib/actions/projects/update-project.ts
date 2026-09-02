@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { project } from "@/drizzle/schema";
-import type { ProjectRow } from "@/types/project/project-row";
-import { updateProjectSchema } from "@/schemas/project/project";
 import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
-import { z } from "zod";
+import { updateProjectSchema } from "@/schemas/project/project";
+import type { ProjectRow } from "@/types/project/project-row";
 
 /**
  * Updates an existing project with partial field updates (name, description, globalPrompt, tools, knowledgebaseId).

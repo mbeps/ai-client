@@ -1,8 +1,8 @@
 "use client";
 
+import { AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Settings } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -30,15 +30,15 @@ export function ModelCapabilityBanner({
   if (!hasNoModels) return null;
 
   return (
-    <div className="flex items-center justify-between gap-3 p-3 bg-amber-500/5 border-b border-amber-500/10 rounded-t-xl mb-2 -mx-3 -mt-2">
-      <div className="flex items-center gap-2 text-sm text-amber-600 font-medium">
+    <div className="-mx-3 -mt-2 mb-2 flex items-center justify-between gap-3 rounded-t-xl border-amber-500/10 border-b bg-amber-500/5 p-3">
+      <div className="flex items-center gap-2 font-medium text-amber-600 text-sm">
         <AlertCircle className="h-4 w-4" />
         <span>All providers are disabled or no models found</span>
       </div>
       <Button
         variant="outline"
         size="sm"
-        className="h-8 text-xs border-amber-500/20 hover:bg-amber-500/10 text-amber-600 font-medium"
+        className="h-8 border-amber-500/20 font-medium text-amber-600 text-xs hover:bg-amber-500/10"
         asChild
       >
         <Link href={ROUTES.SETTINGS.PROVIDERS.path}>

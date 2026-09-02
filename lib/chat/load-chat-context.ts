@@ -1,13 +1,13 @@
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
-  chat,
-  project,
   assistant,
-  mcpServer,
+  chat,
   knowledgebase,
+  mcpServer,
+  project,
   skill,
 } from "@/drizzle/schema";
-import { eq, and, or } from "drizzle-orm";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
@@ -145,7 +145,8 @@ export async function loadChatContext(
 
       // KB readiness check (if applicable)
       (() => {
-        const activeKbId = selectedKbIds?.[0] ?? chatRow.knowledgebaseId ?? null;
+        const activeKbId =
+          selectedKbIds?.[0] ?? chatRow.knowledgebaseId ?? null;
         if (!activeKbId) return Promise.resolve(null);
         return db
           .select({ indexStatus: knowledgebase.indexStatus })
@@ -164,9 +165,9 @@ export async function loadChatContext(
       db
         .select()
         .from(skill)
-        .where(and(eq(skill.userId, userId), eq(skill.enabled, true))) as Promise<
-        SkillRow[]
-      >,
+        .where(
+          and(eq(skill.userId, userId), eq(skill.enabled, true)),
+        ) as Promise<SkillRow[]>,
     ]);
 
   // 3. Derive composite values

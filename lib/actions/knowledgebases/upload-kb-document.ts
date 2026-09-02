@@ -1,16 +1,16 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { knowledgebase, kbDocument } from "@/drizzle/schema";
 import { and, eq } from "drizzle-orm";
-import { uploadObject } from "@/lib/storage/upload-object";
-import { ensureBucket } from "@/lib/storage/ensure-bucket";
-import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+import { db } from "@/drizzle/db";
+import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
-import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { requireSession } from "@/lib/auth/require-session";
 import { env } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { ensureBucket } from "@/lib/storage/ensure-bucket";
+import { uploadObject } from "@/lib/storage/upload-object";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",

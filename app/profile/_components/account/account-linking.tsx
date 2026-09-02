@@ -1,17 +1,17 @@
 "use client";
 
+import { Plus, Shield, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { auth } from "@/lib/auth/auth";
-import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
+import type { auth } from "@/lib/auth/auth";
+import { authClient } from "@/lib/auth/auth-client";
 import {
   SUPPORTED_OAUTH_PROVIDER_DETAILS,
   SUPPORTED_OAUTH_PROVIDERS,
-  SupportedOAuthProvider,
+  type SupportedOAuthProvider,
 } from "@/lib/auth/o-auth-providers";
-import { Plus, Shield, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
 
@@ -29,7 +29,7 @@ export function AccountLinking({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">Linked Accounts</h3>
+        <h3 className="font-medium text-lg">Linked Accounts</h3>
 
         {currentAccounts.length === 0 ? (
           <Card>
@@ -51,7 +51,7 @@ export function AccountLinking({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">Link Other Accounts</h3>
+        <h3 className="font-medium text-lg">Link Other Accounts</h3>
         <div className="grid gap-3">
           {SUPPORTED_OAUTH_PROVIDERS.filter(
             (provider) =>
@@ -126,11 +126,11 @@ function AccountCard({
             <div>
               <p className="font-medium">{providerDetails.name}</p>
               {account == null ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Connect your {providerDetails.name} account for easier sign-in
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Linked on {new Date(account.createdAt).toLocaleDateString()}
                 </p>
               )}

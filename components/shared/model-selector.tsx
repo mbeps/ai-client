@@ -1,24 +1,24 @@
 "use client";
 
+import { BrainCircuit } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
-  ComboboxList,
-  ComboboxGroup,
   ComboboxLabel,
+  ComboboxList,
 } from "@/components/ui/combobox";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Badge } from "@/components/ui/badge";
-import { useUserModels, type UserModelOption } from "@/hooks/use-user-models";
-import { BrainCircuit } from "lucide-react";
+import { type UserModelOption, useUserModels } from "@/hooks/use-user-models";
 import { cn } from "@/lib/utils";
 
 /**
@@ -103,7 +103,7 @@ export function ModelSelector({
           placeholder="No models configured"
           showTrigger={showTrigger}
           className={cn(
-            "h-7 w-[200px] border-none bg-transparent shadow-none text-xs text-muted-foreground",
+            "h-7 w-[200px] border-none bg-transparent text-muted-foreground text-xs shadow-none",
             className,
           )}
           showClear={false}
@@ -128,7 +128,7 @@ export function ModelSelector({
         placeholder={selectedModel.label}
         showTrigger={showTrigger}
         className={cn(
-          "h-7 w-[200px] border-none bg-transparent shadow-none text-xs text-muted-foreground",
+          "h-7 w-[200px] border-none bg-transparent text-muted-foreground text-xs shadow-none",
           className,
         )}
         showClear={false}
@@ -138,14 +138,14 @@ export function ModelSelector({
         <ComboboxList>
           {Object.entries(groupedModels).map(([provider, models]) => (
             <ComboboxGroup key={provider}>
-              <ComboboxLabel className="capitalize text-[10px] font-semibold tracking-wider text-muted-foreground/70">
+              <ComboboxLabel className="font-semibold text-[10px] text-muted-foreground/70 capitalize tracking-wider">
                 {provider}
               </ComboboxLabel>
               {models.map((m) => (
-                <ComboboxItem key={m.id} value={m} className="text-xs p-0!">
+                <ComboboxItem key={m.id} value={m} className="p-0! text-xs">
                   <HoverCard openDelay={200}>
                     <HoverCardTrigger asChild>
-                      <div className="flex w-full items-center gap-2 px-2 py-1.5 cursor-default">
+                      <div className="flex w-full cursor-default items-center gap-2 px-2 py-1.5">
                         <span className="truncate">{m.label}</span>
                       </div>
                     </HoverCardTrigger>
@@ -156,7 +156,7 @@ export function ModelSelector({
                     >
                       <div className="flex flex-col gap-3">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-semibold">
+                          <span className="font-semibold text-xs">
                             {m.label}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
@@ -165,7 +165,7 @@ export function ModelSelector({
                         </div>
 
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
                             Context Window
                           </span>
                           <span className="text-xs">
@@ -183,14 +183,14 @@ export function ModelSelector({
                           m.capReasoning ||
                           m.capStructuredOutput) && (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                            <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
                               Capabilities
                             </span>
                             <div className="flex flex-wrap gap-1">
                               {m.capTools ? (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                  className="h-4 px-1 py-0 text-[10px] capitalize"
                                 >
                                   tools
                                 </Badge>
@@ -198,7 +198,7 @@ export function ModelSelector({
                               {m.capVision ? (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                  className="h-4 px-1 py-0 text-[10px] capitalize"
                                 >
                                   vision
                                 </Badge>
@@ -206,7 +206,7 @@ export function ModelSelector({
                               {m.capReasoning ? (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                  className="h-4 px-1 py-0 text-[10px] capitalize"
                                 >
                                   reasoning
                                 </Badge>
@@ -214,7 +214,7 @@ export function ModelSelector({
                               {m.capStructuredOutput ? (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] px-1 py-0 h-4 capitalize"
+                                  className="h-4 px-1 py-0 text-[10px] capitalize"
                                 >
                                   structured output
                                 </Badge>
@@ -224,15 +224,15 @@ export function ModelSelector({
                         )}
 
                         {m.capReasoning && (
-                          <div className="flex flex-col gap-1.5 border-t border-border/50 pt-2.5 mt-0.5">
-                            <div className="flex items-center gap-1.5 uppercase tracking-wider text-[10px] font-medium text-muted-foreground">
+                          <div className="mt-0.5 flex flex-col gap-1.5 border-border/50 border-t pt-2.5">
+                            <div className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
                               <BrainCircuit className="h-3 w-3 text-amber-500" />
                               Reasoning
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Badge
                                 variant="outline"
-                                className="text-[10px] px-1.5 py-0 h-4 border-amber-500/20 text-amber-600 bg-amber-500/5 font-medium"
+                                className="h-4 border-amber-500/20 bg-amber-500/5 px-1.5 py-0 font-medium text-[10px] text-amber-600"
                               >
                                 Enabled
                               </Badge>

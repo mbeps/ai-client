@@ -3,27 +3,25 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxGroup,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxLabel,
-  ComboboxList,
-} from "@/components/ui/combobox";
-import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
+import type { UserModelOption } from "@/hooks/use-user-models";
 import { setDefaultChatModel } from "@/lib/actions/models/set-default-chat-model";
 import { setDefaultEmbeddingModel } from "@/lib/actions/models/set-default-embedding-model";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
-import type { UserModelOption } from "@/hooks/use-user-models";
 
 type ModelItem = {
   id: string;
@@ -153,7 +151,7 @@ export function DefaultModelPicker({
                     <ComboboxItem value={item} key={model.id}>
                       <div className="flex flex-col">
                         <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {model.providerName}
                         </span>
                       </div>
@@ -197,7 +195,7 @@ export function DefaultModelPicker({
                     <ComboboxItem value={item} key={model.id}>
                       <div className="flex flex-col">
                         <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {model.providerName}
                         </span>
                       </div>

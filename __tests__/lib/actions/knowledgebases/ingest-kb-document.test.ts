@@ -53,7 +53,7 @@ vi.mock("@/lib/rag/ingest", () => ({
   ingestDocument: ingestDocumentMock,
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RateLimitError } from "@/constants/errors";
 import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
 

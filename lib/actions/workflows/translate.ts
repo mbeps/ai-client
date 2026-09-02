@@ -1,15 +1,15 @@
 "use server";
-import { logger } from "@/lib/logger";
 
 import { generateText } from "ai";
-import { requireSession } from "@/lib/auth/require-session";
-import { translateRequestSchema } from "@/schemas/workflows/workflows";
-import { PROMPTS } from "@/constants/prompts";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
+import { PROMPTS } from "@/constants/prompts";
+import { requireSession } from "@/lib/auth/require-session";
+import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
+import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { logger } from "@/lib/logger";
+import { translateRequestSchema } from "@/schemas/workflows/workflows";
 
 /**
  * Server action to translate text using AI with optional source language detection.
@@ -30,7 +30,7 @@ export async function translateText(input: unknown) {
 
   const parsed = translateRequestSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error("Invalid translation request: " + parsed.error.message);
+    throw new Error(`Invalid translation request: ${parsed.error.message}`);
   }
 
   const {

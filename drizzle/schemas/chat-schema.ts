@@ -1,11 +1,4 @@
-import {
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 import { transformRun } from "./transform-agent-schema";
 

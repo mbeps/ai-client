@@ -1,20 +1,19 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { ROUTES } from "@/constants/routes";
-
-import RootNotFound from "@/app/not-found";
-import MainNotFound from "@/app/(main)/not-found";
-import ChatNotFound from "@/app/(main)/chats/[id]/not-found";
-import ProjectNotFound from "@/app/(main)/projects/[id]/not-found";
-import ProjectChatNotFound from "@/app/(main)/projects/[id]/[chatId]/not-found";
-import AssistantNotFound from "@/app/(main)/assistants/[id]/not-found";
+import { describe, expect, it } from "vitest";
 import AssistantChatNotFound from "@/app/(main)/assistants/[id]/[chatId]/not-found";
+import AssistantNotFound from "@/app/(main)/assistants/[id]/not-found";
+import ChatNotFound from "@/app/(main)/chats/[id]/not-found";
 import KnowledgebaseNotFound from "@/app/(main)/knowledgebases/[id]/not-found";
-import ToolNotFound from "@/app/settings/tools/[id]/not-found";
+import MainNotFound from "@/app/(main)/not-found";
+import ProjectChatNotFound from "@/app/(main)/projects/[id]/[chatId]/not-found";
+import ProjectNotFound from "@/app/(main)/projects/[id]/not-found";
+import RootNotFound from "@/app/not-found";
 import PromptNotFound from "@/app/settings/prompts/[id]/not-found";
 import SkillNotFound from "@/app/settings/skills/[id]/not-found";
-import TransformAgentNotFound from "@/app/workflows/transform/[id]/not-found";
+import ToolNotFound from "@/app/settings/tools/[id]/not-found";
 import TransformRunNotFound from "@/app/workflows/transform/[id]/[runId]/not-found";
+import TransformAgentNotFound from "@/app/workflows/transform/[id]/not-found";
+import { ROUTES } from "@/constants/routes";
 
 describe("Not Found Pages", () => {
   it("renders RootNotFound with link to home", () => {

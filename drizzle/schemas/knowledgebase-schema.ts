@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, index, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
 export const knowledgebase = pgTable(

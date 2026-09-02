@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { Button } from "@/components/ui/button";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 export interface ProjectToolsTabProps {
@@ -34,14 +34,14 @@ export function ProjectToolsTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Default Tools</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Default Tools</h3>
+        <p className="text-muted-foreground text-sm">
           Select tools and resources that should be enabled by default for all
           new chats in this project.
         </p>
       </div>
       <div className="space-y-4">
-        <div className="border rounded-md max-h-[500px] overflow-hidden flex flex-col">
+        <div className="flex max-h-[500px] flex-col overflow-hidden rounded-md border">
           <ToolPickerList
             servers={mcpServers.filter((s) => s.enabled)}
             selectedTools={selectedTools}

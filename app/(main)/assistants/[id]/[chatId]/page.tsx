@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getChat } from "@/lib/actions/chats/get-chat";
-import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
+import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
+import { getChat } from "@/lib/actions/chats/get-chat";
+import type { Chat } from "@/types/chat/chat";
 
 /**
  * Chat detail page within an assistant context — server component with validation.
@@ -20,7 +21,7 @@ export default async function AssistantChatPage({
 }) {
   const { id, chatId } = await params;
 
-  let chat;
+  let chat: Chat;
   try {
     const data = await getChat(chatId);
     chat = buildChatFromRows(data);

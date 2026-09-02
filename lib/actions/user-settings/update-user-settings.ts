@@ -1,14 +1,14 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { revalidatePath } from "next/cache";
+import type { z } from "zod";
+import { ROUTES } from "@/constants/routes";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
-import { userSettingsSchema } from "@/schemas/user/user-settings";
-import { revalidatePath } from "next/cache";
-import { ROUTES } from "@/constants/routes";
-import type { UserSettingsRow } from "@/types/user/user-settings-row";
+import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
-import { z } from "zod";
+import { userSettingsSchema } from "@/schemas/user/user-settings";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Updates or initializes application-wide settings for the authenticated user.

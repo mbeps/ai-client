@@ -64,16 +64,16 @@ vi.mock("@/lib/rag/embed-documents", () => ({
   embedDocuments: vi.fn(),
 }));
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RagExtractionEmptyError } from "@/constants/errors";
 import { kbChunk } from "@/drizzle/schema";
-import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
-import { RagExtractionEmptyError } from "@/constants/errors";
+import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
+import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
-function makeDoc(overrides: Partial<KbDocumentRow> = {}): KbDocumentRow {
+function makeDoc(_overrides: Partial<KbDocumentRow> = {}): KbDocumentRow {
   return {
     id: "doc-1",
     kbId: "kb-1",

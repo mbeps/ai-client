@@ -76,14 +76,13 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-import { requireSession } from "@/lib/auth/require-session";
 import { createProject } from "@/lib/actions/projects/create-project";
-import { listProjects } from "@/lib/actions/projects/list-projects";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
+import { listProjects } from "@/lib/actions/projects/list-projects";
 import { renameProject } from "@/lib/actions/projects/rename-project";
-import { updateProject } from "@/lib/actions/projects/update-project";
-
 import { togglePinProject } from "@/lib/actions/projects/toggle-pin-project";
+import { updateProject } from "@/lib/actions/projects/update-project";
+import { requireSession } from "@/lib/auth/require-session";
 
 const PROJECT_ROW = {
   id: "proj-1",

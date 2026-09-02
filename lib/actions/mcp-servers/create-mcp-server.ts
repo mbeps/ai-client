@@ -1,13 +1,13 @@
 "use server";
 
 import { mcpServer } from "@/drizzle/schema";
+import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
+import { buildServerConfig } from "@/lib/mcp/build-server-config";
 import {
-  createMcpServerSchema,
   type CreateMcpServer,
+  createMcpServerSchema,
 } from "@/schemas/providers/mcp-server";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
-import { buildServerConfig } from "@/lib/mcp/build-server-config";
-import { createEntityFactory } from "@/lib/actions/shared/create-entity-factory";
 
 /**
  * Creates a new MCP server configuration for the authenticated user.

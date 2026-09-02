@@ -1,6 +1,6 @@
 import type { Attachment } from "@/types/attachment/attachment";
-import { uploadSingleAttachment } from "./upload-single-attachment";
 import { cloneAttachments } from "./clone-attachments";
+import { uploadSingleAttachment } from "./upload-single-attachment";
 
 /**
  * Processes attachments for a message, cloning existing ones and uploading new ones.

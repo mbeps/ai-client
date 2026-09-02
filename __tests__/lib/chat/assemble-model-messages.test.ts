@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 
 describe("assembleModelMessages — tool results (T10.4)", () => {

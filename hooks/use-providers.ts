@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listProviders } from "@/lib/actions/providers/list-providers";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,
@@ -10,6 +8,8 @@ import {
   isProviderRegistryCacheFresh,
   subscribeProviderRegistryCache,
 } from "@/hooks/provider-registry-cache";
+import { listProviders } from "@/lib/actions/providers/list-providers";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const RETRY_COUNT = 1;
 

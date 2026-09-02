@@ -1,19 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Trash2,
+  CheckCircle2,
+  Clock,
   FileText,
   Loader2,
-  CheckCircle2,
+  Trash2,
   XCircle,
-  Clock,
 } from "lucide-react";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { deleteDocument } from "@/lib/actions/knowledgebases/delete-document";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
-import { toast } from "sonner";
 
 const STATUS_CONFIG = {
   pending: {
@@ -70,14 +70,14 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
 
   if (documents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-4">
+      <p className="py-4 text-muted-foreground text-sm">
         No documents uploaded yet.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y border rounded-md">
+    <ul className="divide-y rounded-md border">
       {documents.map((doc) => {
         const cfg =
           STATUS_CONFIG[doc.status as keyof typeof STATUS_CONFIG] ??
@@ -86,13 +86,13 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
         return (
           <li key={doc.id} className="group flex items-center gap-2 px-3 py-2">
             <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium truncate leading-tight">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-[13px] leading-tight">
                 {doc.name}
               </p>
-              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground leading-tight">
                 {doc.status === "failed" && doc.statusMessage ? (
-                  <span className="text-destructive font-medium">
+                  <span className="font-medium text-destructive">
                     {doc.statusMessage}
                   </span>
                 ) : (
@@ -106,10 +106,10 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
             <div className="flex items-center gap-1.5">
               <Badge
                 variant={cfg.variant}
-                className="flex items-center gap-1 shrink-0 text-[10px] px-1.5 py-0 h-5 font-normal"
+                className="flex h-5 shrink-0 items-center gap-1 px-1.5 py-0 font-normal text-[10px]"
               >
                 <Icon
-                  className={`h-2.5 w-2.5${doc.status === "processing" ? " animate-spin" : ""}`}
+                  className={`h-2.5 w-2.5${doc.status === "processing" ? "animate-spin" : ""}`}
                 />
                 {cfg.label}
               </Badge>

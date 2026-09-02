@@ -1,8 +1,11 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { ProviderCard } from "@/components/settings/providers/provider-card";
+import { ProviderFormDialog } from "@/components/settings/providers/provider-form-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,16 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { deleteProvider } from "@/lib/actions/providers/delete-provider";
-import { toggleProvider } from "@/lib/actions/providers/toggle-provider";
-import { testProviderConnection } from "@/lib/actions/providers/test-provider-connection";
-import { syncProviderModels } from "@/lib/actions/models/sync-provider-models";
-import { ProviderFormDialog } from "@/components/settings/providers/provider-form-dialog";
-import { ProviderCard } from "@/components/settings/providers/provider-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+import { syncProviderModels } from "@/lib/actions/models/sync-provider-models";
+import { deleteProvider } from "@/lib/actions/providers/delete-provider";
+import { testProviderConnection } from "@/lib/actions/providers/test-provider-connection";
+import { toggleProvider } from "@/lib/actions/providers/toggle-provider";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ProviderListProps = {
   providers: AiProviderRow[];
@@ -52,7 +52,7 @@ export function ProviderList({
     useState<AiProviderRow | null>(null);
   const [busyProviderId, setBusyProviderId] = useState<string | null>(null);
 
-  const modelCountByProvider = useMemo(
+  const _modelCountByProvider = useMemo(
     () =>
       models.reduce<Record<string, number>>((acc, model) => {
         acc[model.providerId] = (acc[model.providerId] ?? 0) + 1;
@@ -128,7 +128,7 @@ export function ProviderList({
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 grid-cols-1">
+        <div className="grid grid-cols-1 gap-4">
           {filteredProviders.map((provider) => {
             const isBusy = busyProviderId === provider.id;
 

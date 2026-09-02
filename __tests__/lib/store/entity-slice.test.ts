@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
 
@@ -40,11 +40,11 @@ vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
+import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
+import { listMcpServers as listMcpServersAction } from "@/lib/actions/mcp-servers/list-mcp-servers";
 // ─── Import mocked modules for per-test configuration ─────────────────────
 import { listProjects as listProjectsAction } from "@/lib/actions/projects/list-projects";
-import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
 import { listPrompts as listPromptsAction } from "@/lib/actions/prompts/list-prompts";
-import { listMcpServers as listMcpServersAction } from "@/lib/actions/mcp-servers/list-mcp-servers";
 
 // ─── Chat slice mocks (needed because entity-slice modifies chats too) ─────
 vi.mock("@/lib/actions/chats/create-chat", () => ({ createChat: vi.fn() }));

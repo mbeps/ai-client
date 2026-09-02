@@ -1,6 +1,6 @@
-import * as React from "react";
-import { Loader2Icon } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2Icon } from "lucide-react";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,7 +21,8 @@ const spinnerVariants = cva("animate-spin text-muted-foreground", {
 });
 
 export interface SpinnerProps
-  extends React.ComponentProps<"svg">, VariantProps<typeof spinnerVariants> {
+  extends React.ComponentProps<"svg">,
+    VariantProps<typeof spinnerVariants> {
   /** Accessible label for screen readers. Defaults to "Loading...". */
   label?: string;
 }

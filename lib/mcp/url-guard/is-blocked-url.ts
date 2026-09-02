@@ -1,9 +1,9 @@
 import { env } from "@/lib/env";
 import { resolveHostname } from "../dns-resolver";
-import { isBlockedUrlSync } from "./is-blocked-url-sync";
-import { isIpLiteral } from "./is-ip-literal";
 import { isBlockedIPv4 } from "./is-blocked-ipv4";
 import { isBlockedIPv6 } from "./is-blocked-ipv6";
+import { isBlockedUrlSync } from "./is-blocked-url-sync";
+import { isIpLiteral } from "./is-ip-literal";
 
 /**
  * SSRF protection: validates whether a URL should be blocked due to pointing to internal/private addresses.

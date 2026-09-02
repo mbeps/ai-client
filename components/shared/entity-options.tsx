@@ -1,14 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { getPathSegments } from "@/lib/utils";
-import { useAppStore } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { ChatOptions } from "@/components/chat/chat-options";
-import { ProjectOptions } from "@/components/project/project-options";
 import { AssistantOptions } from "@/components/assistant/assistant-options";
+import { ChatOptions } from "@/components/chat/chat-options";
 import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-options";
+import { ProjectOptions } from "@/components/project/project-options";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useAppStore } from "@/lib/store";
+import { getPathSegments } from "@/lib/utils";
 
 /**
  * Global component rendered in the main header that contextually provides

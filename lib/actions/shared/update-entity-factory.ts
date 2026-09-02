@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { whereOwner } from "@/lib/db/where-owner";
 import { z } from "zod";
+import { db } from "@/drizzle/db";
+import { requireSession } from "@/lib/auth/require-session";
+import { whereOwner } from "@/lib/db/where-owner";
 
-export interface UpdateEntityConfig<TSchema, TResult> {
+export interface UpdateEntityConfig<TSchema, _TResult> {
   /** Drizzle table object (must have .id and .userId columns). */
   table: any;
   /** Zod schema for validating the input payload (id is handled internally). */

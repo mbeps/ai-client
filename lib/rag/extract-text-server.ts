@@ -1,5 +1,5 @@
-import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 import { env } from "@/lib/env";
+import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 
 /** Character limit for KB ingestion extraction (not constrained by AI context window). */
 export const MAX_DOCUMENT_CHARS_LIMIT = env.MAX_DOCUMENT_CHARS;

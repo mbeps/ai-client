@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  nameField,
-  descriptionField,
   contentField,
-  renameSchema,
+  descriptionField,
   idField,
+  nameField,
+  renameSchema,
 } from "../shared-fields";
 
 /**

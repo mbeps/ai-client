@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { createRef } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";

@@ -1,6 +1,6 @@
 "use server";
 
-import { project, chat } from "@/drizzle/schema";
+import { chat, project } from "@/drizzle/schema";
 import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 
 /**

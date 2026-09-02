@@ -1,55 +1,54 @@
 "use client";
 
-import { toggleSetItem } from "@/lib/utils";
-import { useAppStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Database,
+  FileText,
+  History,
+  List,
+  Loader2,
+  Save,
+  Settings,
+  Shield,
+  Wrench,
+} from "lucide-react";
+import Link from "next/link";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
   SidebarTabs,
   SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
-import { ROUTES } from "@/constants/routes";
-import {
-  ArrowLeft,
-  Save,
-  Loader2,
-  Settings,
-  Database,
-  List,
-  Shield,
-  History,
-  AlertCircle,
-  FileText,
-  Wrench,
-} from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter, notFound } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useQueryState, parseAsString } from "nuqs";
-import { toast } from "sonner";
-import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-import { createTransformAgent } from "@/lib/actions/transform-agents/create-transform-agent";
-import { updateTransformAgent } from "@/lib/actions/transform-agents/update-transform-agent";
-import { uploadRunInput } from "@/lib/actions/transform-runs/upload-run-input";
-import { createTransformRun } from "@/lib/actions/transform-runs/create-transform-run";
-import { listTransformRuns } from "@/lib/actions/transform-runs/list-transform-runs";
-import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { TransformRunDialog } from "@/components/workflows/sheet-flow/transform-run-dialog";
-import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-steps-tab";
-import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
+import { Button } from "@/components/ui/button";
 import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
+import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
+import { TransformRunDialog } from "@/components/workflows/sheet-flow/transform-run-dialog";
 import { TransformRunsTab } from "@/components/workflows/sheet-flow/transform-runs-tab";
-
-import { type TransformStep } from "@/types/transform/transform-step";
-import type { TransformRunRow } from "@/types/transform/transform-run-row";
-import { ToolPickerList } from "@/components/chat/tool-picker-list";
-import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
+import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-steps-tab";
+import { ROUTES } from "@/constants/routes";
 import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
+import { createTransformAgent } from "@/lib/actions/transform-agents/create-transform-agent";
+import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
+import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
+import { updateTransformAgent } from "@/lib/actions/transform-agents/update-transform-agent";
+import { createTransformRun } from "@/lib/actions/transform-runs/create-transform-run";
+import { listTransformRuns } from "@/lib/actions/transform-runs/list-transform-runs";
+import { uploadRunInput } from "@/lib/actions/transform-runs/upload-run-input";
+import { useAppStore } from "@/lib/store";
+import { toggleSetItem } from "@/lib/utils";
+import type { TransformRunRow } from "@/types/transform/transform-run-row";
+import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Transform agent editor page supporting create/edit/delete operations.
@@ -156,7 +155,7 @@ export default function AgentEditorPage() {
     return () => {
       mounted = false;
     };
-  }, [id, isNew, router, handleApiError]);
+  }, [id, isNew, handleApiError]);
 
   // Load runs if editing
   useEffect(() => {
@@ -280,7 +279,9 @@ export default function AgentEditorPage() {
 
       if (runFiles.length > 0) {
         const formData = new FormData();
-        runFiles.forEach((file) => formData.append("files", file));
+        runFiles.forEach((file) => {
+          formData.append("files", file);
+        });
         const uploaded = await uploadRunInput(formData);
         inputAttachmentIds = uploaded.map((u) => u.id);
       }
@@ -335,10 +336,10 @@ export default function AgentEditorPage() {
             <List className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">
+            <h1 className="font-semibold text-xl">
               {isNew ? "New Transform Agent" : name || "Untitled Agent"}
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {isNew
                 ? "Configure a multi-step document transformation workflow"
                 : `${steps.length} step${steps.length !== 1 ? "s" : ""} configured`}
@@ -373,10 +374,10 @@ export default function AgentEditorPage() {
       </div>
 
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+            <p className="font-medium text-red-800 text-xs dark:text-red-200">
               No chat models configured. Please set up a provider to configure
               and run transform agents.
             </p>
@@ -384,7 +385,7 @@ export default function AgentEditorPage() {
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
             onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
             <Settings className="mr-1.5 h-3 w-3" />
@@ -451,8 +452,8 @@ export default function AgentEditorPage() {
 
         <SidebarTabsContent value="knowledge" className="space-y-4">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Knowledge Bases</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-semibold text-lg">Knowledge Bases</h3>
+            <p className="text-muted-foreground text-sm">
               Select knowledge bases to provide additional context for this
               transformation agent.
             </p>
@@ -470,8 +471,8 @@ export default function AgentEditorPage() {
 
         <SidebarTabsContent value="tools" className="space-y-4">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Default Tools</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-semibold text-lg">Default Tools</h3>
+            <p className="text-muted-foreground text-sm">
               These tools will be automatically enabled for all steps in this
               transformation.
             </p>

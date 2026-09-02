@@ -1,12 +1,12 @@
 "use client";
 
-import { Trash2, Edit2 } from "lucide-react";
-import type { TransformAgent } from "@/types/transform/transform-agent";
+import { Edit2, Trash2 } from "lucide-react";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/constants/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameTransformAgent } from "@/lib/actions/transform-agents/rename-transform-agent";
 import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
+import { renameTransformAgent } from "@/lib/actions/transform-agents/rename-transform-agent";
+import type { TransformAgent } from "@/types/transform/transform-agent";
 
 /**
  * Dropdown/drawer context menu for managing a transformation agent.

@@ -1,10 +1,10 @@
 import {
+  boolean,
+  index,
+  jsonb,
   pgTable,
   text,
   timestamp,
-  boolean,
-  jsonb,
-  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";

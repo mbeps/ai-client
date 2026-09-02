@@ -23,8 +23,8 @@ export function TransformRunsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Run History</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Run History</h3>
+        <p className="text-muted-foreground text-sm">
           History of transformations executed by this agent.
         </p>
       </div>

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { EditServerForm } from "@/components/mcp/edit-server-form";
 import type { McpServer } from "@/types/mcp/mcp-server";
 

@@ -6,8 +6,9 @@
  *
  * @author Maruf Bepary
  */
-import { ROUTES } from "@/constants/routes";
+
 import { NotFoundPage } from "@/components/shared/not-found-page";
+import { ROUTES } from "@/constants/routes";
 
 export default function ProjectNotFound() {
   return (

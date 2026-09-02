@@ -1,8 +1,8 @@
 "use server";
 
 import { aiModel } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
 import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
+import { logger } from "@/lib/logger";
 
 /**
  * Deletes one or more AI models belonging to the authenticated user.

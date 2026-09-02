@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { projectSchema } from "@/schemas/project/project";
+import type { z } from "zod";
+import type { projectSchema } from "@/schemas/project/project";
 
 /**
  * Represents a workspace that groups related chats with shared system prompts and knowledge bases.

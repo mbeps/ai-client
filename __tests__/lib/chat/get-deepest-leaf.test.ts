@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import type { Message } from "@/types/message/message";
 

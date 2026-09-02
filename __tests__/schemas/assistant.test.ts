@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createAssistantSchema,
-  updateAssistantSchema,
   renameAssistantSchema,
+  updateAssistantSchema,
 } from "@/schemas/assistant/assistant";
 
 // ---------------------------------------------------------------------------

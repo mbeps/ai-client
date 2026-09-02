@@ -1,4 +1,4 @@
-import { ComponentProps, ElementType } from "react";
+import type { ComponentProps, ElementType } from "react";
 import { FaDiscord, FaGithub, FaGoogle } from "react-icons/fa6";
 
 /**

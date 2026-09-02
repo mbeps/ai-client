@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
+import { Button } from "@/components/ui/button";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 export interface ProjectKnowledgebaseTabProps {
@@ -28,8 +28,8 @@ export function ProjectKnowledgebaseTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Knowledge Base</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Knowledge Base</h3>
+        <p className="text-muted-foreground text-sm">
           Attach a knowledge base to provide context to the AI in all chats
           within this project.
         </p>

@@ -1,9 +1,9 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ChatCard } from "@/components/chat/chat-card";
 import { EmptyState } from "@/components/empty-state";
+import { Input } from "@/components/ui/input";
 import type { Chat } from "@/types/chat/chat";
 
 export interface ProjectChatsTabProps {
@@ -25,7 +25,7 @@ export function ProjectChatsTab({
   return (
     <div className="space-y-4">
       <div className="relative w-full sm:max-w-xs">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search chats..."
           className="pl-9"
@@ -34,7 +34,7 @@ export function ProjectChatsTab({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredChats.map((chat) => (
           <ChatCard key={chat.id} chat={chat} />
         ))}

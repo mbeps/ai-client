@@ -5,8 +5,8 @@ import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import {
-  updateProviderSchema,
   type UpdateProviderInput,
+  updateProviderSchema,
 } from "@/schemas/providers/provider-registry";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toEncryptedProviderValues } from "./utils";

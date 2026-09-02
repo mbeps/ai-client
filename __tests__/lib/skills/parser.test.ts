@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  parseSkillMarkdown,
-  formatSkillMarkdown,
-  sanitizeSkillSlug,
   createSkillZip,
   extractSkillFromZip,
+  formatSkillMarkdown,
+  parseSkillMarkdown,
+  sanitizeSkillSlug,
 } from "@/lib/skills/parser";
 
 describe("sanitizeSkillSlug", () => {

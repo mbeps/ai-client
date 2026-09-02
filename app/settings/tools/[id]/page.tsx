@@ -1,23 +1,5 @@
 "use client";
 
-import { EditServerForm } from "@/components/mcp/edit-server-form";
-import { ResourceList } from "@/components/mcp/resource-list";
-import { ServerSettings } from "@/components/mcp/server-settings";
-import { ToolList } from "@/components/mcp/tool-list";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  SidebarTabs,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-  SidebarTabsContent,
-} from "@/components/shared/sidebar-tabs";
-
-import { ROUTES } from "@/constants/routes";
-import { useAppStore } from "@/lib/store";
-import { useQueryState, parseAsString } from "nuqs";
 import {
   ChevronLeft,
   FileText,
@@ -26,10 +8,27 @@ import {
   Shield,
   Wrench,
 } from "lucide-react";
-import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
-import { useParams, useRouter, notFound } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { EditServerForm } from "@/components/mcp/edit-server-form";
+import { ResourceList } from "@/components/mcp/resource-list";
+import { ServerSettings } from "@/components/mcp/server-settings";
+import { ToolList } from "@/components/mcp/tool-list";
+import { PageHeader } from "@/components/page-header";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ROUTES } from "@/constants/routes";
+import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
+import { useAppStore } from "@/lib/store";
 
 /**
  * MCP server detail page — client component for configuring and managing a single MCP server.
@@ -70,7 +69,7 @@ export default function McpServerPage() {
         `${server.name} ${!server.enabled ? "enabled" : "disabled"}`,
       );
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to toggle server state");
     }
   };
@@ -80,7 +79,7 @@ export default function McpServerPage() {
       <Button
         variant="ghost"
         size="sm"
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => router.push(ROUTES.TOOLS.path)}
       >
         <ChevronLeft className="mr-1 h-4 w-4" />

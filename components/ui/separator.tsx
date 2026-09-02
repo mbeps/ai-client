@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as SeparatorPrimitive from "@radix-ui/react-separator"
+import * as SeparatorPrimitive from "@radix-ui/react-separator";
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 /**
  * Separator component for visual dividers in layouts and menus.
@@ -25,12 +25,12 @@ function Separator({
       decorative={decorative}
       orientation={orientation}
       className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
-        className
+        "shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Separator }
+export { Separator };

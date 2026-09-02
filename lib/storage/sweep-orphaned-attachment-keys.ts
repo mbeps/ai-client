@@ -1,8 +1,8 @@
+import { inArray, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { logger } from "@/lib/logger";
 import { deleteObject } from "./delete-object";
-import { inArray, sql } from "drizzle-orm";
 
 /**
  * Deletes S3 objects for attachment keys that are no longer referenced by any

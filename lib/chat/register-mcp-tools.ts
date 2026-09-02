@@ -1,12 +1,12 @@
-import { logger } from "@/lib/logger";
 import { tool } from "ai";
+import { PROMPTS } from "@/constants/prompts";
+import { logger } from "@/lib/logger";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import {
   manageArtifactSchema,
   searchKnowledgeBaseSchema,
 } from "@/schemas/chat/chat";
-import { PROMPTS } from "@/constants/prompts";
 
 /**
  * MCP server parameter type for tool registration.
@@ -83,8 +83,8 @@ export async function registerMcpTools(
   }
 
   if (isArtifactToolSelected) {
-    toolSourceMap["manage_artifact"] = "Internal";
-    mcpTools["manage_artifact"] = tool({
+    toolSourceMap.manage_artifact = "Internal";
+    mcpTools.manage_artifact = tool({
       description: PROMPTS.TOOLS.MANAGE_ARTIFACT.DESCRIPTION,
       inputSchema: manageArtifactSchema,
       execute: async (args) => {
@@ -92,8 +92,7 @@ export async function registerMcpTools(
           // For spreadsheets the AI may pass `sheets` as a top-level arg instead of
           // embedding the JSON in `content`. Serialize it so the viewer can parse it.
           // ponytail: `text` is not in the advertised schema but some models still send it.
-          let content =
-            args.content || (args as { text?: string }).text || "";
+          let content = args.content || (args as { text?: string }).text || "";
 
           // If sheets are provided directly, use them to build the content
           if (args.sheets && Array.isArray(args.sheets)) {
@@ -140,8 +139,8 @@ export async function registerMcpTools(
 
   if (activeKbId && kbIsReady) {
     const kbId = activeKbId;
-    toolSourceMap["search_knowledge_base"] = "System";
-    mcpTools["search_knowledge_base"] = tool({
+    toolSourceMap.search_knowledge_base = "System";
+    mcpTools.search_knowledge_base = tool({
       description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
       inputSchema: searchKnowledgeBaseSchema,
       execute: async (args) => {

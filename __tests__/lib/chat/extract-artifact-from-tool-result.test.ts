@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 
 describe("extractArtifactFromToolResult", () => {

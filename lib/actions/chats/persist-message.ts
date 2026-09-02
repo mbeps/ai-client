@@ -1,12 +1,12 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
-import { eq, and } from "drizzle-orm";
-import type { MessageRow } from "@/types/message/message-row";
+import { requireSession } from "@/lib/auth/require-session";
 import { persistMessageSchema } from "@/schemas/chat/chat";
-import { z } from "zod";
+import type { MessageRow } from "@/types/message/message-row";
 
 /**
  * Persists a message to the database with ownership check.

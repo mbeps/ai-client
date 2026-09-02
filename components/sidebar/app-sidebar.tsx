@@ -1,13 +1,41 @@
 "use client";
 
+import {
+  Bot,
+  ChevronRight,
+  ChevronsUpDown,
+  Database,
+  FolderOpen,
+  LogOut,
+  MessageSquare,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Search,
+  Settings,
+  User,
+  Workflow,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { ChatOptions } from "@/components/chat/chat-options";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupAction,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -17,43 +45,13 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  MessageSquarePlus,
-  FolderOpen,
-  Bot,
-  Database,
-  Wrench,
-  Search,
-  MessageSquare,
-  Settings,
-  ChevronsUpDown,
-  LogOut,
-  User,
-  ChevronRight,
-  MoreHorizontal,
-  Workflow,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAppStore } from "@/lib/store";
-import { hydratedResources } from "@/hooks/use-resource-hydration";
-import { listChats } from "@/lib/actions/chats/list-chats";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth/auth-client";
 import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-  DropdownMenuGroup,
-} from "@/components/ui/dropdown-menu";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
+import { listChats } from "@/lib/actions/chats/list-chats";
+import { authClient } from "@/lib/auth/auth-client";
+import { useAppStore } from "@/lib/store";
 import { cn, sortByUpdatedAt } from "@/lib/utils";
-
-import { ChatOptions } from "@/components/chat/chat-options";
 
 /**
  * Main application sidebar for authenticated routes.
@@ -80,6 +78,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     Object.values(chats).filter((chat) => !chat.projectId),
   ).slice(0, 20);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats once on sidebar mount
   React.useEffect(() => {
     listChats()
       .then((rows) => {
@@ -88,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .catch(() => {
         // silently ignore — sidebar will show empty state
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleNewChat = () => createNewChat();
 
@@ -100,7 +99,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               onClick={handleNewChat}
               tooltip="New Chat"
-              className="font-semibold h-10"
+              className="h-10 font-semibold"
             >
               <MessageSquarePlus className="h-4 w-4" />
               New Chat
@@ -163,7 +162,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel asChild>
             <Link
               href={ROUTES.CHATS.path}
-              className="hover:text-primary cursor-pointer flex items-center w-full"
+              className="flex w-full cursor-pointer items-center hover:text-primary"
             >
               Recent Chats
             </Link>
@@ -271,7 +270,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.PROFILE.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
@@ -280,7 +279,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.SETTINGS.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
@@ -296,7 +295,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     hydratedResources.clear();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
-                  className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+                  className="cursor-pointer focus:bg-destructive focus:text-destructive-foreground"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

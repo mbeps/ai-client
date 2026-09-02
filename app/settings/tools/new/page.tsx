@@ -1,30 +1,30 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { ServerFormFields } from "@/components/mcp/server-form-fields";
-import { PublicServerDiscovery } from "@/components/mcp/public-server-discovery";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { LoadingSwap } from "@/components/ui/loading-swap";
-import {
-  SidebarTabs,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-  SidebarTabsContent,
-} from "@/components/shared/sidebar-tabs";
-import { ROUTES } from "@/constants/routes";
-import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
-import {
-  createMcpServerSchema,
-  type CreateMcpServer,
-} from "@/schemas/providers/mcp-server";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, Globe, Plus, Server, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useQueryState, parseAsString } from "nuqs";
+import { parseAsString, useQueryState } from "nuqs";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { PublicServerDiscovery } from "@/components/mcp/public-server-discovery";
+import { ServerFormFields } from "@/components/mcp/server-form-fields";
+import { PageHeader } from "@/components/page-header";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { ROUTES } from "@/constants/routes";
+import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
+import { useAppStore } from "@/lib/store";
+import {
+  type CreateMcpServer,
+  createMcpServerSchema,
+} from "@/schemas/providers/mcp-server";
 
 const DEFAULTS: CreateMcpServer = {
   name: "",
@@ -72,11 +72,11 @@ export default function NewMcpServerPage() {
   }
 
   return (
-    <div className="page-container max-w-4xl mx-auto py-8">
+    <div className="page-container mx-auto max-w-4xl py-8">
       <Button
         variant="ghost"
         size="sm"
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => router.push(ROUTES.SETTINGS.TOOLS.path)}
       >
         <ChevronLeft className="mr-1 h-4 w-4" />
@@ -107,8 +107,8 @@ export default function NewMcpServerPage() {
 
         <SidebarTabsContent value="manual" className="space-y-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Server Configuration</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-semibold text-lg">Server Configuration</h3>
+            <p className="text-muted-foreground text-sm">
               Configure connection parameters and custom authentication headers
               for an HTTP MCP endpoint.
             </p>

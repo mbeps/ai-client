@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import type { Message } from "@/types/message/message";
 

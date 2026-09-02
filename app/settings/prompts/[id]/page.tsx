@@ -1,28 +1,28 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { PROMPTS } from "@/constants/prompts";
-import { useParams, useRouter, notFound } from "next/navigation";
-import { Loader2, Command, Settings, Shield } from "lucide-react";
-import { ROUTES } from "@/constants/routes";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { Command, Loader2, Settings, Shield } from "lucide-react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
 import {
   PromptForm,
   type PromptFormValues,
 } from "@/components/prompt/prompt-form";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { PageHeader } from "@/components/page-header";
-import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
-import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
-import { useQueryState, parseAsString } from "nuqs";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
   SidebarTabs,
+  SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
-  SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
+import { PROMPTS } from "@/constants/prompts";
+import { ROUTES } from "@/constants/routes";
+import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
+import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Prompt editor page — client component for viewing and editing a single prompt.
@@ -63,7 +63,7 @@ export default function PromptDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -106,7 +106,7 @@ export default function PromptDetailPage() {
   };
 
   return (
-    <div className="page-container max-w-4xl mx-auto py-8">
+    <div className="page-container mx-auto max-w-4xl py-8">
       <PageHeader
         icon={<Command className="h-8 w-8 text-primary" />}
         title={prompt.title}
@@ -116,19 +116,19 @@ export default function PromptDetailPage() {
       <SidebarTabs value={tab} onValueChange={setTab} className="mt-6 w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="general">
-            <Settings className="w-4 h-4 mr-2" />
+            <Settings className="mr-2 h-4 w-4" />
             General
           </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
-            <Shield className="w-4 h-4 mr-2" />
+            <Shield className="mr-2 h-4 w-4" />
             Danger Zone
           </SidebarTabsTrigger>
         </SidebarTabsList>
 
         <SidebarTabsContent value="general" className="space-y-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Prompt Configuration</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-semibold text-lg">Prompt Configuration</h3>
+            <p className="text-muted-foreground text-sm">
               Modify the prompt title, shortcut, and expansion text.
             </p>
           </div>

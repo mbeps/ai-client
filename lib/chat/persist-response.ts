@@ -1,6 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
 
 type PersistAssistantResponseParams = {
   chatId: string;

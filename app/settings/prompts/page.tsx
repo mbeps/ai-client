@@ -1,12 +1,12 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
 import { Command, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { PromptCard } from "@/components/prompt/prompt-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants/routes";
-import Link from "next/link";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Prompts listing page — client component displaying all user-defined prompt shortcuts.
@@ -32,7 +32,7 @@ export default function PromptsPage() {
       action={
         <Button asChild className="w-full md:w-auto">
           <Link href={ROUTES.SETTINGS.PROMPTS.new}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Prompt
           </Link>
         </Button>

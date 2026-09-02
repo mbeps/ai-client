@@ -1,13 +1,13 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { and, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { requireSession } from "@/lib/auth/require-session";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
-import { z } from "zod";
 
 /**
  * Deletes a document from a knowledge base.

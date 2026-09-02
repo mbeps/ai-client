@@ -1,12 +1,12 @@
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { and, eq, ne } from "drizzle-orm";
+import { RateLimitError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
-import { and, eq, ne } from "drizzle-orm";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "@/lib/storage/s3-instance";
-import { ingestDocumentPipeline } from "./ingest-pipeline";
-import { RateLimitError } from "@/constants/errors";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+import { ingestDocumentPipeline } from "./ingest-pipeline";
 
 /**
  * Extracts, chunks, and embeds a KB document. Updates status from pending→processing→ready/failed.

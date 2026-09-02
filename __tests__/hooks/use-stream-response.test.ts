@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── mock @ai-sdk/react useChat: capture config, expose controllable state ────
 const chatState = vi.hoisted(() => ({

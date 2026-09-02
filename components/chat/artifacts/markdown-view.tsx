@@ -1,12 +1,12 @@
 "use client";
 
-import { useCreateBlockNote } from "@blocknote/react";
+import type { Block } from "@blocknote/core";
+import "@blocknote/core/fonts/inter.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import "@blocknote/core/fonts/inter.css";
-import { useEffect, useState, useRef } from "react";
+import { useCreateBlockNote } from "@blocknote/react";
 import { Loader2 } from "lucide-react";
-import type { Block } from "@blocknote/core";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Props for MarkdownView artifact component.
@@ -52,7 +52,7 @@ function BlockNoteEditor({
   }, []);
 
   return (
-    <div className="h-full w-full bg-background p-4 overflow-y-auto custom-scrollbar">
+    <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-4">
       <BlockNoteView
         editor={editor}
         onChange={() => {
@@ -120,8 +120,7 @@ export default function MarkdownView({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [content]);
 
   if (!parsedBlocks) {
     return (

@@ -1,10 +1,10 @@
 "use client";
 
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
 import { Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 
 /**
  * Post-registration email verification panel that prompts users to confirm their email address.
@@ -39,14 +39,14 @@ export function EmailVerification({ email }: { email: string }) {
     }, 1000);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Start countdown once on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial countdown setup is intentional
     startEmailVerificationCountdown();
   }, []);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground mt-2">
+      <p className="mt-2 text-muted-foreground text-sm">
         We sent you a verification link. Please check your email and click the
         link to verify your account.
       </p>

@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  integer,
   pgTable,
   text,
-  boolean,
-  integer,
   timestamp,
-  index,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
@@ -22,10 +22,7 @@ export const transformAgent = pgTable(
     description: text("description"),
     globalContext: text("global_context"),
     modelId: text("model_id"),
-    tools: text("tools")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    tools: text("tools").array().notNull().default(sql`'{}'::text[]`),
     knowledgeBaseIds: text("knowledge_base_ids")
       .array()
       .notNull()

@@ -1,13 +1,12 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { AlertTriangle, Database, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
-import { Database, AlertTriangle, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { KnowledgebaseOptions } from "./knowledgebase-options";
-import { cn } from "@/lib/utils";
 
 interface KnowledgebaseCardProps {
   knowledgebase: Knowledgebase;
@@ -31,17 +30,17 @@ export function KnowledgebaseCard({
 
   return (
     <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[100px]"
+      className="group flex min-h-[100px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50"
       onClick={() => router.push(ROUTES.KNOWLEDGEBASES.detail(kb.id))}
     >
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Database className="h-5 w-5 text-primary" />
           </div>
-          <div className="space-y-1.5 flex-1 min-w-0">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold leading-none truncate">{kb.name}</h3>
+              <h3 className="truncate font-semibold leading-none">{kb.name}</h3>
               {kb.indexStatus === "stale" && (
                 <Badge
                   variant="warning"
@@ -54,7 +53,7 @@ export function KnowledgebaseCard({
               {kb.indexStatus === "indexing" && (
                 <Badge
                   variant="outline"
-                  className="h-4 px-1 text-[8px] uppercase text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20"
+                  className="h-4 border-blue-200 bg-blue-50 px-1 text-[8px] text-blue-500 uppercase dark:bg-blue-950/20"
                 >
                   <Loader2 className="mr-0.5 h-2 w-2 animate-spin" />
                   Indexing
@@ -62,7 +61,7 @@ export function KnowledgebaseCard({
               )}
             </div>
             {kb.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="line-clamp-2 text-muted-foreground text-sm">
                 {kb.description}
               </p>
             )}

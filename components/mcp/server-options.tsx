@@ -1,14 +1,14 @@
 "use client";
-import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { Edit2, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { renameMcpServer } from "@/lib/actions/mcp-servers/rename-mcp-server";
 import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
-import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
-import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
  * Props for ServerOptions component.

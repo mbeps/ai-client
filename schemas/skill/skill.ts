@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { idField, nameField, dateField } from "../shared-fields";
+import { dateField, idField, nameField } from "../shared-fields";
 
 export const skillSlugSchema = z
   .string()

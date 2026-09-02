@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat, knowledgebase } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
+import { requireSession } from "@/lib/auth/require-session";
 import { updateChatKnowledgebaseSchema } from "@/schemas/chat/chat";
 
 /**

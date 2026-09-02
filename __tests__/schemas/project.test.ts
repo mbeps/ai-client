@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createProjectSchema,
-  updateProjectSchema,
   renameProjectSchema,
+  updateProjectSchema,
 } from "@/schemas/project/project";
 
 // ---------------------------------------------------------------------------

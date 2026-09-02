@@ -1,7 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UserPlus } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,15 +14,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { authClient } from "@/lib/auth/auth-client";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 import { env } from "@/lib/env";
-import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
-import { signUpSchema, SignUpForm } from "@/schemas/auth/sign-up";
+import { type SignUpForm, signUpSchema } from "@/schemas/auth/sign-up";
 
 /**
  * User registration form that creates a new account with email, name, and password.
@@ -125,7 +125,7 @@ export function SignUpTab({
           </form>
         </Form>
       ) : (
-        <div className="p-4 text-center text-sm text-muted-foreground">
+        <div className="p-4 text-center text-muted-foreground text-sm">
           Email registration is currently disabled.
         </div>
       )}

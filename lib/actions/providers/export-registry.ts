@@ -5,8 +5,8 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import {
-  exportProviderRegistryInputSchema,
   type ExportProviderRegistryInput,
+  exportProviderRegistryInputSchema,
   type ProviderModelType,
   type RegistryExport,
 } from "@/schemas/providers/provider-registry";

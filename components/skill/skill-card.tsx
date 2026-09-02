@@ -1,18 +1,9 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Trash2, Files } from "lucide-react";
+import { Files, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
-import type { Skill } from "@/types/skill/skill";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { toggleSkillEnabled } from "@/lib/actions/skills/toggle-skill";
-import { deleteSkill } from "@/lib/actions/skills/delete-skill";
-import { useAppStore } from "@/lib/store";
-import { toast } from "sonner";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +15,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { ROUTES } from "@/constants/routes";
+import { deleteSkill } from "@/lib/actions/skills/delete-skill";
+import { toggleSkillEnabled } from "@/lib/actions/skills/toggle-skill";
+import { useAppStore } from "@/lib/store";
+import type { Skill } from "@/types/skill/skill";
 
 interface SkillCardProps {
   skill: Skill;
@@ -68,28 +68,28 @@ export function SkillCard({ skill }: SkillCardProps) {
 
   return (
     <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[120px]"
+      className="group flex min-h-[120px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50"
       onClick={() => router.push(ROUTES.SETTINGS.SKILLS.detail(skill.id))}
     >
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="space-y-1.5 flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-semibold leading-none truncate">
+              <h3 className="truncate font-semibold leading-none">
                 {skill.displayName || skill.name}
               </h3>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge
                 variant="secondary"
-                className="font-mono text-[10px] py-0 bg-muted"
+                className="bg-muted py-0 font-mono text-[10px]"
               >
                 /{skill.name}
               </Badge>
               {skill.files && skill.files.length > 0 && (
                 <Badge
                   variant="outline"
-                  className="text-[10px] py-0 flex items-center gap-1"
+                  className="flex items-center gap-1 py-0 text-[10px]"
                 >
                   <Files className="h-3 w-3" />
                   {skill.files.length}{" "}
@@ -98,7 +98,7 @@ export function SkillCard({ skill }: SkillCardProps) {
               )}
             </div>
             {skill.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
+              <p className="line-clamp-2 text-muted-foreground text-xs">
                 {skill.description}
               </p>
             )}

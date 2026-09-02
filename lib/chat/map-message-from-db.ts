@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { persistMessageSchema } from "@/schemas/chat/chat";
-import type { Message } from "@/types/message/message";
+import type { z } from "zod";
+import type { persistMessageSchema } from "@/schemas/chat/chat";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { Message } from "@/types/message/message";
 import { parseMessageMetadata } from "./parse-message-metadata";
 
 /**

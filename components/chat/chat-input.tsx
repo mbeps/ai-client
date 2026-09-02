@@ -1,36 +1,36 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Mic, Plus, Save, Send, Square, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
+import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
+import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
+import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Mic, Send, Square, X, Save } from "lucide-react";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { AttachmentVisionUnsupportedError } from "@/constants/errors";
+import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
+import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useUserModels } from "@/hooks/use-user-models";
+import { processAttachment } from "@/lib/attachments/process-attachment";
+import { useAppStore } from "@/lib/store";
+import { toggleSetItem } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
-import type { Message } from "@/types/message/message";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Message } from "@/types/message/message";
 import { AttachmentsMenu } from "./attachments-menu";
-import { MentionCommands } from "./mention-commands";
-import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
-import { useUserModels } from "@/hooks/use-user-models";
-import { useAppStore } from "@/lib/store";
-import { ModelSelector } from "@/components/shared/model-selector";
-import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
-import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
 import { ContextUsagePill } from "./context-usage-pill";
-import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
-import { processAttachment } from "@/lib/attachments/process-attachment";
-import { AttachmentVisionUnsupportedError } from "@/constants/errors";
-import { useApiError } from "@/hooks/use-api-error";
-import { toast } from "sonner";
-import { toggleSetItem } from "@/lib/utils";
+import { MentionCommands } from "./mention-commands";
 
 /**
  * Props for the ChatInput component.
@@ -239,7 +239,7 @@ export function ChatInput({
     new Set(initialSelectedTools),
   );
 
-  const toggleServer = useCallback((id: string) => {
+  const _toggleServer = useCallback((id: string) => {
     setSelectedServerIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -273,13 +273,17 @@ export function ChatInput({
         setSelectedServerIds((prev) => new Set(prev).add(serverId));
         setSelectedTools((prev) => {
           const next = new Set(prev);
-          toolNames.forEach((name) => next.add(`${serverId}:tool:${name}`));
+          toolNames.forEach((name) => {
+            next.add(`${serverId}:tool:${name}`);
+          });
           return next;
         });
       } else {
         setSelectedTools((prev) => {
           const next = new Set(prev);
-          toolNames.forEach((name) => next.delete(`${serverId}:tool:${name}`));
+          toolNames.forEach((name) => {
+            next.delete(`${serverId}:tool:${name}`);
+          });
           return next;
         });
       }
@@ -365,7 +369,7 @@ export function ChatInput({
         200,
       )}px`;
     }
-  }, [input]);
+  }, []);
 
   // -- Model initialisation --
   useEffect(() => {
@@ -437,7 +441,7 @@ export function ChatInput({
 
   return (
     <div
-      className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors relative ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
+      className={`relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30 ${isDragging ? "bg-primary/5 ring-2 ring-primary" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -503,7 +507,7 @@ export function ChatInput({
             ? "Set up a provider to start chatting..."
             : "Ask anything... Use / for skills and prompts, @ for assistant"
         }
-        className="min-h-[40px] resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent p-0 overflow-y-auto"
+        className="min-h-[40px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         rows={1}
         disabled={hasNoModels}
       />
@@ -642,7 +646,7 @@ export function ChatInput({
               {submitLabel === "Save" ? (
                 <Save className="h-3.5 w-3.5" />
               ) : (
-                <Send className="h-3.5 w-3.5 ml-0.5" />
+                <Send className="ml-0.5 h-3.5 w-3.5" />
               )}
             </Button>
           )}

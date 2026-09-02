@@ -1,12 +1,12 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { Wrench, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Wrench } from "lucide-react";
+import Link from "next/link";
 import { ServerCard } from "@/components/mcp/server-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants/routes";
-import Link from "next/link";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Tools/MCP servers listing page — client component displaying all configured MCP servers.
@@ -29,7 +29,7 @@ export default function ToolsPage() {
       emptyStateMessage="No MCP servers yet. Add one to connect external tools to your chats."
       searchPlaceholder="Search servers..."
       action={
-        <Button asChild className="w-full md:w-auto gap-2">
+        <Button asChild className="w-full gap-2 md:w-auto">
           <Link href={ROUTES.SETTINGS.TOOLS.new}>
             <Plus className="h-4 w-4" />
             Add Server

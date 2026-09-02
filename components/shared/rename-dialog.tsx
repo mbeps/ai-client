@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { renameSchema } from "@/schemas/shared-fields";
+import { Loader2, Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, X, Loader2 } from "lucide-react";
+import { renameSchema } from "@/schemas/shared-fields";
 
 type RenameFormData = z.infer<typeof renameSchema>;
 
@@ -104,7 +104,7 @@ export function RenameDialog({
                 autoFocus
               />
               {errors.name && (
-                <p className="text-sm text-destructive">
+                <p className="text-destructive text-sm">
                   {errors.name.message}
                 </p>
               )}

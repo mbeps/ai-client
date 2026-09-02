@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/constants/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/constants/routes";
+import { auth } from "@/lib/auth/auth";
 import { SessionsTab } from "../_components/session/sessions-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
@@ -19,7 +19,7 @@ export default async function SessionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Active Sessions</h2>
+        <h2 className="font-bold text-2xl tracking-tight">Active Sessions</h2>
         <p className="text-muted-foreground">
           View and manage the devices where you are currently logged in.
         </p>

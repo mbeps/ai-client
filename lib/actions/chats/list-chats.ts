@@ -1,6 +1,5 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
 import { chat } from "@/drizzle/schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { ChatRow } from "@/types/chat/chat-row";

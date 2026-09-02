@@ -1,8 +1,8 @@
 import { createMCPClient } from "@ai-sdk/mcp";
+import { MCP_TIMEOUT_MS } from "@/constants/mcp";
+import { withTimeout } from "@/lib/mcp/with-timeout";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { buildTransport } from "./build-transport";
-import { withTimeout } from "@/lib/mcp/with-timeout";
-import { MCP_TIMEOUT_MS } from "@/constants/mcp";
 
 /**
  * Creates a connected MCP client for the given server configuration.

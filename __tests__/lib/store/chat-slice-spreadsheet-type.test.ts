@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Safety-net mocks ──────────────────────────────────────────────────────
 vi.mock("@/lib/env", () => ({
@@ -45,9 +45,9 @@ vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
 }));
 
 import { useAppStore } from "@/lib/store";
+import type { AttachmentRow } from "@/types/attachment/attachment-row";
 import type { ChatRow } from "@/types/chat/chat-row";
 import type { MessageRow } from "@/types/message/message-row";
-import type { AttachmentRow } from "@/types/attachment/attachment-row";
 
 const RESET_STATE = {
   chats: {} as Record<string, never>,

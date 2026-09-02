@@ -1,8 +1,8 @@
-import { type ModelMessage } from "ai";
+import type { ModelMessage } from "ai";
+import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
+import type { ThreadMessage } from "@/lib/chat/load-thread-from-db";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
-import { type ThreadMessage } from "@/lib/chat/load-thread-from-db";
 
 interface MessageOrchestrationOptions {
   history: ThreadMessage[];

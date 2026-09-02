@@ -1,9 +1,9 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**

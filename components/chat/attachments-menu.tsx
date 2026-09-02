@@ -1,22 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
-  Paperclip,
-  Database,
-  Wrench,
-  Check,
-  X,
   BrainCircuit,
+  Check,
+  Database,
+  Paperclip,
   SquareTerminal,
+  Wrench,
+  X,
 } from "lucide-react";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
-import type { Skill } from "@/types/skill/skill";
-import type { Prompt } from "@/types/prompt/prompt";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,11 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-import { ToolPickerList } from "./tool-picker-list";
+import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Skill } from "@/types/skill/skill";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
-import { SkillsPickerDialog } from "./skills-picker";
 import { PromptPickerDialog } from "./prompt-picker";
+import { SkillsPickerDialog } from "./skills-picker";
+import { ToolPickerList } from "./tool-picker-list";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -75,7 +75,7 @@ export const AttachmentsMenu = ({
   mcpPrompts = [],
   selectedPrompt = null,
   onSelectPrompt,
-  supportsVision = true,
+  supportsVision: _supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -97,7 +97,7 @@ export const AttachmentsMenu = ({
           selectedSkills={selectedSkills}
           onToggleSkill={onToggleSkill}
           trigger={
-            <Button variant="ghost" size="sm" className="justify-start w-full">
+            <Button variant="ghost" size="sm" className="w-full justify-start">
               <BrainCircuit className="mr-2 h-4 w-4" />
               Select Skills
               {selectedSkills.size > 0 ? ` (${selectedSkills.size})` : ""}
@@ -113,7 +113,7 @@ export const AttachmentsMenu = ({
           selectedPrompt={selectedPrompt}
           onSelectPrompt={onSelectPrompt}
           trigger={
-            <Button variant="ghost" size="sm" className="justify-start w-full">
+            <Button variant="ghost" size="sm" className="w-full justify-start">
               <SquareTerminal className="mr-2 h-4 w-4" />
               Select Prompt
               {selectedPrompt ? " (1)" : ""}
@@ -127,7 +127,7 @@ export const AttachmentsMenu = ({
         selectedKbs={selectedKbs}
         onToggleKb={onToggleKb}
         trigger={
-          <Button variant="ghost" size="sm" className="justify-start w-full">
+          <Button variant="ghost" size="sm" className="w-full justify-start">
             <Database className="mr-2 h-4 w-4" />
             Add Knowledgebase
             {selectedKbs.size > 0 ? ` (${selectedKbs.size})` : ""}
@@ -140,7 +140,7 @@ export const AttachmentsMenu = ({
           <Button
             variant="ghost"
             size="sm"
-            className="justify-start w-full"
+            className="w-full justify-start"
             disabled={!supportsTools}
           >
             <Wrench className="mr-2 h-4 w-4" />
@@ -148,7 +148,7 @@ export const AttachmentsMenu = ({
             {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="flex h-[80vh] max-w-2xl flex-col overflow-hidden p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Select Tools</DialogTitle>
           </DialogHeader>
@@ -162,8 +162,8 @@ export const AttachmentsMenu = ({
             />
           )}
 
-          <div className="p-4 border-t flex items-end justify-between bg-muted/20 shrink-0">
-            <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-end justify-between border-t bg-muted/20 p-4">
+            <div className="flex flex-col gap-1.5 text-muted-foreground text-xs">
               <div className="flex items-center gap-2">
                 <Wrench className="h-3.5 w-3.5" />
                 <span>

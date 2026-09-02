@@ -1,5 +1,5 @@
-import { McpServer } from "./mcp-server";
-import { type DistributiveOmit } from "./distributive-omit";
+import type { DistributiveOmit } from "./distributive-omit";
+import type { McpServer } from "./mcp-server";
 
 /**
  * Represents a publicly shared MCP server.

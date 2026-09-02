@@ -1,6 +1,6 @@
+import { ArrowLeft, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, type LucideIcon } from "lucide-react";
 
 interface NotFoundPageProps {
   title: string;
@@ -28,10 +28,10 @@ export function NotFoundPage({
   linkIcon: LinkIcon = ArrowLeft,
 }: NotFoundPageProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
-      <h2 className="text-6xl font-bold text-muted-foreground">404</h2>
-      <p className="text-xl font-semibold">{title}</p>
-      <p className="text-sm text-muted-foreground max-w-md">{description}</p>
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+      <h2 className="font-bold text-6xl text-muted-foreground">404</h2>
+      <p className="font-semibold text-xl">{title}</p>
+      <p className="max-w-md text-muted-foreground text-sm">{description}</p>
       <Button asChild>
         <Link href={linkHref}>
           {LinkIcon && <LinkIcon className="mr-2 h-4 w-4" />}

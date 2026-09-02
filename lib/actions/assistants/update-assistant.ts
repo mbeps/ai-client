@@ -1,10 +1,10 @@
 "use server";
 
+import type { z } from "zod";
 import { assistant } from "@/drizzle/schema";
-import type { AssistantRow } from "@/types/assistant/assistant-row";
-import { updateAssistantSchema } from "@/schemas/assistant/assistant";
 import { updateEntityFactory } from "@/lib/actions/shared/update-entity-factory";
-import { z } from "zod";
+import { updateAssistantSchema } from "@/schemas/assistant/assistant";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**
  * Updates an existing AI assistant's metadata, description, prompt, tools, or avatar.

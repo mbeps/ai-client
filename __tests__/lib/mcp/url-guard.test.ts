@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { env } from "@/lib/env";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
-import { env } from "@/lib/env";
 
 // Mock DNS resolver to return controlled results, avoiding network dependency in tests
 const { mockDnsResolver } = vi.hoisted(() => ({

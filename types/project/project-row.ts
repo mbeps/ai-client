@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { project } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { project } from "@/drizzle/schema";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a user project (chat group with shared system prompt) from the Drizzle schema.

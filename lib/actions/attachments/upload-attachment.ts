@@ -1,24 +1,24 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { attachment, message, chat } from "@/drizzle/schema";
-import { eq, and } from "drizzle-orm";
-import { uploadObject } from "@/lib/storage/upload-object";
-import { ensureBucket } from "@/lib/storage/ensure-bucket";
-import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
-  ALLOWED_IMAGE_TYPES,
   ALLOWED_DOCUMENT_TYPES,
+  ALLOWED_IMAGE_TYPES,
   ALLOWED_SPREADSHEET_TYPES,
-  MAX_IMAGE_SIZE_BYTES,
   MAX_DOCUMENT_SIZE_BYTES,
+  MAX_IMAGE_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/constants/attachments";
+import { db } from "@/drizzle/db";
+import { attachment, chat, message } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { requireSession } from "@/lib/auth/require-session";
 import { env } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { ensureBucket } from "@/lib/storage/ensure-bucket";
+import { uploadObject } from "@/lib/storage/upload-object";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 
 const ALLOWED_TYPES = new Set([
   ...ALLOWED_IMAGE_TYPES,

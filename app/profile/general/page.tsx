@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth/auth";
-import { ROUTES } from "@/constants/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/constants/routes";
+import { auth } from "@/lib/auth/auth";
 import { ProfileUpdateForm } from "../_components/profile/profile-update-form";
 
 /**
@@ -18,15 +18,15 @@ export default async function GeneralProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">General Settings</h2>
+        <h2 className="font-bold text-2xl tracking-tight">General Settings</h2>
         <p className="text-muted-foreground">
           Update your personal information and how it appears to others.
         </p>
       </div>
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium">Profile Information</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-medium text-lg">Profile Information</h3>
+          <p className="text-muted-foreground text-sm">
             This information will be displayed on your public profile.
           </p>
         </div>

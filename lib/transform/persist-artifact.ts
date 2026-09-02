@@ -10,14 +10,14 @@
  */
 
 import { randomUUID } from "crypto";
+import { eq, sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
-import { eq, sql } from "drizzle-orm";
-import { uploadObject } from "@/lib/storage/upload-object";
-import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import { logger } from "@/lib/logger";
+import { uploadObject } from "@/lib/storage/upload-object";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 
 /** Discriminated input for the two persistence paths. */
 export type PersistArtifactInput =

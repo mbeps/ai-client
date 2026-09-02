@@ -1,12 +1,12 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { prompt } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
-import type { PromptRow } from "@/types/prompt/prompt-row";
+import { requireSession } from "@/lib/auth/require-session";
 import { updatePromptSchema } from "@/schemas/prompt/prompt";
-import { z } from "zod";
+import type { PromptRow } from "@/types/prompt/prompt-row";
 
 /**
  * Updates an existing prompt with partial field updates (shortcut, title, content).

@@ -1,24 +1,24 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Save, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PROMPTS } from "@/constants/prompts";
-import { ReactNode } from "react";
-import { Save, X } from "lucide-react";
 
 export const promptFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -80,7 +80,7 @@ export function PromptForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="title"
@@ -102,7 +102,7 @@ export function PromptForm({
                 <FormLabel>Shortcut</FormLabel>
                 <FormControl>
                   <div className="flex items-center">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-l-md border border-r-0 bg-muted text-muted-foreground font-mono">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted font-mono text-muted-foreground">
                       /
                     </div>
                     <Input

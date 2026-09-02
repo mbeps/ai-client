@@ -1,9 +1,9 @@
 "use client";
 
+import { ArrowLeft, type LucideIcon, RotateCcw } from "lucide-react";
+import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { RotateCcw, ArrowLeft, type LucideIcon } from "lucide-react";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -45,14 +45,14 @@ export function ErrorPage({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="flex flex-col items-center gap-2">
-        <h2 className="text-xl font-semibold">{heading}</h2>
-        <p className="text-sm text-muted-foreground max-w-md">
+        <h2 className="font-semibold text-xl">{heading}</h2>
+        <p className="max-w-md text-muted-foreground text-sm">
           {error.message || fallbackDescription}
         </p>
         {error.digest && (
-          <p className="text-xs text-muted-foreground font-mono">
+          <p className="font-mono text-muted-foreground text-xs">
             Error ID: {error.digest}
           </p>
         )}

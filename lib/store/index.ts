@@ -20,9 +20,9 @@
  * @see ChatSlice and EntitySlice for implementation details
  */
 import { create } from "zustand";
+import type { AppState } from "@/types/app/app-state";
 import { createChatSlice } from "./slices/chat-slice";
 import { createEntitySlice } from "./slices/entity-slice";
-import type { AppState } from "@/types/app/app-state";
 
 /**
  * Global Zustand store hook for the AI chat client.

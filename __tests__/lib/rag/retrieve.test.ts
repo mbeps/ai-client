@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/env", () => ({
   env: {
@@ -18,8 +18,8 @@ vi.mock("@/lib/rag/embed-query", () => ({ embedQuery: vi.fn() }));
 import { CHUNK_CONSTANTS } from "../../../constants/chunk";
 import { applyRRF } from "../../../lib/rag/apply-rrf";
 import { hybridSearch } from "../../../lib/rag/hybrid-search";
-import { type RawChunkRow } from "../../../types/rag/raw-chunk-row";
-import { type ChunkResult } from "../../../types/rag/chunk-result";
+import type { ChunkResult } from "../../../types/rag/chunk-result";
+import type { RawChunkRow } from "../../../types/rag/raw-chunk-row";
 
 describe("applyRRF", () => {
   const makeRow = (id: string): RawChunkRow => ({

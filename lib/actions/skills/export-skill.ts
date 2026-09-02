@@ -1,8 +1,8 @@
 "use server";
 
-import { getSkill } from "./get-skill";
 import { createSkillZip } from "@/lib/skills/parser";
 import type { SkillBundledFile } from "@/types/skill/skill";
+import { getSkill } from "./get-skill";
 
 /**
  * Generates and returns a base64-encoded ZIP archive of an Agent Skill and its bundled subfiles.

@@ -1,10 +1,10 @@
 "use client";
 
+import { ModelSelector } from "@/components/shared/model-selector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ModelSelector } from "@/components/shared/model-selector";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface TransformConfigTabProps {
   name: string;
@@ -35,13 +35,13 @@ export function TransformConfigTab({
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Agent Details</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Agent Details</h3>
+        <p className="text-muted-foreground text-sm">
           Basic configuration and metadata for this transform agent.
         </p>
       </div>
 
-      <div className="space-y-6 max-w-2xl">
+      <div className="max-w-2xl space-y-6">
         <div className="space-y-2">
           <Label htmlFor="name">Agent Name</Label>
           <Input
@@ -66,14 +66,14 @@ export function TransformConfigTab({
           <ModelSelector
             value={modelId}
             onValueChange={onModelIdChange}
-            className="w-full border bg-card h-10 px-3"
+            className="h-10 w-full border bg-card px-3"
           />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label>Require File Upload</Label>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               If enabled, users will be prompted to upload spreadsheet files
               before running the agent.
             </p>

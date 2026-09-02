@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Spy on drizzle-orm condition builders so the WHERE clause can be verified.
 vi.mock("drizzle-orm", async (importOriginal) => {
@@ -24,8 +24,8 @@ const chainable = vi.hoisted(() => {
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
 import { and, eq, lt } from "drizzle-orm";
-import { resetStuckRuns } from "@/lib/transform/lifecycle-service";
 import { transformRun } from "@/drizzle/schema";
+import { resetStuckRuns } from "@/lib/transform/lifecycle-service";
 
 describe("resetStuckRuns", () => {
   beforeEach(() => {

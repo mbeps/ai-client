@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, screen, act } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // KaTeX's CSS import breaks the Vitest PostCSS pipeline in jsdom; not needed for assertions
 vi.mock("katex/dist/katex.min.css", () => ({}));

@@ -1,17 +1,17 @@
 "use client";
 
+import { format } from "date-fns";
+import { Calendar, FileText, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, RefreshCw, Calendar } from "lucide-react";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 export interface KbStatsCardsProps {
   kb: KnowledgebaseRow;
@@ -29,14 +29,14 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Card className="flex-1 min-w-[200px] shadow-none">
+      <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
             <FileText className="h-3.5 w-3.5" />
             Documents
           </CardDescription>
-          <div className="flex flex-col gap-0.5 mt-1">
-            <CardTitle className="text-xl font-bold">
+          <div className="mt-1 flex flex-col gap-0.5">
+            <CardTitle className="font-bold text-xl">
               {documents.length}
             </CardTitle>
             <p className="text-[10px] text-muted-foreground">
@@ -48,9 +48,9 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
         </CardHeader>
       </Card>
 
-      <Card className="flex-1 min-w-[200px] shadow-none">
+      <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
             <RefreshCw
               className={cn(
                 "h-3.5 w-3.5",
@@ -59,9 +59,9 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
             />
             Index Status
           </CardDescription>
-          <div className="flex flex-col gap-0.5 mt-1">
+          <div className="mt-1 flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-xl font-bold capitalize">
+              <CardTitle className="font-bold text-xl capitalize">
                 {kb.indexStatus}
               </CardTitle>
               {kb.indexStatus === "stale" && (
@@ -87,14 +87,14 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
         </CardHeader>
       </Card>
 
-      <Card className="flex-1 min-w-[200px] shadow-none">
+      <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold">
+          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
             <Calendar className="h-3.5 w-3.5" />
             Stats
           </CardDescription>
-          <div className="flex flex-col gap-0.5 mt-1">
-            <CardTitle className="text-sm font-medium">
+          <div className="mt-1 flex flex-col gap-0.5">
+            <CardTitle className="font-medium text-sm">
               Created {format(kb.createdAt, "PPP")}
             </CardTitle>
             <p className="text-[10px] text-muted-foreground">

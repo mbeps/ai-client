@@ -1,6 +1,6 @@
-import type { ChatRow } from "./chat-row";
-import type { MessageRow } from "@/types/message/message-row";
 import type { AttachmentRow } from "@/types/attachment/attachment-row";
+import type { MessageRow } from "@/types/message/message-row";
+import type { ChatRow } from "./chat-row";
 
 /**
  * Chat record with denormalized messages and attachments for display.

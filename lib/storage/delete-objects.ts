@@ -1,5 +1,5 @@
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "./s3-instance";
+import { S3_BUCKET, s3Client } from "./s3-instance";
 
 /**
  * Deletes multiple objects from S3 storage in a single batch request.

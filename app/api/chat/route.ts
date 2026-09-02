@@ -1,31 +1,31 @@
-import { auth } from "@/lib/auth/auth";
-import { env } from "@/lib/env";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { isStepCount, streamText } from "ai";
 import { headers } from "next/headers";
-import { streamText, isStepCount } from "ai";
-import { chatRequestSchema } from "@/schemas/chat/chat";
-import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
-import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
-import { registerSkillTool } from "@/lib/chat/register-skill-tool";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { logger } from "@/lib/logger";
 import {
-  VisionNotSupportedError,
   ToolsNotSupportedError,
+  VisionNotSupportedError,
 } from "@/constants/errors";
-import {
-  loadChatContext,
-  ChatNotFoundError,
-} from "@/lib/chat/load-chat-context";
-import { checkVisionSupport } from "@/lib/chat/vision-guard";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { auth } from "@/lib/auth/auth";
 import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
-import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
-import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { createChatStream, type FinishRef } from "@/lib/chat/chat-stream";
+import {
+  ChatNotFoundError,
+  loadChatContext,
+} from "@/lib/chat/load-chat-context";
+import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
+import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
+import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
+import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { registerSkillTool } from "@/lib/chat/register-skill-tool";
+import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
+import { checkVisionSupport } from "@/lib/chat/vision-guard";
+import { env } from "@/lib/env";
+import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { chatRequestSchema } from "@/schemas/chat/chat";
 
 export const maxDuration = 60;
 

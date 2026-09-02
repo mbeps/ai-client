@@ -1,15 +1,15 @@
 "use client";
 
+import { FileText } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { FileText } from "lucide-react";
-import { Citation } from "@/types/chat/citation";
-import { useMemo } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Citation } from "@/types/chat/citation";
 
 interface CitationsListProps {
   citations: Citation[];
@@ -50,8 +50,8 @@ export function CitationsList({ citations }: CitationsListProps) {
     return null;
 
   return (
-    <div className="flex flex-wrap gap-2 mt-4 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-full mb-1">
+    <div className="fade-in slide-in-from-bottom-1 mt-4 mb-2 flex animate-in flex-wrap gap-2 duration-300">
+      <div className="mb-1 flex w-full items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
         <FileText className="size-3" />
         Sources
       </div>
@@ -60,34 +60,34 @@ export function CitationsList({ citations }: CitationsListProps) {
           <PopoverTrigger asChild>
             <Badge
               variant="secondary"
-              className="cursor-pointer hover:bg-secondary/80 transition-colors py-1 px-2 gap-1.5 flex items-center text-xs font-medium max-w-[200px]"
+              className="flex max-w-[200px] cursor-pointer items-center gap-1.5 px-2 py-1 font-medium text-xs transition-colors hover:bg-secondary/80"
             >
               <FileText className="size-3 shrink-0 text-primary/70" />
               <span className="truncate">{group.name}</span>
-              <span className="bg-primary/10 text-primary-foreground size-4 rounded-full flex items-center justify-center text-[10px]">
+              <span className="flex size-4 items-center justify-center rounded-full bg-primary/10 text-[10px] text-primary-foreground">
                 {group.snippets.length}
               </span>
             </Badge>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[min(42rem,calc(100vw-2rem))] p-0 overflow-hidden"
+            className="w-[min(42rem,calc(100vw-2rem))] overflow-hidden p-0"
             align="start"
           >
-            <div className="flex items-center justify-between p-3 border-b bg-muted/30">
-              <div className="font-semibold text-sm truncate pr-2">
+            <div className="flex items-center justify-between border-b bg-muted/30 p-3">
+              <div className="truncate pr-2 font-semibold text-sm">
                 {group.name}
               </div>
             </div>
             <ScrollArea className="h-[300px] max-h-[70vh]">
-              <div className="p-3 space-y-4">
+              <div className="space-y-4 p-3">
                 {group.snippets.map((snippet, sIdx) => (
                   <div key={sIdx} className="space-y-1.5">
                     <div className="flex items-center">
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="font-mono text-[10px] text-muted-foreground">
                         Snippet {sIdx + 1}
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed text-foreground italic border-l-2 border-primary/20 pl-2 py-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                    <p className="whitespace-pre-wrap break-words border-primary/20 border-l-2 py-0.5 pl-2 text-foreground text-xs italic leading-relaxed [overflow-wrap:anywhere]">
                       &quot;{snippet.content}&quot;
                     </p>
                   </div>

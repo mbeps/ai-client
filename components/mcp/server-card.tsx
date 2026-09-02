@@ -1,10 +1,9 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
-import { Badge } from "@/components/ui/badge";
 import { ServerOptions } from "./server-options";
 
 /**
@@ -37,22 +36,22 @@ export function ServerCard({ server }: ServerCardProps) {
 
   return (
     <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[100px]"
+      className="group flex min-h-[100px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50"
       onClick={() => router.push(ROUTES.TOOLS.detail(server.id))}
     >
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="space-y-1.5 flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-semibold leading-none truncate">
+              <h3 className="truncate font-semibold leading-none">
                 {server.name}
               </h3>
               <span
-                className={`h-2 w-2 rounded-full shrink-0 ${server.enabled ? "bg-green-500" : "bg-muted-foreground/40"}`}
+                className={`h-2 w-2 shrink-0 rounded-full ${server.enabled ? "bg-green-500" : "bg-muted-foreground/40"}`}
               />
             </div>
             {server.url && (
-              <p className="text-sm text-muted-foreground line-clamp-2 font-mono">
+              <p className="line-clamp-2 font-mono text-muted-foreground text-sm">
                 {server.url}
               </p>
             )}

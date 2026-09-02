@@ -1,25 +1,22 @@
-import { StateCreator } from "zustand";
-import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
-import { insertMessage } from "@/lib/chat/insert-message";
-import { removeSubtree as removeMessageSubtree } from "@/lib/chat/remove-subtree";
+import type { StateCreator } from "zustand";
+import { ALLOWED_SPREADSHEET_TYPES } from "@/constants/attachments";
 import { createChat } from "@/lib/actions/chats/create-chat";
 import { deleteChat } from "@/lib/actions/chats/delete-chat";
-import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
-import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
 import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
+import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
+import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
+import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
-import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { insertMessage } from "@/lib/chat/insert-message";
 
 import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
-import { ALLOWED_SPREADSHEET_TYPES } from "@/constants/attachments";
+import { removeSubtree as removeMessageSubtree } from "@/lib/chat/remove-subtree";
 import type { AppState } from "@/types/app/app-state";
-import type { Message } from "@/types/message/message";
-import type { Chat } from "@/types/chat/chat";
-import type { ChatRow } from "@/types/chat/chat-row";
-import type { MessageRow } from "@/types/message/message-row";
-import type { AttachmentRow } from "@/types/attachment/attachment-row";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { Chat } from "@/types/chat/chat";
+import type { Message } from "@/types/message/message";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.

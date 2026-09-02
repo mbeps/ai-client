@@ -1,11 +1,11 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 import type { Prompt } from "@/types/prompt/prompt";
 import { PromptOptions } from "./prompt-options";
-import { Badge } from "@/components/ui/badge";
 
 /**
  * Props for the PromptCard component.
@@ -29,19 +29,19 @@ export function PromptCard({ prompt }: PromptCardProps) {
 
   return (
     <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[80px]"
+      className="group flex min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50"
       onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.detail(prompt.id))}
     >
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="space-y-1.5 flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-semibold leading-none truncate">
+              <h3 className="truncate font-semibold leading-none">
                 {prompt.title}
               </h3>
             </div>
             <div className="flex flex-wrap gap-1">
-              <Badge variant="secondary" className="font-mono text-[10px] py-0">
+              <Badge variant="secondary" className="py-0 font-mono text-[10px]">
                 {prompt.shortcut.startsWith("/")
                   ? prompt.shortcut
                   : `/${prompt.shortcut}`}

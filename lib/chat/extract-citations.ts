@@ -1,5 +1,5 @@
-import { ToolResult } from "@/types/chat/tool-result";
-import { Citation } from "@/types/chat/citation";
+import type { Citation } from "@/types/chat/citation";
+import type { ToolResult } from "@/types/chat/tool-result";
 
 /**
  * Extracts RAG citations from tool results by identifying search_knowledge_base outputs.

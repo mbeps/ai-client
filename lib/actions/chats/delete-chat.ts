@@ -1,10 +1,10 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
-import { eq, and, inArray } from "drizzle-orm";
-import { z } from "zod";
+import { requireSession } from "@/lib/auth/require-session";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
 
 /**

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;

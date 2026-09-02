@@ -1,7 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,17 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { LoadingSwap } from "@/components/ui/loading-swap";
-import { User } from "lucide-react";
-import { authClient } from "@/lib/auth/auth-client";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import {
-  profileUpdateSchema,
-  ProfileUpdateFormData,
-} from "@/schemas/user/profile-update";
 import { Label } from "@/components/ui/label";
+import { LoadingSwap } from "@/components/ui/loading-swap";
+import { authClient } from "@/lib/auth/auth-client";
+import {
+  type ProfileUpdateFormData,
+  profileUpdateSchema,
+} from "@/schemas/user/profile-update";
 
 /**
  * React Hook Form-based form for updating user profile name with real-time validation.
@@ -69,12 +69,12 @@ export function ProfileUpdateForm({
         className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(handleProfileUpdate)}
       >
-        <div className="flex flex-col md:flex-row items-start gap-4">
+        <div className="flex flex-col items-start gap-4 md:flex-row">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="flex-1 w-full">
+              <FormItem className="w-full flex-1">
                 <FormLabel>Name</FormLabel>
                 <FormControl>
                   <Input placeholder="John Doe" {...field} />
@@ -84,10 +84,10 @@ export function ProfileUpdateForm({
             )}
           />
 
-          <div className="flex-1 w-full grid gap-2">
+          <div className="grid w-full flex-1 gap-2">
             <Label>Email</Label>
             <Input value={user.email} disabled />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Email address cannot be changed.
             </p>
           </div>

@@ -1,11 +1,11 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { ROUTES } from "@/constants/routes";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { ROUTES } from "@/constants/routes";
 
 /**
  * Updates message metadata after validating user ownership of chat. Revalidates related paths.

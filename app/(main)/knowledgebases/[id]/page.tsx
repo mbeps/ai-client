@@ -1,42 +1,42 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
-  Upload,
-  Settings,
+  AlertCircle,
   Library,
   Loader2,
+  Settings,
   Shield,
-  AlertCircle,
+  Upload,
 } from "lucide-react";
-import { useParams, useRouter, notFound } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useState } from "react";
-import { listDocuments } from "@/lib/actions/knowledgebases/list-documents";
-import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import { listModels } from "@/lib/actions/models/list-models";
+import { toast } from "sonner";
 import { DocumentList } from "@/components/knowledgebase/document-list";
-import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
-import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
-import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowledgebase";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { KbSettingsTab } from "@/components/knowledgebase/kb-settings-tab";
+import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
+import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import {
   SidebarTabs,
+  SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
-  SidebarTabsContent,
 } from "@/components/shared/sidebar-tabs";
-import { useQueryState, parseAsString } from "nuqs";
-import { useEntityOptions } from "@/hooks/use-entity-options";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants/routes";
-import { toast } from "sonner";
+import { useEntityOptions } from "@/hooks/use-entity-options";
+import { useUserModels } from "@/hooks/use-user-models";
+import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
+import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
+import { listDocuments } from "@/lib/actions/knowledgebases/list-documents";
+import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowledgebase";
+import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
+import { listModels } from "@/lib/actions/models/list-models";
+import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
-import { useUserModels } from "@/hooks/use-user-models";
 
 /**
  * Knowledgebase detail page: Upload documents and manage embeddings.
@@ -131,7 +131,7 @@ export default function KnowledgebasePage() {
     listDocuments(kbId)
       .then(setDocuments)
       .catch(() => {});
-  }, [kbId, setDocuments]);
+  }, [kbId]);
 
   useEffect(() => {
     fetchKb();
@@ -172,7 +172,7 @@ export default function KnowledgebasePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -185,17 +185,17 @@ export default function KnowledgebasePage() {
   return (
     <div className="page-container-detail">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">{kb.name}</h1>
+        <h1 className="font-bold text-2xl">{kb.name}</h1>
         {kb.description && (
           <p className="text-muted-foreground">{kb.description}</p>
         )}
       </div>
 
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="text-xs font-medium text-red-800 dark:text-red-200">
+            <p className="font-medium text-red-800 text-xs dark:text-red-200">
               No embedding models configured. Please set up a provider with
               embedding support to upload documents.
             </p>
@@ -203,7 +203,7 @@ export default function KnowledgebasePage() {
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
+            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
             onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
             <Settings className="mr-1.5 h-3 w-3" />
@@ -241,7 +241,7 @@ export default function KnowledgebasePage() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Documents</h2>
+              <h2 className="font-semibold text-base">Documents</h2>
               <Button
                 size="sm"
                 onClick={() => setShowUpload(true)}

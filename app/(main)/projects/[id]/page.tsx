@@ -1,44 +1,43 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
-import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
-import { useParams, useRouter, notFound } from "next/navigation";
 import {
-  SidebarTabs,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-  SidebarTabsContent,
-} from "@/components/shared/sidebar-tabs";
-
-import { Button } from "@/components/ui/button";
-import {
+  FileText,
+  FolderKanban,
   Library,
   Loader2,
   MessageSquare,
   MessageSquarePlus,
   Settings,
-  FileText,
   Shield,
   Wrench,
-  FolderKanban,
 } from "lucide-react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ProjectChatsTab } from "@/components/project/project-chats-tab";
 import { ProjectKnowledgebaseTab } from "@/components/project/project-knowledgebase-tab";
 import { ProjectPromptTab } from "@/components/project/project-prompt-tab";
 import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
 import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { ROUTES } from "@/constants/routes";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { listChats } from "@/lib/actions/chats/list-chats";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { updateProject } from "@/lib/actions/projects/update-project";
-import { useState, useEffect, useMemo } from "react";
-import { useQueryState, parseAsString } from "nuqs";
-import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { toast } from "sonner";
+import { useAppStore } from "@/lib/store";
+import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 
 /**
  * Project detail page — client component for viewing and editing project configuration.
@@ -73,7 +72,7 @@ export default function ProjectPage() {
     "mcpServers",
   ]);
 
-  const [loadingChats, setLoadingChats] = useState(false);
+  const [_loadingChats, setLoadingChats] = useState(false);
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [globalPrompt, setGlobalPrompt] = useState(project?.globalPrompt ?? "");
@@ -105,6 +104,7 @@ export default function ProjectPage() {
   }, [chats, searchQuery]);
 
   // Load project-specific chats on mount if not already loaded into store
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats on projectId change
   useEffect(() => {
     if (chats.length === 0) {
       setLoadingChats(true);
@@ -112,7 +112,7 @@ export default function ProjectPage() {
         .then((rows) => loadChats(rows, []))
         .finally(() => setLoadingChats(false));
     }
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   useEffect(() => {
     if (project) {
@@ -128,7 +128,7 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -219,13 +219,13 @@ export default function ProjectPage() {
 
   return (
     <div className="page-container">
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <FolderKanban className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{project.name}</h1>
+            <h1 className="font-bold text-3xl">{project.name}</h1>
             <p className="text-muted-foreground">{project.description}</p>
           </div>
         </div>

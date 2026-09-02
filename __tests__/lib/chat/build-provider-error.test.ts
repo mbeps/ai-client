@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
+import { describe, expect, it } from "vitest";
 import {
-  ProviderNotConfiguredError,
-  VisionNotSupportedError,
-  ToolsNotSupportedError,
-  ContextWindowExceededError,
   ContentFilterError,
+  ContextWindowExceededError,
   InvalidApiKeyError,
+  ProviderNotConfiguredError,
+  ToolsNotSupportedError,
+  VisionNotSupportedError,
 } from "@/constants/errors";
+import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
 
 async function bodyOf(res: Response) {
   return (await res.json()) as { error: string; code: string };

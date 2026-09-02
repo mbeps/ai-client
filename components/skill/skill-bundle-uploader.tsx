@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { LoadingSwap } from "@/components/ui/loading-swap";
 import {
+  CheckCircle2,
   FileArchive,
   FileText,
-  CheckCircle2,
+  RefreshCw,
   Upload,
   X,
-  RefreshCw,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { LoadingSwap } from "@/components/ui/loading-swap";
 import { cn } from "@/lib/utils";
 
 export interface SkillBundleUploaderProps {
@@ -66,8 +66,8 @@ export function SkillBundleUploader({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Import Skill Bundle</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-lg">Import Skill Bundle</h3>
+        <p className="text-muted-foreground text-sm">
           Import a <code>SKILL.md</code> file or a <code>.zip</code> bundle
           containing instructions and reference subfiles.
         </p>
@@ -97,7 +97,7 @@ export function SkillBundleUploader({
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={cn(
-          "border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-12 text-center transition-colors",
           isDragging
             ? "border-primary bg-primary/10"
             : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
@@ -112,18 +112,18 @@ export function SkillBundleUploader({
               <FileText className="h-12 w-12 text-primary" />
             )}
             <div className="space-y-1">
-              <p className="font-medium text-base text-foreground flex items-center justify-center gap-2">
+              <p className="flex items-center justify-center gap-2 font-medium text-base text-foreground">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 {selectedFile.name}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {(selectedFile.size / 1024).toFixed(1)} KB
               </p>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-muted-foreground"
+              className="text-muted-foreground text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedFile(null);
@@ -135,17 +135,17 @@ export function SkillBundleUploader({
           </>
         ) : (
           <>
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Upload className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <p className="text-base font-medium">
+              <p className="font-medium text-base">
                 Drop your skill file here, or{" "}
                 <span className="text-primary underline underline-offset-2">
                   browse
                 </span>
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Supports .md files with YAML frontmatter or .zip bundles
               </p>
             </div>

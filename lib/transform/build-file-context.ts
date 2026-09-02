@@ -3,9 +3,9 @@
  * workbooks / input files are available and providing presigned URLs.
  */
 
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
-import { inArray, and, eq } from "drizzle-orm";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /** A row from the attachment table that we pass around during the run. */
@@ -76,4 +76,3 @@ export async function buildFileContext(
 
   return { fileContext, attachmentRows };
 }
-

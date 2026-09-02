@@ -1,10 +1,11 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { BrainCircuit, Check, Search, X } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -12,12 +13,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Skill } from "@/types/skill/skill";
-import { BrainCircuit, Search, Check, X } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/utils";
+import type { Skill } from "@/types/skill/skill";
 
 interface SkillsPickerProps {
   skills: Skill[];
@@ -52,7 +52,7 @@ export function SkillsPicker({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search skills..."
           value={search}
@@ -64,7 +64,7 @@ export function SkillsPicker({
       <ScrollArea className="pr-4" style={{ maxHeight }}>
         <div className="space-y-2">
           {filteredSkills.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
+            <div className="py-8 text-center text-muted-foreground text-sm">
               No skills found.
             </div>
           ) : (
@@ -76,7 +76,7 @@ export function SkillsPicker({
                 <div
                   key={s.id}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group",
+                    "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
                     isSelected && "border-primary bg-primary/5",
                   )}
                   onClick={() => onToggleSkill(s.id)}
@@ -88,23 +88,23 @@ export function SkillsPicker({
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4 text-primary shrink-0" />
-                        <span className="font-medium text-sm leading-none truncate">
+                        <BrainCircuit className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate font-medium text-sm leading-none">
                           {s.displayName || s.name}
                         </span>
                       </div>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] px-1 py-0 h-4 bg-muted text-muted-foreground shrink-0"
+                        className="h-4 shrink-0 bg-muted px-1 py-0 text-[10px] text-muted-foreground"
                       >
                         /{s.name}
                       </Badge>
                     </div>
                     {s.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-muted-foreground text-xs">
                         {s.description}
                       </p>
                     )}
@@ -149,14 +149,14 @@ export function SkillsPickerDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-md flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b">
+      <DialogContent className="flex max-w-md flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 pt-4 pb-3">
           <DialogTitle>Select Agent Skills</DialogTitle>
         </DialogHeader>
 
         {skills.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            <BrainCircuit className="h-8 w-8 mx-auto mb-3 text-primary opacity-40" />
+          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+            <BrainCircuit className="mx-auto mb-3 h-8 w-8 text-primary opacity-40" />
             <p className="mb-2">No skills configured yet.</p>
             <Link
               href={ROUTES.SETTINGS.SKILLS.path}
@@ -176,8 +176,8 @@ export function SkillsPickerDialog({
               maxHeight="320px"
             />
 
-            <div className="px-4 py-3 border-t flex items-center justify-between bg-muted/20 shrink-0">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
+              <p className="text-muted-foreground text-xs">
                 <strong>{selectedSkills.size}</strong>{" "}
                 {selectedSkills.size === 1 ? "skill" : "skills"} selected
               </p>

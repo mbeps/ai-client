@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { CHUNK_CONSTANTS } from "../../../constants/chunk";
 import { chunkText } from "../../../lib/rag/chunk-text";
 

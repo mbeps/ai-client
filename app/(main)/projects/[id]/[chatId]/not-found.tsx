@@ -1,6 +1,6 @@
+import { FolderKanban } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
 import { ROUTES } from "@/constants/routes";
-import { FolderKanban } from "lucide-react";
 
 /**
  * Project chat not found page — displays 404 UI when requested project chat does not exist.

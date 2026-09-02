@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Mock CSS imports for jsdom
 vi.mock("katex/dist/katex.min.css", () => ({}));
@@ -68,10 +68,7 @@ describe("MarkdownTabEditor", () => {
 
   it("renders Rich Text (BlockNote) editor by default", async () => {
     render(
-      <MarkdownTabEditor
-        value="# Some markdown content"
-        onChange={vi.fn()}
-      />,
+      <MarkdownTabEditor value="# Some markdown content" onChange={vi.fn()} />,
     );
 
     await waitFor(() => {

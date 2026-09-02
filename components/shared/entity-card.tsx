@@ -1,8 +1,8 @@
 "use client";
 
+import type React from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import React from "react";
 
 /**
  * Props for the EntityCard component.
@@ -48,29 +48,29 @@ export function EntityCard({
   return (
     <Card
       className={cn(
-        "p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex",
+        "group flex cursor-pointer p-4 transition-colors hover:bg-muted/50",
         horizontal
           ? "flex-row items-center justify-between"
-          : "flex-col justify-between min-h-[100px]",
+          : "min-h-[100px] flex-col justify-between",
         className,
       )}
       onClick={onClick}
     >
       <div
         className={cn(
-          "flex justify-between items-start gap-4",
-          horizontal ? "flex-1 min-w-0" : "w-full",
+          "flex items-start justify-between gap-4",
+          horizontal ? "min-w-0 flex-1" : "w-full",
         )}
       >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           {icon && (
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
               {icon}
             </div>
           )}
-          <div className="space-y-1 flex-1 min-w-0">
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <div className="font-semibold leading-none truncate flex-1 min-w-0">
+              <div className="min-w-0 flex-1 truncate font-semibold leading-none">
                 {typeof title === "string" ? (
                   <h3 className="truncate">{title}</h3>
                 ) : (
@@ -80,7 +80,7 @@ export function EntityCard({
             </div>
             <p
               className={cn(
-                "text-sm text-muted-foreground",
+                "text-muted-foreground text-sm",
                 horizontal ? "line-clamp-1" : "line-clamp-2",
               )}
             >
@@ -91,7 +91,7 @@ export function EntityCard({
 
         {!horizontal && (
           <div
-            className="flex items-center gap-2 shrink-0"
+            className="flex shrink-0 items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
             {rightActions}
@@ -102,7 +102,7 @@ export function EntityCard({
 
       {horizontal && (
         <div
-          className="flex items-center gap-2 shrink-0 ml-4"
+          className="ml-4 flex shrink-0 items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
           {rightActions}

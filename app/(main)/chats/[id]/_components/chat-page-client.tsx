@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChatUI } from "@/components/chat/chat-ui";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
-import { ChatUI } from "@/components/chat/chat-ui";
 
 interface ChatPageClientProps {
   initialChat: Chat;

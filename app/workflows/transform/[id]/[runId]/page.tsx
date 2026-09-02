@@ -1,44 +1,40 @@
 "use client";
 
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
 import {
-  ArrowLeft,
+  AlertCircle,
   CheckCircle2,
   Circle,
   Clock,
   Download,
-  Play,
-  AlertCircle,
   Loader2,
+  Play,
   ThumbsUp,
 } from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter, notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ArtifactPanel } from "@/components/chat/artifact-panel";
+import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
+import { PageHeader } from "@/components/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { ArtifactPanel } from "@/components/chat/artifact-panel";
-import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
-import type { ArtifactData } from "@/types/artifact/artifact-data";
-import { toast } from "sonner";
-import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
+import { Separator } from "@/components/ui/separator";
+import { useApiError } from "@/hooks/use-api-error";
 import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-
+import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
-import type { TransformRunStatus } from "@/types/transform/transform-run-status";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
-import { useApiError } from "@/hooks/use-api-error";
+import type { TransformRunStatus } from "@/types/transform/transform-run-status";
 
 type ToolCall = {
   toolCallId: string;
@@ -90,9 +86,9 @@ function mapRunRowToRun(row: TransformRunRow): TransformRun {
  */
 export default function TransformRunDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const _router = useRouter();
   const { handleApiError } = useApiError();
-  const agentId = params.id as string;
+  const _agentId = params.id as string;
   const runId = params.runId as string;
 
   const [run, setRun] = useState<TransformRun | null>(null);
@@ -506,26 +502,26 @@ export default function TransformRunDetailPage() {
         : 0;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 p-4 lg:p-6 shrink-0 border-b bg-card/50 backdrop-blur-sm">
+      <div className="flex shrink-0 flex-col gap-4 border-b bg-card/50 p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:gap-6 lg:p-6">
         <div className="flex items-center gap-3">
           <PageHeader
-            icon={<Play className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />}
+            icon={<Play className="h-6 w-6 text-blue-500 lg:h-8 lg:w-8" />}
             title={`Run: ${agent.name}`}
             description={`Started on ${run.createdAt.toLocaleString()}`}
           />
         </div>
 
-        <div className="flex items-center gap-4 lg:ml-auto lg:gap-6 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
+        <div className="no-scrollbar flex items-center gap-4 overflow-x-auto pb-2 lg:ml-auto lg:gap-6 lg:pb-0">
           {/* Compact Status */}
-          <div className="flex flex-col gap-0.5 min-w-fit shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+          <div className="flex min-w-fit shrink-0 flex-col gap-0.5">
+            <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
               Status
             </span>
             <Badge
               variant="outline"
-              className="h-5 px-2 text-[10px] border-primary/20 bg-primary/5 capitalize flex items-center gap-1.5 whitespace-nowrap"
+              className="flex h-5 items-center gap-1.5 whitespace-nowrap border-primary/20 bg-primary/5 px-2 text-[10px] capitalize"
             >
               <div
                 className={`h-1 w-1 rounded-full ${statusColors[run.status] ?? "bg-gray-500"} animate-pulse`}
@@ -534,31 +530,31 @@ export default function TransformRunDetailPage() {
             </Badge>
           </div>
 
-          <Separator orientation="vertical" className="h-8 hidden lg:block" />
+          <Separator orientation="vertical" className="hidden h-8 lg:block" />
 
           {/* Compact Progress */}
-          <div className="flex flex-col gap-1 min-w-[120px] lg:min-w-40 shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+          <div className="flex min-w-[120px] shrink-0 flex-col gap-1 lg:min-w-40">
+            <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
               Progress
             </span>
             <div className="flex items-center gap-2 lg:gap-3">
               <Progress value={progress} className="h-1.5 flex-1" />
-              <span className="text-[10px] font-bold tabular-nums">
+              <span className="font-bold text-[10px] tabular-nums">
                 {Math.round(progress)}%
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             {run.status === "awaiting_review" && (
               <>
                 <Separator
                   orientation="vertical"
-                  className="h-8 hidden lg:block mr-4"
+                  className="mr-4 hidden h-8 lg:block"
                 />
                 <Button
                   size="sm"
-                  className="bg-amber-600 hover:bg-amber-700 shadow-lg text-xs"
+                  className="bg-amber-600 text-xs shadow-lg hover:bg-amber-700"
                   onClick={handleApprove}
                   disabled={isApproving}
                 >
@@ -576,7 +572,7 @@ export default function TransformRunDetailPage() {
       </div>
 
       {streamError && (
-        <div className="m-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive shrink-0 flex items-center gap-2">
+        <div className="m-4 flex shrink-0 items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-destructive text-sm">
           <AlertCircle className="h-4 w-4" />
           {streamError}
         </div>
@@ -590,13 +586,13 @@ export default function TransformRunDetailPage() {
             minSize={isMobile ? 30 : 30}
             className="bg-muted/5"
           >
-            <div className="h-full overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            <div className="custom-scrollbar h-full space-y-4 overflow-y-auto p-6">
               {/* Execution Timeline */}
               <div className="space-y-6">
-                <h3 className="text-lg font-bold tracking-tight">
+                <h3 className="font-bold text-lg tracking-tight">
                   Execution Timeline
                 </h3>
-                <div className="relative before:absolute before:left-4 before:top-4 before:bottom-4 before:w-px before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
+                <div className="relative before:absolute before:top-4 before:bottom-4 before:left-4 before:w-px before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
                   {agent.steps.map((step, index) => {
                     const state = stepStates[index] ?? { status: "pending" };
                     const isCompleted = state.status === "completed";
@@ -607,7 +603,7 @@ export default function TransformRunDetailPage() {
                     return (
                       <div
                         key={step.id}
-                        className={`relative pl-10 pb-6 last:pb-0 group transition-all duration-200 ${
+                        className={`group relative pb-6 pl-10 transition-all duration-200 last:pb-0 ${
                           isCompleted || isAwaiting
                             ? "cursor-pointer"
                             : "opacity-60"
@@ -620,15 +616,15 @@ export default function TransformRunDetailPage() {
                         }}
                       >
                         <div
-                          className={`absolute left-0 top-3 flex h-8 w-8 items-center justify-center rounded-full border-muted-foreground/10 bg-background z-10 transition-all shadow-sm ${
+                          className={`absolute top-3 left-0 z-10 flex h-8 w-8 items-center justify-center rounded-full border-muted-foreground/10 bg-background shadow-sm transition-all ${
                             isCompleted
-                              ? "border border-green-500 text-green-500 bg-green-50/50"
+                              ? "border border-green-500 bg-green-50/50 text-green-500"
                               : isCurrent
-                                ? "border border-blue-500 text-blue-500 animate-pulse ring-4 ring-blue-500/10"
+                                ? "animate-pulse border border-blue-500 text-blue-500 ring-4 ring-blue-500/10"
                                 : isAwaiting
-                                  ? "border border-amber-500 text-amber-500 bg-amber-50/50"
+                                  ? "border border-amber-500 bg-amber-50/50 text-amber-500"
                                   : "border text-muted-foreground"
-                          } ${isSelected ? "ring-2 ring-primary/20 shadow-md" : ""}`}
+                          } ${isSelected ? "shadow-md ring-2 ring-primary/20" : ""}`}
                         >
                           {isCompleted ? (
                             <CheckCircle2 className="h-5 w-5" />
@@ -641,13 +637,13 @@ export default function TransformRunDetailPage() {
                           )}
                         </div>
                         <div
-                          className={`p-4 rounded-xl border transition-all ${
+                          className={`rounded-xl border p-4 transition-all ${
                             isSelected
-                              ? "bg-primary/5 border-primary/20 shadow-sm translate-x-1"
-                              : "bg-transparent border-transparent hover:bg-muted/30"
+                              ? "translate-x-1 border-primary/20 bg-primary/5 shadow-sm"
+                              : "border-transparent bg-transparent hover:bg-muted/30"
                           }`}
                         >
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="mb-1 flex items-center gap-2">
                             <h4
                               className={`font-bold text-sm ${isSelected ? "text-primary" : ""}`}
                             >
@@ -656,7 +652,7 @@ export default function TransformRunDetailPage() {
                             {isCompleted && (
                               <Badge
                                 variant="secondary"
-                                className="h-4 text-[10px] bg-green-500/10 text-green-700 border-green-500/20 uppercase tracking-tighter"
+                                className="h-4 border-green-500/20 bg-green-500/10 text-[10px] text-green-700 uppercase tracking-tighter"
                               >
                                 Done
                               </Badge>
@@ -676,7 +672,7 @@ export default function TransformRunDetailPage() {
                             </div>
                           )}
 
-                          <p className="text-xs text-muted-foreground line-clamp-2">
+                          <p className="line-clamp-2 text-muted-foreground text-xs">
                             {isCompleted && state.summary
                               ? state.summary
                               : isCompleted
@@ -698,7 +694,7 @@ export default function TransformRunDetailPage() {
               {run?.status === "completed" &&
                 run.outputAttachmentIds.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
+                    <h4 className="flex items-center gap-2 font-bold text-muted-foreground/70 text-xs uppercase tracking-widest">
                       <Download className="h-3 w-3" />
                       Final Results
                     </h4>
@@ -709,20 +705,20 @@ export default function TransformRunDetailPage() {
                         return (
                           <Card
                             key={id}
-                            className="bg-primary/5 border-primary/10 overflow-hidden group hover:border-primary/30 transition-colors py-0.5"
+                            className="group overflow-hidden border-primary/10 bg-primary/5 py-0.5 transition-colors hover:border-primary/30"
                           >
                             <CardContent className="p-0">
                               <a
                                 href={meta.url}
                                 download={meta.name}
-                                className="flex items-center justify-between p-3 hover:bg-primary/5 transition-colors"
+                                className="flex items-center justify-between p-3 transition-colors hover:bg-primary/5"
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-background shadow-sm border border-primary/10">
+                                  <div className="rounded-lg border border-primary/10 bg-background p-2 shadow-sm">
                                     <Download className="h-4 w-4 text-primary" />
                                   </div>
                                   <div className="space-y-0.5">
-                                    <p className="text-sm font-bold truncate max-w-[200px]">
+                                    <p className="max-w-[200px] truncate font-bold text-sm">
                                       {meta.name}
                                     </p>
                                     <p className="text-[10px] text-muted-foreground">
@@ -733,7 +729,7 @@ export default function TransformRunDetailPage() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -746,14 +742,14 @@ export default function TransformRunDetailPage() {
                   </div>
                 )}
               {/* Storage Notice */}
-              <div className="rounded-xl bg-blue-50/50 p-4 border border-blue-100/50 backdrop-blur-sm">
+              <div className="rounded-xl border border-blue-100/50 bg-blue-50/50 p-4 backdrop-blur-sm">
                 <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
+                  <AlertCircle className="h-5 w-5 shrink-0 text-blue-600" />
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-blue-900">
+                    <p className="font-semibold text-blue-900 text-sm">
                       Storage Optimization
                     </p>
-                    <p className="text-xs text-blue-700/80 leading-relaxed">
+                    <p className="text-blue-700/80 text-xs leading-relaxed">
                       Intermediate step previews are temporary and stored in
                       memory for the current session. Only the final result is
                       saved to permanent storage.
@@ -773,9 +769,9 @@ export default function TransformRunDetailPage() {
               <ResizablePanel
                 defaultSize={50}
                 minSize={30}
-                className="bg-card hidden lg:block"
+                className="hidden bg-card lg:block"
               >
-                <div className="h-full relative overflow-hidden">
+                <div className="relative h-full overflow-hidden">
                   {currentArtifact ? (
                     <ArtifactPanel
                       artifact={currentArtifact}
@@ -784,18 +780,18 @@ export default function TransformRunDetailPage() {
                       isFullWidth={true}
                     />
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 text-center gap-6 bg-muted/5">
+                    <div className="flex h-full flex-col items-center justify-center gap-6 bg-muted/5 p-12 text-center text-muted-foreground">
                       <div className="relative">
-                        <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-                        <div className="h-20 w-20 rounded-2xl bg-card border shadow-xl flex items-center justify-center relative">
+                        <div className="absolute -inset-4 animate-pulse rounded-full bg-primary/10 blur-2xl" />
+                        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border bg-card shadow-xl">
                           <Play className="h-10 w-10 text-primary/40" />
                         </div>
                       </div>
-                      <div className="space-y-2 max-w-sm">
-                        <p className="text-lg font-bold text-foreground">
+                      <div className="max-w-sm space-y-2">
+                        <p className="font-bold text-foreground text-lg">
                           Step Preview
                         </p>
-                        <p className="text-sm leading-relaxed text-muted-foreground/80">
+                        <p className="text-muted-foreground/80 text-sm leading-relaxed">
                           {selectedStepIndex !== null
                             ? "This step hasn't produced a preview yet. Pro-tip: select 'manage_artifact' in your agent tools to enable visual updates."
                             : "Select a completed step from the timeline to inspect the output at that stage of the process."}

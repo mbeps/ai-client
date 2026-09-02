@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -64,7 +64,9 @@ describe("useIsMobile", () => {
     // Simulate viewport shrinking to mobile
     act(() => {
       mockInnerWidth(375);
-      listeners.forEach((cb) => cb());
+      listeners.forEach((cb) => {
+        cb();
+      });
     });
 
     expect(result.current).toBe(true);

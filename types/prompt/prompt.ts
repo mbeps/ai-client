@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { promptSchema } from "@/schemas/prompt/prompt";
+import type { z } from "zod";
+import type { promptSchema } from "@/schemas/prompt/prompt";
 
 /**
  * Represents a reusable prompt snippet accessible via slash-commands in the chat input.

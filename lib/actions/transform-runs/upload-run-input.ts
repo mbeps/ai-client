@@ -1,17 +1,17 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
-import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
-import { uploadObject } from "@/lib/storage/upload-object";
 import { randomUUID } from "crypto";
 import {
   ALLOWED_SPREADSHEET_TYPES,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/constants/attachments";
+import { db } from "@/drizzle/db";
+import { attachment } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { requireSession } from "@/lib/auth/require-session";
 import { env } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { uploadObject } from "@/lib/storage/upload-object";
 
 /**
  * Uploads multiple input files for a transform run to S3 and creates attachment records.

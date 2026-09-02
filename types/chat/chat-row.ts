@@ -1,6 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { chat } from "@/drizzle/schema";
-import { TimedResource } from "../shared/resource";
+import type { InferSelectModel } from "drizzle-orm";
+import type { chat } from "@/drizzle/schema";
+import type { TimedResource } from "../shared/resource";
 
 /**
  * Database representation of a chat session from the Drizzle schema.

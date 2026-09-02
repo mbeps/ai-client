@@ -1,19 +1,19 @@
 "use client";
 
+import type { UIMessage } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import type { UIMessage } from "@ai-sdk/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { PROMPTS } from "@/constants/prompts";
+import { useApiError } from "@/hooks/use-api-error";
 import { persistMessage } from "@/lib/actions/chats/persist-message";
+import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
-import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import { PROMPTS } from "@/constants/prompts";
-import { useCallback, useMemo, useRef, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { useApiError } from "@/hooks/use-api-error";
 
 /**
  * Extracts concatenated text of a given part type from a UI message.

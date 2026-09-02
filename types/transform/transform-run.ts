@@ -1,4 +1,4 @@
-import { type TransformRunStatus } from "./transform-run-status";
+import type { TransformRunStatus } from "./transform-run-status";
 
 /**
  * Represents an execution instance of a transform agent workflow.

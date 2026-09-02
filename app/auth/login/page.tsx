@@ -1,5 +1,8 @@
 "use client";
 
+import { LogIn, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,19 +10,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SignUpTab } from "./_components/tabs/sign-up-tab";
-import { SignInTab } from "./_components/tabs/sign-in-tab";
 import { Separator } from "@/components/ui/separator";
-import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
-import { useEffect, useState } from "react";
-import { authClient } from "@/lib/auth/auth-client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 import { env } from "@/lib/env";
-import { useRouter } from "next/navigation";
+import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";
-import { LogIn, UserPlus } from "lucide-react";
+import { SignInTab } from "./_components/tabs/sign-in-tab";
+import { SignUpTab } from "./_components/tabs/sign-up-tab";
 
 const TAB_VALUES = {
   SIGN_IN: "signin",
@@ -64,7 +64,7 @@ export default function LoginPage() {
     <Tabs
       value={selectedTab}
       onValueChange={(t) => setSelectedTab(t as Tab)}
-      className="max-w-4xl mx-auto my-6 px-4"
+      className="mx-auto my-6 max-w-4xl px-4"
     >
       {(selectedTab === TAB_VALUES.SIGN_IN ||
         selectedTab === TAB_VALUES.SIGN_UP) &&
@@ -88,7 +88,7 @@ export default function LoginPage() {
         )}
       <TabsContent value={TAB_VALUES.SIGN_IN}>
         <Card>
-          <CardHeader className="text-2xl font-bold">
+          <CardHeader className="font-bold text-2xl">
             <CardTitle>Sign In</CardTitle>
           </CardHeader>
           <CardContent>
@@ -110,7 +110,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.SIGN_UP}>
         <Card>
-          <CardHeader className="text-2xl font-bold">
+          <CardHeader className="font-bold text-2xl">
             <CardTitle>Sign Up</CardTitle>
           </CardHeader>
           <CardContent>
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.EMAIL_VERIFICATION}>
         <Card>
-          <CardHeader className="text-2xl font-bold">
+          <CardHeader className="font-bold text-2xl">
             <CardTitle>Verify Your Email</CardTitle>
           </CardHeader>
           <CardContent>
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.FORGOT_PASSWORD}>
         <Card>
-          <CardHeader className="text-2xl font-bold">
+          <CardHeader className="font-bold text-2xl">
             <CardTitle>Forgot Password</CardTitle>
           </CardHeader>
           <CardContent>

@@ -1,4 +1,4 @@
-import { inflateRawSync, inflateSync, deflateRawSync } from "node:zlib";
+import { deflateRawSync, inflateRawSync, inflateSync } from "node:zlib";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface ParsedSkill {

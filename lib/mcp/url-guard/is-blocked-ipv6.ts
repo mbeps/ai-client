@@ -31,7 +31,7 @@ export function isBlockedIPv6(ip: string): boolean {
   const firstGroup = normalized.split(":")[0] ?? "";
   if (firstGroup.length > 0) {
     const val = parseInt(firstGroup, 16);
-    if (!isNaN(val) && (val & 0xfe00) === 0xfc00) return true;
+    if (!Number.isNaN(val) && (val & 0xfe00) === 0xfc00) return true;
   }
 
   return false;

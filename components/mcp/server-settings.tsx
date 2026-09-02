@@ -1,26 +1,25 @@
 "use client";
 
+import { Globe, Info, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/constants/routes";
-import { toast } from "sonner";
-import { useState } from "react";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { Trash2, Globe, Info } from "lucide-react";
 import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { toggleMcpServerPublic } from "@/lib/actions/mcp-servers/toggle-mcp-server-public";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useAppStore } from "@/lib/store";
-import { useShallow } from "zustand/react/shallow";
 
 /**
  * Props for ServerSettings component.
@@ -111,7 +110,7 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
               <Label htmlFor="public-toggle" className="text-base">
                 Make this server public
               </Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 When enabled, anyone can find and use this server in their
                 chats.
               </p>
@@ -125,7 +124,7 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
           </div>
 
           <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm">
-            <Info className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="text-muted-foreground">
               <p className="font-medium text-foreground">Important Note</p>
               <p>
@@ -140,13 +139,13 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
 
       {/* Delete Server Section */}
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-destructive flex items-center gap-2">
+            <h3 className="flex items-center gap-2 font-semibold text-destructive text-lg">
               <Trash2 className="h-5 w-5" />
               Delete Server
             </h3>
-            <p className="text-sm text-muted-foreground max-w-2xl">
+            <p className="max-w-2xl text-muted-foreground text-sm">
               Permanently remove this MCP server configuration. This will affect
               all assistants and chats using this server. This action is
               irreversible.

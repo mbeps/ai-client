@@ -1,8 +1,8 @@
-import { db } from "@/drizzle/db";
-import { chat, message, attachment } from "@/drizzle/schema";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
+import { db } from "@/drizzle/db";
+import { attachment, chat, message } from "@/drizzle/schema";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /**
  * A single message in the server-loaded thread, with presigned attachment URLs.

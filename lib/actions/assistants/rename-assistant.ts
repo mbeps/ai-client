@@ -1,8 +1,8 @@
 "use server";
 
 import { assistant } from "@/drizzle/schema";
-import { renameAssistantSchema } from "@/schemas/assistant/assistant";
 import { renameEntityFactory } from "@/lib/actions/shared/rename-entity-factory";
+import { renameAssistantSchema } from "@/schemas/assistant/assistant";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 
 /**

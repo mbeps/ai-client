@@ -1,15 +1,15 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { requireSession } from "@/lib/auth/require-session";
+import { buildServerConfig } from "@/lib/mcp/build-server-config";
 import {
-  updateMcpServerSchema,
   type UpdateMcpServer,
+  updateMcpServerSchema,
 } from "@/schemas/providers/mcp-server";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
-import { buildServerConfig } from "@/lib/mcp/build-server-config";
 
 /**
  * Updates an existing MCP server configuration for the authenticated user.

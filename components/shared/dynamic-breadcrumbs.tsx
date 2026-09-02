@@ -1,8 +1,10 @@
 "use client";
 
-import * as React from "react";
-import { usePathname } from "next/navigation";
+import { format } from "date-fns";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,16 +13,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-import { useAppStore } from "@/lib/store";
-import { useShallow } from "zustand/react/shallow";
-import { format } from "date-fns";
-import { getPathSegments } from "@/lib/utils";
-import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
-import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
+import { ROUTES } from "@/constants/routes";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
 import { getSkill } from "@/lib/actions/skills/get-skill";
-import { ROUTES } from "@/constants/routes";
+import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
+import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
+import { useAppStore } from "@/lib/store";
+import { getPathSegments } from "@/lib/utils";
 
 /**
  * Friendly labels for known route segments.
@@ -192,7 +191,7 @@ export function DynamicBreadcrumbs() {
               try {
                 const run = await getTransformRun(segment);
                 if (run) {
-                  const agent = await getTransformAgent(run.agentId);
+                  const _agent = await getTransformAgent(run.agentId);
                   const dateStr = format(
                     new Date(run.createdAt),
                     "dd/MM/yyyy HH:mm",

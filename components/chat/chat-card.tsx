@@ -1,8 +1,8 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 import type { Chat } from "@/types/chat/chat";
 import { ChatOptions } from "./chat-options";
@@ -28,7 +28,7 @@ export function ChatCard({ chat }: ChatCardProps) {
 
   return (
     <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[80px]"
+      className="group flex min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50"
       onClick={() =>
         router.push(
           chat.projectId
@@ -39,16 +39,16 @@ export function ChatCard({ chat }: ChatCardProps) {
         )
       }
     >
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <MessageSquare className="h-5 w-5 text-primary" />
           </div>
-          <div className="space-y-1 flex-1 min-w-0">
-            <h3 className="font-semibold leading-none truncate">
+          <div className="min-w-0 flex-1 space-y-1">
+            <h3 className="truncate font-semibold leading-none">
               {chat.title}
             </h3>
-            <p className="text-xs text-muted-foreground line-clamp-1">
+            <p className="line-clamp-1 text-muted-foreground text-xs">
               {chat.projectId
                 ? "Project Chat"
                 : chat.assistantId

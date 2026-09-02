@@ -1,11 +1,11 @@
 "use client";
 
+import { type RefObject, useCallback, useMemo, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import type { Prompt } from "@/types/prompt/prompt";
 import type { Assistant } from "@/types/assistant/assistant";
-import type { Skill } from "@/types/skill/skill";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import { useCallback, useMemo, useState, type RefObject } from "react";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Skill } from "@/types/skill/skill";
 
 export type MentionTrigger = "/" | "@" | null;
 
@@ -52,7 +52,9 @@ export function isSkillItem(item: MentionItem): item is MentionSkillItem {
 /**
  * Type guard for MentionAssistantItem
  */
-export function isAssistantItem(item: MentionItem): item is MentionAssistantItem {
+export function isAssistantItem(
+  item: MentionItem,
+): item is MentionAssistantItem {
   return !("shortcut" in item) && !("isSkill" in item);
 }
 
@@ -124,7 +126,7 @@ export function useMentionCommands(
             s.enabled &&
             (s.name.toLowerCase().includes(q) ||
               s.displayName.toLowerCase().includes(q) ||
-              (s.description && s.description.toLowerCase().includes(q))),
+              s.description?.toLowerCase().includes(q)),
         )
         .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
 
@@ -134,7 +136,9 @@ export function useMentionCommands(
             p.shortcut.toLowerCase().includes(q) ||
             p.title.toLowerCase().includes(q),
         )
-        .map((p): MentionPromptItem => ({ ...p, isMcp: false, isSkill: false }));
+        .map(
+          (p): MentionPromptItem => ({ ...p, isMcp: false, isSkill: false }),
+        );
 
       const mcp = mcpPrompts
         .filter((p) => {
@@ -144,7 +148,7 @@ export function useMentionCommands(
           return (
             p.name.toLowerCase().includes(q) ||
             p.serverName.toLowerCase().includes(q) ||
-            (p.description && p.description.toLowerCase().includes(q))
+            p.description?.toLowerCase().includes(q)
           );
         })
         .map(
@@ -167,9 +171,11 @@ export function useMentionCommands(
         .filter(
           (a) =>
             a.name.toLowerCase().includes(q) ||
-            (a.description && a.description.toLowerCase().includes(q)),
+            a.description?.toLowerCase().includes(q),
         )
-        .map((a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }));
+        .map(
+          (a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }),
+        );
     }
 
     return [];

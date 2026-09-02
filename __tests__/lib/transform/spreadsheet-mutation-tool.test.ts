@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
 
 describe("isSpreadsheetMutationTool — expanded mutation set (T6.2)", () => {

@@ -1,10 +1,10 @@
 "use client";
 
 import { Bot } from "lucide-react";
-import type { Assistant } from "@/types/assistant/assistant";
-import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import { AssistantOptions } from "./assistant-options";
 import { EntityCard } from "@/components/shared/entity-card";
+import { useCreateChat } from "@/hooks/chat/use-create-chat";
+import type { Assistant } from "@/types/assistant/assistant";
+import { AssistantOptions } from "./assistant-options";
 
 /**
  * Props for the AssistantCard component.

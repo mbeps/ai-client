@@ -3,8 +3,8 @@ import { logger } from "@/lib/logger";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { decryptProviderField } from "./decrypt-provider-field";
 import { buildSdkProvider } from "./build-sdk-provider";
+import { decryptProviderField } from "./decrypt-provider-field";
 
 /**
  * Constructs a ResolvedProvider by decrypting provider credentials and initializing the SDK.

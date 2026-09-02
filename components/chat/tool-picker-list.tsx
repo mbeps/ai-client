@@ -1,21 +1,10 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import {
   AlertCircle,
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  Database,
   Loader2,
   RefreshCw,
   Search,
@@ -23,7 +12,16 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import { cn } from "@/lib/utils";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
 export interface ToolPickerListProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -98,13 +96,13 @@ export function ToolPickerList({
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Fetch server content for new servers
   useEffect(() => {
     servers.forEach((server) => {
       if (!serverContent[server.id]) {
         fetchServerContent(server);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servers]);
 
   const toggleExpand = (serverId: string) => {
@@ -164,10 +162,10 @@ export function ToolPickerList({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="p-2 border-b shrink-0 flex items-center justify-between gap-4">
+    <div className={cn("flex h-full flex-col bg-background", className)}>
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b p-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search tools and resources..."
             className="pl-9"
@@ -178,7 +176,7 @@ export function ToolPickerList({
         <Button
           variant="outline"
           size="sm"
-          className="h-9 gap-2 shrink-0"
+          className="h-9 shrink-0 gap-2"
           onClick={toggleAll}
           disabled={allDiscoveredTools.length === 0}
         >
@@ -191,15 +189,15 @@ export function ToolPickerList({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-4 min-h-0">
+      <ScrollArea className="min-h-0 flex-1 p-4">
         <div className="space-y-4">
           {(!search ||
             "artifacts canvas manage_artifact".includes(
               search.toLowerCase(),
             )) && (
-            <div className="border rounded-lg overflow-hidden flex flex-col border-primary/20">
+            <div className="flex flex-col overflow-hidden rounded-lg border border-primary/20">
               <div
-                className="flex items-center justify-between p-3 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors shrink-0"
+                className="flex shrink-0 cursor-pointer items-center justify-between bg-primary/5 p-3 transition-colors hover:bg-primary/10"
                 onClick={() => toggleExpand("internal")}
               >
                 <div className="flex items-center gap-3">
@@ -236,7 +234,7 @@ export function ToolPickerList({
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="secondary"
-                    className="text-[10px] uppercase bg-primary/10 text-primary"
+                    className="bg-primary/10 text-[10px] text-primary uppercase"
                   >
                     built-in
                   </Badge>
@@ -244,11 +242,11 @@ export function ToolPickerList({
               </div>
 
               {(expandedServers.has("internal") || search.length > 0) && (
-                <div className="p-3 space-y-4 border-t border-primary/20 bg-card/50">
-                  <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                <div className="space-y-4 border-primary/20 border-t bg-card/50 p-3">
+                  <div className="custom-scrollbar max-h-[300px] space-y-4 overflow-y-auto pr-2">
                     <div className="space-y-2">
                       <div className="flex flex-col gap-1">
-                        <label className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group">
+                        <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
                           <Checkbox
                             checked={selectedTools.has(
                               "internal:tool:manage_artifact",
@@ -258,11 +256,11 @@ export function ToolPickerList({
                             }
                             className="mt-0.5"
                           />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-medium truncate">
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium text-xs">
                               Artifacts / Canvas
                             </span>
-                            <span className="text-[10px] text-muted-foreground line-clamp-2">
+                            <span className="line-clamp-2 text-[10px] text-muted-foreground">
                               Allows the AI to generate interactive Markdown,
                               Spreadsheets, HTML UI, and Mermaid diagrams in a
                               side panel.
@@ -282,7 +280,7 @@ export function ToolPickerList({
             !"artifacts canvas manage_artifact".includes(
               search.toLowerCase(),
             ) && (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 No tools found matching &quot;{search}&quot;
               </div>
             )}
@@ -305,10 +303,10 @@ export function ToolPickerList({
             return (
               <div
                 key={server.id}
-                className="border rounded-lg overflow-hidden flex flex-col"
+                className="flex flex-col overflow-hidden rounded-lg border"
               >
                 <div
-                  className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors shrink-0"
+                  className="flex shrink-0 cursor-pointer items-center justify-between bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   onClick={() => toggleExpand(server.id)}
                 >
                   <div className="flex items-center gap-3">
@@ -337,7 +335,7 @@ export function ToolPickerList({
                     {selectedInServer > 0 && (
                       <Badge
                         variant="secondary"
-                        className="text-[10px] h-4 px-1"
+                        className="h-4 px-1 text-[10px]"
                       >
                         {selectedInServer} selected
                       </Badge>
@@ -357,14 +355,14 @@ export function ToolPickerList({
                 </div>
 
                 {(isExpanded || search.length > 0) && (
-                  <div className="p-3 space-y-4 border-t bg-card/50">
+                  <div className="space-y-4 border-t bg-card/50 p-3">
                     {content?.loading ? (
-                      <div className="flex items-center justify-center py-4 gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Discovering tools...
                       </div>
                     ) : content?.error ? (
-                      <div className="flex items-center justify-between py-2 text-sm text-destructive">
+                      <div className="flex items-center justify-between py-2 text-destructive text-sm">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4" />
                           <span>{content.error}</span>
@@ -379,11 +377,11 @@ export function ToolPickerList({
                         </Button>
                       </div>
                     ) : (
-                      <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                      <div className="custom-scrollbar max-h-[300px] space-y-4 overflow-y-auto pr-2">
                         {/* Tools section */}
                         {serverTools.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1.5 px-1 sticky top-0 bg-background/95 backdrop-blur py-1 z-10">
+                            <h4 className="sticky top-0 z-10 flex items-center gap-1.5 bg-background/95 px-1 py-1 font-bold text-[10px] text-muted-foreground uppercase backdrop-blur">
                               <Wrench className="h-3 w-3" /> Tools
                             </h4>
                             <div className="flex flex-col gap-1">
@@ -404,7 +402,7 @@ export function ToolPickerList({
                                   return (
                                     <label
                                       key={tool.name}
-                                      className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group"
+                                      className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent"
                                     >
                                       <Checkbox
                                         checked={isChecked}
@@ -413,12 +411,12 @@ export function ToolPickerList({
                                         }
                                         className="mt-0.5"
                                       />
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-medium truncate">
+                                      <div className="flex min-w-0 flex-col">
+                                        <span className="truncate font-medium text-xs">
                                           {tool.name}
                                         </span>
                                         {tool.description && (
-                                          <span className="text-[10px] text-muted-foreground line-clamp-1">
+                                          <span className="line-clamp-1 text-[10px] text-muted-foreground">
                                             {tool.description}
                                           </span>
                                         )}
@@ -431,7 +429,7 @@ export function ToolPickerList({
                         )}
 
                         {serverTools.length === 0 && (
-                          <div className="text-xs text-muted-foreground py-2 text-center">
+                          <div className="py-2 text-center text-muted-foreground text-xs">
                             No tools available
                           </div>
                         )}

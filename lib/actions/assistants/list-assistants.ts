@@ -1,6 +1,5 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
 import { assistant } from "@/drizzle/schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { AssistantRow } from "@/types/assistant/assistant-row";

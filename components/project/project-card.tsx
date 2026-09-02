@@ -2,10 +2,10 @@
 
 import { FolderOpen, Pin } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EntityCard } from "@/components/shared/entity-card";
 import { ROUTES } from "@/constants/routes";
 import type { Project } from "@/types/project/project";
 import { ProjectOptions } from "./project-options";
-import { EntityCard } from "@/components/shared/entity-card";
 
 /**
  * Props for the ProjectCard component.
@@ -32,11 +32,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
       icon={<FolderOpen className="h-5 w-5 text-primary" />}
       title={
         <div className="flex items-center gap-1.5">
-          <h3 className="font-semibold leading-none truncate">
+          <h3 className="truncate font-semibold leading-none">
             {project.name}
           </h3>
           {project.isPinned && (
-            <Pin className="h-3 w-3 text-muted-foreground shrink-0" />
+            <Pin className="h-3 w-3 shrink-0 text-muted-foreground" />
           )}
         </div>
       }

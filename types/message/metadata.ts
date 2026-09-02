@@ -1,5 +1,5 @@
-import { ToolCall } from "@/types/chat/tool-call";
-import { ToolResult } from "@/types/chat/tool-result";
+import type { ToolCall } from "@/types/chat/tool-call";
+import type { ToolResult } from "@/types/chat/tool-result";
 
 /**
  * Token usage data from the AI model response.

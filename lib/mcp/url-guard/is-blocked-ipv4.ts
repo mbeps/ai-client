@@ -9,7 +9,7 @@ export function isBlockedIPv4(ip: string): boolean {
   if (parts.length !== 4) return false;
 
   const octets = parts.map(Number);
-  if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return false;
+  if (octets.some((o) => Number.isNaN(o) || o < 0 || o > 255)) return false;
 
   // 127.0.0.0/8 — loopback
   if (octets[0] === 127) return true;

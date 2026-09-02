@@ -1,12 +1,12 @@
 "use client";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { ROUTES } from "@/constants/routes";
+import { authClient } from "@/lib/auth/auth-client";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -53,7 +53,7 @@ export function AuthenticatedLayout({
   return (
     <SidebarProvider>
       {sidebar}
-      <main className="flex flex-col flex-1 h-screen overflow-hidden bg-background">
+      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-background">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
           <SidebarTrigger />
           <div className="w-full flex-1">
@@ -62,7 +62,7 @@ export function AuthenticatedLayout({
           {headerExtra}
         </header>
         <div
-          className={`flex flex-col flex-1 min-h-0 ${contentClassName || "overflow-hidden"}`}
+          className={`flex min-h-0 flex-1 flex-col ${contentClassName || "overflow-hidden"}`}
         >
           {children}
         </div>

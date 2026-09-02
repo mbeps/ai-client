@@ -1,8 +1,9 @@
 "use client";
 
+import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit2, X, Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,9 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { createModel } from "@/lib/actions/models/create-model";
 import { updateModels } from "@/lib/actions/models/update-model";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

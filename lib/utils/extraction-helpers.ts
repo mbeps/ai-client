@@ -49,7 +49,7 @@ export async function extractDocumentContent(
   try {
     const text = new TextDecoder().decode(buffer);
     return text.slice(0, limit);
-  } catch (error) {
+  } catch (_error) {
     throw new Error(`Unsupported or unreadable MIME type: ${mimeType}`);
   }
 }
