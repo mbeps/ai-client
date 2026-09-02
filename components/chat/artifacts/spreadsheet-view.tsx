@@ -1,12 +1,12 @@
 "use client";
 
+import { flexRender } from "@tanstack/react-table";
 import {
-  createColumnHelper,
-  flexRender,
+  legacyCreateColumnHelper as createColumnHelper,
   getCoreRowModel,
   getFilteredRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+  useLegacyTable as useReactTable,
+} from "@tanstack/react-table/legacy";
 import {
   AlertCircle,
   ChevronLeft,

@@ -71,8 +71,9 @@ export async function translateText(input: unknown) {
             ...(isImage && attachment?.dataUrl
               ? [
                   {
-                    type: "image" as const,
-                    image: attachment.dataUrl,
+                    type: "file" as const,
+                    data: attachment.dataUrl,
+                    mediaType: attachment.mimeType ?? "image",
                   },
                 ]
               : []),

@@ -25,51 +25,51 @@ const envSchema = z.object({
   // AI
   EMBEDDING_DIMENSIONS: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 2048)),
+    .default("2048")
+    .transform((v) => parseInt(v, 10)),
   EMBEDDING_BATCH_SIZE: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 96))
+    .default("96")
+    .transform((v) => parseInt(v, 10))
     // A batch size < 1 would make the batching loop in embed-documents spin
     // forever; clamp to a safe minimum at the trust boundary.
     .transform((v) => Math.max(1, v)),
   CHAT_MAX_HISTORY_TURNS: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 50)),
+    .default("50")
+    .transform((v) => parseInt(v, 10)),
   RAG_TOP_K: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 5)),
+    .default("5")
+    .transform((v) => parseInt(v, 10)),
   TRANSFORM_TOP_K: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 3)),
+    .default("3")
+    .transform((v) => parseInt(v, 10)),
   MAX_DOCUMENT_CHARS: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 500000)),
+    .default("500000")
+    .transform((v) => parseInt(v, 10)),
   DEFAULT_CHUNK_SIZE: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 1600)),
+    .default("1600")
+    .transform((v) => parseInt(v, 10)),
   DEFAULT_CHUNK_OVERLAP: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 200)),
+    .default("200")
+    .transform((v) => parseInt(v, 10)),
   CHAT_MAX_STEPS: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 10)),
+    .default("10")
+    .transform((v) => parseInt(v, 10)),
   RATE_LIMIT_CHAT_RPM: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 20)),
+    .default("20")
+    .transform((v) => parseInt(v, 10)),
   RATE_LIMIT_UPLOAD_RPM: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 30)),
+    .default("30")
+    .transform((v) => parseInt(v, 10)),
 
   // Email
   POSTMARK_SERVER_TOKEN: z.string().min(1),
@@ -81,7 +81,7 @@ const envSchema = z.object({
   // Storage
   S3_FORCE_PATH_STYLE: z
     .string()
-    .optional()
+    .default("true")
     .transform((v) => v !== "false"),
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string(),
@@ -95,15 +95,14 @@ const envSchema = z.object({
     .default("development"),
   ALLOW_PRIVATE_NETWORK_MCP: z
     .string()
-    .optional()
+    .default("false")
     .transform((v) => v === "true"),
   PRESIGNED_URL_EXPIRY_SECONDS: z
     .string()
-    .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 3600)),
+    .default("3600")
+    .transform((v) => parseInt(v, 10)),
   NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD: z
     .string()
-    .optional()
     .default("true")
     .transform((v) => v === "true"),
 });
@@ -121,7 +120,4 @@ const envSchema = z.object({
 export const env =
   typeof window === "undefined"
     ? envSchema.parse(process.env)
-    : (envSchema.partial().parse({
-        NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
-          process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
-      }) as z.infer<typeof envSchema>);
+    : (envSchema.partial().parse(process.env) as z.infer<typeof envSchema>);
