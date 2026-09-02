@@ -22,6 +22,11 @@ export interface FinishRef {
     toolCalls?: unknown[];
     toolResults?: unknown[];
     finishReason?: string;
+    usage?: {
+      promptTokens?: number;
+      completionTokens?: number;
+      totalTokens?: number;
+    };
   } | null;
 }
 
@@ -81,6 +86,8 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
     }
   };
 
+  const startTime = Date.now();
+
   // Persist exactly once across all exit paths.
   let persisted = false;
   const persistOnce = async () => {
@@ -94,6 +101,7 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
       userMessageId,
       resolvedModelId,
       assistantMessageId,
+      startTime,
     });
   };
 
@@ -117,7 +125,19 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
       // Stateless merge: the project writes its own `start` chunk carrying the
       // server-assigned message id, so the SDK must not emit a second one.
       writer.merge(
-        toUIMessageStream({ stream: result.stream, sendStart: false }),
+        toUIMessageStream({
+          stream: result.stream,
+          sendStart: false,
+          messageMetadata: ({ part }) => {
+            if (part.type === "finish") {
+              return {
+                usage: part.totalUsage,
+                finishReason: part.finishReason,
+              };
+            }
+            return undefined;
+          },
+        }),
       );
     },
     onError: (error) => {
@@ -150,6 +170,7 @@ async function persistResultIn(options: {
   userMessageId?: string | null;
   resolvedModelId: string;
   assistantMessageId: string;
+  startTime: number;
 }): Promise<void> {
   const {
     result,
@@ -159,29 +180,37 @@ async function persistResultIn(options: {
     userMessageId,
     resolvedModelId,
     assistantMessageId,
+    startTime,
   } = options;
 
   let finish = finishRef.current;
-  if (!finish || (!finish.text && !finish.reasoning)) {
+  if (!finish) {
     // ponytail: awaits the full result even on client abort; acceptable
     // because persistence is best-effort and bounded by maxDuration.
     // SDK exposes PromiseLike (not Promise) — wrap for .catch support.
     // In AI SDK v7, top-level toolCalls/toolResults aggregate across all steps.
     const toPromise = <T>(p: PromiseLike<T>): Promise<T> => Promise.resolve(p);
-    const [finalStep, toolCalls, toolResults] = await Promise.all([
-      toPromise(result.finalStep).catch(() => undefined),
-      toPromise(result.toolCalls).catch(() => []),
-      toPromise(result.toolResults).catch(() => []),
-    ]);
+    const [finalStep, toolCalls, toolResults, usage, finishReason] =
+      await Promise.all([
+        toPromise(result.finalStep).catch(() => undefined),
+        toPromise(result.toolCalls).catch(() => []),
+        toPromise(result.toolResults).catch(() => []),
+        toPromise(result.usage).catch(() => undefined),
+        toPromise(result.finishReason).catch(() => undefined),
+      ]);
     finish = {
       text: finalStep?.text,
       reasoning: reasoningToString(finalStep?.reasoning),
       toolCalls: (toolCalls as unknown[]) ?? [],
       toolResults: (toolResults as unknown[]) ?? [],
+      usage,
+      finishReason,
     };
   }
 
-  if (!finish.text && !finish.reasoning) {
+  const hasTextOrReasoning = !!(finish.text || finish.reasoning);
+  const hasToolCalls = (finish.toolCalls?.length ?? 0) > 0;
+  if (!hasTextOrReasoning && !hasToolCalls) {
     logger.warn("[Chat Stream] No content to persist", { chatId });
     return;
   }
@@ -201,6 +230,9 @@ async function persistResultIn(options: {
   }
   if (finish.reasoning) metadataObj.reasoning = finish.reasoning;
   metadataObj.model = resolvedModelId;
+  if (finish.finishReason) metadataObj.finishReason = finish.finishReason;
+  if (finish.usage) metadataObj.usage = finish.usage;
+  metadataObj.durationMs = Date.now() - startTime;
 
   try {
     await persistAssistantResponse({

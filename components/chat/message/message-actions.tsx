@@ -19,7 +19,9 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Message } from "@/types/message/message";
+import type { ParsedMessageMetadata } from "@/types/message/metadata";
 import { useUserModels } from "@/hooks/use-user-models";
+import { MessageDetails } from "./message-details";
 
 interface MessageActionsProps {
   message: Message;
@@ -33,9 +35,9 @@ interface MessageActionsProps {
   currentSiblingIndex: number;
   onNavigateBranch: (siblingId: string) => void;
   editContent?: string;
-  modelName?: string | null;
   onShowArtifact?: () => void;
   hasArtifact?: boolean;
+  metadata?: ParsedMessageMetadata;
 }
 
 /**
@@ -53,7 +55,7 @@ interface MessageActionsProps {
  * @param props.currentSiblingIndex - Index of the current response in siblings.
  * @param props.onNavigateBranch - Callback to switch to another sibling response.
  * @param props.onShowArtifact - Optional callback to preview an artifact.
- * @param props.hasArtifact - Whether the message has an associated artifact.
+ * @param props.metadata - Parsed message metadata for response details display.
  * @author Maruf Bepary
  */
 export function MessageActions({
@@ -67,9 +69,9 @@ export function MessageActions({
   currentSiblingIndex,
   onNavigateBranch,
   editContent,
-  modelName,
   onShowArtifact,
   hasArtifact,
+  metadata,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
   const { models } = useUserModels("chat");
@@ -215,9 +217,9 @@ export function MessageActions({
         </Tooltip>
       )}
 
-      {!isUser && modelName && (
-        <div className="ml-auto text-[10px] text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
-          {modelName}
+      {!isUser && metadata && (
+        <div className="ml-auto flex items-center">
+          <MessageDetails createdAt={message.createdAt} metadata={metadata} />
         </div>
       )}
     </div>

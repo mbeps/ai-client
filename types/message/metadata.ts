@@ -2,6 +2,15 @@ import { ToolCall } from "@/types/chat/tool-call";
 import { ToolResult } from "@/types/chat/tool-result";
 
 /**
+ * Token usage data from the AI model response.
+ */
+export type MessageUsage = {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+};
+
+/**
  * Comprehensive metadata parsed from a message's JSON metadata field.
  * Extracts prompt shortcuts, tool invocations, model information, and reasoning in a single pass.
  * Designed to support tree-based message storage with rich context for branching and reconstruction.
@@ -18,6 +27,9 @@ import { ToolResult } from "@/types/chat/tool-result";
  * @property {string[] | null} selectedTools - Array of tool names explicitly enabled by user
  * @property {string[] | null} selectedKbIds - Array of knowledge base IDs selected for RAG context
  * @property {string | undefined} reasoning - Extended reasoning/thinking output from the model, if available
+ * @property {MessageUsage | null} usage - Token usage statistics from the model response
+ * @property {string | null} finishReason - Why the model stopped generating (e.g. "stop", "length")
+ * @property {number | null} durationMs - Wall-clock generation time in milliseconds
  *
  * @author Maruf Bepary
  */
@@ -29,4 +41,7 @@ export type ParsedMessageMetadata = {
   selectedTools: string[] | null;
   selectedKbIds: string[] | null;
   reasoning: string | undefined;
+  usage: MessageUsage | null;
+  finishReason: string | null;
+  durationMs: number | null;
 };

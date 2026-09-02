@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import { ToolCall } from "@/types/chat/tool-call";
 import { ToolResult } from "@/types/chat/tool-result";
 import { ParsedMessageMetadata } from "@/types/message/metadata";
+import type { MessageUsage } from "@/types/message/metadata";
 
 /**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
@@ -21,6 +22,9 @@ export function parseMessageMetadata(
     selectedTools: null,
     selectedKbIds: null,
     reasoning: undefined,
+    usage: null,
+    finishReason: null,
+    durationMs: null,
   };
 
   if (!metadata) return empty;
@@ -65,6 +69,31 @@ export function parseMessageMetadata(
     const reasoning =
       typeof parsed.reasoning === "string" ? parsed.reasoning : undefined;
 
+    const rawPrompt = parsed.usage?.promptTokens ?? parsed.usage?.inputTokens;
+    const rawCompletion =
+      parsed.usage?.completionTokens ?? parsed.usage?.outputTokens;
+    const rawTotal =
+      parsed.usage?.totalTokens ??
+      (rawPrompt != null || rawCompletion != null
+        ? (rawPrompt ?? 0) + (rawCompletion ?? 0)
+        : undefined);
+
+    const usage: MessageUsage | null =
+      parsed.usage && typeof parsed.usage === "object"
+        ? {
+            promptTokens: typeof rawPrompt === "number" ? rawPrompt : undefined,
+            completionTokens:
+              typeof rawCompletion === "number" ? rawCompletion : undefined,
+            totalTokens: typeof rawTotal === "number" ? rawTotal : undefined,
+          }
+        : null;
+
+    const finishReason =
+      typeof parsed.finishReason === "string" ? parsed.finishReason : null;
+
+    const durationMs =
+      typeof parsed.durationMs === "number" ? parsed.durationMs : null;
+
     return {
       promptMeta,
       toolData,
@@ -73,6 +102,9 @@ export function parseMessageMetadata(
       selectedTools,
       selectedKbIds,
       reasoning,
+      usage,
+      finishReason,
+      durationMs,
     };
   } catch (e) {
     logger.error("[MessageMetadata] Metadata parse error:", e);

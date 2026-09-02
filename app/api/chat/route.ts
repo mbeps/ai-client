@@ -231,6 +231,7 @@ export async function POST(req: Request) {
           toolCalls: (finish.toolCalls as unknown[]) ?? [],
           toolResults: (finish.toolResults as unknown[]) ?? [],
           finishReason: finish.finishReason,
+          usage: finish.usage,
         };
       },
     });

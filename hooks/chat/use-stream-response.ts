@@ -185,7 +185,8 @@ export function useStreamResponse(
   const pendingRef = useRef<{
     userMessageId: string | null;
     model: string;
-  }>({ userMessageId: null, model: "" });
+    startTime: number;
+  }>({ userMessageId: null, model: "", startTime: 0 });
 
   // ponytail: @ai-sdk/react bundles its own copy of `ai` types, so strict
   // typing of the transport boundary fights duplicated type identity. The
@@ -209,7 +210,7 @@ export function useStreamResponse(
     },
     // useChat's chat-level callback is still `onFinish` in @ai-sdk/react 4.x
     // (only streamText/generateText renamed to onEnd).
-    onFinish: async ({ message, isError }) => {
+    onFinish: async ({ message, isError, finishReason }) => {
       if (isError) return;
 
       const text = partsText(message, "text");
@@ -220,6 +221,14 @@ export function useStreamResponse(
 
       // On abort or normal finish, persist if there is text, reasoning, or completed tools
       if (!text && !reasoning && completedTools.length === 0) return;
+
+      const msgMeta = (message as any).metadata;
+      const usage = msgMeta?.usage;
+      const resolvedFinishReason = finishReason ?? msgMeta?.finishReason;
+      const durationMs =
+        pendingRef.current.startTime > 0
+          ? Date.now() - pendingRef.current.startTime
+          : undefined;
 
       const metadata = JSON.stringify({
         model: pendingRef.current.model,
@@ -236,6 +245,9 @@ export function useStreamResponse(
             toolName: tc.toolName,
             result: tc.result,
           })),
+        usage,
+        finishReason: resolvedFinishReason,
+        durationMs,
       });
 
       addMessage(chatId, {
@@ -304,7 +316,11 @@ export function useStreamResponse(
     selectedKbIds: string[] = [],
     selectedSkillIds: string[] = [],
   ): Promise<string> => {
-    pendingRef.current = { userMessageId: userMsgId, model };
+    pendingRef.current = {
+      userMessageId: userMsgId,
+      model,
+      startTime: Date.now(),
+    };
 
     // 1. Build metadata object
     const metadataObj = buildMetadata(

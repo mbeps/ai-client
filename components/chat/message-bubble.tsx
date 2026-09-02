@@ -94,6 +94,10 @@ export function MessageBubble({
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
+  const parsedMetadata = useMemo(
+    () => parseMessageMetadata(message.metadata),
+    [message.metadata],
+  );
   const {
     promptMeta: rawPromptMeta,
     toolData: rawToolData,
@@ -101,7 +105,7 @@ export function MessageBubble({
     selectedServerIds: parsedServerIds,
     selectedTools: parsedToolIds,
     selectedKbIds: parsedKbIds,
-  } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
+  } = parsedMetadata;
 
   const citations = useMemo(() => {
     if (streamingCitations && streamingCitations.length > 0)
@@ -312,9 +316,9 @@ export function MessageBubble({
             onNavigateBranch={onNavigateBranch}
             onRegenerate={onRegenerate}
             editContent={promptMeta ? promptMeta.userContent : undefined}
-            modelName={modelName}
             onShowArtifact={onShowArtifact}
             hasArtifact={hasArtifact}
+            metadata={parsedMetadata}
           />
         )}
       </div>

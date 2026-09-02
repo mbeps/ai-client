@@ -179,10 +179,42 @@ describe("createChatStream (UI message stream)", () => {
     await uiStreamCaptures.config.onEnd({} as any);
 
     expect(mockPersist).toHaveBeenCalledTimes(1);
-    // Model is always persisted — the UI displays it on assistant messages.
-    expect(JSON.parse(mockPersist.mock.calls[0][0].metadata)).toEqual({
-      model: "gpt-test",
+    // Model, finishReason, and durationMs are persisted
+    expect(JSON.parse(mockPersist.mock.calls[0][0].metadata)).toEqual(
+      expect.objectContaining({
+        model: "gpt-test",
+        finishReason: "stop",
+        durationMs: expect.any(Number),
+      }),
+    );
+  });
+
+  it("onEnd persists token usage when available in finishRef", async () => {
+    const finishRef = {
+      current: {
+        text: "answer with usage",
+        reasoning: "",
+        toolCalls: [],
+        toolResults: [],
+        finishReason: "stop",
+        usage: {
+          promptTokens: 120,
+          completionTokens: 45,
+          totalTokens: 165,
+        },
+      },
+    };
+    createChatStream(baseOptions({ finishRef }));
+    await uiStreamCaptures.config.onEnd({} as any);
+
+    expect(mockPersist).toHaveBeenCalledTimes(1);
+    const metadata = JSON.parse(mockPersist.mock.calls[0][0].metadata);
+    expect(metadata.usage).toEqual({
+      promptTokens: 120,
+      completionTokens: 45,
+      totalTokens: 165,
     });
+    expect(metadata.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("onEnd skips persistence when finishRef holds no data", async () => {
