@@ -221,6 +221,11 @@ export function ContextUsagePill({
                 tokens={breakdown.toolDefinitions}
                 totalTokens={totalTokens}
               />
+              <BreakdownItem
+                label="Skills"
+                tokens={breakdown.skills}
+                totalTokens={totalTokens}
+              />
             </div>
           </div>
 

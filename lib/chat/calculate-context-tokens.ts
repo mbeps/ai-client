@@ -6,6 +6,7 @@ import { parseMessageMetadata } from "./parse-message-metadata";
 export interface ContextCategoryBreakdown {
   systemInstructions: number;
   toolDefinitions: number;
+  skills: number;
   messages: number;
   files: number;
   toolResults: number;
@@ -30,6 +31,10 @@ export interface CalculateContextParams {
   systemPrompt?: string;
   toolNames?: string[];
   mcpServerCount?: number;
+  /** Estimated tokens for fully-injected selected skill content (content + bundled files). */
+  selectedSkillTokens?: number;
+  /** Number of available skills listed in the catalog (lightweight progressive disclosure). */
+  availableSkillCount?: number;
 }
 
 /**
@@ -104,6 +109,8 @@ export function calculateContextUsage(
     systemPrompt = "",
     toolNames = [],
     mcpServerCount = 0,
+    selectedSkillTokens = 0,
+    availableSkillCount = 0,
   } = params;
 
   // 1. Context Window Limit (default 128K if not provided)
@@ -120,7 +127,13 @@ export function calculateContextUsage(
   const serverOverheadTokens = mcpServerCount * 50;
   const toolDefinitions = toolSchemaTokens + serverOverheadTokens;
 
-  // 4. Thread Messages
+  // 4. Skills
+  // Selected skills are fully injected into the system prompt (content + bundled files).
+  // Available (unselected) skills appear as a lightweight catalog (~50 tokens each).
+  const catalogTokens = availableSkillCount * 50;
+  const skillsTokens = selectedSkillTokens + catalogTokens;
+
+  // 5. Thread Messages
   let messagesTokens = 0;
   let filesTokens = 0;
   let toolResultsTokens = 0;
@@ -171,6 +184,7 @@ export function calculateContextUsage(
   const totalTokens =
     systemInstructions +
     toolDefinitions +
+    skillsTokens +
     messagesTokens +
     filesTokens +
     toolResultsTokens +
@@ -195,6 +209,7 @@ export function calculateContextUsage(
     breakdown: {
       systemInstructions,
       toolDefinitions,
+      skills: skillsTokens,
       messages: messagesTokens,
       files: filesTokens,
       toolResults: toolResultsTokens,

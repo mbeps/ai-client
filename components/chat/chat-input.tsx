@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";
+import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
 import { useAppStore } from "@/lib/store";
 import { toggleSetItem } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -337,6 +338,27 @@ export function ChatInput({
     });
   }, []);
 
+  // Estimate tokens consumed by skills in the system prompt.
+  // Selected skills are fully injected (content + bundled files).
+  // The catalog (available skills) includes ALL enabled skills when the model
+  // supports tools — matching buildSystemPrompt which always lists all skills
+  // in the catalog regardless of which are pre-selected.
+  const { selectedSkillTokens, availableSkillCount } = useMemo(() => {
+    const enabledSkills = skills.filter((s) => s.enabled);
+    let injected = 0;
+    for (const skill of enabledSkills) {
+      if (selectedSkills.has(skill.id)) {
+        injected += estimateTokens(skill.content);
+        for (const f of skill.files ?? []) {
+          injected += estimateTokens(f.content);
+        }
+      }
+    }
+    // Catalog only appears when the model supports tool calling
+    const catalog = supportsTools ? enabledSkills.length : 0;
+    return { selectedSkillTokens: injected, availableSkillCount: catalog };
+  }, [skills, selectedSkills, supportsTools]);
+
   const {
     openTrigger,
     setOpenTrigger,
@@ -599,6 +621,8 @@ export function ChatInput({
             draftAttachments={attachments}
             toolNames={Array.from(selectedTools)}
             mcpServerCount={selectedServerIds.size}
+            selectedSkillTokens={selectedSkillTokens}
+            availableSkillCount={availableSkillCount}
           />
           {onCancel && (
             <Button

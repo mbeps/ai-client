@@ -189,5 +189,50 @@ describe("calculate-context-tokens utility", () => {
       expect(result.percentage).toBeGreaterThanOrEqual(75);
       expect(result.isNearLimit).toBe(true);
     });
+
+    it("accounts for selected skill content tokens in breakdown.skills", () => {
+      // A selected skill with ~380 chars content ≈ 100 tokens
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        selectedSkillTokens: 100,
+        availableSkillCount: 0,
+      });
+
+      expect(result.breakdown.skills).toBe(100);
+      expect(result.totalTokens).toBeGreaterThanOrEqual(result.breakdown.skills);
+    });
+
+    it("accounts for available skill catalog tokens (~50 per skill)", () => {
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        selectedSkillTokens: 0,
+        availableSkillCount: 4,
+      });
+
+      expect(result.breakdown.skills).toBe(200); // 4 * 50
+    });
+
+    it("combines selected and catalog skill tokens correctly", () => {
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        selectedSkillTokens: 300,
+        availableSkillCount: 3,
+      });
+
+      // 300 (injected) + 3 * 50 (catalog) = 450
+      expect(result.breakdown.skills).toBe(450);
+    });
+
+    it("includes skills tokens in the total", () => {
+      const baseResult = calculateContextUsage({ selectedModel: mockModel });
+      const withSkillsResult = calculateContextUsage({
+        selectedModel: mockModel,
+        selectedSkillTokens: 200,
+        availableSkillCount: 2,
+      });
+
+      // skills = 200 + 2*50 = 300 added to total
+      expect(withSkillsResult.totalTokens).toBe(baseResult.totalTokens + 300);
+    });
   });
 });
