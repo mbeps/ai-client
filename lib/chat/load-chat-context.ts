@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
   assistant,
@@ -7,6 +7,7 @@ import {
   mcpServer,
   project,
   skill,
+  userMcpServerInstall,
 } from "@/drizzle/schema";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
@@ -127,21 +128,37 @@ export async function loadChatContext(
           : Promise.resolve(null);
       })(),
 
-      // Enabled MCP servers for this user
-      db
-        .select({
-          id: mcpServer.id,
-          name: mcpServer.name,
-          url: mcpServer.url,
-          headers: mcpServer.headers,
-        })
-        .from(mcpServer)
-        .where(
-          and(
-            or(eq(mcpServer.userId, userId), eq(mcpServer.isPublic, true)),
-            eq(mcpServer.enabled, true),
+      // Enabled MCP servers for this user (owned personal servers + installed public servers)
+      Promise.all([
+        db
+          .select({
+            id: mcpServer.id,
+            name: mcpServer.name,
+            url: mcpServer.url,
+            headers: mcpServer.headers,
+          })
+          .from(mcpServer)
+          .where(
+            and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true)),
           ),
-        ),
+        db
+          .select({
+            id: mcpServer.id,
+            name: mcpServer.name,
+            url: mcpServer.url,
+            headers: userMcpServerInstall.headers,
+          })
+          .from(userMcpServerInstall)
+          .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
+          .where(
+            and(
+              eq(userMcpServerInstall.userId, userId),
+              eq(userMcpServerInstall.enabled, true),
+              eq(mcpServer.isPublic, true),
+              eq(mcpServer.enabled, true),
+            ),
+          ),
+      ]).then(([personal, installed]) => [...personal, ...installed]),
 
       // KB readiness check (if applicable)
       (() => {

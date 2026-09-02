@@ -2,7 +2,7 @@
 
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer } from "@/drizzle/schema";
+import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
@@ -18,28 +18,41 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 export async function listPublicMcpServers(): Promise<PublicMcpServer[]> {
   const session = await requireSession();
 
-  const rows = await db
-    .select({
-      id: mcpServer.id,
-      userId: mcpServer.userId,
-      name: mcpServer.name,
-      url: mcpServer.url,
-      enabled: mcpServer.enabled,
-      isPublic: mcpServer.isPublic,
-      createdAt: mcpServer.createdAt,
-      updatedAt: mcpServer.updatedAt,
-    })
-    .from(mcpServer)
-    .where(
-      and(
-        eq(mcpServer.isPublic, true),
-        eq(mcpServer.enabled, true),
-        ne(mcpServer.userId, session.user.id),
+  const [rows, installs] = await Promise.all([
+    db
+      .select({
+        id: mcpServer.id,
+        userId: mcpServer.userId,
+        name: mcpServer.name,
+        url: mcpServer.url,
+        enabled: mcpServer.enabled,
+        isPublic: mcpServer.isPublic,
+        createdAt: mcpServer.createdAt,
+        updatedAt: mcpServer.updatedAt,
+      })
+      .from(mcpServer)
+      .where(
+        and(
+          eq(mcpServer.isPublic, true),
+          eq(mcpServer.enabled, true),
+          ne(mcpServer.userId, session.user.id),
+        ),
       ),
-    );
+    db
+      .select({
+        id: userMcpServerInstall.id,
+        serverId: userMcpServerInstall.serverId,
+      })
+      .from(userMcpServerInstall)
+      .where(eq(userMcpServerInstall.userId, session.user.id)),
+  ]);
+
+  const installMap = new Map(installs.map((i) => [i.serverId, i.id]));
 
   return rows.map((row) => ({
     ...row,
     isPublic: true as const,
+    isInstalled: installMap.has(row.id),
+    installId: installMap.get(row.id),
   })) as unknown as PublicMcpServer[];
 }

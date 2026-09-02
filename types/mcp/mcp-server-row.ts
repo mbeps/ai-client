@@ -12,4 +12,8 @@ import type { TimedResource } from "../shared/resource";
  * @see {@link types/mcp/public-mcp-server.ts} for public server variant
  * @author Maruf Bepary
  */
-export type McpServerRow = InferSelectModel<typeof mcpServer> & TimedResource;
+export type McpServerRow = InferSelectModel<typeof mcpServer> &
+  TimedResource & {
+    isInstalled?: boolean;
+    installId?: string;
+  };

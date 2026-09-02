@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -46,6 +47,14 @@ export function ServerCard({ server }: ServerCardProps) {
               <h3 className="truncate font-semibold leading-none">
                 {server.name}
               </h3>
+              {server.isInstalled && (
+                <Badge
+                  variant="outline"
+                  className="h-4 px-1 text-[10px] uppercase"
+                >
+                  Community
+                </Badge>
+              )}
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${server.enabled ? "bg-green-500" : "bg-muted-foreground/40"}`}
               />

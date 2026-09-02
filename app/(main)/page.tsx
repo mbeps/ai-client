@@ -26,14 +26,13 @@ export default function HomePage() {
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const { models: chatModels } = useUserModels("chat");
 
-  useResourceHydration(["mcpServers", "publicMcpServers"]);
+  useResourceHydration(["mcpServers"]);
 
   const enabledServers = useMemo(() => {
-    return [...mcpServers, ...publicMcpServers].filter((s) => s.enabled);
-  }, [mcpServers, publicMcpServers]);
+    return mcpServers.filter((s) => s.enabled);
+  }, [mcpServers]);
 
   const handleStart = async (content: string) => {
     if (!content.trim()) return;

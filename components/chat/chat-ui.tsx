@@ -58,7 +58,6 @@ export function ChatUI({
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
   const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const publicMcpServers = useAppStore((state) => state.publicMcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const assistants = useAppStore((state) => state.assistants);
   const userSettings = useAppStore((state) => state.userSettings);
@@ -152,10 +151,8 @@ export function ChatUI({
   );
 
   const allEnabledServers = useMemo(() => {
-    const personalEnabled = mcpServers.filter((s) => s.enabled);
-    const publicEnabled = publicMcpServers.filter((s) => s.enabled);
-    return [...personalEnabled, ...publicEnabled];
-  }, [mcpServers, publicMcpServers]);
+    return mcpServers.filter((s) => s.enabled);
+  }, [mcpServers]);
 
   // -- Artifact Panel Logic (Inlined) --
   const updateMessageMetadataDb = useAppStore(

@@ -2,23 +2,26 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer } from "@/drizzle/schema";
+import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**
- * Adds a public MCP server to the current user's personal server list.
- * Fetches the source server, verifies it's public and enabled, and creates a copy for the user.
- * IMPORTANT: Sensitive data (headers) are stripped during the copy process to ensure security.
- * Only core configuration (name, url) is duplicated.
+ * Installs/subscribes to a public MCP server for the current user.
+ * References the original server row without duplicating it, avoiding copies of copies.
+ * Users can optionally supply their own private custom headers.
  * Runs on server only — invoked from client via Server Action.
  *
- * @param publicServerId - The source public MCP server ID to clone.
- * @returns The ID of the newly created personal MCP server.
+ * @param publicServerId - The source public MCP server ID to install.
+ * @param headers - Optional custom headers JSON string configured by the subscriber.
+ * @returns The ID of the newly created installation record.
  * @throws Error if the public server is not found, not enabled, or not public.
- * @throws Error if the user already owns the server (if validation is enabled).
+ * @throws Error if the owner attempts to install their own server.
  * @author Maruf Bepary
  */
-export async function addPublicServer(publicServerId: string): Promise<string> {
+export async function addPublicServer(
+  publicServerId: string,
+  headers?: string,
+): Promise<string> {
   const session = await requireSession();
 
   // 1. Fetch the public server definition from the database
@@ -39,24 +42,36 @@ export async function addPublicServer(publicServerId: string): Promise<string> {
     );
   }
 
-  // 2. Prevent the owner from adding their own public server as a separate personal copy
+  // 2. Prevent the owner from installing their own public server
   if (source.userId === session.user.id) {
     throw new Error("You already own this server in your personal list.");
   }
 
-  // 3. Create a NEW mcp_server row for the CURRENT user
-  // (SECURITY): Explicitly copy only non-sensitive fields. Headers are stripped.
+  // 3. Check if already installed
+  const [existingInstall] = await db
+    .select({ id: userMcpServerInstall.id })
+    .from(userMcpServerInstall)
+    .where(
+      and(
+        eq(userMcpServerInstall.userId, session.user.id),
+        eq(userMcpServerInstall.serverId, publicServerId),
+      ),
+    );
+
+  if (existingInstall) {
+    return existingInstall.id;
+  }
+
+  // 4. Create an installation reference row for the current user
   const [created] = await db
-    .insert(mcpServer)
+    .insert(userMcpServerInstall)
     .values({
       userId: session.user.id,
-      name: source.name,
-      url: source.url,
-      // Stripping sensitive fields: headers are NOT included here.
+      serverId: publicServerId,
+      headers: headers?.trim() ? headers : null,
       enabled: true,
-      isPublic: false,
     })
-    .returning({ id: mcpServer.id });
+    .returning({ id: userMcpServerInstall.id });
 
   return created.id;
 }

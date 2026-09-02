@@ -61,6 +61,8 @@ export const mcpServerSchema = z
     name: z.string(),
     enabled: z.boolean(),
     isPublic: z.boolean(),
+    isInstalled: z.boolean().optional(),
+    installId: z.string().optional(),
     createdAt: z.date(),
     updatedAt: z.date(),
   })

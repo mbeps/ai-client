@@ -92,63 +92,65 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Public Sharing Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            <CardTitle>Public Sharing</CardTitle>
-          </div>
-          <CardDescription>
-            Share this MCP server with the community to allow other users to
-            discover and use its tools.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="public-toggle" className="text-base">
-                Make this server public
-              </Label>
-              <p className="text-muted-foreground text-sm">
-                When enabled, anyone can find and use this server in their
-                chats.
-              </p>
+      {/* Public Sharing Section - only for owned servers */}
+      {!server.isInstalled && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              <CardTitle>Public Sharing</CardTitle>
             </div>
-            <Switch
-              id="public-toggle"
-              checked={server.isPublic}
-              onCheckedChange={handleTogglePublic}
-              disabled={togglingPublic}
-            />
-          </div>
-
-          <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="text-muted-foreground">
-              <p className="font-medium text-foreground">Important Note</p>
-              <p>
-                Public servers are accessible to all users on the platform.
-                Ensure that your server does not expose sensitive data or
-                internal functions that should remain private.
-              </p>
+            <CardDescription>
+              Share this MCP server with the community to allow other users to
+              discover and use its tools.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="public-toggle" className="text-base">
+                  Make this server public
+                </Label>
+                <p className="text-muted-foreground text-sm">
+                  When enabled, anyone can find and use this server in their
+                  chats.
+                </p>
+              </div>
+              <Switch
+                id="public-toggle"
+                checked={server.isPublic}
+                onCheckedChange={handleTogglePublic}
+                disabled={togglingPublic}
+              />
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Delete Server Section */}
+            <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="text-muted-foreground">
+                <p className="font-medium text-foreground">Important Note</p>
+                <p>
+                  Public servers are accessible to all users on the platform.
+                  Ensure that your server does not expose sensitive data or
+                  internal functions that should remain private.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete / Uninstall Server Section */}
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-1">
             <h3 className="flex items-center gap-2 font-semibold text-destructive text-lg">
               <Trash2 className="h-5 w-5" />
-              Delete Server
+              {server.isInstalled ? "Uninstall Tool" : "Delete Server"}
             </h3>
             <p className="max-w-2xl text-muted-foreground text-sm">
-              Permanently remove this MCP server configuration. This will affect
-              all assistants and chats using this server. This action is
-              irreversible.
+              {server.isInstalled
+                ? "Remove this community tool subscription from your account."
+                : "Permanently remove this MCP server configuration. This will affect all assistants and chats using this server. This action is irreversible."}
             </p>
           </div>
 
@@ -159,14 +161,22 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Server
+              {server.isInstalled ? "Uninstall Tool" : "Delete Server"}
             </Button>
             <DeleteConfirmDialog
               isOpen={deleteOpen}
               onClose={() => setDeleteOpen(false)}
               onConfirm={handleDelete}
-              title="Are you sure?"
-              description="This will permanently delete the MCP server and remove all its tool bindings. This action cannot be undone."
+              title={
+                server.isInstalled
+                  ? "Uninstall Community Tool?"
+                  : "Are you sure?"
+              }
+              description={
+                server.isInstalled
+                  ? "This will remove the community tool subscription from your account."
+                  : "This will permanently delete the MCP server and remove all its tool bindings. This action cannot be undone."
+              }
               loading={deleting}
             />
           </div>

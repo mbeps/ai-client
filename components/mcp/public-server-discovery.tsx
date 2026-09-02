@@ -141,10 +141,9 @@ export function PublicServerDiscovery({
             filteredServers.map((server) => {
               const info = server.url;
               const isAdding = addingId === server.id;
-              // Check if already in personal list by name (simple check)
-              const isAlreadyAdded = mcpServers.some(
-                (s) => s.name === server.name,
-              );
+              const isAlreadyAdded =
+                Boolean(server.isInstalled) ||
+                mcpServers.some((s) => s.id === server.id);
 
               return (
                 <Card
@@ -185,12 +184,12 @@ export function PublicServerDiscovery({
                       ) : isAlreadyAdded ? (
                         <>
                           <Check className="mr-1.5 h-3.5 w-3.5" />
-                          Added
+                          Installed
                         </>
                       ) : (
                         <>
                           <Plus className="h-4 w-4" />
-                          Add
+                          Install
                         </>
                       )}
                     </Button>

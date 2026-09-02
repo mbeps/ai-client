@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { updateInstalledServerHeaders } from "@/lib/actions/mcp-servers/update-installed-server-headers";
 import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";
 import {
   type UpdateMcpServer,
@@ -60,11 +61,20 @@ export function EditServerForm({ server }: EditServerFormProps) {
 
   async function onSubmit(data: UpdateMcpServer) {
     try {
-      await updateMcpServerAction(server.id, data);
-      toast.success("Server configuration updated");
+      if (server.isInstalled) {
+        await updateInstalledServerHeaders(server.id, data.headers);
+        toast.success("Custom headers updated");
+      } else {
+        await updateMcpServerAction(server.id, data);
+        toast.success("Server configuration updated");
+      }
       router.refresh();
     } catch {
-      toast.error("Failed to update server");
+      toast.error(
+        server.isInstalled
+          ? "Failed to update headers"
+          : "Failed to update server",
+      );
     }
   }
 
@@ -76,6 +86,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
             <ServerFormFields
               form={form}
               styled
+              isInstalled={server.isInstalled}
               headerPlaceholder={
                 server.headers ? "Saved — enter new value to update" : undefined
               }

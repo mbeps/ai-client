@@ -4,6 +4,7 @@ const chainable = vi.hoisted(() => {
   const c: any = {
     select: vi.fn(),
     from: vi.fn(),
+    innerJoin: vi.fn(),
     where: vi.fn(),
     limit: vi.fn(),
   };
@@ -36,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   chainable.select.mockReturnValue(chainable);
   chainable.from.mockReturnValue(chainable);
+  chainable.innerJoin.mockReturnValue(chainable);
   // clearAllMocks keeps implementations, but re-install defensively since the
   // impl closes over a `queued` array that must stay shared with __queueWhere
   chainable.__installWhere();
@@ -52,8 +54,10 @@ describe("loadChatContext KB ownership", () => {
         knowledgebaseId: "kb-1",
       },
     ]);
-    chainable.__queueWhere([]); // mcp servers
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
     chainable.__queueWhere([{ indexStatus: "ready" }]); // own KB found
+    chainable.__queueWhere([]); // user skills
 
     const ctx = await loadChatContext("chat-1", "user-1");
 
@@ -70,8 +74,10 @@ describe("loadChatContext KB ownership", () => {
         knowledgebaseId: "kb-2",
       },
     ]);
-    chainable.__queueWhere([]); // mcp servers
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
     chainable.__queueWhere([]); // ownership filter excludes other user's KB
+    chainable.__queueWhere([]); // user skills
 
     const ctx = await loadChatContext("chat-1", "user-1");
 
