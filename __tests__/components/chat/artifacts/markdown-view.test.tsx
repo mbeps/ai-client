@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Capture the props BlockNoteView receives so we can assert on theming.
 const capturedProps: Array<Record<string, unknown>> = [];
@@ -26,6 +26,16 @@ vi.mock("@blocknote/core", () => ({
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
 
+const mockUseTheme = vi.fn().mockReturnValue({
+  resolvedTheme: "light",
+  theme: "light",
+  setTheme: vi.fn(),
+});
+
+vi.mock("next-themes", () => ({
+  useTheme: () => mockUseTheme(),
+}));
+
 import MarkdownView from "@/components/chat/artifacts/markdown-view";
 
 beforeAll(() => {
@@ -36,12 +46,39 @@ beforeAll(() => {
   };
 });
 
-describe("MarkdownView — theme (ART-08)", () => {
-  it("does not hardcode the light theme", async () => {
+beforeEach(() => {
+  capturedProps.length = 0;
+  mockUseTheme.mockReturnValue({
+    resolvedTheme: "light",
+    theme: "light",
+    setTheme: vi.fn(),
+  });
+});
+
+describe("MarkdownView — theme", () => {
+  it("passes light theme to BlockNoteView when resolvedTheme is light", async () => {
+    mockUseTheme.mockReturnValue({
+      resolvedTheme: "light",
+      theme: "light",
+      setTheme: vi.fn(),
+    });
+
     render(<MarkdownView content="# Hello" />);
-    // Wait one tick for the parsed-blocks editor mount
     await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
     const last = capturedProps[capturedProps.length - 1];
-    expect(last.theme).not.toBe("light");
+    expect(last.theme).toBe("light");
+  });
+
+  it("passes dark theme to BlockNoteView when resolvedTheme is dark", async () => {
+    mockUseTheme.mockReturnValue({
+      resolvedTheme: "dark",
+      theme: "dark",
+      setTheme: vi.fn(),
+    });
+
+    render(<MarkdownView content="# Hello Dark" />);
+    await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
+    const last = capturedProps[capturedProps.length - 1];
+    expect(last.theme).toBe("dark");
   });
 });

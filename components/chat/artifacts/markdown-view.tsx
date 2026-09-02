@@ -6,6 +6,7 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -43,6 +44,7 @@ function BlockNoteEditor({
     initialContent: blocks.length > 0 ? blocks : undefined,
   });
 
+  const { resolvedTheme } = useTheme();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -55,6 +57,7 @@ function BlockNoteEditor({
     <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-4">
       <BlockNoteView
         editor={editor}
+        theme={resolvedTheme === "dark" ? "dark" : "light"}
         onChange={() => {
           if (onUpdate) {
             if (timerRef.current) clearTimeout(timerRef.current);

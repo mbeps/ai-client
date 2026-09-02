@@ -20,7 +20,8 @@
       "!graphify-out",
       "!evaluations",
       "!reports",
-      "!subagents"
+      "!subagents",
+      "!__tests__"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true
