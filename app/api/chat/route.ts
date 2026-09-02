@@ -188,7 +188,7 @@ export async function POST(req: Request) {
         ctx.projectRow?.globalPrompt,
         ctx.assistantRow?.prompt,
         ctx.kbIsReady,
-        hasFileAttachments,
+        fileAttachments.map((a) => a.name),
         ctx.availableSkills,
         ctx.selectedSkills,
         isToolCallingModel,

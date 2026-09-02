@@ -23,17 +23,30 @@ export type FileUrlAttachment = {
  * @author Maruf Bepary
  */
 export function registerFileUrlTool(attachments: FileUrlAttachment[]) {
+  const fileNames = attachments.map((a) => a.name).join(", ");
   return {
     get_file_url: tool({
       description:
         "Get a temporary download URL for a file the user uploaded to this conversation. " +
         "Use this when you need a downloadable link for a user-uploaded file, e.g. to pass " +
-        "to another tool that fetches files by URL.",
+        `to another tool that fetches files by URL. Available files: ${fileNames}`,
       inputSchema: z.object({
-        fileName: z.string().min(1).describe("Exact name of the uploaded file"),
+        fileName: z
+          .string()
+          .min(1)
+          .describe(
+            `Exact name of the uploaded file. Available files: ${fileNames}`,
+          ),
       }),
       execute: async ({ fileName }) => {
-        const att = attachments.find((a) => a.name === fileName);
+        // Strip surrounding quotes/brackets that models sometimes add,
+        // then fall back to a case-insensitive search.
+        const normalised = fileName.replace(/^["'[\]]+|["'[\]]+$/g, "").trim();
+        const att =
+          attachments.find((a) => a.name === normalised) ??
+          attachments.find(
+            (a) => a.name.toLowerCase() === normalised.toLowerCase(),
+          );
         if (!att) return { error: "File not found" };
         return { url: await getPresignedUrl(att.key) };
       },

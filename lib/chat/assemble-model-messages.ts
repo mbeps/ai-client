@@ -69,6 +69,14 @@ export function assembleModelMessages(
             type: "text",
             text: `[Document: ${att.name}]\n${att.extractedText}`,
           });
+        } else if (att.type !== "image") {
+          // Spreadsheets, archives, and other non-extractable attachments have
+          // no embedded text. Emit an inline tag so the model knows the file
+          // exists and should use get_file_url to access it.
+          parts.push({
+            type: "text",
+            text: `[Attached File: ${att.name} (${att.type})]`,
+          });
         }
       }
 

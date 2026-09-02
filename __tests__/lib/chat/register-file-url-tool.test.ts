@@ -14,7 +14,7 @@ beforeEach(() => {
 describe("registerFileUrlTool", () => {
   it("registers a get_file_url tool", () => {
     const tools = registerFileUrlTool([
-      { id: "a1", name: "data.xlsx", key: "u/data.xlsx", type: "spreadsheet" },
+      { name: "data.xlsx", key: "u/data.xlsx" },
     ]);
 
     expect(tools.get_file_url).toBeDefined();
@@ -31,7 +31,7 @@ describe("registerFileUrlTool", () => {
   it("returns a presigned url for a known file name", async () => {
     mockGetPresignedUrl.mockResolvedValue("https://example.com/signed");
     const tools = registerFileUrlTool([
-      { id: "a1", name: "data.xlsx", key: "u/data.xlsx", type: "spreadsheet" },
+      { name: "data.xlsx", key: "u/data.xlsx" },
     ]);
 
     const result = await (tools.get_file_url as any).execute({
@@ -39,6 +39,32 @@ describe("registerFileUrlTool", () => {
     });
 
     expect(mockGetPresignedUrl).toHaveBeenCalledWith("u/data.xlsx");
+    expect(result).toEqual({ url: "https://example.com/signed" });
+  });
+
+  it("resolves file name case-insensitively", async () => {
+    mockGetPresignedUrl.mockResolvedValue("https://example.com/signed");
+    const tools = registerFileUrlTool([
+      { name: "Data.xlsx", key: "u/data.xlsx" },
+    ]);
+
+    const result = await (tools.get_file_url as any).execute({
+      fileName: "data.xlsx",
+    });
+
+    expect(result).toEqual({ url: "https://example.com/signed" });
+  });
+
+  it("strips surrounding quotes from fileName before matching", async () => {
+    mockGetPresignedUrl.mockResolvedValue("https://example.com/signed");
+    const tools = registerFileUrlTool([
+      { name: "data.xlsx", key: "u/data.xlsx" },
+    ]);
+
+    const result = await (tools.get_file_url as any).execute({
+      fileName: '"data.xlsx"',
+    });
+
     expect(result).toEqual({ url: "https://example.com/signed" });
   });
 

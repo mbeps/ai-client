@@ -29,12 +29,21 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     expect(result.startsWith("\n")).toBe(false);
   });
 
-  it("mentions get_file_url tool and contains no URLs when files are present", () => {
+  it("mentions get_file_url tool and lists file names when attachments are present", () => {
     const result = buildSystemPrompt(null, null, null, false, [
-      { name: "data.xlsx", url: "https://example.com/signed" },
+      "data.xlsx",
+      "report.csv",
     ]);
     expect(result).toContain("get_file_url");
-    expect(result).not.toContain("http");
+    expect(result).toContain("data.xlsx");
+    expect(result).toContain("report.csv");
+    // No raw signed URLs should appear
+    expect(result).not.toContain("https://example.com/signed");
+  });
+
+  it("does not include attachment section when attachmentNames is empty", () => {
+    const result = buildSystemPrompt(null, null, null, false, []);
+    expect(result).not.toContain("get_file_url");
   });
 
   it("falls back to a default prompt when all layers are empty", () => {
@@ -55,7 +64,7 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
       null,
       null,
       false,
-      false,
+      [],
       availableSkills,
       [],
       true,
@@ -85,7 +94,7 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
       null,
       null,
       false,
-      false,
+      [],
       [],
       selectedSkills,
       true,

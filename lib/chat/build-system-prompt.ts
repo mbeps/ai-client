@@ -15,7 +15,7 @@ import type {
  * @param projectPrompt - Project-specific system prompt (optional)
  * @param assistantPrompt - Assistant-specific system prompt (optional)
  * @param hasKnowledgeBase - Whether knowledge base tool is available
- * @param hasAttachments - Whether the thread has file attachments
+ * @param attachmentNames - Names of files the user has attached (empty array = none)
  * @param availableSkills - List of available skills for dynamic progressive disclosure catalog
  * @param selectedSkills - List of user-selected skills to pre-inject
  * @param supportsTools - Whether the current model supports tool calling
@@ -27,7 +27,7 @@ export function buildSystemPrompt(
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
   hasKnowledgeBase: boolean,
-  hasAttachments?: boolean,
+  attachmentNames?: string[],
   availableSkills?: SkillSummary[],
   selectedSkills?: Skill[] | any[],
   supportsTools?: boolean,
@@ -50,9 +50,10 @@ export function buildSystemPrompt(
     systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
   }
 
-  if (hasAttachments) {
+  if (attachmentNames && attachmentNames.length > 0) {
+    const fileList = attachmentNames.map((n) => `- ${n}`).join("\n");
     systemParts.push(
-      "The user has attached files to this conversation. Use the get_file_url tool to obtain download links for uploaded files when you need them.",
+      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file.`,
     );
   }
 
