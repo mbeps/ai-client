@@ -559,6 +559,7 @@ export function ChatUI({
               initialSelectedKbs={initialKbIds}
               initialModelId={initialModelId}
               onKnowledgebaseChange={handleKbChange}
+              thread={thread}
             />
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { Message } from "@/types/message/message";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import { AttachmentsMenu } from "./attachments-menu";
@@ -23,6 +24,7 @@ import { useAppStore } from "@/lib/store";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
+import { ContextUsagePill } from "./context-usage-pill";
 import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { AttachmentVisionUnsupportedError } from "@/constants/errors";
@@ -101,6 +103,9 @@ interface ChatInputProps {
 
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
+
+  /** Active thread messages for live context token usage calculation. */
+  thread?: Message[];
 }
 
 /**
@@ -128,6 +133,7 @@ export function ChatInput({
   activeChatAssistantId,
   canMentionAssistant = true,
   submitLabel,
+  thread = [],
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -581,7 +587,15 @@ export function ChatInput({
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <ContextUsagePill
+            thread={thread}
+            selectedModel={selectedModelObj ?? undefined}
+            input={input}
+            draftAttachments={attachments}
+            toolNames={Array.from(selectedTools)}
+            mcpServerCount={selectedServerIds.size}
+          />
           {onCancel && (
             <Button
               variant="ghost"
