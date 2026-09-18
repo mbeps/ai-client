@@ -1,5 +1,8 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "./s3-instance";
+
+const log = getLogger(["app", "storage", "s3"]);
 
 /**
  * Uploads a file object to S3 storage.
@@ -17,6 +20,14 @@ export async function uploadObject(
   body: Buffer | Uint8Array,
   contentType: string,
 ) {
+  log.debug(
+    "Uploading S3 object (key: {key}, size: {size}, type: {contentType})",
+    {
+      key,
+      size: body.length,
+      contentType,
+    },
+  );
   await s3Client.send(
     new PutObjectCommand({
       Bucket: S3_BUCKET,

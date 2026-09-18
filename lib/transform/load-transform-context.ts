@@ -5,9 +5,11 @@ import { mcpServer } from "@/drizzle/schema";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import type { TransformAgent } from "@/types/transform/transform-agent";
+
+const log = getLogger(["app", "transform", "context"]);
 
 interface LoadTransformContextArgs {
   userId: string;
@@ -72,7 +74,10 @@ export async function loadTransformContext({
           );
         }
       } catch (err) {
-        logger.warn("[Transform AI] KB retrieval failed", { err }, userId);
+        log.warn("KB retrieval failed for transform agent {agentId}: {error}", {
+          agentId: agentRow.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
       return "";
     })();

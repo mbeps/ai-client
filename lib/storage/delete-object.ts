@@ -1,5 +1,8 @@
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "./s3-instance";
+
+const log = getLogger(["app", "storage", "s3"]);
 
 /**
  * Deletes a single object from S3 storage.
@@ -10,5 +13,6 @@ import { S3_BUCKET, s3Client } from "./s3-instance";
  * @see {@link deleteObjects} for batch deletion
  */
 export async function deleteObject(key: string) {
+  log.debug("Deleting S3 object (key: {key})", { key });
   await s3Client.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }));
 }

@@ -4,7 +4,10 @@ import { and, eq, not, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
+
+const log = getLogger(["app", "actions", "mcp"]);
 
 /**
  * Toggles the enabled/disabled status of an MCP server or installed community server.
@@ -29,6 +32,13 @@ export async function toggleMcpServer(id: string): Promise<McpServerRow> {
     .returning();
 
   if (toggledPersonal) {
+    log.info(
+      "Toggled MCP server state (serverId: {serverId}, enabled: {enabled})",
+      {
+        serverId: toggledPersonal.id,
+        enabled: toggledPersonal.enabled,
+      },
+    );
     return { ...toggledPersonal, isInstalled: false };
   }
 
@@ -63,6 +73,14 @@ export async function toggleMcpServer(id: string): Promise<McpServerRow> {
   if (!sourceServer) {
     throw new Error("Not Found");
   }
+
+  log.info(
+    "Toggled installed MCP server state (serverId: {serverId}, enabled: {enabled})",
+    {
+      serverId: sourceServer.id,
+      enabled: toggledInstall.enabled,
+    },
+  );
 
   return {
     id: sourceServer.id,

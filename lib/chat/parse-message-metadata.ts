@@ -1,4 +1,7 @@
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "metadata"]);
+
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type {
@@ -109,7 +112,9 @@ export function parseMessageMetadata(
       durationMs,
     };
   } catch (e) {
-    logger.error("[MessageMetadata] Metadata parse error:", e);
+    log.error("Failed to parse message metadata: {error}", {
+      error: e instanceof Error ? e.message : String(e),
+    });
     return empty;
   }
 }

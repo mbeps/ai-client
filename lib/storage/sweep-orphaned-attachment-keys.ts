@@ -1,8 +1,10 @@
 import { inArray, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { deleteObject } from "./delete-object";
+
+const log = getLogger(["app", "storage", "sweep"]);
 
 /**
  * Deletes S3 objects for attachment keys that are no longer referenced by any
@@ -34,13 +36,19 @@ export async function sweepOrphanedAttachmentKeys(
         try {
           await deleteObject(key);
         } catch (error) {
-          logger.error("Failed to delete orphaned S3 object", { key, error });
+          log.error(
+            "Failed to delete orphaned S3 object (key: {key}): {error}",
+            {
+              key,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
         }
       }),
     );
   } catch (error) {
-    logger.error("Failed to count attachment references for S3 sweep", {
-      error,
+    log.error("Failed to count attachment references for S3 sweep: {error}", {
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }

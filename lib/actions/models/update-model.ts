@@ -4,7 +4,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "model"]);
+
 import {
   type UpdateModelInput,
   updateModelSchema,
@@ -72,11 +75,11 @@ export async function updateModels(
     .where(and(inArray(aiModel.id, ids), eq(aiModel.userId, session.user.id)))
     .returning();
 
-  logger.info(
-    "Models updated successfully",
-    { count: updated.length, ids, userId: session.user.id },
-    session.user.id,
-  );
+  log.info("Models updated successfully (count: {count})", {
+    count: updated.length,
+    ids,
+    userId: session.user.id,
+  });
 
   if (updated.length === 0) {
     throw new Error("Not Found");

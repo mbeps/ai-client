@@ -5,7 +5,10 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
+
+const log = getLogger(["app", "actions", "messages"]);
 
 /**
  * Recursively deletes a message and all its children/descendants from the tree.
@@ -85,4 +88,13 @@ export async function deleteMessage(
     .where(eq(chat.id, validatedChatId));
 
   await sweepOrphanedAttachmentKeys(keys.map((k) => k.key));
+
+  log.info(
+    "Message and descendants deleted (deletedCount: {count}, messageId: {messageId}, chatId: {chatId})",
+    {
+      count: toDelete.length,
+      messageId: validatedMessageId,
+      chatId: validatedChatId,
+    },
+  );
 }

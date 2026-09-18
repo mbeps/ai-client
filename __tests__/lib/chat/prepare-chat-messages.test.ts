@@ -4,12 +4,19 @@ vi.mock("@/config/env", () => ({
   env: { CHAT_MAX_HISTORY_TURNS: 3 },
 }));
 
+const mockLog = vi.hoisted(() => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+}));
+
 vi.mock("@/lib/logger", () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+  getLogger: vi.fn(() => mockLog),
+  logger: mockLog,
 }));
 
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
-import { logger } from "@/lib/logger";
 
 function thread(n: number) {
   return Array.from({ length: n }, (_, i) => ({
@@ -45,11 +52,11 @@ describe("prepareChatMessages — history truncation (T4A.3)", () => {
 
   it("logs a warning when truncation occurs", () => {
     prepareChatMessages({ history: thread(10) });
-    expect(logger.warn).toHaveBeenCalled();
+    expect(mockLog.warn).toHaveBeenCalled();
   });
 
   it("does not log a warning when nothing is truncated", () => {
     prepareChatMessages({ history: thread(2) });
-    expect(logger.warn).not.toHaveBeenCalled();
+    expect(mockLog.warn).not.toHaveBeenCalled();
   });
 });

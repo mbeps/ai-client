@@ -192,6 +192,9 @@ CLIENT_ID_GITHUB=your-github-oauth-client-id
 CLIENT_SECRET_GITHUB=your-github-oauth-secret
 CLIENT_ID_DISCORD=your-discord-oauth-client-id
 CLIENT_SECRET_DISCORD=your-discord-oauth-secret
+
+# Logging (LogTape)
+LOG_LEVEL=info
 ```
 
 ### Environment Variable Reference
@@ -221,6 +224,9 @@ CLIENT_SECRET_DISCORD=your-discord-oauth-secret
 **OAuth (Optional)**
 - **`CLIENT_ID_GITHUB`** / **`CLIENT_SECRET_GITHUB`** — GitHub OAuth credentials
 - **`CLIENT_ID_DISCORD`** / **`CLIENT_SECRET_DISCORD`** — Discord OAuth credentials
+
+**Logging**
+- **`LOG_LEVEL`** — Minimum log severity threshold (`debug` | `info` | `warn` | `error` | `fatal`; default: `info`). Uses LogTape with ANSI columnar alignment (`HH:mm:ss.SSS LEVEL app·category │ message`) and zero PII leakage. Server-only.
 
 ## 4. Start Infrastructure (Optional)
 These instructions are needed if you wish to run PostgreSQL and MinIO locally using Docker (or Podman). You can also connect to external services (e.g., managed PostgreSQL, AWS S3) by configuring the appropriate environment variables.
@@ -297,3 +303,4 @@ npm start
 - [**Node PostgreSQL**](https://node-postgres.com) — Node.js PostgreSQL client library
 - [**Turbopack**](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
 - [**Biome**](https://biomejs.dev) — Fast formatter and linter for JavaScript, TypeScript, and JSX
+- [**LogTape**](https://logtape.org) — Fast, zero-dependency structured logging framework with hierarchical categories and pluggable sinks

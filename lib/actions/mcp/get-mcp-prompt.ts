@@ -5,8 +5,11 @@ import { MCP_TIMEOUT_MS } from "@/constants/mcp";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
+
+const log = getLogger(["app", "actions", "mcp"]);
+
 import { withMcpServer } from "@/lib/mcp/with-mcp-server";
 import { withTimeout } from "@/lib/mcp/with-timeout";
 
@@ -61,15 +64,23 @@ export async function getMcpPrompt(
 
         return result;
       } catch (error) {
-        logger.error(
-          `[MCP] Failed to get prompt "${promptName}" from server "${server.name}":`,
-          error,
+        log.error(
+          "Failed to get prompt '{promptName}' from server '{serverName}': {error}",
+          {
+            promptName,
+            serverName: server.name,
+            error: error instanceof Error ? error.message : String(error),
+            userId: session.user.id,
+          },
         );
         throw error;
       }
     });
   } catch (error) {
-    logger.error(`[MCP] error in getMcpPrompt:`, error);
+    log.error("Error in getMcpPrompt: {error}", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: session?.user?.id,
+    });
     throw error;
   }
 }

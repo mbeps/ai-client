@@ -4,7 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "model"]);
+
 import {
   type CreateModelInput,
   createModelSchema,
@@ -67,15 +70,11 @@ export async function createModel(
     })
     .returning();
 
-  logger.info(
-    "Model created successfully",
-    {
-      modelId: created.id,
-      label: created.label,
-      userId: session.user.id,
-    },
-    session.user.id,
-  );
+  log.info("Model created successfully (id: {modelId})", {
+    modelId: created.id,
+    label: created.label,
+    userId: session.user.id,
+  });
 
   return created;
 }

@@ -4,9 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/providers/provider-utils";
+
+const log = getLogger(["app", "actions", "provider"]);
 
 export type ProviderConnectionResult = {
   ok: boolean;
@@ -68,10 +70,9 @@ export async function testProviderConnection(
     );
 
     if (!response.ok) {
-      logger.warn(
-        "Provider connection test failed with status",
-        { providerId, status: response.status },
-        session.user.id,
+      log.warn(
+        "Provider connection test failed (status: {status}, providerId: {providerId})",
+        { providerId, status: response.status, userId: session.user.id },
       );
       return {
         ok: false,
@@ -79,18 +80,19 @@ export async function testProviderConnection(
       };
     }
 
-    logger.info(
-      "Provider connection test successful",
-      { providerId, userId: session.user.id },
-      session.user.id,
-    );
+    log.info("Provider connection test successful (providerId: {providerId})", {
+      providerId,
+      userId: session.user.id,
+    });
     return { ok: true };
   } catch (error) {
-    logger.error(
-      "Provider connection test failed",
-      error,
-      { providerId, userId: session.user.id },
-      session.user.id,
+    log.error(
+      "Provider connection test failed (providerId: {providerId}): {error}",
+      {
+        providerId,
+        error: error instanceof Error ? error.message : String(error),
+        userId: session.user.id,
+      },
     );
     return {
       ok: false,

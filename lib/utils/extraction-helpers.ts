@@ -1,5 +1,7 @@
 import { extractText, getDocumentProxy } from "unpdf";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "utils", "extraction"]);
 
 /**
  * Unifies PDF and text extraction logic.
@@ -32,7 +34,9 @@ export async function extractDocumentContent(
       const { text } = await extractText(pdf, { mergePages: true });
       return text.slice(0, limit);
     } catch (error) {
-      logger.error("Error extracting PDF content", error);
+      log.error("Error extracting PDF content: {error}", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error("Failed to extract text from PDF");
     }
   }

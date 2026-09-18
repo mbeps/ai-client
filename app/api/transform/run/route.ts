@@ -6,8 +6,11 @@ import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { auth } from "@/lib/auth/auth";
 import { encodeSSE } from "@/lib/encode-sse";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { buildFileContext } from "@/lib/transform/build-file-context";
+
+const log = getLogger(["app", "api", "transform"]);
+
 import {
   initTransformRun,
   resetStuckRuns,
@@ -228,12 +231,11 @@ export async function POST(req: Request) {
         await runMcpCleanup();
         controller.close();
       } catch (err) {
-        logger.error(
-          "[Transform AI] Run failed",
-          err as Error,
-          undefined,
-          session.user.id,
-        );
+        log.error("Transform AI run failed (runId: {runId}): {error}", {
+          runId,
+          error: err instanceof Error ? err.message : String(err),
+          userId: session.user.id,
+        });
         // Best-effort: mark the run failed so it doesn't stay stuck in "running"
         if (runId) {
           try {

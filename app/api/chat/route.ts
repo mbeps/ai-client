@@ -23,8 +23,11 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+
+const log = getLogger(["app", "api", "chat"]);
+
 import { chatRequestSchema } from "@/schemas/chat/chat";
 
 export const maxDuration = 60;
@@ -60,10 +63,9 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
-    logger.warn(
-      "[Chat API] Invalid request:",
-      JSON.stringify(parsed.error.format(), null, 2),
-    );
+    log.warn("Invalid chat request: {details}", {
+      details: parsed.error.flatten(),
+    });
     return Response.json(
       { error: "Invalid request", details: parsed.error.flatten() },
       { status: 400 },
@@ -124,18 +126,15 @@ export async function POST(req: Request) {
     };
     const resolvedModelId = resolved.modelId;
 
-    logger.info(
-      "[Chat API] Request initialized",
-      {
-        chatId,
-        userMessageId,
-        model,
-        selectedServerIds,
-        selectedAssistantId,
-        selectedSkillIds,
-      },
+    log.info("Chat request initialized (chatId: {chatId}, model: {model})", {
+      chatId,
+      userMessageId,
+      model,
+      selectedServerIds,
+      selectedAssistantId,
+      selectedSkillIds,
       userId,
-    );
+    });
 
     // --- Register MCP tools (depends on ctx) ---
     const isArtifactToolSelected = selectedTools?.includes(
@@ -266,12 +265,11 @@ export async function POST(req: Request) {
     }
 
     // Unclassified errors are server faults: log everything, expose nothing.
-    logger.error(
-      "[Chat API] Request failed",
-      error instanceof Error ? error : new Error(String(error)),
-      { chatId },
+    log.error("Chat request failed (chatId: {chatId}): {error}", {
+      chatId,
+      error: error instanceof Error ? error.message : String(error),
       userId,
-    );
+    });
     return Response.json(
       { error: "An internal error occurred." },
       { status: 500 },

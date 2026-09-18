@@ -1,10 +1,12 @@
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { parseProviderHeaders } from "@/lib/providers/provider-utils";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { buildSdkProvider } from "./build-sdk-provider";
 import { decryptProviderField } from "./decrypt-provider-field";
+
+const log = getLogger(["app", "chat", "provider"]);
 
 /**
  * Constructs a ResolvedProvider by decrypting provider credentials and initializing the SDK.
@@ -38,11 +40,10 @@ export function buildResolvedProvider(
 
   const headers = parseProviderHeaders(decryptedHeaders);
 
-  logger.info(
-    "Provider resolved for model",
-    { modelId: row.model.modelId, provider: row.provider.name },
-    userId,
-  );
+  log.info("Provider resolved for model {modelId} ({provider})", {
+    modelId: row.model.modelId,
+    provider: row.provider.name,
+  });
 
   return {
     sdkProvider: buildSdkProvider({

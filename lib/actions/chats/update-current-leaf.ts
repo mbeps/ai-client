@@ -5,6 +5,9 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "chats"]);
 
 /**
  * Updates the current leaf pointer for a chat session.
@@ -35,4 +38,12 @@ export async function updateCurrentLeaf(
     .returning({ id: chat.id });
 
   if (!updated) throw new Error("Not Found");
+
+  log.debug(
+    "Updated current chat leaf pointer (chatId: {chatId}, leafId: {leafId})",
+    {
+      chatId: validatedChatId,
+      leafId: validatedLeafId,
+    },
+  );
 }

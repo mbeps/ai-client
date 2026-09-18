@@ -6,8 +6,11 @@ import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
+
+const log = getLogger(["app", "transform", "steps"]);
+
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";
 import { extractDownloadFilePayload } from "@/lib/transform/extract-download-file-payload";
@@ -92,7 +95,10 @@ export async function runTransformSteps({
         .set({ updatedAt: new Date() })
         .where(eq(transformRun.id, runRow.id));
     } catch {
-      logger.warn("[Transform AI] Heartbeat update failed", undefined, userId);
+      log.warn("Heartbeat update failed (runId: {runId})", {
+        runId: runRow.id,
+        userId,
+      });
     }
 
     // Update current step index as array index so resume logic (currentStepIndex + 1) is correct
@@ -109,14 +115,14 @@ export async function runTransformSteps({
       total: steps.length,
     });
 
-    logger.info(
-      "[Transform AI] Step started",
+    log.info(
+      "Step started (runId: {runId}, stepIndex: {stepIndex}, stepName: {stepName})",
       {
         runId: runRow.id,
         stepIndex: i,
         stepName: step.name,
+        userId,
       },
-      userId,
     );
 
     // Filter servers by step config
@@ -228,14 +234,14 @@ export async function runTransformSteps({
               const uploadedPath = extractUploadedFilePath(toolResultPayload);
               if (uploadedPath) {
                 activeWorkbookFilePath = uploadedPath;
-                logger.info(
-                  "[Transform AI] Active workbook file_path captured",
+                log.info(
+                  "Active workbook file_path captured (runId: {runId}, stepIndex: {stepIndex})",
                   {
                     runId: runRow.id,
                     stepIndex: i,
                     activeWorkbookFilePath,
+                    userId,
                   },
-                  userId,
                 );
               }
             }
@@ -252,14 +258,14 @@ export async function runTransformSteps({
               if (extractedArtifact) {
                 stepArtifact = extractedArtifact;
               } else {
-                logger.warn(
-                  "[Transform AI] manage_artifact result had no extractable artifact",
+                log.warn(
+                  "manage_artifact result had no extractable artifact (runId: {runId}, stepIndex: {stepIndex})",
                   {
                     runId: runRow.id,
                     stepIndex: i,
                     payloadType: typeof toolResultPayload,
+                    userId,
                   },
-                  userId,
                 );
               }
             }
@@ -316,14 +322,14 @@ export async function runTransformSteps({
         currentAttachmentRows = [persisted.attachmentRow];
         activeWorkbookFilePath = null;
 
-        logger.info(
-          "[Transform AI] Active workbook replaced with step output",
+        log.info(
+          "Active workbook replaced with step output (runId: {runId}, stepIndex: {stepIndex})",
           {
             runId: runRow.id,
             stepIndex: i,
             activeWorkbookAttachmentId: persisted.attachmentRow.id,
+            userId,
           },
-          userId,
         );
       }
     }
@@ -371,18 +377,24 @@ export async function runTransformSteps({
                 stepPersistedSpreadsheetOutput = true;
                 currentAttachmentRows = [persisted.attachmentRow];
 
-                logger.info(
-                  "[Transform AI] Persisted step output from download_file fallback",
-                  { runId: runRow.id, stepIndex: i },
-                  userId,
+                log.info(
+                  "Persisted step output from download_file fallback (runId: {runId}, stepIndex: {stepIndex})",
+                  { runId: runRow.id, stepIndex: i, userId },
                 );
               }
             }
           } catch (downloadErr) {
-            logger.warn(
-              "[Transform AI] download_file fallback persistence failed",
-              { downloadErr, runId: runRow.id, stepIndex: i },
-              userId,
+            log.warn(
+              "download_file fallback persistence failed (runId: {runId}, stepIndex: {stepIndex})",
+              {
+                error:
+                  downloadErr instanceof Error
+                    ? downloadErr.message
+                    : String(downloadErr),
+                runId: runRow.id,
+                stepIndex: i,
+                userId,
+              },
             );
           }
         }
@@ -411,11 +423,11 @@ export async function runTransformSteps({
       artifact: stepArtifact,
     });
 
-    logger.info(
-      "[Transform AI] Step completed",
-      { runId: runRow.id, stepIndex: i },
+    log.info("Step completed (runId: {runId}, stepIndex: {stepIndex})", {
+      runId: runRow.id,
+      stepIndex: i,
       userId,
-    );
+    });
 
     // Human review gate: pause before continuing to the next step
     if (step.requiresReview) {
@@ -430,10 +442,9 @@ export async function runTransformSteps({
         stepIndex: i,
       });
 
-      logger.info(
-        "[Transform AI] Paused for human review",
-        { runId: runRow.id, stepIndex: i },
-        userId,
+      log.info(
+        "Paused for human review (runId: {runId}, stepIndex: {stepIndex})",
+        { runId: runRow.id, stepIndex: i, userId },
       );
 
       return { success: true, paused: true, currentOutputAttachmentIds };

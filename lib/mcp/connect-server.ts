@@ -1,6 +1,9 @@
 import { MCP_TIMEOUT_MS } from "@/constants/mcp";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
+
+const log = getLogger(["app", "mcp", "connect"]);
+
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { createConnectedClient } from "./create-connected-client";
 import { withTimeout } from "./with-timeout";
@@ -27,10 +30,14 @@ export async function connectServer(
       `list tools from ${server.name}`,
     );
 
-    logger.info(`[MCP] Connected to server: ${server.name}`, {
-      serverId: server.id,
-      toolCount: Object.keys(tools).length,
-    });
+    log.info(
+      "Connected to MCP server '{serverName}' (toolCount: {toolCount})",
+      {
+        serverId: server.id,
+        serverName: server.name,
+        toolCount: Object.keys(tools).length,
+      },
+    );
 
     return {
       serverId: server.id,

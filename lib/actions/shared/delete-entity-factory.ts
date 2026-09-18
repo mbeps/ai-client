@@ -2,6 +2,9 @@ import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
 import { deleteResourceWithUnbind } from "@/lib/db/delete-resource-with-unbind";
 import { whereOwner } from "@/lib/db/where-owner";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "factory"]);
 
 /**
  * Configuration for creating a Server Action that deletes an owned row.
@@ -67,6 +70,11 @@ export function deleteEntityFactory(config: DeleteEntityConfig) {
         await config.onDelete(session.user.id, ids);
       }
 
+      log.info("Deleted entities (count: {deletedCount})", {
+        deletedCount,
+        userId: session.user.id,
+      });
+
       return { deletedCount };
     }
 
@@ -83,6 +91,11 @@ export function deleteEntityFactory(config: DeleteEntityConfig) {
         results.map((r) => r.id),
       );
     }
+
+    log.info("Deleted entities (count: {deletedCount})", {
+      deletedCount: results.length,
+      userId: session.user.id,
+    });
 
     return { deletedCount: results.length };
   };

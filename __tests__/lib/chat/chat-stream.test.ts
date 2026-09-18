@@ -25,9 +25,10 @@ vi.mock("@/lib/chat/persist-response", () => ({
   persistAssistantResponse: mockPersist,
 }));
 
-vi.mock("@/lib/logger", () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-}));
+vi.mock("@/lib/logger", () => {
+  const mockLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+  return { getLogger: vi.fn(() => mockLog), logger: mockLog };
+});
 
 import { createChatStream } from "@/lib/chat/chat-stream";
 

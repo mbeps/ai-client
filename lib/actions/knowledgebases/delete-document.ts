@@ -6,8 +6,11 @@ import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
+
+const log = getLogger(["app", "actions", "knowledgebases"]);
 
 /**
  * Deletes a document from a knowledge base.
@@ -53,4 +56,12 @@ export async function deleteDocument(
   );
 
   await db.delete(kbDocument).where(eq(kbDocument.id, validated.documentId));
+
+  log.info(
+    "Deleted knowledge base document (documentId: {documentId}, kbId: {kbId})",
+    {
+      documentId: validated.documentId,
+      kbId: doc.kbId,
+    },
+  );
 }

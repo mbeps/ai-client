@@ -14,10 +14,12 @@ import { eq, sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { uploadObject } from "@/lib/storage/upload-object";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+
+const log = getLogger(["app", "transform", "artifact"]);
 
 /** Discriminated input for the two persistence paths. */
 export type PersistArtifactInput =
@@ -168,7 +170,8 @@ export async function persistTransformArtifact(
       createdAt: new Date(),
     };
 
-    logger.info(`[Transform AI] Persisted ${input.kind} output`, {
+    log.info("Persisted {kind} output for run {runId} at step {stepIndex}", {
+      kind: input.kind,
       runId,
       stepIndex: input.stepIndex,
       outputAttachmentId,
@@ -180,11 +183,11 @@ export async function persistTransformArtifact(
       attachmentRow,
     };
   } catch (err) {
-    logger.warn(`[Transform AI] Failed to persist ${input.kind} output`, {
-      err,
+    log.warn("Failed to persist {kind} output for run {runId}: {error}", {
+      kind: input.kind,
       runId,
-      userId,
       stepIndex: input.stepIndex,
+      error: err instanceof Error ? err.message : String(err),
     });
     return null;
   }

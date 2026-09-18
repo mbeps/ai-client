@@ -6,8 +6,10 @@ import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+
+const log = getLogger(["app", "actions", "knowledgebase"]);
 
 const deleteKbRow = deleteEntityFactory({ table: knowledgebase });
 
@@ -55,10 +57,14 @@ export async function deleteKnowledgebase(
         new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
       );
     } catch (err) {
-      logger.warn(`Failed to delete S3 object for deleted knowledge base`, {
-        err,
-        key: doc.s3Key,
-      });
+      log.warn(
+        "Failed to delete S3 object for deleted knowledgebase (key: {key})",
+        {
+          key: doc.s3Key,
+          error: err instanceof Error ? err.message : String(err),
+          userId: session.user.id,
+        },
+      );
     }
   }
 

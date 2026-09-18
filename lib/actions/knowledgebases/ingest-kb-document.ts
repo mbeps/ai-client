@@ -10,8 +10,10 @@ import {
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { ingestDocument } from "@/lib/rag/ingest";
+
+const log = getLogger(["app", "actions", "knowledgebase"]);
 
 const ingestKbDocumentSchema = z.object({
   documentId: z.string().uuid("Invalid document ID format"),
@@ -79,7 +81,10 @@ export async function ingestKbDocument(
       };
     }
 
-    logger.error("[ingestKbDocument] Unexpected error:", error);
+    log.error("Unexpected error ingesting KB document: {error}", {
+      documentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       error: "An unexpected error occurred during ingestion",

@@ -7,7 +7,9 @@
 import { and, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "transform", "lifecycle"]);
 
 /** Shape returned by initTransformRun. */
 export type InitTransformRunResult = {
@@ -124,14 +126,14 @@ async function initNewRun(
     ])
     .returning();
 
-  logger.info(
-    "[Transform AI] New run initialized",
+  log.info(
+    "New transform run initialized (runId: {runId}, agentId: {agentId})",
     {
       runId: created.id,
       agentId,
       dryRun: created.dryRun,
+      userId,
     },
-    userId,
   );
 
   return { run: created, agent, startFromStep: 0 };
@@ -188,16 +190,16 @@ async function initExistingRun(
   const startFromStep =
     type === "resume" ? (run.currentStepIndex ?? -1) + 1 : 0;
 
-  logger.info(
+  log.info(
     type === "start"
-      ? "[Transform AI] Run started"
-      : "[Transform AI] Run resumed",
+      ? "Transform run started (runId: {runId})"
+      : "Transform run resumed (runId: {runId}, startFromStep: {startFromStep})",
     {
       runId: run.id,
       agentId: run.agentId,
-      ...(type === "resume" ? { startFromStep } : {}),
+      startFromStep,
+      userId,
     },
-    userId,
   );
 
   // Update status to running

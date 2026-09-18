@@ -4,9 +4,10 @@ vi.mock("@/config/env", () => ({
   env: { CHAT_MAX_HISTORY_TURNS: 3 },
 }));
 
-vi.mock("@/lib/logger", () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-}));
+vi.mock("@/lib/logger", () => {
+  const mockLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+  return { getLogger: vi.fn(() => mockLog), logger: mockLog };
+});
 
 import type { ThreadMessage } from "@/lib/chat/load-thread-from-db";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";

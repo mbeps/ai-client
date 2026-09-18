@@ -1,6 +1,9 @@
 import { toast } from "sonner";
 import { cloneAttachmentsBatch } from "@/lib/actions/attachments/clone-attachments-batch";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "attachments"]);
+
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -33,7 +36,9 @@ export async function cloneAttachments(
       } as Attachment;
     });
   } catch (err) {
-    logger.error("[Chat] Attachment batch clone failed:", err);
+    log.error("Attachment batch clone failed: {error}", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     toast.error(
       "Failed to clone attachments. They will not be sent to the AI.",
     );

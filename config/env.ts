@@ -104,6 +104,10 @@ export const serverEnvSchema = clientEnvSchema.extend({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  LOG_LEVEL: z
+    .enum(["debug", "info", "warn", "warning", "error", "fatal"])
+    .default("info")
+    .transform((val) => (val === "warn" ? "warning" : val)),
   ALLOW_PRIVATE_NETWORK_MCP: z
     .string()
     .default("false")
@@ -165,6 +169,7 @@ export function validateEnv(
         S3_SECRET_KEY: process.env.S3_SECRET_KEY,
         S3_BUCKET: process.env.S3_BUCKET,
         NODE_ENV: process.env.NODE_ENV,
+        LOG_LEVEL: process.env.LOG_LEVEL,
         ALLOW_PRIVATE_NETWORK_MCP: process.env.ALLOW_PRIVATE_NETWORK_MCP,
         PRESIGNED_URL_EXPIRY_SECONDS: process.env.PRESIGNED_URL_EXPIRY_SECONDS,
       }

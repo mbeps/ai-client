@@ -2,8 +2,10 @@ import { ProviderKeyCorruptedError } from "@/constants/errors";
 import type { aiProvider } from "@/drizzle/schema";
 import { decrypt } from "@/lib/encryption/decrypt";
 import { encrypt } from "@/lib/encryption/encrypt";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+
+const log = getLogger(["app", "providers"]);
 
 /**
  * Custom HTTP headers for provider (e.g., Authorization, X-Custom-Header).
@@ -216,11 +218,13 @@ export function decodeProviderRecord(row: AiProviderRow): ProviderRecord {
     try {
       apiKey = decrypt(row.apiKey);
     } catch (err) {
-      logger.error(
-        "Failed to decrypt provider field",
-        err,
-        { field: "apiKey", providerId: row.id, userId: row.userId },
-        row.userId,
+      log.error(
+        "Failed to decrypt provider field {field} for provider {providerId}: {error}",
+        {
+          field: "apiKey",
+          providerId: row.id,
+          error: err instanceof Error ? err.message : String(err),
+        },
       );
       throw new ProviderKeyCorruptedError(
         `Provider key is corrupted for provider '${row.name}'`,
@@ -233,11 +237,13 @@ export function decodeProviderRecord(row: AiProviderRow): ProviderRecord {
       const decryptedHeaders = decrypt(row.headers);
       headers = parseProviderHeaders(decryptedHeaders);
     } catch (err) {
-      logger.error(
-        "Failed to decrypt provider field",
-        err,
-        { field: "headers", providerId: row.id, userId: row.userId },
-        row.userId,
+      log.error(
+        "Failed to decrypt provider field {field} for provider {providerId}: {error}",
+        {
+          field: "headers",
+          providerId: row.id,
+          error: err instanceof Error ? err.message : String(err),
+        },
       );
       throw new ProviderKeyCorruptedError(
         `Provider headers are corrupted for provider '${row.name}'`,

@@ -1,7 +1,10 @@
 import { embedMany } from "ai";
 import { env } from "@/config/env";
 import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { getLogger } from "@/lib/logger";
 import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
+
+const log = getLogger(["app", "rag", "embeddings"]);
 
 /**
  * Batch embeds document chunks using per-user provider. Returns empty array for empty input.
@@ -26,6 +29,11 @@ export async function embedDocuments(
     ? texts.map((t) => `passage: ${t}`)
     : texts;
 
+  log.debug("Batch embedding {count} texts with model {modelId}", {
+    count: texts.length,
+    modelId: resolved.modelId,
+  });
+
   // Embedding providers cap the number of values per request; split into
   // batches and concatenate in order.
   const embeddings: number[][] = [];
@@ -34,5 +42,10 @@ export async function embedDocuments(
     const result = await embedMany({ model: embeddingModel, values: batch });
     embeddings.push(...result.embeddings);
   }
+
+  log.debug("Generated {count} embeddings across batches", {
+    count: embeddings.length,
+  });
+
   return embeddings;
 }

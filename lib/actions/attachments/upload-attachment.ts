@@ -15,10 +15,13 @@ import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+
+const log = getLogger(["app", "actions", "attachments"]);
 
 const ALLOWED_TYPES = new Set([
   ...ALLOWED_IMAGE_TYPES,
@@ -122,9 +125,21 @@ export async function uploadAttachment(formData: FormData) {
   try {
     await uploadObject(key, buffer, mimeType);
   } catch (err) {
+    log.error("Failed to upload object to S3 for attachment {id}: {error}", {
+      id,
+      error: err instanceof Error ? err.message : String(err),
+    });
     await db.delete(attachment).where(eq(attachment.id, id));
     throw err;
   }
+
+  log.info(
+    "Attachment uploaded successfully (id: {id}, messageId: {messageId})",
+    {
+      id,
+      messageId: validatedMessageId,
+    },
+  );
 
   return row;
 }

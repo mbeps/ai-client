@@ -7,7 +7,9 @@ import {
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "stream"]);
 
 /**
  * Mutable holder the route's `streamText({ onFinish })` callback populates with
@@ -141,7 +143,10 @@ export function createChatStream(options: CreateChatStreamOptions): Response {
       );
     },
     onError: (error) => {
-      logger.error("[Chat Stream Error]", error, { chatId }, userId);
+      log.error("Chat stream error for chat {chatId}: {error}", {
+        chatId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (isRateLimitError(error)) return normalizeRateLimitMessage(error);
       // Never leak raw provider/server errors to the client.
       return "An error occurred during generation.";
@@ -176,7 +181,6 @@ async function persistResultIn(options: {
     result,
     finishRef,
     chatId,
-    userId,
     userMessageId,
     resolvedModelId,
     assistantMessageId,
@@ -211,7 +215,7 @@ async function persistResultIn(options: {
   const hasTextOrReasoning = !!(finish.text || finish.reasoning);
   const hasToolCalls = (finish.toolCalls?.length ?? 0) > 0;
   if (!hasTextOrReasoning && !hasToolCalls) {
-    logger.warn("[Chat Stream] No content to persist", { chatId });
+    log.warn("No content to persist for chat {chatId}", { chatId });
     return;
   }
 
@@ -245,19 +249,18 @@ async function persistResultIn(options: {
           ? JSON.stringify(metadataObj)
           : null,
     });
-    logger.info(
-      "[Chat Stream] Response completed",
-      {
-        chatId,
-        assistantMessageId,
-        textLength: (finish.text ?? "").length,
-        toolCallsCount: finish.toolCalls?.length ?? 0,
-      },
-      userId,
-    );
+    log.info("Chat stream response completed for chat {chatId}", {
+      chatId,
+      assistantMessageId,
+      textLength: (finish.text ?? "").length,
+      toolCallsCount: finish.toolCalls?.length ?? 0,
+    });
   } catch (err) {
     // Best-effort: the stream is already delivered to the client; a failed DB
     // write must not break the response. Logged for operator action.
-    logger.error("[Chat Stream] Failed to persist response", err, { chatId });
+    log.error("Failed to persist response for chat {chatId}: {error}", {
+      chatId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }

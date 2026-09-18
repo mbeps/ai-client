@@ -2,7 +2,9 @@
 
 import { aiModel } from "@/drizzle/schema";
 import { deleteEntityFactory } from "@/lib/actions/shared/delete-entity-factory";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Deletes one or more AI models belonging to the authenticated user.
@@ -23,10 +25,10 @@ import { logger } from "@/lib/logger";
 export const deleteModel = deleteEntityFactory({
   table: aiModel,
   onDelete: async (userId, ids) => {
-    logger.info(
-      "Models deleted successfully",
-      { count: ids.length, ids, userId },
+    log.info("Models deleted successfully (count: {count})", {
+      count: ids.length,
+      ids,
       userId,
-    );
+    });
   },
 });

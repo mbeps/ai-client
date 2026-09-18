@@ -5,7 +5,10 @@ import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "rag", "search"]);
+
 import type { ChunkResult } from "@/types/rag/chunk-result";
 import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
 import { applyRRF } from "./apply-rrf";
@@ -102,7 +105,10 @@ export async function hybridSearch(
       `)
     ).rows as unknown as RawChunkRow[];
   } catch (err) {
-    logger.error("[RAG] FTS query failed:", err);
+    log.error("FTS query failed: {error}", {
+      error: err instanceof Error ? err.message : String(err),
+      kbId,
+    });
     ftsRows = [];
   }
 

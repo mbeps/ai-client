@@ -2,7 +2,9 @@ import type { ModelMessage } from "ai";
 import { env } from "@/config/env";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import type { ThreadMessage } from "@/lib/chat/load-thread-from-db";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "messages"]);
 
 interface MessageOrchestrationOptions {
   history: ThreadMessage[];
@@ -35,10 +37,13 @@ export function prepareChatMessages(
     while (finalMessages.length > 0 && finalMessages[0].role === "tool") {
       finalMessages = finalMessages.slice(1);
     }
-    logger.warn("[Chat API] History truncated", {
-      originalCount: processedMessages.length,
-      keptCount: limit,
-    });
+    log.warn(
+      "Chat history truncated from {originalCount} to {keptCount} turns",
+      {
+        originalCount: processedMessages.length,
+        keptCount: limit,
+      },
+    );
   }
 
   return finalMessages;

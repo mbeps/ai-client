@@ -4,7 +4,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, userSettings } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Sets the default chat model for the authenticated user.
@@ -54,5 +56,8 @@ export async function setDefaultChatModel(modelId: string): Promise<void> {
       },
     });
 
-  logger.info("Default chat model updated", { modelId }, session.user.id);
+  log.info("Default chat model updated (id: {modelId})", {
+    modelId,
+    userId: session.user.id,
+  });
 }

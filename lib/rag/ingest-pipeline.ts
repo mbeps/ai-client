@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { RagExtractionEmptyError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { kbChunk, kbDocument } from "@/drizzle/schema";
+import { getLogger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { chunkText } from "./chunk-text";
 import { embedDocuments } from "./embed-documents";
@@ -9,6 +10,8 @@ import {
   extractTextFromBuffer,
   MAX_DOCUMENT_CHARS_LIMIT,
 } from "./extract-text-server";
+
+const log = getLogger(["app", "rag", "pipeline"]);
 
 /**
  * Shared ingestion pipeline: extract → chunk → embed → replace chunks → mark doc ready.
@@ -27,6 +30,11 @@ export async function ingestDocumentPipeline(
   buffer: Buffer,
   userId: string,
 ): Promise<{ chunkCount: number; tokenCount: number }> {
+  log.debug("Ingesting document (id: {docId}, name: {name})", {
+    docId: doc.id,
+    name: doc.name,
+  });
+
   const text = await extractTextFromBuffer(buffer, doc.mimeType);
   if (!text.trim()) {
     const error = new RagExtractionEmptyError(
@@ -75,6 +83,15 @@ export async function ingestDocumentPipeline(
       updatedAt: new Date(),
     })
     .where(eq(kbDocument.id, doc.id));
+
+  log.info(
+    "Document ingested successfully (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",
+    {
+      docId: doc.id,
+      chunkCount: chunks.length,
+      tokenCount,
+    },
+  );
 
   return { chunkCount: chunks.length, tokenCount };
 }

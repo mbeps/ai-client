@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "proxy"]);
 
 /**
  * Public path prefixes that bypass authentication checks.
@@ -23,6 +26,7 @@ export async function proxy(request: NextRequest) {
 
   // Allow all public paths through without a session check
   if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    log.debug("Bypassing public path {pathname}", { pathname });
     return NextResponse.next();
   }
 
@@ -32,10 +36,15 @@ export async function proxy(request: NextRequest) {
   });
 
   if (!session) {
+    log.debug(
+      "Unauthenticated request to {pathname}, redirecting to /auth/login",
+      { pathname },
+    );
     const loginUrl = new URL("/auth/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
+  log.debug("Session verified for {pathname}", { pathname });
   return NextResponse.next();
 }
 

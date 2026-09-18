@@ -5,8 +5,11 @@ import { ModelDuplicateImportError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
+
+const log = getLogger(["app", "actions", "provider"]);
+
 import {
   type ImportProviderRegistryInput,
   importProviderRegistryInputSchema,
@@ -165,10 +168,15 @@ export async function importProviderRegistry(
     );
   }
 
-  logger.info(
-    "Provider registry imported",
-    { providersCreated, providersUpdated, modelsCreated, modelsSkipped },
-    session.user.id,
+  log.info(
+    "Provider registry imported (providers: {providersCreated}, models: {modelsCreated})",
+    {
+      providersCreated,
+      providersUpdated,
+      modelsCreated,
+      modelsSkipped,
+      userId: session.user.id,
+    },
   );
 
   return {

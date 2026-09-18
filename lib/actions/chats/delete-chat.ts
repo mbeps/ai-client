@@ -5,7 +5,10 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
+
+const log = getLogger(["app", "actions", "chats"]);
 
 /**
  * Deletes a chat and all associated messages (CASCADE) for the authenticated user.
@@ -43,4 +46,8 @@ export async function deleteChat(chatId: string): Promise<void> {
   if (!deleted) throw new Error("Not Found");
 
   await sweepOrphanedAttachmentKeys(keys.map((k) => k.key));
+
+  log.info("Chat deleted successfully (id: {chatId})", {
+    chatId: validatedChatId,
+  });
 }

@@ -1,6 +1,8 @@
 import { ProviderKeyCorruptedError } from "@/constants/errors";
 import { decrypt } from "@/lib/encryption/decrypt";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "provider"]);
 
 /**
  * Decrypts an encrypted provider field (API key, headers) with error handling.
@@ -21,18 +23,20 @@ export function decryptProviderField(
   fallback: string | null,
   field: string,
   providerId: string,
-  userId?: string,
+  _userId?: string,
 ): string | null {
   if (!value) return fallback;
 
   try {
     return decrypt(value);
   } catch (err) {
-    logger.error(
-      "Failed to decrypt provider field",
-      err,
-      { field, providerId, userId },
-      userId,
+    log.error(
+      "Failed to decrypt provider field {field} for provider {providerId}: {error}",
+      {
+        field,
+        providerId,
+        error: err instanceof Error ? err.message : String(err),
+      },
     );
     throw new ProviderKeyCorruptedError(
       `Provider field '${field}' is corrupted for provider '${providerId}'.`,

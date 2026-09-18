@@ -2,6 +2,9 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "factory"]);
 
 /**
  * Configuration for creating a Server Action that renames an owned row.
@@ -51,6 +54,11 @@ export function renameEntityFactory<TResult>(config: RenameEntityConfig) {
       .returning();
 
     if (!updated) throw new Error("Not Found");
+
+    log.info("Renamed entity (id: {id})", {
+      id: resolvedId,
+      userId: session.user.id,
+    });
 
     return updated as TResult;
   };

@@ -1,6 +1,9 @@
 import { tool } from "ai";
 import { PROMPTS } from "@/constants/prompts";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "tools"]);
+
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import {
@@ -78,7 +81,9 @@ export async function registerMcpTools(
 
       mcpCleanup = result.cleanup;
     } catch (error) {
-      logger.warn("[MCP] Failed to load tools", error);
+      log.warn("Failed to load MCP tools: {error}", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -126,7 +131,9 @@ export async function registerMcpTools(
             artifact: normalizedArgs,
           };
         } catch (error) {
-          logger.error("[Artifact] Failed to process tool call:", error);
+          log.error("Failed to process artifact tool call: {error}", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return {
             success: false,
             message:

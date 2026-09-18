@@ -1,5 +1,7 @@
 import type { ModelMessage } from "ai";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "messages"]);
 
 /**
  * Text content part for Vercel AI SDK model messages.
@@ -167,7 +169,9 @@ export function assembleModelMessages(
           return msgs;
         }
       } catch (e) {
-        logger.warn("[Chat API] Failed to parse metadata for history", e);
+        log.warn("Failed to parse metadata for history: {error}", {
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 

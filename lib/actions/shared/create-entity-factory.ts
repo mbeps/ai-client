@@ -1,7 +1,9 @@
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "factory"]);
 
 /**
  * Configuration for creating a Server Action that inserts a new owned row.
@@ -65,7 +67,9 @@ export function createEntityFactory<TSchema, TResult>(
     const row = rows[0];
 
     if (config.auditName) {
-      logger.audit(`Create ${config.auditName}`, {
+      log.info("Created {entity} (id: {id})", {
+        entity: config.auditName,
+        id: (row as any)?.id,
         userId: session.user.id,
         ...(config.auditData?.(row) ?? {}),
       });

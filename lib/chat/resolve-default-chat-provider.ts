@@ -2,9 +2,11 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { ProviderNotConfiguredError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { fetchProviderWithModel } from "./fetch-provider-with-model";
+
+const log = getLogger(["app", "chat", "provider"]);
 
 /**
  * Resolves the default chat model configured in user settings.
@@ -31,7 +33,7 @@ export async function resolveDefaultChatProvider(
         recordId: settings.defaultChatModelId,
       });
     } catch (err) {
-      logger.warn("Failed to resolve default chat model, falling back", {
+      log.warn("Failed to resolve default chat model, falling back: {error}", {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -59,7 +61,7 @@ export async function resolveDefaultChatProvider(
     );
   }
 
-  logger.warn("Falling back to first available chat model", { userId });
+  log.warn("Falling back to first available chat model");
 
   return fetchProviderWithModel(userId, { recordId: fallback.id });
 }

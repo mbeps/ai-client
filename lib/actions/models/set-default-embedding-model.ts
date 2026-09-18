@@ -4,7 +4,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, knowledgebase, userSettings } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Sets the default embedding model for the authenticated user and marks all knowledgebases as stale.
@@ -60,5 +62,8 @@ export async function setDefaultEmbeddingModel(modelId: string): Promise<void> {
     .set({ indexStatus: "stale", updatedAt: new Date() })
     .where(eq(knowledgebase.userId, session.user.id));
 
-  logger.info("Default embedding model updated", { modelId }, session.user.id);
+  log.info("Default embedding model updated (id: {modelId})", {
+    modelId,
+    userId: session.user.id,
+  });
 }

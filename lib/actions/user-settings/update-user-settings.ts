@@ -6,8 +6,11 @@ import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { userSettingsSchema } from "@/schemas/user/user-settings";
+
+const log = getLogger(["app", "actions", "user-settings"]);
+
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
@@ -52,7 +55,7 @@ export async function updateUserSettings(
     })
     .returning();
 
-  logger.audit("Update User Settings", {
+  log.info("Updated user settings (id: {settingsId})", {
     userId: session.user.id,
     settingsId: row.id,
   });

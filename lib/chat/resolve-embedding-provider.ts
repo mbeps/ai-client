@@ -2,9 +2,11 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { ProviderNotConfiguredError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { resolveProviderByRecordId } from "./resolve-provider-by-record-id";
+
+const log = getLogger(["app", "chat", "provider"]);
 
 /**
  * Resolves the default embedding model configured in user settings.
@@ -33,10 +35,9 @@ export async function resolveEmbeddingProvider(
         settings.defaultEmbeddingModelId,
       );
     } catch (err) {
-      logger.warn(
-        "Failed to resolve default embedding model, falling back",
+      log.warn(
+        "Failed to resolve default embedding model, falling back: {error}",
         { error: err instanceof Error ? err.message : String(err) },
-        userId,
       );
     }
   }
@@ -63,11 +64,7 @@ export async function resolveEmbeddingProvider(
     );
   }
 
-  logger.warn(
-    "Falling back to first available embedding model",
-    { userId },
-    userId,
-  );
+  log.warn("Falling back to first available embedding model");
 
   return resolveProviderByRecordId(userId, fallback.id);
 }

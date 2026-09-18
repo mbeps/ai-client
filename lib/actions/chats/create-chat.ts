@@ -3,8 +3,11 @@
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { createChatSchema } from "@/schemas/chat/chat";
+
+const log = getLogger(["app", "actions", "chat"]);
+
 import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
@@ -42,9 +45,9 @@ export async function createChat(
     })
     .returning();
 
-  logger.audit("Create Chat", {
-    userId: session.user.id,
+  log.info("Chat created (id: {chatId})", {
     chatId: newChat.id,
+    userId: session.user.id,
     projectId: newChat.projectId,
     assistantId: newChat.assistantId,
   });

@@ -7,9 +7,10 @@ vi.mock("@/lib/actions/attachments/upload-attachment", () => ({
   uploadAttachment: mockUpload,
 }));
 vi.mock("sonner", () => ({ toast: mockToast }));
-vi.mock("@/lib/logger", () => ({
-  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
-}));
+vi.mock("@/lib/logger", () => {
+  const mockLog = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+  return { getLogger: vi.fn(() => mockLog), logger: mockLog };
+});
 
 import { uploadSingleAttachment } from "@/lib/chat/attachments/upload-single-attachment";
 import type { Attachment } from "@/types/attachment/attachment";

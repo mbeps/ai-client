@@ -2,6 +2,9 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "factory"]);
 
 export interface UpdateEntityConfig<TSchema, _TResult> {
   /** Drizzle table object (must have .id and .userId columns). */
@@ -57,6 +60,11 @@ export function updateEntityFactory<TSchema, TResult>(
     if (!row) {
       throw new Error("Not Found");
     }
+
+    log.info("Updated entity (id: {id})", {
+      id: validatedId,
+      userId: session.user.id,
+    });
 
     return row as TResult;
   };

@@ -1,6 +1,9 @@
 import { MCP_TIMEOUT_MS } from "@/constants/mcp";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { withTimeout } from "@/lib/mcp/with-timeout";
+
+const log = getLogger(["app", "mcp", "discover"]);
+
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
@@ -56,8 +59,10 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior
       } else {
-        logger.error(`[MCP] Failed to list tools for ${server.name}`, e, {
+        log.error("Failed to list tools for server {serverName}: {error}", {
+          serverName: server.name,
           serverId: server.id,
+          error: e?.message ?? String(e),
         });
       }
     }
@@ -93,8 +98,10 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior
       } else {
-        logger.error(`[MCP] Failed to list resources for ${server.name}`, e, {
+        log.error("Failed to list resources for server {serverName}: {error}", {
+          serverName: server.name,
           serverId: server.id,
+          error: e?.message ?? String(e),
         });
       }
     }
@@ -124,10 +131,13 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior
       } else {
-        logger.error(
-          `[MCP] Failed to list resource templates for ${server.name}`,
-          e,
-          { serverId: server.id },
+        log.error(
+          "Failed to list resource templates for server {serverName}: {error}",
+          {
+            serverName: server.name,
+            serverId: server.id,
+            error: e?.message ?? String(e),
+          },
         );
       }
     }
@@ -168,15 +178,18 @@ export async function discoverToolsAndResources(
       ) {
         // Expected behavior
       } else {
-        logger.error(`[MCP] Failed to list prompts for ${server.name}`, e, {
+        log.error("Failed to list prompts for server {serverName}: {error}", {
+          serverName: server.name,
           serverId: server.id,
+          error: e?.message ?? String(e),
         });
       }
     }
 
-    logger.info(
-      `[MCP] Discovered ${tools.length} tools, ${resources.length} resources, and ${prompts.length} prompts for ${server.name}`,
+    log.info(
+      "Discovered {toolCount} tools, {resourceCount} resources, and {promptCount} prompts for server '{serverName}'",
       {
+        serverName: server.name,
         serverId: server.id,
         toolCount: tools.length,
         resourceCount: resources.length,

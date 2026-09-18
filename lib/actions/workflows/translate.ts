@@ -8,8 +8,10 @@ import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { translateRequestSchema } from "@/schemas/workflows/workflows";
+
+const log = getLogger(["app", "actions", "workflow"]);
 
 /**
  * Server action to translate text using AI with optional source language detection.
@@ -88,7 +90,10 @@ export async function translateText(input: unknown) {
     if (isRateLimitError(error)) {
       throw new RateLimitError(normalizeRateLimitMessage(error));
     }
-    logger.error("[Translate Action Error]:", error);
+    log.error("Translation action failed: {error}", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: session.user.id,
+    });
     throw new Error("Failed to translate text. Please try again.");
   }
 }

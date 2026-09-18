@@ -1,6 +1,9 @@
 import { toast } from "sonner";
 import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "attachments"]);
+
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -42,7 +45,9 @@ export async function uploadSingleAttachment(
     // string is used as the "stripped" sentinel instead of omitting the field.
     return { ...rest, dataUrl: "", key: data.key };
   } catch (err) {
-    logger.error("[Chat] Attachment upload failed:", err);
+    log.error("Attachment upload failed: {error}", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     toast.error(
       `Failed to upload "${attachment.name}". It will not be sent to the AI.`,
     );

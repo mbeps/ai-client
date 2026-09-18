@@ -5,8 +5,11 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { persistMessageSchema } from "@/schemas/chat/chat";
 import type { MessageRow } from "@/types/message/message-row";
+
+const log = getLogger(["app", "actions", "messages"]);
 
 /**
  * Persists a message to the database with ownership check.
@@ -49,6 +52,12 @@ export async function persistMessage(
       metadata: validatedMsg.metadata ?? null,
     })
     .returning();
+
+  log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
+    id: newMessage.id,
+    chatId: validatedChatId,
+    role: newMessage.role,
+  });
 
   return newMessage as MessageRow;
 }

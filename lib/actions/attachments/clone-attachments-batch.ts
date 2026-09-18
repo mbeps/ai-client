@@ -4,6 +4,9 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "actions", "attachments"]);
 
 type CloneAttachmentResult = {
   id: string;
@@ -86,6 +89,14 @@ export async function cloneAttachmentsBatch(
     size: attachment.size,
     extractedText: attachment.extractedText,
   });
+
+  log.info(
+    "Batch cloned {count} attachments for message (messageId: {messageId})",
+    {
+      count: rows.length,
+      messageId: targetMessageId,
+    },
+  );
 
   return rows;
 }

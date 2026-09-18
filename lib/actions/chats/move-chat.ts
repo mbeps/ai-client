@@ -5,8 +5,11 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { moveChatSchema } from "@/schemas/chat/chat";
 import type { ChatRow } from "@/types/chat/chat-row";
+
+const log = getLogger(["app", "actions", "chats"]);
 
 /**
  * Moves a chat to a specific project or removes it from all projects.
@@ -37,6 +40,11 @@ export async function moveChat(
     .returning();
 
   if (!updatedChat) throw new Error("Not Found");
+
+  log.info("Moved chat {chatId} to project {projectId}", {
+    chatId: validatedChatId,
+    projectId: validatedData.projectId,
+  });
 
   return updatedChat;
 }

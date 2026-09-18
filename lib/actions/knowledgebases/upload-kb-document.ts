@@ -6,11 +6,14 @@ import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { uploadObject } from "@/lib/storage/upload-object";
 import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+
+const log = getLogger(["app", "actions", "knowledgebases"]);
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -110,6 +113,14 @@ export async function uploadKbDocument(
       updatedAt: new Date(),
     })
     .where(eq(knowledgebase.id, kbId));
+
+  log.info(
+    "Uploaded knowledge base document (documentId: {documentId}, kbId: {kbId})",
+    {
+      documentId,
+      kbId,
+    },
+  );
 
   return row;
 }

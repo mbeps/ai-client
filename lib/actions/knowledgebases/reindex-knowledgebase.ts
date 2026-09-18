@@ -7,9 +7,11 @@ import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+
+const log = getLogger(["app", "actions", "knowledgebase"]);
 
 /**
  * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.
@@ -82,7 +84,11 @@ export async function reindexKnowledgebase(kbId: string) {
 
       processedCount++;
     } catch (err) {
-      logger.error(`Failed to re-index document ${doc.id}:`, err);
+      log.error("Failed to re-index document {docId}: {error}", {
+        docId: doc.id,
+        error: err instanceof Error ? err.message : String(err),
+        userId: session.user.id,
+      });
       failedCount++;
 
       const errorMessage = isRateLimitError(err)

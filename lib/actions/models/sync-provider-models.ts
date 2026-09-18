@@ -5,9 +5,11 @@ import { ModelMalformedIdError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/providers/provider-utils";
+
+const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Synchronises models from an external AI provider's /models endpoint.
@@ -44,11 +46,10 @@ export async function syncProviderModels(
 ): Promise<SyncProviderModelsResult> {
   const session = await requireSession();
 
-  logger.info(
-    "Starting provider model sync",
-    { providerId, userId: session.user.id },
-    session.user.id,
-  );
+  log.info("Starting provider model sync (providerId: {providerId})", {
+    providerId,
+    userId: session.user.id,
+  });
 
   const [provider] = await db
     .select()
@@ -88,10 +89,13 @@ export async function syncProviderModels(
       });
 
       if (!response.ok) {
-        logger.warn(
-          "[Sync Models] Endpoint returned error status",
-          { url, status: response.status },
-          session.user.id,
+        log.warn(
+          "Endpoint returned error status (status: {status}, url: {url})",
+          {
+            url,
+            status: response.status,
+            userId: session.user.id,
+          },
         );
         return [];
       }
@@ -99,12 +103,11 @@ export async function syncProviderModels(
       const payload = (await response.json()) as ProviderModelsResponse;
       return payload.data ?? [];
     } catch (err) {
-      logger.error(
-        "[Sync Models] Failed to fetch",
-        err,
-        { url },
-        session.user.id,
-      );
+      log.error("Failed to fetch models from endpoint: {error}", {
+        error: err instanceof Error ? err.message : String(err),
+        url,
+        userId: session.user.id,
+      });
       return [];
     }
   }
@@ -177,15 +180,12 @@ export async function syncProviderModels(
 
   // If any models have malformed IDs, throw error after collecting all data
   if (invalidModels.length > 0) {
-    logger.warn(
-      "[Sync Models] Found models with malformed/missing IDs",
-      {
-        count: invalidModels.length,
-        providerId,
-        samples: invalidModels.slice(0, 5),
-      },
-      session.user.id,
-    );
+    log.warn("Found models with malformed or missing IDs (count: {count})", {
+      count: invalidModels.length,
+      providerId,
+      samples: invalidModels.slice(0, 5),
+      userId: session.user.id,
+    });
 
     throw new ModelMalformedIdError(invalidModels.length);
   }
@@ -258,8 +258,8 @@ export async function syncProviderModels(
     added += 1;
   }
 
-  logger.info(
-    "Provider model sync complete",
+  log.info(
+    "Provider model sync complete (added: {added}, unchanged: {unchanged})",
     {
       providerId,
       added,
@@ -268,7 +268,6 @@ export async function syncProviderModels(
       limitExceeded,
       userId: session.user.id,
     },
-    session.user.id,
   );
 
   return { added, unchanged, limitExceeded, totalDiscovered };

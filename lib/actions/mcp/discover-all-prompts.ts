@@ -4,8 +4,11 @@ import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
 import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
+
+const log = getLogger(["app", "actions", "mcp"]);
+
 import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 
@@ -39,7 +42,11 @@ export async function discoverAllPrompts(): Promise<DiscoveredPrompt[]> {
       );
       return result.prompts;
     } catch (e) {
-      logger.error(`[MCP] Failed to discover prompts for ${server.name}`, e);
+      log.error("Failed to discover prompts for server {serverName}: {error}", {
+        serverName: server.name,
+        error: e instanceof Error ? e.message : String(e),
+        userId: session.user.id,
+      });
       return [];
     }
   });

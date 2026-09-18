@@ -29,14 +29,18 @@ const { mockCloneAttachmentsBatch, mockUploadAttachment, mockLoggerError } =
     mockLoggerError: vi.fn(),
   }));
 
-vi.mock("@/lib/logger", () => ({
-  logger: {
+vi.mock("@/lib/logger", () => {
+  const mockLog = {
     error: mockLoggerError,
     warn: vi.fn(),
     info: vi.fn(),
     debug: vi.fn(),
-  },
-}));
+  };
+  return {
+    getLogger: vi.fn(() => mockLog),
+    logger: mockLog,
+  };
+});
 
 vi.mock("@/lib/actions/attachments/clone-attachments-batch", () => ({
   cloneAttachmentsBatch: mockCloneAttachmentsBatch,
@@ -155,8 +159,8 @@ describe("processAttachments", () => {
 
       expect(result).toHaveLength(0);
       expect(mockLoggerError).toHaveBeenCalledWith(
-        "[Chat] Attachment batch clone failed:",
-        expect.any(Error),
+        expect.stringContaining("Attachment batch clone failed"),
+        expect.objectContaining({ error: "DB error" }),
       );
     });
 
@@ -174,7 +178,7 @@ describe("processAttachments", () => {
       expect(result).toHaveLength(0);
       expect(mockLoggerError).toHaveBeenCalledWith(
         expect.stringContaining("Attachment upload failed"),
-        expect.any(Error),
+        expect.objectContaining({ error: "S3 error" }),
       );
     });
 
