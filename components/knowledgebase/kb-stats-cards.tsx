@@ -9,6 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
@@ -65,15 +70,20 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
                 {kb.indexStatus}
               </CardTitle>
               {kb.indexStatus === "stale" && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={onReindex}
-                  title="Re-index all documents"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={onReindex}
+                      aria-label="Re-index all documents"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Re-index all documents</TooltipContent>
+                </Tooltip>
               )}
             </div>
             <p className="text-[10px] text-muted-foreground">

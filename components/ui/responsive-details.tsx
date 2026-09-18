@@ -17,6 +17,12 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface ResponsiveDetailsProps {
@@ -26,6 +32,8 @@ interface ResponsiveDetailsProps {
   title: string;
   /** Accessible description for screen readers. */
   description?: string;
+  /** Optional tooltip content to display when hovering over the trigger. */
+  tooltip?: React.ReactNode;
   /** Content rendered inside the dialog/drawer body. */
   children: React.ReactNode;
 }
@@ -43,15 +51,33 @@ export function ResponsiveDetails({
   trigger,
   title,
   description,
+  tooltip,
   children,
 }: ResponsiveDetailsProps) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  const triggerButton = isMobile ? (
+    <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+  ) : (
+    <DialogTrigger asChild>{trigger}</DialogTrigger>
+  );
+
+  const renderedTrigger = tooltip ? (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : (
+    triggerButton
+  );
+
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+        {renderedTrigger}
         <DrawerContent>
           <DrawerHeader className="text-left">
             <DrawerTitle>{title}</DrawerTitle>
@@ -67,7 +93,7 @@ export function ResponsiveDetails({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {renderedTrigger}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

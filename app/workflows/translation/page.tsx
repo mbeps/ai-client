@@ -29,6 +29,11 @@ import {
 } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
   LANGUAGES,
@@ -251,16 +256,21 @@ export default function TranslationWorkflowPage() {
           </Combobox>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={swapLanguages}
-          disabled={sourceLangValue === "auto"}
-          className="h-8 w-8 shrink-0 rounded-full hover:bg-background"
-          title="Swap"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 transition-transform sm:rotate-0" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={swapLanguages}
+              disabled={sourceLangValue === "auto"}
+              className="h-8 w-8 shrink-0 rounded-full hover:bg-background"
+              aria-label="Swap languages"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 transition-transform sm:rotate-0" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Swap languages</TooltipContent>
+        </Tooltip>
 
         <div className="w-full flex-1">
           <Combobox
@@ -371,30 +381,41 @@ export default function TranslationWorkflowPage() {
               <span className="ml-2 text-[10px] text-muted-foreground">
                 {sourceText.length} / 5000
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isExtracting || !!attachment}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-                title="Attach file"
-              >
-                {isExtracting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Paperclip className="h-3.5 w-3.5" />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isExtracting || !!attachment}
+                    className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label="Attach file"
+                  >
+                    {isExtracting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach file</TooltipContent>
+              </Tooltip>
             </div>
             {(sourceText || attachment) && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleReset}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleReset}
+                    className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label="Reset text"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reset</TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -409,19 +430,24 @@ export default function TranslationWorkflowPage() {
           />
           <div className="flex shrink-0 items-center justify-end border-t bg-muted/10 p-2">
             {translatedText && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopy}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-                title="Copy"
-              >
-                {isCopied ? (
-                  <Check className="h-3.5 w-3.5 text-green-500" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopy}
+                    className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label="Copy translation"
+                  >
+                    {isCopied ? (
+                      <Check className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy translation</TooltipContent>
+              </Tooltip>
             )}
           </div>
           {isLoading && (

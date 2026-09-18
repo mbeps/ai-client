@@ -145,6 +145,8 @@ export function ContextUsagePill({
     isExceeded,
   } = usage;
 
+  const tooltipContent = `Context Window: ${formatTokens(totalTokens)} / ${formatTokens(maxTokens)} tokens (${displayPercentage})`;
+
   const trigger = (
     <button
       type="button"
@@ -157,7 +159,7 @@ export function ContextUsagePill({
           "border-amber-500/50 text-amber-500 hover:text-amber-500",
         className,
       )}
-      title={`Context Window: ${formatTokens(totalTokens)} / ${formatTokens(maxTokens)} tokens (${displayPercentage})`}
+      aria-label={tooltipContent}
     >
       <CircularPieIcon
         percentage={percentage}
@@ -171,6 +173,7 @@ export function ContextUsagePill({
   return (
     <ResponsiveDetails
       trigger={trigger}
+      tooltip={tooltipContent}
       title="Session Info"
       description="Context window consumption and token allocation"
     >

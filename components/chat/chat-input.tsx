@@ -15,6 +15,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { AttachmentVisionUnsupportedError } from "@/constants/errors";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useApiError } from "@/hooks/use-api-error";
@@ -538,16 +543,22 @@ export function ChatInput({
         <div className="flex items-center gap-1.5">
           {isMobile ? (
             <Drawer>
-              <DrawerTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  disabled={hasNoModels}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </DrawerTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DrawerTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      disabled={hasNoModels}
+                      aria-label="Attach files, tools & more"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </DrawerTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Attach files, tools & more</TooltipContent>
+              </Tooltip>
               <DrawerContent>
                 <AttachmentsMenu
                   servers={servers}
@@ -572,16 +583,22 @@ export function ChatInput({
             </Drawer>
           ) : (
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  disabled={hasNoModels}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      disabled={hasNoModels}
+                      aria-label="Attach files, tools & more"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Attach files, tools & more</TooltipContent>
+              </Tooltip>
               <PopoverContent side="top" align="start" className="w-56 p-1">
                 <AttachmentsMenu
                   servers={servers}

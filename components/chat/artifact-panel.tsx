@@ -14,6 +14,11 @@ import { toast } from "sonner";
 import * as xlsx from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { MarkdownRenderer } from "./markdown-renderer";
 
@@ -163,27 +168,39 @@ export function ArtifactPanel({
         <div className="flex min-w-0 items-center gap-3">
           {artifacts.length > 1 && onNavigate && (
             <div className="flex items-center overflow-hidden rounded-md border bg-background">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 rounded-none border-r"
-                disabled={currentIndex === 0}
-                onClick={() => onNavigate(currentIndex - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-none border-r"
+                    disabled={currentIndex === 0}
+                    onClick={() => onNavigate(currentIndex - 1)}
+                    aria-label="Previous artifact"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Previous artifact</TooltipContent>
+              </Tooltip>
               <span className="px-2 font-medium text-[10px] tabular-nums">
                 {currentIndex + 1} / {artifacts.length}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 rounded-none border-l"
-                disabled={currentIndex === artifacts.length - 1}
-                onClick={() => onNavigate(currentIndex + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-none border-l"
+                    disabled={currentIndex === artifacts.length - 1}
+                    onClick={() => onNavigate(currentIndex + 1)}
+                    aria-label="Next artifact"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Next artifact</TooltipContent>
+              </Tooltip>
             </div>
           )}
           <div className="flex min-w-0 flex-col">
@@ -197,40 +214,56 @@ export function ArtifactPanel({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCopy}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            title="Copy content"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopy}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Copy content"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy content</TooltipContent>
+          </Tooltip>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDownload}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            title="Download file"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDownload}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Download file"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download file</TooltipContent>
+          </Tooltip>
 
           <div className="mx-1 h-4 w-px bg-border" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Close artifact"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

@@ -45,6 +45,11 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ROUTES } from "@/constants/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { hydratedResources } from "@/hooks/use-resource-hydration";
@@ -167,17 +172,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               Recent Chats
             </Link>
           </SidebarGroupLabel>
-          <SidebarGroupAction
-            onClick={() => setIsChatsCollapsed(!isChatsCollapsed)}
-            title={isChatsCollapsed ? "Expand" : "Collapse"}
-          >
-            <ChevronRight
-              className={cn(
-                "transition-transform duration-200",
-                !isChatsCollapsed && "rotate-90",
-              )}
-            />
-          </SidebarGroupAction>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarGroupAction
+                onClick={() => setIsChatsCollapsed(!isChatsCollapsed)}
+                aria-label={isChatsCollapsed ? "Expand" : "Collapse"}
+              >
+                <ChevronRight
+                  className={cn(
+                    "transition-transform duration-200",
+                    !isChatsCollapsed && "rotate-90",
+                  )}
+                />
+              </SidebarGroupAction>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isChatsCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
           {!isChatsCollapsed && (
             <SidebarMenu>
               {recentChats.map((chat) => {

@@ -24,5 +24,7 @@ describe("ContextUsagePill", () => {
     const button = screen.getByRole("button");
     expect(button).toBeDefined();
     expect(screen.getByText(/%/)).toBeDefined();
+    expect(button.getAttribute("title")).toBeNull();
+    expect(button.getAttribute("aria-label")).toMatch(/Context Window:/);
   });
 });
