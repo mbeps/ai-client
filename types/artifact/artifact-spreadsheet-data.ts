@@ -1,4 +1,4 @@
-import type { ArtifactSheet } from "./artifact-sheet";
+import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
 
 /**
  * Data model for structured multi-sheet spreadsheet artifacts.

@@ -109,4 +109,3 @@ export function SkillGeneralTab({
     </div>
   );
 }
-export default SkillGeneralTab;

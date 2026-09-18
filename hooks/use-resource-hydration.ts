@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 
 // Module-level: tracks resources that have been successfully hydrated this session.
@@ -99,7 +100,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
           await (loader as () => Promise<void>)();
           hydratedResources.add(res);
         } catch (error) {
-          console.error(`[Hydration] Failed to load ${res}:`, error);
+          logger.error(`[Hydration] Failed to load ${res}`, error);
         } finally {
           setLoadingResources((prev) => {
             const next = new Set(prev);

@@ -4,10 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { ModelMalformedIdError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
-import { decodeProviderRecord } from "@/lib/actions/providers/utils";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
+import { decodeProviderRecord } from "@/lib/providers/provider-utils";
 
 /**
  * Synchronises models from an external AI provider's /models endpoint.

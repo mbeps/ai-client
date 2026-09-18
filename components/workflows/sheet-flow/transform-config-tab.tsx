@@ -87,4 +87,3 @@ export function TransformConfigTab({
     </div>
   );
 }
-export default TransformConfigTab;

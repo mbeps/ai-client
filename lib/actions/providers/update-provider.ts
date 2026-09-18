@@ -4,12 +4,12 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
 import {
   type UpdateProviderInput,
   updateProviderSchema,
 } from "@/schemas/providers/provider-registry";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
-import { toEncryptedProviderValues } from "./utils";
 
 /**
  * Updates an existing AI provider configuration with partial field updates.

@@ -1,4 +1,4 @@
-import type { CellStyle } from "./cell-style";
+import type { CellStyle } from "@/types/artifact/cell-style";
 
 /**
  * Enhanced cell object with optional styling information.

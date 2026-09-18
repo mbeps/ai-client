@@ -22,9 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { createModel } from "@/lib/actions/models/create-model";
 import { updateModels } from "@/lib/actions/models/update-model";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

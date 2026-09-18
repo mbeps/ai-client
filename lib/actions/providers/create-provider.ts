@@ -3,12 +3,12 @@
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
 import {
   type CreateProviderInput,
   createProviderSchema,
 } from "@/schemas/providers/provider-registry";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
-import { toEncryptedProviderValues } from "./utils";
 
 /**
  * Creates a new AI provider configuration for the authenticated user.

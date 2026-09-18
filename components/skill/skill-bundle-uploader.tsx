@@ -181,4 +181,3 @@ export function SkillBundleUploader({
     </div>
   );
 }
-export default SkillBundleUploader;

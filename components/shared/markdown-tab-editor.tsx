@@ -2,6 +2,7 @@
 
 import type { Block } from "@blocknote/core";
 import { useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
 import "@blocknote/core/fonts/inter.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
@@ -137,7 +138,7 @@ function BlockNoteTabContent({
           setParsedBlocks(blocks);
         }
       } catch (err) {
-        console.error("Failed to parse markdown to BlockNote blocks", err);
+        logger.error("Failed to parse markdown to BlockNote blocks", err);
         if (!cancelled) {
           setParsedBlocks([]);
         }

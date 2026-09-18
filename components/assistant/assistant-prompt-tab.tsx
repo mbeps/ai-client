@@ -52,4 +52,3 @@ export function AssistantPromptTab({
     </div>
   );
 }
-export default AssistantPromptTab;

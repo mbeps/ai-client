@@ -112,4 +112,3 @@ export function TransformRunDialog({
     </Dialog>
   );
 }
-export default TransformRunDialog;

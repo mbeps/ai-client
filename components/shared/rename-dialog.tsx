@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { logger } from "@/lib/logger";
 import { renameSchema } from "@/schemas/shared-fields";
 
 type RenameFormData = z.infer<typeof renameSchema>;
@@ -78,7 +79,7 @@ export function RenameDialog({
       await onConfirm(data.name);
       onClose();
     } catch (error) {
-      console.error("Rename failed:", error);
+      logger.error("Rename failed", error);
     } finally {
       setLoading(false);
     }

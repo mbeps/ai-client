@@ -1,6 +1,6 @@
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { aiModel } from "./ai-model-schema";
-import { user } from "./auth-schema";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores application-wide user preferences and settings.

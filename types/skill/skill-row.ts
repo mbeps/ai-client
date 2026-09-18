@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { skill } from "@/drizzle/schema";
-import type { TimedResource } from "../shared/resource";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database row representation of an Agent Skill from the Drizzle schema.

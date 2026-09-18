@@ -1,4 +1,5 @@
 import { deflateRawSync, inflateRawSync, inflateSync } from "node:zlib";
+import { logger } from "@/lib/logger";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface ParsedSkill {
@@ -202,7 +203,7 @@ export function parseZipBuffer(buffer: Buffer | Uint8Array): ZipEntry[] {
           try {
             decompressed = inflateSync(rawData);
           } catch (err) {
-            console.error(`Failed to decompress ${fileName} in zip:`, err);
+            logger.error(`Failed to decompress ${fileName} in zip`, err);
             decompressed = Buffer.from(rawData);
           }
         }
@@ -261,7 +262,7 @@ export function parseZipBuffer(buffer: Buffer | Uint8Array): ZipEntry[] {
         try {
           decompressed = inflateSync(rawCompressedData);
         } catch (err) {
-          console.error(`Failed to decompress ${fileName} in zip:`, err);
+          logger.error(`Failed to decompress ${fileName} in zip`, err);
           decompressed = Buffer.from(rawCompressedData);
         }
       }

@@ -62,4 +62,3 @@ export function ProjectToolsTab({
     </div>
   );
 }
-export default ProjectToolsTab;

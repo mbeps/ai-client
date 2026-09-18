@@ -1,5 +1,5 @@
-import type { CellObject } from "./cell-object";
-import type { ColumnMetadata } from "./column-metadata";
+import type { CellObject } from "@/types/artifact/cell-object";
+import type { ColumnMetadata } from "@/types/artifact/column-metadata";
 
 /**
  * Interface representing a single sheet in an artifact spreadsheet.

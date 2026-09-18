@@ -1,4 +1,4 @@
-import type { BaseResource } from "../shared/resource";
+import type { BaseResource } from "@/types/shared/resource";
 
 /**
  * Raw chunk database row (before transformation to ChunkResult).

@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
 import type { ArtifactSpreadsheetData } from "@/types/artifact/artifact-spreadsheet-data";
@@ -119,7 +120,7 @@ function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
       }));
       return { sheets };
     } catch (err) {
-      console.error("Failed to parse spreadsheet content:", err);
+      logger.error("Failed to parse spreadsheet content", err);
       return { sheets: [] };
     }
   }, [content]);
@@ -254,7 +255,7 @@ export default function SpreadsheetView({
         .toLowerCase();
       xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
     } catch (err) {
-      console.error("Failed to export workbook:", err);
+      logger.error("Failed to export workbook", err);
     }
   };
 

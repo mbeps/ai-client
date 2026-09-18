@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { attachment } from "@/drizzle/schema";
-import type { BaseResource } from "../shared/resource";
+import type { BaseResource } from "@/types/shared/resource";
 
 /**
  * Database representation of an uploaded file (image, PDF, text, spreadsheet) linked to a message.

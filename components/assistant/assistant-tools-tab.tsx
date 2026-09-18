@@ -62,4 +62,3 @@ export function AssistantToolsTab({
     </div>
   );
 }
-export default AssistantToolsTab;

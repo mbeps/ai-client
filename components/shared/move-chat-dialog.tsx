@@ -11,6 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 
 interface MoveChatDialogProps {
@@ -54,7 +55,7 @@ export function MoveChatDialog({
       onClose();
     } catch (error) {
       toast.error("Failed to move chat");
-      console.error(error);
+      logger.error("Knowledgebase error", error);
     } finally {
       setIsLoading(false);
     }

@@ -6,7 +6,7 @@ import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
-import { decodeProviderRecord } from "./utils";
+import { decodeProviderRecord } from "@/lib/providers/provider-utils";
 
 export type ProviderConnectionResult = {
   ok: boolean;

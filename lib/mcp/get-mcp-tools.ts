@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import { connectServer } from "./connect-server";
@@ -27,7 +28,7 @@ export async function getMcpTools(servers: McpServerConfig[]): Promise<{
     if (result.status === "fulfilled") {
       connections.push(result.value);
     } else {
-      console.warn(
+      logger.warn(
         `[MCP] Failed to connect to "${servers[i]?.name}":`,
         result.reason,
       );
@@ -40,7 +41,7 @@ export async function getMcpTools(servers: McpServerConfig[]): Promise<{
   for (const conn of connections) {
     for (const [name, tool] of Object.entries(conn.tools)) {
       if (name in mergedTools) {
-        console.warn(
+        logger.warn(
           `[MCP] Tool name collision: "${name}" from "${conn.serverName}" conflicts with an existing tool. Skipping.`,
         );
       } else {

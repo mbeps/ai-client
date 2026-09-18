@@ -31,9 +31,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { deleteModel } from "@/lib/actions/models/delete-model";
 import { updateModels } from "@/lib/actions/models/update-model";
+import { logger } from "@/lib/logger";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -187,7 +188,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         },
       );
     } catch (error) {
-      console.error("Bulk action failed:", error);
+      logger.error("Bulk action failed", error);
     } finally {
       setBusyModelId(null);
     }
@@ -214,7 +215,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         },
       );
     } catch (error) {
-      console.error("Bulk delete failed:", error);
+      logger.error("Bulk delete failed", error);
     } finally {
       setBusyModelId(null);
     }

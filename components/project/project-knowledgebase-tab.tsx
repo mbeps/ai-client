@@ -58,4 +58,3 @@ export function ProjectKnowledgebaseTab({
     </div>
   );
 }
-export default ProjectKnowledgebaseTab;

@@ -6,11 +6,11 @@ import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { logger } from "@/lib/logger";
+import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
 import {
   type ImportProviderRegistryInput,
   importProviderRegistryInputSchema,
 } from "@/schemas/providers/provider-registry";
-import { toEncryptedProviderValues } from "./utils";
 
 /**
  * Imports provider registry: upserts providers by (userId, name, baseUrl), inserts models.

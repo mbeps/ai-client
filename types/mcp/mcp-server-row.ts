@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { mcpServer } from "@/drizzle/schema";
-import type { TimedResource } from "../shared/resource";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database representation of an MCP (Model Context Protocol) server configuration.

@@ -6,7 +6,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores Model Context Protocol (MCP) server configurations for HTTP transports.

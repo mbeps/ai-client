@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { userSettings } from "@/drizzle/schema";
-import type { TimedResource } from "../shared/resource";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database representation of user-wide settings from the Drizzle schema.

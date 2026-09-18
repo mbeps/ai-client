@@ -51,4 +51,3 @@ export function ProjectChatsTab({
     </div>
   );
 }
-export default ProjectChatsTab;

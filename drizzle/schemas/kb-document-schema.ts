@@ -9,8 +9,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
-import { knowledgebase } from "./knowledgebase-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 
 /**
  * Stores documents uploaded to a knowledge base, tracking ingestion status and chunk counts.

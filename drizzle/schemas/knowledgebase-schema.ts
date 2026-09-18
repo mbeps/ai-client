@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 export const knowledgebase = pgTable(
   "knowledgebase",

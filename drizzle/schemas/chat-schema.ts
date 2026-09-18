@@ -1,6 +1,6 @@
 import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
-import { transformRun } from "./transform-agent-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 
 /**
  * Stores chat sessions scoped to users, optional projects, and optional assistants.

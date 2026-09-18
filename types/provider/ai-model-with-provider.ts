@@ -1,4 +1,4 @@
-import type { AiModelRow } from "./ai-model-row";
+import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 /**
  * AI model record extended with provider metadata for UI display.

@@ -1,6 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { assistant } from "@/drizzle/schema";
-import type { TimedResource } from "../shared/resource";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database representation of an AI assistant persona from the Drizzle schema.

@@ -4,6 +4,7 @@ import { ArrowLeft, type LucideIcon, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -41,7 +42,7 @@ export function ErrorPage({
   resetIcon: ResetIcon = RotateCcw,
 }: ErrorPageProps) {
   useEffect(() => {
-    console.error(error);
+    logger.error("Knowledgebase error", error);
   }, [error]);
 
   return (

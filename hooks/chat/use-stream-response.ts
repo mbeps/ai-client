@@ -11,6 +11,7 @@ import { persistMessage } from "@/lib/actions/chats/persist-message";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
@@ -125,7 +126,7 @@ async function resolveContent(
           mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content,
       };
     } catch (err) {
-      console.error("Failed to load MCP prompt:", err);
+      logger.error("Failed to load MCP prompt", err);
       toast.error("Failed to load MCP prompt. Sending message without it.");
       return { fullContent: content };
     }
@@ -205,7 +206,7 @@ export function useStreamResponse(
     id: chatId,
     transport,
     onError: (error) => {
-      console.error("Stream error:", error);
+      logger.error("Stream error", error);
       toast.error(error.message || "Failed to generate response");
     },
     // useChat's chat-level callback is still `onFinish` in @ai-sdk/react 4.x
@@ -361,7 +362,7 @@ export function useStreamResponse(
         metadata: userMsgMetadata ?? undefined,
       });
     } catch (err) {
-      console.error("Failed to persist message:", err);
+      logger.error("Failed to persist message", err);
       toast.error(
         "Message may not have been saved. Please check your connection.",
       );

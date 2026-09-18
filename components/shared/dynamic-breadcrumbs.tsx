@@ -18,6 +18,7 @@ import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase
 import { getSkill } from "@/lib/actions/skills/get-skill";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
 import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import { getPathSegments } from "@/lib/utils";
 
@@ -201,7 +202,7 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = label;
                 }
               } catch (err) {
-                console.error("Failed to resolve run label:", err);
+                logger.error("Failed to resolve run label", err);
               }
             }
             // 2. Check if it's a Transform Agent segment (URL: /workflows/transform/[agentId])
@@ -212,7 +213,7 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = agent.name;
                 }
               } catch (err) {
-                console.error("Failed to resolve transform agent label:", err);
+                logger.error("Failed to resolve transform agent label", err);
               }
             }
             // 3. Check if it's a Knowledge Base segment (URL: /knowledgebases/[id])
@@ -223,7 +224,7 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = kb.name;
                 }
               } catch (err) {
-                console.error("Failed to resolve knowledgebase label:", err);
+                logger.error("Failed to resolve knowledgebase label", err);
               }
             }
             // 4. Check if it's a Skill segment (URL: /settings/skills/[id])
@@ -234,7 +235,7 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = skill.displayName || skill.name;
                 }
               } catch (err) {
-                console.error("Failed to resolve skill label:", err);
+                logger.error("Failed to resolve skill label", err);
               }
             }
           }

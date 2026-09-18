@@ -53,4 +53,3 @@ export function ProjectPromptTab({
     </div>
   );
 }
-export default ProjectPromptTab;

@@ -41,4 +41,3 @@ export function TransformContextTab({
     </div>
   );
 }
-export default TransformContextTab;

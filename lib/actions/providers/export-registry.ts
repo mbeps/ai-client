@@ -4,13 +4,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { decodeProviderRecord } from "@/lib/providers/provider-utils";
 import {
   type ExportProviderRegistryInput,
   exportProviderRegistryInputSchema,
   type ProviderModelType,
   type RegistryExport,
 } from "@/schemas/providers/provider-registry";
-import { decodeProviderRecord } from "./utils";
 
 /**
  * Exports providers and models for authenticated user with optional ID filtering.

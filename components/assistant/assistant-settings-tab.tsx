@@ -65,4 +65,3 @@ export function AssistantSettingsTab({
     </div>
   );
 }
-export default AssistantSettingsTab;

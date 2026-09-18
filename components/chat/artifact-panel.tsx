@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { logger } from "@/lib/logger";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { MarkdownRenderer } from "./markdown-renderer";
 
@@ -132,7 +133,7 @@ export function ArtifactPanel({
         xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
         return;
       } catch (err) {
-        console.error("Failed to export spreadsheet:", err);
+        logger.error("Failed to export spreadsheet", err);
       }
     }
 

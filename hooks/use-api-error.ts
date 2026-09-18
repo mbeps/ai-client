@@ -1,5 +1,6 @@
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ROUTES } from "@/config/routes";
 import {
   ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE,
   isApiKeyError,
@@ -16,7 +17,6 @@ import {
   UNAUTHORIZED_ERROR_MESSAGE,
   VISION_NOT_SUPPORTED_ERROR_CODE,
 } from "@/constants/errors";
-import { ROUTES } from "@/config/routes";
 
 /**
  * Centralises API error handling with feature-specific error codes and user feedback.

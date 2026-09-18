@@ -7,7 +7,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 export interface SkillBundledFile {
   path: string;

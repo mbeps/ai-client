@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sixDigitCodeField } from "../shared-fields";
+import { sixDigitCodeField } from "@/schemas/shared-fields";
 
 /**
  * Validates a TOTP (Time-based One-Time Password) verification code entry.

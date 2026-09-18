@@ -9,6 +9,7 @@ import { extractCitations } from "@/lib/chat/extract-citations";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -273,7 +274,7 @@ export function ChatUI({
           updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
         }
       } catch (e) {
-        console.error("Failed to update artifact metadata", e);
+        logger.error("Failed to update artifact metadata", e);
       }
     },
     [activeArtifact, chat, chatId, updateMessageMetadataDb],

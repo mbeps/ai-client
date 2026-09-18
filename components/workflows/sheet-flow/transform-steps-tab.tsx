@@ -56,4 +56,3 @@ export function TransformStepsTab({
     </div>
   );
 }
-export default TransformStepsTab;

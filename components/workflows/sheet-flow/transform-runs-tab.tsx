@@ -46,4 +46,3 @@ export function TransformRunsTab({
     </div>
   );
 }
-export default TransformRunsTab;

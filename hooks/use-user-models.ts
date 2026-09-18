@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { listModels } from "@/lib/actions/models/list-models";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,
   isProviderRegistryCacheFresh,
   subscribeProviderRegistryCache,
-} from "@/hooks/provider-registry-cache";
-import { listModels } from "@/lib/actions/models/list-models";
+} from "@/lib/providers/provider-registry-cache";
 import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provider";
 

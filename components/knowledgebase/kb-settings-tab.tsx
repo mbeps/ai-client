@@ -141,4 +141,3 @@ export function KbSettingsTab({
     </div>
   );
 }
-export default KbSettingsTab;

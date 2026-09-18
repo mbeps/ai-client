@@ -1,6 +1,7 @@
 "use client";
 
 import type { Block } from "@blocknote/core";
+import { logger } from "@/lib/logger";
 import "@blocknote/core/fonts/inter.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
@@ -68,7 +69,7 @@ function BlockNoteEditor({
                 );
                 onUpdate(markdown);
               } catch (e) {
-                console.error("Failed to serialize markdown blocks", e);
+                logger.error("Failed to serialize markdown blocks", e);
               }
             }, 1000);
           }
@@ -112,7 +113,7 @@ export default function MarkdownView({
           setParsedBlocks(blocks);
         }
       } catch (err) {
-        console.error("Failed to parse markdown", err);
+        logger.error("Failed to parse markdown", err);
         if (!cancelled) {
           setParsedBlocks([]);
         }

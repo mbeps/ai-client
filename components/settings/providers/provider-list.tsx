@@ -14,11 +14,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { syncProviderModels } from "@/lib/actions/models/sync-provider-models";
 import { deleteProvider } from "@/lib/actions/providers/delete-provider";
 import { testProviderConnection } from "@/lib/actions/providers/test-provider-connection";
 import { toggleProvider } from "@/lib/actions/providers/toggle-provider";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

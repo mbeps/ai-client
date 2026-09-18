@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 
 /**
@@ -40,7 +41,7 @@ export function useCreateChat() {
       );
       return id;
     } catch (error) {
-      console.error("Failed to create new chat:", error);
+      logger.error("Failed to create new chat", error);
       throw error;
     }
   };

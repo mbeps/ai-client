@@ -15,9 +15,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
 import { createProvider } from "@/lib/actions/providers/create-provider";
 import { updateProvider } from "@/lib/actions/providers/update-provider";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 /** Represents a custom HTTP header key-value pair for provider requests. */

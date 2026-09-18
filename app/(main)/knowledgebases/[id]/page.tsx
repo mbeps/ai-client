@@ -35,6 +35,7 @@ import { reindexKnowledgebase } from "@/lib/actions/knowledgebases/reindex-knowl
 import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
 import { listModels } from "@/lib/actions/models/list-models";
 import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { logger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
@@ -95,7 +96,7 @@ export default function KnowledgebasePage() {
 
       setEmbeddingModelLabel(activeEmbedding?.label ?? "Not configured");
     } catch (error) {
-      console.error("Failed to fetch knowledgebase:", error);
+      logger.error("Failed to fetch knowledgebase", error);
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +148,7 @@ export default function KnowledgebasePage() {
       fetchKb();
     } catch (error) {
       toast.error("Failed to start re-indexing");
-      console.error(error);
+      logger.error("Knowledgebase error", error);
     }
   }, [kbId, kb?.indexStatus, fetchKb]);
 

@@ -12,6 +12,7 @@ import {
   type KnowledgebaseWithCount,
   listKnowledgebases,
 } from "@/lib/actions/knowledgebases/list-knowledgebases";
+import { logger } from "@/lib/logger";
 import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
 
 /**
@@ -41,7 +42,7 @@ export default function KnowledgebasesPage() {
         setKnowledgebases(data);
       });
     } catch (error) {
-      console.error("Failed to load knowledgebases:", error);
+      logger.error("Failed to load knowledgebases", error);
     }
   }, []);
 

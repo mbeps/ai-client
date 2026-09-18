@@ -62,7 +62,7 @@ vi.mock("@/lib/auth/require-session", () => ({
 
 const decodeProviderRecord = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/actions/providers/utils", () => ({
+vi.mock("@/lib/providers/provider-utils", () => ({
   decodeProviderRecord,
 }));
 

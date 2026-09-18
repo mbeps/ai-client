@@ -51,4 +51,3 @@ export function AssistantChatsTab({
     </div>
   );
 }
-export default AssistantChatsTab;

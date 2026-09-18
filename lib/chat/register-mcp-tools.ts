@@ -78,7 +78,7 @@ export async function registerMcpTools(
 
       mcpCleanup = result.cleanup;
     } catch (error) {
-      console.warn("[MCP] Failed to load tools:", error);
+      logger.warn("[MCP] Failed to load tools", error);
     }
   }
 

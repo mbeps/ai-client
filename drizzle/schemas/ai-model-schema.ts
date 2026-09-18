@@ -9,8 +9,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { aiProvider } from "./ai-provider-schema";
-import { user } from "./auth-schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores provider models discovered from `/v1/models` or added manually by users.

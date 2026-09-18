@@ -144,4 +144,3 @@ export function SkillSubfilesManager({
     </div>
   );
 }
-export default SkillSubfilesManager;

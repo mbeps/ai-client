@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { idField, nameField } from "../shared-fields";
+import { idField, nameField } from "@/schemas/shared-fields";
 
 /**
  * Enumeration of AI model types available from providers.

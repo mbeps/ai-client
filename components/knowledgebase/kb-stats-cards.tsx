@@ -116,4 +116,3 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
     </div>
   );
 }
-export default KbStatsCards;
