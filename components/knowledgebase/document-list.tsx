@@ -109,7 +109,7 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
                 className="flex h-5 shrink-0 items-center gap-1 px-1.5 py-0 font-normal text-[10px]"
               >
                 <Icon
-                  className={`h-2.5 w-2.5${doc.status === "processing" ? "animate-spin" : ""}`}
+                  className={`h-2.5 w-2.5 ${doc.status === "processing" ? "animate-spin" : ""}`}
                 />
                 {cfg.label}
               </Badge>

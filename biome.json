@@ -21,7 +21,10 @@
       "!evaluations",
       "!reports",
       "!subagents",
-      "!__tests__"
+      "!__tests__",
+      "!tests",
+      "!.vscode",
+      "!wiki"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true
@@ -88,7 +91,8 @@
       },
       "complexity": {
         "noForEach": "off",
-        "useArrowFunction": "off"
+        "useArrowFunction": "off",
+        "useIndexOf": "off"
       },
       "correctness": {
         "useHookAtTopLevel": "error",
@@ -102,6 +106,7 @@
         "noArrayIndexKey": "off",
         "noDocumentCookie": "off",
         "noExplicitAny": "off",
+        "noImplicitAnyLet": "off",
         "noPrototypeBuiltins": "off"
       },
       "nursery": {
