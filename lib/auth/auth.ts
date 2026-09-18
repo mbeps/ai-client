@@ -52,18 +52,30 @@ export const auth = betterAuth({
     },
   },
   socialProviders: {
-    github: {
-      clientId: env.CLIENT_ID_GITHUB!,
-      clientSecret: env.CLIENT_SECRET_GITHUB!,
-    },
-    discord: {
-      clientId: env.CLIENT_ID_DISCORD!,
-      clientSecret: env.CLIENT_SECRET_DISCORD!,
-    },
-    google: {
-      clientId: env.CLIENT_ID_GOOGLE!,
-      clientSecret: env.CLIENT_SECRET_GOOGLE!,
-    },
+    ...(env.CLIENT_ID_GITHUB && env.CLIENT_SECRET_GITHUB
+      ? {
+          github: {
+            clientId: env.CLIENT_ID_GITHUB,
+            clientSecret: env.CLIENT_SECRET_GITHUB,
+          },
+        }
+      : {}),
+    ...(env.CLIENT_ID_DISCORD && env.CLIENT_SECRET_DISCORD
+      ? {
+          discord: {
+            clientId: env.CLIENT_ID_DISCORD,
+            clientSecret: env.CLIENT_SECRET_DISCORD,
+          },
+        }
+      : {}),
+    ...(env.CLIENT_ID_GOOGLE && env.CLIENT_SECRET_GOOGLE
+      ? {
+          google: {
+            clientId: env.CLIENT_ID_GOOGLE,
+            clientSecret: env.CLIENT_SECRET_GOOGLE,
+          },
+        }
+      : {}),
   },
   session: {
     // JWT-based stateless sessions with encrypted cookies
@@ -75,7 +87,7 @@ export const auth = betterAuth({
       strategy: "jwt", // JWT tokens for session validation
     },
   },
-  plugins: [nextCookies(), twoFactor(), passkey()],
+  plugins: [twoFactor(), passkey(), nextCookies()],
   database: drizzleAdapter(db, {
     provider: "pg",
   }),

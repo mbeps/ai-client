@@ -80,10 +80,15 @@ export const account = pgTable(
     updatedAt: timestamp("updated_at")
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    issuer: text("issuer").notNull(),
   },
   (table) => [
     index("account_user_id_idx").on(table.userId),
     uniqueIndex("account_user_provider_idx").on(table.userId, table.providerId),
+    uniqueIndex("account_issuer_account_id_idx").on(
+      table.issuer,
+      table.accountId,
+    ),
   ],
 );
 
