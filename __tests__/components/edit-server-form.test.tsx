@@ -24,6 +24,13 @@ vi.mock("@/lib/actions/mcp-servers/update-mcp-server", () => ({
   updateMcpServer: vi.fn(),
 }));
 
+vi.mock(
+  "@/lib/actions/mcp-servers/update-installed-server-headers",
+  () => ({
+    updateInstalledServerHeaders: vi.fn(),
+  }),
+);
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));

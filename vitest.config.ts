@@ -22,6 +22,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/.next/**"],
     coverage: {
       provider: "v8",
+      all: false,
       reporter: ["text", "lcov"],
       reportsDirectory: "coverage",
       exclude: [

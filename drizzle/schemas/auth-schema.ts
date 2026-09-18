@@ -80,7 +80,7 @@ export const account = pgTable(
     updatedAt: timestamp("updated_at")
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
-    issuer: text("issuer").notNull(),
+    issuer: text("issuer").default("").notNull(),
   },
   (table) => [
     index("account_user_id_idx").on(table.userId),
@@ -125,6 +125,9 @@ export const twoFactor = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until"),
   },
   (table) => [index("two_factor_user_id_idx").on(table.userId)],
 );
