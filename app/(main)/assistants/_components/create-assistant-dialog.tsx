@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
+import { createAssistant } from "@/actions/assistants/create-assistant";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,7 +28,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/constants/prompts";
-import { createAssistant } from "@/lib/actions/assistants/create-assistant";
 import { useAppStore } from "@/lib/store";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
 

@@ -2,11 +2,11 @@
 import { Edit2, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
+import { renameMcpServer } from "@/actions/mcp-servers/rename-mcp-server";
+import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
-import { renameMcpServer } from "@/lib/actions/mcp-servers/rename-mcp-server";
-import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
 import { useAppStore } from "@/lib/store";
 import type { McpServer } from "@/types/mcp/mcp-server";
 

@@ -3,13 +3,13 @@
 import { Check, Globe, Loader2, Plus, Search, Server, X } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { addPublicServer } from "@/actions/mcp-servers/add-public-server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { addPublicServer } from "@/lib/actions/mcp-servers/add-public-server";
 import { useAppStore } from "@/lib/store";
 
 /**

@@ -1,13 +1,13 @@
 import type { StateCreator } from "zustand";
-import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
-import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
-import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
-import { listProjects } from "@/lib/actions/projects/list-projects";
-import { listPrompts } from "@/lib/actions/prompts/list-prompts";
-import { listSkills } from "@/lib/actions/skills/list-skills";
-import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import { listAssistants } from "@/actions/assistants/list-assistants";
+import { discoverAllPrompts } from "@/actions/mcp/discover-all-prompts";
+import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
+import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listProjects } from "@/actions/projects/list-projects";
+import { listPrompts } from "@/actions/prompts/list-prompts";
+import { listSkills } from "@/actions/skills/list-skills";
+import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
 
 /**

@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { cloneAttachmentsBatch } from "@/lib/actions/attachments/clone-attachments-batch";
+import { cloneAttachmentsBatch } from "@/actions/attachments/clone-attachments-batch";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "attachments"]);

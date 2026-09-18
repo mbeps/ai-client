@@ -4,6 +4,8 @@ import { Files, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { deleteSkill } from "@/actions/skills/delete-skill";
+import { toggleSkillEnabled } from "@/actions/skills/toggle-skill";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,8 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
-import { deleteSkill } from "@/lib/actions/skills/delete-skill";
-import { toggleSkillEnabled } from "@/lib/actions/skills/toggle-skill";
 import { useAppStore } from "@/lib/store";
 import type { Skill } from "@/types/skill/skill";
 

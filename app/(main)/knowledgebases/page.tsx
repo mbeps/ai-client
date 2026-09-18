@@ -3,15 +3,15 @@
 import { AlertCircle, Database, Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
+import {
+  type KnowledgebaseWithCount,
+  listKnowledgebases,
+} from "@/actions/knowledgebases/list-knowledgebases";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { useUserModels } from "@/hooks/use-user-models";
-import {
-  type KnowledgebaseWithCount,
-  listKnowledgebases,
-} from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { logger } from "@/lib/logger";
 import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
 

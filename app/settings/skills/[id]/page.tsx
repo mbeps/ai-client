@@ -12,6 +12,9 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { deleteSkill } from "@/actions/skills/delete-skill";
+import { exportSkillZip } from "@/actions/skills/export-skill";
+import { updateSkill } from "@/actions/skills/update-skill";
 import { PageHeader } from "@/components/page-header";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
@@ -26,9 +29,6 @@ import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager"
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
-import { deleteSkill } from "@/lib/actions/skills/delete-skill";
-import { exportSkillZip } from "@/lib/actions/skills/export-skill";
-import { updateSkill } from "@/lib/actions/skills/update-skill";
 import { useAppStore } from "@/lib/store";
 import type { SkillBundledFile } from "@/types/skill/skill";
 

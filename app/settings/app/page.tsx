@@ -1,7 +1,7 @@
 import { Settings2 } from "lucide-react";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { PageHeader } from "@/components/page-header";
 import { GlobalPromptForm } from "@/components/settings/global-prompt-form";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**

@@ -4,6 +4,7 @@ import { ChevronLeft, Command, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createPrompt } from "@/actions/prompts/create-prompt";
 import { PageHeader } from "@/components/page-header";
 import {
   PromptForm,
@@ -11,7 +12,6 @@ import {
 } from "@/components/prompt/prompt-form";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { useAppStore } from "@/lib/store";
 
 /**

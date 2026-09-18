@@ -20,12 +20,12 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn().mockReturnValue({ refresh: mockRefresh }),
 }));
 
-vi.mock("@/lib/actions/mcp-servers/update-mcp-server", () => ({
+vi.mock("@/actions/mcp-servers/update-mcp-server", () => ({
   updateMcpServer: vi.fn(),
 }));
 
 vi.mock(
-  "@/lib/actions/mcp-servers/update-installed-server-headers",
+  "@/actions/mcp-servers/update-installed-server-headers",
   () => ({
     updateInstalledServerHeaders: vi.fn(),
   }),

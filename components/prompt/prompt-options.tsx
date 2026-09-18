@@ -1,11 +1,11 @@
 "use client";
 import { Edit2, ExternalLink, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { deletePrompt } from "@/actions/prompts/delete-prompt";
+import { updatePrompt } from "@/actions/prompts/update-prompt";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
-import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { useAppStore } from "@/lib/store";
 import type { Prompt } from "@/types/prompt/prompt";
 

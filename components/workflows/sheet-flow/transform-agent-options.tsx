@@ -1,11 +1,11 @@
 "use client";
 
 import { Edit2, Trash2 } from "lucide-react";
+import { deleteTransformAgent } from "@/actions/transform-agents/delete-transform-agent";
+import { renameTransformAgent } from "@/actions/transform-agents/rename-transform-agent";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deleteTransformAgent } from "@/lib/actions/transform-agents/delete-transform-agent";
-import { renameTransformAgent } from "@/lib/actions/transform-agents/rename-transform-agent";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 
 /**

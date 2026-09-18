@@ -1,7 +1,7 @@
 import { Database } from "lucide-react";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { PageHeader } from "@/components/page-header";
 import { ProviderSettingsClient } from "@/components/settings/providers/provider-settings-client";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**

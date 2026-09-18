@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { listChats } from "@/actions/chats/list-chats";
 import { ChatOptions } from "@/components/chat/chat-options";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -53,7 +54,6 @@ import {
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { hydratedResources } from "@/hooks/use-resource-hydration";
-import { listChats } from "@/lib/actions/chats/list-chats";
 import { authClient } from "@/lib/auth/auth-client";
 import { useAppStore } from "@/lib/store";
 import { cn, sortByUpdatedAt } from "@/lib/utils";

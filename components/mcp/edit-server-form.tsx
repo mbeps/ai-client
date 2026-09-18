@@ -5,13 +5,13 @@ import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { updateInstalledServerHeaders } from "@/actions/mcp-servers/update-installed-server-headers";
+import { updateMcpServer as updateMcpServerAction } from "@/actions/mcp-servers/update-mcp-server";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { updateInstalledServerHeaders } from "@/lib/actions/mcp-servers/update-installed-server-headers";
-import { updateMcpServer as updateMcpServerAction } from "@/lib/actions/mcp-servers/update-mcp-server";
 import {
   type UpdateMcpServer,
   updateMcpServerSchema,

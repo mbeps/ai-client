@@ -12,7 +12,7 @@ export async function resolveMcpPrompt(
   serverId: string,
   promptName: string,
 ): Promise<string> {
-  const { getMcpPrompt } = await import("@/lib/actions/mcp/get-mcp-prompt");
+  const { getMcpPrompt } = await import("@/actions/mcp/get-mcp-prompt");
   const mcpPromptResult = await getMcpPrompt(serverId, promptName);
   const mcpContent = (mcpPromptResult as any).messages
     .map((m: any) => {

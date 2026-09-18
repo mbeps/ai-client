@@ -26,7 +26,7 @@ vi.mock("@ai-sdk/react", () => ({
 }));
 
 const mockPersist = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/actions/chats/persist-message", () => ({
+vi.mock("@/actions/chats/persist-message", () => ({
   persistMessage: mockPersist,
 }));
 

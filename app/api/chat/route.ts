@@ -1,11 +1,11 @@
 import { isStepCount, streamText } from "ai";
 import { headers } from "next/headers";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { env } from "@/config/env";
 import {
   ToolsNotSupportedError,
   VisionNotSupportedError,
 } from "@/constants/errors";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { auth } from "@/lib/auth/auth";
 import { buildProviderErrorResponse } from "@/lib/chat/build-provider-error";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";

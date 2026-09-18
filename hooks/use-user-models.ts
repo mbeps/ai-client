@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listModels } from "@/lib/actions/models/list-models";
+import { listModels } from "@/actions/models/list-models";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,

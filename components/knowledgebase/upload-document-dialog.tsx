@@ -3,6 +3,8 @@
 import { AlertCircle, Loader2, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { ingestKbDocument } from "@/actions/knowledgebases/ingest-kb-document";
+import { uploadKbDocument } from "@/actions/knowledgebases/upload-kb-document";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,8 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useUserModels } from "@/hooks/use-user-models";
-import { ingestKbDocument } from "@/lib/actions/knowledgebases/ingest-kb-document";
-import { uploadKbDocument } from "@/lib/actions/knowledgebases/upload-kb-document";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const ACCEPTED_TYPES = ".pdf,.txt,.md";

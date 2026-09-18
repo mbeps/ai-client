@@ -26,7 +26,7 @@ vi.mock("@/config/env", () => ({
 }));
 
 // Mock actions
-vi.mock("@/lib/actions/skills/get-skill", () => ({
+vi.mock("@/actions/skills/get-skill", () => ({
   getSkill: vi.fn().mockResolvedValue({
     id: "d6359b3d-89a8-48ce-bcde-6ddced6aa746",
     name: "ai-sdk-nextjs",

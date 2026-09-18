@@ -2,12 +2,12 @@
 
 import { Edit2, MessageSquare, Settings2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { deleteAssistant } from "@/actions/assistants/delete-assistant";
+import { renameAssistant } from "@/actions/assistants/rename-assistant";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
-import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
 import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/types/assistant/assistant";
 

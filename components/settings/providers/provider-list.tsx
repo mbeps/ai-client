@@ -3,6 +3,10 @@
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { syncProviderModels } from "@/actions/models/sync-provider-models";
+import { deleteProvider } from "@/actions/providers/delete-provider";
+import { testProviderConnection } from "@/actions/providers/test-provider-connection";
+import { toggleProvider } from "@/actions/providers/toggle-provider";
 import { ProviderCard } from "@/components/settings/providers/provider-card";
 import { ProviderFormDialog } from "@/components/settings/providers/provider-form-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
@@ -14,10 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { syncProviderModels } from "@/lib/actions/models/sync-provider-models";
-import { deleteProvider } from "@/lib/actions/providers/delete-provider";
-import { testProviderConnection } from "@/lib/actions/providers/test-provider-connection";
-import { toggleProvider } from "@/lib/actions/providers/toggle-provider";
 import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";

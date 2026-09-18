@@ -26,58 +26,58 @@ vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 
 // Mock all server actions that entity slice uses
-vi.mock("@/lib/actions/projects/list-projects", () => ({
+vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/lib/actions/assistants/list-assistants", () => ({
+vi.mock("@/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
-vi.mock("@/lib/actions/prompts/list-prompts", () => ({
+vi.mock("@/actions/prompts/list-prompts", () => ({
   listPrompts: vi.fn(),
 }));
-vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
-vi.mock("@/lib/actions/mcp-servers/list-public-mcp-servers", () => ({
+vi.mock("@/actions/mcp-servers/list-public-mcp-servers", () => ({
   listPublicMcpServers: vi.fn(),
 }));
-vi.mock("@/lib/actions/transform-agents/list-transform-agents", () => ({
+vi.mock("@/actions/transform-agents/list-transform-agents", () => ({
   listTransformAgents: vi.fn(),
 }));
-vi.mock("@/lib/actions/user-settings/get-user-settings", () => ({
+vi.mock("@/actions/user-settings/get-user-settings", () => ({
   getUserSettings: vi.fn(),
 }));
-vi.mock("@/lib/actions/mcp/discover-all-prompts", () => ({
+vi.mock("@/actions/mcp/discover-all-prompts", () => ({
   discoverAllPrompts: vi.fn(),
 }));
 
 // Chat slice stubs
-vi.mock("@/lib/actions/chats/create-chat", () => ({
+vi.mock("@/actions/chats/create-chat", () => ({
   createChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-chat", () => ({
+vi.mock("@/actions/chats/delete-chat", () => ({
   deleteChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/rename-chat", () => ({
+vi.mock("@/actions/chats/rename-chat", () => ({
   renameChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/move-chat", () => ({
+vi.mock("@/actions/chats/move-chat", () => ({
   moveChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-message", () => ({
+vi.mock("@/actions/chats/delete-message", () => ({
   deleteMessage: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-current-leaf", () => ({
+vi.mock("@/actions/chats/update-current-leaf", () => ({
   updateCurrentLeaf: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-message-metadata", () => ({
+vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-chat-knowledgebase", () => ({
+vi.mock("@/actions/chats/update-chat-knowledgebase", () => ({
   updateChatKnowledgebase: vi.fn(),
 }));
 
-import { listProjects } from "@/lib/actions/projects/list-projects";
+import { listProjects } from "@/actions/projects/list-projects";
 
 const RESET_STATE = {
   chats: {},

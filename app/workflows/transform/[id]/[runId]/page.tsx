@@ -13,6 +13,9 @@ import {
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
+import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
+import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import { PageHeader } from "@/components/page-header";
@@ -27,9 +30,6 @@ import {
 } from "@/components/ui/resizable";
 import { Separator } from "@/components/ui/separator";
 import { useApiError } from "@/hooks/use-api-error";
-import { getAttachmentUrl } from "@/lib/actions/attachments/get-attachment-url";
-import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";

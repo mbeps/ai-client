@@ -1,13 +1,13 @@
 import type { StateCreator } from "zustand";
+import { createChat } from "@/actions/chats/create-chat";
+import { deleteChat } from "@/actions/chats/delete-chat";
+import { deleteMessage as deleteMessageAction } from "@/actions/chats/delete-message";
+import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
+import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
+import { updateChatKnowledgebase } from "@/actions/chats/update-chat-knowledgebase";
+import { updateCurrentLeaf as updateCurrentLeafAction } from "@/actions/chats/update-current-leaf";
+import { updateMessageMetadata as updateMessageMetadataAction } from "@/actions/chats/update-message-metadata";
 import { ALLOWED_SPREADSHEET_TYPES } from "@/constants/attachments";
-import { createChat } from "@/lib/actions/chats/create-chat";
-import { deleteChat } from "@/lib/actions/chats/delete-chat";
-import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
-import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
-import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
-import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
-import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
-import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { insertMessage } from "@/lib/chat/insert-message";
 

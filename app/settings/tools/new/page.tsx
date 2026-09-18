@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { createMcpServer } from "@/actions/mcp-servers/create-mcp-server";
 import { PublicServerDiscovery } from "@/components/mcp/public-server-discovery";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { PageHeader } from "@/components/page-header";
@@ -19,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { ROUTES } from "@/config/routes";
-import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
 import { useAppStore } from "@/lib/store";
 import {
   type CreateMcpServer,

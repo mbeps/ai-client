@@ -1,11 +1,11 @@
 "use client";
 
 import { Edit2, Trash2 } from "lucide-react";
+import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
+import { updateKnowledgebase } from "@/actions/knowledgebases/update-knowledgebase";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import { updateKnowledgebase } from "@/lib/actions/knowledgebases/update-knowledgebase";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**

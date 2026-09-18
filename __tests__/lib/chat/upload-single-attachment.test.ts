@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockUpload = vi.hoisted(() => vi.fn());
 const mockToast = vi.hoisted(() => ({ error: vi.fn() }));
 
-vi.mock("@/lib/actions/attachments/upload-attachment", () => ({
+vi.mock("@/actions/attachments/upload-attachment", () => ({
   uploadAttachment: mockUpload,
 }));
 vi.mock("sonner", () => ({ toast: mockToast }));

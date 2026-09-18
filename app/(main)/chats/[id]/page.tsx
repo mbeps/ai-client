@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
+import { buildChatFromRows } from "@/actions/chats/build-chat";
+import { getChat } from "@/actions/chats/get-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
-import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
-import { getChat } from "@/lib/actions/chats/get-chat";
 import type { Chat } from "@/types/chat/chat";
 
 /**

@@ -1,4 +1,4 @@
-import { listChats } from "@/lib/actions/chats/list-chats";
+import { listChats } from "@/actions/chats/list-chats";
 import type { ChatRow } from "@/types/chat/chat-row";
 import { ChatsClient } from "./_components/chats-client";
 

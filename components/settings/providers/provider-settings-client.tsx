@@ -3,6 +3,7 @@
 import { Boxes, Database, FileJson, Loader2, Settings2 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useState } from "react";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { DefaultModelPicker } from "@/components/settings/providers/default-model-picker";
 import { ImportExportPanel } from "@/components/settings/providers/import-export-panel";
 import { ModelTable } from "@/components/settings/providers/model-table";
@@ -15,7 +16,6 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { useProviders } from "@/hooks/use-providers";
 import { useUserModels } from "@/hooks/use-user-models";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 type ProviderSettingsClientProps = {

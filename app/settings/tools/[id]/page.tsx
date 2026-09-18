@@ -12,6 +12,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import { EditServerForm } from "@/components/mcp/edit-server-form";
 import { ResourceList } from "@/components/mcp/resource-list";
 import { ServerSettings } from "@/components/mcp/server-settings";
@@ -27,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
-import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
 import { useAppStore } from "@/lib/store";
 
 /**

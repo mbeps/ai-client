@@ -3,11 +3,11 @@
 import { Bot, Check, Command, Database, User, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { authClient } from "@/lib/auth/auth-client";
 import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 import { extractCitations } from "@/lib/chat/extract-citations";

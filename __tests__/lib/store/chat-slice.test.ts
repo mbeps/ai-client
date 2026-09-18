@@ -22,43 +22,43 @@ vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 
 // ─── Mock all server actions ───────────────────────────────────────────────
-vi.mock("@/lib/actions/chats/create-chat", () => ({
+vi.mock("@/actions/chats/create-chat", () => ({
   createChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-chat", () => ({
+vi.mock("@/actions/chats/delete-chat", () => ({
   deleteChat: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/rename-chat", () => ({
+vi.mock("@/actions/chats/rename-chat", () => ({
   renameChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/move-chat", () => ({
+vi.mock("@/actions/chats/move-chat", () => ({
   moveChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-message", () => ({
+vi.mock("@/actions/chats/delete-message", () => ({
   deleteMessage: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/update-current-leaf", () => ({
+vi.mock("@/actions/chats/update-current-leaf", () => ({
   updateCurrentLeaf: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/update-message-metadata", () => ({
+vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn().mockResolvedValue(undefined),
 }));
 // Entity slice stubs (needed because useAppStore loads all slices)
-vi.mock("@/lib/actions/projects/list-projects", () => ({
+vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/lib/actions/assistants/list-assistants", () => ({
+vi.mock("@/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
-vi.mock("@/lib/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
-vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
+vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
 // ─── Import mocked modules for per-test configuration ─────────────────────
-import { createChat as createChatAction } from "@/lib/actions/chats/create-chat";
-import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
-import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
+import { createChat as createChatAction } from "@/actions/chats/create-chat";
+import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
+import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const RESET_STATE = {
@@ -641,7 +641,7 @@ describe("ChatSlice — DB actions", () => {
 
     it("rejects and does not update store when the server action fails", async () => {
       const { deleteMessage: deleteMsgAction } = await import(
-        "@/lib/actions/chats/delete-message"
+        "@/actions/chats/delete-message"
       );
       vi.mocked(deleteMsgAction).mockRejectedValueOnce(new Error("DB error"));
       const chatId = createChatInStore();
@@ -681,7 +681,7 @@ describe("ChatSlice — DB actions", () => {
 
     it("swallows errors from the server action", async () => {
       const { updateCurrentLeaf } = await import(
-        "@/lib/actions/chats/update-current-leaf"
+        "@/actions/chats/update-current-leaf"
       );
       vi.mocked(updateCurrentLeaf).mockRejectedValueOnce(new Error("DB error"));
       const chatId = createChatInStore();
@@ -726,7 +726,7 @@ describe("ChatSlice — DB actions", () => {
 
     it("swallows errors from the server action", async () => {
       const { updateMessageMetadata } = await import(
-        "@/lib/actions/chats/update-message-metadata"
+        "@/actions/chats/update-message-metadata"
       );
       vi.mocked(updateMessageMetadata).mockRejectedValueOnce(
         new Error("DB error"),

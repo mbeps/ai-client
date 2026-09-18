@@ -5,6 +5,8 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { deletePrompt } from "@/actions/prompts/delete-prompt";
+import { updatePrompt } from "@/actions/prompts/update-prompt";
 import { PageHeader } from "@/components/page-header";
 import {
   PromptForm,
@@ -20,8 +22,6 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { ROUTES } from "@/config/routes";
 import { PROMPTS } from "@/constants/prompts";
-import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
-import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { useAppStore } from "@/lib/store";
 
 /**

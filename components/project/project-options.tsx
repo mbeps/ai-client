@@ -2,12 +2,12 @@
 import { Edit2, Pin, PinOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { deleteProject } from "@/actions/projects/delete-project";
+import { renameProject } from "@/actions/projects/rename-project";
+import { togglePinProject } from "@/actions/projects/toggle-pin-project";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { deleteProject } from "@/lib/actions/projects/delete-project";
-import { renameProject } from "@/lib/actions/projects/rename-project";
-import { togglePinProject } from "@/lib/actions/projects/toggle-pin-project";
 import { useAppStore } from "@/lib/store";
 import type { Project } from "@/types/project/project";
 

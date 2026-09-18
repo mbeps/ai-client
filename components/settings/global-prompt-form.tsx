@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { updateUserSettings } from "@/actions/user-settings/update-user-settings";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { ActionButton } from "@/components/ui/action-button";
 import {
@@ -14,7 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
 import {
   type UserSettingsFormData as UserSettings,
   userSettingsSchema,

@@ -42,11 +42,11 @@ vi.mock("@/lib/logger", () => {
   };
 });
 
-vi.mock("@/lib/actions/attachments/clone-attachments-batch", () => ({
+vi.mock("@/actions/attachments/clone-attachments-batch", () => ({
   cloneAttachmentsBatch: mockCloneAttachmentsBatch,
 }));
 
-vi.mock("@/lib/actions/attachments/upload-attachment", () => ({
+vi.mock("@/actions/attachments/upload-attachment", () => ({
   uploadAttachment: mockUploadAttachment,
 }));
 

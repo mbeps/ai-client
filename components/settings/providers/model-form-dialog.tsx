@@ -3,6 +3,8 @@
 import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { createModel } from "@/actions/models/create-model";
+import { updateModels } from "@/actions/models/update-model";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,8 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { createModel } from "@/lib/actions/models/create-model";
-import { updateModels } from "@/lib/actions/models/update-model";
 import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { setDefaultChatModel } from "@/actions/models/set-default-chat-model";
+import { setDefaultEmbeddingModel } from "@/actions/models/set-default-embedding-model";
 import {
   Card,
   CardContent,
@@ -18,8 +20,6 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import type { UserModelOption } from "@/hooks/use-user-models";
-import { setDefaultChatModel } from "@/lib/actions/models/set-default-chat-model";
-import { setDefaultEmbeddingModel } from "@/lib/actions/models/set-default-embedding-model";
 import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 

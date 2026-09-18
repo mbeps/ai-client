@@ -17,6 +17,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { translateText } from "@/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +42,6 @@ import {
 } from "@/constants/languages";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
-import { translateText } from "@/lib/actions/workflows/translate";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import type { Attachment } from "@/types/attachment/attachment";
 

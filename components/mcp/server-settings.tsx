@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
+import { toggleMcpServerPublic } from "@/actions/mcp-servers/toggle-mcp-server-public";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +19,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
-import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
-import { toggleMcpServerPublic } from "@/lib/actions/mcp-servers/toggle-mcp-server-public";
 import { useAppStore } from "@/lib/store";
 
 /**

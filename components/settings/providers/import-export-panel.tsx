@@ -3,9 +3,9 @@
 import { Download, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { exportProviderRegistry } from "@/actions/providers/export-registry";
+import { importProviderRegistry } from "@/actions/providers/import-registry";
 import { Button } from "@/components/ui/button";
-import { exportProviderRegistry } from "@/lib/actions/providers/export-registry";
-import { importProviderRegistry } from "@/lib/actions/providers/import-registry";
 import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

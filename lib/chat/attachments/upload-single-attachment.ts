@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { uploadAttachment } from "@/lib/actions/attachments/upload-attachment";
+import { uploadAttachment } from "@/actions/attachments/upload-attachment";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "attachments"]);

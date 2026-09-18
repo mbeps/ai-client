@@ -3,6 +3,8 @@
 import { CircleSlash, Edit2, Loader2, Play, Plus, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { deleteModel } from "@/actions/models/delete-model";
+import { updateModels } from "@/actions/models/update-model";
 import { ModelFormDialog } from "@/components/settings/providers/model-form-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +33,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { deleteModel } from "@/lib/actions/models/delete-model";
-import { updateModels } from "@/lib/actions/models/update-model";
 import { logger } from "@/lib/logger";
 import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";

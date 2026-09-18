@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type KnowledgebaseWithCount,
   listKnowledgebases,
-} from "@/lib/actions/knowledgebases/list-knowledgebases";
+} from "@/actions/knowledgebases/list-knowledgebases";
 import { logger } from "@/lib/logger";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
