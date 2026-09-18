@@ -62,14 +62,22 @@ describe("createSkillSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects description longer than 1024 characters", () => {
-    const result = createSkillSchema.safeParse({
+  it("rejects description longer than 500 characters", () => {
+    const valid = createSkillSchema.safeParse({
       name: "my-skill",
       displayName: "Display",
-      description: "d".repeat(1025),
+      description: "d".repeat(500),
       content: "Content",
     });
-    expect(result.success).toBe(false);
+    expect(valid.success).toBe(true);
+
+    const invalid = createSkillSchema.safeParse({
+      name: "my-skill",
+      displayName: "Display",
+      description: "d".repeat(501),
+      content: "Content",
+    });
+    expect(invalid.success).toBe(false);
   });
 
   it("rejects empty displayName or content", () => {
@@ -105,6 +113,18 @@ describe("updateSkillSchema", () => {
       name: "Invalid Slug",
     });
     expect(invalid.success).toBe(false);
+  });
+
+  it("rejects description longer than 500 characters in update", () => {
+    const invalid = updateSkillSchema.safeParse({
+      description: "d".repeat(501),
+    });
+    expect(invalid.success).toBe(false);
+
+    const valid = updateSkillSchema.safeParse({
+      description: "d".repeat(500),
+    });
+    expect(valid.success).toBe(true);
   });
 });
 

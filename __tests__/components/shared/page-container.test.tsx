@@ -95,3 +95,4 @@ describe("PageContainer", () => {
     expect(content).toHaveClass("custom-content-class");
   });
 });
+

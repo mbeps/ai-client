@@ -1,40 +1,33 @@
 "use client";
 
-import {
-  BrainCircuit,
-  Download,
-  Files,
-  Loader2,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
-import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { deleteSkill } from "@/actions/skills/delete-skill";
 import { exportSkillZip } from "@/actions/skills/export-skill";
 import { updateSkill } from "@/actions/skills/update-skill";
-import { PageHeader } from "@/components/page-header";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
-import {
-  SidebarTabs,
-  SidebarTabsContent,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-} from "@/components/shared/sidebar-tabs";
-import { SkillGeneralTab } from "@/components/skill/skill-general-tab";
-import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { SkillDetailHeader } from "@/components/skill/skill-detail-header";
+import { SkillDirectorySidebar } from "@/components/skill/skill-directory-sidebar";
+import { SkillFileEditor } from "@/components/skill/skill-file-editor";
 import { ROUTES } from "@/config/routes";
+import {
+  addOrUpdateFile,
+  cleanPath,
+  deleteFile,
+  deleteFolderPath,
+  moveFile,
+  renameFilePath,
+  renameFolderPath,
+} from "@/lib/skills/skill-tree-utils";
 import { useAppStore } from "@/lib/store";
+import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
- * Skill editor page — view, edit, configure, and manage subfiles for an individual Agent Skill.
+ * Skill editor page — view, edit, configure, and manage directory hierarchy for an Agent Skill.
  *
  * @author Maruf Bepary
  */
@@ -42,14 +35,6 @@ export default function SkillDetailPage() {
   const params = useParams();
   const router = useRouter();
   const skillId = params.id as string;
-
-  const [tab, setTab] = useQueryState(
-    "tab",
-    parseAsString.withDefault("general").withOptions({
-      shallow: true,
-      history: "replace",
-    }),
-  );
 
   const skills = useAppStore((state) => state.skills);
   const skill = skills.find((s) => s.id === skillId);
@@ -62,6 +47,9 @@ export default function SkillDetailPage() {
   const [content, setContent] = useState(skill?.content ?? "");
   const [enabled, setEnabled] = useState(skill?.enabled ?? true);
   const [files, setFiles] = useState<SkillBundledFile[]>(skill?.files ?? []);
+  const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
+  const [selectedFilePath, setSelectedFilePath] = useState<string>("SKILL.md");
+  const [fileToMove, setFileToMove] = useState<string | null>(null);
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -93,26 +81,28 @@ export default function SkillDetailPage() {
     );
   }
 
-  if (!skill) {
-    notFound();
-  }
+  if (!skill) notFound();
 
   const handleSave = async (updatedFiles?: SkillBundledFile[]) => {
-    const cleanName = name.trim().toLowerCase();
-    if (!cleanName) {
+    const cleanSlug = name.trim().toLowerCase();
+    if (!cleanSlug) {
       toast.error("Skill slug is required");
       return;
     }
-
-    if (!/^[a-z0-9-]+$/.test(cleanName)) {
+    if (!/^[a-z0-9-]+$/.test(cleanSlug)) {
       toast.error(
         "Skill slug can only contain lowercase letters, numbers, and hyphens",
       );
       return;
     }
-
     if (!content.trim()) {
       toast.error("Skill instructions content is required");
+      return;
+    }
+    if (description.trim().length > SKILL_DESCRIPTION_MAX_LENGTH) {
+      toast.error(
+        `Skill description must be at most ${SKILL_DESCRIPTION_MAX_LENGTH} characters`,
+      );
       return;
     }
 
@@ -120,7 +110,7 @@ export default function SkillDetailPage() {
     try {
       const filesToSave = updatedFiles ?? files;
       await updateSkill(skillId, {
-        name: cleanName,
+        name: cleanSlug,
         displayName: displayName.trim() || undefined,
         description: description.trim() || undefined,
         content,
@@ -128,10 +118,7 @@ export default function SkillDetailPage() {
         files: filesToSave,
       });
 
-      if (updatedFiles) {
-        setFiles(updatedFiles);
-      }
-
+      if (updatedFiles) setFiles(updatedFiles);
       await loadSkills();
       toast.success("Skill saved");
       router.refresh();
@@ -140,10 +127,6 @@ export default function SkillDetailPage() {
     } finally {
       setSavingSettings(false);
     }
-  };
-
-  const handleSaveFiles = async (updatedFiles: SkillBundledFile[]) => {
-    await handleSave(updatedFiles);
   };
 
   const handleDelete = async () => {
@@ -187,99 +170,171 @@ export default function SkillDetailPage() {
     }
   };
 
+  const isSkillMd = selectedFilePath === "SKILL.md";
+  const activeSubfile = files.find(
+    (f) => cleanPath(f.path) === cleanPath(selectedFilePath),
+  );
+  const activeContent = isSkillMd ? content : (activeSubfile?.content ?? "");
+
+  const handleContentChange = (val: string) => {
+    if (isSkillMd) {
+      setContent(val);
+    } else {
+      setFiles((prev) =>
+        prev.map((f) =>
+          cleanPath(f.path) === cleanPath(selectedFilePath)
+            ? { ...f, content: val }
+            : f,
+        ),
+      );
+    }
+  };
+
+  const handleCreateFile = (path: string, initialContent = "") => {
+    const updated = addOrUpdateFile(files, { path, content: initialContent });
+    setFiles(updated);
+    setSelectedFilePath(path);
+  };
+
+  const handleCreateFolder = (folderPath: string) => {
+    setEmptyFolders((prev) =>
+      Array.from(new Set([...prev, cleanPath(folderPath)])),
+    );
+  };
+
+  const handleRenameFile = (oldPath: string, newPath: string) => {
+    const updated = renameFilePath(files, oldPath, newPath);
+    setFiles(updated);
+    if (cleanPath(selectedFilePath) === cleanPath(oldPath)) {
+      setSelectedFilePath(newPath);
+    }
+  };
+
+  const handleDeleteFile = (path: string) => {
+    const updated = deleteFile(files, path);
+    setFiles(updated);
+    if (cleanPath(selectedFilePath) === cleanPath(path)) {
+      setSelectedFilePath("SKILL.md");
+    }
+    toast.success(`File "${path}" deleted`);
+  };
+
+  const handleRenameFolder = (oldPrefix: string, newPrefix: string) => {
+    const updated = renameFolderPath(files, oldPrefix, newPrefix);
+    setFiles(updated);
+    setEmptyFolders((prev) =>
+      prev.map((f) => (f === oldPrefix ? newPrefix : f)),
+    );
+    const oldWithSlash = `${cleanPath(oldPrefix)}/`;
+    if (cleanPath(selectedFilePath).startsWith(oldWithSlash)) {
+      const rest = cleanPath(selectedFilePath).slice(oldWithSlash.length);
+      setSelectedFilePath(`${cleanPath(newPrefix)}/${rest}`);
+    }
+  };
+
+  const handleDeleteFolder = (folderPath: string) => {
+    const updated = deleteFolderPath(files, folderPath);
+    setFiles(updated);
+    setEmptyFolders((prev) => prev.filter((f) => f !== cleanPath(folderPath)));
+    const folderWithSlash = `${cleanPath(folderPath)}/`;
+    if (cleanPath(selectedFilePath).startsWith(folderWithSlash)) {
+      setSelectedFilePath("SKILL.md");
+    }
+  };
+
+  const handleMoveFile = (sourcePath: string, targetFolder: string) => {
+    try {
+      const { files: updated, newPath } = moveFile(
+        files,
+        sourcePath,
+        targetFolder,
+      );
+      setFiles(updated);
+      if (cleanPath(selectedFilePath) === cleanPath(sourcePath)) {
+        setSelectedFilePath(newPath);
+      }
+      toast.success(
+        `Moved "${sourcePath}" to ${targetFolder ? `"${targetFolder}/"` : "root"}`,
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Failed to move file");
+    }
+  };
+
   return (
     <PageContainer variant="full" className="space-y-6">
-      <PageHeader
-        icon={<BrainCircuit className="h-8 w-8 text-primary" />}
-        title={skill.displayName || skill.name}
-        description={`Slash command: /${skill.name}`}
-        action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              disabled={exporting}
-            >
-              {exporting ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-1.5 h-4 w-4" />
-              )}
-              Export Bundle
-            </Button>
-          </div>
-        }
+      {/* Simplified Page Header with Editable Title, Slash Command, Description, and Actions */}
+      <SkillDetailHeader
+        displayName={displayName}
+        onDisplayNameChange={setDisplayName}
+        name={name}
+        onNameChange={setName}
+        description={description}
+        onDescriptionChange={setDescription}
+        enabled={enabled}
+        onEnabledChange={setEnabled}
+        onSave={() => handleSave()}
+        isSaving={savingSettings}
+        onDelete={() => setShowDeleteDialog(true)}
+        isDeleting={deleting}
+        onExport={handleExport}
+        isExporting={exporting}
       />
 
-      <SidebarTabs value={tab} onValueChange={setTab} className="mt-6 w-full">
-        <SidebarTabsList>
-          <SidebarTabsTrigger value="general">
-            <Settings className="mr-2 h-4 w-4" />
-            General
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="files">
-            <Files className="mr-2 h-4 w-4" />
-            Files ({files.length})
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="danger">
-            <Shield className="mr-2 h-4 w-4" />
-            Danger Zone
-          </SidebarTabsTrigger>
-        </SidebarTabsList>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        {/* Left Column: Editor without redundant box wrapper */}
+        <div className="lg:col-span-2">
+          <SkillFileEditor
+            filePath={selectedFilePath}
+            content={activeContent}
+            onChangeContent={handleContentChange}
+            onRename={
+              !isSkillMd
+                ? () => {
+                    const newPath = prompt(
+                      "Enter new file path:",
+                      selectedFilePath,
+                    );
+                    if (newPath) handleRenameFile(selectedFilePath, newPath);
+                  }
+                : undefined
+            }
+            onMove={
+              !isSkillMd ? () => setFileToMove(selectedFilePath) : undefined
+            }
+            onDelete={
+              !isSkillMd ? () => handleDeleteFile(selectedFilePath) : undefined
+            }
+          />
+        </div>
 
-        {/* General Settings Tab */}
-        <SidebarTabsContent value="general" className="space-y-6">
-          <div className="flex items-center justify-between rounded-xl border bg-card p-4">
-            <div className="space-y-0.5">
-              <label className="font-medium text-sm">Enable Skill</label>
-              <p className="text-muted-foreground text-xs">
-                When enabled, this skill will appear in slash commands and
-                progressive disclosure tool calls.
-              </p>
-            </div>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
+        {/* Right Column: Directory Structure */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <SkillDirectorySidebar
+              files={files}
+              selectedPath={selectedFilePath}
+              onSelectFile={setSelectedFilePath}
+              onCreateFile={handleCreateFile}
+              onCreateFolder={handleCreateFolder}
+              onRenameFile={handleRenameFile}
+              onDeleteFile={handleDeleteFile}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onMoveFile={handleMoveFile}
+              emptyFolders={emptyFolders}
+              externalMoveFile={fileToMove}
+              onClearExternalMoveFile={() => setFileToMove(null)}
+            />
           </div>
-
-          <SkillGeneralTab
-            displayName={displayName}
-            onDisplayNameChange={setDisplayName}
-            name={name}
-            onNameChange={setName}
-            description={description}
-            onDescriptionChange={setDescription}
-            content={content}
-            onContentChange={setContent}
-            onSave={() => handleSave()}
-            isSaving={savingSettings}
-          />
-        </SidebarTabsContent>
-
-        {/* Subfiles Management Tab */}
-        <SidebarTabsContent value="files">
-          <SkillSubfilesManager
-            files={files}
-            onSaveFiles={handleSaveFiles}
-            isSaving={savingSettings}
-          />
-        </SidebarTabsContent>
-
-        {/* Danger Zone Tab */}
-        <SidebarTabsContent value="danger">
-          <DangerZoneCard
-            consequences="Deleting this skill will permanently remove it from your skills library and slash commands."
-            buttonLabel="Delete Skill"
-            onDelete={() => setShowDeleteDialog(true)}
-            isDeleting={deleting}
-          />
-        </SidebarTabsContent>
-      </SidebarTabs>
+        </div>
+      </div>
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        title={`Delete "${skill.displayName || skill.name}"?`}
+        title={`Delete "${displayName || name}"?`}
         description="This will permanently delete the agent skill. This cannot be undone."
         loading={deleting}
       />
