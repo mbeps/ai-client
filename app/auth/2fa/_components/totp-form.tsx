@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 import { type TotpFormData, totpSchema } from "@/schemas/auth/totp";
 

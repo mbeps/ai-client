@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import { cn } from "@/lib/utils";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";

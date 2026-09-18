@@ -3,7 +3,7 @@
 import { FolderOpen, Pin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EntityCard } from "@/components/shared/entity-card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { Project } from "@/types/project/project";
 import { ProjectOptions } from "./project-options";
 

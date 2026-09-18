@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 /**

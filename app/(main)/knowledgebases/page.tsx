@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useUserModels } from "@/hooks/use-user-models";
 import {
   type KnowledgebaseWithCount,

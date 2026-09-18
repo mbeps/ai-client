@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AttachmentsMenu } from "@/components/chat/attachments-menu";
 
 // Mock env
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",

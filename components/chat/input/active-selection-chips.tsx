@@ -2,7 +2,7 @@
 
 import { Bot, BrainCircuit, Command, Database, X, Zap } from "lucide-react";
 import Link from "next/link";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { Skill } from "@/types/skill/skill";

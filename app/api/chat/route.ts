@@ -1,5 +1,6 @@
 import { isStepCount, streamText } from "ai";
 import { headers } from "next/headers";
+import { env } from "@/config/env";
 import {
   ToolsNotSupportedError,
   VisionNotSupportedError,
@@ -21,7 +22,6 @@ import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
-import { env } from "@/lib/env";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";

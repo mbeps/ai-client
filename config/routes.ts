@@ -5,7 +5,7 @@
  * return fully-typed path strings.
  *
  * @example
- * import { ROUTES } from "@/lib/routes";
+ * import { ROUTES } from "@/config/routes";
  * const chatPath = ROUTES.CHATS.detail("chat-123");  // "/chats/chat-123"
  * const settingsPath = ROUTES.SETTINGS.TOOLS.path;  // "/settings/tools"
  */
@@ -160,3 +160,5 @@ export const ROUTES = {
     },
   },
 } as const;
+
+export type Routes = typeof ROUTES;

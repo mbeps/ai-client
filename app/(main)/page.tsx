@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 import { ChatInput } from "@/components/chat/chat-input";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useUserModels } from "@/hooks/use-user-models";
 import { authClient } from "@/lib/auth/auth-client";

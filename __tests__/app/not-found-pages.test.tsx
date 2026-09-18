@@ -13,7 +13,7 @@ import SkillNotFound from "@/app/settings/skills/[id]/not-found";
 import ToolNotFound from "@/app/settings/tools/[id]/not-found";
 import TransformRunNotFound from "@/app/workflows/transform/[id]/[runId]/not-found";
 import TransformAgentNotFound from "@/app/workflows/transform/[id]/not-found";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 describe("Not Found Pages", () => {
   it("renders RootNotFound with link to home", () => {

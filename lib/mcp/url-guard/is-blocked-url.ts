@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 import { resolveHostname } from "../dns-resolver";
 import { isBlockedIPv4 } from "./is-blocked-ipv4";
 import { isBlockedIPv6 } from "./is-blocked-ipv6";

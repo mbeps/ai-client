@@ -1,6 +1,6 @@
 import { BrainCircuit } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Skill not found page — displays 404 UI when requested skill does not exist.

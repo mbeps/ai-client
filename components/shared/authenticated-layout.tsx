@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 
 interface AuthenticatedLayoutProps {

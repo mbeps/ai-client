@@ -1,6 +1,6 @@
 import { List } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Transform automation not found page — displays 404 UI when requested automation does not exist.

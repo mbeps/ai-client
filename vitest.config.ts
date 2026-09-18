@@ -36,7 +36,7 @@ export default defineConfig({
         "scripts/**",
         "proxy.ts",
         "models.ts",
-        "lib/env.ts",
+        "config/env.ts",
         "lib/auth/auth.ts",
         "lib/auth/client.ts",
       ],

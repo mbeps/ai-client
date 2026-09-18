@@ -8,7 +8,7 @@
  */
 
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 export default function ProjectNotFound() {
   return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 describe("ROUTES — static paths", () => {
   it("HOME path is /", () => {
@@ -216,3 +216,4 @@ describe("ROUTES — name properties", () => {
     expect(ROUTES.WORKFLOWS.TRANSFORM.name).toBe("Step-by-Step Automations");
   });
 });
+

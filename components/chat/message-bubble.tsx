@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { KnowledgebaseWithCount } from "@/lib/actions/knowledgebases/list-knowledgebases";
 import { authClient } from "@/lib/auth/auth-client";
 import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";

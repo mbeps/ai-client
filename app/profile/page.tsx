@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Profile root page that redirects to the general settings tab.

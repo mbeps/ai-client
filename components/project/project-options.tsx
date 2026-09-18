@@ -3,7 +3,7 @@ import { Edit2, Pin, PinOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { deleteProject } from "@/lib/actions/projects/delete-project";
 import { renameProject } from "@/lib/actions/projects/rename-project";

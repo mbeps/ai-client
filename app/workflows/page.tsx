@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 const WORKFLOWS = [
   {

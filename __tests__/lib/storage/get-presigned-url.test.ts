@@ -14,7 +14,7 @@ vi.mock("@/lib/storage/s3-instance", () => ({
   S3_BUCKET: "test-bucket",
 }));
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: mockEnv,
 }));
 

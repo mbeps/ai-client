@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 /**
  * AWS S3 client configured with MinIO or S3 endpoint, region, and credentials from environment.

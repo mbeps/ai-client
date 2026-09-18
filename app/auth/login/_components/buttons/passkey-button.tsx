@@ -3,7 +3,7 @@
 import { Fingerprint } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 
 /**

@@ -1,11 +1,11 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import { requireSession } from "@/lib/auth/require-session";
-import { env } from "@/lib/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ensureBucket } from "@/lib/storage/ensure-bucket";
 import { uploadObject } from "@/lib/storage/upload-object";

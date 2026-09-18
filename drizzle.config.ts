@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit";
-import { env } from "./lib/env";
+import { env } from "./config/env";
 
 /**
  * Drizzle CLI configuration that points to the Better Auth schema.

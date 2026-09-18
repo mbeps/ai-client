@@ -1,4 +1,4 @@
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     S3_BUCKET: "test-bucket",

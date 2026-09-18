@@ -13,7 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
 import { getSkill } from "@/lib/actions/skills/get-skill";
 import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";

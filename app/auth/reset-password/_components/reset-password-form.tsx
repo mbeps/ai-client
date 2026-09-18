@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PasswordInput } from "@/components/ui/password-input";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 import {
   type ResetPasswordForm,

@@ -4,7 +4,7 @@ import {
   twoFactorClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import { ROUTES } from "../../constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { auth } from "./auth";
 
 /**

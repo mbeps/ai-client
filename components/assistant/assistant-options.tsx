@@ -3,7 +3,7 @@
 import { Edit2, MessageSquare, Settings2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";

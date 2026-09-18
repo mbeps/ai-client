@@ -25,7 +25,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
 import { useAppStore } from "@/lib/store";

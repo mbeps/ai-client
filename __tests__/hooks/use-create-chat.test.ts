@@ -6,7 +6,7 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 const mockPush = vi.hoisted(() => vi.fn());
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",

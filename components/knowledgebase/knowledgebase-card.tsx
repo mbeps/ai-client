@@ -4,7 +4,7 @@ import { AlertTriangle, Database, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import { KnowledgebaseOptions } from "./knowledgebase-options";
 

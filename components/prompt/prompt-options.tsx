@@ -2,7 +2,7 @@
 import { Edit2, ExternalLink, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";

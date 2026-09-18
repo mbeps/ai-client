@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
 import { BackupCodeTab } from "./_components/backup-code-tab";
 import { TotpForm } from "./_components/totp-form";

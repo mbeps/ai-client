@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
 import { ProfileUpdateForm } from "../_components/profile/profile-update-form";
 

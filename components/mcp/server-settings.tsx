@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
 import { toggleMcpServerPublic } from "@/lib/actions/mcp-servers/toggle-mcp-server-public";
 import { useAppStore } from "@/lib/store";

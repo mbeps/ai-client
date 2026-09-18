@@ -3,7 +3,7 @@
 import { MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { Chat } from "@/types/chat/chat";
 import { ChatOptions } from "./chat-options";
 

@@ -3,7 +3,7 @@
 
 const mockSend = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     S3_BUCKET: "test-bucket",
     S3_REGION: "us-east-1",

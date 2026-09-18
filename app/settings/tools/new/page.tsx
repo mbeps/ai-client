@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { createMcpServer } from "@/lib/actions/mcp-servers/create-mcp-server";
 import { useAppStore } from "@/lib/store";
 import {

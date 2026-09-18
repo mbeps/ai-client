@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { deleteSkill } from "@/lib/actions/skills/delete-skill";
 import { toggleSkillEnabled } from "@/lib/actions/skills/toggle-skill";
 import { useAppStore } from "@/lib/store";

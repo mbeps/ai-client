@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { env } from "@/config/env";
 import { auth } from "@/lib/auth/auth";
-import { env } from "@/lib/env";
 import { ChangePasswordForm } from "./change-password-form";
 import { PasskeyManagement } from "./passkey-management";
 import { SetPasswordButton } from "./set-password-button";

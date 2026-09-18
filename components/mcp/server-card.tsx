@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import { ServerOptions } from "./server-options";
 

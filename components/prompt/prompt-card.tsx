@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { Prompt } from "@/types/prompt/prompt";
 import { PromptOptions } from "./prompt-options";
 

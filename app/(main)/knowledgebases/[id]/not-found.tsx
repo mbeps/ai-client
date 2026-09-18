@@ -1,6 +1,6 @@
 import { Library } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Knowledge base not found page — displays 404 UI when requested knowledge base does not exist.

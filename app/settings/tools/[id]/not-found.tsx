@@ -1,6 +1,6 @@
 import { Wrench } from "lucide-react";
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Tool not found page — displays 404 UI when requested MCP server does not exist.

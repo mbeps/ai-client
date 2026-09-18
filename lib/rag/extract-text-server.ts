@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 
 /** Character limit for KB ingestion extraction (not constrained by AI context window). */

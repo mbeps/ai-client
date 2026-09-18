@@ -18,7 +18,7 @@ import {
 } from "@/components/skill/create-skill-form";
 import { SkillBundleUploader } from "@/components/skill/skill-bundle-uploader";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { createSkill } from "@/lib/actions/skills/create-skill";
 import { importSkillFile } from "@/lib/actions/skills/import-skill";
 import { useAppStore } from "@/lib/store";

@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 import { isBlockedIPv4 } from "./is-blocked-ipv4";
 import { isBlockedIPv6 } from "./is-blocked-ipv6";
 
@@ -21,7 +21,7 @@ export function isBlockedUrlSync(rawUrl: string): boolean {
   }
 
   // If internal access is allowed via environment config, bypass guard checks
-  // SECURITY: this module runs on the server only; config comes from @/lib/env.
+  // SECURITY: this module runs on the server only; config comes from @/config/env.
   if (env.ALLOW_PRIVATE_NETWORK_MCP === true) {
     return false;
   }

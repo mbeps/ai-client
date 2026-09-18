@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorPage } from "@/components/shared/error-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Chat page error boundary: Graceful error handling for failed chat loads.

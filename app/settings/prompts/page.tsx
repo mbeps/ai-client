@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PromptCard } from "@/components/prompt/prompt-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store";
 
 /**

@@ -7,7 +7,7 @@ import {
 import { useAppStore } from "@/lib/store";
 
 // Safety-net mocks
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",

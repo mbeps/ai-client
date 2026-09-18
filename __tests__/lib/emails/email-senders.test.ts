@@ -1,4 +1,4 @@
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     POSTMARK_SERVER_TOKEN: "test-postmark-token",
     POSTMARK_FROM_EMAIL: "noreply@example.com",

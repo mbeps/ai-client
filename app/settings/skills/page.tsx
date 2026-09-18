@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { SkillCard } from "@/components/skill/skill-card";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store";
 
 /**

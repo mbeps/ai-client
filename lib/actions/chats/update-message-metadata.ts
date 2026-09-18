@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";

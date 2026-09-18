@@ -6,7 +6,7 @@
  * client-side where the server-only env parse is partial.
  * @author Maruf Bepary
  */
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 const DEFAULT_CHARS = env.DEFAULT_CHUNK_SIZE ?? 1_600; // ~400 tokens
 

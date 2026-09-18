@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/env", () => ({ env: { RATE_LIMIT_CHAT_RPM: 20 } }));
+vi.mock("@/config/env", () => ({ env: { RATE_LIMIT_CHAT_RPM: 20 } }));
 
 vi.mock("@/lib/auth/auth", () => ({
   auth: {

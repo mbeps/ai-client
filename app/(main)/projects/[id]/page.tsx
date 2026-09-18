@@ -29,7 +29,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";

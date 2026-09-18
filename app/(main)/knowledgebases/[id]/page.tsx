@@ -25,7 +25,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 import { useUserModels } from "@/hooks/use-user-models";
 import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";

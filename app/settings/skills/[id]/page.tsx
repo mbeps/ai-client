@@ -25,7 +25,7 @@ import { SkillGeneralTab } from "@/components/skill/skill-general-tab";
 import { SkillSubfilesManager } from "@/components/skill/skill-subfiles-manager";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { deleteSkill } from "@/lib/actions/skills/delete-skill";
 import { exportSkillZip } from "@/lib/actions/skills/export-skill";
 import { updateSkill } from "@/lib/actions/skills/update-skill";

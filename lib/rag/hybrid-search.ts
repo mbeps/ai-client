@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
+import { env } from "@/config/env";
 import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
-import { env } from "@/lib/env";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import { logger } from "@/lib/logger";

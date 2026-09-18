@@ -11,7 +11,7 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",

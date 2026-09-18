@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import { TransformAgentOptions } from "./transform-agent-options";
 

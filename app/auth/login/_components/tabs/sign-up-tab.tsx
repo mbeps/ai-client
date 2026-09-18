@@ -16,9 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PasswordInput } from "@/components/ui/password-input";
-import { ROUTES } from "@/constants/routes";
+import { env } from "@/config/env";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { env } from "@/lib/env";
 import { type SignUpForm, signUpSchema } from "@/schemas/auth/sign-up";
 
 /**

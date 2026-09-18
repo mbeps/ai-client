@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 

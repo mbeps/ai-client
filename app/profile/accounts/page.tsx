@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
 import { LinkedAccountsTab } from "../_components/account/linked-accounts-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";

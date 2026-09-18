@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
 import { userSettings } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";

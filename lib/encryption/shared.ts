@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 export const ALGORITHM = "aes-256-gcm";
 

@@ -3,7 +3,7 @@
 import { AlertCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Props for ModelCapabilityBanner component.

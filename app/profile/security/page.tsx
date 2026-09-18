@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { env } from "@/config/env";
+import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { env } from "@/lib/env";
 import { SecurityTab } from "../_components/security/security-tab";
 import { LoadingSuspense } from "../_components/shared/loading-suspense";
 

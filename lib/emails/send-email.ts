@@ -10,7 +10,7 @@
  */
 
 import { ServerClient } from "postmark";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
 
 /** Singleton Postmark server client initialised from `POSTMARK_SERVER_TOKEN`. */
 const postmarkClient = new ServerClient(env.POSTMARK_SERVER_TOKEN);

@@ -1,5 +1,5 @@
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Global 404 not-found fallback for the entire application.

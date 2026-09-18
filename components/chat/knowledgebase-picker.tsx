@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 

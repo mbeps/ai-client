@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ROUTES } from "@/constants/routes";
-import { env } from "@/lib/env";
+import { env } from "@/config/env";
+import { ROUTES } from "@/config/routes";
 import ResetPasswordForm from "./_components/reset-password-form";
 
 export const metadata = {

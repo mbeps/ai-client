@@ -10,7 +10,7 @@ import {
   type PromptFormValues,
 } from "@/components/prompt/prompt-form";
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { createPrompt } from "@/lib/actions/prompts/create-prompt";
 import { useAppStore } from "@/lib/store";
 

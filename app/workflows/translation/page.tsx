@@ -38,7 +38,7 @@ import {
   DEFAULT_TARGET_LANGUAGE,
   LANGUAGES,
 } from "@/constants/languages";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { translateText } from "@/lib/actions/workflows/translate";

@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ROUTES } from "@/constants/routes";
+import { env } from "@/config/env";
+import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { env } from "@/lib/env";
 import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
 import { EmailVerification } from "./_components/forms/email-verification";
 import { ForgotPassword } from "./_components/forms/forgot-password";

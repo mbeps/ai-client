@@ -19,7 +19,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { PROMPTS } from "@/constants/prompts";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { deletePrompt } from "@/lib/actions/prompts/delete-prompt";
 import { updatePrompt } from "@/lib/actions/prompts/update-prompt";
 import { useAppStore } from "@/lib/store";

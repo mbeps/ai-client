@@ -1,5 +1,5 @@
 import { NotFoundPage } from "@/components/shared/not-found-page";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Chat not found page: 404 fallback for missing or inaccessible chats.

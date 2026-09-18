@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
 import { useAppStore } from "@/lib/store";
 
