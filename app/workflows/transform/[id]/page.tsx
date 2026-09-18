@@ -29,6 +29,7 @@ import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -324,7 +325,7 @@ export default function AgentEditorPage() {
   }
 
   return (
-    <div className="page-container-detail">
+    <PageContainer variant="default" className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={ROUTES.WORKFLOWS.TRANSFORM.path}>
           <Button variant="ghost" size="icon">
@@ -532,6 +533,6 @@ export default function AgentEditorPage() {
         description="This will permanently delete the transform agent and its configuration. This cannot be undone."
         loading={isDeleting}
       />
-    </div>
+    </PageContainer>
   );
 }

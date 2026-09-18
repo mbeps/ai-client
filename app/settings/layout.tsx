@@ -20,11 +20,8 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthenticatedLayout
-      sidebar={<SettingsSidebar />}
-      contentClassName="overflow-y-auto"
-    >
-      <div className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</div>
+    <AuthenticatedLayout sidebar={<SettingsSidebar />}>
+      {children}
     </AuthenticatedLayout>
   );
 }

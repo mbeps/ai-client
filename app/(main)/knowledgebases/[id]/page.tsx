@@ -25,6 +25,7 @@ import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -184,7 +185,7 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <div className="page-container-detail">
+    <PageContainer variant="narrow" className="space-y-6">
       <div className="flex flex-col gap-1">
         <h1 className="font-bold text-2xl">{kb.name}</h1>
         {kb.description && (
@@ -303,6 +304,6 @@ export default function KnowledgebasePage() {
         description={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
         loading={isDeleting}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { createSkill } from "@/actions/skills/create-skill";
 import { importSkillFile } from "@/actions/skills/import-skill";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -86,7 +87,7 @@ export default function NewSkillPage() {
   };
 
   return (
-    <div className="page-container mx-auto max-w-4xl py-8">
+    <PageContainer variant="default">
       <Button
         variant="ghost"
         size="sm"
@@ -135,6 +136,6 @@ export default function NewSkillPage() {
           />
         </SidebarTabsContent>
       </SidebarTabs>
-    </div>
+    </PageContainer>
   );
 }

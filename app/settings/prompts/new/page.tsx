@@ -10,6 +10,7 @@ import {
   PromptForm,
   type PromptFormValues,
 } from "@/components/prompt/prompt-form";
+import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store";
@@ -46,7 +47,7 @@ export default function NewPromptPage() {
   };
 
   return (
-    <div className="page-container mx-auto max-w-4xl py-8">
+    <PageContainer variant="default">
       <Button
         variant="ghost"
         size="sm"
@@ -72,6 +73,6 @@ export default function NewPromptPage() {
           isSubmitting={isSubmitting}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

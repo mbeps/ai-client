@@ -18,6 +18,7 @@ import { ResourceList } from "@/components/mcp/resource-list";
 import { ServerSettings } from "@/components/mcp/server-settings";
 import { ToolList } from "@/components/mcp/tool-list";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -75,7 +76,7 @@ export default function McpServerPage() {
   };
 
   return (
-    <div className="page-container">
+    <PageContainer variant="default">
       <Button
         variant="ghost"
         size="sm"
@@ -146,6 +147,6 @@ export default function McpServerPage() {
           <ServerSettings serverId={server.id} />
         </SidebarTabsContent>
       </SidebarTabs>
-    </div>
+    </PageContainer>
   );
 }

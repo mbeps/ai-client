@@ -16,11 +16,8 @@ export default function WorkflowsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthenticatedLayout
-      sidebar={<WorkflowSidebar />}
-      contentClassName="overflow-y-auto"
-    >
-      <div className="mx-auto w-full max-w-7xl p-4 md:p-6">{children}</div>
+    <AuthenticatedLayout sidebar={<WorkflowSidebar />}>
+      {children}
     </AuthenticatedLayout>
   );
 }

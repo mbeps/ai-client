@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
+import { PageContainer } from "@/components/shared/page-container";
 import { ProfileSidebar } from "@/components/sidebar/profile-sidebar";
 
 /**
@@ -19,11 +20,8 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthenticatedLayout
-      sidebar={<ProfileSidebar />}
-      contentClassName="overflow-y-auto"
-    >
-      <div className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</div>
+    <AuthenticatedLayout sidebar={<ProfileSidebar />}>
+      <PageContainer variant="default">{children}</PageContainer>
     </AuthenticatedLayout>
   );
 }

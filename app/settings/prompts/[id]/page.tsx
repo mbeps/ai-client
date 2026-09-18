@@ -14,6 +14,7 @@ import {
 } from "@/components/prompt/prompt-form";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -106,7 +107,7 @@ export default function PromptDetailPage() {
   };
 
   return (
-    <div className="page-container mx-auto max-w-4xl py-8">
+    <PageContainer variant="default">
       <PageHeader
         icon={<Command className="h-8 w-8 text-primary" />}
         title={prompt.title}
@@ -169,6 +170,6 @@ export default function PromptDetailPage() {
         description="This will permanently delete the prompt shortcut. This cannot be undone."
         loading={deleting}
       />
-    </div>
+    </PageContainer>
   );
 }

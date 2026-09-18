@@ -1,5 +1,6 @@
 import { Languages, List } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   Card,
   CardDescription,
@@ -37,7 +38,7 @@ const WORKFLOWS = [
 
 export default function WorkflowsPage() {
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       <div>
         <h1 className="font-bold text-3xl tracking-tight">Workflows</h1>
         <p className="text-muted-foreground">
@@ -68,6 +69,6 @@ export default function WorkflowsPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

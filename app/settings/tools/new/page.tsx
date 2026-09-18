@@ -10,6 +10,7 @@ import { createMcpServer } from "@/actions/mcp-servers/create-mcp-server";
 import { PublicServerDiscovery } from "@/components/mcp/public-server-discovery";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -72,7 +73,7 @@ export default function NewMcpServerPage() {
   }
 
   return (
-    <div className="page-container mx-auto max-w-4xl py-8">
+    <PageContainer variant="default">
       <Button
         variant="ghost"
         size="sm"
@@ -149,6 +150,6 @@ export default function NewMcpServerPage() {
           />
         </SidebarTabsContent>
       </SidebarTabs>
-    </div>
+    </PageContainer>
   );
 }

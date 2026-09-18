@@ -19,6 +19,7 @@ import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -502,7 +503,12 @@ export default function TransformRunDetailPage() {
         : 0;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-background">
+    <PageContainer
+      variant="full"
+      scrollable={false}
+      padding="none"
+      className="bg-background"
+    >
       {/* Header */}
       <div className="flex shrink-0 flex-col gap-4 border-b bg-card/50 p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:gap-6 lg:p-6">
         <div className="flex items-center gap-3">
@@ -805,6 +811,6 @@ export default function TransformRunDetailPage() {
           )}
         </ResizablePanelGroup>
       </div>
-    </div>
+    </PageContainer>
   );
 }

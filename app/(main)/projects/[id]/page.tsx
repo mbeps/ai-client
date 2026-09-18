@@ -25,6 +25,7 @@ import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
 import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -218,7 +219,7 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className="page-container">
+    <PageContainer className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -329,9 +330,9 @@ export default function ProjectPage() {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title={`Delete "${project.name}"?`}
-        description="This will permanently delete the project. Chats will be dissociated but not deleted. This cannot be undone."
+        description="This will permanently delete this project. Associated chats and data will remain accessible. This action cannot be undone."
         loading={deleting}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -2,6 +2,7 @@ import { List, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { TransformAgentCard } from "@/components/workflows/sheet-flow/transform-agent-card";
 import { ROUTES } from "@/config/routes";
@@ -40,7 +41,7 @@ export default async function TransformAgentsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       <PageHeader
         icon={<List className="h-8 w-8 text-amber-500" />}
         title={ROUTES.WORKFLOWS.TRANSFORM.name}
@@ -77,6 +78,6 @@ export default async function TransformAgentsPage() {
           </Button>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

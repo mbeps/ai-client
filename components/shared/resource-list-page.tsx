@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { type SortableResource, sortByUpdatedAt } from "@/lib/utils";
@@ -73,7 +74,7 @@ export function ResourceListPage<T extends SortableResource>({
   const sorted = sortByUpdatedAt(filtered);
 
   return (
-    <div className="page-container">
+    <PageContainer className="space-y-6">
       <PageHeader
         icon={icon}
         title={title}
@@ -113,6 +114,6 @@ export function ResourceListPage<T extends SortableResource>({
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

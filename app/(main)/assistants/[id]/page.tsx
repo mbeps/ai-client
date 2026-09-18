@@ -23,6 +23,7 @@ import { AssistantSettingsTab } from "@/components/assistant/assistant-settings-
 import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -187,7 +188,7 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="page-container">
+    <PageContainer className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -284,9 +285,9 @@ export default function AssistantPage() {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title={`Delete "${assistant.name}"?`}
-        description="This will permanently delete the assistant. This cannot be undone."
+        description="This will permanently delete this assistant. Existing chats created with this assistant will not be deleted. This action cannot be undone."
         loading={deleting}
       />
-    </div>
+    </PageContainer>
   );
 }

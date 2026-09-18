@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { translateText } from "@/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
+import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -182,7 +183,7 @@ export default function TranslationWorkflowPage() {
   }, [chatModels, modelId]);
 
   return (
-    <div className="mx-auto flex h-full max-w-7xl flex-col space-y-3 overflow-hidden">
+    <PageContainer variant="default" scrollable={false} className="space-y-3">
       {/* Header Row */}
       <div className="flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-2">
@@ -479,6 +480,6 @@ export default function TranslationWorkflowPage() {
           {isLoading ? "Translating..." : "Translate"}
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

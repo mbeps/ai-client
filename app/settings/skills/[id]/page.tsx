@@ -18,6 +18,7 @@ import { updateSkill } from "@/actions/skills/update-skill";
 import { PageHeader } from "@/components/page-header";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -187,7 +188,7 @@ export default function SkillDetailPage() {
   };
 
   return (
-    <div className="page-container mx-auto max-w-4xl py-8">
+    <PageContainer variant="full" className="space-y-6">
       <PageHeader
         icon={<BrainCircuit className="h-8 w-8 text-primary" />}
         title={skill.displayName || skill.name}
@@ -282,6 +283,6 @@ export default function SkillDetailPage() {
         description="This will permanently delete the agent skill. This cannot be undone."
         loading={deleting}
       />
-    </div>
+    </PageContainer>
   );
 }
