@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Plus, Save, Send, Square, X } from "lucide-react";
+import { ArrowRight, Mic, Plus, Save, Square, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
@@ -687,7 +687,7 @@ export function ChatInput({
               {submitLabel === "Save" ? (
                 <Save className="h-3.5 w-3.5" />
               ) : (
-                <Send className="ml-0.5 h-3.5 w-3.5" />
+                <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
               )}
             </Button>
           )}
