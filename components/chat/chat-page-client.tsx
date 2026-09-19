@@ -42,6 +42,7 @@ export function ChatPageClient({
   return (
     <ChatUI
       chatId={initialChat.id}
+      initialChat={initialChat}
       initialMessage={!hasSentInitial ? initialMessage : undefined}
       onInitialMessageSent={() => {
         setHasSentInitial(true);

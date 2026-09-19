@@ -532,6 +532,101 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       expect(useAppStore.getState().chats[chatId]).toBeUndefined();
       expect(useAppStore.getState().chats.fresh).toBeDefined();
     });
+
+    it("preserves existing chat messages and currentLeafId when loadChats is called with empty messageRows, while pruning unlisted chats", () => {
+      const activeChatId = createChatInStore();
+      const unlistedChatId = createChatInStore();
+
+      useAppStore.getState().addMessage(activeChatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Existing prompt",
+        parentId: null,
+      });
+      useAppStore.getState().addMessage(activeChatId, {
+        id: "msg-2",
+        role: "assistant",
+        content: "Existing response",
+        parentId: "msg-1",
+      });
+
+      expect(useAppStore.getState().chats[activeChatId].currentLeafId).toBe("msg-2");
+      expect(Object.keys(useAppStore.getState().chats[activeChatId].messages)).toHaveLength(2);
+
+      const now = new Date().toISOString();
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: activeChatId,
+            title: "Updated Title",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: null,
+            updatedAt: now,
+          },
+        ],
+        [],
+      );
+
+      const state = useAppStore.getState();
+      expect(state.chats[unlistedChatId]).toBeUndefined();
+      expect(state.chats[activeChatId]).toBeDefined();
+      expect(state.chats[activeChatId].title).toBe("Updated Title");
+      expect(state.chats[activeChatId].messages["msg-1"]).toBeDefined();
+      expect(state.chats[activeChatId].messages["msg-2"]).toBeDefined();
+      expect(state.chats[activeChatId].currentLeafId).toBe("msg-2");
+    });
+
+    it("updates messages when incoming message rows are provided for a specific chat", () => {
+      const chatId = createChatInStore();
+
+      useAppStore.getState().addMessage(chatId, {
+        id: "old-msg",
+        role: "user",
+        content: "Old message",
+        parentId: null,
+      });
+
+      const now = new Date().toISOString();
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: chatId,
+            title: "Chat with new messages",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: "new-msg-2",
+            updatedAt: now,
+          },
+        ],
+        [
+          {
+            id: "new-msg-1",
+            chatId,
+            role: "user",
+            content: "New prompt",
+            parentId: null,
+            metadata: null,
+            createdAt: now,
+          },
+          {
+            id: "new-msg-2",
+            chatId,
+            role: "assistant",
+            content: "New reply",
+            parentId: "new-msg-1",
+            metadata: null,
+            createdAt: now,
+          },
+        ],
+      );
+
+      const chat = useAppStore.getState().chats[chatId];
+      expect(chat.messages["old-msg"]).toBeUndefined();
+      expect(chat.messages["new-msg-1"]).toBeDefined();
+      expect(chat.messages["new-msg-2"]).toBeDefined();
+      expect(chat.currentLeafId).toBe("new-msg-2");
+    });
   });
 });
 

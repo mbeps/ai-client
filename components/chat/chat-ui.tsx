@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { Chat } from "@/types/chat/chat";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
 import { ChatInput } from "./chat-input";
@@ -26,6 +27,9 @@ import { StreamingSection } from "./streaming-section";
 interface ChatUIProps {
   /** Unique identifier for the active chat session. */
   chatId: string;
+
+  /** Pre-fetched chat data from server for immediate rendering before store hydration. */
+  initialChat?: Chat;
 
   /** Optional message to send on component mount. Typically from query parameters. */
   initialMessage?: string;
@@ -51,10 +55,17 @@ interface ChatUIProps {
  */
 export function ChatUI({
   chatId,
+  initialChat,
   initialMessage,
   onInitialMessageSent,
 }: ChatUIProps) {
-  const chat = useAppStore((state) => state.chats[chatId]);
+  const storeChat = useAppStore((state) => state.chats[chatId]);
+  const chat =
+    storeChat && Object.keys(storeChat.messages).length > 0
+      ? storeChat
+      : initialChat?.id === chatId
+        ? initialChat
+        : storeChat;
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
   const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);

@@ -227,9 +227,27 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {
+    const existingChats = get().chats;
+
+    // Group messageRows by chatId
+    const messageRowsByChatId = new Map<string, typeof messageRows>();
+    for (const m of messageRows) {
+      const list = messageRowsByChatId.get(m.chatId);
+      if (list) {
+        list.push(m);
+      } else {
+        messageRowsByChatId.set(m.chatId, [m]);
+      }
+    }
+
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
+      const existing = existingChats[row.id];
+      const incomingMsgs = messageRowsByChatId.get(row.id);
+      const hasIncomingMsgs =
+        incomingMsgs !== undefined && incomingMsgs.length > 0;
+
       chats[row.id] = {
         id: row.id,
         title: row.title,
@@ -237,8 +255,10 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         assistantId: row.assistantId ?? undefined,
         knowledgebaseId: row.knowledgebaseId ?? null,
         updatedAt: new Date(row.updatedAt),
-        messages: {},
-        currentLeafId: row.currentLeafId ?? null,
+        messages: hasIncomingMsgs ? {} : (existing?.messages ?? {}),
+        currentLeafId: hasIncomingMsgs
+          ? (row.currentLeafId ?? existing?.currentLeafId ?? null)
+          : (existing?.currentLeafId ?? row.currentLeafId ?? null),
       };
     }
 

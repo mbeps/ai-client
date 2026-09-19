@@ -373,8 +373,6 @@ export function ChatInput({
     setSelectedPrompt,
     selectedAssistant,
     setSelectedAssistant,
-    selectedKnowledgebase,
-    setSelectedKnowledgebase,
     handleInputChange,
     handleKeyDown: handleCommandKeyDown,
     handleSelect: handleMentionSelect,
