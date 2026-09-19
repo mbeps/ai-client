@@ -3,11 +3,12 @@
 import { type RefObject, useCallback, useMemo, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/types/assistant/assistant";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
-export type MentionTrigger = "/" | "@" | null;
+export type MentionTrigger = "/" | "@" | "#" | null;
 
 export type MentionPromptItem =
   | (Prompt & { isMcp: false; isSkill?: false })
@@ -30,10 +31,16 @@ export type MentionAssistantItem = Assistant & {
   isSkill?: false;
 };
 
+export type MentionKnowledgebaseItem = Knowledgebase & {
+  isMcp: false;
+  isSkill?: false;
+};
+
 export type MentionItem =
   | MentionPromptItem
   | MentionAssistantItem
-  | MentionSkillItem;
+  | MentionSkillItem
+  | MentionKnowledgebaseItem;
 
 /**
  * Type guard for MentionPromptItem
@@ -59,6 +66,15 @@ export function isAssistantItem(
 }
 
 /**
+ * Type guard for MentionKnowledgebaseItem
+ */
+export function isKnowledgebaseItem(
+  item: MentionItem,
+): item is MentionKnowledgebaseItem {
+  return "documentCount" in item && "indexStatus" in item;
+}
+
+/**
  * Manages mention/slash-command UI state and filtering for chat input.
  * Supports two triggers: '/' for prompts and skills, and '@' for assistants.
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
@@ -75,11 +91,14 @@ export function useMentionCommands(
   canMentionAssistant: boolean = true,
   selectedServerIds?: Set<string>,
   onSelectSkill?: (skill: Skill) => void,
+  onSelectKnowledgebase?: (kb: Knowledgebase) => void,
+  knowledgebases?: Knowledgebase[],
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
   const skills = useAppStore((state) => state.skills);
   const mcpPrompts = useAppStore((state) => state.mcpPrompts);
+  const kbs = knowledgebases ?? [];
 
   const [openTrigger, setOpenTrigger] = useState<MentionTrigger>(null);
   const [commandQuery, setCommandQuery] = useState("");
@@ -114,6 +133,9 @@ export function useMentionCommands(
       ? assistants.find((a) => a.id === initialSelectedAssistantId) || null
       : null,
   );
+
+  const [selectedKnowledgebase, setSelectedKnowledgebase] =
+    useState<Knowledgebase | null>(null);
 
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];
@@ -178,6 +200,22 @@ export function useMentionCommands(
         );
     }
 
+    if (openTrigger === "#") {
+      return kbs
+        .filter(
+          (kb) =>
+            kb.name.toLowerCase().includes(q) ||
+            kb.description?.toLowerCase().includes(q),
+        )
+        .map(
+          (kb): MentionKnowledgebaseItem => ({
+            ...kb,
+            isMcp: false,
+            isSkill: false,
+          }),
+        );
+    }
+
     return [];
   }, [
     commandQuery,
@@ -185,6 +223,7 @@ export function useMentionCommands(
     prompts,
     mcpPrompts,
     assistants,
+    kbs,
     openTrigger,
     selectedServerIds,
   ]);
@@ -200,21 +239,33 @@ export function useMentionCommands(
 
       const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
       const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+      const lastHashIndex = textBeforeCursor.lastIndexOf("#");
 
       let triggerIndex = -1;
       let activeTrigger: MentionTrigger = null;
 
-      if (lastSlashIndex > lastAtIndex && !selectedPrompt) {
+      if (
+        lastSlashIndex > lastAtIndex &&
+        lastSlashIndex > lastHashIndex &&
+        !selectedPrompt
+      ) {
         triggerIndex = lastSlashIndex;
         activeTrigger = "/";
       } else if (
         lastAtIndex > lastSlashIndex &&
+        lastAtIndex > lastHashIndex &&
         !selectedAssistant &&
         !activeChatAssistantId &&
         canMentionAssistant
       ) {
         triggerIndex = lastAtIndex;
         activeTrigger = "@";
+      } else if (
+        lastHashIndex > lastSlashIndex &&
+        lastHashIndex > lastAtIndex
+      ) {
+        triggerIndex = lastHashIndex;
+        activeTrigger = "#";
       }
 
       if (triggerIndex !== -1) {
@@ -269,6 +320,11 @@ export function useMentionCommands(
           if (isAssistantItem(item)) {
             setSelectedAssistant(item);
           }
+        } else if (openTrigger === "#") {
+          if (isKnowledgebaseItem(item)) {
+            setSelectedKnowledgebase(item);
+            onSelectKnowledgebase?.(item);
+          }
         }
 
         setOpenTrigger(null);
@@ -281,7 +337,15 @@ export function useMentionCommands(
         }, 0);
       }
     },
-    [input, cursorPosition, setInput, textareaRef, openTrigger, onSelectSkill],
+    [
+      input,
+      cursorPosition,
+      setInput,
+      textareaRef,
+      openTrigger,
+      onSelectSkill,
+      onSelectKnowledgebase,
+    ],
   );
 
   const handleKeyDown = useCallback(
@@ -328,6 +392,8 @@ export function useMentionCommands(
     setSelectedPrompt,
     selectedAssistant,
     setSelectedAssistant,
+    selectedKnowledgebase,
+    setSelectedKnowledgebase,
     handleInputChange,
     handleKeyDown,
     handleSelect,

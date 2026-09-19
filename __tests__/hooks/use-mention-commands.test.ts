@@ -97,6 +97,29 @@ const SAMPLE_ASSISTANTS = [
   },
 ];
 
+const SAMPLE_KNOWLEDGEBASES = [
+  {
+    id: "kb1",
+    userId: "u1",
+    name: "Project Docs",
+    description: "Project documentation",
+    documentCount: 10,
+    indexStatus: "ready" as const,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "kb2",
+    userId: "u1",
+    name: "API Reference",
+    description: "API reference docs",
+    documentCount: 5,
+    indexStatus: "stale" as const,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
 function makeInputEvent(value: string, selectionStart: number) {
   return {
     target: { value, selectionStart },
@@ -248,6 +271,68 @@ describe("useMentionCommands", () => {
     });
   });
 
+  describe("knowledgebase command detection (#)", () => {
+    it("opens command palette when input starts with #", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#", 1));
+      });
+
+      expect(result.current.openTrigger).toBe("#");
+    });
+
+    it("shows all knowledgebases when query is empty (#)", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#", 1));
+      });
+
+      expect(result.current.filteredItems).toHaveLength(
+        SAMPLE_KNOWLEDGEBASES.length,
+      );
+    });
+
+    it("filters knowledgebases by name match", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#proj", 5));
+      });
+
+      expect(result.current.filteredItems).toHaveLength(1);
+      expect((result.current.filteredItems[0] as any).name).toBe(
+        "Project Docs",
+      );
+    });
+
+    it("filters knowledgebases by description match", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#api", 4));
+      });
+
+      expect(result.current.filteredItems).toHaveLength(1);
+      expect((result.current.filteredItems[0] as any).name).toBe(
+        "API Reference",
+      );
+    });
+  });
+
   describe("handleSelect", () => {
     it("removes the / trigger and sets selectedPrompt", () => {
       const setInput = vi.fn();
@@ -284,6 +369,25 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("removes the # trigger and sets selectedKnowledgebase", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("#proj", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#proj", 5));
+      });
+
+      act(() => {
+        result.current.handleSelect(SAMPLE_KNOWLEDGEBASES[0]);
+      });
+
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(result.current.selectedKnowledgebase).toEqual(SAMPLE_KNOWLEDGEBASES[0]);
       expect(result.current.openTrigger).toBeNull();
     });
   });

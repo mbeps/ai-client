@@ -200,15 +200,6 @@ export function MessageBubble({
             {promptEntry.title}
           </span>
         )}
-        {selectedKbIds.length > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
-            <Database className="h-3 w-3" />
-            {selectedKbIds
-              .map((id) => knowledgebases.find((kb) => kb.id === id)?.name)
-              .filter(Boolean)
-              .join(", ") || `${selectedKbIds.length} knowledgebases`}
-          </span>
-        )}
       </div>
 
       <div className="flex-1 overflow-hidden">

@@ -373,6 +373,8 @@ export function ChatInput({
     setSelectedPrompt,
     selectedAssistant,
     setSelectedAssistant,
+    selectedKnowledgebase,
+    setSelectedKnowledgebase,
     handleInputChange,
     handleKeyDown: handleCommandKeyDown,
     handleSelect: handleMentionSelect,
@@ -386,6 +388,8 @@ export function ChatInput({
     canMentionAssistant,
     selectedServerIds,
     (skill) => setSelectedSkills((prev) => new Set(prev).add(skill.id)),
+    (kb) => setSelectedKbs((prev) => new Set(prev).add(kb.id)),
+    knowledgebases,
   );
 
   useEffect(() => {
@@ -532,7 +536,7 @@ export function ChatInput({
         placeholder={
           hasNoModels
             ? "Set up a provider to start chatting..."
-            : "Ask anything... Use / for skills and prompts, @ for assistant"
+            : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases"
         }
         className="min-h-[40px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         rows={1}

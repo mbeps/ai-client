@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, BrainCircuit, SquareTerminal, Zap } from "lucide-react";
+import { Bot, BrainCircuit, Database, SquareTerminal, Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import {
   isAssistantItem,
+  isKnowledgebaseItem,
   isPromptItem,
   isSkillItem,
   type MentionItem,
@@ -30,7 +31,7 @@ interface MentionCommandsProps {
 }
 
 /**
- * Dropdown menu for mention commands (prompts & skills via `/` and assistants via `@`).
+ * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`).
  * Separates Skills into their own distinct group from Prompts.
  *
  * @author Maruf Bepary
@@ -47,6 +48,20 @@ export function MentionCommands({
   const skillItems = items.filter(isSkillItem);
   const promptItems = items.filter(isPromptItem);
   const assistantItems = items.filter(isAssistantItem);
+  const knowledgebaseItems = items.filter(isKnowledgebaseItem);
+
+  const getEmptyMessage = () => {
+    switch (trigger) {
+      case "/":
+        return "skills or prompts";
+      case "@":
+        return "assistants";
+      case "#":
+        return "knowledgebases";
+      default:
+        return "items";
+    }
+  };
 
   return (
     <div
@@ -57,9 +72,7 @@ export function MentionCommands({
     >
       <Command className="h-auto" value={items[selectedIndex]?.id}>
         <CommandList className="max-h-[300px]">
-          <CommandEmpty>
-            No {trigger === "/" ? "skills or prompts" : "assistants"} found.
-          </CommandEmpty>
+          <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
           {trigger === "/" && skillItems.length > 0 && (
             <CommandGroup heading="Skills">
@@ -173,6 +186,39 @@ export function MentionCommands({
                           {(item as Assistant).description}
                         </span>
                       )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {trigger === "#" && knowledgebaseItems.length > 0 && (
+            <CommandGroup heading="Knowledgebases">
+              {knowledgebaseItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <Database className="h-4 w-4 shrink-0 text-blue-500" />
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">{item.name}</span>
+                      {item.description && (
+                        <span className="truncate text-muted-foreground text-xs">
+                          {item.description}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs">
+                        {item.documentCount} documents • {item.indexStatus}
+                      </span>
                     </div>
                   </CommandItem>
                 );
