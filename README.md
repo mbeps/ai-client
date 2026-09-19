@@ -1,12 +1,13 @@
 # AI Client
 
-A full-featured Next.js 16 AI chat application featuring branching message trees, real-time streaming responses, multi-format artifact rendering (Markdown, HTML, XLSX, Mermaid diagrams), file handling, and integrated Model Context Protocol (MCP) servers. Built with TypeScript, PostgreSQL, Better Auth, and the Vercel AI SDK—deploy with confidence.
+AI Client is a full-featured conversational workspace with branching message trees and interactive artifact sidecars. Send messages across alternative conversation paths, execute automated spreadsheet workflows, and inspect documents with integrated knowledge bases. Generation jobs run durably in the background, allowing uninterrupted navigation and page reloads during active streaming.
 
 # Features
 
 ## Chat Interface & UX
 - **Branching conversations** — Edit any message to create sibling branches non-destructively; navigate trees intuitively.
-- **Real-time streaming** — Server-Sent Events (SSE) support for text, reasoning tokens (`<Thinking>`), and real-time tool orchestration.
+- **Durable background execution** — Long-running AI response generation runs as background jobs with Inngest, allowing navigation between chats or browser reloads without losing generation progress.
+- **Real-time streaming** — Inngest Realtime streams text, reasoning tokens (`<Thinking>`), and tool calls over WebSockets directly to the chat interface.
 - **Global Search** — Unified interface for searching chats, projects, and assistants with type-based grouping and real-time filtering.
 - **Message trees** — Explore alternative conversation paths via interactive branch controls with state persistence across branches.
 
@@ -31,7 +32,7 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 - **SSRF Protection** — Mandatory URL validation for MCP server registrations to ensure secure communication with remote services.
 
 ## Specialised Workflows
-- **Transform Workflow** — Multi-step spreadsheet automation engine with SSE-powered execution and manual review/approval gates.
+- **Transform Workflow** — Multi-step spreadsheet automation engine with Inngest durable job execution and manual review/approval gates.
 - **Translation Workflow** — Dedicated side-by-side interface for linguistic translation with auto-detection and language swapping.
 - **S3-Integrated Processing** — Efficient file handling using presigned S3 URLs passed directly to AI tools, avoiding large payload transfers.
 
@@ -48,8 +49,49 @@ A full-featured Next.js 16 AI chat application featuring branching message trees
 
 ## Architecture & Persistence
 - **Postgres 17 & Drizzle ORM** — Relational data integrity with type-safe schema management.
+- **Inngest Event Engine** — Durable background job orchestration with local dev server and subscription token-based WebSocket channels.
 - **Hybrid State Management** — Optimistic UI updates via Zustand paired with robust Server Action-based persistence.
 - **MinIO/S3 Storage** — Secure storage for conversation attachments and RAG documents with controlled access via presigned URLs.
+
+# Requirements
+
+- Node.js 22 or higher
+- npm 9 or higher
+- PostgreSQL 17
+- MinIO or AWS S3
+- Inngest dev server (via Docker or Podman) or Inngest Cloud
+- OpenAI-compatible AI provider (such as OpenRouter, Ollama, Groq, Azure, or local models)
+- Postmark account (Optional)
+- HTTP MCP servers (Optional)
+
+# Stack
+
+## Frontend
+- [Next.js](https://nextjs.org/docs): React framework with App Router and Server Components.
+- [React](https://react.dev): Component-based UI library.
+- [TypeScript](https://www.typescriptlang.org/docs): Type-safe programming language.
+- [Tailwind CSS](https://tailwindcss.com/docs): Utility-first CSS framework.
+- [Shadcn UI](https://ui.shadcn.com): Composable React component library.
+- [Radix UI](https://www.radix-ui.com/docs/primitives/overview/introduction): Accessible, unstyled component primitives.
+- [Zustand](https://zustand.docs.pmnd.rs): Client-side state store.
+- [React Markdown](https://github.com/remarkjs/react-markdown): Markdown parsing and rendering for React.
+- [Mermaid](https://mermaid.js.org): Diagram and flowchart rendering.
+- [KaTeX](https://katex.org): Mathematical typesetting library.
+- [BlockNote](https://www.blocknote.dev): Rich text editor.
+
+## Backend
+- [Inngest](https://www.inngest.com/docs): Durable execution engine for background workflows and real-time streaming.
+- [Better Auth](https://better-auth.com/docs): Multi-method authentication supporting email, OAuth, passkeys, and two-factor authentication.
+- [Postmark](https://postmark.com): Transactional email delivery service.
+- [MinIO](https://docs.min.io): S3-compatible object storage service.
+
+## Database
+- [PostgreSQL](https://www.postgresql.org/docs): Relational database with vector search extension.
+- [Drizzle ORM](https://orm.drizzle.team): Type-safe SQL query builder and migrations.
+
+## AI & Tooling
+- [Vercel AI SDK](https://sdk.vercel.ai/docs): Streaming responses and tool integration with multi-provider support.
+- [Model Context Protocol](https://modelcontextprotocol.io): Standardised protocol for connecting AI models to external tools and resources.
 
 # Database Schema
 
@@ -65,57 +107,11 @@ The application uses PostgreSQL with Drizzle ORM. Core tables include:
 - **`project`** / **`assistant`** — Shared prompts and tool configurations for chats
 - **`knowledgebase`** — RAG metadata and document chunk tracking for semantic search
 
-# Tech Stack
-
-## Frontend
-- [**Next.js**](https://nextjs.org/docs) — React framework with App Router and Server Components
-- [**React**](https://react.dev) — Component-based UI library
-- [**TypeScript**](https://www.typescriptlang.org/docs) — Type-safe JavaScript
-- [**Tailwind CSS**](https://tailwindcss.com/docs) — Utility-first CSS framework
-- [**Shadcn UI**](https://ui.shadcn.com) — Composable React component library
-- [**Radix UI / Base UI**](https://www.radix-ui.com/docs/primitives/overview/introduction) — Accessible, unstyled component primitives
-- [**Sonner**](https://sonner.emilkowal.ski) — Toast notifications
-- [**Zustand**](https://zustand.docs.pmnd.rs) — Lightweight client-side state store
-- [**React Markdown**](https://github.com/remarkjs/react-markdown) — Markdown to React components
-- [**Mermaid**](https://mermaid.js.org) — Diagram and flowchart rendering
-- [**KaTeX**](https://katex.org) — Mathematical typesetting
-- [**unpdf**](https://github.com/pdfjs-express/pdfjs-express) — PDF text extraction
-- [**BlockNote**](https://www.blocknote.dev) — Rich text editor
-
-## Backend
-- [**Better Auth**](https://better-auth.com/docs) — Email/password, OAuth, passkeys, and TOTP support
-- [**Postmark**](https://postmark.com) — Transactional email service
-- [**MinIO (AWS SDK v3)**](https://docs.min.io) — S3-compatible object storage
-
-## Database & ORM
-- [**PostgreSQL**](https://www.postgresql.org/docs) — Relational database
-- [**Drizzle ORM**](https://orm.drizzle.team) — Type-safe SQL query builder and migrations
-
-## AI & Language Models
-- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses and tool integration with multi-provider support
-- [**OpenAI-Compatible API Providers**](https://platform.openai.com/docs/api-reference) — Support for OpenRouter, OpenAI, Ollama, Groq, Azure, and any OpenAI-compatible endpoint
-- [**@ai-sdk/mcp**](https://github.com/vercel/ai-sdk) — Model Context Protocol integration
-- [**@modelcontextprotocol/sdk**](https://modelcontextprotocol.io) — Official MCP TypeScript SDK
-
-# Requirements
-
-## System Requirements
-
-- **Node.js**: 22.x or higher
-- **npm**: 9.x or higher (bundled with Node.js)
-- **PostgreSQL 17.0** — Primary data store for users, chats, messages, and application state
-- **S3/MinIO** — S3-compatible object storage for file uploads and attachments (or AWS S3 in production)
-- **OpenAI-Compatible AI Provider** — Any provider supporting OpenAI API standards (e.g., OpenRouter, OpenAI, Ollama, Groq, Azure, local models; account/deployment required)
-- **Postmark** — Transactional email service for authentication and notifications (account required)
-- **HTTP MCP Servers (Optional)** — Required if you want to extend AI capabilities via remote toolsets
-
-> Docker/Podman can be used to run PostgreSQL and MinIO locally without cloud dependencies.
-
-# Setup
+# Setting Up Project
 
 Follow these steps to set up and run the AI Client locally.
 
-## 1. Clone Repository
+## 1. Clone the Repository
 
 Clone the repository to your local machine:
 
@@ -124,6 +120,7 @@ git clone https://github.com/mbeps/ai-client.git
 cd ai-client
 ```
 
+## 2. Install Dependencies
 
 Install all required Node.js dependencies:
 
@@ -141,14 +138,7 @@ cp .env.example .env.local
 
 ### Environment Variables for Docker Containers
 
-The `docker-compose.yml` file reads from `.env` to configure PostgreSQL and MinIO. Key variables:
-
-- **`DB_HOST`**, **`DB_PORT`**, **`DB_USER`**, **`DB_PASSWORD`**, **`DB_NAME`** — PostgreSQL configuration
-- **`S3_ACCESS_KEY`**, **`S3_SECRET_KEY`** — MinIO root credentials
-
-These are referenced in `docker-compose.yml` and should be defined in `.env` (defaults are provided).
-
-### Example `.env` (for Docker)
+The `docker-compose.yml` file reads from `.env` to configure PostgreSQL, MinIO, and Inngest. Key variables:
 
 ```bash
 # PostgreSQL (docker-compose)
@@ -161,6 +151,9 @@ DB_NAME=better_auth_tutorial
 # MinIO (docker-compose)
 S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
+
+# Inngest (docker-compose)
+INNGEST_DEV=1
 ```
 
 ### Example `.env.local` (for Application)
@@ -174,7 +167,11 @@ BETTER_AUTH_SECRET=your-secure-random-string-here
 BETTER_AUTH_URL=http://localhost:3000
 NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=true
 
-# AI & Language Models
+# Inngest
+INNGEST_DEV=1
+INNGEST_BASE_URL=http://localhost:8288
+INNGEST_EVENT_KEY=
+INNGEST_SIGNING_KEY=
 
 # Storage (MinIO/S3)
 S3_ENDPOINT=http://localhost:9000
@@ -200,50 +197,51 @@ LOG_LEVEL=info
 ### Environment Variable Reference
 
 **Core Application**
-- **`DATABASE_URL`** (required) — PostgreSQL connection string
-  - Format: `postgresql://user:password@host:port/database`
-  - Ensure it matches your `.env` variables for the container
-- **`BETTER_AUTH_SECRET`** (required) — Authentication secret key
-  - Generate: `openssl rand -base64 32`
-  - Keep secure; never commit to version control
-- **`BETTER_AUTH_URL`** (required) — Auth callback URL (`http://localhost:3000` for dev)
-- **`NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD`** — Set to `false` to disable email/password credential authentication; defaults to `true`
-- **`ALLOW_PRIVATE_NETWORK_MCP`** — Set to `true` to allow connecting to Localhost/Private MCP servers during development (bypasses SSRF guard). Server-only.
+- `DATABASE_URL` (required) — PostgreSQL connection string. Format: `postgresql://user:password@host:port/database`.
+- `BETTER_AUTH_SECRET` (required) — Authentication secret key generated with `openssl rand -base64 32`.
+- `BETTER_AUTH_URL` (required) — Auth callback URL (`http://localhost:3000` for development).
+- `NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD` — Set to `false` to disable email and password credential authentication; defaults to `true`.
+- `ALLOW_PRIVATE_NETWORK_MCP` — Set to `true` to allow connecting to private network or localhost MCP servers during development.
+
+**Inngest**
+- `INNGEST_DEV` — Set to `1` to run Inngest in local development mode against the local dev server.
+- `INNGEST_BASE_URL` — Inngest server endpoint URL (`http://localhost:8288` for the local container).
+- `INNGEST_EVENT_KEY` — Inngest event publication key (optional for local dev, required in production).
+- `INNGEST_SIGNING_KEY` — Webhook signing key for verifying Inngest requests (optional for local dev, required in production).
 
 **Storage**
-- **`S3_ENDPOINT`** — MinIO/S3 endpoint URL (default: `http://localhost:9000`)
-- **`S3_REGION`** — AWS region or MinIO region (default: `us-east-1`)
-- **`S3_ACCESS_KEY`** — MinIO root user (default: `minioadmin`)
-- **`S3_SECRET_KEY`** — MinIO root password (default: `minioadmin`)
-- **`S3_BUCKET`** — Bucket name for uploads (default: `ai-client-uploads`)
+- `S3_ENDPOINT` — MinIO or S3 endpoint URL (`http://localhost:9000` for local MinIO).
+- `S3_REGION` — AWS region or MinIO region (default: `us-east-1`).
+- `S3_ACCESS_KEY` — MinIO root user or AWS access key.
+- `S3_SECRET_KEY` — MinIO root password or AWS secret key.
+- `S3_BUCKET` — S3 bucket name for uploads (default: `ai-client-uploads`).
 
 **Email Service**
-- **`POSTMARK_SERVER_TOKEN`** (required) — API token from https://postmark.com
-- **`POSTMARK_FROM_EMAIL`** (required) — Verified sender email address
+- `POSTMARK_SERVER_TOKEN` (required for email delivery) — API token from Postmark.
+- `POSTMARK_FROM_EMAIL` (required for email delivery) — Verified sender email address.
 
 **OAuth (Optional)**
-- **`CLIENT_ID_GITHUB`** / **`CLIENT_SECRET_GITHUB`** — GitHub OAuth credentials
-- **`CLIENT_ID_DISCORD`** / **`CLIENT_SECRET_DISCORD`** — Discord OAuth credentials
+- `CLIENT_ID_GITHUB` / `CLIENT_SECRET_GITHUB` — GitHub OAuth credentials.
+- `CLIENT_ID_DISCORD` / `CLIENT_SECRET_DISCORD` — Discord OAuth credentials.
 
 **Logging**
-- **`LOG_LEVEL`** — Minimum log severity threshold (`debug` | `info` | `warn` | `error` | `fatal`; default: `info`). Uses LogTape with ANSI columnar alignment (`HH:mm:ss.SSS LEVEL app·category │ message`) and zero PII leakage. Server-only.
+- `LOG_LEVEL` — Minimum log severity threshold (`debug` | `info` | `warn` | `error` | `fatal`; default: `info`).
 
-## 4. Start Infrastructure (Optional)
-These instructions are needed if you wish to run PostgreSQL and MinIO locally using Docker (or Podman). You can also connect to external services (e.g., managed PostgreSQL, AWS S3) by configuring the appropriate environment variables.
+## 4. Start Infrastructure Containers
 
-Start PostgreSQL and MinIO using Docker (or Podman):
+Start PostgreSQL, MinIO, and Inngest using Docker or Podman:
 
 ```bash
 docker-compose up -d
 ```
 
-Verify both services are running:
+Verify that all services are running:
 
 ```bash
 docker ps
 ```
 
-You should see `postgres` and `minio` containers. MinIO console is available at http://localhost:9001.
+You should see `postgres`, `minio`, and `inngest` containers. MinIO console is available at http://localhost:9001 and Inngest dev dashboard is available at http://localhost:8288.
 
 ## 5. Set Up Database
 
@@ -253,54 +251,56 @@ Run database migrations:
 npm run db:migrate
 ```
 
-## 6. Run Development Server
+# Run Application
 
 Start the development server:
 
 ```bash
 npm run dev
 ```
-> The application will be available at http://localhost:3000.
 
-Alternatively, you can build and run the application:
+Alternatively, you can build the whole app and run it using the following commands:
 
 ```bash
 npm run build
 npm start
 ```
 
+The application should now be running at http://localhost:3000.
+
 # References
 
-- [**Next.js**](https://nextjs.org/docs/app) — React meta-framework with App Router, Server Components, and Server Actions
-- [**React**](https://react.dev) — Component-based UI library for building interactive interfaces
-- [**TypeScript**](https://www.typescriptlang.org/docs) — Typed superset of JavaScript with compile-time safety
-- [**Better Auth**](https://better-auth.com/docs) — Multi-method authentication (email/password, OAuth, passkeys, TOTP 2FA)
-- [**PostgreSQL**](https://www.postgresql.org/docs) — Relational database for persistent storage
-- [**Drizzle ORM**](https://orm.drizzle.team) — Type-safe SQL query builder with migrations and introspection
-- [**Vercel AI SDK**](https://sdk.vercel.ai/docs) — Streaming responses, tool integration, and multi-provider language model abstraction
-- [**OpenAI API Compatibility**](https://platform.openai.com/docs/api-reference) — Universal interface for chat and embedding model access across any OpenAI-compatible provider
-- [**Model Context Protocol**](https://modelcontextprotocol.io) — Protocol for AI tool and server integration
-- [**Shadcn UI**](https://ui.shadcn.com) — Copy-paste React component library built on Radix UI
-- [**Radix UI**](https://www.radix-ui.com) — Unstyled, accessible component primitives for custom design systems
-- [**Tailwind CSS**](https://tailwindcss.com/docs) — Utility-first CSS framework for rapid styling
-- [**React Markdown**](https://github.com/remarkjs/react-markdown) — Parse and render Markdown to React components
-- [**Mermaid**](https://mermaid.js.org) — Diagram rendering for flowcharts, sequence diagrams, and more
-- [**KaTeX**](https://katex.org) — Mathematical typesetting and LaTeX notation rendering
-- [**unpdf**](https://github.com/pdfjs-express/pdfjs-express) — PDF text extraction and processing
-- [**React Hook Form**](https://react-hook-form.com) — Performant form handling with minimal re-renders
-- [**Zod**](https://zod.dev) — TypeScript-first schema validation for runtime safety
-- [**Zustand**](https://zustand.docs.pmnd.rs) — Lightweight, flexible state management without boilerplate
-- [**MinIO**](https://docs.min.io) — S3-compatible object storage for file uploads and assets
-- [**AWS SDK v3**](https://docs.aws.amazon.com/sdk-for-javascript/) — AWS service client for S3/MinIO
-- [**xlsx**](https://github.com/SheetJS/sheetjs) — Excel file parsing, generation, and manipulation
-- [**UUID**](https://github.com/uuidjs/uuid) — Standard UUID generation for unique identifiers
-- [**Date-fns**](https://date-fns.org) — Date manipulation, formatting, and parsing utilities
-- [**cmdk**](https://github.com/pacocoursey/cmdk) — Fast command/search interface component
-- [**Resizable Panels**](https://github.com/bvaughn/react-resizable-panels) — Draggable, resizable layout panels
-- [**Vaul**](https://github.com/emilkowalski/vaul) — Mobile drawer/sheet component
-- [**BlockNote**](https://www.blocknote.dev) — Rich text editor for document editing
-- [**Postmark**](https://postmark.com) — Transactional email service for reliable delivery
-- [**Node PostgreSQL**](https://node-postgres.com) — Node.js PostgreSQL client library
-- [**Turbopack**](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
-- [**Biome**](https://biomejs.dev) — Fast formatter and linter for JavaScript, TypeScript, and JSX
-- [**LogTape**](https://logtape.org) — Fast, zero-dependency structured logging framework with hierarchical categories and pluggable sinks
+- [Next.js](https://nextjs.org/docs/app) — React meta-framework with App Router, Server Components, and Server Actions
+- [React](https://react.dev) — Component-based UI library for building interactive interfaces
+- [TypeScript](https://www.typescriptlang.org/docs) — Typed superset of JavaScript with compile-time safety
+- [Inngest](https://www.inngest.com/docs) — Durable execution engine for background workflows and real-time streaming
+- [Better Auth](https://better-auth.com/docs) — Multi-method authentication supporting credentials, OAuth, passkeys, and two-factor authentication
+- [PostgreSQL](https://www.postgresql.org/docs) — Relational database for persistent storage
+- [Drizzle ORM](https://orm.drizzle.team) — Type-safe SQL query builder with migrations and introspection
+- [Vercel AI SDK](https://sdk.vercel.ai/docs) — Streaming responses, tool integration, and multi-provider language model abstraction
+- [OpenAI API Compatibility](https://platform.openai.com/docs/api-reference) — Universal interface for chat and embedding model access across any OpenAI-compatible provider
+- [Model Context Protocol](https://modelcontextprotocol.io) — Protocol for AI tool and server integration
+- [Shadcn UI](https://ui.shadcn.com) — Composable React component library built on Radix UI
+- [Radix UI](https://www.radix-ui.com) — Unstyled, accessible component primitives for custom design systems
+- [Tailwind CSS](https://tailwindcss.com/docs) — Utility-first CSS framework for rapid styling
+- [React Markdown](https://github.com/remarkjs/react-markdown) — Parse and render Markdown to React components
+- [Mermaid](https://mermaid.js.org) — Diagram rendering for flowcharts, sequence diagrams, and more
+- [KaTeX](https://katex.org) — Mathematical typesetting and LaTeX notation rendering
+- [unpdf](https://github.com/pdfjs-express/pdfjs-express) — PDF text extraction and processing
+- [React Hook Form](https://react-hook-form.com) — Performant form handling with minimal re-renders
+- [Zod](https://zod.dev) — TypeScript-first schema validation for runtime safety
+- [Zustand](https://zustand.docs.pmnd.rs) — Lightweight, flexible state management without boilerplate
+- [MinIO](https://docs.min.io) — S3-compatible object storage for file uploads and assets
+- [AWS SDK v3](https://docs.aws.amazon.com/sdk-for-javascript/) — AWS service client for S3/MinIO
+- [xlsx](https://github.com/SheetJS/sheetjs) — Excel file parsing, generation, and manipulation
+- [UUID](https://github.com/uuidjs/uuid) — Standard UUID generation for unique identifiers
+- [Date-fns](https://date-fns.org) — Date manipulation, formatting, and parsing utilities
+- [cmdk](https://github.com/pacocoursey/cmdk) — Fast command/search interface component
+- [Resizable Panels](https://github.com/bvaughn/react-resizable-panels) — Draggable, resizable layout panels
+- [Vaul](https://github.com/emilkowalski/vaul) — Mobile drawer/sheet component
+- [BlockNote](https://www.blocknote.dev) — Rich text editor for document editing
+- [Postmark](https://postmark.com) — Transactional email service for reliable delivery
+- [Node PostgreSQL](https://node-postgres.com) — Node.js PostgreSQL client library
+- [Turbopack](https://turbo.build/pack) — Next-generation bundler integrated with Next.js
+- [Biome](https://biomejs.dev) — Fast formatter and linter for JavaScript, TypeScript, and JSX
+- [LogTape](https://logtape.org) — Fast, zero-dependency structured logging framework with hierarchical categories and pluggable sinks
