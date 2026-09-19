@@ -116,6 +116,12 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .string()
     .default("3600")
     .transform((v) => parseInt(v, 10)),
+
+  // Inngest
+  INNGEST_BASE_URL: z.string().optional(),
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
+  INNGEST_DEV: z.string().optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -172,6 +178,10 @@ export function validateEnv(
         LOG_LEVEL: process.env.LOG_LEVEL,
         ALLOW_PRIVATE_NETWORK_MCP: process.env.ALLOW_PRIVATE_NETWORK_MCP,
         PRESIGNED_URL_EXPIRY_SECONDS: process.env.PRESIGNED_URL_EXPIRY_SECONDS,
+        INNGEST_BASE_URL: process.env.INNGEST_BASE_URL,
+        INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
+        INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
+        INNGEST_DEV: process.env.INNGEST_DEV,
       }
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:

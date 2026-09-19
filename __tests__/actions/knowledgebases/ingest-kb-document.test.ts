@@ -47,17 +47,11 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
-const ingestDocumentMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/lib/rag/ingest", () => ({
-  ingestDocument: ingestDocumentMock,
-}));
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RateLimitError } from "@/constants/errors";
 import { ingestKbDocument } from "@/actions/knowledgebases/ingest-kb-document";
+import { inngest } from "@/lib/inngest/client";
 
-describe("ingestKbDocument — RateLimitError handling (T3.8)", () => {
+describe("ingestKbDocument action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Ownership check finds the document.
@@ -66,10 +60,16 @@ describe("ingestKbDocument — RateLimitError handling (T3.8)", () => {
     ]);
   });
 
-  it("returns the rate limit message, not the generic unexpected-error message", async () => {
-    ingestDocumentMock.mockRejectedValue(
-      new RateLimitError("Embedding provider rate limited, retry later"),
-    );
+  it("validates UUID format and rejects invalid IDs", async () => {
+    const result = await ingestKbDocument("not-a-uuid");
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid document ID format",
+    });
+  });
+
+  it("returns error if document is not found or not owned by user", async () => {
+    chainable.where.mockResolvedValueOnce([]);
 
     const result = await ingestKbDocument(
       "00000000-0000-4000-8000-000000000001",
@@ -77,10 +77,26 @@ describe("ingestKbDocument — RateLimitError handling (T3.8)", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Embedding provider rate limited, retry later",
+      error: "Document not found or access denied",
     });
-    expect(result.error).not.toBe(
-      "An unexpected error occurred during ingestion",
+  });
+
+  it("updates status to processing and dispatches Inngest event", async () => {
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
     );
+
+    expect(result).toEqual({ success: true });
+    expect(chainable.set).toHaveBeenCalledWith({
+      status: "processing",
+      statusMessage: null,
+    });
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "knowledgebase/document.ingest",
+      data: {
+        documentId: "00000000-0000-4000-8000-000000000001",
+        userId: "user-1",
+      },
+    });
   });
 });

@@ -1,18 +1,20 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /**
  * Content Security Policy for the application.
  * Permissive enough to allow Mermaid (inline scripts/styles), KaTeX (fonts),
- * rehype-raw HTML rendering, and presigned S3 image URLs.
+ * rehype-raw HTML rendering, presigned S3 image URLs, and Inngest Realtime WebSockets.
  * Restrictive enough to block plugin objects and restrict frame/content sources.
  */
 const CSP = [
   `default-src 'self'`,
   `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob:`,
+  `img-src 'self' data: blob: ${isDev ? "http://localhost:* http://127.0.0.1:*" : ""}`.trim(),
   `font-src 'self' data:`,
-  `connect-src 'self' https:`,
+  `connect-src 'self' https: ws: wss: ${isDev ? "http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
   `frame-src 'self'`,
   `object-src 'none'`,
   `media-src 'self'`,

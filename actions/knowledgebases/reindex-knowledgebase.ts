@@ -1,17 +1,10 @@
 "use server";
 
-import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
-import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { getLogger } from "@/lib/logger";
-import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
-import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
-
-const log = getLogger(["app", "actions", "knowledgebase"]);
+import { inngest } from "@/lib/inngest/client";
 
 /**
  * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.
@@ -58,72 +51,16 @@ export async function reindexKnowledgebase(kbId: string) {
     .set({ statusMessage: null })
     .where(eq(kbDocument.kbId, kbId));
 
-  // 3. Get all documents in KB to re-index
   const docs = await db
-    .select()
+    .select({ id: kbDocument.id })
     .from(kbDocument)
     .where(eq(kbDocument.kbId, kbId));
 
-  let processedCount = 0;
-  let failedCount = 0;
+  // 3. Dispatch durable re-index background job to Inngest
+  await inngest.send({
+    name: "knowledgebase/reindex",
+    data: { kbId, userId: session.user.id },
+  });
 
-  // 4. Process each document sequentially
-  for (const doc of docs) {
-    try {
-      // Fetch from S3
-      const s3Res = await s3Client.send(
-        new GetObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: doc.s3Key,
-        }),
-      );
-
-      const buffer = Buffer.from(await s3Res.Body!.transformToByteArray());
-
-      await ingestDocumentPipeline(doc, buffer, session.user.id);
-
-      processedCount++;
-    } catch (err) {
-      log.error("Failed to re-index document {docId}: {error}", {
-        docId: doc.id,
-        error: err instanceof Error ? err.message : String(err),
-        userId: session.user.id,
-      });
-      failedCount++;
-
-      const errorMessage = isRateLimitError(err)
-        ? normalizeRateLimitMessage(err)
-        : (err as Error).message;
-
-      // Mark specific document as failed
-      await db
-        .update(kbDocument)
-        .set({
-          status: "failed",
-          statusMessage: errorMessage,
-          updatedAt: new Date(),
-        })
-        .where(eq(kbDocument.id, doc.id));
-
-      // If it's a rate limit error, we should stop the whole re-indexing process
-      // to avoid hitting the provider with dozens of failed requests.
-      if (isRateLimitError(err)) {
-        break;
-      }
-    }
-  }
-
-  // 5. Update final KB status
-  // If ANY document failed, the KB is "stale" (partially indexed)
-  // If all succeeded, it's "ready"
-  await db
-    .update(knowledgebase)
-    .set({
-      indexStatus: failedCount > 0 ? "stale" : "ready",
-      lastIndexedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(knowledgebase.id, kbId));
-
-  return { processedCount, failedCount };
+  return { processedCount: docs.length, failedCount: 0 };
 }

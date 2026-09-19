@@ -10,8 +10,8 @@ import {
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
-import { ingestDocument } from "@/lib/rag/ingest";
 
 const log = getLogger(["app", "actions", "knowledgebase"]);
 
@@ -57,8 +57,16 @@ export async function ingestKbDocument(
       return { success: false, error: "Document not found or access denied" };
     }
 
-    // 3. Execution
-    await ingestDocument(validatedId, session.user.id);
+    // 3. Execution via Inngest background job
+    await db
+      .update(kbDocument)
+      .set({ status: "processing", statusMessage: null })
+      .where(eq(kbDocument.id, validatedId));
+
+    await inngest.send({
+      name: "knowledgebase/document.ingest",
+      data: { documentId: validatedId, userId: session.user.id },
+    });
 
     return { success: true };
   } catch (error) {

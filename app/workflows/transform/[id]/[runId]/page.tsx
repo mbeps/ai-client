@@ -1,5 +1,6 @@
 "use client";
 
+import { useRealtime } from "inngest/react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -16,6 +17,11 @@ import { toast } from "sonner";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
 import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
+import {
+  approveTransformRunAction,
+  getTransformRunRealtimeToken,
+  startTransformRunAction,
+} from "@/actions/transform-runs/inngest-actions";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import { PageHeader } from "@/components/page-header";
@@ -31,6 +37,7 @@ import {
 } from "@/components/ui/resizable";
 import { Separator } from "@/components/ui/separator";
 import { useApiError } from "@/hooks/use-api-error";
+import { transformRunChannel } from "@/lib/inngest/channels";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
@@ -108,9 +115,6 @@ export default function TransformRunDetailPage() {
   const [isMobile, setIsMobile] = useState(false);
   const hasStartedStream = useRef(false);
   const activeStepIndexRef = useRef<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -360,75 +364,78 @@ export default function TransformRunDetailPage() {
     [handleApiError],
   );
 
-  const startStream = useCallback(
-    (body: object) => {
-      const controller = new AbortController();
-      abortRef.current = controller;
-      const { signal } = controller;
+  const isExecutionActive =
+    run?.status === "running" || run?.status === "pending";
 
-      fetch("/api/transform/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal,
-      })
-        .then((res) => {
-          if (!res.body) return;
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-
-          function read() {
-            if (signal.aborted) {
-              reader.cancel().catch(() => {});
-              return;
-            }
-            reader
-              .read()
-              .then(({ done, value }) => {
-                if (done || signal.aborted) return;
-                const text = decoder.decode(value, { stream: true });
-                const lines = text.split("\n");
-                for (const line of lines) {
-                  if (!line.startsWith("data: ")) continue;
-                  try {
-                    const event = JSON.parse(line.slice(6));
-                    handleSseEvent(event);
-                  } catch {
-                    // skip malformed events
-                  }
-                }
-                read();
-              })
-              .catch(() => {
-                if (signal.aborted) return;
-                setStreamError("Connection error");
-              });
-          }
-          read();
-        })
-        .catch(() => {
-          if (signal.aborted) return;
-          setStreamError("Failed to connect to run engine");
-        });
-    },
-    [handleSseEvent],
+  const fetchTransformToken = useCallback(
+    () =>
+      runId
+        ? getTransformRunRealtimeToken(runId)
+        : Promise.reject(new Error("No runId")),
+    [runId],
   );
+
+  const apiBaseUrl = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    if (process.env.NODE_ENV !== "production") {
+      return `${window.location.protocol}//${window.location.hostname}:8288`;
+    }
+    return undefined;
+  }, []);
+
+  const { messages } = useRealtime({
+    channel: runId ? transformRunChannel({ runId }) : undefined,
+    topics: ["progress"] as const,
+    token: fetchTransformToken,
+    enabled: !!runId && isExecutionActive,
+    historyLimit: null,
+    apiBaseUrl,
+  });
+
+  const lastProcessedIndexRef = useRef(0);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer on runId change
+  useEffect(() => {
+    lastProcessedIndexRef.current = 0;
+  }, [runId]);
+
+  useEffect(() => {
+    const all = messages.all;
+    if (all.length < lastProcessedIndexRef.current) {
+      lastProcessedIndexRef.current = 0;
+    }
+    if (all.length > lastProcessedIndexRef.current) {
+      for (let i = lastProcessedIndexRef.current; i < all.length; i++) {
+        const msg = all[i];
+        if (msg?.data) {
+          handleSseEvent(msg.data as Record<string, unknown>);
+        }
+      }
+      lastProcessedIndexRef.current = all.length;
+    }
+  }, [messages.all, handleSseEvent]);
 
   useEffect(() => {
     if (!run || !agent || hasStartedStream.current) return;
     if (run.status !== "pending") return;
 
     hasStartedStream.current = true;
-    startStream({ type: "start", runId: run.id });
-  }, [run, agent, startStream]);
+    startTransformRunAction(run.id).catch((err) => {
+      const msg = err instanceof Error ? err.message : "Failed to start run";
+      setStreamError(msg);
+      toast.error(msg);
+    });
+  }, [run, agent]);
 
   const handleApprove = async () => {
     if (!run) return;
     setIsApproving(true);
     try {
-      hasStartedStream.current = false;
-      startStream({ type: "resume", runId: run.id });
-      hasStartedStream.current = true;
+      await approveTransformRunAction(run.id);
+      setRun((prev: TransformRun | null) =>
+        prev ? { ...prev, status: "running" } : prev,
+      );
+      toast.success("Run approved and resumed");
     } catch {
       toast.error("Failed to approve run");
     } finally {

@@ -19,6 +19,11 @@ process.env.S3_REGION = process.env.S3_REGION || "us-east-1";
 process.env.S3_ACCESS_KEY = process.env.S3_ACCESS_KEY || "minioadmin";
 process.env.S3_SECRET_KEY = process.env.S3_SECRET_KEY || "minioadmin";
 process.env.S3_BUCKET = process.env.S3_BUCKET || "test-bucket";
+process.env.INNGEST_EVENT_KEY =
+  process.env.INNGEST_EVENT_KEY || "test-inngest-event-key";
+process.env.INNGEST_SIGNING_KEY =
+  process.env.INNGEST_SIGNING_KEY || "test-inngest-signing-key";
+process.env.INNGEST_DEV = process.env.INNGEST_DEV || "1";
 
 if (typeof window !== "undefined") {
   if (!global.ResizeObserver) {
@@ -42,3 +47,15 @@ if (typeof window !== "undefined") {
     });
   }
 }
+
+import { beforeEach, vi } from "vitest";
+
+beforeEach(async () => {
+  const { inngest } = await import("@/lib/inngest/client");
+  vi.spyOn(inngest, "send").mockImplementation(async () => ({
+    ids: ["mock-event-id"],
+  }));
+  if (inngest.realtime) {
+    vi.spyOn(inngest.realtime, "publish").mockImplementation(async () => {});
+  }
+});

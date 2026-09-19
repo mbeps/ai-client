@@ -1,77 +1,22 @@
 "use client";
 
-import type { UIMessage } from "@ai-sdk/react";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useRealtime } from "inngest/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { buildChatFromRows } from "@/actions/chats/build-chat";
+import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
+import { getChat } from "@/actions/chats/get-chat";
 import { persistMessage } from "@/actions/chats/persist-message";
 import { PROMPTS } from "@/constants/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
+import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
-
-/**
- * Extracts concatenated text of a given part type from a UI message.
- * @author Maruf Bepary
- */
-function partsText(message: UIMessage | undefined, type: string): string {
-  if (!message) return "";
-  return message.parts
-    .filter((p): p is any => p.type === type)
-    .map((p) => (p as any).text ?? "")
-    .join("");
-}
-
-/**
- * Maps streaming tool parts to the ToolCallState shape the rendering tree uses.
- * @author Maruf Bepary
- */
-function activeToolCallsFrom(message: UIMessage | undefined): ToolCallState[] {
-  if (!message) return [];
-  return message.parts.flatMap((p) => {
-    const part = p as any;
-    if (
-      part.type !== "dynamic-tool" &&
-      !part.type?.startsWith?.("tool-") &&
-      part.type !== "tool-invocation"
-    ) {
-      return [];
-    }
-    const invocation = part.toolInvocation ?? part;
-    const toolCallId = invocation.toolCallId ?? part.toolCallId;
-    const toolName =
-      invocation.toolName ??
-      part.toolName ??
-      (typeof part.type === "string" && part.type.startsWith("tool-")
-        ? part.type.slice(5)
-        : "");
-    const args = invocation.args ?? invocation.input ?? part.args ?? part.input;
-    const result =
-      invocation.result ?? invocation.output ?? part.result ?? part.output;
-    const hasResult = result !== undefined;
-    const state =
-      part.state ??
-      invocation.state ??
-      (hasResult ? "output-available" : "input-available");
-    const isComplete =
-      state === "output-available" || state === "result" || hasResult;
-    return [
-      {
-        toolCallId,
-        toolName,
-        args,
-        status: isComplete ? "complete" : "calling",
-        result,
-      } as ToolCallState,
-    ];
-  });
-}
 
 /**
  * Builds the metadata object for the user message, tracking model, tools, and prompt info.
@@ -154,14 +99,11 @@ interface StreamRequestOptions {
 }
 
 /**
- * Orchestrates AI response streaming over the AI SDK `useChat` hook.
+ * Orchestrates AI response generation using Inngest background jobs and Inngest Realtime.
  *
- * The server reconstructs history from the database, so only identifiers are
- * sent (`chatId`, `userMessageId`, selections) — never message content.
- * Sequencing contract: the optimistic Zustand insert happens immediately, but
- * the API call waits for `persistMessage` so `userMessageId` always refers to
- * a committed DB row. On stream finish, the assistant message is synced into
- * the store using the server-assigned id carried by the `start` chunk.
+ * Dispatches durable generation jobs that continue in the background even if the user
+ * navigates away or refreshes the page. Listens to token deltas, reasoning, and tool calls
+ * in real-time over the Inngest Realtime chat channel.
  *
  * @param chatId - Target chat session ID for message persistence.
  * @param options - Optional callbacks: onDone invoked with final content string on stream completion.
@@ -177,133 +119,329 @@ export function useStreamResponse(
 ) {
   const { handleApiError } = useApiError();
   const addMessage = useAppStore((state) => state.addMessage);
+  const upsertChat = useAppStore((state) => state.upsertChat);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
   );
 
-  // Mutable per-request context read by onFinish without re-creating the
-  // transport — keeps the useChat instance stable across renders.
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamingReasoning, setStreamingReasoning] = useState<string | null>(
+    null,
+  );
+  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
+
   const pendingRef = useRef<{
     userMessageId: string | null;
     model: string;
     startTime: number;
   }>({ userMessageId: null, model: "", startTime: 0 });
 
-  // ponytail: @ai-sdk/react bundles its own copy of `ai` types, so strict
-  // typing of the transport boundary fights duplicated type identity. The
-  // transport's runtime behaviour is covered by tests instead. State-lazy
-  // init keeps the transport identity stable without touching refs in render.
-  const [transport] = useState<any>(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        // Identifier-only body — the server rebuilds history from the DB.
-        prepareSendMessagesRequest: async ({ body }) => ({ body: body ?? {} }),
-      }),
+  const lastChunkTimeRef = useRef(0);
+  const accumulatedTextRef = useRef("");
+  const accumulatedReasoningRef = useRef("");
+  const assistantMessageIdRef = useRef<string | null>(null);
+  const activeToolCallsRef = useRef<ToolCallState[]>([]);
+
+  const handleStreamEvent = useCallback(
+    (event: ChatStreamEvent) => {
+      switch (event.type) {
+        case "start":
+          lastChunkTimeRef.current = Date.now();
+          assistantMessageIdRef.current = event.messageId;
+          setIsStreaming(true);
+          break;
+
+        case "text-delta":
+          lastChunkTimeRef.current = Date.now();
+          accumulatedTextRef.current += event.text;
+          setStreamingContent(accumulatedTextRef.current);
+          setIsStreaming(true);
+          break;
+
+        case "reasoning-delta":
+          lastChunkTimeRef.current = Date.now();
+          accumulatedReasoningRef.current += event.reasoning;
+          setStreamingReasoning(accumulatedReasoningRef.current);
+          setIsStreaming(true);
+          break;
+
+        case "tool-call": {
+          lastChunkTimeRef.current = Date.now();
+          const toolCall: ToolCallState = {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            args: event.args,
+            status: "calling",
+          };
+          activeToolCallsRef.current = [
+            ...activeToolCallsRef.current.filter(
+              (t) => t.toolCallId !== event.toolCallId,
+            ),
+            toolCall,
+          ];
+          setActiveToolCalls([...activeToolCallsRef.current]);
+          setIsStreaming(true);
+          break;
+        }
+
+        case "tool-result": {
+          lastChunkTimeRef.current = Date.now();
+          activeToolCallsRef.current = activeToolCallsRef.current.map((t) =>
+            t.toolCallId === event.toolCallId
+              ? { ...t, status: "complete", result: event.result }
+              : t,
+          );
+          setActiveToolCalls([...activeToolCallsRef.current]);
+          setIsStreaming(true);
+          break;
+        }
+
+        case "finish": {
+          lastChunkTimeRef.current = 0;
+          const text = accumulatedTextRef.current;
+          const reasoning = accumulatedReasoningRef.current;
+          const completedTools = activeToolCallsRef.current.filter(
+            (tc) => tc.status === "complete",
+          );
+
+          if (text || reasoning || completedTools.length > 0) {
+            const assistantId =
+              assistantMessageIdRef.current || crypto.randomUUID();
+            const durationMs =
+              pendingRef.current.startTime > 0
+                ? Date.now() - pendingRef.current.startTime
+                : undefined;
+
+            const metadata = JSON.stringify({
+              model: pendingRef.current.model,
+              reasoning,
+              toolCalls: completedTools.map((tc) => ({
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                args: tc.args,
+              })),
+              toolResults: completedTools
+                .filter((tc) => tc.result !== undefined)
+                .map((tc) => ({
+                  toolCallId: tc.toolCallId,
+                  toolName: tc.toolName,
+                  result: tc.result,
+                })),
+              usage: event.usage,
+              finishReason: event.finishReason,
+              durationMs,
+            });
+
+            addMessage(chatId, {
+              role: "assistant",
+              content: text,
+              parentId: pendingRef.current.userMessageId,
+              id: assistantId,
+              metadata,
+              reasoning: reasoning || undefined,
+            });
+
+            options?.onDone?.(text);
+          }
+
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          break;
+        }
+
+        case "error": {
+          lastChunkTimeRef.current = 0;
+          if (!handleApiError(event)) {
+            toast.error(event.message || "Failed to generate response");
+          }
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          break;
+        }
+      }
+    },
+    [chatId, addMessage, handleApiError, options],
   );
 
-  const chat = useChat<UIMessage>({
-    id: chatId,
-    transport,
-    onError: (error) => {
-      logger.error("Stream error", error);
-      toast.error(error.message || "Failed to generate response");
-    },
-    // useChat's chat-level callback is still `onFinish` in @ai-sdk/react 4.x
-    // (only streamText/generateText renamed to onEnd).
-    onFinish: async ({ message, isError, finishReason }) => {
-      if (isError) return;
+  const fetchChatToken = useCallback(
+    () =>
+      chatId
+        ? getChatRealtimeToken(chatId)
+        : Promise.reject(new Error("No chatId")),
+    [chatId],
+  );
 
-      const text = partsText(message, "text");
-      const reasoning = partsText(message, "reasoning");
-      const completedTools = activeToolCallsFrom(message).filter(
-        (tc) => tc.status === "complete",
-      );
-
-      // On abort or normal finish, persist if there is text, reasoning, or completed tools
-      if (!text && !reasoning && completedTools.length === 0) return;
-
-      const msgMeta = (message as any).metadata;
-      const usage = msgMeta?.usage;
-      const resolvedFinishReason = finishReason ?? msgMeta?.finishReason;
-      const durationMs =
-        pendingRef.current.startTime > 0
-          ? Date.now() - pendingRef.current.startTime
-          : undefined;
-
-      const metadata = JSON.stringify({
-        model: pendingRef.current.model,
-        reasoning,
-        toolCalls: completedTools.map((tc) => ({
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          args: tc.args,
-        })),
-        toolResults: completedTools
-          .filter((tc) => tc.result !== undefined)
-          .map((tc) => ({
-            toolCallId: tc.toolCallId,
-            toolName: tc.toolName,
-            result: tc.result,
-          })),
-        usage,
-        finishReason: resolvedFinishReason,
-        durationMs,
-      });
-
-      addMessage(chatId, {
-        role: "assistant",
-        content: text,
-        parentId: pendingRef.current.userMessageId,
-        id: message.id,
-        metadata,
-        reasoning: reasoning || undefined,
-      });
-      options?.onDone?.(text);
-    },
-  });
-
-  const { messages, status, sendMessage, stop } = chat;
-
-  // Streaming view-state derived from the SDK hook (no duplicate local state).
-  const lastAssistant = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "assistant") return messages[i];
+  const apiBaseUrl = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    if (process.env.NODE_ENV !== "production") {
+      return `${window.location.protocol}//${window.location.hostname}:8288`;
     }
     return undefined;
-  }, [messages]);
+  }, []);
 
-  const isStreaming = status === "submitted" || status === "streaming";
+  const {
+    messages,
+    error: realtimeError,
+    connectionStatus,
+  } = useRealtime({
+    channel: chatId ? chatChannel({ chatId }) : undefined,
+    topics: ["stream"] as const,
+    token: fetchChatToken,
+    enabled: !!chatId,
+    historyLimit: null,
+    apiBaseUrl,
+  });
+
+  const syncFromDb = useCallback(async () => {
+    if (!chatId) return false;
+    try {
+      const data = await getChat(chatId);
+      const userMsgId = pendingRef.current.userMessageId;
+      const assistantMsg = data.messages.find(
+        (m) =>
+          m.role === "assistant" &&
+          (userMsgId
+            ? m.parentId === userMsgId
+            : new Date(m.createdAt).getTime() >=
+              pendingRef.current.startTime - 2000),
+      );
+
+      if (assistantMsg) {
+        const fullChat = buildChatFromRows(data);
+        upsertChat(fullChat);
+        options?.onDone?.(assistantMsg.content);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return true;
+      }
+    } catch (err) {
+      logger.error("Failed to sync chat from DB", err);
+    }
+    return false;
+  }, [chatId, upsertChat, options]);
+
+  const connectionStatusRef = useRef(connectionStatus);
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
+
+  useEffect(() => {
+    if (realtimeError) {
+      logger.error("Inngest Realtime connection error:", realtimeError);
+    }
+    if ((realtimeError || connectionStatus === "error") && isStreaming) {
+      void syncFromDb();
+    }
+  }, [realtimeError, connectionStatus, isStreaming, syncFromDb]);
+
+  const lastProcessedIndexRef = useRef(0);
+  const processedMessagesRef = useRef<WeakSet<object>>(new WeakSet());
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer on chatId change
+  useEffect(() => {
+    lastProcessedIndexRef.current = 0;
+  }, [chatId]);
+
+  useEffect(() => {
+    const all = messages.all;
+    if (all && all.length > 0) {
+      if (all.length < lastProcessedIndexRef.current) {
+        lastProcessedIndexRef.current = 0;
+      }
+      if (all.length > lastProcessedIndexRef.current) {
+        for (let i = lastProcessedIndexRef.current; i < all.length; i++) {
+          const msg = all[i];
+          if (
+            msg &&
+            typeof msg === "object" &&
+            !processedMessagesRef.current.has(msg)
+          ) {
+            processedMessagesRef.current.add(msg);
+            if (msg.data) {
+              handleStreamEvent(msg.data as ChatStreamEvent);
+            }
+          }
+        }
+        lastProcessedIndexRef.current = all.length;
+      }
+      return;
+    }
+
+    // Fallback if environment only provides delta (e.g. legacy test mocks)
+    if (messages.delta && messages.delta.length > 0) {
+      for (const msg of messages.delta) {
+        if (
+          msg &&
+          typeof msg === "object" &&
+          !processedMessagesRef.current.has(msg)
+        ) {
+          processedMessagesRef.current.add(msg);
+          if (msg.data) {
+            handleStreamEvent(msg.data as ChatStreamEvent);
+          }
+        }
+      }
+    }
+  }, [messages.all, messages.delta, handleStreamEvent]);
+
+  // Watchdog & connection error recovery: prevent permanent "Thinking..." state
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      const timeSinceLastChunk = Date.now() - lastChunkTimeRef.current;
+      const timeSinceStart = Date.now() - pendingRef.current.startTime;
+
+      const isConnectionError =
+        connectionStatusRef.current === "error" || Boolean(realtimeError);
+      const isStalled = timeSinceStart > 5000 && timeSinceLastChunk > 5000;
+
+      if (isConnectionError || isStalled) {
+        const synced = await syncFromDb();
+        if (synced) {
+          clearInterval(interval);
+          return;
+        }
+
+        if ((isConnectionError && attempts >= 10) || attempts >= 30) {
+          clearInterval(interval);
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          if (isConnectionError) {
+            toast.error(
+              "Connection lost to generation stream. Please refresh if response is ready.",
+            );
+          }
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isStreaming, realtimeError, syncFromDb]);
+
   const isLoading = isStreaming;
-  const streamingReasoning = isStreaming
-    ? partsText(lastAssistant, "reasoning") || null
-    : null;
-  const streamingContent = isStreaming
-    ? partsText(lastAssistant, "text") || null
-    : null;
   const isStreamingReasoning =
     isStreaming && !!streamingReasoning && !streamingContent;
-  const activeToolCalls = isStreaming ? activeToolCallsFrom(lastAssistant) : [];
 
-  const stopStream = useCallback(() => stop(), [stop]);
+  const stopStream = useCallback(() => {
+    lastChunkTimeRef.current = 0;
+    setIsStreaming(false);
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
+  }, []);
 
-  // Abort in-flight requests on unmount.
-  useEffect(() => () => void stop(), [stop]);
-
-  /**
-   * Streams an AI response for a given user message and persists it to the store and database.
-   *
-   * @param userMsgId - UUID of the user message triggering this stream.
-   * @param content - User's message content (plain text).
-   * @param parentId - Optional parent message ID for branching conversations.
-   * @param attachments - Optional array of file attachments.
-   * @param model - AI model to use (backend falls back to provider default when empty).
-   * @param selectedServerIds - Optional array of MCP server IDs to enable for tools.
-   * @param selectedTools - Optional array of tool identifiers to make available to the AI.
-   * @param selectedPromptId - Optional slash-command prompt ID to prepend to content.
-   * @returns The complete accumulated AI response text on success, or "" on failure/abort.
-   * @see processAttachments for file upload details.
-   */
   const streamResponse = async (
     userMsgId: string,
     content: string,
@@ -322,6 +460,16 @@ export function useStreamResponse(
       model,
       startTime: Date.now(),
     };
+    lastChunkTimeRef.current = Date.now();
+
+    accumulatedTextRef.current = "";
+    accumulatedReasoningRef.current = "";
+    assistantMessageIdRef.current = null;
+    activeToolCallsRef.current = [];
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
+    setIsStreaming(true);
 
     // 1. Build metadata object
     const metadataObj = buildMetadata(
@@ -377,32 +525,37 @@ export function useStreamResponse(
       updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
     }
 
-    // 6. Trigger the SDK request with an identifier-only body
+    // 6. Dispatch background job to Inngest via /api/chat
     try {
-      await sendMessage(
-        { text: fullContent },
-        {
-          body: {
-            chatId,
-            userMessageId: userMsgId,
-            model,
-            selectedServerIds,
-            selectedTools,
-            selectedAssistantId,
-            selectedSkillIds,
-            selectedKbIds,
-          } satisfies StreamRequestOptions,
-        },
-      );
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId,
+          userMessageId: userMsgId,
+          model,
+          selectedServerIds,
+          selectedTools,
+          selectedAssistantId,
+          selectedSkillIds,
+          selectedKbIds,
+        } satisfies StreamRequestOptions),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (!handleApiError(errorData)) {
+          toast.error(errorData.error || "Failed to generate response");
+        }
+        setIsStreaming(false);
+      }
     } catch (err: any) {
       if (!handleApiError(err)) {
         toast.error(err.message || "Failed to generate response");
       }
+      setIsStreaming(false);
     }
 
-    // ponytail: the closure's `messages` is stale at this point (sendMessage
-    // resolves before the next render). No caller uses the return value today;
-    // upgrade path: expose a live selector from the SDK state.
     return "";
   };
 

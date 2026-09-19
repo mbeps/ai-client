@@ -23,6 +23,29 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
 
+  inngest:
+    image: inngest/inngest:latest
+    ports:
+      - "8288:8288"
+    environment:
+      - INNGEST_DEV=1
+    command: inngest dev -u http://host.containers.internal:3000/api/inngest
+    command:
+      - /usr/bin/inngest
+      - dev
+      - --host
+      - 0.0.0.0
+      - -u
+      - http://host.docker.internal:3000/api/inngest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "host.containers.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - inngest_data:/var/lib/inngest
+    restart: unless-stopped
+
 volumes:
   pgdata:
   minio_data:
+  inngest_data:

@@ -7,22 +7,21 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getLogger } from "@/lib/logger";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
-import type { TransformAgent } from "@/types/transform/transform-agent";
 
 const log = getLogger(["app", "transform", "context"]);
 
 interface LoadTransformContextArgs {
   userId: string;
-  agentRow: Pick<
-    TransformAgent,
-    | "id"
-    | "name"
-    | "description"
-    | "modelId"
-    | "knowledgeBaseIds"
-    | "globalContext"
-    | "tools"
-  > & { steps: string };
+  agentRow: {
+    id: string;
+    name: string;
+    description?: string | null;
+    modelId?: string | null;
+    knowledgeBaseIds?: string[];
+    globalContext?: string | null;
+    tools?: string[];
+    steps: string;
+  };
   modelOverride?: string | null;
   anyArtifactToolSelected?: boolean;
 }
@@ -53,11 +52,12 @@ export async function loadTransformContext({
 
   // KB Search if applicable
   let kbContextPromise: Promise<string> = Promise.resolve("");
-  if (agentRow.knowledgeBaseIds && agentRow.knowledgeBaseIds.length > 0) {
+  const kbIds = agentRow.knowledgeBaseIds;
+  if (kbIds && kbIds.length > 0) {
     kbContextPromise = (async () => {
       try {
         const results = await Promise.all(
-          agentRow.knowledgeBaseIds.map((id) =>
+          kbIds.map((id) =>
             hybridSearch(
               id,
               agentRow.globalContext || agentRow.description || agentRow.name,

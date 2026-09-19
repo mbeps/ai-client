@@ -132,13 +132,11 @@ describe("ingestion routes through shared pipeline (T3.5)", () => {
     expect(passedUser).toBe("user-1");
   });
 
-  it("reindexKnowledgebase calls the pipeline per ready document", async () => {
+  it("reindexKnowledgebase marks KB as indexing and dispatches Inngest event", async () => {
     const docs = [
       makeDoc(),
       makeDoc({ id: "doc-2", s3Key: "kb/kb-1/doc-2/b.pdf" }),
     ];
-    // call 1: kb select; call 2: kb indexing update; call 3: reset statusMessage;
-    // call 4: docs select; per-doc: pipeline; final: kb status update
     let whereCall = 0;
     chainable.where.mockImplementation(() => {
       whereCall++;
@@ -151,37 +149,10 @@ describe("ingestion routes through shared pipeline (T3.5)", () => {
     const result = await reindexKnowledgebase("kb-1");
 
     expect(result).toEqual({ processedCount: 2, failedCount: 0 });
-    expect(pipelineMock).toHaveBeenCalledTimes(2);
-    expect(pipelineMock.mock.calls[0][0].id).toBe("doc-1");
-    expect(pipelineMock.mock.calls[1][0].id).toBe("doc-2");
-    expect(pipelineMock.mock.calls[0][2]).toBe("user-1");
-  });
-
-  it("reindexKnowledgebase marks failed docs and continues on non-rate-limit errors", async () => {
-    const docs = [
-      makeDoc(),
-      makeDoc({ id: "doc-2", s3Key: "kb/kb-1/doc-2/b.pdf" }),
-    ];
-    let whereCall = 0;
-    chainable.where.mockImplementation(() => {
-      whereCall++;
-      if (whereCall === 1)
-        return Promise.resolve([{ id: "kb-1", indexStatus: "stale" }]);
-      if (whereCall === 4) return Promise.resolve(docs);
-      return Promise.resolve([]);
-    });
-    pipelineMock
-      .mockRejectedValueOnce(new Error("boom"))
-      .mockResolvedValueOnce({ chunkCount: 1, tokenCount: 5 });
-
-    const result = await reindexKnowledgebase("kb-1");
-
-    expect(result).toEqual({ processedCount: 1, failedCount: 1 });
-    // failed doc marked failed
-    const failSet = chainable.set.mock.calls.find(
-      ([arg]) => arg.status === "failed",
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "indexing",
+      }),
     );
-    expect(failSet).toBeDefined();
-    expect(failSet![0].statusMessage).toBe("boom");
   });
 });

@@ -45,15 +45,13 @@ next-env.d.ts
 
 
 subagents/**
+.subagents/**
 scripts/hash-password.js
 reports/**
 **.xlsx
 graphify-out/**
 wiki/**
-GEMINI.md
-CLAUDE.md
-AGENT.md
-.github/**
-!.github/workflows/**
+AGENTS.md
+.agents/**
 evaluations/**
 .archive/**

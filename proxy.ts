@@ -11,6 +11,7 @@ const log = getLogger(["app", "proxy"]);
 const PUBLIC_PREFIXES = [
   "/auth", // login, 2fa, reset-password
   "/api/auth", // Better Auth handler at app/api/auth/[...all]/route.ts
+  "/api/inngest", // Inngest serve handler
 ];
 
 /**
@@ -50,9 +51,11 @@ export async function proxy(request: NextRequest) {
 
 /**
  * Run proxy on all routes except Next.js internals and static assets.
+ * Run proxy on all routes except Next.js internals, static assets, and Inngest serve endpoint.
  */
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/inngest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
