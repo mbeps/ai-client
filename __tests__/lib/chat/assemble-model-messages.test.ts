@@ -164,4 +164,18 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
       content: "Original assistant message",
     });
   });
+
+  it("handles unparseable tool call args string and tool output field", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Tool execution",
+        metadata: JSON.stringify({
+          toolCalls: [{ toolCallId: "tc-1", toolName: "t1", args: "{not-json" }],
+          toolResults: [{ toolCallId: "tc-1", toolName: "t1", output: '{"status":"ok"}' }],
+        }),
+      },
+    ]);
+    expect(messages).toHaveLength(2);
+  });
 });

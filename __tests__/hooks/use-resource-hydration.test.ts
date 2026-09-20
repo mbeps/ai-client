@@ -166,6 +166,28 @@ describe("useResourceHydration", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("logs error via logger.error when resource loader throws", async () => {
+    hydratedResources.clear();
+    const { logger } = await import("@/lib/logger");
+    const spy = vi.spyOn(logger, "error").mockImplementation(() => {});
+
+    useAppStore.setState({
+      loadProjects: vi.fn().mockRejectedValue(new Error("Network failure")),
+    });
+
+    renderHook(() => useResourceHydration(["projects"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[Hydration] Failed to load projects"),
+      expect.any(Error),
+    );
+    spy.mockRestore();
+  });
+
   it("handles mcpPrompts special case loader", async () => {
     const { discoverAllPrompts } = await import("@/actions/mcp/discover-all-prompts");
     vi.mocked(discoverAllPrompts).mockResolvedValueOnce({

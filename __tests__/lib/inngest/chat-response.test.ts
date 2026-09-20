@@ -244,6 +244,25 @@ describe("generateChatResponse Inngest Function", () => {
     );
   });
 
+  it("handles realtime publish failure gracefully without crashing generation", async () => {
+    (inngest.realtime.publish as any).mockRejectedValueOnce(new Error("Redis down"));
+
+    const fn = (generateChatResponse as any).fn;
+
+    await fn({
+      event: {
+        data: {
+          chatId: "chat-123",
+          userId: "user-123",
+          userMessageId: "msg-1",
+          model: "gpt-4o",
+        },
+      },
+    });
+
+    expect(mockPersistResponse).toHaveBeenCalled();
+  });
+
   it("throws VisionNotSupportedError and emits error event when model lacks vision support", async () => {
     mockResolveProvider.mockResolvedValueOnce({
       modelId: "text-only",

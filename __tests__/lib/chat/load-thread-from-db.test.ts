@@ -157,4 +157,38 @@ describe("loadThreadFromDb", () => {
       extractedText: undefined,
     });
   });
+
+  it("handles cyclic parentId gracefully and filters out null messageId attachments", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    // Cyclic parent references: m1 -> m2 -> m1
+    chainable.__queueWhere([
+      { id: "m1", role: "user", content: "first", parentId: "m2" },
+      { id: "m2", role: "assistant", content: "second", parentId: "m1" },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-null-msg",
+        messageId: null,
+        name: "orphan.png",
+        mimeType: "image/png",
+        key: "uploads/orphan.png",
+      },
+      {
+        id: "att-excel",
+        messageId: "m1",
+        name: "sheet.xlsx",
+        mimeType: "application/vnd.ms-excel",
+        key: "uploads/sheet.xlsx",
+      },
+    ]);
+
+    const thread = await loadThreadFromDb("chat-1", "m2", "user-1");
+
+    // Loop terminates despite cycle
+    expect(thread.length).toBe(2);
+    expect(thread[0].attachments).toBeDefined();
+    expect(thread[0].attachments![0].type).toBe("spreadsheet");
+    // m2 has no attachments
+    expect(thread[1].attachments).toBeUndefined();
+  });
 });

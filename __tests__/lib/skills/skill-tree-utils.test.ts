@@ -80,24 +80,26 @@ describe("skill-tree-utils", () => {
     });
 
     it("correctly sorts large lists of files with SKILL.md remaining first", () => {
-      const files: SkillBundledFile[] = Array.from({ length: 35 }, (_, i) => ({
-        path: `file-${String(i).padStart(2, "0")}.txt`,
+      const files: SkillBundledFile[] = Array.from({ length: 60 }, (_, i) => ({
+        path: `z-file-${String(60 - i).padStart(2, "0")}.txt`,
         content: `content-${i}`,
       }));
       const tree = buildSkillTree(files);
       expect(tree[0].name).toBe("SKILL.md");
       expect(tree[0].isRootSkillMd).toBe(true);
-      expect(tree).toHaveLength(36);
+      expect(tree).toHaveLength(61);
     });
 
     it("ignores duplicate or SKILL.md inside files array", () => {
       const files: SkillBundledFile[] = [
         { path: "SKILL.md", content: "duplicate" },
+        { path: "", content: "empty path" },
         { path: "notes.md", content: "notes" },
       ];
       const tree = buildSkillTree(files);
       const skillNodes = tree.filter((n) => n.name === "SKILL.md");
       expect(skillNodes).toHaveLength(1);
+      expect(tree.some((n) => n.path === "")).toBe(false);
     });
   });
 

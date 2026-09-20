@@ -276,5 +276,54 @@ describe("calculate-context-tokens utility", () => {
       expect(result.breakdown.files).toBeGreaterThan(0);
       expect(result.breakdown.draft).toBe(800); // 800 for image
     });
+
+    it("flags isExceeded when tokens exceed context window and handles string args/results and < 1% display percentage", () => {
+      const tinyModel: UserModelOption = {
+        id: "tiny",
+        modelId: "tiny",
+        name: "Tiny",
+        providerName: "Local",
+        contextWindow: 10,
+        capVision: false,
+        capTools: false,
+        modelType: "chat",
+        pricing: { inputRatePer1m: 0, outputRatePer1m: 0 },
+      };
+      const result = calculateContextUsage({
+        selectedModel: tinyModel,
+        input: "a".repeat(100),
+        thread: [
+          {
+            id: "m-1",
+            role: "assistant",
+            content: "ok",
+            metadata: JSON.stringify({
+              toolCalls: [{ toolCallId: "1", toolName: "t", args: "string args" }],
+              toolResults: [{ toolCallId: "1", toolName: "t", result: "string result" }],
+            }),
+          },
+        ] as any,
+      });
+      expect(result.isExceeded).toBe(true);
+    });
+
+    it("displays < 1% when total tokens > 0 but rounded percentage is 0", () => {
+      const hugeModel: UserModelOption = {
+        id: "huge",
+        modelId: "huge",
+        name: "Huge",
+        providerName: "Cloud",
+        contextWindow: 10_000_000,
+        capVision: false,
+        capTools: false,
+        modelType: "chat",
+        pricing: { inputRatePer1m: 0, outputRatePer1m: 0 },
+      };
+      const result = calculateContextUsage({
+        selectedModel: hugeModel,
+        input: "a", // 1 token
+      });
+      expect(result.displayPercentage).toBe("< 1%");
+    });
   });
 });

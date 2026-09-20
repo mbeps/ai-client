@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { configureLogging, configureLoggingSync, getLogger, logger } from "@/lib/logger";
 
+vi.mock("@/config/env", () => ({
+  env: { LOG_LEVEL: "debug" },
+}));
+
 describe("lib/logger", () => {
   it("synchronously configures logging without error", () => {
     expect(() => configureLoggingSync()).not.toThrow();
@@ -59,6 +63,15 @@ describe("lib/logger", () => {
     const { getLogger: freshGetLogger } = await import("@/lib/logger");
     const log = freshGetLogger(["app", "lazy"]);
     expect(log).toBeDefined();
+    vi.resetModules();
+  });
+
+  it("handles LOG_LEVEL env config and non-Error error details and audit traceId", async () => {
+    vi.resetModules();
+    const { configureLoggingSync: freshConfig, logger: freshLogger } = await import("@/lib/logger");
+    expect(() => freshConfig()).not.toThrow();
+    expect(() => freshLogger.error("msg", "string error", { ctxKey: 1 })).not.toThrow();
+    expect(() => freshLogger.audit("TestAction", { userId: "user-1" }, "trace-999")).not.toThrow();
     vi.resetModules();
   });
 });

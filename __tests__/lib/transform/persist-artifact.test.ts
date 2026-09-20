@@ -248,6 +248,42 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
       "user-1",
       "run-1",
     );
+    expect(result).toBeNull();
+  });
+
+  it("returns null when spreadsheet artifact content is invalid JSON", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: "invalid json string",
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("logs and returns null when compensation delete fails during S3 upload failure", async () => {
+    uploadObjectMock.mockRejectedValueOnce(new Error("S3 down"));
+    chainable.delete.mockImplementationOnce(() => {
+      throw new Error("Delete failed");
+    });
+
+    const result = await persistTransformArtifact(
+      {
+        kind: "download",
+        fileContent: Buffer.from("data").toString("base64"),
+        filename: "file.xlsx",
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
 
     expect(result).toBeNull();
   });

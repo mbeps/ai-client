@@ -236,6 +236,18 @@ describe("transform agents actions", () => {
       expect(result).toEqual(updated);
     });
 
+    it("updates optional values for description, globalContext, and modelId with undefined", async () => {
+      const updated = { id: agentId, name: "Existing Agent" };
+      chainable.returning.mockResolvedValueOnce([updated]);
+
+      const result = await updateTransformAgent(agentId, {
+        description: undefined,
+        globalContext: undefined,
+        modelId: undefined,
+      });
+      expect(result).toEqual(updated);
+    });
+
     it("throws Not Found when agent is not found or not owned", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 

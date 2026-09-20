@@ -217,6 +217,16 @@ describe("Project Server Actions", () => {
       expect(result).toEqual(SAMPLE_PROJECT);
     });
 
+    it("updates optional values with null for nullable fields", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      const result = await updateProject(PROJECT_ID, {
+        knowledgebaseId: null,
+      });
+
+      expect(result).toEqual(SAMPLE_PROJECT);
+    });
+
     it("throws 'Not Found' when updated row is not found", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 

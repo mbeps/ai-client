@@ -47,6 +47,21 @@ Preserve public APIs.`;
     expect(parsed.content).toBe(raw);
   });
 
+  it("parses multi-line YAML frontmatter and alternative keys like title and display_name", () => {
+    const raw = `---
+name: multi-line-skill
+title: My Title Skill
+description: Line one
+  line two
+---
+Body content here.`;
+
+    const parsed = parseSkillMarkdown(raw);
+    expect(parsed.name).toBe("multi-line-skill");
+    expect(parsed.displayName).toBe("My Title Skill");
+    expect(parsed.description).toBe("Line one line two");
+  });
+
   it("round-trips formatSkillMarkdown and parseSkillMarkdown", () => {
     const original = {
       name: "systematic-debugging",
@@ -500,5 +515,103 @@ description: This is line one
     const zipBuffer = Buffer.concat([local, cd, eocd]);
     const extracted = extractSkillFromZip(zipBuffer, "fallback-on-corrupt-entries");
     expect(extracted.name).toBe("fallback-on-corrupt-entries");
+  });
+
+  it("covers remaining parser branches and edge cases", () => {
+    // 1. displayname key in frontmatter
+    const parsedWithDisplayName = parseSkillMarkdown(
+      "---\nname: my-skill\ndisplayname: Display Name Test\n---\nBody",
+    );
+    expect(parsedWithDisplayName.displayName).toBe("Display Name Test");
+
+    // 2. Empty name and fallbackName -> custom-skill, and empty description & empty content -> Agent skill instructions.
+    const emptySkill = parseSkillMarkdown("", "");
+    expect(emptySkill.name).toBe("custom-skill");
+    expect(emptySkill.displayName).toBe("Custom Skill");
+    expect(emptySkill.description).toBe("Agent skill instructions.");
+
+    // 3. parseZipBuffer with Uint8Array
+    const dummyZip = Buffer.from(
+      createSkillZip({
+        name: "uint8-test",
+        description: "Testing Uint8Array",
+        content: "# Uint8 Test",
+        files: [],
+      }),
+    );
+    const uint8 = new Uint8Array(dummyZip);
+    const parsedUint8 = extractSkillFromZip(uint8);
+    expect(parsedUint8.name).toBe("uint8-test");
+
+    // 4. Central Directory with corrupted deflate method 8 (both inflateRaw and inflateSync throw)
+    const fileName = Buffer.from("corrupted-cd.txt");
+    const corruptData = Buffer.from([0x01, 0x02, 0x03, 0x04]);
+    const local = Buffer.alloc(30 + fileName.length + corruptData.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(8, 8); // method 8
+    local.writeUInt32LE(0, 14);
+    local.writeUInt32LE(corruptData.length, 18);
+    local.writeUInt32LE(corruptData.length, 22);
+    local.writeUInt16LE(fileName.length, 26);
+    local.writeUInt16LE(0, 28);
+    fileName.copy(local, 30);
+    corruptData.copy(local, 30 + fileName.length);
+
+    const cd = Buffer.alloc(46 + fileName.length);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4);
+    cd.writeUInt16LE(20, 6);
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(8, 10); // method 8
+    cd.writeUInt32LE(0, 16);
+    cd.writeUInt32LE(corruptData.length, 20);
+    cd.writeUInt32LE(corruptData.length, 24);
+    cd.writeUInt16LE(fileName.length, 28);
+    cd.writeUInt32LE(0, 42);
+    fileName.copy(cd, 46);
+
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(1, 8);
+    eocd.writeUInt16LE(1, 10);
+    eocd.writeUInt32LE(cd.length, 12);
+    eocd.writeUInt32LE(local.length, 16);
+
+    const zipWithCorruptedCD = Buffer.concat([local, cd, eocd]);
+    const extractedCorrupt = extractSkillFromZip(zipWithCorruptedCD);
+    expect(extractedCorrupt.files.length).toBe(1);
+
+    // 5. Fallback sequential parser with dataEnd > buf.length
+    const truncatedLocal = Buffer.alloc(30 + fileName.length);
+    truncatedLocal.writeUInt32LE(0x04034b50, 0);
+    truncatedLocal.writeUInt16LE(20, 4);
+    truncatedLocal.writeUInt16LE(0, 6);
+    truncatedLocal.writeUInt16LE(0, 8);
+    truncatedLocal.writeUInt32LE(0, 14);
+    truncatedLocal.writeUInt32LE(500, 18); // claims 500 bytes compressed data
+    truncatedLocal.writeUInt32LE(500, 22);
+    truncatedLocal.writeUInt16LE(fileName.length, 26);
+    truncatedLocal.writeUInt16LE(0, 28);
+    fileName.copy(truncatedLocal, 30);
+
+    const extractedTruncated = extractSkillFromZip(truncatedLocal);
+    expect(extractedTruncated.files.length).toBe(0);
+
+    // 6. Directory entries and relativePath ending in slash
+    const skillData = {
+      name: "dir-test",
+      description: "Testing dirs",
+      content: "# Dir Test",
+      files: [
+        { path: "folder/sub/.DS_Store", content: "ds" },
+        { path: "subfolder/", content: "" },
+        { path: "normal.txt", content: "hello" },
+      ],
+    };
+    const zipWithDir = createSkillZip(skillData);
+    const extractedDir = extractSkillFromZip(zipWithDir);
+    expect(extractedDir.files.map((f) => f.path)).toEqual(["normal.txt"]);
   });
 });

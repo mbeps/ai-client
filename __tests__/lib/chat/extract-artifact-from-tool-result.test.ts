@@ -135,4 +135,60 @@ describe("extractArtifactFromToolResult", () => {
     expect(art?.title).toBe("Untitled Artifact");
     expect(art?.content).toBe(JSON.stringify({ section: 1 }));
   });
+
+  it("supports artifact_type property and falls back to toolCallId or artifact-default for id", () => {
+    const art1 = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      toolCallId: "call-99",
+      result: {
+        artifact: {
+          artifact_type: "mermaid",
+          content: "graph TD;",
+        },
+      },
+    });
+    expect(art1?.id).toBe("call-99-artifact");
+    expect(art1?.type).toBe("mermaid");
+
+    const art2 = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      result: {
+        artifact: {
+          type: "markdown",
+          content: "hello",
+        },
+      },
+    });
+    expect(art2?.id).toBe("artifact-default");
+  });
+
+  it("handles empty content, whitespace id and title, and missing artifact_type/type", () => {
+    // Neither type nor artifact_type provided
+    const artNoType = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      result: {
+        artifact: {
+          id: "art-1",
+        },
+      },
+    });
+    expect(artNoType).toBeNull();
+
+    // Whitespace id and title, undefined content, top-level flat record inside result
+    const artWhitespace = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      result: {
+        id: "   ",
+        title: "   ",
+        type: "markdown",
+        // content is undefined
+      },
+    });
+    expect(artWhitespace).toEqual({
+      id: "artifact-default",
+      type: "markdown",
+      title: "Untitled Artifact",
+      content: "",
+    });
+  });
 });

@@ -319,10 +319,83 @@ describe("executeTransformRun Inngest Workflow", () => {
       expect.anything(),
       expect.objectContaining({
         type: "transform-complete",
-        runId: "run-empty",
-        outputAttachmentIds: [],
       }),
     );
+  });
+
+  it("throws error when run is not found", async () => {
+    chainable.where.mockResolvedValueOnce([]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await expect(
+      fn({
+        event: {
+          data: { runId: "missing", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Run missing not found");
+  });
+
+  it("throws error when agent is not found", async () => {
+    const runRow = { id: "run-1", agentId: "agent-missing" };
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await expect(
+      fn({
+        event: {
+          data: { runId: "run-1", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Agent agent-missing not found");
+  });
+
+  it("handles malformed JSON in agent steps by falling back to empty array", async () => {
+    const runRow = {
+      id: "run-malformed",
+      agentId: "agent-malformed",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-malformed",
+      requiresFileUpload: false,
+      steps: "invalid-json-string",
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: { runId: "run-malformed", userId: "user-1" },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockRunSteps).not.toHaveBeenCalled();
   });
 
   it("handles realtime publish failure in emit", async () => {

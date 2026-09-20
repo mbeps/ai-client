@@ -65,9 +65,9 @@ vi.mock("@/lib/chat/attachments/process-attachments", () => ({
   processAttachments: mockProcessAttachments,
 }));
 
-const mockResolveMcpPrompt = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/chat/resolve-mcp-prompt", () => ({
-  resolveMcpPrompt: mockResolveMcpPrompt,
+const mockGetMcpPrompt = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/mcp/get-mcp-prompt", () => ({
+  getMcpPrompt: mockGetMcpPrompt,
 }));
 
 const mockStoreState = vi.hoisted(() => ({
@@ -164,6 +164,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         undefined,
         "asst-1",
         ["kb-1"],
+        ["skill-1"],
       );
     });
 
@@ -196,6 +197,114 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       metadata: expect.any(String),
       attachments: [],
     });
+  });
+
+  it("resolves MCP prompt successfully and attaches it to message content", async () => {
+    mockGetMcpPrompt.mockResolvedValueOnce({
+      messages: [{ content: "Custom MCP instructions" }],
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-4",
+        [],
+        [],
+        "mcp:server-1:prompt-1",
+      );
+    });
+
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: `Custom MCP instructions\n\nhello`,
+        metadata: expect.stringContaining('"promptId":"mcp:server-1:prompt-1"'),
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  it("handles error in resolveMcpPrompt gracefully", async () => {
+    mockGetMcpPrompt.mockRejectedValueOnce(new Error("MCP offline"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-4",
+        [],
+        [],
+        "mcp:server-1:prompt-1",
+      );
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to load MCP prompt. Sending message without it.",
+    );
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: "hello",
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  it("handles error event from stream", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "error", message: "Rate limit exceeded" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Rate limit exceeded");
+  });
+
+  it("handles syncFromDb error when syncing on connection error", async () => {
+    mockGetChat.mockRejectedValueOnce(new Error("DB error"));
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.connectionStatus = "error";
+      rerender();
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(mockGetChat).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("supports stopStream and fetchChatToken rejection when chatId is missing", async () => {
+    const { result } = renderHook(() => useStreamResponse(""));
+
+    await act(() => {
+      result.current.stopStream();
+    });
+
+    const tokenFn = realtimeState.config?.token;
+    if (tokenFn) {
+      await expect(tokenFn()).rejects.toThrow("No chatId");
+    }
   });
 
   it("syncs the assistant message into the store with the server-assigned id on finish event", async () => {
@@ -704,64 +813,6 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     expect(realtimeState.config?.token).toBeDefined();
 
     await expect(realtimeState.config.token()).rejects.toThrow("No chatId");
-  });
-
-  it("resolves MCP prompt and includes selectedSkillIds in metadata", async () => {
-    mockResolveMcpPrompt.mockResolvedValueOnce("MCP Prompt Template");
-    const { result } = renderHook(() => useStreamResponse("chat-1"));
-
-    await act(async () => {
-      await result.current.streamResponse(
-        "user-msg-1",
-        "user content",
-        null,
-        [],
-        "gpt-4o",
-        [],
-        [],
-        "mcp:srv-1:test-prompt",
-        undefined,
-        [],
-        ["skill-1"],
-      );
-    });
-
-    expect(mockResolveMcpPrompt).toHaveBeenCalledWith("srv-1", "test-prompt");
-    expect(mockPersist).toHaveBeenCalledWith(
-      "chat-1",
-      expect.objectContaining({
-        content: expect.stringContaining("MCP Prompt Template"),
-        metadata: expect.stringContaining('"selectedSkillIds":["skill-1"]'),
-      }),
-    );
-  });
-
-  it("handles MCP prompt resolution failure gracefully and sends original content", async () => {
-    mockResolveMcpPrompt.mockRejectedValueOnce(new Error("MCP server down"));
-    const { result } = renderHook(() => useStreamResponse("chat-1"));
-
-    await act(async () => {
-      await result.current.streamResponse(
-        "user-msg-1",
-        "user content",
-        null,
-        [],
-        "gpt-4o",
-        [],
-        [],
-        "mcp:srv-1:failing-prompt",
-      );
-    });
-
-    expect(mockToastError).toHaveBeenCalledWith(
-      "Failed to load MCP prompt. Sending message without it.",
-    );
-    expect(mockPersist).toHaveBeenCalledWith(
-      "chat-1",
-      expect.objectContaining({
-        content: "user content",
-      }),
-    );
   });
 
   it("resolves slash prompt from store when selectedPromptId is a local prompt", async () => {
