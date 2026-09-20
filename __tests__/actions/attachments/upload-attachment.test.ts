@@ -46,6 +46,13 @@ vi.mock("@/lib/storage/upload-object", () => ({
   uploadObject: uploadObjectMock,
 }));
 
+const checkRateLimitMock = vi.hoisted(() =>
+  vi.fn().mockReturnValue({ allowed: true, retryAfterSeconds: 0 }),
+);
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: checkRateLimitMock,
+}));
+
 vi.mock("@/lib/storage/ensure-bucket", () => ({
   ensureBucket: vi.fn().mockResolvedValue(undefined),
 }));
@@ -97,8 +104,10 @@ describe("uploadAttachment — DB-first ordering with compensation (T2.5)", () =
         ? Promise.resolve([{ chatUserId: "user-1" }])
         : chainable;
     });
+    chainable.where.mockImplementation(() => Promise.resolve([{ chatUserId: "user-1" }]));
     chainable.returning.mockResolvedValue([ATTACHMENT_ROW]);
     uploadObjectMock.mockResolvedValue(undefined);
+    checkRateLimitMock.mockReturnValue({ allowed: true, retryAfterSeconds: 0 });
   });
 
   it("inserts the DB row BEFORE calling uploadObject", async () => {
@@ -139,5 +148,87 @@ describe("uploadAttachment — DB-first ordering with compensation (T2.5)", () =
         id: "11111111-1111-4111-8111-111111111111",
       }),
     );
+  });
+
+  it("throws when rate limited", async () => {
+    checkRateLimitMock.mockReturnValueOnce({ allowed: false, retryAfterSeconds: 15 });
+    await expect(uploadAttachment(makeFormData())).rejects.toThrow("Too many uploads. Retry in 15s.");
+  });
+
+  it("throws when file or messageId is missing", async () => {
+    const fdNoFile = new FormData();
+    fdNoFile.append("messageId", "22222222-2222-4222-8222-222222222222");
+    await expect(uploadAttachment(fdNoFile)).rejects.toThrow("No file provided");
+
+    const fdNoMsg = new FormData();
+    fdNoMsg.append("file", new File([new Uint8Array(5)], "notes.txt", { type: "text/plain" }));
+    await expect(uploadAttachment(fdNoMsg)).rejects.toThrow("No messageId provided");
+  });
+
+  it("throws Forbidden when message owner is missing or does not match current user", async () => {
+    chainable.where.mockReturnValueOnce(Promise.resolve([]));
+    await expect(uploadAttachment(makeFormData())).rejects.toThrow("Forbidden");
+
+    chainable.where.mockReturnValueOnce(Promise.resolve([{ chatUserId: "other-user" }]));
+    await expect(uploadAttachment(makeFormData())).rejects.toThrow("Forbidden");
+  });
+
+  it("throws when file type is not supported", async () => {
+    const fd = new FormData();
+    fd.append("file", new File([new Uint8Array([0x00, 0x01, 0x02])], "data.unknown", { type: "application/x-unknown" }));
+    fd.append("messageId", "22222222-2222-4222-8222-222222222222");
+
+    await expect(uploadAttachment(fd)).rejects.toThrow(/File type .* is not supported/);
+  });
+
+  it("enforces image and document size limits", async () => {
+    const fdImage = new FormData();
+    fdImage.append("file", new File([new Uint8Array(2 * 1024 * 1024 + 1)], "pic.png", { type: "image/png" }));
+    fdImage.append("messageId", "22222222-2222-4222-8222-222222222222");
+
+    await expect(uploadAttachment(fdImage)).rejects.toThrow("File exceeds the 2 MB size limit.");
+
+    const fdDoc = new FormData();
+    fdDoc.append("file", new File([new Uint8Array(20 * 1024 * 1024 + 1)], "doc.pdf", { type: "application/pdf" }));
+    fdDoc.append("messageId", "22222222-2222-4222-8222-222222222222");
+
+    await expect(uploadAttachment(fdDoc)).rejects.toThrow("File exceeds the 20 MB size limit.");
+
+    const fdSheet = new FormData();
+    fdSheet.append("file", new File([new Uint8Array(50 * 1024 * 1024 + 1)], "sheet.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    fdSheet.append("messageId", "22222222-2222-4222-8222-222222222222");
+
+    await expect(uploadAttachment(fdSheet)).rejects.toThrow("File exceeds the 50 MB size limit.");
+  });
+
+  it("handles empty resolved mimeType reporting 'unknown'", async () => {
+    const fd = new FormData();
+    fd.append("file", new File([new Uint8Array(5)], "unknown_file", { type: "" }));
+    fd.append("messageId", "22222222-2222-4222-8222-222222222222");
+
+    await expect(uploadAttachment(fd)).rejects.toThrow('File type "unknown" is not supported.');
+  });
+
+  it("generates UUID when clientAttachmentId is omitted and stores extractedText", async () => {
+    const fd = new FormData();
+    fd.append("file", new File([new Uint8Array(5)], "doc.txt", { type: "text/plain" }));
+    fd.append("messageId", "22222222-2222-4222-8222-222222222222");
+    fd.append("extractedText", "Extracted content from file");
+
+    await uploadAttachment(fd);
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        extractedText: "Extracted content from file",
+      }),
+    );
+  });
+
+  it("handles string error rejection from uploadObject during compensation", async () => {
+    uploadObjectMock.mockRejectedValue("String upload error");
+
+    await expect(uploadAttachment(makeFormData())).rejects.toBe("String upload error");
+    expect(chainable.delete).toHaveBeenCalled();
   });
 });

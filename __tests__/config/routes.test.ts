@@ -168,8 +168,26 @@ describe("ROUTES — dynamic helpers", () => {
     );
   });
 
+  it("SETTINGS.SKILLS.detail returns correct path", () => {
+    expect(ROUTES.SETTINGS.SKILLS.detail("skill-id")).toBe(
+      "/settings/skills/skill-id",
+    );
+  });
+
   it("TOOLS.detail returns correct path", () => {
     expect(ROUTES.TOOLS.detail("tool-xyz")).toBe("/settings/tools/tool-xyz");
+  });
+
+  it("PROMPTS.detail returns correct path", () => {
+    expect(ROUTES.PROMPTS.detail("prompt-xyz")).toBe(
+      "/settings/prompts/prompt-xyz",
+    );
+  });
+
+  it("SKILLS.detail returns correct path", () => {
+    expect(ROUTES.SKILLS.detail("skill-xyz")).toBe(
+      "/settings/skills/skill-xyz",
+    );
   });
 
   it("WORKFLOWS.TRANSFORM.detail returns correct path", () => {

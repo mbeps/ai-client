@@ -151,4 +151,19 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
       deletedCount: 1,
     });
   });
+
+  it("returns deletedCount 0 when passed an empty array", async () => {
+    const result = await deleteKnowledgebase([]);
+    expect(result).toEqual({ deletedCount: 0 });
+    expect(chainable.select).not.toHaveBeenCalled();
+  });
+
+  it("logs non-Error exception gracefully during S3 cleanup", async () => {
+    selectResult = [{ s3Key: "kb/kb-1/doc-1/file.pdf" }];
+    sendMock.mockRejectedValue("String S3 failure");
+
+    await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
+      deletedCount: 1,
+    });
+  });
 });

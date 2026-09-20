@@ -73,4 +73,10 @@ describe("checkRateLimit", () => {
       vi.useRealTimers();
     }
   });
+
+  it("handles limitPerMinute = 0 where timestamps is empty", () => {
+    const result = checkRateLimit("k8", 0);
+    expect(result.allowed).toBe(false);
+    expect(result.retryAfterSeconds).toBeGreaterThan(0);
+  });
 });

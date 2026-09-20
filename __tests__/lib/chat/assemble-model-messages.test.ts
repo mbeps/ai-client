@@ -91,4 +91,77 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
       value: "Plain text error: file not found",
     });
   });
+
+  it("handles user messages with document, non-image, and image attachments", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "user",
+        content: "Analyze these files",
+        attachments: [
+          {
+            id: "att-1",
+            name: "doc.txt",
+            type: "document",
+            extractedText: "Extracted document text",
+          },
+          {
+            id: "att-2",
+            name: "data.xlsx",
+            type: "spreadsheet",
+          },
+          {
+            id: "att-3",
+            name: "pic.png",
+            type: "image",
+            url: "https://example.com/pic.png",
+            mimeType: "image/png",
+          },
+        ] as any,
+      },
+    ]);
+
+    expect(messages).toHaveLength(1);
+    const content = messages[0].content as any[];
+    expect(Array.isArray(content)).toBe(true);
+    expect(content.some((p) => p.type === "text" && p.text.includes("Extracted document text"))).toBe(true);
+    expect(content.some((p) => p.type === "text" && p.text.includes("[Attached File: data.xlsx (spreadsheet)]"))).toBe(true);
+    expect(content.some((p) => p.type === "text" && p.text === "Analyze these files")).toBe(true);
+    expect(content.some((p) => p.type === "file" && p.data.url === "https://example.com/pic.png")).toBe(true);
+  });
+
+  it("handles user message with single text part as string content", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "user",
+        content: "",
+        attachments: [
+          {
+            id: "att-1",
+            name: "only-doc.txt",
+            type: "document",
+            extractedText: "Only doc text",
+          },
+        ] as any,
+      },
+    ]);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toBe("[Document: only-doc.txt]\nOnly doc text");
+  });
+
+  it("falls back to raw message when metadata JSON is corrupted", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Original assistant message",
+        metadata: "{invalid json",
+      },
+    ]);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toEqual({
+      role: "assistant",
+      content: "Original assistant message",
+    });
+  });
 });

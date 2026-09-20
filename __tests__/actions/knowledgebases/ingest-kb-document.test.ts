@@ -48,7 +48,13 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { ingestKbDocument } from "@/actions/knowledgebases/ingest-kb-document";
+import {
+  ProviderNotConfiguredError,
+  RagExtractionEmptyError,
+  RateLimitError,
+} from "@/constants/errors";
 import { inngest } from "@/lib/inngest/client";
 
 describe("ingestKbDocument action", () => {
@@ -97,6 +103,92 @@ describe("ingestKbDocument action", () => {
         documentId: "00000000-0000-4000-8000-000000000001",
         userId: "user-1",
       },
+    });
+  });
+
+  it("handles RateLimitError correctly", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw new RateLimitError("Rate limit exceeded");
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "Rate limit exceeded",
+    });
+  });
+
+  it("handles RagExtractionEmptyError correctly", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw new RagExtractionEmptyError("Extraction empty", "RAG_EXTRACTION_EMPTY");
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "Extraction empty",
+      code: "RAG_EXTRACTION_EMPTY",
+    });
+  });
+
+  it("handles ProviderNotConfiguredError correctly", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw new ProviderNotConfiguredError("Provider not configured", "PROVIDER_NOT_CONFIGURED");
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "Provider not configured",
+      code: "PROVIDER_NOT_CONFIGURED",
+    });
+  });
+
+  it("handles unexpected errors correctly", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw new Error("Database offline");
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "An unexpected error occurred during ingestion",
+    });
+  });
+
+  it("handles z.ZodError correctly", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw new z.ZodError([]);
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid input data",
+    });
+  });
+
+  it("handles non-Error thrown gracefully", async () => {
+    chainable.update.mockImplementationOnce(() => {
+      throw "non-error-string";
+    });
+
+    const result = await ingestKbDocument(
+      "00000000-0000-4000-8000-000000000001",
+    );
+    expect(result).toEqual({
+      success: false,
+      error: "An unexpected error occurred during ingestion",
     });
   });
 });

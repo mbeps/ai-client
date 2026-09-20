@@ -121,4 +121,134 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
     expect(chainable.delete).toHaveBeenCalledOnce();
     expect(chainable.where).toHaveBeenCalled();
   });
+
+  it("persists spreadsheet artifact when content is an array of rows", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: JSON.stringify([["A", "B"], [1, 2]]),
+        },
+        stepIndex: 1,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-2-output.xlsx");
+    expect(uploadObjectMock).toHaveBeenCalled();
+  });
+
+  it("persists spreadsheet artifact when content has .data and .name", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: JSON.stringify({ name: "MyData", data: [["val1"]] }),
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(uploadObjectMock).toHaveBeenCalled();
+  });
+
+  it("persists spreadsheet artifact when content has .sheets array", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: JSON.stringify({
+            sheets: [
+              { name: "First", data: [[1, 2]] },
+              { data: [[3, 4]] },
+            ],
+          }),
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(uploadObjectMock).toHaveBeenCalled();
+  });
+
+  it("persists spreadsheet artifact with empty sheet when parsed object has no sheets", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: JSON.stringify({ otherField: true }),
+        },
+        stepIndex: 2,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-3-output.xlsx");
+  });
+
+  it("returns null when spreadsheet artifact content is empty string", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          content: "",
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("uses default filename when download payload has no filename", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "download",
+        fileContent: Buffer.from("data").toString("base64"),
+        filename: "",
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-1-output.xlsx");
+  });
+
+  it("handles db error gracefully and returns null", async () => {
+    chainable.insert.mockImplementationOnce(() => {
+      throw new Error("DB down");
+    });
+
+    const result = await persistTransformArtifact(
+      {
+        kind: "download",
+        fileContent: Buffer.from("data").toString("base64"),
+        filename: "file.xlsx",
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).toBeNull();
+  });
 });

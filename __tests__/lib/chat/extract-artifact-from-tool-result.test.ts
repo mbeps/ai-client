@@ -102,4 +102,37 @@ describe("extractArtifactFromToolResult", () => {
       JSON.stringify({ sheets: [{ name: "Sheet1", data: [[1, 2]] }] }),
     );
   });
+
+  it("returns null when raw string result is invalid JSON", () => {
+    expect(
+      extractArtifactFromToolResult({
+        toolName: "manage_artifact",
+        result: "{invalid-json",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when artifact type is unsupported", () => {
+    expect(
+      extractArtifactFromToolResult({
+        toolName: "manage_artifact",
+        result: { artifact: { type: "unsupported_type", content: "..." } },
+      }),
+    ).toBeNull();
+  });
+
+  it("stringifies non-string content object and defaults title if absent", () => {
+    const art = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      result: {
+        artifact: {
+          type: "markdown",
+          content: { section: 1 },
+        },
+      },
+    });
+
+    expect(art?.title).toBe("Untitled Artifact");
+    expect(art?.content).toBe(JSON.stringify({ section: 1 }));
+  });
 });

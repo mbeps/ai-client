@@ -20,12 +20,13 @@ vi.mock("inngest/react", () => ({
     const messages = {
       ...realtimeState.messages,
       all:
-        realtimeState.messages.all.length > 0
-          ? realtimeState.messages.all
-          : [...realtimeState.messages.delta],
+        realtimeState.messages.all === undefined
+          ? undefined
+          : realtimeState.messages.all.length > 0
+            ? realtimeState.messages.all
+            : [...realtimeState.messages.delta],
     };
     return {
-      messages: realtimeState.messages,
       messages,
       connectionStatus: realtimeState.connectionStatus,
       runStatus: "running",
@@ -64,6 +65,11 @@ vi.mock("@/lib/chat/attachments/process-attachments", () => ({
   processAttachments: mockProcessAttachments,
 }));
 
+const mockResolveMcpPrompt = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/resolve-mcp-prompt", () => ({
+  resolveMcpPrompt: mockResolveMcpPrompt,
+}));
+
 const mockStoreState = vi.hoisted(() => ({
   addMessage: vi.fn(),
   updateMessageAttachments: vi.fn(),
@@ -78,8 +84,19 @@ vi.mock("@/lib/store", () => ({
   ),
 }));
 
+const mockHandleApiError = vi.hoisted(() => vi.fn().mockReturnValue(false));
+const mockToastError = vi.hoisted(() => vi.fn());
+
 vi.mock("@/hooks/use-api-error", () => ({
   useApiError: () => ({ handleApiError: vi.fn().mockReturnValue(false) }),
+  useApiError: () => ({ handleApiError: mockHandleApiError }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: mockToastError,
+    success: vi.fn(),
+  },
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -503,5 +520,327 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     expect(result.current.isLoading).toBe(false);
 
     vi.useRealTimers();
+  });
+
+  it("catches error if persistMessage fails and shows toast error", async () => {
+    mockPersist.mockRejectedValueOnce(new Error("Persist error"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Message may not have been saved. Please check your connection.",
+    );
+  });
+
+  it("handles !res.ok when handleApiError handles the error", async () => {
+    mockHandleApiError.mockReturnValueOnce(true);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Rate limit" }),
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles !res.ok when handleApiError does not handle and json rejects", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => {
+        throw new Error("JSON parse error");
+      },
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Failed to generate response");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles fetch exception and shows toast error", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network failed"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Network failed");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 'error' stream event and displays toast error", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.delta = [
+        {
+          data: {
+            type: "error",
+            message: "Realtime stream error occurred",
+          },
+        },
+      ];
+      rerender();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Realtime stream error occurred");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 'error' stream event without toast when handleApiError returns true", async () => {
+    mockHandleApiError.mockReturnValueOnce(true);
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.delta = [
+        {
+          data: {
+            type: "error",
+            message: "Handled error",
+          },
+        },
+      ];
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("falls back to messages.delta when messages.all is undefined", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.all = undefined as any;
+      realtimeState.messages.delta = [
+        {
+          data: {
+            type: "text-delta",
+            text: "delta fallback chunk",
+          },
+        },
+      ];
+      rerender();
+    });
+
+    expect(result.current.streamingContent).toBe("delta fallback chunk");
+  });
+
+  it("watchdog times out after 10 connection error attempts and displays toast", async () => {
+    vi.useFakeTimers();
+    mockGetChat.mockRejectedValue(new Error("DB sync failed"));
+
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    // Set connection error and re-render so effects update refs
+    await act(async () => {
+      realtimeState.connectionStatus = "error";
+      rerender();
+    });
+
+    // Advance 15 intervals in watchdog
+    await act(async () => {
+      for (let i = 0; i < 15; i++) {
+        await vi.advanceTimersByTimeAsync(2500);
+      }
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Connection lost to generation stream. Please refresh if response is ready.",
+    );
+    expect(result.current.isLoading).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("handles realtimeError in useRealtime", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.error = new Error("Subscription failed");
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it("rejects token fetch when chatId is empty", async () => {
+    renderHook(() => useStreamResponse(""));
+    expect(realtimeState.config?.token).toBeDefined();
+
+    await expect(realtimeState.config.token()).rejects.toThrow("No chatId");
+  });
+
+  it("resolves MCP prompt and includes selectedSkillIds in metadata", async () => {
+    mockResolveMcpPrompt.mockResolvedValueOnce("MCP Prompt Template");
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "user content",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        "mcp:srv-1:test-prompt",
+        undefined,
+        [],
+        ["skill-1"],
+      );
+    });
+
+    expect(mockResolveMcpPrompt).toHaveBeenCalledWith("srv-1", "test-prompt");
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: expect.stringContaining("MCP Prompt Template"),
+        metadata: expect.stringContaining('"selectedSkillIds":["skill-1"]'),
+      }),
+    );
+  });
+
+  it("handles MCP prompt resolution failure gracefully and sends original content", async () => {
+    mockResolveMcpPrompt.mockRejectedValueOnce(new Error("MCP server down"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "user content",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        "mcp:srv-1:failing-prompt",
+      );
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to load MCP prompt. Sending message without it.",
+    );
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: "user content",
+      }),
+    );
+  });
+
+  it("resolves slash prompt from store when selectedPromptId is a local prompt", async () => {
+    mockStoreState.prompts = [
+      { id: "local-p1", content: "You are an assistant" },
+    ] as any;
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "explain this",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        "local-p1",
+      );
+    });
+
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: expect.stringContaining("You are an assistant"),
+      }),
+    );
+  });
+
+  it("watchdog interval stops when syncFromDb returns true", async () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    mockGetChat.mockResolvedValue({
+      id: "chat-1",
+      messages: [
+        {
+          id: "asst-1",
+          role: "assistant",
+          parentId: "user-msg-1",
+          content: "Synced message",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      attachments: [],
+    });
+    mockBuildChatFromRows.mockReturnValue({
+      id: "chat-1",
+      messages: {
+        "asst-1": { id: "asst-1", role: "assistant", content: "Synced message" },
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useStreamResponse("chat-1", { onDone }),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    // Advance timers past stalled threshold (5000ms) with open connection
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+
+    expect(onDone).toHaveBeenCalledWith("Synced message");
+    expect(result.current.isLoading).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("returns undefined for apiBaseUrl in production environment", () => {
+    const origEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = "production";
+      renderHook(() => useStreamResponse("chat-prod"));
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
   });
 });

@@ -43,4 +43,40 @@ describe("uploadSingleAttachment — blob stripping (F6)", () => {
     expect(result!.id).toBe("att-1");
     expect(result!.name).toBe("pic.png");
   });
+
+  it("falls back to fetch dataUrl and includes extractedText when provided", async () => {
+    const mockBlob = new Blob(["test"], { type: "text/plain" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      blob: vi.fn().mockResolvedValue(mockBlob),
+    }));
+
+    const result = await uploadSingleAttachment(
+      {
+        id: "att-2",
+        type: "document",
+        name: "doc.txt",
+        mimeType: "text/plain",
+        sizeBytes: 4,
+        dataUrl: "data:text/plain;base64,dGVzdA==",
+        extractedText: "Sample extracted text",
+      },
+      "msg-2",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.extractedText).toBe("Sample extracted text");
+    expect(result!.dataUrl).toBe("");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles non-Error objects thrown during upload", async () => {
+    mockUpload.mockRejectedValueOnce("Upload service down");
+
+    const result = await uploadSingleAttachment(baseAttachment, "msg-1");
+    expect(result).toBeNull();
+    expect(mockToast.error).toHaveBeenCalledWith(
+      'Failed to upload "pic.png". It will not be sent to the AI.',
+    );
+  });
 });

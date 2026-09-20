@@ -22,7 +22,7 @@ const mcpServerBaseSchema = z.object({
     .refine((val) => !isBlockedUrlSync(val), {
       message: "URL points to a blocked or internal address",
     }),
-  headers: jsonObjectSchema.optional(),
+  headers: jsonObjectSchema.or(z.literal("")).optional(),
   isPublic: z.boolean(),
 });
 

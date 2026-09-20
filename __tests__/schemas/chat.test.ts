@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   chatRequestSchema,
   createChatSchema,
+  manageArtifactSchema,
   messageMetadataSchema,
   moveChatSchema,
   persistMessageSchema,
   renameChatSchema,
+  searchKnowledgeBaseSchema,
 } from "@/schemas/chat/chat";
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -314,5 +316,93 @@ describe("chatRequestSchema", () => {
       selectedKbIds: Array.from({ length: 6 }, () => VALID_UUID),
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// manageArtifactSchema
+// ---------------------------------------------------------------------------
+describe("manageArtifactSchema", () => {
+  const validArtifact = {
+    type: "markdown",
+    title: "Test Artifact",
+    content: "# Content",
+  };
+
+  it("accepts flat artifact object", () => {
+    const res = manageArtifactSchema.safeParse(validArtifact);
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("accepts nested artifact key structure", () => {
+    const res = manageArtifactSchema.safeParse({ artifact: validArtifact });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("accepts valid JSON string", () => {
+    const res = manageArtifactSchema.safeParse(JSON.stringify(validArtifact));
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("rejects invalid JSON string", () => {
+    const res = manageArtifactSchema.safeParse("not-a-valid-json{");
+    expect(res.success).toBe(false);
+  });
+
+  it("rejects non-object parsed JSON string", () => {
+    const res = manageArtifactSchema.safeParse(JSON.stringify("string value"));
+    expect(res.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchKnowledgeBaseSchema
+// ---------------------------------------------------------------------------
+describe("searchKnowledgeBaseSchema", () => {
+  it("accepts flat query object", () => {
+    const res = searchKnowledgeBaseSchema.safeParse({ query: "company policy" });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("company policy");
+    }
+  });
+
+  it("accepts nested search_knowledge_base wrapper", () => {
+    const res = searchKnowledgeBaseSchema.safeParse({
+      search_knowledge_base: { query: "pricing guide" },
+    });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("pricing guide");
+    }
+  });
+
+  it("accepts valid JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse(
+      JSON.stringify({ query: "architecture" }),
+    );
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("architecture");
+    }
+  });
+
+  it("rejects invalid JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse("not valid json{");
+    expect(res.success).toBe(false);
+  });
+
+  it("rejects non-object parsed JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse(JSON.stringify("plain string"));
+    expect(res.success).toBe(false);
   });
 });

@@ -139,6 +139,8 @@ describe("useMentionCommands", () => {
     useAppStore.setState({
       prompts: SAMPLE_PROMPTS,
       assistants: SAMPLE_ASSISTANTS,
+      skills: [],
+      mcpPrompts: [],
     });
     vi.clearAllMocks();
   });
@@ -167,6 +169,61 @@ describe("useMentionCommands", () => {
         useMentionCommands("", setInput, textareaRef),
       );
       expect(result.current.filteredItems).toHaveLength(0);
+    });
+
+    it("initializes selectedPrompt from local prompt id", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, "p1"),
+      );
+      expect(result.current.selectedPrompt).toEqual(
+        expect.objectContaining({ id: "p1", isMcp: false }),
+      );
+    });
+
+    it("initializes selectedPrompt from mcp prompt id", () => {
+      useAppStore.setState({
+        mcpPrompts: [
+          {
+            serverId: "srv-1",
+            serverName: "Server 1",
+            name: "mcp-test",
+            description: "Test mcp prompt",
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, "mcp:srv-1:mcp-test"),
+      );
+      expect(result.current.selectedPrompt).toEqual(
+        expect.objectContaining({ id: "mcp:srv-1:mcp-test", isMcp: true }),
+      );
+    });
+
+    it("returns null for unknown initialSelectedPromptId", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, "non-existent-prompt"),
+      );
+      expect(result.current.selectedPrompt).toBeNull();
+    });
+
+    it("initializes selectedAssistant from assistant id", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, "a1"),
+      );
+      expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
+    });
+
+    it("returns null for unknown initialSelectedAssistantId", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, "unknown-asst"),
+      );
+      expect(result.current.selectedAssistant).toBeNull();
     });
   });
 
@@ -374,8 +431,21 @@ describe("useMentionCommands", () => {
 
     it("removes the # trigger and sets selectedKnowledgebase", () => {
       const setInput = vi.fn();
+      const onSelectKnowledgebase = vi.fn();
       const { result } = renderHook(() =>
-        useMentionCommands("#proj", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
+        useMentionCommands(
+          "#proj",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          onSelectKnowledgebase,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
       );
 
       act(() => {
@@ -388,12 +458,159 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(result.current.selectedKnowledgebase).toEqual(SAMPLE_KNOWLEDGEBASES[0]);
+      expect(onSelectKnowledgebase).toHaveBeenCalledWith(SAMPLE_KNOWLEDGEBASES[0]);
       expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("selects a skill item and calls onSelectSkill", () => {
+      const setInput = vi.fn();
+      const onSelectSkill = vi.fn();
+      const sampleSkill: any = {
+        id: "sk-1",
+        name: "code-review",
+        displayName: "Code Review",
+        description: "Review code",
+        isEnabled: true,
+        isSkill: true,
+      };
+
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/code",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          onSelectSkill,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/code", 5));
+      });
+
+      act(() => {
+        result.current.handleSelect(sampleSkill);
+      });
+
+      expect(onSelectSkill).toHaveBeenCalledWith(sampleSkill);
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("focuses textarea after selection if ref is attached", () => {
+      vi.useFakeTimers();
+      const fakeTextarea = {
+        focus: vi.fn(),
+        setSelectionRange: vi.fn(),
+      } as unknown as HTMLTextAreaElement;
+      const ref = { current: fakeTextarea };
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("/sum", setInput, ref),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/sum", 4));
+      });
+
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0]);
+        vi.runAllTimers();
+      });
+
+      expect(fakeTextarea.focus).toHaveBeenCalled();
+      expect(fakeTextarea.setSelectionRange).toHaveBeenCalledWith(0, 0);
+      vi.useRealTimers();
+    });
+
+    it("does nothing if openTrigger is null", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0]);
+      });
+
+      expect(setInput).not.toHaveBeenCalled();
     });
   });
 
   describe("handleKeyDown", () => {
-    it("Escape closes the command palette", () => {
+    it("returns false if openTrigger is null", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      let handled = false;
+      act(() => {
+        handled = result.current.handleKeyDown(makeKeyEvent("ArrowDown"));
+      });
+      expect(handled).toBe(false);
+    });
+
+    it("navigates down and wraps around with ArrowDown", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      const initialIndex = result.current.selectedIndex;
+      act(() => {
+        const handled = result.current.handleKeyDown(makeKeyEvent("ArrowDown"));
+        expect(handled).toBe(true);
+      });
+      expect(result.current.selectedIndex).toBe(initialIndex + 1);
+    });
+
+    it("navigates up and wraps around with ArrowUp", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      act(() => {
+        const handled = result.current.handleKeyDown(makeKeyEvent("ArrowUp"));
+        expect(handled).toBe(true);
+      });
+      expect(result.current.selectedIndex).toBe(result.current.filteredItems.length - 1);
+    });
+
+    it("selects current item with Enter", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("/sum", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/sum", 4));
+      });
+
+      act(() => {
+        const handled = result.current.handleKeyDown(makeKeyEvent("Enter"));
+        expect(handled).toBe(true);
+      });
+
+      expect(result.current.selectedPrompt).toEqual(
+        expect.objectContaining({ id: SAMPLE_PROMPTS[0].id }),
+      );
+    });
+
+    it("closes the palette with Escape", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef),
@@ -406,8 +623,100 @@ describe("useMentionCommands", () => {
 
       act(() => {
         result.current.handleKeyDown(makeKeyEvent("Escape"));
+        const handled = result.current.handleKeyDown(makeKeyEvent("Escape"));
+        expect(handled).toBe(true);
       });
       expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("returns false for unhandled keys", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      let handled = true;
+      act(() => {
+        handled = result.current.handleKeyDown(makeKeyEvent("Tab"));
+      });
+      expect(handled).toBe(false);
+    });
+  });
+
+  describe("skill filtering and line position detection", () => {
+    it("filters enabled skills by name, displayName, or description", () => {
+      const sampleSkills: any = [
+        {
+          id: "sk-1",
+          name: "python-helper",
+          displayName: "Python Helper",
+          description: "Assists with python code",
+          enabled: true,
+        },
+        {
+          id: "sk-2",
+          name: "disabled-skill",
+          displayName: "Disabled Skill",
+          description: "Should not appear",
+          enabled: false,
+        },
+      ];
+
+      useAppStore.setState({ skills: sampleSkills as any });
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/python", 7));
+      });
+
+      expect(result.current.filteredItems).toHaveLength(1);
+      expect((result.current.filteredItems[0] as any).name).toBe("python-helper");
+    });
+
+    it("does not open trigger when preceded by non-whitespace character", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("abc/test", 8));
+      });
+
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("closes trigger when newline exists after trigger", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/foo\nbar", 8));
+      });
+
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("returns empty array for unknown openTrigger", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.setOpenTrigger("?" as any);
+      });
+
+      expect(result.current.filteredItems).toEqual([]);
     });
   });
 
@@ -496,3 +805,5 @@ describe("useMentionCommands", () => {
     });
   });
 });
+
+

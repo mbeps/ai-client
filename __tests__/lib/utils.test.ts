@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cn, toggleSetItem } from "@/lib/utils";
+import { cn, getPathSegments, sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
 
 describe("cn", () => {
   it("returns a single class name unchanged", () => {
@@ -72,5 +72,41 @@ describe("toggleSetItem", () => {
     const original = new Set(["a"]);
     toggleSetItem(original, "a");
     expect(original).toEqual(new Set(["a"]));
+  });
+});
+
+describe("sortByUpdatedAt", () => {
+  it("sorts items by updatedAt descending without mutating input", () => {
+    const d1 = new Date("2025-01-01");
+    const d2 = new Date("2025-02-01");
+    const d3 = new Date("2025-03-01");
+    const items = [
+      { id: "1", updatedAt: d1 },
+      { id: "3", updatedAt: d3 },
+      { id: "2", updatedAt: d2 },
+    ];
+    const sorted = sortByUpdatedAt(items);
+    expect(sorted.map((x) => x.id)).toEqual(["3", "2", "1"]);
+    // Verify original array is unchanged
+    expect(items.map((x) => x.id)).toEqual(["1", "3", "2"]);
+  });
+
+  it("handles empty array", () => {
+    expect(sortByUpdatedAt([])).toEqual([]);
+  });
+});
+
+describe("getPathSegments", () => {
+  it("extracts non-empty path segments", () => {
+    expect(getPathSegments("/settings/tools/123/")).toEqual([
+      "settings",
+      "tools",
+      "123",
+    ]);
+  });
+
+  it("returns empty array for root or empty path", () => {
+    expect(getPathSegments("/")).toEqual([]);
+    expect(getPathSegments("")).toEqual([]);
   });
 });

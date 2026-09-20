@@ -40,8 +40,38 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
+// Public MCP Servers
+vi.mock("@/actions/mcp-servers/list-public-mcp-servers", () => ({
+  listPublicMcpServers: vi.fn(),
+}));
+
+// Skills
+vi.mock("@/actions/skills/list-skills", () => ({
+  listSkills: vi.fn(),
+}));
+
+// Transform Agents
+vi.mock("@/actions/transform-agents/list-transform-agents", () => ({
+  listTransformAgents: vi.fn(),
+}));
+
+// User Settings
+vi.mock("@/actions/user-settings/get-user-settings", () => ({
+  getUserSettings: vi.fn(),
+}));
+
+// Discover All Prompts
+vi.mock("@/actions/mcp/discover-all-prompts", () => ({
+  discoverAllPrompts: vi.fn(),
+}));
+
 import { listAssistants as listAssistantsAction } from "@/actions/assistants/list-assistants";
 import { listMcpServers as listMcpServersAction } from "@/actions/mcp-servers/list-mcp-servers";
+import { listPublicMcpServers as listPublicMcpServersAction } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listSkills as listSkillsAction } from "@/actions/skills/list-skills";
+import { listTransformAgents as listTransformAgentsAction } from "@/actions/transform-agents/list-transform-agents";
+import { getUserSettings as getUserSettingsAction } from "@/actions/user-settings/get-user-settings";
+import { discoverAllPrompts as discoverAllPromptsAction } from "@/actions/mcp/discover-all-prompts";
 // ─── Import mocked modules for per-test configuration ─────────────────────
 import { listProjects as listProjectsAction } from "@/actions/projects/list-projects";
 import { listPrompts as listPromptsAction } from "@/actions/prompts/list-prompts";
@@ -310,5 +340,128 @@ describe("T5.4 resetEntityState clears entity state", () => {
     expect(Object.keys(useAppStore.getState().chats)).toHaveLength(1);
     useAppStore.getState().resetChatState();
     expect(Object.keys(useAppStore.getState().chats)).toHaveLength(0);
+  });
+
+  it("loads skills into store", async () => {
+    vi.mocked(listSkillsAction).mockResolvedValueOnce([
+      {
+        id: "sk-1",
+        userId: "u1",
+        name: "test-skill",
+        displayName: "Test Skill",
+        description: "Skill Description",
+        content: "# Skill",
+        files: [{ path: "ref.md", content: "ref" }] as any,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "sk-2",
+        userId: "u1",
+        name: "test-skill-no-files",
+        displayName: "No Files",
+        description: "None",
+        content: "# Skill",
+        files: null as any,
+        enabled: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+
+    await useAppStore.getState().loadSkills();
+    const skills = useAppStore.getState().skills;
+    expect(skills).toHaveLength(2);
+    expect(skills[0].name).toBe("test-skill");
+    expect(skills[0].files).toHaveLength(1);
+    expect(skills[1].files).toEqual([]);
+  });
+
+  it("loads transform agents with valid and invalid steps JSON", async () => {
+    vi.mocked(listTransformAgentsAction).mockResolvedValueOnce([
+      {
+        id: "ta-1",
+        userId: "u1",
+        name: "Agent 1",
+        description: "desc",
+        globalContext: "context",
+        modelId: "gpt-4",
+        tools: ["tool-1"],
+        knowledgeBaseIds: ["kb-1"],
+        requiresFileUpload: true,
+        steps: JSON.stringify([{ name: "step 1" }]),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "ta-2",
+        userId: "u1",
+        name: "Agent 2",
+        description: null,
+        globalContext: null,
+        modelId: null,
+        tools: null,
+        knowledgeBaseIds: null,
+        requiresFileUpload: false,
+        steps: "invalid-json-steps",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+
+    await useAppStore.getState().loadTransformAgents();
+    const agents = useAppStore.getState().transformAgents;
+    expect(agents).toHaveLength(2);
+    expect(agents[0].steps).toHaveLength(1);
+    expect(agents[1].steps).toEqual([]);
+    expect(agents[1].description).toBe("");
+  });
+
+  it("loads public MCP servers into store", async () => {
+    vi.mocked(listPublicMcpServersAction).mockResolvedValueOnce([
+      {
+        id: "pub-1",
+        name: "Public Server",
+        url: "http://pub.example.com",
+        headers: null,
+        enabled: true,
+        isPublic: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any,
+    ]);
+
+    await useAppStore.getState().loadPublicMcpServers();
+    expect(useAppStore.getState().publicMcpServers).toHaveLength(1);
+  });
+
+  it("loads user settings into store", async () => {
+    vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
+      userId: "u1",
+      theme: "dark",
+      defaultModelId: "gpt-4",
+    } as any);
+
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().userSettings).toEqual({
+      userId: "u1",
+      theme: "dark",
+      defaultModelId: "gpt-4",
+    });
+  });
+
+  it("loads MCP prompts into store", async () => {
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce([
+      {
+        name: "prompt-1",
+        description: "mcp prompt",
+        arguments: [],
+        serverName: "S1",
+      },
+    ]);
+
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().mcpPrompts).toHaveLength(1);
   });
 });

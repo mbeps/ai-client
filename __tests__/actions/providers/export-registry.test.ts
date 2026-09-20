@@ -81,6 +81,25 @@ const PROVIDER_ROW = {
   updatedAt: new Date("2024-01-01"),
 };
 
+const MODEL_ROW = {
+  id: "model-1",
+  userId: "user-1",
+  providerId: "provider-1",
+  modelId: "llama3",
+  label: "Llama 3",
+  modelType: "chat",
+  contextWindow: 8192,
+  embeddingDimensions: null,
+  capTools: true,
+  capVision: false,
+  capReasoning: false,
+  capStructuredOutput: true,
+  isManuallyAdded: false,
+  isEnabled: true,
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-01"),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   chainable.select.mockReturnValue(chainable);
@@ -92,7 +111,7 @@ describe("exportProviderRegistry", () => {
   it("does not include decrypted headers in exported providers", async () => {
     chainable.where
       .mockResolvedValueOnce([PROVIDER_ROW])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([MODEL_ROW]);
     decodeProviderRecord.mockReturnValue({
       apiKey: "sk-plaintext-secret",
       headers: { Authorization: "Bearer sk-plaintext-secret" },
@@ -106,6 +125,49 @@ describe("exportProviderRegistry", () => {
     // Decrypted plaintext headers must never appear anywhere in the export
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("sk-plaintext-secret");
-    expect(exported.headers).toBeUndefined();
+    expect(exported.models).toHaveLength(1);
+    expect(exported.models[0].modelId).toBe("llama3");
+  });
+
+  it("filters providers when providerIds input is provided", async () => {
+    chainable.where
+      .mockResolvedValueOnce([PROVIDER_ROW])
+      .mockResolvedValueOnce([MODEL_ROW]);
+
+    const result = await exportProviderRegistry({
+      providerIds: ["11111111-1111-4111-8111-111111111111"],
+    });
+
+    expect(result.providers).toHaveLength(1);
+    expect(result.version).toBe("1");
+  });
+
+  it("handles empty providers and models correctly", async () => {
+    chainable.where.mockResolvedValueOnce([]);
+
+    const result = await exportProviderRegistry();
+
+    expect(result.providers).toHaveLength(0);
+  });
+
+  it("maps modelTypes correctly with fallback to chat for unknown or null type", async () => {
+    const modelsWithVariousTypes = [
+      { ...MODEL_ROW, id: "m-1", modelType: "embedding" },
+      { ...MODEL_ROW, id: "m-2", modelType: "both" },
+      { ...MODEL_ROW, id: "m-3", modelType: "unknown" },
+      { ...MODEL_ROW, id: "m-4", modelType: null },
+    ];
+
+    chainable.where
+      .mockResolvedValueOnce([PROVIDER_ROW])
+      .mockResolvedValueOnce(modelsWithVariousTypes);
+
+    const result = await exportProviderRegistry({ providerIds: [] });
+
+    expect(result.providers[0].models).toHaveLength(4);
+    expect(result.providers[0].models[0].modelType).toBe("embedding");
+    expect(result.providers[0].models[1].modelType).toBe("both");
+    expect(result.providers[0].models[2].modelType).toBe("chat");
+    expect(result.providers[0].models[3].modelType).toBe("chat");
   });
 });

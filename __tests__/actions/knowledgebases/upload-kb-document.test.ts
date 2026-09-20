@@ -58,6 +58,13 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
+const checkRateLimitMock = vi.hoisted(() =>
+  vi.fn().mockReturnValue({ allowed: true, retryAfterSeconds: 0 }),
+);
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: checkRateLimitMock,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { uploadKbDocument } from "@/actions/knowledgebases/upload-kb-document";
 
@@ -145,5 +152,41 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
     fd.append("kbId", DOC_ROW.kbId);
 
     await expect(uploadKbDocument(fd)).rejects.toThrow(/not supported/i);
+  });
+
+  it("throws when rate limit is exceeded", async () => {
+    checkRateLimitMock.mockReturnValueOnce({ allowed: false, retryAfterSeconds: 45 });
+    await expect(uploadKbDocument(makeFormData())).rejects.toThrow(
+      "Too many uploads. Retry in 45s.",
+    );
+  });
+
+  it("throws when no file is provided", async () => {
+    const fd = new FormData();
+    fd.append("kbId", DOC_ROW.kbId);
+    await expect(uploadKbDocument(fd)).rejects.toThrow("No file provided");
+  });
+
+  it("throws when no kbId is provided", async () => {
+    const fd = new FormData();
+    fd.append("file", new File([new Uint8Array(5)], "doc.txt", { type: "text/plain" }));
+    await expect(uploadKbDocument(fd)).rejects.toThrow("No kbId provided");
+  });
+
+  it("throws 'Not Found' when knowledgebase does not exist or user does not own it", async () => {
+    chainable.where.mockImplementationOnce(() => Promise.resolve([]));
+    await expect(uploadKbDocument(makeFormData())).rejects.toThrow("Not Found");
+  });
+
+  it("throws when file size exceeds 50 MB limit", async () => {
+    const bigFile = new File([new Uint8Array(5)], "big.txt", { type: "text/plain" });
+    Object.defineProperty(bigFile, "size", { value: 50 * 1024 * 1024 + 1 });
+    const fd = new FormData();
+    fd.append("file", bigFile);
+    fd.append("kbId", DOC_ROW.kbId);
+
+    await expect(uploadKbDocument(fd)).rejects.toThrow(
+      "File exceeds the 50 MB size limit.",
+    );
   });
 });

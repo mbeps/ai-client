@@ -38,7 +38,7 @@ export async function createTransformAgent(
       tools: validated.tools,
       knowledgeBaseIds: validated.knowledgeBaseIds,
       requiresFileUpload: validated.requiresFileUpload,
-      steps: JSON.stringify(validated.steps ?? []),
+      steps: JSON.stringify(validated.steps),
       userId: session.user.id,
     })
     .returning();

@@ -115,6 +115,13 @@ describe("loadThreadFromDb", () => {
         mimeType: "application/pdf",
         key: "uploads/user-1/report.pdf",
       },
+      {
+        id: "att-3",
+        messageId: "root",
+        name: "data.csv",
+        mimeType: "text/csv",
+        key: "uploads/user-1/data.csv",
+      },
     ]);
     mockGetPresignedUrl.mockResolvedValueOnce("https://example.com/pic");
 
@@ -124,7 +131,7 @@ describe("loadThreadFromDb", () => {
     expect(mockGetPresignedUrl).toHaveBeenCalledTimes(1);
     expect(mockGetPresignedUrl).toHaveBeenCalledWith("uploads/user-1/pic.png");
     const atts = thread[0].attachments!;
-    expect(atts).toHaveLength(2);
+    expect(atts).toHaveLength(3);
     expect(atts).toContainEqual({
       id: "att-1",
       name: "pic.png",
@@ -139,6 +146,14 @@ describe("loadThreadFromDb", () => {
       url: "",
       type: "document",
       key: "uploads/user-1/report.pdf",
+      extractedText: undefined,
+    });
+    expect(atts).toContainEqual({
+      id: "att-3",
+      name: "data.csv",
+      url: "",
+      type: "spreadsheet",
+      key: "uploads/user-1/data.csv",
       extractedText: undefined,
     });
   });

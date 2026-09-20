@@ -33,8 +33,7 @@ export const updateKnowledgebase = updateEntityFactory<
   mapValues: (data) => {
     const values: Record<string, any> = {};
     if (data.name !== undefined) values.name = data.name;
-    if (data.description !== undefined)
-      values.description = data.description ?? null;
+    if (data.description !== undefined) values.description = data.description;
     return values;
   },
 });

@@ -128,6 +128,11 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
     await expect(uploadRunInput(fd)).rejects.toThrow(/not supported/i);
   });
 
+  it("rejects file with unknown mime type and reports 'unknown'", async () => {
+    const fd = makeFormData([makeFile("data.unknown_ext", "", 1024)]);
+    await expect(uploadRunInput(fd)).rejects.toThrow('File type "unknown" is not supported');
+  });
+
   it("rejects file over 50 MB", async () => {
     const fd = makeFormData([
       makeFile(

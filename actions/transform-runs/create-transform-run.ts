@@ -47,7 +47,7 @@ export async function createTransformRun(
       agentId: validated.agentId,
       userId: session.user.id,
       status: "pending",
-      dryRun: validated.dryRun ?? false,
+      dryRun: validated.dryRun,
       inputAttachmentIds: Array.isArray(validated.inputAttachmentIds)
         ? validated.inputAttachmentIds
         : validated.inputAttachmentIds

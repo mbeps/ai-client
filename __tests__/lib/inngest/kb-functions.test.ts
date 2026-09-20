@@ -127,6 +127,23 @@ describe("KB Inngest Functions", () => {
       );
       expect(result).toEqual({ count: 0 });
     });
+
+    it("throws an error when knowledgebase is not found", async () => {
+      chainable.where.mockResolvedValueOnce([]); // no KB found
+
+      const fn = (reindexKbFunction as any).fn;
+      await expect(
+        fn({
+          event: {
+            data: {
+              kbId: "kb-missing",
+              userId: "user-1",
+            },
+          },
+          step: mockStep,
+        }),
+      ).rejects.toThrow("Knowledge base kb-missing not found");
+    });
   });
 });
 

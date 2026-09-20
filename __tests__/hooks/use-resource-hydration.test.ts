@@ -149,4 +149,36 @@ describe("useResourceHydration", () => {
     });
     expect(vi.mocked(listProjects)).toHaveBeenCalledTimes(2);
   });
+
+  it("handles loader failure and removes resource from loading state", async () => {
+    hydratedResources.clear();
+    useAppStore.setState({
+      loadProjects: vi.fn().mockRejectedValue(new Error("Boom")),
+    });
+
+    const { result } = renderHook(() => useResourceHydration(["projects"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(hydratedResources.has("projects")).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles mcpPrompts special case loader", async () => {
+    const { discoverAllPrompts } = await import("@/actions/mcp/discover-all-prompts");
+    vi.mocked(discoverAllPrompts).mockResolvedValueOnce({
+      prompts: [],
+      failedServers: [],
+    });
+
+    renderHook(() => useResourceHydration(["mcpPrompts"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(hydratedResources.has("mcpPrompts")).toBe(true);
+  });
 });

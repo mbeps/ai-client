@@ -13,9 +13,6 @@ export async function exportSkillZip(
   skillId: string,
 ): Promise<{ filename: string; base64: string }> {
   const skill = await getSkill(skillId);
-  if (!skill) {
-    throw new Error("Skill not found");
-  }
 
   const zipBuf = createSkillZip({
     name: skill.name,

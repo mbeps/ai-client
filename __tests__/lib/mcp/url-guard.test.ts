@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "@/config/env";
+import { isBlockedIPv6 } from "@/lib/mcp/url-guard/is-blocked-ipv6";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 
@@ -370,6 +371,58 @@ describe("isBlockedUrl", () => {
       expect(await isBlockedUrl("http://rotating.example.com")).toBe(false);
       expect(await isBlockedUrl("http://rotating.example.com")).toBe(true);
     });
+
+    it("blocks when DNS resolution times out after 5s", async () => {
+      vi.useFakeTimers();
+      mockDnsResolver.mockReturnValue(new Promise(() => {})); // never resolves
+      const promise = isBlockedUrl("http://hanging.example.com");
+      await vi.advanceTimersByTimeAsync(5001);
+      const result = await promise;
+      expect(result).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it("handles URL parse failure inside isBlockedUrl body defensively", async () => {
+      const origURL = globalThis.URL;
+      let count = 0;
+      vi.spyOn(globalThis, "URL").mockImplementation(function (this: any, ...args: any[]) {
+        count++;
+        if (count === 1) {
+          // isBlockedUrlSync passes
+          return new origURL(args[0], args[1]);
+        }
+        // isBlockedUrl second call throws
+        throw new Error("corrupted url");
+      } as any);
+
+      expect(await isBlockedUrl("https://defensive-check.example.com")).toBe(true);
+      vi.restoreAllMocks();
+    });
+  });
+});
+
+describe("isBlockedIPv6 direct checks", () => {
+  it("validates IPv4-mapped IPv6 addresses", () => {
+    expect(isBlockedIPv6("::ffff:192.168.1.1")).toBe(true);
+    expect(isBlockedIPv6("::ffff:8.8.8.8")).toBe(false);
+  });
+
+  it("handles empty or invalid first group", () => {
+    expect(isBlockedIPv6("::")).toBe(false);
+    expect(isBlockedIPv6("zzzz::1")).toBe(false);
+  });
+
+  it("handles split returning empty array to hit defensive fallback", () => {
+    const origSplit = String.prototype.split;
+    vi.spyOn(String.prototype, "split").mockImplementation(function (this: string, ...args: any[]) {
+      if (this === "mock-empty-split") {
+        return [] as any;
+      }
+      return origSplit.apply(this, args as any);
+    });
+
+    expect(isBlockedIPv6("mock-empty-split")).toBe(false);
+    vi.restoreAllMocks();
   });
 });
 

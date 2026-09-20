@@ -156,6 +156,29 @@ describe("addPublicServer", () => {
     expect(result).toBe("existing-install-1");
     expect(chainable.insert).not.toHaveBeenCalled();
   });
+
+  it("throws if public server is not found or not enabled", async () => {
+    chainable.where.mockImplementationOnce(() => Promise.resolve([]));
+    await expect(addPublicServer("missing-pub-srv")).rejects.toThrow(
+      "The requested public server was not found or is currently unavailable.",
+    );
+  });
+
+  it("installs without headers when headers param is empty/whitespace", async () => {
+    chainable.where
+      .mockImplementationOnce(() => Promise.resolve([MOCK_PUBLIC_SERVER]))
+      .mockImplementationOnce(() => Promise.resolve([]));
+
+    chainable.returning.mockResolvedValueOnce([{ id: "install-no-hdr" }]);
+
+    const result = await addPublicServer("srv-pub-1", "   ");
+    expect(result).toBe("install-no-hdr");
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: null,
+      }),
+    );
+  });
 });
 
 describe("uninstallPublicServer", () => {
@@ -175,6 +198,15 @@ describe("updateInstalledServerHeaders", () => {
       }),
     );
   });
+
+  it("sets headers to null when empty or whitespace", async () => {
+    await updateInstalledServerHeaders("srv-pub-1", "   ");
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: null,
+      }),
+    );
+  });
 });
 
 describe("toggleMcpServerPublic", () => {
@@ -183,5 +215,103 @@ describe("toggleMcpServerPublic", () => {
     chainable.returning.mockResolvedValueOnce([]);
     await expect(toggleMcpServerPublic("srv-pub-1")).rejects.toThrow("Not Found");
   });
+
+  it("toggles and returns updated server for owner", async () => {
+    const updatedServer = { ...MOCK_PUBLIC_SERVER, isPublic: false };
+    chainable.returning.mockResolvedValueOnce([updatedServer]);
+    const result = await toggleMcpServerPublic("srv-pub-1");
+    expect(result).toEqual(updatedServer);
+  });
 });
+
+describe("listMcpServers", () => {
+  it("lists personal and installed servers merged and sorted by updatedAt descending", async () => {
+    const personalDate = new Date("2026-02-01");
+    const installedDate = new Date("2026-03-01");
+
+    const personalServer = {
+      id: "pers-1",
+      userId: "user-1",
+      name: "Personal MCP",
+      url: "http://localhost:8000",
+      headers: null,
+      enabled: true,
+      isPublic: false,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: personalDate,
+    };
+
+    const installedServer = {
+      id: "inst-srv-1",
+      userId: "author-user-2",
+      name: "Installed MCP",
+      url: "https://mcp.com",
+      headers: '{"key": "sub"}',
+      enabled: true,
+      isPublic: true,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: installedDate,
+      installId: "install-rec-1",
+    };
+
+    chainable.orderBy
+      .mockResolvedValueOnce([personalServer])
+      .mockResolvedValueOnce([installedServer]);
+
+    const result = await listMcpServers();
+
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe("inst-srv-1");
+    expect(result[0].isInstalled).toBe(true);
+    expect(result[1].id).toBe("pers-1");
+    expect(result[1].isInstalled).toBe(false);
+  });
+});
+
+describe("listPublicMcpServers", () => {
+  it("lists public servers marking whether they are already installed by the user", async () => {
+    const publicServer1 = {
+      id: "pub-1",
+      userId: "author-1",
+      name: "Public Tool 1",
+      url: "https://tool1.com",
+      enabled: true,
+      isPublic: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const publicServer2 = {
+      id: "pub-2",
+      userId: "author-2",
+      name: "Public Tool 2",
+      url: "https://tool2.com",
+      enabled: true,
+      isPublic: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    chainable.where
+      .mockImplementationOnce(() => Promise.resolve([publicServer1, publicServer2]))
+      .mockImplementationOnce(() => Promise.resolve([{ id: "inst-1", serverId: "pub-1" }]));
+
+    const result = await listPublicMcpServers();
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      id: "pub-1",
+      isInstalled: true,
+      installId: "inst-1",
+      isPublic: true,
+    });
+    expect(result[1]).toMatchObject({
+      id: "pub-2",
+      isInstalled: false,
+      installId: undefined,
+      isPublic: true,
+    });
+  });
+});
+
+
 

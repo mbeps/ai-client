@@ -83,4 +83,76 @@ describe("loadChatContext KB ownership", () => {
 
     expect(ctx.kbIsReady).toBe(false);
   });
+
+  it("throws ChatNotFoundError when chat row does not exist", async () => {
+    chainable.__queueWhere([]); // chat not found
+    await expect(loadChatContext("missing-chat", "user-1")).rejects.toThrow();
+  });
+
+  it("resolves project, assistant, filtered servers, and matched skills", async () => {
+    // 1. Initial chat lookup
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: "proj-1",
+        assistantId: null,
+        knowledgebaseId: null,
+      },
+    ]);
+
+    // 2. Project lookup
+    chainable.__queueWhere([
+      { globalPrompt: "Project Instructions", knowledgebaseId: "proj-kb" },
+    ]);
+
+    // 3. Assistant lookup (using selectedAssistantId)
+    chainable.__queueWhere([{ prompt: "Assistant Prompt" }]);
+
+    // 4. Personal MCP servers
+    chainable.__queueWhere([{ id: "srv-1", name: "Personal Server" }]);
+
+    // 5. Installed MCP servers
+    chainable.__queueWhere([{ id: "srv-2", name: "Public Server" }]);
+
+    // 6. User skills
+    chainable.__queueWhere([
+      { id: "sk-1", name: "skill-one", displayName: "Skill One", description: "First" },
+      { id: "sk-2", name: "skill-two", displayName: "Skill Two", description: "Second" },
+    ]);
+
+    const ctx = await loadChatContext(
+      "chat-1",
+      "user-1",
+      ["srv-1"],
+      undefined,
+      "asst-1",
+      ["skill-two"],
+    );
+
+    expect(ctx.projectRow?.globalPrompt).toBe("Project Instructions");
+    expect(ctx.assistantRow?.prompt).toBe("Assistant Prompt");
+    expect(ctx.servers).toHaveLength(1);
+    expect(ctx.servers[0].id).toBe("srv-1");
+    expect(ctx.selectedSkills).toHaveLength(1);
+    expect(ctx.selectedSkills[0].name).toBe("skill-two");
+    expect(ctx.availableSkills).toHaveLength(2);
+  });
+
+  it("returns empty servers array when selectedServerIds is explicitly empty", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: null,
+        assistantId: null,
+        knowledgebaseId: null,
+      },
+    ]);
+    chainable.__queueWhere([{ id: "srv-1", name: "Server" }]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+
+    const ctx = await loadChatContext("chat-1", "user-1", []);
+
+    expect(ctx.servers).toEqual([]);
+  });
 });

@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSend = vi.hoisted(() => vi.fn());
+const chainable = vi.hoisted(() => {
+  const c: any = {};
+  c.select = vi.fn().mockReturnValue(c);
+  c.from = vi.fn().mockReturnValue(c);
+  c.where = vi.fn().mockReturnValue(c);
+  c.groupBy = vi.fn();
+  return c;
+});
 
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: vi.fn().mockImplementation(function () {
-    return { send: mockSend };
-  }),
-  DeleteObjectCommand: vi.fn().mockImplementation(function (params: object) {
-    return { _type: "DeleteObjectCommand", ...params };
-  }),
-}));
+vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
 vi.mock("@/config/env", () => ({
   env: {
@@ -26,51 +26,69 @@ vi.mock("@/config/env", () => ({
   },
 }));
 
-vi.mock("@/drizzle/db", () => ({
-  db: { select: vi.fn() },
+const deleteObjectMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/storage/delete-object", () => ({
+  deleteObject: deleteObjectMock,
 }));
 
-import { db } from "@/drizzle/db";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
-
-// ponytail: chain methods are no-ops; only the rows resolved by groupBy matter
-function stubCountQuery(rows: Array<{ key: string; count: number }>) {
-  const builder = {
-    from: () => builder,
-    where: () => builder,
-    groupBy: () => Promise.resolve(rows),
-  };
-  vi.mocked(db.select).mockReturnValue(builder as never);
-}
 
 describe("sweepOrphanedAttachmentKeys", () => {
   beforeEach(() => {
-    mockSend.mockReset();
-    vi.mocked(db.select).mockReset();
+    vi.clearAllMocks();
+    chainable.select.mockReturnValue(chainable);
+    chainable.from.mockReturnValue(chainable);
+    chainable.where.mockReturnValue(chainable);
+    deleteObjectMock.mockResolvedValue(undefined);
   });
 
-  it("issues DeleteObjectCommand for keys with zero remaining references", async () => {
-    stubCountQuery([]);
-    mockSend.mockResolvedValue({});
+  it("returns early when keys array is empty", async () => {
+    await sweepOrphanedAttachmentKeys([]);
+    expect(chainable.select).not.toHaveBeenCalled();
+  });
 
-    await sweepOrphanedAttachmentKeys(["a", "b"]);
+  it("deletes orphaned keys that are not referenced in the database", async () => {
+    // key1 is referenced in DB, key2 is orphaned
+    chainable.groupBy.mockResolvedValueOnce([{ key: "key1", count: 1 }]);
 
-    expect(mockSend).toHaveBeenCalledTimes(2);
+    await sweepOrphanedAttachmentKeys(["key1", "key2", "key1"]);
+
+    expect(deleteObjectMock).toHaveBeenCalledTimes(1);
+    expect(deleteObjectMock).toHaveBeenCalledWith("key2");
   });
 
   it("does not delete keys still referenced by other attachment rows", async () => {
-    stubCountQuery([{ key: "a", count: 3 }]);
-    mockSend.mockResolvedValue({});
+    chainable.groupBy.mockResolvedValueOnce([{ key: "a", count: 3 }]);
 
     await sweepOrphanedAttachmentKeys(["a"]);
 
-    expect(mockSend).not.toHaveBeenCalled();
+    expect(deleteObjectMock).not.toHaveBeenCalled();
   });
 
-  it("never throws when S3 deletion fails", async () => {
-    stubCountQuery([]);
-    mockSend.mockRejectedValue(new Error("S3 down"));
+  it("handles deleteObject throwing Error and non-Error objects without throwing", async () => {
+    chainable.groupBy.mockResolvedValueOnce([]);
+    deleteObjectMock
+      .mockRejectedValueOnce(new Error("S3 error"))
+      .mockRejectedValueOnce("String error");
 
-    await expect(sweepOrphanedAttachmentKeys(["a"])).resolves.toBeUndefined();
+    await expect(
+      sweepOrphanedAttachmentKeys(["key-err1", "key-err2"]),
+    ).resolves.not.toThrow();
+
+    expect(deleteObjectMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("catches and logs database query errors without throwing", async () => {
+    chainable.groupBy.mockRejectedValueOnce(new Error("DB connection lost"));
+
+    await expect(
+      sweepOrphanedAttachmentKeys(["key1"]),
+    ).resolves.not.toThrow();
+
+    // With non-Error
+    chainable.groupBy.mockRejectedValueOnce("string db error");
+    await expect(
+      sweepOrphanedAttachmentKeys(["key1"]),
+    ).resolves.not.toThrow();
   });
 });

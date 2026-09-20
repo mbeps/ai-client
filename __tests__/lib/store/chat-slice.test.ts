@@ -43,6 +43,9 @@ vi.mock("@/actions/chats/update-current-leaf", () => ({
 vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/actions/chats/update-chat-knowledgebase", () => ({
+  updateChatKnowledgebase: vi.fn().mockResolvedValue(undefined),
+}));
 // Entity slice stubs (needed because useAppStore loads all slices)
 vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
@@ -57,8 +60,11 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
 
 // ─── Import mocked modules for per-test configuration ─────────────────────
 import { createChat as createChatAction } from "@/actions/chats/create-chat";
+import { deleteChat as deleteChatAction } from "@/actions/chats/delete-chat";
+import { deleteMessage as deleteMessageAction } from "@/actions/chats/delete-message";
 import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
 import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
+import { updateChatKnowledgebase as updateChatKnowledgebaseAction } from "@/actions/chats/update-chat-knowledgebase";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const RESET_STATE = {
@@ -1200,5 +1206,176 @@ describe("T5.3 scoped rollback does not clobber entity state", () => {
       .catch(() => {});
     expect(useAppStore.getState().projects).toHaveLength(1);
     expect(useAppStore.getState().projects[0].id).toBe("p1");
+  });
+
+  it("deleteMessageDb calculates newLeafId from deepest leaf of parent and handles rollback", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {
+            root: {
+              id: "root",
+              parentId: null,
+              childrenIds: ["child1"],
+              role: "user",
+              content: "root",
+              parts: [],
+              createdAt: new Date(),
+            },
+            child1: {
+              id: "child1",
+              parentId: "root",
+              childrenIds: [],
+              role: "assistant",
+              content: "child",
+              parts: [],
+              createdAt: new Date(),
+            },
+          },
+          currentLeafId: "child1",
+        },
+      },
+    });
+
+    // 1. Success case
+    await useAppStore.getState().deleteMessageDb("chat1", "child1");
+    expect(deleteMessageAction).toHaveBeenCalledWith("chat1", "child1", "root");
+    expect(useAppStore.getState().chats.chat1.messages.child1).toBeUndefined();
+
+    // 2. Chat not found
+    await useAppStore.getState().deleteMessageDb("missing-chat", "msg");
+
+    // 3. Rollback on failure
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {
+            m1: {
+              id: "m1",
+              parentId: null,
+              childrenIds: [],
+              role: "user",
+              content: "m1",
+              parts: [],
+              createdAt: new Date(),
+            },
+          },
+          currentLeafId: "m1",
+        },
+      },
+    });
+    vi.mocked(deleteMessageAction).mockRejectedValueOnce(new Error("DB delete fail"));
+    await expect(
+      useAppStore.getState().deleteMessageDb("chat1", "m1"),
+    ).rejects.toThrow("DB delete fail");
+    expect(useAppStore.getState().chats.chat1.messages.m1).toBeDefined();
+  });
+
+  it("moveChatDb rolls back on server action failure", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: "proj-old",
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    vi.mocked(moveChatAction).mockRejectedValueOnce(new Error("Move failed"));
+    await useAppStore.getState().moveChatDb("chat1", "proj-new");
+    expect(useAppStore.getState().chats.chat1.projectId).toBe("proj-old");
+  });
+
+  it("deleteChatDb deletes chat from store and rolls back on failure", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    // 1. Success
+    await useAppStore.getState().deleteChatDb("chat1");
+    expect(useAppStore.getState().chats.chat1).toBeUndefined();
+
+    // 2. Failure with rollback
+    useAppStore.setState({
+      chats: {
+        chat2: {
+          id: "chat2",
+          title: "Chat 2",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+    vi.mocked(deleteChatAction).mockRejectedValueOnce(new Error("Delete failed"));
+    await useAppStore.getState().deleteChatDb("chat2");
+    expect(useAppStore.getState().chats.chat2).toBeDefined();
+  });
+
+  it("setKnowledgebaseDb updates knowledgebase on chat and handles missing chat and rollback", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    // 1. Chat does not exist
+    await useAppStore.getState().setKnowledgebaseDb("missing-chat", "kb-1");
+
+    // 2. Success
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-1");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
+    expect(updateChatKnowledgebaseAction).toHaveBeenCalledWith({
+      chatId: "chat1",
+      knowledgebaseId: "kb-1",
+    });
+
+    // 3. Rollback on failure
+    vi.mocked(updateChatKnowledgebaseAction).mockRejectedValueOnce(
+      new Error("KB update failed"),
+    );
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-2");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
   });
 });

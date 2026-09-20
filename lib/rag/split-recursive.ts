@@ -60,6 +60,7 @@ export function splitRecursive(
           for (let i = 0; i < piece.length; i += step) {
             const slice = piece.slice(i, i + chunkSize);
             if (slice) chunks.push(slice);
+            chunks.push(piece.slice(i, i + chunkSize));
           }
         }
         current = "";

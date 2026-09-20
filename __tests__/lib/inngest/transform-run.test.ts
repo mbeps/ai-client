@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockSelectWhere = vi.hoisted(() => vi.fn());
+const mockUpdateWhere = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockUpdateSet = vi.hoisted(() => vi.fn().mockReturnValue({ where: mockUpdateWhere }));
+const mockUpdate = vi.hoisted(() => vi.fn().mockReturnValue({ set: mockUpdateSet }));
+
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of ["select", "from", "update", "set"]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
-  c.where = vi.fn();
+  const c = {
+    select: vi.fn().mockImplementation(() => ({
+      from: vi.fn().mockImplementation(() => ({
+        where: mockSelectWhere,
+      })),
+    })),
+    update: mockUpdate,
+    where: mockSelectWhere,
+  };
   return c;
 });
 
@@ -169,5 +178,286 @@ describe("executeTransformRun Inngest Workflow", () => {
       }),
     );
     expect(mockRunSteps).toHaveBeenCalledTimes(2);
+  });
+
+  it("handles step execution failure and returns success: false", async () => {
+    const runRow = {
+      id: "run-fail",
+      agentId: "agent-fail",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-fail",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s1", name: "Fail Step", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall % 2 === 1) return Promise.resolve([runRow]);
+      return Promise.resolve([agentRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: false,
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-fail",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: false });
+  });
+
+  it("handles requiresFileUpload when resuming from step > 0 with prior output attachments", async () => {
+    const runRow = {
+      id: "run-files",
+      agentId: "agent-files",
+      currentStepIndex: 1,
+      inputAttachmentIds: ["in-1"],
+      outputAttachmentIds: ["out-stage-0"],
+    };
+    const agentRow = {
+      id: "agent-files",
+      requiresFileUpload: true,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0 },
+        { id: "s1", name: "Step 1", order: 1, toolIds: ["internal:tool:manage_artifact"] },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall % 2 === 1) return Promise.resolve([runRow]);
+      return Promise.resolve([agentRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      currentOutputAttachmentIds: ["out-stage-1"],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-files",
+          userId: "user-1",
+          startFromStep: 1,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockRunSteps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startFromStep: 1,
+      }),
+    );
+  });
+
+  it("completes immediately when steps array is empty", async () => {
+    const runRow = {
+      id: "run-empty",
+      agentId: "agent-empty",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-empty",
+      requiresFileUpload: false,
+      steps: JSON.stringify([]),
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-empty",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockRunSteps).not.toHaveBeenCalled();
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "transform-complete",
+        runId: "run-empty",
+        outputAttachmentIds: [],
+      }),
+    );
+  });
+
+  it("handles realtime publish failure in emit", async () => {
+    const publishSpy = vi
+      .spyOn(inngest.realtime, "publish")
+      .mockRejectedValueOnce(new Error("Publish failed"));
+
+    const runRow = {
+      id: "run-pub-err",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([]),
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-pub-err",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(publishSpy).toHaveBeenCalled();
+  });
+
+  it("handles corrupted agentRow.steps JSON in initialize-run", async () => {
+    const runRow = {
+      id: "run-corrupted",
+      agentId: "agent-corrupted",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-corrupted",
+      requiresFileUpload: false,
+      steps: "{ not valid json",
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-corrupted",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+  });
+
+  it("handles requiresFileUpload at step 0 with nullish inputs and invalid agent steps JSON in execute-step", async () => {
+    const runRow = {
+      id: "run-step0-files",
+      agentId: "agent-step0",
+      currentStepIndex: 0,
+      inputAttachmentIds: null,
+      outputAttachmentIds: null,
+    };
+    const agentRow = {
+      id: "agent-step0",
+      requiresFileUpload: true,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0 },
+      ]),
+    };
+    const agentRowBadSteps = {
+      ...agentRow,
+      steps: "invalid-json-in-execute",
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 3) return Promise.resolve([runRow]);
+      if (selectCall === 4) return Promise.resolve([agentRowBadSteps]);
+      // Finalize run check
+      return Promise.resolve([{ ...runRow, outputAttachmentIds: ["fallback-out-1"] }]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      currentOutputAttachmentIds: undefined,
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-step0-files",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
   });
 });

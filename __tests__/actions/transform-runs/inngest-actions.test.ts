@@ -59,6 +59,24 @@ describe("Transform Run Inngest Actions", () => {
         },
       });
     });
+
+    it("falls back startFromStep to 0 when currentStepIndex is null", async () => {
+      chainable.where.mockResolvedValueOnce([
+        { id: "run-123", currentStepIndex: null },
+      ]);
+
+      const result = await startTransformRunAction("run-123");
+
+      expect(result).toEqual({ success: true });
+      expect(inngest.send).toHaveBeenCalledWith({
+        name: "workflows/transform.execute",
+        data: {
+          runId: "run-123",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      });
+    });
   });
 
   describe("approveTransformRunAction", () => {

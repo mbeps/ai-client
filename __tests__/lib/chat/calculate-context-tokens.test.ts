@@ -234,5 +234,47 @@ describe("calculate-context-tokens utility", () => {
       // skills = 200 + 2*50 = 300 added to total
       expect(withSkillsResult.totalTokens).toBe(baseResult.totalTokens + 300);
     });
+
+    it("handles fallback token count when attachment has neither text nor size", () => {
+      const emptyAtt = { id: "att-none", name: "unknown", type: "other" } as any;
+      expect(estimateAttachmentTokens(emptyAtt)).toBe(100);
+    });
+
+    it("accounts for thread message attachments and draft attachments in calculation", () => {
+      const msgAttachment: Attachment = {
+        id: "att-msg",
+        name: "file.bin",
+        type: "other",
+        mimeType: "application/octet-stream",
+        sizeBytes: 800,
+        dataUrl: "",
+        url: "",
+      };
+      const draftAtt: Attachment = {
+        id: "att-draft",
+        name: "pic.png",
+        type: "image",
+        mimeType: "image/png",
+        sizeBytes: 100,
+        dataUrl: "",
+        url: "",
+      };
+
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "m1",
+            role: "user",
+            content: "hello",
+            attachments: [msgAttachment],
+          } as any,
+        ],
+        draftAttachments: [draftAtt],
+      });
+
+      expect(result.breakdown.files).toBeGreaterThan(0);
+      expect(result.breakdown.draft).toBe(800); // 800 for image
+    });
   });
 });

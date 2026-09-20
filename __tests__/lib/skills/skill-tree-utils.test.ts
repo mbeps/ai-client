@@ -79,6 +79,17 @@ describe("skill-tree-utils", () => {
       expect(refFolder?.children?.find((c) => c.name === "empty-sub")).toBeDefined();
     });
 
+    it("correctly sorts large lists of files with SKILL.md remaining first", () => {
+      const files: SkillBundledFile[] = Array.from({ length: 35 }, (_, i) => ({
+        path: `file-${String(i).padStart(2, "0")}.txt`,
+        content: `content-${i}`,
+      }));
+      const tree = buildSkillTree(files);
+      expect(tree[0].name).toBe("SKILL.md");
+      expect(tree[0].isRootSkillMd).toBe(true);
+      expect(tree).toHaveLength(36);
+    });
+
     it("ignores duplicate or SKILL.md inside files array", () => {
       const files: SkillBundledFile[] = [
         { path: "SKILL.md", content: "duplicate" },
@@ -105,6 +116,12 @@ describe("skill-tree-utils", () => {
       expect(updated[0].path).toBe("references/overview.md");
       expect(updated[1].path).toBe("scripts/run.sh");
     });
+
+    it("returns unchanged files when new path is empty or same as old path", () => {
+      const files: SkillBundledFile[] = [{ path: "a.txt", content: "a" }];
+      expect(renameFilePath(files, "a.txt", "")).toEqual(files);
+      expect(renameFilePath(files, "a.txt", "a.txt")).toEqual(files);
+    });
   });
 
   describe("renameFolderPath", () => {
@@ -121,6 +138,12 @@ describe("skill-tree-utils", () => {
         "references/api/endpoints.md",
         "scripts/run.sh",
       ]);
+    });
+
+    it("returns unchanged files when new folder path is empty or same as old folder path", () => {
+      const files: SkillBundledFile[] = [{ path: "docs/a.txt", content: "a" }];
+      expect(renameFolderPath(files, "docs", "")).toEqual(files);
+      expect(renameFolderPath(files, "docs", "docs")).toEqual(files);
     });
   });
 
@@ -197,6 +220,15 @@ describe("skill-tree-utils", () => {
         /already exists/,
       );
     });
+
+    it("returns original files when destination is the same as current location", () => {
+      const files: SkillBundledFile[] = [
+        { path: "docs/guide.md", content: "guide" },
+      ];
+      const result = moveFile(files, "docs/guide.md", "docs");
+      expect(result.newPath).toBe("docs/guide.md");
+      expect(result.files).toBe(files);
+    });
   });
 
   describe("getAllFolders", () => {
@@ -206,8 +238,58 @@ describe("skill-tree-utils", () => {
         { path: "scripts/test.py", content: "py" },
         { path: "root.md", content: "root" },
       ];
-      const folders = getAllFolders(files, ["assets", "references"]);
+      const folders = getAllFolders(files, ["assets", "references", "", "   /// "]);
       expect(folders).toEqual(["assets", "references", "references/sub", "scripts"]);
+    });
+
+    it("handles default empty array when emptyFolders is omitted", () => {
+      const files: SkillBundledFile[] = [{ path: "a/b.txt", content: "b" }];
+      expect(getAllFolders(files)).toEqual(["a"]);
+    });
+  });
+
+  describe("addOrUpdateFile", () => {
+    it("updates existing file while keeping other files intact", () => {
+      const files: SkillBundledFile[] = [
+        { path: "other.txt", content: "original other" },
+        { path: "target.txt", content: "original target" },
+      ];
+      const updated = addOrUpdateFile(files, {
+        path: "target.txt",
+        content: "updated target",
+      });
+      expect(updated).toEqual([
+        { path: "other.txt", content: "original other" },
+        { path: "target.txt", content: "updated target" },
+      ]);
+    });
+  });
+
+  describe("buildSkillTree edge cases", () => {
+    it("handles empty folder paths that clean to empty string", () => {
+      const tree = buildSkillTree([], ["", "   ///  "]);
+      expect(tree).toHaveLength(1);
+      expect(tree[0].name).toBe("SKILL.md");
+    });
+
+    it("sorts multiple root files keeping SKILL.md first", () => {
+      const files: SkillBundledFile[] = [
+        { path: "z.txt", content: "" },
+        { path: "y.txt", content: "" },
+        { path: "x.txt", content: "" },
+        { path: "w.txt", content: "" },
+        { path: "v.txt", content: "" },
+        { path: "u.txt", content: "" },
+        { path: "t.txt", content: "" },
+        { path: "s.txt", content: "" },
+        { path: "r.txt", content: "" },
+        { path: "q.txt", content: "" },
+        { path: "p.txt", content: "" },
+        { path: "a.txt", content: "" },
+      ];
+      const tree = buildSkillTree(files);
+      expect(tree[0].name).toBe("SKILL.md");
+      expect(tree[1].name).toBe("a.txt");
     });
   });
 });

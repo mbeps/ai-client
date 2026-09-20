@@ -11,8 +11,10 @@ vi.mock("@/lib/chat/resolve-embedding-provider", () => ({
 }));
 vi.mock("@/lib/rag/prefixed-embedding-models", () => ({
   PREFIXED_EMBEDDING_MODELS: new Set<string>(),
+  PREFIXED_EMBEDDING_MODELS: new Set<string>(["prefixed-model"]),
 }));
 
+import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
 import { embedDocuments } from "../../../lib/rag/embed-documents";
 
 describe("embedDocuments batching", () => {
@@ -55,5 +57,19 @@ describe("embedDocuments batching", () => {
     expect(result[0]).toEqual([texts[0].length]);
     expect(result[96]).toEqual([texts[96].length]);
     expect(result[99]).toEqual([texts[99].length]);
+  });
+
+  it("prefixes passage when model is in PREFIXED_EMBEDDING_MODELS", async () => {
+    vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+      sdkProvider: { embeddingModel: vi.fn() },
+      modelId: "prefixed-model",
+    } as any);
+
+    await embedDocuments(["hello world"], "user-1");
+    expect(embedManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: ["passage: hello world"],
+      }),
+    );
   });
 });

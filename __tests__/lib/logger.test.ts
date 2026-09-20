@@ -34,5 +34,32 @@ describe("lib/logger", () => {
     expect(() => logger.error("Facade error with string", "string error")).not.toThrow();
     expect(() => logger.audit("Create Project", { userId: "user-123", name: "Test" })).not.toThrow();
   });
+
+  it("handles configureSync throwing an error gracefully", async () => {
+    vi.resetModules();
+    vi.doMock("@logtape/logtape", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@logtape/logtape")>();
+      return {
+        ...actual,
+        configureSync: vi.fn(() => {
+          throw new Error("Already configured");
+        }),
+      };
+    });
+
+    const { configureLoggingSync: freshConfigure } = await import("@/lib/logger");
+    expect(() => freshConfigure()).not.toThrow();
+
+    vi.doUnmock("@logtape/logtape");
+    vi.resetModules();
+  });
+
+  it("lazily initializes when getLogger is called first", async () => {
+    vi.resetModules();
+    const { getLogger: freshGetLogger } = await import("@/lib/logger");
+    const log = freshGetLogger(["app", "lazy"]);
+    expect(log).toBeDefined();
+    vi.resetModules();
+  });
 });
 

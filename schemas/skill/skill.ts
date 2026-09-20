@@ -45,7 +45,13 @@ export const createSkillSchema = z.object({
  *
  * @author Maruf Bepary
  */
-export const updateSkillSchema = createSkillSchema.partial();
+export const updateSkillSchema = createSkillSchema
+  .omit({ files: true, enabled: true })
+  .partial()
+  .extend({
+    files: z.array(skillFileSchema).optional(),
+    enabled: z.boolean().optional(),
+  });
 
 /**
  * Full Agent Skill schema as stored and serialized in the application.
