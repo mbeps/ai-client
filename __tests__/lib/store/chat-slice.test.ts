@@ -441,7 +441,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       });
     });
 
-    it("replaces an existing chat", () => {
+    it("replaces an existing chat metadata", () => {
       const chatId = createChatInStore();
       const updated: Chat = {
         id: chatId,
@@ -452,6 +452,71 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       };
       useAppStore.getState().upsertChat(updated);
       expect(useAppStore.getState().chats[chatId].title).toBe("Replaced");
+    });
+
+    it("preserves existing messages and currentLeafId when called with empty messages", () => {
+      const chatId = createChatInStore();
+      useAppStore.getState().addMessage(chatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Hello world",
+      });
+
+      const existingChat = useAppStore.getState().chats[chatId];
+      expect(Object.keys(existingChat.messages)).toHaveLength(1);
+      expect(existingChat.currentLeafId).toBe("msg-1");
+
+      const updatePayload: Chat = {
+        id: chatId,
+        title: "Updated Title via Metadata Sync",
+        updatedAt: new Date(),
+        messages: {},
+        currentLeafId: null,
+      };
+
+      useAppStore.getState().upsertChat(updatePayload);
+
+      const updatedChat = useAppStore.getState().chats[chatId];
+      expect(updatedChat.title).toBe("Updated Title via Metadata Sync");
+      expect(updatedChat.messages).toEqual(existingChat.messages);
+      expect(updatedChat.currentLeafId).toBe("msg-1");
+    });
+
+    it("replaces messages and currentLeafId when called with non-empty messages", () => {
+      const chatId = createChatInStore();
+      useAppStore.getState().addMessage(chatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Initial message",
+      });
+
+      const newMessages = {
+        "msg-replacement": {
+          id: "msg-replacement",
+          role: "assistant" as const,
+          content: "Replaced message content",
+          createdAt: new Date(),
+          parentId: null,
+          childrenIds: [],
+          metadata: null,
+          attachments: [],
+        },
+      };
+
+      const updatePayload: Chat = {
+        id: chatId,
+        title: "Full Chat Replacement",
+        updatedAt: new Date(),
+        messages: newMessages,
+        currentLeafId: "msg-replacement",
+      };
+
+      useAppStore.getState().upsertChat(updatePayload);
+
+      const updatedChat = useAppStore.getState().chats[chatId];
+      expect(updatedChat.title).toBe("Full Chat Replacement");
+      expect(updatedChat.messages).toEqual(newMessages);
+      expect(updatedChat.currentLeafId).toBe("msg-replacement");
     });
   });
 

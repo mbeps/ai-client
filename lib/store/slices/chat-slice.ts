@@ -317,9 +317,26 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   upsertChat: (chat) => {
-    set((state) => ({
-      chats: { ...state.chats, [chat.id]: chat },
-    }));
+    set((state) => {
+      const existing = state.chats[chat.id];
+      const hasIncomingMessages =
+        chat.messages && Object.keys(chat.messages).length > 0;
+
+      return {
+        chats: {
+          ...state.chats,
+          [chat.id]: {
+            ...chat,
+            messages: hasIncomingMessages
+              ? chat.messages
+              : (existing?.messages ?? {}),
+            currentLeafId: hasIncomingMessages
+              ? chat.currentLeafId
+              : (existing?.currentLeafId ?? chat.currentLeafId ?? null),
+          },
+        },
+      };
+    });
   },
 
   renameChatDb: async (id, title) => {
