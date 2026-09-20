@@ -80,7 +80,6 @@ export async function deleteMessage(
   if (toDelete.length > 0) {
     await db.delete(message).where(inArray(message.id, toDelete));
   }
-  await db.delete(message).where(inArray(message.id, toDelete));
 
   // Update the chat's currentLeafId to the newly computed leaf
   await db

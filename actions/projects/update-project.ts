@@ -34,14 +34,11 @@ export const updateProject = updateEntityFactory<
     if (data.name !== undefined) values.name = data.name;
     if (data.description !== undefined)
       values.description = data.description ?? null;
-    if (data.description !== undefined) values.description = data.description;
     if (data.globalPrompt !== undefined)
       values.globalPrompt = data.globalPrompt ?? null;
-    values.globalPrompt = data.globalPrompt;
     if (data.tools !== undefined) values.tools = data.tools;
     if (data.knowledgebaseId !== undefined)
       values.knowledgebaseId = data.knowledgebaseId ?? null;
-    values.knowledgebaseId = data.knowledgebaseId;
     return values;
   },
 });
