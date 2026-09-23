@@ -1,5 +1,4 @@
 import { isStepCount, streamText } from "ai";
-import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { env } from "@/config/env";
 import {
   ToolsNotSupportedError,
@@ -20,6 +19,7 @@ import { classifyProviderError } from "@/lib/error/classify-provider-error";
 import { chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -73,7 +73,7 @@ export const generateChatResponse = inngest.createFunction(
       await emit({ type: "start", messageId: assistantMessageId });
 
       const [userSettings, resolved, ctx, thread] = await Promise.all([
-        getUserSettings().catch(() => null),
+        getUserSettingsByUserId(userId).catch(() => null),
         model
           ? resolveProvider(userId, model)
           : resolveDefaultChatProvider(userId),
