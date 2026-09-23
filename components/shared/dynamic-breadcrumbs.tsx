@@ -99,7 +99,27 @@ export function DynamicBreadcrumbs() {
     () => getPathSegments(pathname),
     [pathname],
   );
-  const chatId = pathSegments.find((seg) => UUID_REGEX.test(seg)) ?? null;
+  const chatId = React.useMemo(() => {
+    // /chats/[id]
+    if (
+      pathSegments[0] === "chats" &&
+      pathSegments[1] &&
+      UUID_REGEX.test(pathSegments[1])
+    ) {
+      return pathSegments[1];
+    }
+    // /projects/[id]/[chatId] or /assistants/[id]/[chatId]
+    if (
+      (pathSegments[0] === "projects" || pathSegments[0] === "assistants") &&
+      pathSegments.length >= 3 &&
+      pathSegments[2] &&
+      UUID_REGEX.test(pathSegments[2])
+    ) {
+      return pathSegments[2];
+    }
+    return null;
+  }, [pathSegments]);
+
   const currentChatData = useAppStore((s) =>
     chatId ? s.chats[chatId] : undefined,
   );
@@ -107,6 +127,7 @@ export function DynamicBreadcrumbs() {
   const [resolvedLabels, setResolvedLabels] = React.useState<
     Record<string, string>
   >({});
+  const resolutionAttempted = React.useRef<Set<string>>(new Set());
 
   // Load projects if not available
   React.useEffect(() => {
@@ -183,12 +204,18 @@ export function DynamicBreadcrumbs() {
           if (
             UUID_REGEX.test(segment) &&
             !resolvedLabels[segment] &&
+            !resolutionAttempted.current.has(segment) &&
             !inStore
           ) {
+            resolutionAttempted.current.add(segment);
             const prevSegment = segments[index - 1];
 
             // 1. Check if it's a Run segment (URL: /workflows/transform/[agentId]/[runId])
-            if (prevSegment && UUID_REGEX.test(prevSegment)) {
+            if (
+              pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path) &&
+              prevSegment &&
+              UUID_REGEX.test(prevSegment)
+            ) {
               try {
                 const run = await getTransformRun(segment);
                 if (run) {
@@ -206,7 +233,10 @@ export function DynamicBreadcrumbs() {
               }
             }
             // 2. Check if it's a Transform Agent segment (URL: /workflows/transform/[agentId])
-            else if (prevSegment === "transform") {
+            else if (
+              pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path) &&
+              prevSegment === "transform"
+            ) {
               try {
                 const agent = await getTransformAgent(segment);
                 if (agent) {
