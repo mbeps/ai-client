@@ -62,7 +62,11 @@ export function isSkillItem(item: MentionItem): item is MentionSkillItem {
 export function isAssistantItem(
   item: MentionItem,
 ): item is MentionAssistantItem {
-  return !("shortcut" in item) && !("isSkill" in item);
+  return (
+    !("shortcut" in item) &&
+    !("documentCount" in item) &&
+    !(item as any).isSkill
+  );
 }
 
 /**

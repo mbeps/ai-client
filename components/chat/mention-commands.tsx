@@ -70,7 +70,11 @@ export function MentionCommands({
         className,
       )}
     >
-      <Command className="h-auto" value={items[selectedIndex]?.id}>
+      <Command
+        className="h-auto"
+        value={items[selectedIndex]?.id}
+        shouldFilter={false}
+      >
         <CommandList className="max-h-[300px]">
           <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 

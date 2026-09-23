@@ -28,7 +28,7 @@ export default function HomePage() {
   const mcpServers = useAppStore((state) => state.mcpServers);
   const { models: chatModels } = useUserModels("chat");
 
-  useResourceHydration(["mcpServers"]);
+  useResourceHydration(["mcpServers", "assistants", "prompts", "skills"]);
 
   const enabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
