@@ -51,7 +51,8 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
         }),
       },
     ]);
-    expect(messages).toHaveLength(1);
+    expect(messages).toHaveLength(2);
+    expect(messages[1].role).toBe("tool");
     const parts = (messages[0] as any).content;
     const toolCallPart = parts.find((p: any) => p.type === "tool-call");
     expect(toolCallPart).toBeDefined();
@@ -177,5 +178,102 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
       },
     ]);
     expect(messages).toHaveLength(2);
+  });
+
+  it("heals when toolResults is missing or empty by synthesizing fallback result parts for all tool calls", () => {
+    const messagesWithMissingResults = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Searching...",
+        metadata: JSON.stringify({
+          toolCalls: [
+            { toolCallId: "call_1", toolName: "search", args: { q: "test" } },
+            { toolCallId: "call_2", toolName: "lookup", args: { id: "123" } },
+          ],
+        }),
+      },
+    ]);
+
+    expect(messagesWithMissingResults).toHaveLength(2);
+    expect(messagesWithMissingResults[1].role).toBe("tool");
+    const resultParts = (messagesWithMissingResults[1] as any).content;
+    expect(resultParts).toHaveLength(2);
+    expect(resultParts[0]).toEqual({
+      type: "tool-result",
+      toolCallId: "call_1",
+      toolName: "search",
+      output: { type: "json", value: { error: "Tool execution did not return a result" } },
+    });
+    expect(resultParts[1]).toEqual({
+      type: "tool-result",
+      toolCallId: "call_2",
+      toolName: "lookup",
+      output: { type: "json", value: { error: "Tool execution did not return a result" } },
+    });
+
+    const messagesWithEmptyResults = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Searching...",
+        metadata: JSON.stringify({
+          toolCalls: [
+            { toolCallId: "call_1", toolName: "search", args: { q: "test" } },
+          ],
+          toolResults: [],
+        }),
+      },
+    ]);
+
+    expect(messagesWithEmptyResults).toHaveLength(2);
+    const emptyResultParts = (messagesWithEmptyResults[1] as any).content;
+    expect(emptyResultParts).toHaveLength(1);
+    expect(emptyResultParts[0].output).toEqual({
+      type: "json",
+      value: { error: "Tool execution did not return a result" },
+    });
+  });
+
+  it("handles partially missing tool results by using matching result when available and fallback for missing", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Searching and fetching...",
+        metadata: JSON.stringify({
+          toolCalls: [
+            { toolCallId: "call_1", toolName: "search", args: { q: "test" } },
+            { toolCallId: "call_2", toolName: "fetch_url", args: { url: "https://example.com" } },
+          ],
+          toolResults: [
+            {
+              toolCallId: "call_1",
+              toolName: "search",
+              result: { hits: ["doc1", "doc2"] },
+            },
+          ],
+        }),
+      },
+    ]);
+
+    expect(messages).toHaveLength(2);
+    expect(messages[1].role).toBe("tool");
+    const parts = (messages[1] as any).content;
+    expect(parts).toHaveLength(2);
+
+    expect(parts[0]).toEqual({
+      type: "tool-result",
+      toolCallId: "call_1",
+      toolName: "search",
+      output: { type: "json", value: { hits: ["doc1", "doc2"] } },
+    });
+
+    expect(parts[1]).toEqual({
+      type: "tool-result",
+      toolCallId: "call_2",
+      toolName: "fetch_url",
+      output: {
+        type: "json",
+        value: { error: "Tool execution did not return a result" },
+      },
+    });
   });
 });

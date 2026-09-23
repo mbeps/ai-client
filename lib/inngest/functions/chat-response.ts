@@ -166,6 +166,11 @@ export const generateChatResponse = inngest.createFunction(
         stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
       });
 
+      const safeFinishReason = Promise.resolve(result.finishReason).catch(
+        () => "stop",
+      );
+      const safeUsage = Promise.resolve(result.usage).catch(() => undefined);
+
       let accumulatedText = "";
       let accumulatedReasoning = "";
       const completedTools: Array<{
@@ -213,13 +218,32 @@ export const generateChatResponse = inngest.createFunction(
             toolName: chunk.toolName,
             result: (chunk as any).result ?? (chunk as any).output,
           });
+        } else if (chunk.type === "tool-error") {
+          const tc = completedTools.find(
+            (t) => t.toolCallId === chunk.toolCallId,
+          );
+          const rawErr = (chunk as any).error;
+          const errorMsg =
+            rawErr instanceof Error
+              ? rawErr.message
+              : typeof rawErr === "string"
+                ? rawErr
+                : JSON.stringify(rawErr ?? "Tool execution failed");
+          const errorResult = { error: errorMsg };
+          if (tc) {
+            tc.result = errorResult;
+          }
+          await emit({
+            type: "tool-result",
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            result: errorResult,
+          });
         }
       }
 
-      const finishReason = await Promise.resolve(result.finishReason).catch(
-        () => "stop",
-      );
-      const usage = await Promise.resolve(result.usage).catch(() => undefined);
+      const finishReason = await safeFinishReason;
+      const usage = await safeUsage;
 
       const metadata = JSON.stringify({
         model: resolvedModelId,
@@ -229,13 +253,14 @@ export const generateChatResponse = inngest.createFunction(
           toolName: tc.toolName,
           args: tc.args,
         })),
-        toolResults: completedTools
-          .filter((tc) => tc.result !== undefined)
-          .map((tc) => ({
-            toolCallId: tc.toolCallId,
-            toolName: tc.toolName,
-            result: tc.result,
-          })),
+        toolResults: completedTools.map((tc) => ({
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          result:
+            tc.result !== undefined
+              ? tc.result
+              : { error: "Tool execution was interrupted" },
+        })),
         usage,
         finishReason,
       });

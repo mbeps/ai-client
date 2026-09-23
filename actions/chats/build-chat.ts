@@ -69,6 +69,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     title: row.title,
     projectId: row.projectId ?? undefined,
     assistantId: row.assistantId ?? undefined,
+    knowledgebaseId: row.knowledgebaseId ?? undefined,
     projectName: row.projectName,
     assistantName: row.assistantName,
     updatedAt: new Date(row.updatedAt),

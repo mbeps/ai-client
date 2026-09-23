@@ -157,10 +157,10 @@ export function ChatUI({
     };
   }, [currentProject?.tools, currentAssistant?.tools]);
 
-  const initialKbIds = useMemo(
-    () => (chat?.knowledgebaseId ? [chat.knowledgebaseId] : []),
-    [chat?.knowledgebaseId],
-  );
+  const initialKbIds = useMemo(() => {
+    const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
+    return kbId ? [kbId] : [];
+  }, [chat?.knowledgebaseId, currentProject?.knowledgebaseId]);
 
   const allEnabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);

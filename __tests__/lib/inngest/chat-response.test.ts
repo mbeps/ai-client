@@ -178,7 +178,7 @@ describe("generateChatResponse Inngest Function", () => {
   });
 
   it("handles reasoning, tool calls, tool results, and artifact creation chunks", async () => {
-    mockStreamText.mockReturnValue({
+    mockStreamText.mockImplementation(() => ({
       fullStream: (async function* () {
         yield { type: "reasoning-delta", text: "Planning search..." };
         yield {
@@ -198,13 +198,9 @@ describe("generateChatResponse Inngest Function", () => {
         };
         yield { type: "text-delta", text: "Done creating plan." };
       })(),
-      finishReason: new Promise((_, reject) => {
-        queueMicrotask(() => reject(new Error("Finish reason failed")));
-      }),
-      usage: new Promise((_, reject) => {
-        queueMicrotask(() => reject(new Error("Usage failed")));
-      }),
-    });
+      finishReason: Promise.reject(new Error("Finish reason failed")),
+      usage: Promise.reject(new Error("Usage failed")),
+    }));
 
     const fn = (generateChatResponse as any).fn;
 
@@ -433,5 +429,79 @@ describe("generateChatResponse Inngest Function", () => {
 
     expect(publishSpy).toHaveBeenCalled();
   });
+
+  it("handles tool-error chunks and guarantees symmetric 1:1 toolResults serialization", async () => {
+    mockStreamText.mockReturnValueOnce({
+      fullStream: (async function* () {
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-err",
+          toolName: "fetch_api",
+          args: { endpoint: "/data" },
+        };
+        yield {
+          type: "tool-error",
+          toolCallId: "tc-err",
+          toolName: "fetch_api",
+          error: new Error("Network timeout"),
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-interrupted",
+          toolName: "slow_tool",
+          args: { run: true },
+        };
+        // tc-interrupted has no matching result or error
+      })(),
+      finishReason: Promise.resolve("stop"),
+      usage: Promise.resolve({ promptTokens: 10, completionTokens: 10 }),
+    });
+
+    const fn = (generateChatResponse as any).fn;
+
+    await fn({
+      event: {
+        data: {
+          chatId: "chat-tool-error",
+          userId: "user-1",
+          userMessageId: "msg-1",
+          model: "gpt-4o",
+        },
+      },
+    });
+
+    // Verify realtime emit called for tool-error converted to tool-result with error
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "tool-result",
+        toolCallId: "tc-err",
+        toolName: "fetch_api",
+        result: { error: "Network timeout" },
+      }),
+    );
+
+    // Verify metadata serialization has 1:1 symmetry
+    const callArgs = mockPersistResponse.mock.calls.find(
+      (call: any[]) => call[0]?.chatId === "chat-tool-error",
+    )[0];
+    const parsedMetadata = JSON.parse(callArgs.metadata);
+
+    expect(parsedMetadata.toolCalls).toHaveLength(2);
+    expect(parsedMetadata.toolResults).toHaveLength(2);
+
+    expect(parsedMetadata.toolResults[0]).toEqual({
+      toolCallId: "tc-err",
+      toolName: "fetch_api",
+      result: { error: "Network timeout" },
+    });
+
+    expect(parsedMetadata.toolResults[1]).toEqual({
+      toolCallId: "tc-interrupted",
+      toolName: "slow_tool",
+      result: { error: "Tool execution was interrupted" },
+    });
+  });
 });
+
 

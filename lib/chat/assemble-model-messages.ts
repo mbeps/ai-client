@@ -138,33 +138,37 @@ export function assembleModelMessages(
 
           const msgs: any[] = [{ role: "assistant", content: parts }];
 
-          if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
-            const resultParts = meta.toolResults.map((tr: any) => {
-              const raw = tr.result ?? tr.output;
-              let outputValue = raw;
-              let isJson = typeof raw === "object" && raw !== null;
-
-              if (typeof raw === "string") {
-                try {
-                  outputValue = JSON.parse(raw);
-                  isJson = true;
-                } catch {
-                  outputValue = raw;
-                  isJson = false;
-                }
+          const toolResultsList = Array.isArray(meta.toolResults)
+            ? meta.toolResults
+            : [];
+          const resultParts = meta.toolCalls.map((tc: any) => {
+            const tr = toolResultsList.find(
+              (r: any) => r.toolCallId === tc.toolCallId,
+            );
+            const raw =
+              tr && (tr.result !== undefined || tr.output !== undefined)
+                ? (tr.result ?? tr.output)
+                : { error: "Tool execution did not return a result" };
+            let outputValue = raw;
+            let isJson = typeof raw === "object" && raw !== null;
+            if (typeof raw === "string") {
+              try {
+                outputValue = JSON.parse(raw);
+                isJson = true;
+              } catch {
+                isJson = false;
               }
-
-              return {
-                type: "tool-result",
-                toolCallId: tr.toolCallId,
-                toolName: tr.toolName,
-                output: isJson
-                  ? { type: "json", value: outputValue }
-                  : { type: "text", value: String(outputValue ?? "") },
-              };
-            });
-            msgs.push({ role: "tool", content: resultParts });
-          }
+            }
+            return {
+              type: "tool-result",
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              output: isJson
+                ? { type: "json", value: outputValue }
+                : { type: "text", value: String(raw ?? "") },
+            };
+          });
+          msgs.push({ role: "tool", content: resultParts });
 
           return msgs;
         }

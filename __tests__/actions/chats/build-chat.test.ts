@@ -29,6 +29,7 @@ describe("buildChatFromRows", () => {
       title: "Test Chat",
       projectId: "proj-1",
       assistantId: "asst-1",
+      knowledgebaseId: "kb-1",
       projectName: "Project 1",
       assistantName: "Assistant 1",
       updatedAt: new Date().toISOString(),
@@ -112,5 +113,6 @@ describe("buildChatFromRows", () => {
     expect(chat.messages["msg-2"].attachments[0].type).toBe("spreadsheet");
     expect(chat.projectId).toBe("proj-1");
     expect(chat.assistantId).toBe("asst-1");
+    expect(chat.knowledgebaseId).toBe("kb-1");
   });
 });

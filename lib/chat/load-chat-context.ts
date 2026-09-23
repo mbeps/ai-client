@@ -73,127 +73,126 @@ export async function loadChatContext(
   selectedAssistantId?: string,
   selectedSkillIds?: string[],
 ): Promise<ChatContext> {
-  // 1. Chat lookup (sequential — everything below depends on it)
-  const [chatRow] = await db
+  // 1. Chat and Project lookup (joined to resolve project context and KB in one query)
+  const [row] = await db
     .select({
       id: chat.id,
       projectId: chat.projectId,
       assistantId: chat.assistantId,
       knowledgebaseId: chat.knowledgebaseId,
+      projectTableId: project.id,
+      projectGlobalPrompt: project.globalPrompt,
+      projectKnowledgebaseId: project.knowledgebaseId,
     })
     .from(chat)
+    .leftJoin(
+      project,
+      and(eq(project.id, chat.projectId), eq(project.userId, userId)),
+    )
     .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
 
-  if (!chatRow) {
+  if (!row) {
     throw new ChatNotFoundError(chatId);
   }
 
-  // 2. Parallel queries that depend on chatRow
-  const [projectRow, assistantRow, servers, kbRow, userSkills] =
-    await Promise.all([
-      // Project lookup (if applicable)
-      chatRow.projectId
-        ? db
-            .select({
-              globalPrompt: project.globalPrompt,
-              knowledgebaseId: project.knowledgebaseId,
-            })
-            .from(project)
-            .where(
-              and(
-                eq(project.id, chatRow.projectId),
-                eq(project.userId, userId),
-              ),
-            )
-            .limit(1)
-            .then((rows) => rows[0] ?? null)
-        : Promise.resolve(null),
+  const chatRow = {
+    id: row.id,
+    projectId: row.projectId,
+    assistantId: row.assistantId,
+    knowledgebaseId: row.knowledgebaseId,
+  };
 
-      // Assistant lookup (if applicable)
-      (() => {
-        const effectiveAssistantId =
-          chatRow.assistantId || selectedAssistantId || null;
-        return effectiveAssistantId
-          ? db
-              .select({ prompt: assistant.prompt })
-              .from(assistant)
-              .where(
-                and(
-                  eq(assistant.id, effectiveAssistantId),
-                  eq(assistant.userId, userId),
-                ),
-              )
-              .limit(1)
-              .then((rows) => rows[0] ?? null)
-          : Promise.resolve(null);
-      })(),
+  const projectRow =
+    row.projectId && row.projectTableId
+      ? {
+          globalPrompt: row.projectGlobalPrompt,
+          knowledgebaseId: row.projectKnowledgebaseId,
+        }
+      : null;
 
-      // Enabled MCP servers for this user (owned personal servers + installed public servers)
-      Promise.all([
-        db
-          .select({
-            id: mcpServer.id,
-            name: mcpServer.name,
-            url: mcpServer.url,
-            headers: mcpServer.headers,
-          })
-          .from(mcpServer)
-          .where(
-            and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true)),
-          ),
-        db
-          .select({
-            id: mcpServer.id,
-            name: mcpServer.name,
-            url: mcpServer.url,
-            headers: userMcpServerInstall.headers,
-          })
-          .from(userMcpServerInstall)
-          .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
-          .where(
-            and(
-              eq(userMcpServerInstall.userId, userId),
-              eq(userMcpServerInstall.enabled, true),
-              eq(mcpServer.isPublic, true),
-              eq(mcpServer.enabled, true),
-            ),
-          ),
-      ]).then(([personal, installed]) => [...personal, ...installed]),
-
-      // KB readiness check (if applicable)
-      (() => {
-        const activeKbId =
-          selectedKbIds?.[0] ?? chatRow.knowledgebaseId ?? null;
-        if (!activeKbId) return Promise.resolve(null);
-        return db
-          .select({ indexStatus: knowledgebase.indexStatus })
-          .from(knowledgebase)
-          .where(
-            and(
-              eq(knowledgebase.id, activeKbId),
-              eq(knowledgebase.userId, userId),
-            ),
-          )
-          .limit(1)
-          .then((rows) => rows[0] ?? null);
-      })(),
-
-      // Enabled user skills
-      db
-        .select()
-        .from(skill)
-        .where(
-          and(eq(skill.userId, userId), eq(skill.enabled, true)),
-        ) as Promise<SkillRow[]>,
-    ]);
-
-  // 3. Derive composite values
   const activeKbId =
     selectedKbIds?.[0] ??
     chatRow.knowledgebaseId ??
     projectRow?.knowledgebaseId ??
     null;
 
+  // 2. Parallel queries that depend on chatRow and activeKbId
+  const [assistantRow, servers, kbRow, userSkills] = await Promise.all([
+    // Assistant lookup (if applicable)
+    (() => {
+      const effectiveAssistantId =
+        chatRow.assistantId || selectedAssistantId || null;
+      return effectiveAssistantId
+        ? db
+            .select({ prompt: assistant.prompt })
+            .from(assistant)
+            .where(
+              and(
+                eq(assistant.id, effectiveAssistantId),
+                eq(assistant.userId, userId),
+              ),
+            )
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null);
+    })(),
+
+    // Enabled MCP servers for this user (owned personal servers + installed public servers)
+    Promise.all([
+      db
+        .select({
+          id: mcpServer.id,
+          name: mcpServer.name,
+          url: mcpServer.url,
+          headers: mcpServer.headers,
+        })
+        .from(mcpServer)
+        .where(and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true))),
+      db
+        .select({
+          id: mcpServer.id,
+          name: mcpServer.name,
+          url: mcpServer.url,
+          headers: userMcpServerInstall.headers,
+        })
+        .from(userMcpServerInstall)
+        .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
+        .where(
+          and(
+            eq(userMcpServerInstall.userId, userId),
+            eq(userMcpServerInstall.enabled, true),
+            eq(mcpServer.isPublic, true),
+            eq(mcpServer.enabled, true),
+          ),
+        ),
+    ]).then(([personal, installed]) => [...personal, ...installed]),
+
+    // KB readiness check (if applicable)
+    (() => {
+      if (!activeKbId) return Promise.resolve(null);
+      return db
+        .select({ indexStatus: knowledgebase.indexStatus })
+        .from(knowledgebase)
+        .where(
+          and(
+            eq(knowledgebase.id, activeKbId),
+            eq(knowledgebase.userId, userId),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+    })(),
+
+    // Enabled user skills
+    db
+      .select()
+      .from(skill)
+      .where(and(eq(skill.userId, userId), eq(skill.enabled, true))) as Promise<
+      SkillRow[]
+    >,
+  ]);
+
+  // 3. Derive composite values
   const kbIsReady = activeKbId ? kbRow?.indexStatus === "ready" : false;
 
   // 4. Filter servers by selection if provided

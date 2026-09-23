@@ -25,12 +25,13 @@ export default async function AssistantChatPage({
   try {
     const data = await getChat(chatId);
     chat = buildChatFromRows(data);
-    if (chat.assistantId !== id) {
-      notFound();
-    }
   } catch {
     notFound();
   }
 
-  return <ChatPageClient initialChat={chat!} />;
+  if (chat.assistantId !== id) {
+    notFound();
+  }
+
+  return <ChatPageClient initialChat={chat} />;
 }
