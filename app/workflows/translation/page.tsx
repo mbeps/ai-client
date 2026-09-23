@@ -1,5 +1,6 @@
 "use client";
 
+import { useRealtime } from "inngest/react";
 import {
   AlertCircle,
   ArrowLeftRight,
@@ -17,7 +18,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { translateText } from "@/actions/workflows/translate";
+import {
+  getLatestTranslationAction,
+  getTranslationRealtimeToken,
+  triggerTranslation,
+} from "@/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
@@ -44,12 +49,13 @@ import {
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";
+import { translationChannel } from "@/lib/inngest/channels";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Translation workflow page providing AI-powered text and document translation.
  * Client component supporting language selection, model selection, and file attachment processing.
- * Implements real-time translation with support for direct text input or document extraction.
+ * Implements real-time background translation via Inngest with streaming support.
  * Maintains copy-to-clipboard functionality and language pair swapping.
  *
  * @author Maruf Bepary
@@ -72,7 +78,11 @@ export default function TranslationWorkflowPage() {
   const [isCopied, setIsCopied] = useState(false);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [activeTranslationId, setActiveTranslationId] = useState<string | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastProcessedIndexRef = useRef(0);
 
   useEffect(() => {
     if (chatModels.length === 0) return;
@@ -92,19 +102,125 @@ export default function TranslationWorkflowPage() {
     [targetLangValue],
   );
 
+  const apiBaseUrl = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    if (process.env.NODE_ENV !== "production") {
+      return `${window.location.protocol}//${window.location.hostname}:8288`;
+    }
+    return undefined;
+  }, []);
+
+  const fetchTranslationToken = useCallback(async () => {
+    if (!activeTranslationId) throw new Error("No active translation");
+    return getTranslationRealtimeToken(activeTranslationId);
+  }, [activeTranslationId]);
+
+  const { messages } = useRealtime({
+    channel: activeTranslationId
+      ? translationChannel({ translationId: activeTranslationId })
+      : undefined,
+    topics: ["stream"] as const,
+    token: fetchTranslationToken,
+    enabled: !!activeTranslationId && isLoading,
+    historyLimit: null,
+    apiBaseUrl,
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer on translationId change
+  useEffect(() => {
+    lastProcessedIndexRef.current = 0;
+  }, [activeTranslationId]);
+
+  useEffect(() => {
+    const all = messages.all;
+    if (all.length < lastProcessedIndexRef.current) {
+      lastProcessedIndexRef.current = 0;
+    }
+    if (all.length > lastProcessedIndexRef.current) {
+      for (let i = lastProcessedIndexRef.current; i < all.length; i++) {
+        const msg = all[i];
+        if (msg?.data) {
+          const event = msg.data as {
+            type: string;
+            text?: string;
+            translatedText?: string;
+            message?: string;
+          };
+          if (event.type === "start") {
+            setTranslatedText("");
+          } else if (event.type === "text-delta" && event.text) {
+            setTranslatedText((prev) => prev + event.text);
+          } else if (event.type === "finish") {
+            if (event.translatedText) {
+              setTranslatedText(event.translatedText);
+            }
+            setIsLoading(false);
+          } else if (event.type === "error") {
+            setIsLoading(false);
+            toast.error(event.message || "Translation failed");
+          }
+        }
+      }
+      lastProcessedIndexRef.current = all.length;
+    }
+  }, [messages.all]);
+
+  useEffect(() => {
+    let mounted = true;
+    getLatestTranslationAction()
+      .then((latest) => {
+        if (!mounted || !latest) return;
+        if (latest.status === "pending" || latest.status === "translating") {
+          setActiveTranslationId(latest.id);
+          setSourceText(latest.sourceText);
+          setTranslatedText(latest.translatedText || "");
+          setIsLoading(true);
+          const sLang = LANGUAGES.find(
+            (l) => l.label === latest.sourceLanguage,
+          );
+          if (sLang) setSourceLangValue(sLang.value);
+          const tLang = LANGUAGES.find(
+            (l) => l.label === latest.targetLanguage,
+          );
+          if (tLang) setTargetLangValue(tLang.value);
+          if (latest.modelId) setModelId(latest.modelId);
+        } else if (latest.status === "completed" && latest.translatedText) {
+          setSourceText((current) => current || latest.sourceText);
+          setTranslatedText((current) => current || latest.translatedText);
+          const sLang = LANGUAGES.find(
+            (l) => l.label === latest.sourceLanguage,
+          );
+          if (sLang) setSourceLangValue(sLang.value);
+          const tLang = LANGUAGES.find(
+            (l) => l.label === latest.targetLanguage,
+          );
+          if (tLang) setTargetLangValue(tLang.value);
+          if (latest.modelId) setModelId(latest.modelId);
+        }
+      })
+      .catch(() => {
+        // Silently ignore rehydration error
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleTranslate = useCallback(async () => {
-    if (!sourceText.trim() && !attachment) {
+    const isImage = attachment?.type === "image";
+    if (!sourceText.trim() && !isImage) {
       setTranslatedText("");
       return;
     }
 
     setIsLoading(true);
+    setTranslatedText("");
     try {
-      const result = await translateText({
+      const { translationId } = await triggerTranslation({
         text: sourceText,
         sourceLanguage: sourceLang.label,
         targetLanguage: targetLang.label,
-        modelId: modelId,
+        modelId: modelId || undefined,
         attachment: attachment
           ? {
               name: attachment.name,
@@ -115,15 +231,14 @@ export default function TranslationWorkflowPage() {
             }
           : undefined,
       });
-      setTranslatedText(result);
+      setActiveTranslationId(translationId);
     } catch (error: any) {
+      setIsLoading(false);
       if (!handleApiError(error)) {
         toast.error(
           error instanceof Error ? error.message : "Translation failed",
         );
       }
-    } finally {
-      setIsLoading(false);
     }
   }, [sourceText, sourceLang, targetLang, modelId, attachment, handleApiError]);
 
@@ -148,6 +263,7 @@ export default function TranslationWorkflowPage() {
     setSourceText("");
     setTranslatedText("");
     setAttachment(null);
+    setActiveTranslationId(null);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,9 +275,15 @@ export default function TranslationWorkflowPage() {
       const processed = await processAttachment(file, []);
       setAttachment(processed);
 
-      if (processed.type === "document" && processed.extractedText) {
-        // Truncate to 5000 characters to match schema limits
-        setSourceText(processed.extractedText.slice(0, 5000));
+      if (processed.type === "document") {
+        if (processed.extractedText?.trim()) {
+          // Truncate to 5000 characters to match schema limits
+          setSourceText(processed.extractedText.slice(0, 5000));
+        } else {
+          toast.warning(
+            "No readable text could be extracted from this document.",
+          );
+        }
       }
     } catch (error) {
       toast.error(
@@ -183,7 +305,11 @@ export default function TranslationWorkflowPage() {
   }, [chatModels, modelId]);
 
   return (
-    <PageContainer variant="default" scrollable={false} className="space-y-3">
+    <PageContainer
+      variant="default"
+      scrollable={true}
+      className="flex min-h-full flex-col space-y-3 pb-6"
+    >
       {/* Header Row */}
       <div className="flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-2">
@@ -306,9 +432,9 @@ export default function TranslationWorkflowPage() {
       </div>
 
       {/* Editor Grid - Maximum Height */}
-      <div className="relative grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="relative grid min-h-[360px] flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Source */}
-        <div className="group relative flex flex-col rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/20">
+        <div className="group relative flex min-h-[280px] flex-col rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/20">
           <input
             type="file"
             ref={fileInputRef}
@@ -326,7 +452,7 @@ export default function TranslationWorkflowPage() {
                   ? "Vision mode: Image attached. Add notes if needed..."
                   : "Type or paste text to translate..."
               }
-              className="scrollbar-thin min-h-0 flex-1 resize-none border-0 p-4 text-sm leading-relaxed focus-visible:ring-0"
+              className="scrollbar-thin min-h-[140px] flex-1 resize-none border-0 p-4 text-sm leading-relaxed focus-visible:ring-0"
               disabled={isExtracting}
             />
 
@@ -422,13 +548,14 @@ export default function TranslationWorkflowPage() {
         </div>
 
         {/* Target */}
-        <div className="group relative flex flex-col overflow-hidden rounded-xl border bg-muted/5 shadow-sm transition-colors hover:border-primary/20">
+        <div className="group relative flex min-h-[280px] flex-col overflow-hidden rounded-xl border bg-muted/5 shadow-sm transition-colors hover:border-primary/20">
           <Textarea
             value={translatedText}
             readOnly
             placeholder={isLoading ? "Translating..." : "Translation..."}
-            className="scrollbar-thin min-h-0 flex-1 resize-none border-0 bg-transparent p-4 text-sm leading-relaxed focus-visible:ring-0"
+            className="scrollbar-thin min-h-[140px] flex-1 resize-none border-0 bg-transparent p-4 text-sm leading-relaxed focus-visible:ring-0"
           />
+
           <div className="flex shrink-0 items-center justify-end border-t bg-muted/10 p-2">
             {translatedText && (
               <Tooltip>
@@ -468,7 +595,7 @@ export default function TranslationWorkflowPage() {
             isLoading ||
             isExtracting ||
             hasNoModels ||
-            (!sourceText.trim() && !attachment)
+            (!sourceText.trim() && attachment?.type !== "image")
           }
           className="h-8 px-8 font-medium text-xs shadow-sm transition-all"
         >

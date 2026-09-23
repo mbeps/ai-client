@@ -34,9 +34,39 @@ vi.mock("@/lib/chat/fetch-provider-with-model", () => ({
   fetchProviderWithModel: fetchProviderWithModelMock,
 }));
 
+const dbChainable = vi.hoisted(() => {
+  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
+  for (const m of [
+    "insert",
+    "values",
+    "returning",
+    "select",
+    "from",
+    "where",
+    "orderBy",
+    "limit",
+  ]) {
+    c[m] = vi.fn().mockImplementation(() => c);
+  }
+  return c;
+});
+
+vi.mock("@/drizzle/db", () => ({ db: dbChainable }));
+
+vi.mock("inngest/react", () => ({
+  getClientSubscriptionToken: vi.fn().mockResolvedValue("mock-trans-token"),
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { translateText } from "@/actions/workflows/translate";
+import {
+  getLatestTranslationAction,
+  getTranslationRealtimeToken,
+  translateText,
+  triggerTranslation,
+} from "@/actions/workflows/translate";
 import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
+import { inngest } from "@/lib/inngest/client";
+
 
 describe("translateText action", () => {
   beforeEach(() => {
@@ -205,7 +235,6 @@ describe("translateText action", () => {
       }),
     ).rejects.toThrow("Failed to translate text. Please try again.");
 
-    // Test with non-Error string throw
     generateTextMock.mockRejectedValueOnce("Plain string explosion");
     await expect(
       translateText({
@@ -215,5 +244,132 @@ describe("translateText action", () => {
       }),
     ).rejects.toThrow("Failed to translate text. Please try again.");
   });
+
+  it("throws when non-image translation has no readable text", async () => {
+    await expect(
+      translateText({
+        sourceLanguage: "English",
+        targetLanguage: "Spanish",
+        text: "   ",
+        attachment: {
+          name: "empty.pdf",
+          type: "document",
+          mimeType: "application/pdf",
+          extractedText: "   ",
+        },
+      }),
+    ).rejects.toThrow(/Either text or an attachment with content must be provided/);
+  });
+
 });
+
+describe("triggerTranslation action", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("validates input and throws on empty text without image", async () => {
+    await expect(
+      triggerTranslation({
+        sourceLanguage: "English",
+        targetLanguage: "Italian",
+        text: "",
+      }),
+    ).rejects.toThrow(/Invalid translation request/);
+  });
+
+  it("inserts translation record and dispatches Inngest event", async () => {
+    dbChainable.returning.mockResolvedValueOnce([
+      { id: "trans-new-1", userId: "user-1", status: "pending" },
+    ]);
+
+    const result = await triggerTranslation({
+      sourceLanguage: "English",
+      targetLanguage: "German",
+      text: "Hello world",
+    });
+
+    expect(result).toEqual({ translationId: "trans-new-1" });
+    expect(dbChainable.insert).toHaveBeenCalled();
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "workflows/translate.execute",
+      data: expect.objectContaining({
+        translationId: "trans-new-1",
+        userId: "user-1",
+        sourceText: "Hello world",
+      }),
+    });
+  });
+
+  it("handles document attachment with extracted text", async () => {
+    dbChainable.returning.mockResolvedValueOnce([
+      { id: "trans-doc-1", userId: "user-1", status: "pending" },
+    ]);
+
+    const result = await triggerTranslation({
+      sourceLanguage: "English",
+      targetLanguage: "French",
+      attachment: {
+        name: "letter.pdf",
+        type: "document",
+        mimeType: "application/pdf",
+        extractedText: "Letter body text",
+      },
+    });
+
+    expect(result).toEqual({ translationId: "trans-doc-1" });
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "workflows/translate.execute",
+      data: expect.objectContaining({
+        translationId: "trans-doc-1",
+        sourceText: "Letter body text",
+      }),
+    });
+  });
+});
+
+describe("getTranslationRealtimeToken action", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws Unauthorized if record not found or belongs to another user", async () => {
+    dbChainable.where.mockResolvedValueOnce([]);
+
+    await expect(getTranslationRealtimeToken("trans-ghost")).rejects.toThrow(
+      "Unauthorized",
+    );
+  });
+
+  it("returns subscription token when record exists and belongs to user", async () => {
+    dbChainable.where.mockResolvedValueOnce([{ id: "trans-ok" }]);
+
+    const token = await getTranslationRealtimeToken("trans-ok");
+    expect(token).toBe("mock-trans-token");
+  });
+});
+
+describe("getLatestTranslationAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns latest translation record or null", async () => {
+    dbChainable.limit.mockResolvedValueOnce([
+      { id: "trans-recent", status: "completed", translatedText: "Ciao" },
+    ]);
+
+    const latest = await getLatestTranslationAction();
+    expect(latest).toEqual({
+      id: "trans-recent",
+      status: "completed",
+      translatedText: "Ciao",
+    });
+
+    dbChainable.limit.mockResolvedValueOnce([]);
+    const empty = await getLatestTranslationAction();
+    expect(empty).toBeNull();
+  });
+});
+
 

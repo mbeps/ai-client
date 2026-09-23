@@ -1,4 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
+import { MAX_DOCUMENT_CHARS } from "@/constants/attachments";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "utils", "extraction"]);
@@ -15,11 +16,10 @@ const log = getLogger(["app", "utils", "extraction"]);
 export async function extractDocumentContent(
   input: Buffer | Uint8Array | File,
   mimeType: string,
-  // ponytail: sole caller passes env.MAX_DOCUMENT_CHARS; NaN default makes a
-  // future caller without an explicit limit fail loudly instead of silently
-  // using a stale value.
-  limit: number = Number.NaN,
+  limit: number = MAX_DOCUMENT_CHARS,
 ): Promise<string> {
+  const effectiveLimit =
+    Number.isFinite(limit) && limit > 0 ? limit : MAX_DOCUMENT_CHARS;
   let buffer: Uint8Array;
 
   if (input instanceof File) {
@@ -32,7 +32,7 @@ export async function extractDocumentContent(
     try {
       const pdf = await getDocumentProxy(buffer);
       const { text } = await extractText(pdf, { mergePages: true });
-      return text.slice(0, limit);
+      return text.slice(0, effectiveLimit);
     } catch (error) {
       log.error("Error extracting PDF content: {error}", {
         error: error instanceof Error ? error.message : String(error),
@@ -47,13 +47,13 @@ export async function extractDocumentContent(
     mimeType === "application/xml"
   ) {
     const text = new TextDecoder().decode(buffer);
-    return text.slice(0, limit);
+    return text.slice(0, effectiveLimit);
   }
 
   // Fallback for unknown types if it's text-like but doesn't start with text/
   try {
     const text = new TextDecoder().decode(buffer);
-    return text.slice(0, limit);
+    return text.slice(0, effectiveLimit);
   } catch (_error) {
     throw new Error(`Unsupported or unreadable MIME type: ${mimeType}`);
   }

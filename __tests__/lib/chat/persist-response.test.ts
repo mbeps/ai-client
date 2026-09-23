@@ -3,15 +3,19 @@ import { persistAssistantResponse } from "@/lib/chat/persist-response";
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
+  c.select = vi.fn().mockImplementation(() => c);
+  c.from = vi.fn().mockImplementation(() => c);
   c.insert = vi.fn().mockImplementation(() => c);
   c.values = vi.fn().mockImplementation(() => c);
   c.update = vi.fn().mockImplementation(() => c);
   c.set = vi.fn().mockImplementation(() => c);
-  c.where = vi.fn().mockResolvedValue(undefined);
+  c.where = vi.fn().mockImplementation(() => c);
+  c.limit = vi.fn().mockResolvedValue([]);
   return c;
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
+
 
 describe("persistAssistantResponse", () => {
   it("inserts message and updates chat leaf", async () => {

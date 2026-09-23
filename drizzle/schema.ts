@@ -20,3 +20,4 @@ export * from "./schemas/prompt-schema";
 export * from "./schemas/skill-schema";
 export * from "./schemas/transform-agent-schema";
 export * from "./schemas/user-settings-schema";
+export * from "./schemas/workflow-schema";

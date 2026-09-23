@@ -87,5 +87,15 @@ describe("extractDocumentContent", () => {
 
     decodeSpy.mockRestore();
   });
+
+  it("uses MAX_DOCUMENT_CHARS when limit is omitted or NaN", async () => {
+    const data = new TextEncoder().encode("Hello default limit");
+    const resultDefault = await extractDocumentContent(data, "text/plain");
+    expect(resultDefault).toBe("Hello default limit");
+
+    const resultNaN = await extractDocumentContent(data, "text/plain", Number.NaN);
+    expect(resultNaN).toBe("Hello default limit");
+  });
 });
+
 

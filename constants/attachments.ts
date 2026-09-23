@@ -87,3 +87,9 @@ export const MAX_IMAGES_PER_MESSAGE = 3;
  * Applies to combined count of images, documents, and spreadsheets.
  */
 export const MAX_ATTACHMENTS_PER_MESSAGE = 5;
+
+/**
+ * Maximum characters to extract from documents for chat and workflow attachments.
+ * Prevents extremely large documents from bloating context.
+ */
+export const MAX_DOCUMENT_CHARS = 50_000;
