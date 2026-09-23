@@ -142,9 +142,11 @@ export function useStreamResponse(
   const accumulatedReasoningRef = useRef("");
   const assistantMessageIdRef = useRef<string | null>(null);
   const activeToolCallsRef = useRef<ToolCallState[]>([]);
+  const stoppedRef = useRef(false);
 
   const handleStreamEvent = useCallback(
     (event: ChatStreamEvent) => {
+      if (stoppedRef.current) return;
       switch (event.type) {
         case "start":
           lastChunkTimeRef.current = Date.now();
@@ -435,12 +437,55 @@ export function useStreamResponse(
     isStreaming && !!streamingReasoning && !streamingContent;
 
   const stopStream = useCallback(() => {
+    stoppedRef.current = true;
+
+    const partialText = accumulatedTextRef.current;
+    const messageId = assistantMessageIdRef.current || crypto.randomUUID();
+    const chat = useAppStore.getState().chats?.[chatId];
+    const userMsgId =
+      pendingRef.current.userMessageId ||
+      (chat?.currentLeafId && chat.messages[chat.currentLeafId]?.role === "user"
+        ? chat.currentLeafId
+        : null);
+
+    // If there is partial streamed text, commit it immediately so the UI
+    // does not go blank and the content survives a page refresh.
+    if (partialText && userMsgId) {
+      addMessage(chatId, {
+        role: "assistant",
+        content: partialText,
+        parentId: userMsgId,
+        id: messageId,
+        metadata: JSON.stringify({
+          model: pendingRef.current.model,
+          finishReason: "stop",
+        }),
+      });
+      persistMessage(chatId, {
+        id: messageId,
+        role: "assistant",
+        content: partialText,
+        parentId: userMsgId,
+        metadata: JSON.stringify({
+          model: pendingRef.current.model,
+          finishReason: "stop",
+        }),
+      }).catch((err) => {
+        logger.error("Failed to persist stopped message", err);
+      });
+    }
+
     lastChunkTimeRef.current = 0;
     setIsStreaming(false);
     setStreamingContent(null);
     setStreamingReasoning(null);
     setActiveToolCalls([]);
-  }, []);
+    fetch("/api/chat/stop", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId }),
+    }).catch(() => {});
+  }, [chatId, addMessage]);
 
   const streamResponse = async (
     userMsgId: string,
@@ -462,6 +507,7 @@ export function useStreamResponse(
     };
     lastChunkTimeRef.current = Date.now();
 
+    stoppedRef.current = false;
     accumulatedTextRef.current = "";
     accumulatedReasoningRef.current = "";
     assistantMessageIdRef.current = null;

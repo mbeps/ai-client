@@ -53,6 +53,11 @@ export async function persistMessage(
     })
     .returning();
 
+  await db
+    .update(chat)
+    .set({ currentLeafId: newMessage.id, updatedAt: new Date() })
+    .where(eq(chat.id, validatedChatId));
+
   log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
     id: newMessage.id,
     chatId: validatedChatId,

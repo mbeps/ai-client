@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
 
@@ -12,18 +12,39 @@ type PersistAssistantResponseParams = {
 
 /**
  * Persists the assistant's response to the database:
- * 1. Inserts a new `message` row with role `assistant`.
- * 2. Updates the parent `chat` row's `currentLeafId` so the tree points to
+ * 1. Checks if an assistant reply for this `parentId` (user message) already
+ *    exists — if so, the client already persisted a partial response on stop
+ *    and we skip to avoid overwriting it.
+ * 2. Inserts a new `message` row with role `assistant`.
+ * 3. Updates the parent `chat` row's `currentLeafId` so the tree points to
  *    the new leaf.
  *
- * Both operations share the same `chatId` and `assistantMessageId` — they are
- * intentionally sequential to avoid a race where the leaf points to a message
- * that hasn't been inserted yet.
+ * Both insert and update share the same `chatId` and `assistantMessageId` —
+ * they are intentionally sequential to avoid a race where the leaf points to
+ * a message that hasn't been inserted yet.
  */
 export async function persistAssistantResponse(
   params: PersistAssistantResponseParams,
 ): Promise<void> {
   const { chatId, assistantMessageId, content, parentId, metadata } = params;
+
+  // If the client already persisted a partial message (user pressed Stop),
+  // skip insertion to avoid overwriting the saved partial content.
+  if (parentId) {
+    const [existing] = await db
+      .select({ id: message.id })
+      .from(message)
+      .where(
+        and(
+          eq(message.chatId, chatId),
+          eq(message.parentId, parentId),
+          eq(message.role, "assistant"),
+        ),
+      )
+      .limit(1);
+
+    if (existing) return;
+  }
 
   await db.insert(message).values({
     id: assistantMessageId,

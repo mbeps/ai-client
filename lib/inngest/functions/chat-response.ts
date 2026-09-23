@@ -5,6 +5,7 @@ import {
   VisionNotSupportedError,
 } from "@/constants/errors";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { loadChatContext } from "@/lib/chat/load-chat-context";
 import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
@@ -16,7 +17,7 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { chatChannel } from "@/lib/inngest/channels";
+import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
@@ -36,6 +37,12 @@ export const generateChatResponse = inngest.createFunction(
     id: "generate-chat-response",
     retries: 0,
     triggers: [{ event: "chat/response.generate" }],
+    cancelOn: [
+      {
+        event: "chat/response.cancel",
+        if: "async.data.chatId == event.data.chatId && async.data.userId == event.data.userId",
+      },
+    ],
   },
   async ({ event }) => {
     const {
@@ -50,20 +57,20 @@ export const generateChatResponse = inngest.createFunction(
       selectedKbIds,
     } = event.data;
 
+    const abortController = chatAbortRegistry.register(chatId);
+
     const ch = chatChannel({ chatId });
     const assistantMessageId = crypto.randomUUID();
 
-    const emit = async (data: any) => {
+    const emit = async (data: ChatStreamEvent) => {
+      if (abortController.signal.aborted) return;
       try {
         await inngest.realtime.publish(ch.stream, data);
       } catch (err) {
-        log.warn(
-          "Failed to publish chat realtime event (chatId: {chatId}): {err}",
-          {
-            chatId,
-            err: err instanceof Error ? err.message : String(err),
-          },
-        );
+        log.warn("Failed to publish chat stream event to Inngest Realtime", {
+          error: err instanceof Error ? err.message : String(err),
+          type: data.type,
+        });
       }
     };
 
@@ -135,6 +142,7 @@ export const generateChatResponse = inngest.createFunction(
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
+        abortSignal: abortController.signal,
         instructions: buildSystemPrompt(
           globalSystemPrompt,
           ctx.projectRow?.globalPrompt,
@@ -168,6 +176,12 @@ export const generateChatResponse = inngest.createFunction(
       }> = [];
 
       for await (const chunk of result.fullStream) {
+        if (abortController.signal.aborted) {
+          log.info("Stream loop aborted by user (chatId: {chatId})", {
+            chatId,
+          });
+          break;
+        }
         if (chunk.type === "text-delta") {
           accumulatedText += chunk.text;
           await emit({ type: "text-delta", text: chunk.text });
@@ -246,6 +260,15 @@ export const generateChatResponse = inngest.createFunction(
         { chatId, assistantMessageId },
       );
     } catch (error: unknown) {
+      if (
+        abortController.signal.aborted ||
+        (error instanceof Error && error.name === "AbortError")
+      ) {
+        log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
+          chatId,
+        });
+        return;
+      }
       const classified = classifyProviderError(error);
       const effectiveError = classified ?? error;
       const errorMsg =
@@ -263,6 +286,7 @@ export const generateChatResponse = inngest.createFunction(
       await emit({ type: "error", message: errorMsg, code: errorCode });
       throw error;
     } finally {
+      chatAbortRegistry.delete(chatId);
       await mcpCleanup();
     }
   },

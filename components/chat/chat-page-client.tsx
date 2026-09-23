@@ -33,11 +33,23 @@ export function ChatPageClient({
   initialMessage,
 }: ChatPageClientProps) {
   const upsertChat = useAppStore((state) => state.upsertChat);
-  const [hasSentInitial, setHasSentInitial] = useState(false);
+  const hasExistingMessages = Object.keys(initialChat.messages).length > 0;
+  const [hasSentInitial, setHasSentInitial] = useState(hasExistingMessages);
 
   useEffect(() => {
     upsertChat(initialChat);
-  }, [initialChat, upsertChat]);
+    if (initialMessage && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("msg")) {
+        url.searchParams.delete("msg");
+        window.history.replaceState(
+          {},
+          "",
+          url.pathname + (url.search ? url.search : ""),
+        );
+      }
+    }
+  }, [initialChat, upsertChat, initialMessage]);
 
   return (
     <ChatUI

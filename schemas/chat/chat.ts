@@ -249,3 +249,11 @@ export const updateChatKnowledgebaseSchema = z.object({
   chatId: idField,
   knowledgebaseId: idField.nullable(),
 });
+
+/**
+ * Validates the DELETE /api/chat/stop request body.
+ * Only requires chatId to identify which chat's generation to cancel.
+ *
+ * @author Maruf Bepary
+ */
+export const stopChatRequestSchema = z.object({ chatId: idField }).strict();

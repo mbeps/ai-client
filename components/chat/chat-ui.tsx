@@ -372,6 +372,23 @@ export function ChatUI({
     if (initialMessage && chat && !sentInitial.current) {
       sentInitial.current = true;
       onInitialMessageSent?.();
+
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("msg")) {
+          url.searchParams.delete("msg");
+          window.history.replaceState(
+            {},
+            "",
+            url.pathname + (url.search ? url.search : ""),
+          );
+        }
+      }
+
+      if (Object.keys(chat.messages).length > 0) {
+        return;
+      }
+
       handleSend(
         initialMessage,
         [],
