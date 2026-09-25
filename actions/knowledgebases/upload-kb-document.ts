@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
+import { KB_CONFIG } from "@/config/knowledgebase";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
@@ -14,14 +15,6 @@ import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const log = getLogger(["app", "actions", "knowledgebases"]);
-
-const ALLOWED_MIME_TYPES = new Set([
-  "application/pdf",
-  "text/plain",
-  "text/markdown",
-]);
-
-const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 /**
  * Validates file (type, size), uploads to S3, creates pending document, marks KB stale.
@@ -66,13 +59,13 @@ export async function uploadKbDocument(
 
   // Magic-byte-sniffed type is authoritative; rejects spoofed Content-Type.
   const mimeType = await resolveMimeType(file);
-  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+  if (!KB_CONFIG.ALLOWED_MIME_TYPES.has(mimeType)) {
     throw new Error(
       `File type "${mimeType}" is not supported. Use PDF, plain text, or Markdown.`,
     );
   }
 
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {
     throw new Error("File exceeds the 50 MB size limit.");
   }
 

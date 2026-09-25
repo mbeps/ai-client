@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { env } from "@/config/env";
+import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
@@ -81,7 +82,7 @@ export async function hybridSearch(
       WHERE c.kb_id = ${kbId}
         AND c.embedding IS NOT NULL
       ORDER BY c.embedding <=> ${embeddingLiteral}::vector
-      LIMIT 20
+      LIMIT ${RAG_CONFIG.SEARCH_CANDIDATE_LIMIT}
     `)
   ).rows as unknown as RawChunkRow[];
 
@@ -101,7 +102,7 @@ export async function hybridSearch(
         WHERE c.kb_id = ${kbId}
           AND c.search_vector @@ plainto_tsquery('english', ${normalizedQuery})
         ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${normalizedQuery})) DESC
-        LIMIT 20
+        LIMIT ${RAG_CONFIG.SEARCH_CANDIDATE_LIMIT}
       `)
     ).rows as unknown as RawChunkRow[];
   } catch (err) {

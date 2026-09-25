@@ -14,12 +14,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { KB_CONFIG } from "@/config/knowledgebase";
 import { useUserModels } from "@/hooks/use-user-models";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
-
-const ACCEPTED_TYPES = ".pdf,.txt,.md";
-const MAX_SIZE_MB = 50;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 type Phase = "idle" | "uploading" | "ingesting" | "error";
 
@@ -80,8 +77,8 @@ export function UploadDocumentDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
     if (!selected) return;
-    if (selected.size > MAX_SIZE_BYTES) {
-      const _message = `File exceeds the ${MAX_SIZE_MB} MB limit.`;
+    if (selected.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {
+      const _message = `File exceeds the ${KB_CONFIG.MAX_FILE_SIZE_MB} MB limit.`;
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
     setError(null);
@@ -137,13 +134,13 @@ export function UploadDocumentDialog({
             <Input
               ref={fileInputRef}
               type="file"
-              accept={ACCEPTED_TYPES}
+              accept={KB_CONFIG.ACCEPTED_EXTENSIONS}
               onChange={handleFileChange}
               disabled={isLoading}
             />
             <p className="text-muted-foreground text-xs">
               Supported: PDF, plain text (.txt), Markdown (.md) &middot; Max{" "}
-              {MAX_SIZE_MB} MB
+              {KB_CONFIG.MAX_FILE_SIZE_MB} MB
             </p>
           </div>
 

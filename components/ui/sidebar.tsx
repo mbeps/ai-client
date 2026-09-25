@@ -21,15 +21,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { UI_CONFIG } from "@/config/ui";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
-const SIDEBAR_WIDTH_ICON = "3rem";
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const {
+  COOKIE_NAME: SIDEBAR_COOKIE_NAME,
+  COOKIE_MAX_AGE: SIDEBAR_COOKIE_MAX_AGE,
+  WIDTH: SIDEBAR_WIDTH,
+  WIDTH_MOBILE: SIDEBAR_WIDTH_MOBILE,
+  WIDTH_ICON: SIDEBAR_WIDTH_ICON,
+  KEYBOARD_SHORTCUT: SIDEBAR_KEYBOARD_SHORTCUT,
+} = UI_CONFIG.SIDEBAR;
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
