@@ -9,6 +9,7 @@ import {
   Shield,
   Wrench,
 } from "lucide-react";
+import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
@@ -95,11 +96,13 @@ export default function McpServerPage() {
       <Button
         variant="ghost"
         size="sm"
+        asChild
         className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
-        onClick={() => router.push(ROUTES.TOOLS.path)}
       >
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        Back to Tools
+        <Link href={ROUTES.TOOLS.path}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Tools
+        </Link>
       </Button>
 
       <PageHeader

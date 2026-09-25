@@ -31,7 +31,10 @@ export function ChatCard({ chat }: ChatCardProps) {
       : ROUTES.CHATS.detail(chat.id);
 
   return (
-    <Link href={targetHref} className="group block h-full focus-visible:outline-none">
+    <Link
+      href={targetHref}
+      className="group block h-full focus-visible:outline-none"
+    >
       <Card className="flex h-full min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">

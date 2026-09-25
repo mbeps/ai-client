@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, Globe, Plus, Server, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useForm } from "react-hook-form";
@@ -77,11 +78,13 @@ export default function NewMcpServerPage() {
       <Button
         variant="ghost"
         size="sm"
+        asChild
         className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
-        onClick={() => router.push(ROUTES.SETTINGS.TOOLS.path)}
       >
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        Back to Tools
+        <Link href={ROUTES.SETTINGS.TOOLS.path}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Tools
+        </Link>
       </Button>
 
       <PageHeader
@@ -120,14 +123,11 @@ export default function NewMcpServerPage() {
               <ServerFormFields form={form} />
 
               <div className="flex items-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(ROUTES.SETTINGS.TOOLS.path)}
-                  disabled={isSubmitting}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
+                <Button variant="outline" asChild>
+                  <Link href={ROUTES.SETTINGS.TOOLS.path}>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Link>
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   <LoadingSwap isLoading={isSubmitting}>

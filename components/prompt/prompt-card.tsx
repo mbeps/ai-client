@@ -40,7 +40,10 @@ export function PromptCard({ prompt }: PromptCardProps) {
                 </h3>
               </div>
               <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary" className="py-0 font-mono text-[10px]">
+                <Badge
+                  variant="secondary"
+                  className="py-0 font-mono text-[10px]"
+                >
                   {prompt.shortcut.startsWith("/")
                     ? prompt.shortcut
                     : `/${prompt.shortcut}`}

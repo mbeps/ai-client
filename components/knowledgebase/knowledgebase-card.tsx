@@ -39,7 +39,9 @@ export function KnowledgebaseCard({
             </div>
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
-                <h3 className="truncate font-semibold leading-none">{kb.name}</h3>
+                <h3 className="truncate font-semibold leading-none">
+                  {kb.name}
+                </h3>
                 {kb.indexStatus === "stale" && (
                   <Badge
                     variant="warning"

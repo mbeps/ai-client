@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontal, X } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,9 @@ export interface MenuItem {
   /** Optional icon element (lucide-react icon recommended) rendered before the label. */
   icon?: React.ReactNode;
   /** Callback executed when the menu item is clicked. */
-  onClick: () => void;
+  onClick?: () => void;
+  /** Optional target URL for link navigation. */
+  href?: string;
   /** Visual indicator that this item performs a destructive action (e.g. delete). */
   isDestructive?: boolean;
   /** When true, hides the item from the menu. Useful for conditional actions. */
@@ -83,20 +86,40 @@ export function ResponsiveMenu({
               <DrawerTitle>{title}</DrawerTitle>
             </DrawerHeader>
             <div className="space-y-2 p-4">
-              {visibleItems.map((item, i) => (
-                <Button
-                  key={i}
-                  variant={item.isDestructive ? "destructive" : "outline"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    item.onClick();
-                    setOpen(false);
-                  }}
-                >
-                  {item.icon}
-                  {item.label}
-                </Button>
-              ))}
+              {visibleItems.map((item, i) =>
+                item.href ? (
+                  <Button
+                    key={i}
+                    asChild
+                    variant={item.isDestructive ? "destructive" : "outline"}
+                    className="w-full justify-start"
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        item.onClick?.();
+                        setOpen(false);
+                      }}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    key={i}
+                    variant={item.isDestructive ? "destructive" : "outline"}
+                    className="w-full justify-start"
+                    onClick={() => {
+                      item.onClick?.();
+                      setOpen(false);
+                    }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Button>
+                ),
+              )}
             </div>
             <DrawerFooter className="pt-2">
               <DrawerClose asChild>
@@ -117,17 +140,34 @@ export function ResponsiveMenu({
             {visibleItems.map((item, i) => (
               <Fragment key={i}>
                 {item.separator && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                  className={
-                    item.isDestructive
-                      ? "focus:bg-destructive focus:text-destructive-foreground"
-                      : undefined
-                  }
-                  onClick={item.onClick}
-                >
-                  {item.icon}
-                  {item.label}
-                </DropdownMenuItem>
+                {item.href ? (
+                  <DropdownMenuItem
+                    asChild
+                    className={
+                      item.isDestructive
+                        ? "focus:bg-destructive focus:text-destructive-foreground"
+                        : undefined
+                    }
+                    onClick={item.onClick}
+                  >
+                    <Link href={item.href} className="flex w-full items-center">
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className={
+                      item.isDestructive
+                        ? "focus:bg-destructive focus:text-destructive-foreground"
+                        : undefined
+                    }
+                    onClick={item.onClick}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </DropdownMenuItem>
+                )}
               </Fragment>
             ))}
           </DropdownMenuContent>

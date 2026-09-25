@@ -386,11 +386,13 @@ export default function AgentEditorPage() {
           <Button
             size="sm"
             variant="outline"
+            asChild
             className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
-            <Settings className="mr-1.5 h-3 w-3" />
-            Go to Settings
+            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
+              <Settings className="mr-1.5 h-3 w-3" />
+              Go to Settings
+            </Link>
           </Button>
         </div>
       )}

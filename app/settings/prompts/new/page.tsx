@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, Command, Plus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -51,11 +52,13 @@ export default function NewPromptPage() {
       <Button
         variant="ghost"
         size="sm"
+        asChild
         className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
-        onClick={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
       >
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        Back to Prompts
+        <Link href={ROUTES.SETTINGS.PROMPTS.path}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Prompts
+        </Link>
       </Button>
 
       <PageHeader

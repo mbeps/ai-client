@@ -132,8 +132,8 @@ export function SkillCard({ skill }: SkillCardProps) {
                   <AlertDialogTitle>Delete Skill</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to delete &quot;
-                    {skill.displayName || skill.name}&quot;? This action cannot be
-                    undone.
+                    {skill.displayName || skill.name}&quot;? This action cannot
+                    be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -61,7 +61,6 @@ import type { Attachment } from "@/types/attachment/attachment";
  * @author Maruf Bepary
  */
 export default function TranslationWorkflowPage() {
-  const router = useRouter();
   const { handleApiError } = useApiError();
   const [sourceText, setSourceText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
@@ -341,11 +340,13 @@ export default function TranslationWorkflowPage() {
           <Button
             size="sm"
             variant="outline"
+            asChild
             className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-            onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
           >
-            <Settings className="mr-1.5 h-3 w-3" />
-            Go to Settings
+            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
+              <Settings className="mr-1.5 h-3 w-3" />
+              Go to Settings
+            </Link>
           </Button>
         </div>
       )}

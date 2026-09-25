@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Database, Plus, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   type KnowledgebaseWithCount,
@@ -25,7 +25,6 @@ import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-di
  * @author Maruf Bepary
  */
 export default function KnowledgebasesPage() {
-  const router = useRouter();
   const { models } = useUserModels("embedding");
   const hasNoModels = models.length === 0;
 
@@ -65,11 +64,13 @@ export default function KnowledgebasesPage() {
             <Button
               size="sm"
               variant="outline"
+              asChild
               className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-              onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
             >
-              <Settings className="mr-1.5 h-3 w-3" />
-              Go to Settings
+              <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
+                <Settings className="mr-1.5 h-3 w-3" />
+                Go to Settings
+              </Link>
             </Button>
           </div>
         </div>

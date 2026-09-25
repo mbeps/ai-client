@@ -1,7 +1,6 @@
 "use client";
 
 import { Edit2, MessageSquare, Settings2, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { deleteAssistant } from "@/actions/assistants/delete-assistant";
 import { renameAssistant } from "@/actions/assistants/rename-assistant";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
@@ -22,7 +21,6 @@ import type { Assistant } from "@/types/assistant/assistant";
  * @see ResponsiveMenu for desktop/mobile responsive menu wrapper.
  */
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {
-  const router = useRouter();
   const createNewChat = useCreateChat();
   const loadAssistants = useAppStore((state) => state.loadAssistants);
 
@@ -54,7 +52,7 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
     {
       label: "Manage",
       icon: <Settings2 className="mr-2 h-4 w-4" />,
-      onClick: () => router.push(ROUTES.ASSISTANTS.detail(assistant.id)),
+      href: ROUTES.ASSISTANTS.detail(assistant.id),
       separator: true,
     },
     {

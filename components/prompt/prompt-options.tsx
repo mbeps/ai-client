@@ -1,6 +1,5 @@
 "use client";
 import { Edit2, ExternalLink, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { deletePrompt } from "@/actions/prompts/delete-prompt";
 import { updatePrompt } from "@/actions/prompts/update-prompt";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
@@ -13,7 +12,6 @@ import type { Prompt } from "@/types/prompt/prompt";
  * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.
  */
 export function PromptOptions({ prompt }: { prompt: Prompt }) {
-  const router = useRouter();
   const loadPrompts = useAppStore((state) => state.loadPrompts);
 
   const {
@@ -39,7 +37,7 @@ export function PromptOptions({ prompt }: { prompt: Prompt }) {
     {
       label: "Edit Content",
       icon: <ExternalLink className="mr-2 h-4 w-4" />,
-      onClick: () => router.push(ROUTES.SETTINGS.PROMPTS.detail(prompt.id)),
+      href: ROUTES.SETTINGS.PROMPTS.detail(prompt.id),
     },
     {
       label: "Rename Prompt",
