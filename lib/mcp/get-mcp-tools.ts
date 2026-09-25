@@ -19,6 +19,7 @@ const log = getLogger(["app", "mcp", "tools"]);
 export async function getMcpTools(servers: McpServerConfig[]): Promise<{
   tools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   cleanup: () => Promise<void>;
 }> {
   const results = await Promise.allSettled(
@@ -42,6 +43,7 @@ export async function getMcpTools(servers: McpServerConfig[]): Promise<{
 
   const mergedTools: Record<string, any> = {};
   const toolSourceMap: Record<string, string> = {};
+  const toolServerIdMap: Record<string, string> = {};
 
   for (const conn of connections) {
     for (const [name, tool] of Object.entries(conn.tools)) {
@@ -53,6 +55,7 @@ export async function getMcpTools(servers: McpServerConfig[]): Promise<{
       } else {
         mergedTools[name] = tool;
         toolSourceMap[name] = conn.serverName;
+        toolServerIdMap[name] = conn.serverId;
       }
     }
   }
@@ -61,5 +64,5 @@ export async function getMcpTools(servers: McpServerConfig[]): Promise<{
     await Promise.allSettled(connections.map((c) => c.close()));
   };
 
-  return { tools: mergedTools, toolSourceMap, cleanup };
+  return { tools: mergedTools, toolSourceMap, toolServerIdMap, cleanup };
 }

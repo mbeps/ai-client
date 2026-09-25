@@ -185,7 +185,7 @@ export const generateChatResponse = inngest.createFunction(
           log.info("Stream loop aborted by user (chatId: {chatId})", {
             chatId,
           });
-          break;
+          return;
         }
         if (chunk.type === "text-delta") {
           accumulatedText += chunk.text;
@@ -240,6 +240,13 @@ export const generateChatResponse = inngest.createFunction(
             result: errorResult,
           });
         }
+      }
+
+      if (abortController.signal.aborted) {
+        log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
+          chatId,
+        });
+        return;
       }
 
       const finishReason = await safeFinishReason;

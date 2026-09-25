@@ -51,6 +51,14 @@ export async function persistMessage(
       parentId: validatedMsg.parentId,
       metadata: validatedMsg.metadata ?? null,
     })
+    .onConflictDoUpdate({
+      target: message.id,
+      set: {
+        content: validatedMsg.content,
+        metadata: validatedMsg.metadata ?? null,
+        updatedAt: new Date(),
+      },
+    })
     .returning();
 
   await db

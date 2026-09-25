@@ -11,6 +11,9 @@ const chainable = vi.hoisted(() => {
   c.set = vi.fn().mockImplementation(() => c);
   c.where = vi.fn().mockImplementation(() => c);
   c.limit = vi.fn().mockResolvedValue([]);
+  c.onConflictDoNothing = vi.fn().mockImplementation(() => c);
+  c.onConflictDoUpdate = vi.fn().mockImplementation(() => c);
+  c.returning = vi.fn().mockResolvedValue([{ id: "msg-1" }]);
   return c;
 });
 
@@ -62,5 +65,25 @@ describe("persistAssistantResponse", () => {
       parentId: null,
       metadata: "{}",
     });
+  });
+
+  it("safely ignores duplicate inserts via onConflictDoNothing", async () => {
+    chainable.insert.mockClear();
+    chainable.update.mockClear();
+    
+    // Simulate duplicate where onConflictDoNothing returns empty
+    chainable.returning.mockResolvedValueOnce([]); 
+
+    await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-1",
+      content: "Hello AI",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(chainable.onConflictDoNothing).toHaveBeenCalled();
+    // Since returning is [], the update chat block should NOT be called
+    expect(chainable.update).not.toHaveBeenCalled();
   });
 });

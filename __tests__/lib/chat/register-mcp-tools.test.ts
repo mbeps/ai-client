@@ -154,6 +154,7 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
     getMcpToolsMock.mockResolvedValue({
       tools: { shared_tool: { id: "from-srv-a" } },
       toolSourceMap: { shared_tool: "srv-a" },
+      toolServerIdMap: { shared_tool: "a" },
       cleanup: async () => {},
     });
   });
@@ -172,6 +173,19 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
   });
 
   it("selecting with the owning server's full id enables the tool", async () => {
+    const { mcpTools } = await registerMcpTools(
+      [{ id: "a", name: "srv-a", url: "http://x", type: "sse" } as any],
+      ["a:tool:shared_tool"],
+      false,
+      undefined,
+      false,
+      "user-1",
+    );
+
+    expect(mcpTools.shared_tool).toBeDefined();
+  });
+
+  it("selecting with the owning server's name enables the tool (backward compatibility)", async () => {
     const { mcpTools } = await registerMcpTools(
       [{ id: "a", name: "srv-a", url: "http://x", type: "sse" } as any],
       ["srv-a:tool:shared_tool"],

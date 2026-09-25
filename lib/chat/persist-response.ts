@@ -46,14 +46,22 @@ export async function persistAssistantResponse(
     if (existing) return;
   }
 
-  await db.insert(message).values({
-    id: assistantMessageId,
-    chatId,
-    role: "assistant",
-    content,
-    parentId: parentId ?? null,
-    metadata,
-  });
+  const [inserted] = await db
+    .insert(message)
+    .values({
+      id: assistantMessageId,
+      chatId,
+      role: "assistant",
+      content,
+      parentId: parentId ?? null,
+      metadata,
+    })
+    .onConflictDoNothing()
+    .returning({ id: message.id });
+
+  if (!inserted) {
+    return;
+  }
 
   await db
     .update(chat)

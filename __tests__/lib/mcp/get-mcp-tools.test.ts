@@ -15,6 +15,7 @@ describe("getMcpTools", () => {
     connectServerMock.mockImplementation(async (server: McpServerConfig) => {
       if (server.id === "s1") {
         return {
+          serverId: "s1",
           serverName: "server-1",
           tools: {
             toolA: { description: "Tool A" },
@@ -25,6 +26,7 @@ describe("getMcpTools", () => {
       }
       if (server.id === "s2") {
         return {
+          serverId: "s2",
           serverName: "server-2",
           tools: {
             toolB: { description: "Tool B" },
@@ -42,7 +44,7 @@ describe("getMcpTools", () => {
       { id: "s3", name: "server-3" },
     ] as McpServerConfig[];
 
-    const { tools, toolSourceMap, cleanup } = await getMcpTools(servers);
+    const { tools, toolSourceMap, toolServerIdMap, cleanup } = await getMcpTools(servers);
 
     expect(Object.keys(tools)).toEqual(["toolA", "toolCommon", "toolB"]);
     expect(tools.toolCommon.description).toBe("Server 1 Common");
@@ -50,6 +52,11 @@ describe("getMcpTools", () => {
       toolA: "server-1",
       toolCommon: "server-1",
       toolB: "server-2",
+    });
+    expect(toolServerIdMap).toEqual({
+      toolA: "s1",
+      toolCommon: "s1",
+      toolB: "s2",
     });
 
     await cleanup();

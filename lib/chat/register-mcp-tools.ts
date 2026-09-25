@@ -68,9 +68,12 @@ export async function registerMcpTools(
           // Full-id match keeps selection server-scoped when duplicate tool
           // names exist across servers. getMcpTools merges by bare name
           // (first server wins), so toolSourceMap identifies the owner.
-          const isSelected = selectedTools.includes(
-            `${result.toolSourceMap[name]}:tool:${name}`,
-          );
+          const serverId = result.toolServerIdMap?.[name];
+          const serverName = result.toolSourceMap[name];
+          const isSelected =
+            (serverId && selectedTools.includes(`${serverId}:tool:${name}`)) ||
+            (serverName &&
+              selectedTools.includes(`${serverName}:tool:${name}`));
           if (isSelected) {
             filteredTools[name] = toolDef;
             toolSourceMap[name] = result.toolSourceMap[name];

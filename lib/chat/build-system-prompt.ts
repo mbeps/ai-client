@@ -53,7 +53,7 @@ export function buildSystemPrompt(
   if (attachmentNames && attachmentNames.length > 0) {
     const fileList = attachmentNames.map((n) => `- ${n}`).join("\n");
     systemParts.push(
-      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file.`,
+      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file. If an MCP tool requires a local file path (e.g. Excel tools), first get the download URL using get_file_url, then pass that URL to the MCP file ingestion tool (such as upload_file with file_content=<URL> and filename=<name>) to stage the file, and use the returned local file path with other tools.`,
     );
   }
 
