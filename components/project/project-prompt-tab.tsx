@@ -1,8 +1,8 @@
 "use client";
 
 import { Loader2, Save } from "lucide-react";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/config/prompts";
 
 export interface ProjectPromptTabProps {
@@ -33,13 +33,13 @@ export function ProjectPromptTab({
         </p>
       </div>
       <div className="space-y-4">
-        <Textarea
+        <MarkdownTabEditor
           value={globalPrompt}
-          onChange={(e) => onGlobalPromptChange(e.target.value)}
-          rows={12}
+          onChange={onGlobalPromptChange}
           placeholder={
             PROMPTS.UI.EXAMPLES.PROJECT_GLOBAL_PROMPT_PLACEHOLDER_EDIT
           }
+          minHeight="min-h-[300px]"
         />
         <Button onClick={onSave} disabled={isSaving}>
           {isSaving ? (

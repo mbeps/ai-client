@@ -27,16 +27,14 @@ export function TransformContextTab({
         </p>
       </div>
 
-      <div className="max-w-2xl space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="globalContext">Background Context</Label>
-          <MarkdownTabEditor
-            value={globalContext}
-            onChange={onGlobalContextChange}
-            placeholder="e.g. This agent handles monthly financial reports. All currency values should be in USD..."
-            minHeight="min-h-[240px]"
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="globalContext">Background Context</Label>
+        <MarkdownTabEditor
+          value={globalContext}
+          onChange={onGlobalContextChange}
+          placeholder="e.g. This agent handles monthly financial reports. All currency values should be in USD..."
+          minHeight="min-h-[240px]"
+        />
       </div>
     </div>
   );
