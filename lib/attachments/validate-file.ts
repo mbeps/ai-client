@@ -1,4 +1,3 @@
-import type { Attachment } from "@/types/attachment/attachment";
 import {
   ALLOWED_DOCUMENT_TYPES,
   ALLOWED_IMAGE_TYPES,
@@ -8,7 +7,8 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_IMAGES_PER_MESSAGE,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "../../constants/attachments";
+} from "@/config/attachments";
+import type { Attachment } from "@/types/attachment/attachment";
 import { resolveMimeType } from "./resolve-mime-type";
 
 /**

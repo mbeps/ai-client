@@ -1,4 +1,4 @@
-import { MAX_DOCUMENT_CHARS } from "@/constants/attachments";
+import { MAX_DOCUMENT_CHARS } from "@/config/attachments";
 import { extractDocumentContent } from "@/lib/utils/extraction-helpers";
 
 /**

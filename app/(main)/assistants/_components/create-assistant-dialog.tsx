@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { useAppStore } from "@/lib/store";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
 

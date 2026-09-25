@@ -1,4 +1,4 @@
-import { MCP_TIMEOUT_MS } from "@/constants/mcp";
+import { MCP_TIMEOUT_MS } from "@/config/mcp";
 import { getLogger } from "@/lib/logger";
 import { withTimeout } from "@/lib/mcp/with-timeout";
 

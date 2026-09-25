@@ -1,4 +1,4 @@
-import { MIME_BY_EXT } from "@/constants/attachments";
+import { MIME_BY_EXT } from "@/config/attachments";
 import { getExtension } from "@/lib/attachments/get-extension";
 
 /** Magic-byte signatures for the app's allowed binary types. */

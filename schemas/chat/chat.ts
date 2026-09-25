@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { idField } from "@/schemas/shared-fields";
 
 /**

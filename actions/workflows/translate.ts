@@ -3,8 +3,8 @@
 import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { getClientSubscriptionToken } from "inngest/react";
+import { PROMPTS } from "@/config/prompts";
 import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
-import { PROMPTS } from "@/constants/prompts";
 import { db } from "@/drizzle/db";
 import { workflowTranslation } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";

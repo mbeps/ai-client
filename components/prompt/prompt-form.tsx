@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 
 export const promptFormSchema = z.object({
   title: z.string().min(1, "Title is required"),

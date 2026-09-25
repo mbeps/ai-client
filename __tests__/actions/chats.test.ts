@@ -31,6 +31,8 @@ const chainable = vi.hoisted(() => {
     "limit",
     "insert",
     "values",
+    "onConflictDoNothing",
+    "onConflictDoUpdate",
     "update",
     "set",
     "delete",
@@ -53,6 +55,8 @@ const chainable = vi.hoisted(() => {
     "innerJoin",
     "insert",
     "values",
+    "onConflictDoNothing",
+    "onConflictDoUpdate",
     "update",
     "set",
     "delete",
@@ -123,6 +127,8 @@ beforeEach(() => {
   chainable.limit.mockReturnValue(chainable);
   chainable.insert.mockReturnValue(chainable);
   chainable.values.mockReturnValue(chainable);
+  chainable.onConflictDoNothing.mockReturnValue(chainable);
+  chainable.onConflictDoUpdate.mockReturnValue(chainable);
   chainable.update.mockReturnValue(chainable);
   chainable.set.mockReturnValue(chainable);
   chainable.delete.mockReturnValue(chainable);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHUNK_CONSTANTS } from "../../../constants/chunk";
+import { CHUNK_CONSTANTS } from "@/config/chunk";
 import { chunkText } from "../../../lib/rag/chunk-text";
 
 describe("chunkText", () => {

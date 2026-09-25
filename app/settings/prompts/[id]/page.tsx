@@ -21,8 +21,8 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { PROMPTS } from "@/config/prompts";
 import { ROUTES } from "@/config/routes";
-import { PROMPTS } from "@/constants/prompts";
 import { useAppStore } from "@/lib/store";
 
 /**

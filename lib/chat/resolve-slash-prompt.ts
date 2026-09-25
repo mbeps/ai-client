@@ -1,4 +1,4 @@
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import type { Prompt } from "@/types/prompt/prompt";
 
 /**

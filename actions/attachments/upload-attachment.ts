@@ -2,7 +2,6 @@
 
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { env } from "@/config/env";
 import {
   ALLOWED_DOCUMENT_TYPES,
   ALLOWED_IMAGE_TYPES,
@@ -10,7 +9,8 @@ import {
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_IMAGE_SIZE_BYTES,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "@/constants/attachments";
+} from "@/config/attachments";
+import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";

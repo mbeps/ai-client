@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
 
 describe("resolveSlashPrompt", () => {

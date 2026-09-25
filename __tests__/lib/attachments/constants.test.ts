@@ -8,7 +8,7 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_IMAGES_PER_MESSAGE,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "@/constants/attachments";
+} from "@/config/attachments";
 
 describe("attachment constants", () => {
   describe("ALLOWED_IMAGE_TYPES", () => {

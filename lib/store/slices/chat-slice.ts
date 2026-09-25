@@ -7,7 +7,7 @@ import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
 import { updateChatKnowledgebase } from "@/actions/chats/update-chat-knowledgebase";
 import { updateCurrentLeaf as updateCurrentLeafAction } from "@/actions/chats/update-current-leaf";
 import { updateMessageMetadata as updateMessageMetadataAction } from "@/actions/chats/update-message-metadata";
-import { ALLOWED_SPREADSHEET_TYPES } from "@/constants/attachments";
+import { ALLOWED_SPREADSHEET_TYPES } from "@/config/attachments";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { insertMessage } from "@/lib/chat/insert-message";
 

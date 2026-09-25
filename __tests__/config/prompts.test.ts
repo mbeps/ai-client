@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 
-describe("constants/prompts", () => {
+describe("config/prompts", () => {
   it("defines system, tools, schema, and UI constants", () => {
     expect(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION).toContain("knowledge base");
     expect(PROMPTS.TOOLS.MANAGE_ARTIFACT.DEFAULT_TITLE).toBe("Generated Artifact");

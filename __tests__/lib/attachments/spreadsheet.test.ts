@@ -1,7 +1,7 @@
 import {
   SPREADSHEET_EXTENSIONS,
   ALLOWED_SPREADSHEET_TYPES as SPREADSHEET_MIME_TYPES,
-} from "@/constants/attachments";
+} from "@/config/attachments";
 import { getExtension } from "@/lib/attachments/get-extension";
 import { isSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 

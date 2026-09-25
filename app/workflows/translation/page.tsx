@@ -40,12 +40,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ROUTES } from "@/config/routes";
 import {
   DEFAULT_SOURCE_LANGUAGE,
   DEFAULT_TARGET_LANGUAGE,
   LANGUAGES,
-} from "@/constants/languages";
+} from "@/config/languages";
+import { ROUTES } from "@/config/routes";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";

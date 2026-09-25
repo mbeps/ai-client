@@ -47,7 +47,7 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_SPREADSHEET_SIZE_BYTES } from "@/constants/attachments";
+import { MAX_SPREADSHEET_SIZE_BYTES } from "@/config/attachments";
 import { uploadRunInput } from "@/actions/transform-runs/upload-run-input";
 import { uploadObject } from "@/lib/storage/upload-object";
 

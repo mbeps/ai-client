@@ -15,7 +15,7 @@ vi.mock("@/config/env", () => ({
 vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/rag/embed-query", () => ({ embedQuery: vi.fn() }));
 
-import { CHUNK_CONSTANTS } from "../../../constants/chunk";
+import { CHUNK_CONSTANTS } from "@/config/chunk";
 import { applyRRF } from "../../../lib/rag/apply-rrf";
 import { hybridSearch } from "../../../lib/rag/hybrid-search";
 import type { ChunkResult } from "../../../types/rag/chunk-result";

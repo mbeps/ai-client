@@ -1,6 +1,6 @@
 import { streamText } from "ai";
 import { eq } from "drizzle-orm";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { db } from "@/drizzle/db";
 import { workflowTranslation } from "@/drizzle/schema";
 import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";

@@ -7,7 +7,7 @@ import { buildChatFromRows } from "@/actions/chats/build-chat";
 import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
 import { getChat } from "@/actions/chats/get-chat";
 import { persistMessage } from "@/actions/chats/persist-message";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";

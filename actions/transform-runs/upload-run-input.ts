@@ -1,11 +1,11 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { env } from "@/config/env";
 import {
   ALLOWED_SPREADSHEET_TYPES,
   MAX_SPREADSHEET_SIZE_BYTES,
-} from "@/constants/attachments";
+} from "@/config/attachments";
+import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";

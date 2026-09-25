@@ -1,7 +1,7 @@
 import {
   ALLOWED_SPREADSHEET_TYPES,
   SPREADSHEET_EXTENSIONS,
-} from "@/constants/attachments";
+} from "@/config/attachments";
 import { getExtension } from "./get-extension";
 
 /**

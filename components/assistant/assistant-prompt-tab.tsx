@@ -3,7 +3,7 @@
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 
 export interface AssistantPromptTabProps {
   prompt: string;

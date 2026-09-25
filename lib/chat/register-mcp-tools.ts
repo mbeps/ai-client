@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "tools"]);

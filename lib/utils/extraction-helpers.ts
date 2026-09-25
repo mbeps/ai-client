@@ -1,5 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
-import { MAX_DOCUMENT_CHARS } from "@/constants/attachments";
+import { MAX_DOCUMENT_CHARS } from "@/config/attachments";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "utils", "extraction"]);

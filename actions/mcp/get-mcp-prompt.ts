@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, or } from "drizzle-orm";
-import { MCP_TIMEOUT_MS } from "@/constants/mcp";
+import { MCP_TIMEOUT_MS } from "@/config/mcp";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";

@@ -1,4 +1,4 @@
-import { CHUNK_CONSTANTS } from "../../constants/chunk";
+import { CHUNK_CONSTANTS } from "@/config/chunk";
 import { splitRecursive } from "./split-recursive";
 
 /**
