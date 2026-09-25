@@ -19,11 +19,10 @@ import {
 import { useApiError } from "@/hooks/use-api-error";
 
 const mockPush = vi.fn();
+const mockRouter = { push: mockPush };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+  useRouter: () => mockRouter,
 }));
 
 vi.mock("sonner", () => ({
@@ -230,6 +229,14 @@ describe("useApiError hook", () => {
     const action = (toast.error as any).mock.calls[0][1].action;
     action.onClick();
     expect(mockPush).toHaveBeenCalledWith(ROUTES.SETTINGS.APP.path);
+  });
+
+  it("maintains referential identity of handleApiError across re-renders", () => {
+    const { result, rerender } = renderHook(() => useApiError());
+    const firstRef = result.current.handleApiError;
+    rerender();
+    const secondRef = result.current.handleApiError;
+    expect(firstRef).toBe(secondRef);
   });
 });
 
