@@ -89,6 +89,8 @@ export const ROUTES = {
     PROVIDERS: {
       path: `${SETTINGS_BASE}/providers` as const,
       name: "Providers",
+      new: `${SETTINGS_BASE}/providers/new` as const,
+      detail: (id: string) => `${SETTINGS_BASE}/providers/${id}` as const,
     },
     TOOLS: {
       path: `${SETTINGS_BASE}/tools` as const,

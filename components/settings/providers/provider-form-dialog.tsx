@@ -250,6 +250,10 @@ export function ProviderFormDialog({
                   isEdit ? "Leave empty to keep current key" : "sk-..."
                 }
               />
+              <p className="text-muted-foreground text-xs">
+                The key is encrypted before storage and can never be read back,
+                not even by an admin. Replace it to change it.
+              </p>
             </div>
           )}
 
