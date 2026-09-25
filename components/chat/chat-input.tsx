@@ -390,15 +390,7 @@ export function ChatInput({
     knowledgebases,
   );
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        200,
-      )}px`;
-    }
-  }, []);
+
 
   // -- Model initialisation --
   useEffect(() => {
@@ -452,9 +444,6 @@ export function ChatInput({
       setSelectedPrompt(null);
       setSelectedAssistant(null);
       setSelectedSkills(new Set());
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
     }
   };
 
@@ -536,8 +525,8 @@ export function ChatInput({
             ? "Set up a provider to start chatting..."
             : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases"
         }
-        className="min-h-[40px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-        rows={1}
+        className="max-h-[120px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+        rows={2}
         disabled={hasNoModels}
       />
 

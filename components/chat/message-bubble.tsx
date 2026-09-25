@@ -194,12 +194,6 @@ export function MessageBubble({
         <span className="font-semibold text-sm">
           {isUser ? "You" : modelName ? modelName : "Assistant"}
         </span>
-        {promptEntry && (
-          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs">
-            <Command className="h-3 w-3" />
-            {promptEntry.title}
-          </span>
-        )}
       </div>
 
       <div className="flex-1 overflow-hidden">
