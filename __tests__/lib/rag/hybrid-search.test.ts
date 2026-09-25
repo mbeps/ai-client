@@ -5,7 +5,7 @@ vi.mock("@/config/env", () => ({
 }));
 
 import { describe, expect, it, vi } from "vitest";
-import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
+import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 
 const dbMock = vi.hoisted(() => ({

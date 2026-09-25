@@ -15,7 +15,7 @@ import {
   TOOLS_NOT_SUPPORTED_ERROR_CODE,
   UNAUTHORIZED_ERROR_CODE,
   VISION_NOT_SUPPORTED_ERROR_CODE,
-} from "@/constants/errors";
+} from "@/lib/errors";
 import { useApiError } from "@/hooks/use-api-error";
 
 const mockPush = vi.fn();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderKeyCorruptedError } from "@/constants/errors";
+import { ProviderKeyCorruptedError } from "@/lib/errors";
 import { decryptProviderField } from "@/lib/chat/decrypt-provider-field";
 import { decrypt } from "@/lib/encryption/decrypt";
 

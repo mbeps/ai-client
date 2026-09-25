@@ -1,4 +1,4 @@
-import { SPREADSHEET_MUTATION_TOOL_NAMES } from "../../constants/spreadsheet-mutation-tool-names";
+import { SPREADSHEET_MUTATION_TOOL_NAMES } from "@/lib/spreadsheet-mutation-tool-names";
 
 /**
  * Returns `true` when the tool name is a spreadsheet mutation tool.

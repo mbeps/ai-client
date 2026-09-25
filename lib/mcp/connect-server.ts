@@ -1,4 +1,4 @@
-import { MCP_TIMEOUT_MS } from "@/config/mcp";
+import { MCP_SETTINGS } from "@/config/mcp";
 import { getLogger } from "@/lib/logger";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
 
@@ -26,7 +26,7 @@ export async function connectServer(
   try {
     const tools = await withTimeout(
       client.tools(),
-      MCP_TIMEOUT_MS,
+      MCP_SETTINGS.MCP_TIMEOUT_MS,
       `list tools from ${server.name}`,
     );
 

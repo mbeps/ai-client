@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { RagExtractionEmptyError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { kbChunk, kbDocument } from "@/drizzle/schema";
+import { RagExtractionEmptyError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { chunkText } from "./chunk-text";

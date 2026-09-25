@@ -1,10 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 import { env } from "@/config/env";
-import { KnowledgebaseNotReadyError, RateLimitError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "rag", "search"]);

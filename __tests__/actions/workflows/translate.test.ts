@@ -64,7 +64,7 @@ import {
   translateText,
   triggerTranslation,
 } from "@/actions/workflows/translate";
-import { ProviderNotConfiguredError, RateLimitError } from "@/constants/errors";
+import { ProviderNotConfiguredError, RateLimitError } from "@/lib/errors";
 import { inngest } from "@/lib/inngest/client";
 
 

@@ -1,4 +1,4 @@
-import { ProviderNotConfiguredError } from "@/constants/errors";
+import { ProviderNotConfiguredError } from "@/lib/errors";
 import { buildSdkProvider } from "@/lib/chat/build-sdk-provider";
 
 describe("buildSdkProvider", () => {

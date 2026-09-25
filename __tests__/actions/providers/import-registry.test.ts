@@ -61,7 +61,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ModelDuplicateImportError } from "@/constants/errors";
+import { ModelDuplicateImportError } from "@/lib/errors";
 import { importProviderRegistry } from "@/actions/providers/import-registry";
 
 describe("importProviderRegistry action", () => {

@@ -2,7 +2,7 @@ import {
   ContentFilterError,
   ContextWindowExceededError,
   InvalidApiKeyError,
-} from "@/constants/errors";
+} from "@/lib/errors";
 
 /**
  * Duck-types provider errors by message pattern. Providers express these

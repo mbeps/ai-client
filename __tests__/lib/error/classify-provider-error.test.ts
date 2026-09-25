@@ -3,7 +3,7 @@ import {
   ContentFilterError,
   ContextWindowExceededError,
   InvalidApiKeyError,
-} from "@/constants/errors";
+} from "@/lib/errors";
 import {
   classifyProviderError,
   isContentFilter,

@@ -54,7 +54,7 @@ import {
   ProviderNotConfiguredError,
   RagExtractionEmptyError,
   RateLimitError,
-} from "@/constants/errors";
+} from "@/lib/errors";
 import { inngest } from "@/lib/inngest/client";
 
 describe("ingestKbDocument action", () => {

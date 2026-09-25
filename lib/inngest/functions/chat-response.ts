@@ -1,9 +1,5 @@
 import { isStepCount, streamText } from "ai";
 import { env } from "@/config/env";
-import {
-  ToolsNotSupportedError,
-  VisionNotSupportedError,
-} from "@/constants/errors";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { loadChatContext } from "@/lib/chat/load-chat-context";
@@ -17,6 +13,7 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";

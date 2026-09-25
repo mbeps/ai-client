@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SSE_HEADERS } from "@/constants/sse";
+import { SSE_HEADERS } from "@/lib/sse";
 
 describe("sse constants", () => {
   it("validates SSE_HEADERS object", () => {

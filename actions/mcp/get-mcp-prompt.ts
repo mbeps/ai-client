@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, or } from "drizzle-orm";
-import { MCP_TIMEOUT_MS } from "@/config/mcp";
+import { MCP_SETTINGS } from "@/config/mcp";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -58,7 +58,7 @@ export async function getMcpPrompt(
             name: promptName,
             arguments: args,
           }),
-          MCP_TIMEOUT_MS,
+          MCP_SETTINGS.MCP_TIMEOUT_MS,
           `getPrompt ${promptName}`,
         );
 

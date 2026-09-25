@@ -17,7 +17,7 @@ import {
   UNAUTHORIZED_ERROR_CODE,
   UNAUTHORIZED_ERROR_MESSAGE,
   VISION_NOT_SUPPORTED_ERROR_CODE,
-} from "@/constants/errors";
+} from "@/lib/errors";
 
 /**
  * Centralises API error handling with feature-specific error codes and user feedback.

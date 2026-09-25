@@ -1,7 +1,7 @@
-import { ProviderKeyCorruptedError } from "@/constants/errors";
 import type { aiProvider } from "@/drizzle/schema";
 import { decrypt } from "@/lib/encryption/decrypt";
 import { encrypt } from "@/lib/encryption/encrypt";
+import { ProviderKeyCorruptedError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

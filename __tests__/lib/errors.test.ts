@@ -37,9 +37,9 @@ import {
   ToolsNotSupportedError,
   VisionNotSupportedError,
   isApiKeyError,
-} from "@/constants/errors";
+} from "@/lib/errors";
 
-describe("constants/errors", () => {
+describe("lib/errors", () => {
   it("RateLimitError has correct properties", () => {
     const err = new RateLimitError("Rate limit exceeded", 30);
     expect(err.name).toBe("RateLimitError");

@@ -20,7 +20,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AttachmentVisionUnsupportedError } from "@/constants/errors";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -28,6 +27,7 @@ import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
+import { AttachmentVisionUnsupportedError } from "@/lib/errors";
 import { useAppStore } from "@/lib/store";
 import { toggleSetItem } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";

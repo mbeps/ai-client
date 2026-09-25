@@ -54,7 +54,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ModelMalformedIdError } from "@/constants/errors";
+import { ModelMalformedIdError } from "@/lib/errors";
 import { syncProviderModels } from "@/actions/models/sync-provider-models";
 
 describe("syncProviderModels action", () => {

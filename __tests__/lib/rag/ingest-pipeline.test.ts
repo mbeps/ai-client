@@ -65,7 +65,7 @@ vi.mock("@/lib/rag/embed-documents", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RagExtractionEmptyError } from "@/constants/errors";
+import { RagExtractionEmptyError } from "@/lib/errors";
 import { kbChunk } from "@/drizzle/schema";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";

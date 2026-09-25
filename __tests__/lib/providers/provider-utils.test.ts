@@ -19,7 +19,7 @@ vi.mock("@/lib/encryption/decrypt", () => ({
   decrypt: decryptMock,
 }));
 
-import { ProviderKeyCorruptedError } from "@/constants/errors";
+import { ProviderKeyCorruptedError } from "@/lib/errors";
 import {
   decodeProviderRecord,
   normaliseProviderApiKey,

@@ -1,11 +1,11 @@
 import { generateText, isStepCount } from "ai";
 import { eq } from "drizzle-orm";
 import { env } from "@/config/env";
-import { RATE_LIMIT_ERROR_CODE } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderNotConfiguredError } from "@/constants/errors";
+import { ProviderNotConfiguredError } from "@/lib/errors";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 
 const fetchProviderWithModelMock = vi.hoisted(() => vi.fn());

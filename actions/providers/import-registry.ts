@@ -1,10 +1,10 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { ModelDuplicateImportError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ModelDuplicateImportError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
 

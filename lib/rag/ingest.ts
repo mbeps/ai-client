@@ -1,10 +1,10 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { and, eq, ne } from "drizzle-orm";
-import { RateLimitError } from "@/constants/errors";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { RateLimitError } from "@/lib/errors";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { ingestDocumentPipeline } from "./ingest-pipeline";
 

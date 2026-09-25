@@ -1,4 +1,4 @@
-import { MCP_TIMEOUT_MS } from "@/config/mcp";
+import { MCP_SETTINGS } from "@/config/mcp";
 import { getLogger } from "@/lib/logger";
 import { withTimeout } from "@/lib/mcp/with-timeout";
 
@@ -39,7 +39,7 @@ export async function discoverToolsAndResources(
           client.listTools({
             params: toolCursor ? { cursor: toolCursor } : undefined,
           }),
-          MCP_TIMEOUT_MS,
+          MCP_SETTINGS.MCP_TIMEOUT_MS,
           `discoverTools listTools: ${server.name}`,
         )) as any;
 
@@ -75,7 +75,7 @@ export async function discoverToolsAndResources(
           client.listResources({
             params: resCursor ? { cursor: resCursor } : undefined,
           }),
-          MCP_TIMEOUT_MS,
+          MCP_SETTINGS.MCP_TIMEOUT_MS,
           `discoverTools listResources: ${server.name}`,
         )) as any;
 
@@ -110,7 +110,7 @@ export async function discoverToolsAndResources(
     try {
       const templateResult = (await withTimeout(
         client.listResourceTemplates(),
-        MCP_TIMEOUT_MS,
+        MCP_SETTINGS.MCP_TIMEOUT_MS,
         `discoverTools listResourceTemplates: ${server.name}`,
       )) as any;
 
@@ -150,7 +150,7 @@ export async function discoverToolsAndResources(
           client.experimental_listPrompts({
             params: promptCursor ? { cursor: promptCursor } : undefined,
           }),
-          MCP_TIMEOUT_MS,
+          MCP_SETTINGS.MCP_TIMEOUT_MS,
           `discoverTools listPrompts: ${server.name}`,
         )) as any;
 
