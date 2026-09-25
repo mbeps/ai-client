@@ -1,8 +1,8 @@
 "use client";
 
 import { Loader2, Save } from "lucide-react";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { PROMPTS } from "@/config/prompts";
 
 export interface AssistantPromptTabProps {
@@ -32,13 +32,13 @@ export function AssistantPromptTab({
         </p>
       </div>
       <div className="space-y-4">
-        <Textarea
+        <MarkdownTabEditor
           value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
-          rows={12}
+          onChange={onPromptChange}
           placeholder={
             PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
           }
+          minHeight="min-h-[300px]"
         />
         <Button onClick={onSave} disabled={isSaving}>
           {isSaving ? (
