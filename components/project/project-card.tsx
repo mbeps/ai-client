@@ -1,7 +1,6 @@
 "use client";
 
 import { FolderOpen, Pin } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { EntityCard } from "@/components/shared/entity-card";
 import { ROUTES } from "@/config/routes";
 import type { Project } from "@/types/project/project";
@@ -25,10 +24,9 @@ interface ProjectCardProps {
  * @see ProjectOptions for menu actions including pin toggle.
  */
 export function ProjectCard({ project }: ProjectCardProps) {
-  const router = useRouter();
-
   return (
     <EntityCard
+      href={ROUTES.PROJECTS.detail(project.id)}
       icon={<FolderOpen className="h-5 w-5 text-primary" />}
       title={
         <div className="flex items-center gap-1.5">
@@ -42,7 +40,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
       }
       description={project.description}
       menu={<ProjectOptions project={project} />}
-      onClick={() => router.push(ROUTES.PROJECTS.detail(project.id))}
     />
   );
 }
