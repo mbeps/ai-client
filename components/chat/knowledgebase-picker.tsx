@@ -3,14 +3,17 @@
 import {
   AlertTriangle,
   Check,
+  CheckSquare,
   Database,
+  ExternalLink,
   Loader2,
   Search,
+  Square,
   X,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +25,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -68,11 +70,23 @@ export function KnowledgebasePicker({
 }: KnowledgebasePickerProps) {
   const [search, setSearch] = useState("");
 
-  const filteredKbs = knowledgebases.filter(
-    (kb) =>
-      kb.name.toLowerCase().includes(search.toLowerCase()) ||
-      kb.description?.toLowerCase().includes(search.toLowerCase()),
+  const filteredKbs = useMemo(
+    () =>
+      knowledgebases.filter(
+        (kb) =>
+          kb.name.toLowerCase().includes(search.toLowerCase()) ||
+          kb.description?.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [knowledgebases, search],
   );
+
+  const readyKbs = useMemo(
+    () => filteredKbs.filter((kb) => kb.indexStatus === "ready"),
+    [filteredKbs],
+  );
+
+  const isAllSelected =
+    readyKbs.length > 0 && readyKbs.every((kb) => selectedIds.has(kb.id));
 
   const handleToggle = (id: string) => {
     if (mode === "single") {
@@ -94,13 +108,42 @@ export function KnowledgebasePicker({
     }
   };
 
+  const handleToggleAll = () => {
+    if (mode === "single") {
+      if (selectedIds.size > 0) {
+        onSelect(new Set());
+      } else if (readyKbs.length > 0) {
+        onSelect(new Set([readyKbs[0].id]));
+      }
+      return;
+    }
+
+    if (isAllSelected) {
+      const next = new Set(selectedIds);
+      readyKbs.forEach((kb) => {
+        next.delete(kb.id);
+      });
+      onSelect(next);
+    } else {
+      const next = new Set(selectedIds);
+      readyKbs.forEach((kb) => {
+        next.add(kb.id);
+      });
+      onSelect(next);
+    }
+  };
+
   const clearSelection = () => {
     onSelect(new Set());
   };
 
+  const selectedCount = useMemo(() => {
+    return filteredKbs.filter((kb) => selectedIds.has(kb.id)).length;
+  }, [filteredKbs, selectedIds]);
+
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="relative">
+    <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
+      <div className="relative shrink-0">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search knowledge bases..."
@@ -110,7 +153,33 @@ export function KnowledgebasePicker({
         />
       </div>
 
-      <ScrollArea className="pr-4" style={{ maxHeight }}>
+      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
+          onClick={handleToggleAll}
+          disabled={readyKbs.length === 0}
+        >
+          {isAllSelected ? (
+            <Square className="h-3.5 w-3.5" />
+          ) : (
+            <CheckSquare className="h-3.5 w-3.5" />
+          )}
+          <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
+        </Button>
+        <span>
+          {selectedCount > 0
+            ? `${selectedCount}/${filteredKbs.length} selected ${filteredKbs.length === 1 ? "knowledge base" : "knowledge bases"}`
+            : `${filteredKbs.length} ${filteredKbs.length === 1 ? "knowledge base" : "knowledge bases"} available`}
+        </span>
+      </div>
+
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+        style={maxHeight ? { maxHeight } : undefined}
+      >
         <div className="space-y-2">
           {allowEmpty && mode === "single" && (
             <div
@@ -194,7 +263,7 @@ export function KnowledgebasePicker({
             })
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -203,6 +272,7 @@ interface KnowledgebasePickerDialogProps {
   knowledgebases: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
+  onSelectKbs?: (ids: Set<string>) => void;
   trigger?: React.ReactNode;
 }
 
@@ -213,6 +283,7 @@ export function KnowledgebasePickerDialog({
   knowledgebases,
   selectedKbs,
   onToggleKb,
+  onSelectKbs,
   trigger,
 }: KnowledgebasePickerDialogProps) {
   const [open, setOpen] = useState(false);
@@ -227,9 +298,11 @@ export function KnowledgebasePickerDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex max-w-md flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b px-4 pt-4 pb-3">
-          <DialogTitle>Select Knowledge Bases</DialogTitle>
+      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
+        <DialogHeader className="border-b px-4 py-3.5 pr-12">
+          <DialogTitle className="font-semibold text-base">
+            Select Knowledge Bases
+          </DialogTitle>
         </DialogHeader>
 
         {knowledgebases.length === 0 ? (
@@ -250,23 +323,38 @@ export function KnowledgebasePickerDialog({
               knowledgebases={knowledgebases}
               selectedIds={selectedKbs}
               onSelect={(ids) => {
-                // Determine which one was toggled
-                const added = [...ids].find((id) => !selectedKbs.has(id));
-                const removed = [...selectedKbs].find((id) => !ids.has(id));
-                if (added) onToggleKb(added);
-                else if (removed) onToggleKb(removed);
+                if (onSelectKbs) {
+                  onSelectKbs(ids);
+                  return;
+                }
+                const added = [...ids].filter((id) => !selectedKbs.has(id));
+                const removed = [...selectedKbs].filter((id) => !ids.has(id));
+                added.forEach((id) => {
+                  onToggleKb(id);
+                });
+                removed.forEach((id) => {
+                  onToggleKb(id);
+                });
               }}
-              className="p-4"
-              maxHeight="300px"
+              className="flex min-h-0 flex-1 flex-col p-4"
               showIcons={false}
             />
 
             <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
-              <p className="text-muted-foreground text-xs">
-                <strong>{selectedKbs.size}</strong>{" "}
-                {selectedKbs.size === 1 ? "knowledge base" : "knowledge bases"}{" "}
-                selected
-              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
+              >
+                <Link
+                  href={ROUTES.KNOWLEDGEBASES.path}
+                  onClick={() => setOpen(false)}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Manage Knowledge Bases</span>
+                </Link>
+              </Button>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"

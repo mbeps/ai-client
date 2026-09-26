@@ -56,7 +56,7 @@ const mockMcpPrompts: DiscoveredPrompt[] = [
 ];
 
 describe("PromptPicker", () => {
-  it("renders both custom and MCP prompts", () => {
+  it("renders both custom and MCP prompts in accordions", () => {
     render(
       <PromptPicker
         prompts={mockPrompts}
@@ -66,12 +66,19 @@ describe("PromptPicker", () => {
       />,
     );
 
+    expect(screen.getByText("Internal Prompts")).toBeDefined();
+    expect(screen.getByText("GitHub MCP")).toBeDefined();
+
+    // Expand Internal Prompts
+    fireEvent.click(screen.getByText("Internal Prompts"));
     expect(screen.getByText("Summarise Text")).toBeDefined();
     expect(screen.getByText("/summarise")).toBeDefined();
     expect(screen.getByText("Fix Grammar")).toBeDefined();
     expect(screen.getByText("/grammar")).toBeDefined();
+
+    // Expand GitHub MCP
+    fireEvent.click(screen.getByText("GitHub MCP"));
     expect(screen.getByText("analyze-repo")).toBeDefined();
-    expect(screen.getByText("GitHub MCP")).toBeDefined();
   });
 
   it("filters prompts by search keyword", () => {
@@ -103,6 +110,7 @@ describe("PromptPicker", () => {
       />,
     );
 
+    fireEvent.click(screen.getByText("Internal Prompts"));
     fireEvent.click(screen.getByText("Summarise Text"));
     expect(handleSelect).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -132,6 +140,53 @@ describe("PromptPicker", () => {
     );
 
     fireEvent.click(screen.getByText("Summarise Text"));
+    expect(handleSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("selects a prompt from section when section checkbox is clicked", () => {
+    const handleSelect = vi.fn();
+    render(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={mockMcpPrompts}
+        selectedPrompt={null}
+        onSelectPrompt={handleSelect}
+      />,
+    );
+
+    const sectionCheckbox = screen.getByLabelText(
+      "Select all from Internal Prompts",
+    );
+    fireEvent.click(sectionCheckbox);
+    expect(handleSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "p1",
+        title: "Summarise Text",
+      }),
+    );
+  });
+
+  it("deselects prompt when section checkbox is clicked and section prompt was selected", () => {
+    const handleSelect = vi.fn();
+    const selected: MentionPromptItem = {
+      ...mockPrompts[0],
+      isMcp: false,
+      isSkill: false,
+    };
+
+    render(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={mockMcpPrompts}
+        selectedPrompt={selected}
+        onSelectPrompt={handleSelect}
+      />,
+    );
+
+    const sectionCheckbox = screen.getByLabelText(
+      "Select all from Internal Prompts",
+    );
+    fireEvent.click(sectionCheckbox);
     expect(handleSelect).toHaveBeenCalledWith(null);
   });
 });
@@ -173,9 +228,10 @@ describe("PromptPickerDialog", () => {
     fireEvent.click(screen.getByText("Open Dialog"));
     expect(screen.getByText("Select Prompt")).toBeDefined();
     expect(screen.getByText("Summarise Text")).toBeDefined();
+    expect(screen.getByText("Manage Prompts")).toBeDefined();
     expect(
       screen.getByText((_content, element) => {
-        return element?.textContent === "1 prompt selected";
+        return element?.textContent === "1/3 selected prompts";
       }),
     ).toBeDefined();
   });
