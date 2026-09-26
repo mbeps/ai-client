@@ -9,16 +9,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 import { extractCitations } from "@/lib/chat/extract-citations";
+import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
+import { CanvasCard } from "./message/canvas-card";
 import { CitationsList } from "./message/citations-list";
 import { MessageActions } from "./message/message-actions";
 import { ResponseTimeline } from "./message/response-timeline";
@@ -63,8 +65,12 @@ interface MessageBubbleProps {
   reasoning?: string;
   /** True while the model is actively streaming its reasoning. */
   isStreamingReasoning?: boolean;
-  /** Callback to show the artifact associated with this message. */
-  onShowArtifact?: () => void;
+  /** Callback to toggle a canvas artifact. */
+  onToggleArtifact?: (artifact: ArtifactData) => void;
+  /** Active artifact id if canvas is currently open. */
+  activeArtifactId?: string | null;
+  /** Whether canvas panel is currently open. */
+  isCanvasOpen?: boolean;
   /** Optional citations to show during streaming before they are persisted in metadata. */
   streamingCitations?: Citation[];
   /** Tool invocations currently in flight during streaming. */
@@ -86,7 +92,9 @@ export function MessageBubble({
   reasoning,
   isStreamingReasoning,
   onRegenerate,
-  onShowArtifact,
+  onToggleArtifact,
+  activeArtifactId,
+  isCanvasOpen,
   streamingCitations,
   activeToolCalls,
   knowledgebases = [],
@@ -125,14 +133,10 @@ export function MessageBubble({
     return parsedModelId;
   }, [isUser, parsedModelId]);
 
-  const hasArtifact = useMemo(() => {
-    const hasMermaid = /```mermaid/i.test(message.content);
-    if (hasMermaid) return true;
-    if (!toolData) return false;
-    return toolData.toolResults.some(
-      (tr) => !!extractArtifactFromToolResult(tr),
-    );
-  }, [message.content, toolData]);
+  const messageArtifacts = useMemo(
+    () => extractMessageArtifacts(message, activeToolCalls),
+    [message, activeToolCalls],
+  );
 
   const initialContent = promptMeta ? promptMeta.userContent : message.content;
   const [isEditing, setIsEditing] = useState(false);
@@ -284,7 +288,18 @@ export function MessageBubble({
               )}
             </div>
           ) : (
-            <MarkdownRenderer content={message.content} />
+            <>
+              {messageArtifacts.map((art) => (
+                <CanvasCard
+                  key={art.id}
+                  artifact={art}
+                  isOpen={isCanvasOpen && activeArtifactId === art.id}
+                  onToggle={() => onToggleArtifact?.(art)}
+                  createdAt={message.createdAt}
+                />
+              ))}
+              <MarkdownRenderer content={message.content} />
+            </>
           )}
           <CitationsList citations={citations} />
         </div>
@@ -301,8 +316,6 @@ export function MessageBubble({
             onNavigateBranch={onNavigateBranch}
             onRegenerate={onRegenerate}
             editContent={promptMeta ? promptMeta.userContent : undefined}
-            onShowArtifact={onShowArtifact}
-            hasArtifact={hasArtifact}
             metadata={parsedMetadata}
           />
         )}

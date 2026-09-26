@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Copy,
   Edit2,
-  Maximize2,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -35,8 +34,6 @@ interface MessageActionsProps {
   currentSiblingIndex: number;
   onNavigateBranch: (siblingId: string) => void;
   editContent?: string;
-  onShowArtifact?: () => void;
-  hasArtifact?: boolean;
   metadata?: ParsedMessageMetadata;
 }
 
@@ -69,8 +66,6 @@ export function MessageActions({
   currentSiblingIndex,
   onNavigateBranch,
   editContent,
-  onShowArtifact,
-  hasArtifact,
   metadata,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
@@ -197,23 +192,6 @@ export function MessageActions({
           <TooltipContent>
             {hasNoModels ? "No models configured" : "Regenerate response"}
           </TooltipContent>
-        </Tooltip>
-      )}
-
-      {!isUser && onShowArtifact && hasArtifact && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              aria-label="Show artifact"
-              onClick={onShowArtifact}
-            >
-              <Maximize2 className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Show artifact</TooltipContent>
         </Tooltip>
       )}
 

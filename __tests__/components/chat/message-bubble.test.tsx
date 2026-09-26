@@ -214,4 +214,75 @@ describe("MessageBubble message editing", () => {
     const saveBtn = screen.getByRole("button", { name: /save & submit/i });
     expect(saveBtn).toBeDisabled();
   });
+
+  it("renders CanvasCard when assistant message metadata contains manage_artifact tool result", () => {
+    const assistantMsgWithArtifact: Message = {
+      id: "msg-art-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "I have prepared the requested document.",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date("2026-09-26T11:49:00Z"),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-art",
+            result: {
+              artifact: {
+                id: "art-card-1",
+                type: "markdown",
+                title: "Canvas Absence Notification",
+                content: "# Absence Notification",
+              },
+            },
+          },
+        ],
+      }),
+    };
+
+    const onToggleArtifact = vi.fn();
+
+    renderMessageBubble({
+      message: assistantMsgWithArtifact,
+      onToggleArtifact,
+      isCanvasOpen: false,
+      activeArtifactId: null,
+    });
+
+    expect(screen.getByText("Canvas Absence Notification")).toBeInTheDocument();
+    const openBtn = screen.getByRole("button", { name: /^open$/i });
+    expect(openBtn).toBeInTheDocument();
+
+    fireEvent.click(openBtn);
+    expect(onToggleArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "art-card-1",
+        title: "Canvas Absence Notification",
+      }),
+    );
+  });
+
+  it("does NOT render CanvasCard for assistant messages without canvas artifacts", () => {
+    const plainAssistantMsg: Message = {
+      id: "msg-plain-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Hello! How can I help you today?",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: null,
+    };
+
+    renderMessageBubble({
+      message: plainAssistantMsg,
+    });
+
+    expect(
+      screen.queryByRole("button", { name: /^open$/i }),
+    ).not.toBeInTheDocument();
+  });
 });
+

@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
@@ -32,8 +33,12 @@ interface MessageThreadProps {
   onRegenerate: (id: string) => void;
   /** Callback to navigate to a sibling branch by message ID. */
   onNavigateBranch: (messageId: string) => void;
-  /** Callback to show the artifact panel for a given message. */
-  onShowArtifact: (msgId: string) => void;
+  /** Callback to toggle a canvas artifact. */
+  onToggleArtifact?: (artifact: ArtifactData) => void;
+  /** Active artifact id if canvas is currently open. */
+  activeArtifactId?: string | null;
+  /** Whether canvas panel is currently open. */
+  isCanvasOpen?: boolean;
 }
 
 /**
@@ -51,7 +56,9 @@ export function MessageThread({
   onDelete,
   onRegenerate,
   onNavigateBranch,
-  onShowArtifact,
+  onToggleArtifact,
+  activeArtifactId,
+  isCanvasOpen,
 }: MessageThreadProps) {
   const { knowledgebases } = useKnowledgebases();
   const handleNavigateBranch = useCallback(
@@ -99,7 +106,9 @@ export function MessageThread({
             onNavigateBranch={handleNavigateBranch}
             reasoning={msg.reasoning}
             isStreamingReasoning={false}
-            onShowArtifact={() => onShowArtifact(msg.id)}
+            onToggleArtifact={onToggleArtifact}
+            activeArtifactId={activeArtifactId}
+            isCanvasOpen={isCanvasOpen}
             knowledgebases={knowledgebases}
           />
         );

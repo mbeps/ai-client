@@ -226,17 +226,28 @@ export function ChatUI({
     }
   }
 
-  const handleShowArtifact = useCallback(
-    (msgId: string) => {
-      // Look up directly in allArtifacts so the index matches the panel's data
-      // source (ponytail: single source of truth instead of a parallel count walk).
-      const idx = allArtifacts.findIndex((a) => a.messageId === msgId);
-      if (idx >= 0) {
-        setArtifactIndex(idx);
+  const handleToggleArtifact = useCallback(
+    (artifact: ArtifactData) => {
+      // Find index of targeted artifact in allArtifacts
+      const targetIdx = allArtifacts.findIndex(
+        (a) =>
+          a.id === artifact.id ||
+          (a.messageId === artifact.messageId && a.title === artifact.title),
+      );
+
+      if (isArtifactOpen && artifactIndex === targetIdx) {
+        // Already showing this artifact -> toggle closed
+        setIsArtifactOpen(false);
+      } else if (targetIdx >= 0) {
+        // Switch to this artifact and open panel
+        setArtifactIndex(targetIdx);
+        setIsArtifactOpen(true);
+      } else {
+        // Fallback (e.g. streaming artifact not yet in thread)
         setIsArtifactOpen(true);
       }
     },
-    [allArtifacts],
+    [allArtifacts, isArtifactOpen, artifactIndex],
   );
 
   const handleUpdateArtifact = useCallback(
@@ -552,7 +563,9 @@ export function ChatUI({
                 onDelete={handleDelete}
                 onRegenerate={handleRegenerate}
                 onNavigateBranch={handleNavigateBranch}
-                onShowArtifact={handleShowArtifact}
+                onToggleArtifact={handleToggleArtifact}
+                activeArtifactId={activeArtifact?.id}
+                isCanvasOpen={isArtifactOpen}
               />
 
               <StreamingSection
@@ -562,6 +575,9 @@ export function ChatUI({
                 isStreamingReasoning={isStreamingReasoning}
                 activeToolCalls={activeToolCalls}
                 streamingCitations={streamingCitations}
+                onToggleArtifact={handleToggleArtifact}
+                activeArtifactId={activeArtifact?.id}
+                isCanvasOpen={isArtifactOpen}
               />
             </div>
           </div>
