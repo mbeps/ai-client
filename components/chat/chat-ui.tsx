@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import { extractArtifactFromToolResult } from "@/lib/chat/extract-artifact-from-tool-result";
 import { extractCitations } from "@/lib/chat/extract-citations";
+import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
@@ -14,6 +14,7 @@ import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
+import type { Message } from "@/types/message/message";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
 import { ChatInput } from "./chat-input";
@@ -166,6 +167,36 @@ export function ChatUI({
     return mcpServers.filter((s) => s.enabled);
   }, [mcpServers]);
 
+  // Streaming state
+  const {
+    isLoading,
+    streamingContent,
+    streamingReasoning,
+    isStreamingReasoning,
+    activeToolCalls,
+    streamResponse,
+    stopStream,
+  } = useStreamResponse(chatId);
+
+  const streamingCitations = useMemo(() => {
+    if (activeToolCalls.length === 0) return [];
+
+    const completedSearchToolResults = activeToolCalls
+      .filter(
+        (tc) =>
+          tc.status === "complete" &&
+          tc.toolName === "search_knowledge_base" &&
+          tc.result,
+      )
+      .map((tc) => ({
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        result: tc.result,
+      }));
+
+    return extractCitations(completedSearchToolResults);
+  }, [activeToolCalls]);
+
   // -- Artifact Panel Logic (Inlined) --
   const updateMessageMetadataDb = useAppStore(
     (state) => state.updateMessageMetadataDb,
@@ -174,53 +205,73 @@ export function ChatUI({
   const [artifactIndex, setArtifactIndex] = useState<number>(-1);
   const [isArtifactOpen, setIsArtifactOpen] = useState(false);
   const [prevArtifactsLength, setPrevArtifactsLength] = useState(0);
+  const [prevChatId, setPrevChatId] = useState(chatId);
+
+  // Reset artifact states on chat switch
+  if (chatId !== prevChatId) {
+    setPrevChatId(chatId);
+    setPrevArtifactsLength(0);
+    setArtifactIndex(-1);
+    setIsArtifactOpen(false);
+  }
 
   const allArtifacts = useMemo(() => {
     const artifacts: ArtifactData[] = [];
-    thread.forEach((msg) => {
-      if (msg.metadata) {
-        try {
-          const meta = JSON.parse(msg.metadata);
-          if (Array.isArray(meta.toolResults)) {
-            meta.toolResults.forEach((tr: any) => {
-              const art = extractArtifactFromToolResult(tr);
-              if (art) {
-                artifacts.push({ ...art, messageId: msg.id });
-              }
-            });
-          }
-        } catch {}
+    const seenIds = new Set<string>();
+
+    for (const msg of thread) {
+      const msgArtifacts = extractMessageArtifacts(msg);
+      for (const art of msgArtifacts) {
+        const id = art.id || `${msg.id}-art-${artifacts.length}`;
+        if (!seenIds.has(id)) {
+          seenIds.add(id);
+          artifacts.push({ ...art, id });
+        }
       }
-      const mermaidMatches = [
-        ...msg.content.matchAll(/```mermaid\s*\n([\s\S]*?)```/g),
-      ];
-      mermaidMatches.forEach((m, i) => {
-        artifacts.push({
-          type: "mermaid",
-          title: i === 0 ? "Mermaid Diagram" : `Mermaid Diagram ${i + 1}`,
-          content: m[1].trim(),
-          messageId: msg.id,
-        });
-      });
-    });
+    }
+
+    if (activeToolCalls && activeToolCalls.length > 0) {
+      const streamingMsg: Message = {
+        id: "streaming",
+        role: "assistant",
+        content: streamingContent ?? "",
+        createdAt: new Date(),
+        parentId: null,
+        childrenIds: [],
+        metadata: null,
+      };
+      const streamingArtifacts = extractMessageArtifacts(
+        streamingMsg,
+        activeToolCalls,
+      );
+      for (const art of streamingArtifacts) {
+        const id = art.id || `streaming-art-${artifacts.length}`;
+        if (!seenIds.has(id)) {
+          seenIds.add(id);
+          artifacts.push({ ...art, id });
+        }
+      }
+    }
+
     return artifacts;
-  }, [thread]);
+  }, [thread, activeToolCalls, streamingContent]);
 
   const activeArtifact =
     artifactIndex >= 0 && artifactIndex < allArtifacts.length
       ? allArtifacts[artifactIndex]
       : null;
 
-  // Auto-open when artifacts appear and clamp active index
+  // Auto-open when artifacts appear / increase and clamp active index
   if (allArtifacts.length !== prevArtifactsLength) {
+    const isIncrease = allArtifacts.length > prevArtifactsLength;
     setPrevArtifactsLength(allArtifacts.length);
-    if (allArtifacts.length > 0 && !isArtifactOpen && artifactIndex === -1) {
+
+    if (isIncrease) {
       setArtifactIndex(allArtifacts.length - 1);
       setIsArtifactOpen(true);
-    } else if (allArtifacts.length > 0 && artifactIndex === -1) {
-      setArtifactIndex(allArtifacts.length - 1);
     } else if (allArtifacts.length === 0) {
       setArtifactIndex(-1);
+      setIsArtifactOpen(false);
     } else if (artifactIndex >= allArtifacts.length) {
       setArtifactIndex(allArtifacts.length - 1);
     }
@@ -309,36 +360,6 @@ export function ChatUI({
     },
     [chatId, setKnowledgebaseDb],
   );
-
-  // Streaming state
-  const {
-    isLoading,
-    streamingContent,
-    streamingReasoning,
-    isStreamingReasoning,
-    activeToolCalls,
-    streamResponse,
-    stopStream,
-  } = useStreamResponse(chatId);
-
-  const streamingCitations = useMemo(() => {
-    if (activeToolCalls.length === 0) return [];
-
-    const completedSearchToolResults = activeToolCalls
-      .filter(
-        (tc) =>
-          tc.status === "complete" &&
-          tc.toolName === "search_knowledge_base" &&
-          tc.result,
-      )
-      .map((tc) => ({
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        result: tc.result,
-      }));
-
-    return extractCitations(completedSearchToolResults);
-  }, [activeToolCalls]);
 
   const handleSend = useCallback(
     async (
