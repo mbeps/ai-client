@@ -303,6 +303,10 @@ export function ChatUI({
 
   const handleUpdateArtifact = useCallback(
     (newContent: string) => {
+      const isLatest =
+        allArtifacts.length <= 1 || artifactIndex === allArtifacts.length - 1;
+      if (!isLatest) return;
+
       if (!activeArtifact?.messageId) return;
 
       const msg = chat?.messages[activeArtifact.messageId];
@@ -350,7 +354,14 @@ export function ChatUI({
         logger.error("Failed to update artifact metadata", e);
       }
     },
-    [activeArtifact, chat, chatId, updateMessageMetadataDb],
+    [
+      activeArtifact,
+      allArtifacts.length,
+      artifactIndex,
+      chat,
+      chatId,
+      updateMessageMetadataDb,
+    ],
   );
 
   const handleKbChange = useCallback(

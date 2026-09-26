@@ -469,4 +469,112 @@ describe("ChatUI - Canvas Page Auto-Navigation", () => {
     expect(lastArtifactPanelProps?.artifact?.title).toBe("Page 1 Chat 2");
     expect(lastArtifactPanelProps?.currentIndex).toBe(0);
   });
+
+  it("disallows editing when viewing an older canvas version and allows editing on latest", () => {
+    const msg1 = createMessageWithArtifact("msg-1", "art-1", "Page 1", null);
+    const msg2 = createMessageWithArtifact("msg-2", "art-2", "Page 2", "msg-1");
+    msg1.childrenIds = ["msg-2"];
+
+    const chat: Chat = {
+      id: "chat-1",
+      userId: "user-1",
+      title: "Test Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: "msg-2",
+      messages: {
+        "msg-1": msg1,
+        "msg-2": msg2,
+      },
+    };
+    mockStoreState.chats["chat-1"] = chat;
+
+    render(<ChatUI chatId="chat-1" initialChat={chat} />);
+
+    // On latest version (index 1) -> update is allowed
+    act(() => {
+      lastArtifactPanelProps?.onUpdate?.("Updated content for Page 2");
+    });
+    expect(mockStoreState.updateMessageMetadataDb).toHaveBeenCalledWith(
+      "chat-1",
+      "msg-2",
+      expect.stringContaining("Updated content for Page 2"),
+    );
+
+    mockStoreState.updateMessageMetadataDb.mockClear();
+
+    // Navigate to previous version (index 0)
+    act(() => {
+      lastArtifactPanelProps?.onNavigate?.(0);
+    });
+    expect(lastArtifactPanelProps?.currentIndex).toBe(0);
+
+    // Editing older version must be guarded and rejected
+    act(() => {
+      lastArtifactPanelProps?.onUpdate?.("Attempted edit on Page 1");
+    });
+    expect(mockStoreState.updateMessageMetadataDb).not.toHaveBeenCalled();
+  });
+
+  it("re-enables editability on the previous canvas when the newer message is deleted", () => {
+    const msg1 = createMessageWithArtifact("msg-1", "art-1", "Page 1", null);
+    const msg2 = createMessageWithArtifact("msg-2", "art-2", "Page 2", "msg-1");
+    msg1.childrenIds = ["msg-2"];
+
+    const initialChat: Chat = {
+      id: "chat-1",
+      userId: "user-1",
+      title: "Test Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: "msg-2",
+      messages: {
+        "msg-1": msg1,
+        "msg-2": msg2,
+      },
+    };
+    mockStoreState.chats["chat-1"] = initialChat;
+
+    const { rerender } = render(
+      <ChatUI chatId="chat-1" initialChat={initialChat} />,
+    );
+
+    // Navigate to previous version (index 0)
+    act(() => {
+      lastArtifactPanelProps?.onNavigate?.(0);
+    });
+    expect(lastArtifactPanelProps?.currentIndex).toBe(0);
+
+    // Edit rejected while Page 2 is still the latest
+    act(() => {
+      lastArtifactPanelProps?.onUpdate?.("Forbidden edit");
+    });
+    expect(mockStoreState.updateMessageMetadataDb).not.toHaveBeenCalled();
+
+    // Now delete msg-2: msg-1 is now the newest canvas again!
+    const updatedChat: Chat = {
+      ...initialChat,
+      currentLeafId: "msg-1",
+      messages: {
+        "msg-1": { ...msg1, childrenIds: [] },
+      },
+    };
+    mockStoreState.chats["chat-1"] = updatedChat;
+
+    rerender(<ChatUI chatId="chat-1" initialChat={updatedChat} />);
+
+    // Now msg-1 is at index 0 out of 1 artifact (isLatest is true)
+    expect(lastArtifactPanelProps?.currentIndex).toBe(0);
+    expect(lastArtifactPanelProps?.artifacts?.length).toBe(1);
+
+    // Editing msg-1 is now allowed!
+    act(() => {
+      lastArtifactPanelProps?.onUpdate?.("Restored Page 1 updated");
+    });
+    expect(mockStoreState.updateMessageMetadataDb).toHaveBeenCalledWith(
+      "chat-1",
+      "msg-1",
+      expect.stringContaining("Restored Page 1 updated"),
+    );
+  });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -86,6 +87,8 @@ export function ArtifactPanel({
   isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
+  const isLatest =
+    artifacts.length <= 1 || currentIndex === artifacts.length - 1;
 
   if (!isOpen || !artifact) return null;
 
@@ -268,6 +271,26 @@ export function ArtifactPanel({
         </div>
       </div>
 
+      {!isLatest && (
+        <div className="flex shrink-0 items-center justify-between border-amber-500/20 border-b bg-amber-500/10 px-4 py-2 text-amber-800 text-xs dark:text-amber-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              This canvas is read-only. Only the latest canvas can be edited.
+            </span>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate(artifacts.length - 1)}
+              className="ml-2 shrink-0 cursor-pointer font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
+            >
+              Go to latest
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="relative flex-1 overflow-hidden bg-muted/5">
         <Tabs value={artifact.type} className="flex h-full w-full flex-col">
           <TabsList className="hidden">
@@ -281,11 +304,17 @@ export function ArtifactPanel({
             value="markdown"
             className="m-0 h-full w-full border-none p-0 outline-none"
           >
-            <MarkdownView
-              id={`${artifact.messageId}-${currentIndex}`}
-              content={artifact.content}
-              onUpdate={onUpdate}
-            />
+            {isLatest ? (
+              <MarkdownView
+                id={`${artifact.messageId}-${currentIndex}`}
+                content={artifact.content}
+                onUpdate={onUpdate}
+              />
+            ) : (
+              <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-6">
+                <MarkdownRenderer content={artifact.content} />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent

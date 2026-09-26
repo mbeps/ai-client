@@ -71,4 +71,67 @@ describe("ArtifactPanel", () => {
     expect(prevBtn.getAttribute("title")).toBeNull();
     expect(nextBtn.getAttribute("title")).toBeNull();
   });
+
+  it("renders amber disclaimer and 'Go to latest' button when viewing previous canvas version", () => {
+    const secondArtifact: ArtifactData = {
+      ...mockArtifact,
+      id: "art-2",
+      title: "Second Artifact",
+    };
+    const onNavigate = vi.fn();
+
+    render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={mockArtifact}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[mockArtifact, secondArtifact]}
+          currentIndex={0}
+          onNavigate={onNavigate}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(
+      screen.getByText(
+        "This canvas is read-only. Only the latest canvas can be edited.",
+      ),
+    ).toBeInTheDocument();
+
+    const goToLatestBtn = screen.getByRole("button", { name: "Go to latest" });
+    expect(goToLatestBtn).toBeInTheDocument();
+    goToLatestBtn.click();
+    expect(onNavigate).toHaveBeenCalledWith(1);
+  });
+
+  it("does NOT render amber disclaimer when viewing the latest canvas version", () => {
+    const secondArtifact: ArtifactData = {
+      ...mockArtifact,
+      id: "art-2",
+      title: "Second Artifact",
+    };
+
+    render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={secondArtifact}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[mockArtifact, secondArtifact]}
+          currentIndex={1}
+          onNavigate={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(
+      screen.queryByText(
+        "This canvas is read-only. Only the latest canvas can be edited.",
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Go to latest" }),
+    ).toBeNull();
+  });
 });
