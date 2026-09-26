@@ -1,29 +1,19 @@
 "use client";
 
 import {
-  Check,
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Search,
   Square,
   SquareTerminal,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { PickerDialog } from "@/components/chat/picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
@@ -477,101 +467,52 @@ export function PromptPickerDialog({
   onSelectPrompt,
   trigger,
 }: PromptPickerDialogProps) {
-  const [open, setOpen] = useState(false);
-
   const totalCount = prompts.length + mcpPrompts.length;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+    <PickerDialog
+      title="Select Prompt"
+      description="Choose a prompt to use in your message"
+      trigger={
+        trigger || (
           <Button>
             <SquareTerminal className="mr-2 h-4 w-4" />
             Select Prompt
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
-        <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">
-            Select Prompt
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Choose a prompt to use in your message
-          </DialogDescription>
-        </DialogHeader>
-
-        {totalCount === 0 ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-            <SquareTerminal className="mx-auto mb-3 h-8 w-8 opacity-40" />
-            <p className="mb-2">No prompts configured yet.</p>
-            <Link
-              href={ROUTES.SETTINGS.PROMPTS.path}
-              className="text-primary underline underline-offset-4"
-              onClick={() => setOpen(false)}
-            >
-              Create a prompt in Settings
-            </Link>
-          </div>
-        ) : (
-          <>
-            <PromptPicker
-              prompts={prompts}
-              mcpPrompts={mcpPrompts}
-              selectedPrompt={selectedPrompt}
-              onSelectPrompt={onSelectPrompt}
-              className="flex min-h-0 flex-1 flex-col p-4"
-            />
-
-            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
-              >
-                <Link
-                  href={ROUTES.SETTINGS.PROMPTS.path}
-                  onClick={() => setOpen(false)}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>Manage Prompts</span>
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                {selectedPrompt && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSelectPrompt(null)}
-                    className="h-8 text-xs"
-                  >
-                    <X className="mr-1 h-3.5 w-3.5" />
-                    Clear
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2 px-6"
-                >
-                  <Check className="h-4 w-4" />
-                  Done
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        )
+      }
+      isEmpty={totalCount === 0}
+      emptyIcon={SquareTerminal}
+      emptyTitle="No prompts configured yet."
+      emptyAction={{
+        label: "Create a prompt in Settings",
+        href: ROUTES.SETTINGS.PROMPTS.path,
+      }}
+      manageAction={{
+        label: "Manage Prompts",
+        href: ROUTES.SETTINGS.PROMPTS.path,
+      }}
+      extraActions={
+        selectedPrompt ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSelectPrompt(null)}
+            className="h-8 text-xs"
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            Clear
+          </Button>
+        ) : undefined
+      }
+    >
+      <PromptPicker
+        prompts={prompts}
+        mcpPrompts={mcpPrompts}
+        selectedPrompt={selectedPrompt}
+        onSelectPrompt={onSelectPrompt}
+        className="flex min-h-0 flex-1 flex-col p-4"
+      />
+    </PickerDialog>
   );
 }

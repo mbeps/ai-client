@@ -1,26 +1,11 @@
 "use client";
 
-import {
-  BrainCircuit,
-  Check,
-  CheckSquare,
-  ExternalLink,
-  Search,
-  Square,
-  X,
-} from "lucide-react";
-import Link from "next/link";
+import { BrainCircuit, CheckSquare, Search, Square } from "lucide-react";
 import { useMemo, useState } from "react";
+import { PickerDialog } from "@/components/chat/picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
@@ -224,85 +209,37 @@ export function SkillsPickerDialog({
   onSelectSkills,
   trigger,
 }: SkillsPickerDialogProps) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+    <PickerDialog
+      title="Select Agent Skills"
+      description="Choose agent skills to enable in chat"
+      trigger={
+        trigger || (
           <Button>
             <BrainCircuit className="mr-2 h-4 w-4" />
             Select Skills
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
-        <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">
-            Select Agent Skills
-          </DialogTitle>
-        </DialogHeader>
-
-        {skills.length === 0 ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-            <BrainCircuit className="mx-auto mb-3 h-8 w-8 text-primary opacity-40" />
-            <p className="mb-2">No skills configured yet.</p>
-            <Link
-              href={ROUTES.SETTINGS.SKILLS.path}
-              className="text-primary underline underline-offset-4"
-              onClick={() => setOpen(false)}
-            >
-              Create or upload a skill in Settings
-            </Link>
-          </div>
-        ) : (
-          <>
-            <SkillsPicker
-              skills={skills}
-              selectedIds={selectedSkills}
-              onToggleSkill={onToggleSkill}
-              onSelectSkills={onSelectSkills}
-              className="flex min-h-0 flex-1 flex-col p-4"
-            />
-
-            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
-              >
-                <Link
-                  href={ROUTES.SETTINGS.SKILLS.path}
-                  onClick={() => setOpen(false)}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>Manage Skills</span>
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2 px-6"
-                >
-                  <Check className="h-4 w-4" />
-                  Done
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        )
+      }
+      isEmpty={skills.length === 0}
+      emptyIcon={BrainCircuit}
+      emptyTitle="No skills configured yet."
+      emptyAction={{
+        label: "Create or upload a skill in Settings",
+        href: ROUTES.SETTINGS.SKILLS.path,
+      }}
+      manageAction={{
+        label: "Manage Skills",
+        href: ROUTES.SETTINGS.SKILLS.path,
+      }}
+    >
+      <SkillsPicker
+        skills={skills}
+        selectedIds={selectedSkills}
+        onToggleSkill={onToggleSkill}
+        onSelectSkills={onSelectSkills}
+        className="flex min-h-0 flex-1 flex-col p-4"
+      />
+    </PickerDialog>
   );
 }

@@ -2,28 +2,18 @@
 
 import {
   AlertTriangle,
-  Check,
   CheckSquare,
   Database,
-  ExternalLink,
   Loader2,
   Search,
   Square,
-  X,
   XCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { PickerDialog } from "@/components/chat/picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
@@ -286,98 +276,50 @@ export function KnowledgebasePickerDialog({
   onSelectKbs,
   trigger,
 }: KnowledgebasePickerDialogProps) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+    <PickerDialog
+      title="Select Knowledge Bases"
+      description="Choose knowledge bases to reference in your conversation"
+      trigger={
+        trigger || (
           <Button>
             <Database className="mr-2 h-4 w-4" />
             Select Knowledge Bases
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
-        <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">
-            Select Knowledge Bases
-          </DialogTitle>
-        </DialogHeader>
-
-        {knowledgebases.length === 0 ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-            <Database className="mx-auto mb-3 h-8 w-8 opacity-40" />
-            <p className="mb-2">No knowledge bases available.</p>
-            <Link
-              href={ROUTES.KNOWLEDGEBASES.path}
-              className="text-primary underline underline-offset-4"
-              onClick={() => setOpen(false)}
-            >
-              Create a knowledge base
-            </Link>
-          </div>
-        ) : (
-          <>
-            <KnowledgebasePicker
-              knowledgebases={knowledgebases}
-              selectedIds={selectedKbs}
-              onSelect={(ids) => {
-                if (onSelectKbs) {
-                  onSelectKbs(ids);
-                  return;
-                }
-                const added = [...ids].filter((id) => !selectedKbs.has(id));
-                const removed = [...selectedKbs].filter((id) => !ids.has(id));
-                added.forEach((id) => {
-                  onToggleKb(id);
-                });
-                removed.forEach((id) => {
-                  onToggleKb(id);
-                });
-              }}
-              className="flex min-h-0 flex-1 flex-col p-4"
-              showIcons={false}
-            />
-
-            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
-              >
-                <Link
-                  href={ROUTES.KNOWLEDGEBASES.path}
-                  onClick={() => setOpen(false)}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>Manage Knowledge Bases</span>
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  className="gap-2 px-6"
-                >
-                  <Check className="h-4 w-4" />
-                  Done
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        )
+      }
+      isEmpty={knowledgebases.length === 0}
+      emptyIcon={Database}
+      emptyTitle="No knowledge bases available."
+      emptyAction={{
+        label: "Create a knowledge base",
+        href: ROUTES.KNOWLEDGEBASES.path,
+      }}
+      manageAction={{
+        label: "Manage Knowledge Bases",
+        href: ROUTES.KNOWLEDGEBASES.path,
+      }}
+    >
+      <KnowledgebasePicker
+        knowledgebases={knowledgebases}
+        selectedIds={selectedKbs}
+        onSelect={(ids) => {
+          if (onSelectKbs) {
+            onSelectKbs(ids);
+            return;
+          }
+          const added = [...ids].filter((id) => !selectedKbs.has(id));
+          const removed = [...selectedKbs].filter((id) => !ids.has(id));
+          added.forEach((id) => {
+            onToggleKb(id);
+          });
+          removed.forEach((id) => {
+            onToggleKb(id);
+          });
+        }}
+        className="flex min-h-0 flex-1 flex-col p-4"
+        showIcons={false}
+      />
+    </PickerDialog>
   );
 }

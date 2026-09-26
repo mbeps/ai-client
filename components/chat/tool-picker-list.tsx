@@ -2,30 +2,20 @@
 
 import {
   AlertCircle,
-  Check,
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Loader2,
   RefreshCw,
   Search,
   Square,
   Wrench,
-  X,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { PickerDialog } from "@/components/chat/picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
@@ -501,12 +491,12 @@ export function ToolPickerDialog({
   supportsTools = true,
   trigger,
 }: ToolPickerDialogProps) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+    <PickerDialog
+      title="Select Tools"
+      description="Choose tools and integrations to enable in your session"
+      trigger={
+        trigger || (
           <Button
             variant="ghost"
             size="sm"
@@ -517,61 +507,20 @@ export function ToolPickerDialog({
             {supportsTools ? "Select Tools" : "Tools Unsupported"}
             {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
           </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
-        <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">
-            Select Tools
-          </DialogTitle>
-        </DialogHeader>
-
-        {open && (
-          <ToolPickerList
-            servers={servers}
-            selectedTools={selectedTools}
-            onToggleTool={onToggleTool}
-            onBulkSelect={onBulkSelect}
-            className="flex min-h-0 flex-1 flex-col p-4"
-          />
-        )}
-
-        <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
-          >
-            <Link
-              href={ROUTES.SETTINGS.TOOLS.path}
-              onClick={() => setOpen(false)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>Manage Tools</span>
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setOpen(false)}
-              className="gap-2 px-6"
-            >
-              <Check className="h-4 w-4" />
-              Done
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        )
+      }
+      manageAction={{
+        label: "Manage Tools",
+        href: ROUTES.SETTINGS.TOOLS.path,
+      }}
+    >
+      <ToolPickerList
+        servers={servers}
+        selectedTools={selectedTools}
+        onToggleTool={onToggleTool}
+        onBulkSelect={onBulkSelect}
+        className="flex min-h-0 flex-1 flex-col p-4"
+      />
+    </PickerDialog>
   );
 }

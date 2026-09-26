@@ -2,22 +2,12 @@
 
 import {
   BrainCircuit,
-  Check,
   Database,
   Paperclip,
   SquareTerminal,
   Wrench,
-  X,
 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
@@ -28,7 +18,7 @@ import type { Skill } from "@/types/skill/skill";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
 import { PromptPickerDialog } from "./prompt-picker";
 import { SkillsPickerDialog } from "./skills-picker";
-import { ToolPickerList } from "./tool-picker-list";
+import { ToolPickerDialog } from "./tool-picker-list";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -78,8 +68,6 @@ export const AttachmentsMenu = ({
   supportsVision: _supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
-  const [toolsOpen, setToolsOpen] = useState(false);
-
   return (
     <div className="flex flex-col gap-0.5 p-1">
       <Button
@@ -135,8 +123,13 @@ export const AttachmentsMenu = ({
         }
       />
 
-      <Dialog open={toolsOpen} onOpenChange={setToolsOpen}>
-        <DialogTrigger asChild>
+      <ToolPickerDialog
+        servers={servers}
+        selectedTools={selectedTools}
+        onToggleTool={onToggleTool}
+        onBulkSelect={onBulkSelect}
+        supportsTools={supportsTools}
+        trigger={
           <Button
             variant="ghost"
             size="sm"
@@ -147,52 +140,8 @@ export const AttachmentsMenu = ({
             {supportsTools ? "Select Tools" : "Tools Unsupported"}
             {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
           </Button>
-        </DialogTrigger>
-        <DialogContent className="flex h-[80vh] max-w-2xl flex-col overflow-hidden p-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Select Tools</DialogTitle>
-          </DialogHeader>
-
-          {toolsOpen && (
-            <ToolPickerList
-              servers={servers}
-              selectedTools={selectedTools}
-              onToggleTool={onToggleTool}
-              onBulkSelect={onBulkSelect}
-            />
-          )}
-
-          <div className="flex shrink-0 items-end justify-between border-t bg-muted/20 p-4">
-            <div className="flex flex-col gap-1.5 text-muted-foreground text-xs">
-              <div className="flex items-center gap-2">
-                <Wrench className="h-3.5 w-3.5" />
-                <span>
-                  <strong>{selectedTools.size}</strong> tools selected
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setToolsOpen(false)}
-                size="sm"
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
-              <Button
-                onClick={() => setToolsOpen(false)}
-                size="sm"
-                className="gap-2 px-6"
-              >
-                <Check className="h-4 w-4" />
-                Done
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        }
+      />
     </div>
   );
 };
