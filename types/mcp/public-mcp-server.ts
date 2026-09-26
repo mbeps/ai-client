@@ -1,14 +1,5 @@
-import { McpServer } from "./mcp-server";
-
-/**
- * A helper that preserves union discrimination when omitting keys.
- * Used for safe type transformations without losing type narrowing.
- *
- * @author Maruf Bepary
- */
-type DistributiveOmit<T, K extends keyof any> = T extends any
-  ? Omit<T, K>
-  : never;
+import type { DistributiveOmit } from "@/types/mcp/distributive-omit";
+import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
  * Represents a publicly shared MCP server.

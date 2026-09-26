@@ -1,6 +1,17 @@
 "use client";
 
-import * as React from "react";
+import {
+  BrainCircuit,
+  ChevronLeft,
+  Command,
+  Database,
+  LogOut,
+  Settings,
+  Wrench,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type * as React from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,18 +24,10 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import {
-  Settings,
-  Wrench,
-  ChevronLeft,
-  LogOut,
-  Command,
-  Database,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { ROUTES } from "@/config/routes";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Sidebar for the /settings section.
@@ -60,6 +63,11 @@ export function SettingsSidebar({
       href: ROUTES.SETTINGS.PROMPTS.path,
       icon: Command,
     },
+    {
+      name: "Skills",
+      href: ROUTES.SETTINGS.SKILLS.path,
+      icon: BrainCircuit,
+    },
   ];
 
   return (
@@ -77,8 +85,8 @@ export function SettingsSidebar({
           <SidebarSeparator className="mx-0 my-2" />
           <SidebarMenuItem>
             <div className="px-3 py-2">
-              <h2 className="text-lg font-semibold tracking-tight">Settings</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="font-semibold text-lg tracking-tight">Settings</h2>
+              <p className="text-muted-foreground text-xs">
                 Manage your application preferences
               </p>
             </div>
@@ -100,7 +108,9 @@ export function SettingsSidebar({
                     (item.name === "Providers" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
                     (item.name === "Prompts" &&
-                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path))
+                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path)) ||
+                    (item.name === "Skills" &&
+                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path))
                   }
                   tooltip={item.name}
                 >
@@ -121,6 +131,9 @@ export function SettingsSidebar({
             <SidebarMenuButton
               onClick={async () => {
                 await authClient.signOut();
+                useAppStore.getState().resetEntityState();
+                useAppStore.getState().resetChatState();
+                hydratedResources.clear();
                 router.push(ROUTES.AUTH.LOGIN.path);
               }}
               className="text-destructive hover:text-destructive focus:text-destructive"

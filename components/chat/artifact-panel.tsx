@@ -1,9 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ArtifactData } from "@/types/artifact/artifact";
 import {
+  AlertTriangle,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -15,6 +13,15 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as xlsx from "xlsx";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { logger } from "@/lib/logger";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { MarkdownRenderer } from "./markdown-renderer";
 
 const MarkdownView = dynamic(() => import("./artifacts/markdown-view"), {
@@ -80,6 +87,8 @@ export function ArtifactPanel({
   isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
+  const isLatest =
+    artifacts.length <= 1 || currentIndex === artifacts.length - 1;
 
   if (!isOpen || !artifact) return null;
 
@@ -89,7 +98,7 @@ export function ArtifactPanel({
       setCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (_err) {
       toast.error("Failed to copy content");
     }
   };
@@ -127,7 +136,7 @@ export function ArtifactPanel({
         xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
         return;
       } catch (err) {
-        console.error("Failed to export spreadsheet:", err);
+        logger.error("Failed to export spreadsheet", err);
       }
     }
 
@@ -153,41 +162,53 @@ export function ArtifactPanel({
 
   return (
     <div
-      className={`h-full border-l bg-card flex flex-col shadow-xl md:shadow-none overflow-hidden transition-all duration-300 animate-in slide-in-from-right ${
+      className={`slide-in-from-right flex h-full animate-in flex-col overflow-hidden border-l bg-card shadow-xl transition-all duration-300 md:shadow-none ${
         isFullWidth
-          ? "w-full relative"
-          : "w-full md:w-[60%] lg:w-[55%] xl:w-[50%] absolute right-0 top-0 z-50 md:relative"
+          ? "relative w-full"
+          : "absolute top-0 right-0 z-50 w-full md:relative md:w-[60%] lg:w-[55%] xl:w-[50%]"
       }`}
     >
-      <div className="flex items-center justify-between p-3 border-b bg-muted/30 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex shrink-0 items-center justify-between border-b bg-muted/30 p-3">
+        <div className="flex min-w-0 items-center gap-3">
           {artifacts.length > 1 && onNavigate && (
-            <div className="flex items-center border rounded-md overflow-hidden bg-background">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 rounded-none border-r"
-                disabled={currentIndex === 0}
-                onClick={() => onNavigate(currentIndex - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-[10px] px-2 font-medium tabular-nums">
+            <div className="flex items-center overflow-hidden rounded-md border bg-background">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-none border-r"
+                    disabled={currentIndex === 0}
+                    onClick={() => onNavigate(currentIndex - 1)}
+                    aria-label="Previous artifact"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Previous artifact</TooltipContent>
+              </Tooltip>
+              <span className="px-2 font-medium text-[10px] tabular-nums">
                 {currentIndex + 1} / {artifacts.length}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 rounded-none border-l"
-                disabled={currentIndex === artifacts.length - 1}
-                onClick={() => onNavigate(currentIndex + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-none border-l"
+                    disabled={currentIndex === artifacts.length - 1}
+                    onClick={() => onNavigate(currentIndex + 1)}
+                    aria-label="Next artifact"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Next artifact</TooltipContent>
+              </Tooltip>
             </div>
           )}
-          <div className="flex flex-col min-w-0">
-            <h3 className="font-semibold text-sm truncate">
+          <div className="flex min-w-0 flex-col">
+            <h3 className="truncate font-semibold text-sm">
               {artifact.title || "Artifact"}
             </h3>
             <span className="text-[10px] text-muted-foreground uppercase leading-none">
@@ -196,46 +217,82 @@ export function ArtifactPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCopy}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            title="Copy content"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopy}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Copy content"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy content</TooltipContent>
+          </Tooltip>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDownload}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            title="Download file"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDownload}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Download file"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download file</TooltipContent>
+          </Tooltip>
 
-          <div className="w-px h-4 bg-border mx-1" />
+          <div className="mx-1 h-4 w-px bg-border" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="Close artifact"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-hidden bg-muted/5">
-        <Tabs value={artifact.type} className="w-full h-full flex flex-col">
+      {!isLatest && (
+        <div className="flex shrink-0 items-center justify-between border-amber-500/20 border-b bg-amber-500/10 px-4 py-2 text-amber-800 text-xs dark:text-amber-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              This canvas is read-only. Only the latest canvas can be edited.
+            </span>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate(artifacts.length - 1)}
+              className="ml-2 shrink-0 cursor-pointer font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
+            >
+              Go to latest
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="relative flex-1 overflow-hidden bg-muted/5">
+        <Tabs value={artifact.type} className="flex h-full w-full flex-col">
           <TabsList className="hidden">
             <TabsTrigger value="markdown">Markdown</TabsTrigger>
             <TabsTrigger value="spreadsheet">Spreadsheet</TabsTrigger>
@@ -245,18 +302,24 @@ export function ArtifactPanel({
 
           <TabsContent
             value="markdown"
-            className="w-full h-full m-0 border-none p-0 outline-none"
+            className="m-0 h-full w-full border-none p-0 outline-none"
           >
-            <MarkdownView
-              id={`${artifact.messageId}-${currentIndex}`}
-              content={artifact.content}
-              onUpdate={onUpdate}
-            />
+            {isLatest ? (
+              <MarkdownView
+                id={`${artifact.messageId}-${currentIndex}`}
+                content={artifact.content}
+                onUpdate={onUpdate}
+              />
+            ) : (
+              <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-6">
+                <MarkdownRenderer content={artifact.content} />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent
             value="spreadsheet"
-            className="w-full h-full m-0 border-none p-0 outline-none"
+            className="m-0 h-full w-full border-none p-0 outline-none"
           >
             <SpreadsheetView
               title={artifact.title}
@@ -266,14 +329,14 @@ export function ArtifactPanel({
 
           <TabsContent
             value="html"
-            className="w-full h-full m-0 border-none p-0 outline-none"
+            className="m-0 h-full w-full border-none p-0 outline-none"
           >
             <HtmlView content={artifact.content} />
           </TabsContent>
 
           <TabsContent
             value="mermaid"
-            className="w-full h-full m-0 border-none p-6 outline-none overflow-auto custom-scrollbar"
+            className="custom-scrollbar m-0 h-full w-full overflow-auto border-none p-6 outline-none"
           >
             <MarkdownRenderer
               content={`\`\`\`mermaid\n${artifact.content}\n\`\`\``}

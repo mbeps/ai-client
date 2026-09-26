@@ -1,11 +1,11 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { McpItemList } from "@/components/mcp/mcp-item-list";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
+import { McpItemList } from "@/components/mcp/mcp-item-list";
+import { Badge } from "@/components/ui/badge";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { McpServer } from "@/types/mcp/mcp-server";
-import { Badge } from "@/components/ui/badge";
 
 /**
  * Props for ResourceList component.
@@ -36,18 +36,18 @@ function renderResourceContent(res: DiscoveredResource) {
   return (
     <>
       <div className="space-y-1">
-        <h4 className="text-xs font-semibold text-muted-foreground">URI</h4>
-        <code className="text-xs break-all bg-muted p-1 rounded">
+        <h4 className="font-semibold text-muted-foreground text-xs">URI</h4>
+        <code className="break-all rounded bg-muted p-1 text-xs">
           {res.uri}
         </code>
       </div>
 
       {res.description && (
         <div className="space-y-1">
-          <h4 className="text-xs font-semibold text-muted-foreground">
+          <h4 className="font-semibold text-muted-foreground text-xs">
             Description
           </h4>
-          <p className="text-sm text-foreground/80 leading-relaxed">
+          <p className="text-foreground/80 text-sm leading-relaxed">
             {res.description}
           </p>
         </div>
@@ -55,7 +55,7 @@ function renderResourceContent(res: DiscoveredResource) {
 
       {res.mimeType && (
         <div className="space-y-1">
-          <h4 className="text-xs font-semibold text-muted-foreground">
+          <h4 className="font-semibold text-muted-foreground text-xs">
             MIME Type
           </h4>
           <Badge variant="outline" className="text-[10px]">

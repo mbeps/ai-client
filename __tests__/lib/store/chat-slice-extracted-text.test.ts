@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
 
 // ─── Safety-net mocks (same pattern as chat-slice.test.ts) ─────────────────
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",
@@ -21,27 +21,27 @@ vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 
 // Entity slice stubs
-vi.mock("@/lib/actions/chats/create-chat", () => ({ createChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/delete-chat", () => ({ deleteChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/rename-chat", () => ({ renameChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/move-chat", () => ({ moveChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/delete-message", () => ({
+vi.mock("@/actions/chats/create-chat", () => ({ createChat: vi.fn() }));
+vi.mock("@/actions/chats/delete-chat", () => ({ deleteChat: vi.fn() }));
+vi.mock("@/actions/chats/rename-chat", () => ({ renameChat: vi.fn() }));
+vi.mock("@/actions/chats/move-chat", () => ({ moveChat: vi.fn() }));
+vi.mock("@/actions/chats/delete-message", () => ({
   deleteMessage: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-current-leaf", () => ({
+vi.mock("@/actions/chats/update-current-leaf", () => ({
   updateCurrentLeaf: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-message-metadata", () => ({
+vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn(),
 }));
-vi.mock("@/lib/actions/projects/list-projects", () => ({
+vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/lib/actions/assistants/list-assistants", () => ({
+vi.mock("@/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
-vi.mock("@/lib/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
-vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
+vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
@@ -120,8 +120,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(1);
     expect(atts[0].extractedText).toBe("Extracted PDF content here");
   });
@@ -137,8 +136,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(1);
     expect(atts[0].extractedText).toBeUndefined();
   });
@@ -159,8 +157,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const atts =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+    const atts = useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(atts).toHaveLength(2);
     expect(atts[0].extractedText).toBe("First doc content");
     expect(atts[1].extractedText).toBe("Second doc content");
@@ -187,7 +184,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
       ],
     );
 
-    const msgs = useAppStore.getState().chats["c1"].messages;
+    const msgs = useAppStore.getState().chats.c1.messages;
     expect(msgs["msg-1"].attachments[0].extractedText).toBe("User doc text");
     expect(msgs["msg-2"].attachments[0].extractedText).toBe(
       "Assistant doc text",
@@ -212,7 +209,7 @@ describe("ChatSlice — loadChats extractedText mapping", () => {
     );
 
     const att =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments[0];
+      useAppStore.getState().chats.c1.messages["msg-1"].attachments[0];
     expect(att.id).toBe("att-1");
     expect(att.name).toBe("report.pdf");
     expect(att.mimeType).toBe("application/pdf");

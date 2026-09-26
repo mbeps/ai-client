@@ -1,8 +1,14 @@
 "use client";
 
-import * as React from "react";
-import { usePathname } from "next/navigation";
+import { format } from "date-fns";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
+import { useShallow } from "zustand/react/shallow";
+import { getKnowledgebase } from "@/actions/knowledgebases/get-knowledgebase";
+import { getSkill } from "@/actions/skills/get-skill";
+import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
+import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,14 +17,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
+import { ROUTES } from "@/config/routes";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
-import { useShallow } from "zustand/react/shallow";
-import { format } from "date-fns";
-import { getTransformRun } from "@/lib/actions/transform-runs/get-transform-run";
-import { getTransformAgent } from "@/lib/actions/transform-agents/get-transform-agent";
-import { getKnowledgebase } from "@/lib/actions/knowledgebases/get-knowledgebase";
-import { ROUTES } from "@/constants/routes";
+import { getPathSegments } from "@/lib/utils";
 
 /**
  * Friendly labels for known route segments.
@@ -29,6 +31,7 @@ const ROUTE_LABELS: Record<string, string> = {
   assistants: "Assistants",
   knowledgebases: "Knowledge Bases",
   tools: "Tools",
+  skills: "Skills",
   profile: "Profile",
   security: "Security",
   sessions: "Sessions",
@@ -39,7 +42,7 @@ const ROUTE_LABELS: Record<string, string> = {
   prompts: "Prompts",
   workflows: "Workflows",
   translation: "Translation",
-  transform: "Spreadsheets Automation",
+  transform: "Step-by-Step Automations",
   new: "New",
 };
 
@@ -58,38 +61,73 @@ const UUID_REGEX =
 export function DynamicBreadcrumbs() {
   const pathname = usePathname();
   const {
-    chats,
     projects,
     assistants,
     prompts,
+    skills,
     mcpServers,
+    publicMcpServers,
     transformAgents,
     loadProjects,
     loadPrompts,
     loadAssistants,
+    loadSkills,
     loadMcpServers,
     loadPublicMcpServers,
     loadTransformAgents,
   } = useAppStore(
     useShallow((state) => ({
-      chats: state.chats,
       projects: state.projects,
       assistants: state.assistants,
       prompts: state.prompts,
+      skills: state.skills,
       mcpServers: state.mcpServers,
+      publicMcpServers: state.publicMcpServers,
       transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
       loadAssistants: state.loadAssistants,
+      loadSkills: state.loadSkills,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
       loadTransformAgents: state.loadTransformAgents,
     })),
   );
 
+  // Narrow subscription: only the single chat whose ID appears in the current URL
+  const pathSegments = React.useMemo(
+    () => getPathSegments(pathname),
+    [pathname],
+  );
+  const chatId = React.useMemo(() => {
+    // /chats/[id]
+    if (
+      pathSegments[0] === "chats" &&
+      pathSegments[1] &&
+      UUID_REGEX.test(pathSegments[1])
+    ) {
+      return pathSegments[1];
+    }
+    // /projects/[id]/[chatId] or /assistants/[id]/[chatId]
+    if (
+      (pathSegments[0] === "projects" || pathSegments[0] === "assistants") &&
+      pathSegments.length >= 3 &&
+      pathSegments[2] &&
+      UUID_REGEX.test(pathSegments[2])
+    ) {
+      return pathSegments[2];
+    }
+    return null;
+  }, [pathSegments]);
+
+  const currentChatData = useAppStore((s) =>
+    chatId ? s.chats[chatId] : undefined,
+  );
+
   const [resolvedLabels, setResolvedLabels] = React.useState<
     Record<string, string>
   >({});
+  const resolutionAttempted = React.useRef<Set<string>>(new Set());
 
   // Load projects if not available
   React.useEffect(() => {
@@ -112,6 +150,13 @@ export function DynamicBreadcrumbs() {
     }
   }, [prompts.length, loadPrompts]);
 
+  // Load skills if not available
+  React.useEffect(() => {
+    if (skills.length === 0) {
+      loadSkills().catch(() => {});
+    }
+  }, [skills.length, loadSkills]);
+
   // Load MCP servers if not available
   React.useEffect(() => {
     if (mcpServers.length === 0) {
@@ -119,10 +164,12 @@ export function DynamicBreadcrumbs() {
     }
   }, [mcpServers.length, loadMcpServers]);
 
-  // Load Public MCP servers
+  // Load Public MCP servers — guard prevents re-fetch on every mount
   React.useEffect(() => {
-    loadPublicMcpServers().catch(() => {});
-  }, [loadPublicMcpServers]);
+    if (publicMcpServers.length === 0) {
+      loadPublicMcpServers().catch(() => {});
+    }
+  }, [publicMcpServers.length, loadPublicMcpServers]);
 
   // Load transform agents if on a transform workflow path
   React.useEffect(() => {
@@ -137,7 +184,7 @@ export function DynamicBreadcrumbs() {
   // Resolve IDs that aren't in state
   React.useEffect(() => {
     let ignore = false;
-    const segments = pathname.split("/").filter(Boolean);
+    const segments = getPathSegments(pathname);
 
     const resolveAll = async () => {
       const updates: Record<string, string> = {};
@@ -149,23 +196,30 @@ export function DynamicBreadcrumbs() {
             projects.some((p) => p.id === segment) ||
             assistants.some((a) => a.id === segment) ||
             prompts.some((p) => p.id === segment) ||
+            skills.some((s) => s.id === segment) ||
             mcpServers.some((s) => s.id === segment) ||
             transformAgents.some((a) => a.id === segment) ||
-            chats[segment];
+            (chatId === segment && !!currentChatData);
 
           if (
             UUID_REGEX.test(segment) &&
             !resolvedLabels[segment] &&
+            !resolutionAttempted.current.has(segment) &&
             !inStore
           ) {
+            resolutionAttempted.current.add(segment);
             const prevSegment = segments[index - 1];
 
             // 1. Check if it's a Run segment (URL: /workflows/transform/[agentId]/[runId])
-            if (prevSegment && UUID_REGEX.test(prevSegment)) {
+            if (
+              pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path) &&
+              prevSegment &&
+              UUID_REGEX.test(prevSegment)
+            ) {
               try {
                 const run = await getTransformRun(segment);
                 if (run) {
-                  const agent = await getTransformAgent(run.agentId);
+                  const _agent = await getTransformAgent(run.agentId);
                   const dateStr = format(
                     new Date(run.createdAt),
                     "dd/MM/yyyy HH:mm",
@@ -175,18 +229,21 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = label;
                 }
               } catch (err) {
-                console.error("Failed to resolve run label:", err);
+                logger.error("Failed to resolve run label", err);
               }
             }
             // 2. Check if it's a Transform Agent segment (URL: /workflows/transform/[agentId])
-            else if (prevSegment === "transform") {
+            else if (
+              pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path) &&
+              prevSegment === "transform"
+            ) {
               try {
                 const agent = await getTransformAgent(segment);
                 if (agent) {
                   updates[segment] = agent.name;
                 }
               } catch (err) {
-                console.error("Failed to resolve transform agent label:", err);
+                logger.error("Failed to resolve transform agent label", err);
               }
             }
             // 3. Check if it's a Knowledge Base segment (URL: /knowledgebases/[id])
@@ -197,7 +254,18 @@ export function DynamicBreadcrumbs() {
                   updates[segment] = kb.name;
                 }
               } catch (err) {
-                console.error("Failed to resolve knowledgebase label:", err);
+                logger.error("Failed to resolve knowledgebase label", err);
+              }
+            }
+            // 4. Check if it's a Skill segment (URL: /settings/skills/[id])
+            else if (prevSegment === "skills") {
+              try {
+                const skill = await getSkill(segment);
+                if (skill) {
+                  updates[segment] = skill.displayName || skill.name;
+                }
+              } catch (err) {
+                logger.error("Failed to resolve skill label", err);
               }
             }
           }
@@ -219,40 +287,44 @@ export function DynamicBreadcrumbs() {
     projects,
     assistants,
     prompts,
+    skills,
     mcpServers,
     transformAgents,
-    chats,
+    chatId,
+    currentChatData,
     resolvedLabels,
   ]);
 
-  // Split pathname into segments and remove empty strings
-  const segments = pathname.split("/").filter(Boolean);
-
-  if (segments.length === 0) return null;
+  // Use path segments computed above (pathSegments)
+  if (pathSegments.length === 0) return null;
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {segments.map((segment, index) => {
-          const href = `/${segments.slice(0, index + 1).join("/")}`;
-          const isLast = index === segments.length - 1;
+        {pathSegments.map((segment, index) => {
+          const href = `/${pathSegments.slice(0, index + 1).join("/")}`;
+          const isLast = index === pathSegments.length - 1;
 
-          const currentChat = chats[segment];
+          const isChatSegment = chatId === segment;
 
           // Map segment to label or capitalise it
           const label =
-            currentChat?.title ||
+            (isChatSegment ? currentChatData?.title : undefined) ||
             projects.find((p) => p.id === segment)?.name ||
             assistants.find((a) => a.id === segment)?.name ||
             prompts.find((p) => p.id === segment)?.title ||
+            skills.find((s) => s.id === segment)?.displayName ||
+            skills.find((s) => s.id === segment)?.name ||
             mcpServers.find((s) => s.id === segment)?.name ||
             transformAgents.find((a) => a.id === segment)?.name ||
             resolvedLabels[segment] ||
-            // Fallback for project/assistant names from chat object
-            Object.values(chats).find((c) => c.projectId === segment)
-              ?.projectName ||
-            Object.values(chats).find((c) => c.assistantId === segment)
-              ?.assistantName ||
+            // Fallback: project/assistant name from the current chat
+            (currentChatData?.projectId === segment
+              ? currentChatData?.projectName
+              : undefined) ||
+            (currentChatData?.assistantId === segment
+              ? currentChatData?.assistantName
+              : undefined) ||
             ROUTE_LABELS[segment.toLowerCase()] ||
             segment.charAt(0).toUpperCase() +
               segment.slice(1).replace(/-/g, " ");

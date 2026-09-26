@@ -1,12 +1,12 @@
 import {
+  customType,
+  index,
+  integer,
   pgTable,
   text,
-  integer,
   timestamp,
-  index,
-  customType,
 } from "drizzle-orm/pg-core";
-import { kbDocument } from "./kb-document-schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 
 const vectorType = customType<{ data: number[] | null; driverData: string }>({
   dataType() {

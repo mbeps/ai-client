@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
+import path from "path";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
-import path from "path";
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
@@ -22,6 +22,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/.next/**"],
     coverage: {
       provider: "v8",
+      all: false,
       reporter: ["text", "lcov"],
       reportsDirectory: "coverage",
       exclude: [
@@ -35,7 +36,7 @@ export default defineConfig({
         "scripts/**",
         "proxy.ts",
         "models.ts",
-        "lib/env.ts",
+        "config/env.ts",
         "lib/auth/auth.ts",
         "lib/auth/client.ts",
       ],

@@ -6,7 +6,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores user-configured OpenAI-compatible providers (OpenRouter, Ollama, Groq, etc.).

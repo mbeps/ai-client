@@ -1,22 +1,20 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/empty-state";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw } from "lucide-react";
-import { EmptyState } from "@/components/empty-state";
-import type { LucideIcon } from "lucide-react";
+import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
+import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
  * Result type from MCP server discovery.
@@ -112,12 +110,12 @@ export function McpItemList<T>({
     return (
       <Card className="border-destructive/50">
         <CardContent className="flex items-center gap-3 pt-6">
-          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
           <div className="flex-1">
-            <p className="text-sm font-medium">
+            <p className="font-medium text-sm">
               Failed to discover {itemKind}s
             </p>
-            <p className="text-xs text-muted-foreground">{error}</p>
+            <p className="text-muted-foreground text-xs">{error}</p>
           </div>
           <Button variant="outline" size="sm" onClick={discover}>
             <RefreshCw className="mr-2 h-3 w-3" />
@@ -134,8 +132,8 @@ export function McpItemList<T>({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2 font-medium text-muted-foreground text-sm">
           <Icon className="h-4 w-4" />
           <span>
             {items.length} {itemKind}
@@ -154,21 +152,21 @@ export function McpItemList<T>({
             <AccordionItem
               key={getItemKey(item)}
               value={getItemKey(item)}
-              className="border-b border-border/50 px-4 last:border-0 hover:bg-muted/30 transition-colors"
+              className="border-border/50 border-b px-4 transition-colors last:border-0 hover:bg-muted/30"
             >
-              <AccordionTrigger className="hover:no-underline py-4">
+              <AccordionTrigger className="py-4 hover:no-underline">
                 <div className="flex items-center gap-3 text-left">
-                  <div className="p-2 rounded-md bg-primary/10 text-primary">
+                  <div className="rounded-md bg-primary/10 p-2 text-primary">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-mono font-semibold">
+                    <p className="font-mono font-semibold text-sm">
                       {getItemLabel(item)}
                     </p>
                   </div>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pb-4 pt-1">
+              <AccordionContent className="pt-1 pb-4">
                 <div className="space-y-4 pl-11">{renderContent(item)}</div>
               </AccordionContent>
             </AccordionItem>

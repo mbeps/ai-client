@@ -1,5 +1,5 @@
-import { boolean, pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores user-created projects that act as scopes for grouping chats and sharing system prompts across conversations.

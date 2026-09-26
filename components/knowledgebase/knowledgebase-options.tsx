@@ -1,11 +1,12 @@
 "use client";
+
 import { Edit2, Trash2 } from "lucide-react";
-import { renameKnowledgebase } from "@/lib/actions/knowledgebases/rename-knowledgebase";
-import { deleteKnowledgebase } from "@/lib/actions/knowledgebases/delete-knowledgebase";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
+import { updateKnowledgebase } from "@/actions/knowledgebases/update-knowledgebase";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { ROUTES } from "@/constants/routes";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**
  * Dropdown/Drawer menu with Rename and Delete options for knowledgebases.
@@ -36,7 +37,7 @@ export function KnowledgebaseOptions({
   } = useEntityOptions({
     id: kb.id,
     type: "Knowledgebase",
-    onRename: renameKnowledgebase,
+    onRename: (id, newName) => updateKnowledgebase(id, { name: newName }),
     onDelete: (id) => deleteKnowledgebase(id),
     redirectPath: ROUTES.KNOWLEDGEBASES.path,
     useRouterRefresh: true,

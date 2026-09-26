@@ -1,8 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface UseEntityOptionsProps {
@@ -80,7 +80,7 @@ export function useEntityOptions({
       if (redirectPath) {
         router.push(redirectPath);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error(`Failed to delete ${type.toLowerCase()}`);
     } finally {
       setIsDeleting(false);

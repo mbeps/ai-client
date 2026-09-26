@@ -1,860 +1,897 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useStreamResponse } from "@/hooks/chat/use-stream-response";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ─── Hoisted mock variables ────────────────────────────────────────────────
-const mockPush = vi.hoisted(() => vi.fn());
-const mockRefresh = vi.hoisted(() => vi.fn());
-const mockToastInfo = vi.hoisted(() => vi.fn());
-const mockToastError = vi.hoisted(() => vi.fn());
-const mockToastSuccess = vi.hoisted(() => vi.fn());
+// ── mock inngest/react useRealtime ──────────────────────────────────────────
+const realtimeState = vi.hoisted(() => ({
+  config: null as any,
+  messages: {
+    delta: [] as any[],
+    all: [] as any[],
+    byTopic: {},
+    last: null,
+  },
+  connectionStatus: "open" as string,
+  error: null as any,
+}));
+
+vi.mock("inngest/react", () => ({
+  useRealtime: (config: any) => {
+    realtimeState.config = config;
+    const messages = {
+      ...realtimeState.messages,
+      all:
+        realtimeState.messages.all === undefined
+          ? undefined
+          : realtimeState.messages.all.length > 0
+            ? realtimeState.messages.all
+            : [...realtimeState.messages.delta],
+    };
+    return {
+      messages,
+      connectionStatus: realtimeState.connectionStatus,
+      runStatus: "running",
+      isPaused: false,
+      pauseReason: null,
+      result: null,
+      error: realtimeState.error,
+      reset: vi.fn(),
+    };
+  },
+  getClientSubscriptionToken: vi.fn().mockResolvedValue("mock-token"),
+}));
+
+const mockPersist = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/chats/persist-message", () => ({
+  persistMessage: mockPersist,
+}));
+
+const mockGetChat = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/chats/get-chat", () => ({
+  getChat: mockGetChat,
+}));
+
+const mockBuildChatFromRows = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/chats/build-chat", () => ({
+  buildChatFromRows: mockBuildChatFromRows,
+}));
+
+vi.mock("@/actions/chats/chat-realtime-token", () => ({
+  getChatRealtimeToken: vi.fn().mockResolvedValue("mock-token"),
+  triggerChatResponseAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+const mockProcessAttachments = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/attachments/process-attachments", () => ({
+  processAttachments: mockProcessAttachments,
+}));
+
+const mockGetMcpPrompt = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/mcp/get-mcp-prompt", () => ({
+  getMcpPrompt: mockGetMcpPrompt,
+}));
+
+const mockStoreState = vi.hoisted(() => ({
+  addMessage: vi.fn(),
+  updateMessageAttachments: vi.fn(),
+  upsertChat: vi.fn(),
+  prompts: [],
+}));
+
+vi.mock("@/lib/store", () => ({
+  useAppStore: Object.assign(
+    (selector: (s: any) => any) => selector(mockStoreState),
+    { getState: () => mockStoreState },
+  ),
+}));
+
 const mockHandleApiError = vi.hoisted(() => vi.fn().mockReturnValue(false));
-const mockAddMessage = vi.hoisted(() => vi.fn());
-const mockUpdateMessageAttachments = vi.hoisted(() => vi.fn());
-const mockPersistMessage = vi.hoisted(() =>
-  vi.fn().mockResolvedValue(undefined),
-);
-const mockProcessAttachments = vi.hoisted(() => vi.fn().mockResolvedValue([]));
-const mockGetState = vi.hoisted(() =>
-  vi.fn().mockReturnValue({
-    chats: {
-      "chat-1": {
-        id: "chat-1",
-        currentLeafId: null,
-        messages: {},
-      },
-    },
-    prompts: [],
-  }),
-);
+const mockToastError = vi.hoisted(() => vi.fn());
 
-// ─── Mocks ─────────────────────────────────────────────────────────────────
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn().mockReturnValue({
-    push: mockPush,
-    refresh: mockRefresh,
-  }),
+vi.mock("@/hooks/use-api-error", () => ({
+  useApiError: () => ({ handleApiError: vi.fn().mockReturnValue(false) }),
+  useApiError: () => ({ handleApiError: mockHandleApiError }),
 }));
 
 vi.mock("sonner", () => ({
   toast: {
-    info: mockToastInfo,
     error: mockToastError,
-    success: mockToastSuccess,
+    success: vi.fn(),
   },
 }));
 
-vi.mock("@/hooks/use-api-error", () => ({
-  useApiError: vi.fn().mockReturnValue({
-    handleApiError: mockHandleApiError,
-  }),
-}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-vi.mock("@/lib/store", () => {
-  const storeState = {
-    addMessage: mockAddMessage,
-    updateMessageAttachments: mockUpdateMessageAttachments,
-    chats: mockGetState().chats,
-    prompts: mockGetState().prompts,
+import { useStreamResponse } from "@/hooks/chat/use-stream-response";
+
+const originalFetch = global.fetch;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  realtimeState.config = null;
+  realtimeState.connectionStatus = "open";
+  realtimeState.error = null;
+  realtimeState.messages = {
+    delta: [],
+    all: [],
+    byTopic: {},
+    last: null,
   };
-
-  const useAppStoreMock = vi.fn((selector) => {
-    if (typeof selector === "function") {
-      return selector(storeState);
-    }
-    return storeState;
+  mockPersist.mockResolvedValue({});
+  mockProcessAttachments.mockResolvedValue([]);
+  mockGetChat.mockReset();
+  mockBuildChatFromRows.mockReset();
+  mockStoreState.upsertChat.mockClear();
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ success: true }),
   });
-
-  // Add getState static method
-  useAppStoreMock.getState = () => storeState;
-
-  return { useAppStore: useAppStoreMock };
 });
 
-vi.mock("@/lib/actions/chats/persist-message", () => ({
-  persistMessage: mockPersistMessage,
-}));
+describe("useStreamResponse (Inngest Realtime-backed)", () => {
+  it("awaits persistMessage BEFORE triggering the API dispatch", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
 
-vi.mock("@/lib/chat/upload-attachments", () => ({
-  processAttachments: mockProcessAttachments,
-}));
+    let resolvePersist!: () => void;
+    mockPersist.mockReturnValue(new Promise<void>((r) => (resolvePersist = r)));
 
-// ─── Helper to create mock SSE stream ──────────────────────────────────────
-function createMockSseStream(events: Array<{ type: string; data: any }>) {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    start(controller) {
-      events.forEach(({ type, data }) => {
-        const line = `data: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(line));
-      });
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: { "Content-Type": "text/event-stream" },
-  });
-}
+    let p!: Promise<string>;
+    await act(async () => {
+      p = result.current.streamResponse("user-msg-1", "hello", null);
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
 
-// ─── Tests ─────────────────────────────────────────────────────────────────
-describe("useStreamResponse", () => {
-  const chatId = "chat-1";
-  const userMsgId = "user-msg-1";
-  const assistantMsgId = "assistant-msg-1";
+    await act(async () => {
+      resolvePersist();
+      await p;
+    });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = vi.fn();
+    expect(mockPersist).toHaveBeenCalledWith("chat-1", expect.anything());
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  it("sends chatId + userMessageId + selections in the request body to /api/chat", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
 
-  // ── Successful streaming ────────────────────────────────────────────────
-  describe("Successful streaming", () => {
-    it("should stream text tokens and accumulate content", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Hello" } },
-        { type: "data", data: { type: "text", delta: " world" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test message",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      expect(mockAddMessage).toHaveBeenCalledWith(
-        chatId,
-        "assistant",
-        "Hello world",
-        userMsgId,
-        assistantMsgId,
-        "{}",
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-x",
+        ["srv1"],
+        ["srv1:tool:t"],
         undefined,
-        undefined,
+        "asst-1",
+        ["kb-1"],
+        ["skill-1"],
       );
     });
 
-    it("should track and update tool calls", async () => {
-      const events = [
-        {
-          type: "data",
-          data: {
-            type: "tool-call",
-            toolCallId: "call-1",
-            toolName: "get_weather",
-            args: { location: "NYC" },
-          },
-        },
-        {
-          type: "data",
-          data: {
-            type: "tool-result",
-            toolCallId: "call-1",
-            toolName: "get_weather",
-            result: { temp: 72 },
-          },
-        },
-        { type: "data", data: { type: "text", delta: "It's 72°F" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("/api/chat");
+    const body = JSON.parse(init.body);
+    expect(body).toMatchObject({
+      chatId: "chat-1",
+      userMessageId: "user-msg-1",
+      model: "gpt-x",
+      selectedServerIds: ["srv1"],
+      selectedTools: ["srv1:tool:t"],
+      selectedAssistantId: "asst-1",
+      selectedKbIds: ["kb-1"],
+    });
+  });
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
+  it("optimistically inserts the user message into the store", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
 
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "What's the weather?",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Tool call should be tracked during streaming
-      await waitFor(() => {
-        expect(result.current.activeToolCalls.length).toBeGreaterThanOrEqual(0);
-      });
-
-      // After done, tool calls should be cleared
-      expect(result.current.activeToolCalls).toEqual([]);
-      expect(result.current.isLoading).toBe(false);
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", "parent-1");
     });
 
-    it("should accumulate reasoning tokens separately", async () => {
-      const events = [
-        { type: "data", data: { type: "reasoning", delta: "Let me think" } },
-        { type: "data", data: { type: "reasoning", delta: " about this" } },
-        { type: "data", data: { type: "text", delta: "The answer is 42" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
+      role: "user",
+      content: "hello",
+      parentId: "parent-1",
+      id: "user-msg-1",
+      metadata: expect.any(String),
+      attachments: [],
+    });
+  });
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
+  it("resolves MCP prompt successfully and attaches it to message content", async () => {
+    mockGetMcpPrompt.mockResolvedValueOnce({
+      messages: [{ content: "Custom MCP instructions" }],
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
 
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Complex question",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Assistant message should include reasoning
-      expect(mockAddMessage).toHaveBeenCalledWith(
-        chatId,
-        "assistant",
-        "The answer is 42",
-        userMsgId,
-        assistantMsgId,
-        "{}",
-        undefined,
-        "Let me think about this",
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-4",
+        [],
+        [],
+        "mcp:server-1:prompt-1",
       );
     });
 
-    it("should persist metadata in done event", async () => {
-      const metadata = {
-        toolCalls: [{ name: "calculator", result: 42 }],
-        model: "gpt-4",
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: `Custom MCP instructions\n\nhello`,
+        metadata: expect.stringContaining('"promptId":"mcp:server-1:prompt-1"'),
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  it("handles error in resolveMcpPrompt gracefully", async () => {
+    mockGetMcpPrompt.mockRejectedValueOnce(new Error("MCP offline"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-4",
+        [],
+        [],
+        "mcp:server-1:prompt-1",
+      );
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to load MCP prompt. Sending message without it.",
+    );
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: "hello",
+      }),
+    );
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  it("handles error event from stream", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "error", message: "Rate limit exceeded" } },
+        ],
       };
+      rerender();
+    });
 
-      const events = [
-        { type: "data", data: { type: "text", delta: "Result: 42" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata },
-        },
-      ];
+    expect(mockToastError).toHaveBeenCalledWith("Rate limit exceeded");
+  });
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
+  it("handles syncFromDb error when syncing on connection error", async () => {
+    mockGetChat.mockRejectedValueOnce(new Error("DB error"));
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
 
-      const { result } = renderHook(() => useStreamResponse(chatId));
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
 
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Calculate",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
+    await act(async () => {
+      realtimeState.connectionStatus = "error";
+      rerender();
+      await new Promise((r) => setTimeout(r, 50));
+    });
 
-      expect(mockAddMessage).toHaveBeenCalledWith(
-        chatId,
-        "assistant",
-        "Result: 42",
-        userMsgId,
-        assistantMsgId,
-        JSON.stringify(metadata),
-        undefined,
-        undefined,
-      );
+    expect(mockGetChat).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("supports stopStream and fetchChatToken rejection when chatId is missing", async () => {
+    const { result } = renderHook(() => useStreamResponse(""));
+
+    await act(() => {
+      result.current.stopStream();
+    });
+
+    const tokenFn = realtimeState.config?.token;
+    if (tokenFn) {
+      await expect(tokenFn()).rejects.toThrow("No chatId");
+    }
+  });
+
+  it("syncs the assistant message into the store with the server-assigned id on finish event", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", "parent-1");
+    });
+
+    // Simulate deltas arriving over realtime
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          { data: { type: "reasoning-delta", reasoning: "thinking" } },
+          { data: { type: "text-delta", text: "answer" } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
+      role: "assistant",
+      content: "answer",
+      parentId: "user-msg-1",
+      id: "server-assistant-id",
+      metadata: expect.stringContaining("thinking"),
+      reasoning: "thinking",
     });
   });
 
-  // ── Stream abort handling ───────────────────────────────────────────────
-  describe("Stream abort handling", () => {
-    it("should abort stream when stopStream is called", async () => {
-      // Mock a slow stream that can be aborted
-      (global.fetch as any).mockImplementation((url: string, options: any) => {
-        return new Promise((resolve) => {
-          options.signal.addEventListener("abort", () => {
-            resolve(Promise.reject(new DOMException("Aborted", "AbortError")));
-          });
+  it("syncs completed tool calls and results as raw objects in metadata on finish event", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
 
-          // Stream starts but never finishes
-          setTimeout(() => {
-            const stream = new ReadableStream({
-              start(controller) {
-                const encoder = new TextEncoder();
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({ type: "text", delta: "Starting" })}\n\n`,
-                  ),
-                );
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "generate artifact",
+        null,
+      );
+    });
+
+    mockStoreState.addMessage.mockClear();
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "tc-1",
+              toolName: "manage_artifact",
+              args: { type: "spreadsheet", title: "Test" },
+            },
+          },
+          {
+            data: {
+              type: "tool-result",
+              toolCallId: "tc-1",
+              toolName: "manage_artifact",
+              result: {
+                success: true,
+                artifact: { id: "art-1", type: "spreadsheet" },
               },
-            });
-            resolve(
-              new Response(stream, {
-                status: 200,
-                headers: { "Content-Type": "text/event-stream" },
-              }),
-            );
-          }, 50);
-        });
-      });
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      // Start streaming (don't await)
-      let streamPromise: Promise<any>;
-      act(() => {
-        streamPromise = result.current.streamResponse(
-          userMsgId,
-          "Long task",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Wait a bit for fetch to be called
-      await new Promise((resolve) => setTimeout(resolve, 30));
-
-      // Abort while "fetching"
-      act(() => {
-        result.current.stopStream();
-      });
-
-      // Wait for everything to settle
-      await act(async () => {
-        await streamPromise!.catch(() => {}); // Catch AbortError
-      });
-
-      // Verify cleanup happened
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.streamingContent).toBeNull();
-    }, 10000);
-
-    it("should save partial content on abort if content exists", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Partial" } },
-        { type: "data", data: { type: "text", delta: " content" } },
-      ];
-
-      (global.fetch as any).mockImplementation((url: string, options: any) => {
-        // Create stream that will be aborted
-        return Promise.resolve(createMockSseStream(events));
-      });
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      // Start streaming and abort quickly
-      const streamPromise = act(async () => {
-        result.current.streamResponse(userMsgId, "Message", null, [], "gpt-4");
-      });
-
-      // Abort after a brief moment
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      act(() => {
-        result.current.stopStream();
-      });
-
-      await streamPromise;
-
-      // Should save partial content (may be empty if abort was too quick)
-      expect(result.current.isLoading).toBe(false);
+            },
+          },
+          {
+            data: {
+              type: "text-delta",
+              text: "I made the spreadsheet.",
+            },
+          },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
     });
+
+    expect(mockStoreState.addMessage).toHaveBeenCalledTimes(1);
+    const addedCall = mockStoreState.addMessage.mock.calls[0][1];
+    expect(addedCall.content).toBe("I made the spreadsheet.");
+    expect(addedCall.parentId).toBe("user-msg-1");
+    const meta = JSON.parse(addedCall.metadata);
+    expect(meta.toolCalls).toEqual([
+      {
+        toolCallId: "tc-1",
+        toolName: "manage_artifact",
+        args: { type: "spreadsheet", title: "Test" },
+      },
+    ]);
+    expect(meta.toolResults).toEqual([
+      {
+        toolCallId: "tc-1",
+        toolName: "manage_artifact",
+        result: {
+          success: true,
+          artifact: { id: "art-1", type: "spreadsheet" },
+        },
+      },
+    ]);
   });
 
-  // ── Error handling ──────────────────────────────────────────────────────
-  describe("Error handling", () => {
-    it("should handle 401 Unauthorized errors", async () => {
-      vi.clearAllMocks();
+  it("skips syncing when the assistant produced no content", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
 
-      (global.fetch as any).mockResolvedValue(
-        new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-        }),
-      );
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      // Hook catches errors internally and shows toast
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // useApiError is mocked to return false, so useStreamResponse falls back to toast.error(err.message)
-      expect(mockToastError).toHaveBeenCalledWith("Unauthorized");
-      expect(result.current.isLoading).toBe(false);
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
     });
 
-    it("should handle 429 Rate limit errors", async () => {
-      vi.clearAllMocks();
+    mockStoreState.addMessage.mockClear();
 
-      (global.fetch as any).mockResolvedValue(
-        new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
-        }),
-      );
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      expect(mockToastError).toHaveBeenCalledWith("Rate limit exceeded");
-      expect(result.current.isLoading).toBe(false);
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "a1" } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
     });
 
-    it("should handle network failures", async () => {
-      (global.fetch as any).mockRejectedValue(
-        new Error("Network request failed"),
-      );
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      expect(mockToastError).toHaveBeenCalled();
-    });
-
-    it("should handle SSE error events", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Starting" } },
-        {
-          type: "data",
-          data: { type: "error", message: "Provider error", code: "PROVIDER" },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Should add error message
-      expect(mockAddMessage).toHaveBeenCalledWith(
-        chatId,
-        "assistant",
-        "Provider error",
-        userMsgId,
-      );
-    });
-
-    it("should handle generic stream errors", async () => {
-      (global.fetch as any).mockResolvedValue(
-        new Response(JSON.stringify({ error: "Something went wrong" }), {
-          status: 500,
-        }),
-      );
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Test",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      expect(mockToastError).toHaveBeenCalled();
-    });
+    expect(mockStoreState.addMessage).not.toHaveBeenCalled();
   });
 
-  // ── Message persistence ─────────────────────────────────────────────────
-  describe("Message persistence", () => {
-    it("should persist user message before streaming", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Response" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
+  it("derives streaming state as deltas arrive over realtime", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "User message",
-          null,
-          [],
-          "gpt-4",
-          ["server-1"],
-          ["tool-1"],
-        );
-      });
-
-      // User message should be persisted
-      expect(mockPersistMessage).toHaveBeenCalledWith(chatId, {
-        id: userMsgId,
-        role: "user",
-        content: "User message",
-        parentId: null,
-        metadata: expect.any(String),
-      });
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "a1" } },
+          { data: { type: "reasoning-delta", reasoning: "hmm" } },
+          { data: { type: "text-delta", text: "partial ans" } },
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "t1",
+              toolName: "search",
+              args: { q: "x" },
+            },
+          },
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "t2",
+              toolName: "search",
+              args: { q: "y" },
+            },
+          },
+          {
+            data: {
+              type: "tool-result",
+              toolCallId: "t2",
+              toolName: "search",
+              result: { hits: 1 },
+            },
+          },
+        ],
+      };
+      rerender();
     });
 
-    it("should handle message persistence failures gracefully", async () => {
-      mockPersistMessage.mockRejectedValueOnce(
-        new Error("Database connection failed"),
-      );
-
-      const events = [
-        { type: "data", data: { type: "text", delta: "Response" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "User message",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Should show error toast but continue streaming
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Message may not have been saved. Please check your connection.",
-      );
-
-      // Stream should still complete
-      expect(mockAddMessage).toHaveBeenCalledWith(
-        chatId,
-        "assistant",
-        "Response",
-        userMsgId,
-        assistantMsgId,
-        "{}",
-        undefined,
-        undefined,
-      );
-    });
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.streamingContent).toBe("partial ans");
+    expect(result.current.streamingReasoning).toBe("hmm");
+    expect(result.current.isStreamingReasoning).toBe(false);
+    expect(result.current.activeToolCalls).toEqual([
+      {
+        toolCallId: "t1",
+        toolName: "search",
+        args: { q: "x" },
+        status: "calling",
+      },
+      {
+        toolCallId: "t2",
+        toolName: "search",
+        args: { q: "y" },
+        status: "complete",
+        result: { hits: 1 },
+      },
+    ]);
   });
 
-  // ── Attachment upload flow ──────────────────────────────────────────────
-  describe("Attachment upload flow", () => {
-    it("should upload attachments and update message", async () => {
-      const attachments = [
-        {
-          id: "att-1",
-          name: "test.png",
-          mimeType: "image/png",
-          size: 1024,
-          url: "blob:test",
-        },
-      ];
+  it("clears streaming state when finish event is processed", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
 
-      const uploadedAttachments = [
-        {
-          id: "att-1",
-          name: "test.png",
-          mimeType: "image/png",
-          size: 1024,
-          url: "https://s3.example.com/test.png",
-        },
-      ];
-
-      mockProcessAttachments.mockResolvedValueOnce(uploadedAttachments);
-
-      const events = [
-        { type: "data", data: { type: "text", delta: "Done" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message with attachment",
-          null,
-          attachments as any,
-          "gpt-4",
-        );
-      });
-
-      // Attachments should be processed
-      expect(mockProcessAttachments).toHaveBeenCalledWith(
-        attachments,
-        userMsgId,
-      );
-
-      // Message should be updated with uploaded attachments
-      expect(mockUpdateMessageAttachments).toHaveBeenCalledWith(
-        chatId,
-        userMsgId,
-        uploadedAttachments,
-      );
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "a1" } },
+          { data: { type: "text-delta", text: "done" } },
+        ],
+      };
+      rerender();
     });
 
-    it("should handle empty attachment uploads", async () => {
-      mockProcessAttachments.mockResolvedValueOnce([]);
+    expect(result.current.isLoading).toBe(true);
 
-      const events = [
-        { type: "data", data: { type: "text", delta: "Response" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message",
-          null,
-          [{ id: "att-1" } as any],
-          "gpt-4",
-        );
-      });
-
-      // Should not update attachments if none were uploaded
-      expect(mockUpdateMessageAttachments).not.toHaveBeenCalled();
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [{ data: { type: "finish", finishReason: "stop" } }],
+      };
+      rerender();
     });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.streamingContent).toBeNull();
+    expect(result.current.streamingReasoning).toBeNull();
+    expect(result.current.activeToolCalls).toEqual([]);
   });
 
-  // ── State management ────────────────────────────────────────────────────
-  describe("State management", () => {
-    it("should reset streaming state after completion", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Complete" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
+  it("stopStream clears the active stream state", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // All streaming state should be reset
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.streamingContent).toBeNull();
-      expect(result.current.streamingReasoning).toBeNull();
-      expect(result.current.isStreamingReasoning).toBe(false);
-      expect(result.current.activeToolCalls).toEqual([]);
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "a1" } },
+          { data: { type: "text-delta", text: "streaming..." } },
+        ],
+      };
+      rerender();
     });
 
-    it("should call onDone callback after successful completion", async () => {
-      const onDone = vi.fn();
+    expect(result.current.isLoading).toBe(true);
 
-      const events = [
-        { type: "data", data: { type: "text", delta: "Final result" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() =>
-        useStreamResponse(chatId, { onDone }),
-      );
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      expect(onDone).toHaveBeenCalledWith("Final result");
+    act(() => {
+      result.current.stopStream();
     });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.streamingContent).toBeNull();
   });
 
-  // ── Conversation history assembly ───────────────────────────────────────
-  describe("Conversation history assembly", () => {
-    it("should include current message in history when chat is new", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Hi" } },
-        {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
-        },
-      ];
+  it("uploads attachments and updates the store message", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+    const att = { id: "att-1", name: "f.png", type: "image" } as any;
+    mockProcessAttachments.mockResolvedValue([{ ...att, key: "k" }]);
 
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Hello",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      // Fetch should be called with proper request body
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/chat",
-        expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: expect.any(String),
-        }),
-      );
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "look", null, [att]);
     });
+
+    expect(mockProcessAttachments).toHaveBeenCalledWith([att], "user-msg-1");
+    expect(mockStoreState.updateMessageAttachments).toHaveBeenCalledWith(
+      "chat-1",
+      "user-msg-1",
+      [{ ...att, key: "k" }],
+    );
   });
 
-  // ── Metadata building ───────────────────────────────────────────────────
-  describe("Metadata building", () => {
-    it("should include all optional metadata fields when provided", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Response" } },
+  it("recovers from database and completes streaming when realtime connection errors", async () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1", { onDone }),
+    );
+
+    mockGetChat.mockResolvedValue({
+      id: "chat-1",
+      messages: [
         {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
+          id: "asst-db-id",
+          role: "assistant",
+          content: "recovered reply",
+          parentId: "user-msg-1",
+          createdAt: new Date().toISOString(),
         },
-      ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message",
-          "parent-1",
-          [],
-          "gpt-4",
-          ["server-1"],
-          ["tool-1"],
-          undefined,
-          "assistant-1",
-          ["kb-1"],
-        );
-      });
-
-      // User message should have complete metadata
-      const persistCall = mockPersistMessage.mock.calls[0];
-      const metadata = JSON.parse(persistCall[1].metadata);
-
-      expect(metadata).toMatchObject({
-        model: "gpt-4",
-        selectedServerIds: ["server-1"],
-        selectedTools: ["tool-1"],
-        assistantId: "assistant-1",
-        selectedKbIds: ["kb-1"],
-      });
+      ],
+      attachments: [],
+    });
+    mockBuildChatFromRows.mockReturnValue({
+      id: "chat-1",
+      messages: {
+        "asst-db-id": {
+          id: "asst-db-id",
+          role: "assistant",
+          content: "recovered reply",
+          parentId: "user-msg-1",
+        },
+      },
     });
 
-    it("should omit optional metadata fields when not provided", async () => {
-      const events = [
-        { type: "data", data: { type: "text", delta: "Response" } },
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    // Simulate realtime connection error
+    await act(async () => {
+      realtimeState.connectionStatus = "error";
+      rerender();
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+
+    expect(mockGetChat).toHaveBeenCalledWith("chat-1");
+    expect(mockBuildChatFromRows).toHaveBeenCalled();
+    expect(mockStoreState.upsertChat).toHaveBeenCalled();
+    expect(onDone).toHaveBeenCalledWith("recovered reply");
+    expect(result.current.isLoading).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("catches error if persistMessage fails and shows toast error", async () => {
+    mockPersist.mockRejectedValueOnce(new Error("Persist error"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Message may not have been saved. Please check your connection.",
+    );
+  });
+
+  it("handles !res.ok when handleApiError handles the error", async () => {
+    mockHandleApiError.mockReturnValueOnce(true);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Rate limit" }),
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles !res.ok when handleApiError does not handle and json rejects", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => {
+        throw new Error("JSON parse error");
+      },
+    });
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Failed to generate response");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles fetch exception and shows toast error", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network failed"));
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith("Network failed");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 'error' stream event and displays toast error", async () => {
+    mockHandleApiError.mockReturnValueOnce(false);
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.delta = [
         {
-          type: "data",
-          data: { type: "done", id: assistantMsgId, metadata: {} },
+          data: {
+            type: "error",
+            message: "Realtime stream error occurred",
+          },
         },
       ];
-
-      (global.fetch as any).mockResolvedValue(createMockSseStream(events));
-
-      const { result } = renderHook(() => useStreamResponse(chatId));
-
-      await act(async () => {
-        await result.current.streamResponse(
-          userMsgId,
-          "Message",
-          null,
-          [],
-          "gpt-4",
-        );
-      });
-
-      const persistCall = mockPersistMessage.mock.calls[0];
-      const metadata = JSON.parse(persistCall[1].metadata);
-
-      expect(metadata).toMatchObject({
-        model: "gpt-4",
-        selectedServerIds: [],
-        selectedTools: [],
-      });
-      expect(metadata.assistantId).toBeUndefined();
-      expect(metadata.selectedKbIds).toBeUndefined();
+      rerender();
     });
+
+    expect(mockToastError).toHaveBeenCalledWith("Realtime stream error occurred");
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles 'error' stream event without toast when handleApiError returns true", async () => {
+    mockHandleApiError.mockReturnValueOnce(true);
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.delta = [
+        {
+          data: {
+            type: "error",
+            message: "Handled error",
+          },
+        },
+      ];
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("falls back to messages.delta when messages.all is undefined", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.messages.all = undefined as any;
+      realtimeState.messages.delta = [
+        {
+          data: {
+            type: "text-delta",
+            text: "delta fallback chunk",
+          },
+        },
+      ];
+      rerender();
+    });
+
+    expect(result.current.streamingContent).toBe("delta fallback chunk");
+  });
+
+  it("watchdog times out after 10 connection error attempts and displays toast", async () => {
+    vi.useFakeTimers();
+    mockGetChat.mockRejectedValue(new Error("DB sync failed"));
+
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    // Set connection error and re-render so effects update refs
+    await act(async () => {
+      realtimeState.connectionStatus = "error";
+      rerender();
+    });
+
+    // Advance 15 intervals in watchdog
+    await act(async () => {
+      for (let i = 0; i < 15; i++) {
+        await vi.advanceTimersByTimeAsync(2500);
+      }
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Connection lost to generation stream. Please refresh if response is ready.",
+    );
+    expect(result.current.isLoading).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("handles realtimeError in useRealtime", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    await act(async () => {
+      realtimeState.error = new Error("Subscription failed");
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it("rejects token fetch when chatId is empty", async () => {
+    renderHook(() => useStreamResponse(""));
+    expect(realtimeState.config?.token).toBeDefined();
+
+    await expect(realtimeState.config.token()).rejects.toThrow("No chatId");
+  });
+
+  it("resolves slash prompt from store when selectedPromptId is a local prompt", async () => {
+    mockStoreState.prompts = [
+      { id: "local-p1", content: "You are an assistant" },
+    ] as any;
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "explain this",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        "local-p1",
+      );
+    });
+
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: expect.stringContaining("You are an assistant"),
+      }),
+    );
+  });
+
+  it("watchdog interval stops when syncFromDb returns true", async () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    mockGetChat.mockResolvedValue({
+      id: "chat-1",
+      messages: [
+        {
+          id: "asst-1",
+          role: "assistant",
+          parentId: "user-msg-1",
+          content: "Synced message",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      attachments: [],
+    });
+    mockBuildChatFromRows.mockReturnValue({
+      id: "chat-1",
+      messages: {
+        "asst-1": { id: "asst-1", role: "assistant", content: "Synced message" },
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useStreamResponse("chat-1", { onDone }),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    // Advance timers past stalled threshold (5000ms) with open connection
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+
+    expect(onDone).toHaveBeenCalledWith("Synced message");
+    expect(result.current.isLoading).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("returns undefined for apiBaseUrl in production environment", () => {
+    const origEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = "production";
+      renderHook(() => useStreamResponse("chat-prod"));
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
   });
 });

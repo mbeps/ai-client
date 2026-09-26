@@ -1,11 +1,11 @@
 "use client";
 
 import { Wrench } from "lucide-react";
-import { McpItemList } from "@/components/mcp/mcp-item-list";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
+import { McpItemList } from "@/components/mcp/mcp-item-list";
+import { Badge } from "@/components/ui/badge";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
-import { Badge } from "@/components/ui/badge";
 
 /**
  * Props for ToolList component.
@@ -64,10 +64,10 @@ function renderToolContent(tool: DiscoveredTool) {
     <>
       {tool.description && (
         <div className="space-y-1">
-          <h4 className="text-xs font-semibold text-muted-foreground">
+          <h4 className="font-semibold text-muted-foreground text-xs">
             Description
           </h4>
-          <p className="text-sm text-foreground/80 leading-relaxed">
+          <p className="text-foreground/80 text-sm leading-relaxed">
             {tool.description}
           </p>
         </div>
@@ -78,7 +78,7 @@ function renderToolContent(tool: DiscoveredTool) {
           (tool.inputSchema.properties as Record<string, unknown>) || {},
         ).length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-muted-foreground">
+            <h4 className="font-semibold text-muted-foreground text-xs">
               Parameters
             </h4>
             <div className="grid gap-2">
@@ -87,13 +87,13 @@ function renderToolContent(tool: DiscoveredTool) {
               ).map(([propName, prop]: [string, any]) => (
                 <div
                   key={propName}
-                  className="flex flex-col gap-1 p-2 rounded-md bg-muted/50 border border-border/50"
+                  className="flex flex-col gap-1 rounded-md border border-border/50 bg-muted/50 p-2"
                 >
                   <div className="flex items-center justify-between">
-                    <code className="text-xs font-bold text-primary px-1.5 py-0.5 rounded">
+                    <code className="rounded px-1.5 py-0.5 font-bold text-primary text-xs">
                       {propName}
                     </code>
-                    <Badge variant="outline" className="text-[10px] h-4">
+                    <Badge variant="outline" className="h-4 text-[10px]">
                       {prop.type}
                       {(tool.inputSchema.required as string[])?.includes(
                         propName,
@@ -101,7 +101,7 @@ function renderToolContent(tool: DiscoveredTool) {
                     </Badge>
                   </div>
                   {prop.description && (
-                    <p className="text-xs text-muted-foreground italic">
+                    <p className="text-muted-foreground text-xs italic">
                       {prop.description}
                     </p>
                   )}

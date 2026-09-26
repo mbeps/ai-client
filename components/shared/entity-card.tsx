@@ -1,15 +1,18 @@
 "use client";
 
+import Link from "next/link";
+import type React from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import React from "react";
 
 /**
  * Props for the EntityCard component.
  */
 interface EntityCardProps {
-  /** Icon to display in the top-left circle. */
-  icon: React.ReactNode;
+  /** Optional link destination URL. If provided, renders semantic Next.js Link. */
+  href?: string;
+  /** Optional icon to display in the top-left circle. */
+  icon?: React.ReactNode;
   /** Title of the card. Can be a string or React content (for badges/pins). */
   title: React.ReactNode;
   /** Primary description text. */
@@ -19,7 +22,7 @@ interface EntityCardProps {
   rightActions?: React.ReactNode;
   /** Optional options menu to display in the top-right corner. */
   menu?: React.ReactNode;
-  /** Optional click handler for the entire card. */
+  /** Optional click handler for the entire card (used when href is not provided). */
   onClick?: () => void;
   /** Optional additional CSS classes. */
   className?: string;
@@ -28,14 +31,13 @@ interface EntityCardProps {
 }
 
 /**
- * A unified card component used for displaying various entities like Projects, 
-Assistants, 
- * and Transform Agents. Standardizes layout, padding, hover states, and action 
-placement.
+ * A unified card component used for displaying various entities like Projects, Assistants,
+ * and Transform Agents. Standardizes layout, padding, hover states, and action placement.
  *
  * @param props - EntityCardProps
  */
 export function EntityCard({
+  href,
   icon,
   title,
   description,
@@ -45,30 +47,33 @@ export function EntityCard({
   className,
   horizontal = false,
 }: EntityCardProps) {
-  return (
+  const cardElement = (
     <Card
       className={cn(
-        "p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex",
+        "group flex cursor-pointer p-4 transition-colors hover:bg-muted/50",
         horizontal
           ? "flex-row items-center justify-between"
-          : "flex-col justify-between min-h-[100px]",
+          : "min-h-[100px] flex-col justify-between",
+        href && "h-full",
         className,
       )}
       onClick={onClick}
     >
       <div
         className={cn(
-          "flex justify-between items-start gap-4",
-          horizontal ? "flex-1 min-w-0" : "w-full",
+          "flex items-start justify-between gap-4",
+          horizontal ? "min-w-0 flex-1" : "w-full",
         )}
       >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            {icon}
-          </div>
-          <div className="space-y-1 flex-1 min-w-0">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {icon && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              {icon}
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <div className="font-semibold leading-none truncate flex-1 min-w-0">
+              <div className="min-w-0 flex-1 truncate font-semibold leading-none">
                 {typeof title === "string" ? (
                   <h3 className="truncate">{title}</h3>
                 ) : (
@@ -78,7 +83,7 @@ export function EntityCard({
             </div>
             <p
               className={cn(
-                "text-sm text-muted-foreground",
+                "text-muted-foreground text-sm",
                 horizontal ? "line-clamp-1" : "line-clamp-2",
               )}
             >
@@ -89,8 +94,9 @@ export function EntityCard({
 
         {!horizontal && (
           <div
-            className="flex items-center gap-2 shrink-0"
+            className="flex shrink-0 items-center gap-2"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             {rightActions}
             {menu}
@@ -100,8 +106,9 @@ export function EntityCard({
 
       {horizontal && (
         <div
-          className="flex items-center gap-2 shrink-0 ml-4"
+          className="ml-4 flex shrink-0 items-center gap-2"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         >
           {rightActions}
           {menu}
@@ -109,4 +116,17 @@ export function EntityCard({
       )}
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group block h-full focus-visible:outline-none"
+      >
+        {cardElement}
+      </Link>
+    );
+  }
+
+  return cardElement;
 }

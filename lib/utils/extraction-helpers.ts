@@ -1,4 +1,8 @@
 import { extractText, getDocumentProxy } from "unpdf";
+import { MAX_DOCUMENT_CHARS } from "@/config/attachments";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "utils", "extraction"]);
 
 /**
  * Unifies PDF and text extraction logic.
@@ -12,8 +16,10 @@ import { extractText, getDocumentProxy } from "unpdf";
 export async function extractDocumentContent(
   input: Buffer | Uint8Array | File,
   mimeType: string,
-  limit: number = 50000,
+  limit: number = MAX_DOCUMENT_CHARS,
 ): Promise<string> {
+  const effectiveLimit =
+    Number.isFinite(limit) && limit > 0 ? limit : MAX_DOCUMENT_CHARS;
   let buffer: Uint8Array;
 
   if (input instanceof File) {
@@ -26,9 +32,11 @@ export async function extractDocumentContent(
     try {
       const pdf = await getDocumentProxy(buffer);
       const { text } = await extractText(pdf, { mergePages: true });
-      return text.slice(0, limit);
+      return text.slice(0, effectiveLimit);
     } catch (error) {
-      console.error("Error extracting PDF content:", error);
+      log.error("Error extracting PDF content: {error}", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new Error("Failed to extract text from PDF");
     }
   }
@@ -39,14 +47,14 @@ export async function extractDocumentContent(
     mimeType === "application/xml"
   ) {
     const text = new TextDecoder().decode(buffer);
-    return text.slice(0, limit);
+    return text.slice(0, effectiveLimit);
   }
 
   // Fallback for unknown types if it's text-like but doesn't start with text/
   try {
     const text = new TextDecoder().decode(buffer);
-    return text.slice(0, limit);
-  } catch (error) {
+    return text.slice(0, effectiveLimit);
+  } catch (_error) {
     throw new Error(`Unsupported or unreadable MIME type: ${mimeType}`);
   }
 }

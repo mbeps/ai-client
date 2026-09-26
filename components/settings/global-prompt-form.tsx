@@ -1,13 +1,11 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  userSettingsSchema,
-  type UserSettingsFormData as UserSettings,
-} from "@/schemas/user/user-settings";
-import { updateUserSettings } from "@/lib/actions/user-settings/update-user-settings";
-import { useRef, useEffect } from "react";
+import { Save } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { updateUserSettings } from "@/actions/user-settings/update-user-settings";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { ActionButton } from "@/components/ui/action-button";
 import {
   Form,
   FormControl,
@@ -17,8 +15,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
-import { ActionButton } from "@/components/ui/action-button";
+import {
+  type UserSettingsFormData as UserSettings,
+  userSettingsSchema,
+} from "@/schemas/user/user-settings";
 
 interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;
@@ -26,8 +26,7 @@ interface GlobalPromptFormProps {
 
 /**
  * Form component for editing the global system prompt in user settings.
- * Displays a resizing textarea that prepends to all AI requests for consistent context.
- * Auto-expands textarea height based on content up to a maximum height.
+ * Displays a multi-tab editor (Raw, Preview, BlockNote) that prepends to all AI requests for consistent context.
  *
  * @param props.initialSettings - Current user settings containing the global system prompt.
  * @author Maruf Bepary
@@ -40,20 +39,6 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
     },
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const globalSystemPrompt = form.watch("globalSystemPrompt");
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        600,
-      )}px`;
-    }
-  }, [globalSystemPrompt]);
-
   return (
     <div className="space-y-4">
       <Form {...form}>
@@ -65,15 +50,11 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
               <FormItem>
                 <FormLabel>Global System Prompt</FormLabel>
                 <FormControl>
-                  <Textarea
-                    {...field}
+                  <MarkdownTabEditor
                     value={field.value ?? ""}
-                    ref={(e) => {
-                      field.ref(e);
-                      (textareaRef as any).current = e;
-                    }}
+                    onChange={field.onChange}
                     placeholder="Enter your global system prompt..."
-                    className="min-h-[100px] resize-none"
+                    minHeight="min-h-[160px]"
                   />
                 </FormControl>
                 <FormDescription>
@@ -104,7 +85,10 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
                 }
               }}
             >
-              Save Changes
+              <div className="flex items-center">
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </div>
             </ActionButton>
           </div>
         </form>

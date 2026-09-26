@@ -1,9 +1,12 @@
-import { createMCPClient } from "@ai-sdk/mcp";
-import { buildTransport } from "./build-transport";
-import { withTimeout, MCP_TIMEOUT_MS } from "./timeout-utils";
-import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import { MCP_SETTINGS } from "@/config/mcp";
+import { getLogger } from "@/lib/logger";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
-import { logger } from "@/lib/logger";
+
+const log = getLogger(["app", "mcp", "connect"]);
+
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import { createConnectedClient } from "./create-connected-client";
+import { withTimeout } from "./with-timeout";
 
 /**
  * Connects to a single MCP server and retrieves its tools.
@@ -18,25 +21,23 @@ import { logger } from "@/lib/logger";
 export async function connectServer(
   server: McpServerConfig,
 ): Promise<McpConnection> {
-  const transport = await buildTransport(server);
-
-  const client = await withTimeout(
-    createMCPClient({ transport }),
-    MCP_TIMEOUT_MS,
-    `connect to ${server.name}`,
-  );
+  const client = await createConnectedClient(server);
 
   try {
     const tools = await withTimeout(
       client.tools(),
-      MCP_TIMEOUT_MS,
-      server.name,
+      MCP_SETTINGS.MCP_TIMEOUT_MS,
+      `list tools from ${server.name}`,
     );
 
-    logger.info(`[MCP] Connected to server: ${server.name}`, {
-      serverId: server.id,
-      toolCount: Object.keys(tools).length,
-    });
+    log.info(
+      "Connected to MCP server '{serverName}' (toolCount: {toolCount})",
+      {
+        serverId: server.id,
+        serverName: server.name,
+        toolCount: Object.keys(tools).length,
+      },
+    );
 
     return {
       serverId: server.id,

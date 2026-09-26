@@ -1,36 +1,37 @@
 "use client";
 
-import { EditServerForm } from "@/components/mcp/edit-server-form";
-import { ResourceList } from "@/components/mcp/resource-list";
-import { ServerSettings } from "@/components/mcp/server-settings";
-import { ToolList } from "@/components/mcp/tool-list";
-import { NotFoundMessage } from "@/components/not-found-message";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  SidebarTabs,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-  SidebarTabsContent,
-} from "@/components/shared/sidebar-tabs";
-
-import { ROUTES } from "@/constants/routes";
-import { useAppStore } from "@/lib/store";
-import { useQueryState, parseAsString } from "nuqs";
 import {
   ChevronLeft,
   FileText,
+  Loader2,
   Server,
   Settings,
   Shield,
   Wrench,
 } from "lucide-react";
-import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
-import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useShallow } from "zustand/react/shallow";
+import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
+import { EditServerForm } from "@/components/mcp/edit-server-form";
+import { ResourceList } from "@/components/mcp/resource-list";
+import { ServerSettings } from "@/components/mcp/server-settings";
+import { ToolList } from "@/components/mcp/tool-list";
+import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/shared/page-container";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ROUTES } from "@/config/routes";
+import { useAppStore } from "@/lib/store";
 
 /**
  * MCP server detail page — client component for configuring and managing a single MCP server.
@@ -46,11 +47,17 @@ export default function McpServerPage() {
   const router = useRouter();
   const serverId = params.id as string;
 
-  const { server } = useAppStore(
-    useShallow((state) => ({
-      server: state.mcpServers.find((s) => s.id === serverId),
-    })),
-  );
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const server = mcpServers.find((s) => s.id === serverId);
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
+
+  const [loading, setLoading] = useState(mcpServers.length === 0);
+
+  useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers().finally(() => setLoading(false));
+    }
+  }, [loadMcpServers, mcpServers.length]);
 
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
@@ -60,7 +67,17 @@ export default function McpServerPage() {
     }),
   );
 
-  if (!server) return <NotFoundMessage entity="MCP Server" />;
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!server) {
+    notFound();
+  }
 
   const handleToggle = async () => {
     try {
@@ -69,21 +86,23 @@ export default function McpServerPage() {
         `${server.name} ${!server.enabled ? "enabled" : "disabled"}`,
       );
       router.refresh();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to toggle server state");
     }
   };
 
   return (
-    <div className="page-container">
+    <PageContainer variant="default">
       <Button
         variant="ghost"
         size="sm"
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
-        onClick={() => router.push(ROUTES.TOOLS.path)}
+        asChild
+        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        Back to Tools
+        <Link href={ROUTES.TOOLS.path}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Tools
+        </Link>
       </Button>
 
       <PageHeader
@@ -146,6 +165,6 @@ export default function McpServerPage() {
           <ServerSettings serverId={server.id} />
         </SidebarTabsContent>
       </SidebarTabs>
-    </div>
+    </PageContainer>
   );
 }

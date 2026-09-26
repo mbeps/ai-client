@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { PROMPTS } from "@/constants/prompts";
-import { idField } from "../shared-fields";
+import { PROMPTS } from "@/config/prompts";
+import { idField } from "@/schemas/shared-fields";
 
 /**
  * Validates a message object for persistence to the database.
@@ -117,62 +117,34 @@ export const messageMetadataSchema = z.object({
 });
 
 /**
- * Validates a message object sent in a chat request.
- * Supports complex content parts and optional file attachments.
+ * Validates the POST request body for the chat API endpoint.
+ * The client sends only identifiers — the full message thread is loaded
+ * server-side from the database (loadThreadFromDb), so no `messages` array
+ * is accepted. Strict object: unknown fields (including legacy `messages`)
+ * fail validation.
  */
-export const chatMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.union([
-    z.string(),
-    z.array(
-      z.union([
-        z.object({ type: z.literal("text"), text: z.string() }),
-        z.object({
-          type: z.literal("image"),
-          image: z.union([z.string().url(), z.string()]),
-          mimeType: z.string().optional(),
-        }),
-      ]),
-    ),
-  ]),
-  id: idField.optional(),
-  parentId: idField.optional(),
-  attachments: z
-    .array(
-      z.object({
-        id: idField,
-        name: z.string().min(1).max(255),
-        mimeType: z.string().max(100).optional(),
-        type: z.enum(["image", "document", "spreadsheet"]).optional(),
-        dataUrl: z.string().optional(),
-        extractedText: z.string().optional(),
-        key: z.string().max(1024).optional(),
-      }),
-    )
-    .optional(),
-  metadata: z.string().nullable().optional(),
-});
-
-/**
- * Validates the full POST request body for the chat API endpoint.
- * Includes chatId, message history, model selection, and MCP tool/resource selections.
- */
-export const chatRequestSchema = z.object({
-  chatId: idField,
-  userMessageId: idField.optional(),
-  model: z.string().max(100).optional(),
-  messages: z.array(chatMessageSchema).max(500),
-  selectedServerIds: z.array(z.string()).max(20).optional(),
-  selectedTools: z.array(z.string()).max(100).optional(),
-  selectedAssistantId: idField.optional(),
-  selectedKbIds: z.array(idField).max(5).optional(),
-});
+export const chatRequestSchema = z
+  .object({
+    chatId: idField,
+    userMessageId: idField,
+    model: z.string().max(100).optional(),
+    selectedServerIds: z.array(z.string()).max(20).optional(),
+    selectedTools: z.array(z.string()).max(100).optional(),
+    selectedAssistantId: idField.optional(),
+    selectedPromptId: idField.optional(),
+    selectedSkillIds: z.array(z.string()).max(20).optional(),
+    selectedKbIds: z.array(idField).max(5).optional(),
+  })
+  .strict();
 
 /**
  * Base fields for manage_artifact tool to avoid code duplication in the union schema.
  */
 const manageArtifactBaseFields = {
-  type: z.string().describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
+  type: z
+    .enum(["markdown", "spreadsheet", "html", "mermaid"])
+    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
+  id: z.string().optional().describe("Unique identifier for the artifact."),
   title: z
     .string()
     .optional()
@@ -228,13 +200,60 @@ export const manageArtifactSchema = z.union([
     .pipe(z.object(manageArtifactBaseFields)),
 ]);
 
-export const searchKnowledgeBaseSchema = z.object({
-  query: z
+export const searchKnowledgeBaseSchema = z.union([
+  z.object({
+    query: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .describe(
+        "Search query to find relevant information in the knowledge base. Be specific and focused.",
+      ),
+  }),
+  // Some models might wrap it in a search_knowledge_base object
+  z
+    .object({
+      search_knowledge_base: z.object({
+        query: z.string().trim().min(1).max(500),
+      }),
+    })
+    .transform((val) => val.search_knowledge_base),
+  // Handle JSON string input
+  z
     .string()
-    .trim()
-    .min(1)
-    .max(500)
-    .describe(
-      "Search query to find relevant information in the knowledge base. Be specific and focused.",
+    .transform((str) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        return null;
+      }
+    })
+    .pipe(
+      z.object({
+        query: z.string().trim().min(1).max(500),
+      }),
     ),
+]);
+
+/**
+ * Validates chat knowledge base update requests.
+ * Accepts a valid UUID for chatId and a valid UUID (or null) for knowledgebaseId.
+ * Null value allows disabling RAG context for the chat.
+ * Use when associating or disassociating a knowledge base with a chat via updateChatKnowledgebase action.
+ *
+ * @see {@link lib/actions/chats/update-chat-knowledgebase.ts} for update action
+ * @author Maruf Bepary
+ */
+export const updateChatKnowledgebaseSchema = z.object({
+  chatId: idField,
+  knowledgebaseId: idField.nullable(),
 });
+
+/**
+ * Validates the DELETE /api/chat/stop request body.
+ * Only requires chatId to identify which chat's generation to cancel.
+ *
+ * @author Maruf Bepary
+ */
+export const stopChatRequestSchema = z.object({ chatId: idField }).strict();

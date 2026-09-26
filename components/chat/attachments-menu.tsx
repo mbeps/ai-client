@@ -1,10 +1,16 @@
 "use client";
 
+import {
+  BrainCircuit,
+  Check,
+  Database,
+  Paperclip,
+  SquareTerminal,
+  Wrench,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Paperclip, Database, Wrench, Check, X } from "lucide-react";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-import { ToolPickerList } from "./tool-picker-list";
+import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Skill } from "@/types/skill/skill";
 import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
+import { PromptPickerDialog } from "./prompt-picker";
+import { SkillsPickerDialog } from "./skills-picker";
+import { ToolPickerList } from "./tool-picker-list";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
@@ -29,29 +43,24 @@ interface AttachmentsMenuProps {
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
   onToggleKb: (id: string) => void;
+  skills?: Skill[];
+  selectedSkills?: Set<string>;
+  onToggleSkill?: (id: string) => void;
+  prompts?: Prompt[];
+  mcpPrompts?: DiscoveredPrompt[];
+  selectedPrompt?: MentionPromptItem | null;
+  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
 }
 
 /**
- * Menu providing options to upload files, add knowledgebases, and select MCP tools.
- * Renders conditionally based on model capabilities (vision support, tool support).
- * Used in ChatInput for attachment and integration management.
+ * Menu providing options to upload files, add knowledgebases, select skills, select prompts, and select MCP tools.
  *
- * @param props.servers - Available MCP servers for tool selection.
- * @param props.fileInputRef - Reference to hidden file input element.
- * @param props.selectedTools - Set of selected tool IDs.
- * @param props.onToggleTool - Callback to toggle individual tool selection.
- * @param props.onBulkSelect - Callback to bulk-select tools from a server.
- * @param props.knowledgebases - Available knowledgebases to add.
- * @param props.selectedKbs - Set of selected knowledgebase IDs.
- * @param props.onToggleKb - Callback to toggle knowledgebase selection.
- * @param props.supportsVision - Whether the model supports vision (image attachments).
- * @param props.supportsTools - Whether the model supports MCP tools.
  * @author Maruf Bepary
  */
 export const AttachmentsMenu = ({
-  servers,
+  servers = [],
   fileInputRef,
   selectedTools,
   onToggleTool,
@@ -59,7 +68,14 @@ export const AttachmentsMenu = ({
   knowledgebases,
   selectedKbs,
   onToggleKb,
-  supportsVision = true,
+  skills = [],
+  selectedSkills = new Set(),
+  onToggleSkill,
+  prompts = [],
+  mcpPrompts = [],
+  selectedPrompt = null,
+  onSelectPrompt,
+  supportsVision: _supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -75,12 +91,43 @@ export const AttachmentsMenu = ({
         <Paperclip className="mr-2 h-4 w-4" /> Upload File
       </Button>
 
+      {onToggleSkill && (
+        <SkillsPickerDialog
+          skills={skills}
+          selectedSkills={selectedSkills}
+          onToggleSkill={onToggleSkill}
+          trigger={
+            <Button variant="ghost" size="sm" className="w-full justify-start">
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              Select Skills
+              {selectedSkills.size > 0 ? ` (${selectedSkills.size})` : ""}
+            </Button>
+          }
+        />
+      )}
+
+      {onSelectPrompt && (
+        <PromptPickerDialog
+          prompts={prompts}
+          mcpPrompts={mcpPrompts}
+          selectedPrompt={selectedPrompt}
+          onSelectPrompt={onSelectPrompt}
+          trigger={
+            <Button variant="ghost" size="sm" className="w-full justify-start">
+              <SquareTerminal className="mr-2 h-4 w-4" />
+              Select Prompt
+              {selectedPrompt ? " (1)" : ""}
+            </Button>
+          }
+        />
+      )}
+
       <KnowledgebasePickerDialog
         knowledgebases={knowledgebases || []}
         selectedKbs={selectedKbs}
         onToggleKb={onToggleKb}
         trigger={
-          <Button variant="ghost" size="sm" className="justify-start w-full">
+          <Button variant="ghost" size="sm" className="w-full justify-start">
             <Database className="mr-2 h-4 w-4" />
             Add Knowledgebase
             {selectedKbs.size > 0 ? ` (${selectedKbs.size})` : ""}
@@ -93,30 +140,30 @@ export const AttachmentsMenu = ({
           <Button
             variant="ghost"
             size="sm"
-            className="justify-start w-full"
-            disabled={!servers || !supportsTools}
+            className="w-full justify-start"
+            disabled={!supportsTools}
           >
             <Wrench className="mr-2 h-4 w-4" />
             {supportsTools ? "Select Tools" : "Tools Unsupported"}
             {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="flex h-[80vh] max-w-2xl flex-col overflow-hidden p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Select Tools</DialogTitle>
           </DialogHeader>
 
           {toolsOpen && (
             <ToolPickerList
-              servers={servers || []}
+              servers={servers}
               selectedTools={selectedTools}
               onToggleTool={onToggleTool}
               onBulkSelect={onBulkSelect}
             />
           )}
 
-          <div className="p-4 border-t flex items-end justify-between bg-muted/20 shrink-0">
-            <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-end justify-between border-t bg-muted/20 p-4">
+            <div className="flex flex-col gap-1.5 text-muted-foreground text-xs">
               <div className="flex items-center gap-2">
                 <Wrench className="h-3.5 w-3.5" />
                 <span>

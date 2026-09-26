@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",
@@ -23,41 +23,71 @@ vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 
 // ─── Mock all server actions ───────────────────────────────────────────────
 // Projects
-vi.mock("@/lib/actions/projects/list-projects", () => ({
+vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
 
 // Assistants
-vi.mock("@/lib/actions/assistants/list-assistants", () => ({
+vi.mock("@/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
 
 // Prompts
-vi.mock("@/lib/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
+vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
 
 // MCP Servers
-vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
+// Public MCP Servers
+vi.mock("@/actions/mcp-servers/list-public-mcp-servers", () => ({
+  listPublicMcpServers: vi.fn(),
+}));
+
+// Skills
+vi.mock("@/actions/skills/list-skills", () => ({
+  listSkills: vi.fn(),
+}));
+
+// Transform Agents
+vi.mock("@/actions/transform-agents/list-transform-agents", () => ({
+  listTransformAgents: vi.fn(),
+}));
+
+// User Settings
+vi.mock("@/actions/user-settings/get-user-settings", () => ({
+  getUserSettings: vi.fn(),
+}));
+
+// Discover All Prompts
+vi.mock("@/actions/mcp/discover-all-prompts", () => ({
+  discoverAllPrompts: vi.fn(),
+}));
+
+import { listAssistants as listAssistantsAction } from "@/actions/assistants/list-assistants";
+import { listMcpServers as listMcpServersAction } from "@/actions/mcp-servers/list-mcp-servers";
+import { listPublicMcpServers as listPublicMcpServersAction } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listSkills as listSkillsAction } from "@/actions/skills/list-skills";
+import { listTransformAgents as listTransformAgentsAction } from "@/actions/transform-agents/list-transform-agents";
+import { getUserSettings as getUserSettingsAction } from "@/actions/user-settings/get-user-settings";
+import { discoverAllPrompts as discoverAllPromptsAction } from "@/actions/mcp/discover-all-prompts";
 // ─── Import mocked modules for per-test configuration ─────────────────────
-import { listProjects as listProjectsAction } from "@/lib/actions/projects/list-projects";
-import { listAssistants as listAssistantsAction } from "@/lib/actions/assistants/list-assistants";
-import { listPrompts as listPromptsAction } from "@/lib/actions/prompts/list-prompts";
-import { listMcpServers as listMcpServersAction } from "@/lib/actions/mcp-servers/list-mcp-servers";
+import { listProjects as listProjectsAction } from "@/actions/projects/list-projects";
+import { listPrompts as listPromptsAction } from "@/actions/prompts/list-prompts";
 
 // ─── Chat slice mocks (needed because entity-slice modifies chats too) ─────
-vi.mock("@/lib/actions/chats/create-chat", () => ({ createChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/delete-chat", () => ({ deleteChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/rename-chat", () => ({ renameChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/move-chat", () => ({ moveChat: vi.fn() }));
-vi.mock("@/lib/actions/chats/delete-message", () => ({
+vi.mock("@/actions/chats/create-chat", () => ({ createChat: vi.fn() }));
+vi.mock("@/actions/chats/delete-chat", () => ({ deleteChat: vi.fn() }));
+vi.mock("@/actions/chats/rename-chat", () => ({ renameChat: vi.fn() }));
+vi.mock("@/actions/chats/move-chat", () => ({ moveChat: vi.fn() }));
+vi.mock("@/actions/chats/delete-message", () => ({
   deleteMessage: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-current-leaf", () => ({
+vi.mock("@/actions/chats/update-current-leaf", () => ({
   updateCurrentLeaf: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/update-message-metadata", () => ({
+vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn(),
 }));
 
@@ -212,5 +242,226 @@ describe("EntitySlice — MCP Servers", () => {
       await useAppStore.getState().loadMcpServers();
       expect(useAppStore.getState().mcpServers[0].name).toBe("My MCP");
     });
+  });
+});
+
+// ─── MED-04 loadError state ────────────────────────────────────────────────
+describe("EntitySlice — loadError", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("sets loadError and preserves prior entity data on loader rejection", async () => {
+    useAppStore.setState({ projects: [{ id: "p1" }] } as never);
+    vi.mocked(listProjectsAction).mockRejectedValueOnce(new Error("boom"));
+
+    await useAppStore.getState().loadProjects();
+
+    expect(useAppStore.getState().loadError).toBe("Failed to load projects");
+    expect(useAppStore.getState().projects).toEqual([{ id: "p1" }]);
+  });
+
+  it("clears loadError on successful load", async () => {
+    useAppStore.setState({ loadError: "Failed to load projects" });
+    vi.mocked(listProjectsAction).mockResolvedValueOnce([makeProjectRow("p1")]);
+
+    await useAppStore.getState().loadProjects();
+
+    expect(useAppStore.getState().loadError).toBeNull();
+    expect(useAppStore.getState().projects).toHaveLength(1);
+  });
+
+  it("resetEntityState clears loadError", () => {
+    useAppStore.setState({ loadError: "Failed to load assistants" });
+    useAppStore.getState().resetEntityState();
+    expect(useAppStore.getState().loadError).toBeNull();
+  });
+
+  it("does not reject when the loader fails", async () => {
+    vi.mocked(listAssistantsAction).mockRejectedValueOnce(new Error("boom"));
+    await expect(
+      useAppStore.getState().loadAssistants(),
+    ).resolves.toBeUndefined();
+  });
+});
+
+// ─── T5.4 reset actions ────────────────────────────────────────────────────
+describe("T5.4 resetEntityState clears entity state", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("resets all entity arrays and userSettings to defaults", async () => {
+    vi.mocked(listProjectsAction).mockResolvedValueOnce([
+      {
+        id: "p1",
+        userId: "u1",
+        name: "P1",
+        description: null,
+        isPinned: false,
+        globalPrompt: null,
+        tools: [],
+        knowledgebaseId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    await useAppStore.getState().loadProjects();
+    expect(useAppStore.getState().projects).toHaveLength(1);
+    useAppStore.getState().resetEntityState();
+    expect(useAppStore.getState().projects).toHaveLength(0);
+    expect(useAppStore.getState().assistants).toHaveLength(0);
+    expect(useAppStore.getState().prompts).toHaveLength(0);
+    expect(useAppStore.getState().mcpServers).toHaveLength(0);
+    expect(useAppStore.getState().publicMcpServers).toHaveLength(0);
+    expect(useAppStore.getState().transformAgents).toHaveLength(0);
+    expect(useAppStore.getState().mcpPrompts).toHaveLength(0);
+    expect(useAppStore.getState().userSettings).toBeNull();
+  });
+
+  it("resetChatState clears chats", () => {
+    useAppStore.setState((s) => ({
+      ...s,
+      chats: {
+        c1: {
+          id: "c1",
+          title: "Chat",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    }));
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(1);
+    useAppStore.getState().resetChatState();
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(0);
+  });
+
+  it("loads skills into store", async () => {
+    vi.mocked(listSkillsAction).mockResolvedValueOnce([
+      {
+        id: "sk-1",
+        userId: "u1",
+        name: "test-skill",
+        displayName: "Test Skill",
+        description: "Skill Description",
+        content: "# Skill",
+        files: [{ path: "ref.md", content: "ref" }] as any,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "sk-2",
+        userId: "u1",
+        name: "test-skill-no-files",
+        displayName: "No Files",
+        description: "None",
+        content: "# Skill",
+        files: null as any,
+        enabled: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+
+    await useAppStore.getState().loadSkills();
+    const skills = useAppStore.getState().skills;
+    expect(skills).toHaveLength(2);
+    expect(skills[0].name).toBe("test-skill");
+    expect(skills[0].files).toHaveLength(1);
+    expect(skills[1].files).toEqual([]);
+  });
+
+  it("loads transform agents with valid and invalid steps JSON", async () => {
+    vi.mocked(listTransformAgentsAction).mockResolvedValueOnce([
+      {
+        id: "ta-1",
+        userId: "u1",
+        name: "Agent 1",
+        description: "desc",
+        globalContext: "context",
+        modelId: "gpt-4",
+        tools: ["tool-1"],
+        knowledgeBaseIds: ["kb-1"],
+        requiresFileUpload: true,
+        steps: JSON.stringify([{ name: "step 1" }]),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "ta-2",
+        userId: "u1",
+        name: "Agent 2",
+        description: null,
+        globalContext: null,
+        modelId: null,
+        tools: null,
+        knowledgeBaseIds: null,
+        requiresFileUpload: false,
+        steps: "invalid-json-steps",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+
+    await useAppStore.getState().loadTransformAgents();
+    const agents = useAppStore.getState().transformAgents;
+    expect(agents).toHaveLength(2);
+    expect(agents[0].steps).toHaveLength(1);
+    expect(agents[1].steps).toEqual([]);
+    expect(agents[1].description).toBe("");
+  });
+
+  it("loads public MCP servers into store", async () => {
+    vi.mocked(listPublicMcpServersAction).mockResolvedValueOnce([
+      {
+        id: "pub-1",
+        name: "Public Server",
+        url: "http://pub.example.com",
+        headers: null,
+        enabled: true,
+        isPublic: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any,
+    ]);
+
+    await useAppStore.getState().loadPublicMcpServers();
+    expect(useAppStore.getState().publicMcpServers).toHaveLength(1);
+  });
+
+  it("loads user settings into store", async () => {
+    vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
+      userId: "u1",
+      theme: "dark",
+      defaultModelId: "gpt-4",
+    } as any);
+
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().userSettings).toEqual({
+      userId: "u1",
+      theme: "dark",
+      defaultModelId: "gpt-4",
+    });
+  });
+
+  it("loads MCP prompts into store", async () => {
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce([
+      {
+        name: "prompt-1",
+        description: "mcp prompt",
+        arguments: [],
+        serverName: "S1",
+      },
+    ]);
+
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().mcpPrompts).toHaveLength(1);
   });
 });

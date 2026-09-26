@@ -12,7 +12,7 @@ export function AssistantBar({ assistantName }: { assistantName?: string }) {
   if (!assistantName) return null;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2 text-muted-foreground text-sm">
       <Bot className="h-4 w-4" />
       <span>
         Chatting with <strong>{assistantName}</strong>

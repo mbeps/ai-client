@@ -1,6 +1,8 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { Folder, Inbox } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   CommandDialog,
   CommandEmpty,
@@ -9,9 +11,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Folder, Inbox } from "lucide-react";
-import { toast } from "sonner";
-import { useState } from "react";
+import { logger } from "@/lib/logger";
+import { useAppStore } from "@/lib/store";
 
 interface MoveChatDialogProps {
   /** Whether the dialog is currently open. */
@@ -54,7 +55,7 @@ export function MoveChatDialog({
       onClose();
     } catch (error) {
       toast.error("Failed to move chat");
-      console.error(error);
+      logger.error("Knowledgebase error", error);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +92,7 @@ export function MoveChatDialog({
               <Folder className="mr-2 h-4 w-4" />
               <span>{project.name}</span>
               {project.id === currentProjectId && (
-                <span className="ml-auto text-xs text-muted-foreground">
+                <span className="ml-auto text-muted-foreground text-xs">
                   Current
                 </span>
               )}

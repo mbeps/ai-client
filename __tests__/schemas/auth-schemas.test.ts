@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { forgotPasswordSchema } from "@/schemas/auth/forgot-password";
 import { resetPasswordSchema } from "@/schemas/auth/reset-password";
 import {
-  emailField,
-  passwordField,
-  requiredPasswordField,
-  nameField,
   descriptionField,
+  emailField,
+  nameField,
+  passwordField,
   renameSchema,
+  requiredPasswordField,
   sixDigitCodeField,
 } from "@/schemas/shared-fields";
 

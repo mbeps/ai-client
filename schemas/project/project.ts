@@ -1,11 +1,11 @@
 import { z } from "zod";
 import {
-  nameField,
-  descriptionField,
   contentField,
-  renameSchema,
+  descriptionField,
   idField,
-} from "../shared-fields";
+  nameField,
+  renameSchema,
+} from "@/schemas/shared-fields";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.

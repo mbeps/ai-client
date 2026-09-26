@@ -1,8 +1,11 @@
 "use client";
 
+import { Edit2, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { createProvider } from "@/actions/providers/create-provider";
+import { updateProvider } from "@/actions/providers/update-provider";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { createProvider } from "@/lib/actions/providers/create-provider";
-import { updateProvider } from "@/lib/actions/providers/update-provider";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 /** Represents a custom HTTP header key-value pair for provider requests. */
@@ -230,8 +230,8 @@ export function ProviderFormDialog({
 
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <p className="text-sm font-medium">Requires API key</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-sm">Requires API key</p>
+              <p className="text-muted-foreground text-xs">
                 Disable for keyless providers such as local Ollama instances.
               </p>
             </div>
@@ -250,13 +250,17 @@ export function ProviderFormDialog({
                   isEdit ? "Leave empty to keep current key" : "sk-..."
                 }
               />
+              <p className="text-muted-foreground text-xs">
+                The key is encrypted before storage and can never be read back,
+                not even by an admin. Replace it to change it.
+              </p>
             </div>
           )}
 
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <p className="text-sm font-medium">Enabled</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-sm">Enabled</p>
+              <p className="text-muted-foreground text-xs">
                 Disabled providers stay configured but hidden from runtime
                 routing.
               </p>
@@ -319,14 +323,26 @@ export function ProviderFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            {isSaving
-              ? "Saving..."
-              : isEdit
-                ? "Save Changes"
-                : "Create Provider"}
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : isEdit ? (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Provider
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

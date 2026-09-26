@@ -1,0 +1,194 @@
+// ── queue-based DB mock ──────────────────────────────────────────────────────
+// Each queued entry is consumed by one `where()` call, in call order:
+// chat lookup → messages → attachments. The returned promise carries an
+// `orderBy` that resolves the SAME rows (the result set is fixed after where).
+const chainable = vi.hoisted(() => {
+  const c: any = {
+    select: vi.fn(),
+    from: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+  };
+  let queued: unknown[][] = [];
+  const installWhere = () => {
+    c.where.mockImplementation(() => {
+      const rows = queued.shift() ?? [];
+      const p: any = Promise.resolve(rows);
+      p.orderBy = () => Promise.resolve(rows);
+      return p;
+    });
+  };
+  installWhere();
+  (c as any).__queueWhere = (rows: unknown[]) => {
+    queued.push(rows);
+  };
+  (c as any).__resetQueue = () => {
+    queued = [];
+  };
+  (c as any).__installWhere = installWhere;
+  return c;
+});
+
+vi.mock("@/drizzle/db", () => ({ db: chainable }));
+
+const mockGetPresignedUrl = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/storage/get-presigned-url", () => ({
+  getPresignedUrl: mockGetPresignedUrl,
+}));
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
+import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  chainable.select.mockReturnValue(chainable);
+  chainable.from.mockReturnValue(chainable);
+  // clearAllMocks keeps implementations, but re-install defensively since the
+  // impl closes over a `queued` array that must stay shared with __queueWhere
+  chainable.__installWhere();
+  chainable.__resetQueue();
+  mockGetPresignedUrl.mockResolvedValue("https://example.com/presigned");
+});
+
+describe("loadThreadFromDb", () => {
+  it("throws ChatNotFoundError when chat does not exist", async () => {
+    chainable.__queueWhere([]); // chat lookup returns no row
+
+    await expect(
+      loadThreadFromDb("chat-1", "msg-leaf", "user-1"),
+    ).rejects.toThrow(ChatNotFoundError);
+  });
+
+  it("throws ChatNotFoundError when chat belongs to another user", async () => {
+    chainable.__queueWhere([]); // ownership filter excludes the row
+
+    await expect(
+      loadThreadFromDb("chat-1", "msg-leaf", "user-1"),
+    ).rejects.toThrow(ChatNotFoundError);
+  });
+
+  it("returns only the branch root→leaf, not sibling branches", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "root", role: "user", content: "hi", parentId: null },
+      { id: "a1", role: "assistant", content: "branch A", parentId: "root" },
+      { id: "b1", role: "assistant", content: "branch B", parentId: "root" },
+      { id: "b2", role: "user", content: "follow-up B", parentId: "b1" },
+    ]);
+    chainable.__queueWhere([]); // attachments
+
+    const thread = await loadThreadFromDb("chat-1", "b2", "user-1");
+
+    expect(thread.map((m) => m.id)).toEqual(["root", "b1", "b2"]);
+  });
+
+  it("throws when userMessageId is not found among chat messages", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "root", role: "user", content: "hi", parentId: null },
+    ]);
+    chainable.__queueWhere([]);
+
+    await expect(
+      loadThreadFromDb("chat-1", "missing-msg", "user-1"),
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it("signs URLs only for image attachments; other types get no URL", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "root", role: "user", content: "see files", parentId: null },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-1",
+        messageId: "root",
+        name: "pic.png",
+        mimeType: "image/png",
+        key: "uploads/user-1/pic.png",
+      },
+      {
+        id: "att-2",
+        messageId: "root",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+        key: "uploads/user-1/report.pdf",
+      },
+      {
+        id: "att-3",
+        messageId: "root",
+        name: "data.csv",
+        mimeType: "text/csv",
+        key: "uploads/user-1/data.csv",
+      },
+    ]);
+    mockGetPresignedUrl.mockResolvedValueOnce("https://example.com/pic");
+
+    const thread = await loadThreadFromDb("chat-1", "root", "user-1");
+
+    // Only the image is eagerly signed (vision messages need it)
+    expect(mockGetPresignedUrl).toHaveBeenCalledTimes(1);
+    expect(mockGetPresignedUrl).toHaveBeenCalledWith("uploads/user-1/pic.png");
+    const atts = thread[0].attachments!;
+    expect(atts).toHaveLength(3);
+    expect(atts).toContainEqual({
+      id: "att-1",
+      name: "pic.png",
+      url: "https://example.com/pic",
+      type: "image",
+      key: "uploads/user-1/pic.png",
+      extractedText: undefined,
+    });
+    expect(atts).toContainEqual({
+      id: "att-2",
+      name: "report.pdf",
+      url: "",
+      type: "document",
+      key: "uploads/user-1/report.pdf",
+      extractedText: undefined,
+    });
+    expect(atts).toContainEqual({
+      id: "att-3",
+      name: "data.csv",
+      url: "",
+      type: "spreadsheet",
+      key: "uploads/user-1/data.csv",
+      extractedText: undefined,
+    });
+  });
+
+  it("handles cyclic parentId gracefully and filters out null messageId attachments", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    // Cyclic parent references: m1 -> m2 -> m1
+    chainable.__queueWhere([
+      { id: "m1", role: "user", content: "first", parentId: "m2" },
+      { id: "m2", role: "assistant", content: "second", parentId: "m1" },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-null-msg",
+        messageId: null,
+        name: "orphan.png",
+        mimeType: "image/png",
+        key: "uploads/orphan.png",
+      },
+      {
+        id: "att-excel",
+        messageId: "m1",
+        name: "sheet.xlsx",
+        mimeType: "application/vnd.ms-excel",
+        key: "uploads/sheet.xlsx",
+      },
+    ]);
+
+    const thread = await loadThreadFromDb("chat-1", "m2", "user-1");
+
+    // Loop terminates despite cycle
+    expect(thread.length).toBe(2);
+    expect(thread[0].attachments).toBeDefined();
+    expect(thread[0].attachments![0].type).toBe("spreadsheet");
+    // m2 has no attachments
+    expect(thread[1].attachments).toBeUndefined();
+  });
+});

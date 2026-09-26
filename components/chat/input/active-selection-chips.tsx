@@ -1,27 +1,30 @@
 "use client";
 
+import { Bot, BrainCircuit, Command, Database, X, Zap } from "lucide-react";
 import Link from "next/link";
-import { X, Bot, Command, Database, Zap } from "lucide-react";
-import { ROUTES } from "@/constants/routes";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import { ROUTES } from "@/config/routes";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { Skill } from "@/types/skill/skill";
 
 interface ActiveSelectionChipsProps {
   selectedAssistant: { name: string } | null;
   selectedPrompt: MentionPromptItem | null;
   selectedKbs: Set<string>;
   knowledgebases: Knowledgebase[];
+  selectedSkills?: Set<string>;
+  skills?: Skill[];
   onRemoveAssistant: () => void;
   onRemovePrompt: () => void;
   onRemoveKb: (id: string) => void;
+  onRemoveSkill?: (id: string) => void;
 }
 
 /**
  * Renders pill/badge chips at the top of the chat input showing
- * the currently selected assistant, prompt, and knowledge bases.
+ * the currently selected assistant, prompt, knowledge bases, and agent skills.
  * Each chip includes a remove button.
- * @param props - Configuration for selected entities and remove callbacks.
- * @returns Row of chips or null if nothing is selected.
+ *
  * @author Maruf Bepary
  */
 export function ActiveSelectionChips({
@@ -29,11 +32,19 @@ export function ActiveSelectionChips({
   selectedPrompt,
   selectedKbs,
   knowledgebases,
+  selectedSkills = new Set(),
+  skills = [],
   onRemoveAssistant,
   onRemovePrompt,
   onRemoveKb,
+  onRemoveSkill,
 }: ActiveSelectionChipsProps) {
-  if (!selectedAssistant && !selectedPrompt && selectedKbs.size === 0) {
+  if (
+    !selectedAssistant &&
+    !selectedPrompt &&
+    selectedKbs.size === 0 &&
+    selectedSkills.size === 0
+  ) {
     return null;
   }
 
@@ -42,13 +53,13 @@ export function ActiveSelectionChips({
       {selectedAssistant && (
         <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
           <Bot className="h-3 w-3 text-muted-foreground" />
-          <span className="truncate max-w-[160px]">
+          <span className="max-w-[160px] truncate">
             @{selectedAssistant.name}
           </span>
           <button
             type="button"
             onClick={onRemoveAssistant}
-            className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
           >
             <X className="h-3 w-3" />
           </button>
@@ -63,13 +74,13 @@ export function ActiveSelectionChips({
             <Command className="h-3 w-3 text-muted-foreground" />
           )}
           {selectedPrompt.isMcp ? (
-            <span className="truncate max-w-[160px]">
+            <span className="max-w-[160px] truncate">
               /{(selectedPrompt as any).title}
             </span>
           ) : (
             <Link
               href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
-              className="truncate max-w-[160px] hover:underline"
+              className="max-w-[160px] truncate hover:underline"
               target="_blank"
             >
               /
@@ -80,12 +91,36 @@ export function ActiveSelectionChips({
           <button
             type="button"
             onClick={onRemovePrompt}
-            className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
           >
             <X className="h-3 w-3" />
           </button>
         </div>
       )}
+
+      {Array.from(selectedSkills).map((skillId) => {
+        const item = skills.find((s) => s.id === skillId || s.name === skillId);
+        return (
+          <div
+            key={skillId}
+            className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+          >
+            <BrainCircuit className="h-3 w-3 shrink-0 text-primary" />
+            <span className="max-w-[160px] truncate">
+              /{item?.name ?? item?.displayName ?? skillId}
+            </span>
+            {onRemoveSkill && (
+              <button
+                type="button"
+                onClick={() => onRemoveSkill(skillId)}
+                className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
 
       {Array.from(selectedKbs).map((kbId) => {
         const kb = knowledgebases.find((k) => k.id === kbId);
@@ -95,11 +130,11 @@ export function ActiveSelectionChips({
             className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
           >
             <Database className="h-3 w-3 text-muted-foreground" />
-            <span className="truncate max-w-[160px]">{kb?.name ?? kbId}</span>
+            <span className="max-w-[160px] truncate">{kb?.name ?? kbId}</span>
             <button
               type="button"
               onClick={() => onRemoveKb(kbId)}
-              className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
             >
               <X className="h-3 w-3" />
             </button>

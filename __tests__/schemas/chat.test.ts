@@ -1,12 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  persistMessageSchema,
-  createChatSchema,
-  renameChatSchema,
-  moveChatSchema,
-  messageMetadataSchema,
-  chatMessageSchema,
   chatRequestSchema,
+  createChatSchema,
+  manageArtifactSchema,
+  messageMetadataSchema,
+  moveChatSchema,
+  persistMessageSchema,
+  renameChatSchema,
+  searchKnowledgeBaseSchema,
 } from "@/schemas/chat/chat";
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -217,51 +218,38 @@ describe("messageMetadataSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// chatMessageSchema
+// chatRequestSchema (Phase 4A — thread loaded server-side, no messages field)
 // ---------------------------------------------------------------------------
-describe("chatMessageSchema", () => {
-  it("accepts simple string content message", () => {
-    const result = chatMessageSchema.safeParse({
-      role: "user",
-      content: "Hello!",
+describe("chatRequestSchema", () => {
+  it("accepts minimal request with chatId and userMessageId only", () => {
+    const result = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts array content (multimodal)", () => {
-    const result = chatMessageSchema.safeParse({
-      role: "user",
-      content: [{ type: "text", text: "Describe this image" }],
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects invalid role", () => {
-    const result = chatMessageSchema.safeParse({ role: "bot", content: "hi" });
+  it("rejects missing userMessageId (now required)", () => {
+    const result = chatRequestSchema.safeParse({ chatId: VALID_UUID });
     expect(result.success).toBe(false);
   });
 
-  it("accepts optional UUID id and parentId", () => {
-    const result = chatMessageSchema.safeParse({
-      role: "assistant",
-      content: "Sure!",
-      id: VALID_UUID,
-      parentId: VALID_UUID,
-    });
-    expect(result.success).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// chatRequestSchema
-// ---------------------------------------------------------------------------
-describe("chatRequestSchema", () => {
-  it("accepts minimal valid request", () => {
+  it("rejects payloads containing a messages field (strict object)", () => {
     const result = chatRequestSchema.safeParse({
       chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
       messages: [{ role: "user", content: "Hi" }],
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown top-level fields", () => {
+    const result = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      history: [{ role: "user", content: "Hi" }],
+    });
+    expect(result.success).toBe(false);
   });
 
   it("accepts full valid request", () => {
@@ -269,9 +257,11 @@ describe("chatRequestSchema", () => {
       chatId: VALID_UUID,
       userMessageId: VALID_UUID,
       model: "gpt-4",
-      messages: [{ role: "user", content: "Hello" }],
       selectedServerIds: ["server-1"],
       selectedTools: ["search"],
+      selectedAssistantId: VALID_UUID,
+      selectedPromptId: VALID_UUID,
+      selectedKbIds: [VALID_UUID],
     });
     expect(result.success).toBe(true);
   });
@@ -279,19 +269,15 @@ describe("chatRequestSchema", () => {
   it("rejects non-UUID chatId", () => {
     const result = chatRequestSchema.safeParse({
       chatId: "not-a-uuid",
-      messages: [],
+      userMessageId: VALID_UUID,
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects more than 500 messages", () => {
-    const messages = Array.from({ length: 501 }, () => ({
-      role: "user" as const,
-      content: "msg",
-    }));
+  it("rejects non-UUID userMessageId", () => {
     const result = chatRequestSchema.safeParse({
       chatId: VALID_UUID,
-      messages,
+      userMessageId: "not-a-uuid",
     });
     expect(result.success).toBe(false);
   });
@@ -299,7 +285,7 @@ describe("chatRequestSchema", () => {
   it("rejects model longer than 100 characters", () => {
     const result = chatRequestSchema.safeParse({
       chatId: VALID_UUID,
-      messages: [],
+      userMessageId: VALID_UUID,
       model: "m".repeat(101),
     });
     expect(result.success).toBe(false);
@@ -308,9 +294,115 @@ describe("chatRequestSchema", () => {
   it("rejects more than 20 selectedServerIds", () => {
     const result = chatRequestSchema.safeParse({
       chatId: VALID_UUID,
-      messages: [],
+      userMessageId: VALID_UUID,
       selectedServerIds: Array.from({ length: 21 }, (_, i) => `s${i}`),
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 100 selectedTools", () => {
+    const result = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      selectedTools: Array.from({ length: 101 }, (_, i) => `t${i}`),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 5 selectedKbIds", () => {
+    const result = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      selectedKbIds: Array.from({ length: 6 }, () => VALID_UUID),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// manageArtifactSchema
+// ---------------------------------------------------------------------------
+describe("manageArtifactSchema", () => {
+  const validArtifact = {
+    type: "markdown",
+    title: "Test Artifact",
+    content: "# Content",
+  };
+
+  it("accepts flat artifact object", () => {
+    const res = manageArtifactSchema.safeParse(validArtifact);
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("accepts nested artifact key structure", () => {
+    const res = manageArtifactSchema.safeParse({ artifact: validArtifact });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("accepts valid JSON string", () => {
+    const res = manageArtifactSchema.safeParse(JSON.stringify(validArtifact));
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.title).toBe("Test Artifact");
+    }
+  });
+
+  it("rejects invalid JSON string", () => {
+    const res = manageArtifactSchema.safeParse("not-a-valid-json{");
+    expect(res.success).toBe(false);
+  });
+
+  it("rejects non-object parsed JSON string", () => {
+    const res = manageArtifactSchema.safeParse(JSON.stringify("string value"));
+    expect(res.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchKnowledgeBaseSchema
+// ---------------------------------------------------------------------------
+describe("searchKnowledgeBaseSchema", () => {
+  it("accepts flat query object", () => {
+    const res = searchKnowledgeBaseSchema.safeParse({ query: "company policy" });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("company policy");
+    }
+  });
+
+  it("accepts nested search_knowledge_base wrapper", () => {
+    const res = searchKnowledgeBaseSchema.safeParse({
+      search_knowledge_base: { query: "pricing guide" },
+    });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("pricing guide");
+    }
+  });
+
+  it("accepts valid JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse(
+      JSON.stringify({ query: "architecture" }),
+    );
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.query).toBe("architecture");
+    }
+  });
+
+  it("rejects invalid JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse("not valid json{");
+    expect(res.success).toBe(false);
+  });
+
+  it("rejects non-object parsed JSON string", () => {
+    const res = searchKnowledgeBaseSchema.safeParse(JSON.stringify("plain string"));
+    expect(res.success).toBe(false);
   });
 });

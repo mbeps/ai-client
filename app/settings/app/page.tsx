@@ -1,8 +1,9 @@
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
-import { GlobalPromptForm } from "@/components/settings/global-prompt-form";
-import { PageHeader } from "@/components/page-header";
-import { requireSession } from "@/lib/auth/require-session";
 import { Settings2 } from "lucide-react";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
+import { PageHeader } from "@/components/page-header";
+import { GlobalPromptForm } from "@/components/settings/global-prompt-form";
+import { PageContainer } from "@/components/shared/page-container";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
  * Application general settings page — server component for managing global app preferences.
@@ -17,13 +18,13 @@ export default async function SettingsPage() {
   const settings = await getUserSettings();
 
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       <PageHeader
         icon={<Settings2 className="size-8" />}
         title="General Settings"
         description="Manage your application-wide preferences and configurations."
       />
       <GlobalPromptForm initialSettings={settings ?? {}} />
-    </div>
+    </PageContainer>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { ROUTES } from "@/config/routes";
 import type { Chat } from "@/types/chat/chat";
 import { ChatOptions } from "./chat-options";
 
@@ -24,43 +24,44 @@ interface ChatCardProps {
  * @param props.chat - The chat to display.
  */
 export function ChatCard({ chat }: ChatCardProps) {
-  const router = useRouter();
+  const targetHref = chat.projectId
+    ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
+    : chat.assistantId
+      ? ROUTES.ASSISTANTS.chat(chat.assistantId, chat.id)
+      : ROUTES.CHATS.detail(chat.id);
 
   return (
-    <Card
-      className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group flex flex-col justify-between min-h-[80px]"
-      onClick={() =>
-        router.push(
-          chat.projectId
-            ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
-            : chat.assistantId
-              ? ROUTES.ASSISTANTS.chat(chat.assistantId, chat.id)
-              : ROUTES.CHATS.detail(chat.id),
-        )
-      }
+    <Link
+      href={targetHref}
+      className="group block h-full focus-visible:outline-none"
     >
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <MessageSquare className="h-5 w-5 text-primary" />
+      <Card className="flex h-full min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h3 className="truncate font-semibold leading-none">
+                {chat.title}
+              </h3>
+              <p className="line-clamp-1 text-muted-foreground text-xs">
+                {chat.projectId
+                  ? "Project Chat"
+                  : chat.assistantId
+                    ? "Assistant Chat"
+                    : "Standalone Chat"}
+              </p>
+            </div>
           </div>
-          <div className="space-y-1 flex-1 min-w-0">
-            <h3 className="font-semibold leading-none truncate">
-              {chat.title}
-            </h3>
-            <p className="text-xs text-muted-foreground line-clamp-1">
-              {chat.projectId
-                ? "Project Chat"
-                : chat.assistantId
-                  ? "Assistant Chat"
-                  : "Standalone Chat"}
-            </p>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <ChatOptions chat={chat} />
           </div>
         </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <ChatOptions chat={chat} />
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
 }

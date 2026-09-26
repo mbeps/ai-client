@@ -7,7 +7,7 @@
  * @returns Array of resolved IPv4 and IPv6 address strings (empty if DNS unavailable)
  */
 export async function resolveHostname(hostname: string): Promise<string[]> {
-  let dns: (typeof import("dns"))["promises"];
+  let dns: typeof import("dns")["promises"];
   try {
     dns = (await import("dns")).promises;
   } catch {

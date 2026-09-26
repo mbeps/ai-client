@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listProviders } from "@/lib/actions/providers/list-providers";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+import { listProviders } from "@/actions/providers/list-providers";
 import {
   fetchProviderRegistryWithCache,
   getProviderRegistryCachedData,
   invalidateProviderCache,
   isProviderRegistryCacheFresh,
   subscribeProviderRegistryCache,
-} from "@/hooks/provider-registry-cache";
+} from "@/lib/providers/provider-registry-cache";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const RETRY_COUNT = 1;
 

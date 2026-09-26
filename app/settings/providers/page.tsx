@@ -1,8 +1,9 @@
 import { Database } from "lucide-react";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { PageHeader } from "@/components/page-header";
-import { requireSession } from "@/lib/auth/require-session";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
 import { ProviderSettingsClient } from "@/components/settings/providers/provider-settings-client";
+import { PageContainer } from "@/components/shared/page-container";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
  * Provider settings page — server component for managing AI provider integrations.
@@ -17,13 +18,13 @@ export default async function ProviderSettingsPage() {
   const settings = await getUserSettings();
 
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       <PageHeader
         icon={<Database className="size-8" />}
         title="Providers"
         description="Manage AI providers, models, defaults, and registry imports/exports."
       />
       <ProviderSettingsClient initialSettings={settings} />
-    </div>
+    </PageContainer>
   );
 }

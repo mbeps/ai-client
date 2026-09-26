@@ -1,8 +1,9 @@
-import { validateFile } from "./validate-file";
-import { extractPdf, extractPlainText } from "./extract-document";
+import { ALLOWED_IMAGE_TYPES } from "@/config/attachments";
+import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
 import type { Attachment } from "@/types/attachment/attachment";
-import { ALLOWED_IMAGE_TYPES } from "./constants";
-import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/spreadsheet-types";
+import { extractPdf, extractPlainText } from "./extract-document";
+import { resolveMimeType } from "./resolve-mime-type";
+import { validateFile } from "./validate-file";
 
 /**
  * Converts a browser File to a structured Attachment object.
@@ -40,14 +41,15 @@ export async function processAttachment(
     });
   }
 
-  const validation = validateFile(file, existingAttachments);
+  const validation = await validateFile(file, existingAttachments);
   if (!validation.valid) {
     throw new Error(validation.reason);
   }
 
+  const mimeType = await resolveMimeType(file);
   const id = crypto.randomUUID();
-  const isImage = ALLOWED_IMAGE_TYPES.has(file.type);
-  const isSpreadsheet = checkIsSpreadsheet(file.name, file.type);
+  const isImage = ALLOWED_IMAGE_TYPES.has(mimeType);
+  const isSpreadsheet = checkIsSpreadsheet(file.name, mimeType);
 
   if (isImage) {
     const dataUrl = await readAsDataUrl(file);
@@ -55,7 +57,7 @@ export async function processAttachment(
       id,
       type: "image",
       name: file.name,
-      mimeType: file.type,
+      mimeType,
       sizeBytes: file.size,
       dataUrl,
     };
@@ -66,7 +68,7 @@ export async function processAttachment(
       id,
       type: "spreadsheet",
       name: file.name,
-      mimeType: file.type,
+      mimeType,
       sizeBytes: file.size,
       dataUrl: "",
       rawFile: file,
@@ -74,7 +76,7 @@ export async function processAttachment(
   }
 
   const extractedText =
-    file.type === "application/pdf"
+    mimeType === "application/pdf"
       ? await extractPdf(file)
       : await extractPlainText(file);
 
@@ -82,7 +84,7 @@ export async function processAttachment(
     id,
     type: "document",
     name: file.name,
-    mimeType: file.type,
+    mimeType,
     sizeBytes: file.size,
     dataUrl: "",
     extractedText,

@@ -1,13 +1,14 @@
-import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-import { listMcpServers } from "@/lib/actions/mcp-servers/list-mcp-servers";
-import { listPublicMcpServers } from "@/lib/actions/mcp-servers/list-public-mcp-servers";
-import { discoverAllPrompts } from "@/lib/actions/mcp/discover-all-prompts";
-import { listProjects } from "@/lib/actions/projects/list-projects";
-import { listPrompts } from "@/lib/actions/prompts/list-prompts";
-import { listTransformAgents } from "@/lib/actions/transform-agents/list-transform-agents";
-import { getUserSettings } from "@/lib/actions/user-settings/get-user-settings";
+import type { StateCreator } from "zustand";
+import { listAssistants } from "@/actions/assistants/list-assistants";
+import { discoverAllPrompts } from "@/actions/mcp/discover-all-prompts";
+import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
+import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listProjects } from "@/actions/projects/list-projects";
+import { listPrompts } from "@/actions/prompts/list-prompts";
+import { listSkills } from "@/actions/skills/list-skills";
+import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
+import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
-import { StateCreator } from "zustand";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).
@@ -20,8 +21,13 @@ const createEntityLoader = <K extends keyof AppState, R>(
   mapper: (row: R) => AppState[K] extends (infer T)[] ? T : never,
 ) => {
   return async () => {
-    const rows = await listAction();
-    set({ [key]: rows.map(mapper) } as Partial<AppState>);
+    try {
+      const rows = await listAction();
+      set({ [key]: rows.map(mapper), loadError: null } as Partial<AppState>);
+    } catch {
+      // ponytail: single shared error field; per-entity errors only if needed later
+      set({ loadError: `Failed to load ${String(key)}` });
+    }
   };
 };
 
@@ -30,19 +36,23 @@ type EntitySlice = Pick<
   | "projects"
   | "assistants"
   | "prompts"
+  | "skills"
   | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
   | "transformAgents"
   | "mcpPrompts"
+  | "loadError"
   | "loadTransformAgents"
   | "loadProjects"
   | "loadAssistants"
   | "loadPrompts"
+  | "loadSkills"
   | "loadUserSettings"
   | "loadMcpServers"
   | "loadPublicMcpServers"
   | "loadMcpPrompts"
+  | "resetEntityState"
 >;
 
 export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
@@ -51,11 +61,13 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   projects: [],
   assistants: [],
   prompts: [],
+  skills: [],
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
   transformAgents: [],
   mcpPrompts: [],
+  loadError: null,
 
   loadMcpPrompts: async () => {
     const prompts = await discoverAllPrompts();
@@ -135,6 +147,19 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     updatedAt: new Date(row.updatedAt),
   })),
 
+  loadSkills: createEntityLoader(set, "skills", listSkills, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    displayName: row.displayName,
+    description: row.description,
+    content: row.content,
+    files: (row.files as any) ?? [],
+    enabled: row.enabled,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
+
   loadMcpServers: createEntityLoader(
     set,
     "mcpServers",
@@ -163,4 +188,19 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         updatedAt: new Date(r.updatedAt),
       }) as any,
   ),
+
+  resetEntityState: () => {
+    set({
+      projects: [],
+      assistants: [],
+      prompts: [],
+      skills: [],
+      mcpServers: [],
+      publicMcpServers: [],
+      transformAgents: [],
+      mcpPrompts: [],
+      userSettings: null,
+      loadError: null,
+    });
+  },
 });

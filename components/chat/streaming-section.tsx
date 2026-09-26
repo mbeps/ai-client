@@ -1,8 +1,8 @@
 "use client";
 
+import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { Citation } from "@/types/chat/citation";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import type { Citation } from "@/lib/store/mappers/message-mapper";
-import type { Message } from "@/types/message/message";
 import { StreamingPlaceholder } from "./message/streaming-placeholder";
 import { MessageBubble } from "./message-bubble";
 
@@ -22,6 +22,12 @@ interface StreamingSectionProps {
   activeToolCalls: ToolCallState[];
   /** Citations extracted from completed search tool calls. */
   streamingCitations: Citation[];
+  /** Callback to toggle a canvas artifact. */
+  onToggleArtifact?: (artifact: ArtifactData) => void;
+  /** Active artifact id if canvas is currently open. */
+  activeArtifactId?: string | null;
+  /** Whether canvas panel is currently open. */
+  isCanvasOpen?: boolean;
 }
 
 /**
@@ -40,6 +46,9 @@ export function StreamingSection({
   isStreamingReasoning,
   activeToolCalls,
   streamingCitations,
+  onToggleArtifact,
+  activeArtifactId,
+  isCanvasOpen,
 }: StreamingSectionProps) {
   const hasStreamingContent =
     streamingContent !== null ||
@@ -84,6 +93,9 @@ export function StreamingSection({
           isStreamingReasoning={isStreamingReasoning}
           streamingCitations={streamingCitations}
           activeToolCalls={activeToolCalls}
+          onToggleArtifact={onToggleArtifact}
+          activeArtifactId={activeArtifactId}
+          isCanvasOpen={isCanvasOpen}
         />
       )}
     </>

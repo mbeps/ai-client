@@ -1,0 +1,66 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { z } from "zod";
+import { ROUTES } from "@/config/routes";
+import { db } from "@/drizzle/db";
+import { userSettings } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+import { userSettingsSchema } from "@/schemas/user/user-settings";
+
+const log = getLogger(["app", "actions", "user-settings"]);
+
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
+
+/**
+ * Updates or initializes application-wide settings for the authenticated user.
+ * Specifically manages global preferences such as the global system prompt and default model selections.
+ * Uses an upsert pattern based on userId to ensure only one setting row exists per user.
+ * Revalidates cache after update to reflect changes immediately.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param data - Setting values validated against userSettingsSchema (globalSystemPrompt, defaultChatModelId, defaultEmbeddingModelId fields).
+ * @returns The updated or newly created user settings record.
+ * @throws Error if session is not authenticated (returns "Unauthorized").
+ * @throws ZodError if input data fails validation against userSettingsSchema.
+ * @throws Error if database upsert fails due to constraints or connection issues.
+ * @see getUserSettings to fetch current user settings.
+ * @author Maruf Bepary
+ */
+export async function updateUserSettings(
+  data: z.infer<typeof userSettingsSchema>,
+): Promise<UserSettingsRow> {
+  const session = await requireSession();
+
+  // Validate input
+  const validated = userSettingsSchema.parse(data);
+
+  const filteredData = {
+    globalSystemPrompt: validated.globalSystemPrompt ?? null,
+  };
+
+  const [row] = await db
+    .insert(userSettings)
+    .values({
+      userId: session.user.id,
+      ...filteredData,
+    })
+    .onConflictDoUpdate({
+      target: userSettings.userId,
+      set: {
+        ...filteredData,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  log.info("Updated user settings (id: {settingsId})", {
+    userId: session.user.id,
+    settingsId: row.id,
+  });
+
+  revalidatePath(ROUTES.SETTINGS.APP.path);
+
+  return row;
+}

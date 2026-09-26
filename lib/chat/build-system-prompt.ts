@@ -1,20 +1,25 @@
-import type { ModelMessage } from "ai";
-import { PROMPTS } from "@/constants/prompts";
+import { PROMPTS } from "@/config/prompts";
+import type {
+  Skill,
+  SkillBundledFile,
+  SkillSummary,
+} from "@/types/skill/skill";
 
 /**
- * Builds the system prompt message for a chat request by composing multiple prompt layers.
+ * Builds the system prompt for a chat request by composing multiple prompt layers.
  * Merges global app prompts, project-level prompts, assistant-specific prompts,
- * and adds knowledge base / attachment instructions as needed.
- * All parts are joined with double newlines for clarity.
- * Defaults to generic helpful assistant prompt if no custom prompts provided.
+ * knowledge base instructions, active skills catalog (progressive disclosure),
+ * and pre-selected skills.
  *
  * @param globalPrompt - Global application system prompt (optional)
  * @param projectPrompt - Project-specific system prompt (optional)
  * @param assistantPrompt - Assistant-specific system prompt (optional)
  * @param hasKnowledgeBase - Whether knowledge base tool is available
- * @param attachmentUrls - Presigned URLs for spreadsheet files to load via MCP
- * @returns Array with single system message for model
- * @see {@link lib/chat/register-mcp-tools.ts} for MCP tool registration
+ * @param attachmentNames - Names of files the user has attached (empty array = none)
+ * @param availableSkills - List of available skills for dynamic progressive disclosure catalog
+ * @param selectedSkills - List of user-selected skills to pre-inject
+ * @param supportsTools - Whether the current model supports tool calling
+ * @returns Composed system prompt string
  * @author Maruf Bepary
  */
 export function buildSystemPrompt(
@@ -22,8 +27,11 @@ export function buildSystemPrompt(
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
   hasKnowledgeBase: boolean,
-  attachmentUrls?: { name: string; url: string }[],
-): ModelMessage[] {
+  attachmentNames?: string[],
+  availableSkills?: SkillSummary[],
+  selectedSkills?: Skill[] | any[],
+  supportsTools?: boolean,
+): string {
   const systemParts: string[] = [];
 
   if (globalPrompt?.trim()) {
@@ -33,25 +41,61 @@ export function buildSystemPrompt(
   if (projectPrompt?.trim()) {
     systemParts.push(projectPrompt.trim());
   }
+
   if (assistantPrompt?.trim()) {
     systemParts.push(assistantPrompt.trim());
   }
+
   if (hasKnowledgeBase) {
     systemParts.push(PROMPTS.SYSTEM.KNOWLEDGE_BASE_TOOL_INSTRUCTION);
   }
 
-  if (attachmentUrls && attachmentUrls.length > 0) {
-    const fileList = attachmentUrls
-      .map((a) => `[${a.name}]: ${a.url}`)
-      .join("\n");
+  if (attachmentNames && attachmentNames.length > 0) {
+    const fileList = attachmentNames.map((n) => `- ${n}`).join("\n");
     systemParts.push(
-      `The user has attached spreadsheet files. Use the upload_file tool with the provided URL to load each file before processing:\n${fileList}`,
+      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file. If an MCP tool requires a local file path (e.g. Excel tools), first get the download URL using get_file_url, then pass that URL to the MCP file ingestion tool (such as upload_file with file_content=<URL> and filename=<name>) to stage the file, and use the returned local file path with other tools.`,
     );
+  }
+
+  // Pre-injected user-selected skills
+  if (selectedSkills && selectedSkills.length > 0) {
+    for (const s of selectedSkills) {
+      let skillText = `## Active Skill: ${s.displayName} (${s.name})\n${s.content}`;
+      const files = (s.files as SkillBundledFile[]) ?? [];
+      if (files.length > 0) {
+        skillText +=
+          "\n\n### Bundled Reference Files:\n" +
+          files
+            .map((f) => `#### File: ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
+            .join("\n\n");
+      }
+      systemParts.push(skillText);
+    }
+  }
+
+  // Available skills catalog for progressive disclosure via load_skill tool
+  if (supportsTools && availableSkills && availableSkills.length > 0) {
+    const catalogXml = availableSkills
+      .map(
+        (s) =>
+          `  <skill>\n    <name>${s.name}</name>\n    <description>${s.description}</description>\n  </skill>`,
+      )
+      .join("\n");
+
+    const skillsInstruction = `## Available Agent Skills
+You have access to specialized agent skills for domain workflows.
+If a task matches an available skill's description, call the \`load_skill\` tool with the skill's name to retrieve its full procedural instructions before responding.
+
+<available_skills>
+${catalogXml}
+</available_skills>`;
+
+    systemParts.push(skillsInstruction);
   }
 
   if (systemParts.length === 0) {
     systemParts.push("You are a helpful AI assistant.");
   }
 
-  return [{ role: "system", content: systemParts.join("\n\n") }];
+  return systemParts.join("\n\n---\n\n");
 }

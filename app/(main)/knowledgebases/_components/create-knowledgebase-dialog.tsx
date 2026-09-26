@@ -1,17 +1,21 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, Loader2, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { toast } from "sonner";
+import type { z } from "zod";
+import { createKnowledgebase } from "@/actions/knowledgebases/create-knowledgebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -23,12 +27,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createKnowledgebase } from "@/lib/actions/knowledgebases/create-knowledgebase";
-import { toast } from "sonner";
-import { Plus, X, AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import { useUserModels } from "@/hooks/use-user-models";
+import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 
 type FormValues = z.infer<typeof createKnowledgebaseSchema>;
 
@@ -126,9 +126,9 @@ export function CreateKnowledgebaseDialog({
             />
 
             {hasNoModels && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+              <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 p-2 dark:border-red-900/30 dark:bg-red-950/20">
                 <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
+                <p className="font-medium text-[11px] text-red-800 dark:text-red-200">
                   No embedding models configured. Please set up a provider
                   first.
                 </p>
@@ -147,7 +147,10 @@ export function CreateKnowledgebaseDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting || hasNoModels}>
                 {isSubmitting ? (
-                  "Creating..."
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />

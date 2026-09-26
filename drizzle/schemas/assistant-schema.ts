@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 /**
  * Stores user-created AI assistant personas with system prompts and avatar images.

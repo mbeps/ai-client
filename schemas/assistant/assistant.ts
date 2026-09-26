@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  nameField,
-  descriptionField,
   contentField,
+  descriptionField,
+  nameField,
   renameSchema,
-} from "../shared-fields";
+} from "@/schemas/shared-fields";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.

@@ -1,8 +1,8 @@
 "use client";
 
-import { AppSidebar } from "@/components/sidebar/app-sidebar";
-import { EntityOptions } from "@/components/shared/entity-options";
 import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
+import { EntityOptions } from "@/components/shared/entity-options";
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
 
 /**
  * Authentication-guarded layout for all protected main app routes.

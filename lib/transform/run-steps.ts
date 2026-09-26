@@ -1,23 +1,24 @@
-import { db } from "@/drizzle/db";
-import { transformRun, attachment } from "@/drizzle/schema";
+import { generateText, isStepCount } from "ai";
 import { eq } from "drizzle-orm";
-import { generateText, stepCountIs } from "ai";
-import { logger } from "@/lib/logger";
-import { RATE_LIMIT_ERROR_CODE } from "@/lib/constants/errors";
-import {
-  isRateLimitError,
-  normalizeRateLimitMessage,
-} from "@/lib/utils/error-utils";
-import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
-import {
-  extractUploadedFilePath,
-  extractArtifactFromToolPayload,
-  extractDownloadFilePayload,
-  isSpreadsheetMutationTool,
-} from "@/lib/transform/tool-payload-utils";
-import type { TransformStep } from "@/types/transform/transform-agent";
+import { env } from "@/config/env";
+import { db } from "@/drizzle/db";
+import { transformRun } from "@/drizzle/schema";
+import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/errors";
+import { getLogger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
+
+const log = getLogger(["app", "transform", "steps"]);
+
 import { buildFileContext } from "@/lib/transform/build-file-context";
+import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";
+import { extractDownloadFilePayload } from "@/lib/transform/extract-download-file-payload";
+import { extractUploadedFilePath } from "@/lib/transform/extract-uploaded-file-path";
+import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
+import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
+import type { ResolvedProvider } from "@/types/provider/resolved-provider";
+import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Configuration for running a sequence of transform agent steps.
@@ -38,7 +39,7 @@ interface RunTransformStepsOptions {
   };
   userId: string;
   allServers: any[];
-  resolvedProvider: any;
+  resolvedProvider: ResolvedProvider;
   kbContext: string;
   runMcpTools: Record<string, any>;
   runToolSourceMap: Record<string, string>;
@@ -87,10 +88,23 @@ export async function runTransformSteps({
     let stepHasSpreadsheetMutations = false;
     let stepPersistedSpreadsheetOutput = false;
 
-    // Update current step index
+    // Heartbeat: keep updatedAt fresh so stuck-run sweeps don't kill active runs
+    try {
+      await db
+        .update(transformRun)
+        .set({ updatedAt: new Date() })
+        .where(eq(transformRun.id, runRow.id));
+    } catch {
+      log.warn("Heartbeat update failed (runId: {runId})", {
+        runId: runRow.id,
+        userId,
+      });
+    }
+
+    // Update current step index as array index so resume logic (currentStepIndex + 1) is correct
     await db
       .update(transformRun)
-      .set({ currentStepIndex: step.order })
+      .set({ currentStepIndex: i })
       .where(eq(transformRun.id, runRow.id));
 
     emit({
@@ -101,14 +115,14 @@ export async function runTransformSteps({
       total: steps.length,
     });
 
-    logger.info(
-      "[Transform AI] Step started",
+    log.info(
+      "Step started (runId: {runId}, stepIndex: {stepIndex}, stepName: {stepName})",
       {
         runId: runRow.id,
         stepIndex: i,
         stepName: step.name,
+        userId,
       },
-      userId,
     );
 
     // Filter servers by step config
@@ -124,22 +138,19 @@ export async function runTransformSteps({
       ...(step.toolIds || []),
     ]);
 
-    const filteredEntries = Object.entries(runMcpTools).filter(
-      ([toolName]) => {
-        const source = runToolSourceMap[toolName];
-        const isInternal = source === "Internal" || source === "System";
-        const fromAllowedServer =
-          isInternal || stepServerNames.has(source);
+    const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) => {
+      const source = runToolSourceMap[toolName];
+      const isInternal = source === "Internal" || source === "System";
+      const fromAllowedServer = isInternal || stepServerNames.has(source);
 
-        if (!fromAllowedServer) return false;
-        if (allowedToolIds.size === 0) return true;
+      if (!fromAllowedServer) return false;
+      if (allowedToolIds.size === 0) return true;
 
-        return Array.from(allowedToolIds).some((id) => {
-          const [, type, name] = id.split(":");
-          return type === "tool" && name === toolName;
-        });
-      },
-    );
+      return Array.from(allowedToolIds).some((id) => {
+        const [, type, name] = id.split(":");
+        return type === "tool" && name === toolName;
+      });
+    });
 
     const filteredTools = Object.fromEntries(filteredEntries);
     const toolSourceMap = Object.fromEntries(
@@ -191,12 +202,11 @@ export async function runTransformSteps({
     try {
       const result = await generateText({
         model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: "Please execute the task." },
-        ],
+        // v7 rejects role:"system" messages in messages[] by default.
+        instructions: systemPrompt,
+        messages: [{ role: "user", content: "Please execute the task." }],
         tools: filteredTools,
-        stopWhen: stepCountIs(10),
+        stopWhen: isStepCount(env.CHAT_MAX_STEPS),
         maxRetries: 1,
       });
 
@@ -214,9 +224,7 @@ export async function runTransformSteps({
           }
           for (const tr of stepInfo.toolResults) {
             const serverName = toolSourceMap[tr.toolName];
-            const toolResultPayload =
-              (tr as { result?: unknown; output?: unknown }).result ??
-              (tr as { result?: unknown; output?: unknown }).output;
+            const toolResultPayload = (tr as any).result ?? (tr as any).output;
 
             if (isSpreadsheetMutationTool(tr.toolName)) {
               stepHasSpreadsheetMutations = true;
@@ -226,32 +234,38 @@ export async function runTransformSteps({
               const uploadedPath = extractUploadedFilePath(toolResultPayload);
               if (uploadedPath) {
                 activeWorkbookFilePath = uploadedPath;
-                logger.info(
-                  "[Transform AI] Active workbook file_path captured",
+                log.info(
+                  "Active workbook file_path captured (runId: {runId}, stepIndex: {stepIndex})",
                   {
                     runId: runRow.id,
                     stepIndex: i,
                     activeWorkbookFilePath,
+                    userId,
                   },
-                  userId,
                 );
               }
             }
 
             const formattedResult =
-              typeof toolResultPayload === "object" && toolResultPayload !== null
+              typeof toolResultPayload === "object" &&
+              toolResultPayload !== null
                 ? JSON.stringify(toolResultPayload, null, 2)
                 : toolResultPayload;
 
             if (tr.toolName === "manage_artifact") {
-              const extractedArtifact = extractArtifactFromToolPayload(toolResultPayload);
+              const extractedArtifact =
+                extractArtifactFromToolPayload(toolResultPayload);
               if (extractedArtifact) {
                 stepArtifact = extractedArtifact;
               } else {
-                logger.warn(
-                  "[Transform AI] manage_artifact result had no extractable artifact",
-                  { runId: runRow.id, stepIndex: i, payloadType: typeof toolResultPayload },
-                  userId,
+                log.warn(
+                  "manage_artifact result had no extractable artifact (runId: {runId}, stepIndex: {stepIndex})",
+                  {
+                    runId: runRow.id,
+                    stepIndex: i,
+                    payloadType: typeof toolResultPayload,
+                    userId,
+                  },
                 );
               }
             }
@@ -306,15 +320,16 @@ export async function runTransformSteps({
         currentOutputAttachmentIds = persisted.outputAttachmentIds;
         stepPersistedSpreadsheetOutput = true;
         currentAttachmentRows = [persisted.attachmentRow];
+        activeWorkbookFilePath = null;
 
-        logger.info(
-          "[Transform AI] Active workbook replaced with step output",
+        log.info(
+          "Active workbook replaced with step output (runId: {runId}, stepIndex: {stepIndex})",
           {
             runId: runRow.id,
             stepIndex: i,
             activeWorkbookAttachmentId: persisted.attachmentRow.id,
+            userId,
           },
-          userId,
         );
       }
     }
@@ -327,7 +342,8 @@ export async function runTransformSteps({
     ) {
       const downloadToolSource = runToolSourceMap.download_file;
       const canUseDownloadTool =
-        typeof downloadToolSource === "string" && stepServerNames.has(downloadToolSource);
+        typeof downloadToolSource === "string" &&
+        stepServerNames.has(downloadToolSource);
 
       if (canUseDownloadTool) {
         const downloadTool = runMcpTools.download_file as {
@@ -336,7 +352,9 @@ export async function runTransformSteps({
 
         if (typeof downloadTool.execute === "function") {
           try {
-            const downloaded = await downloadTool.execute({ file_path: activeWorkbookFilePath });
+            const downloaded = await downloadTool.execute({
+              file_path: activeWorkbookFilePath,
+            });
             const downloadPayload = extractDownloadFilePayload(downloaded);
 
             if (downloadPayload) {
@@ -344,7 +362,10 @@ export async function runTransformSteps({
                 {
                   kind: "download",
                   fileContent: downloadPayload.fileContent,
-                  filename: downloadPayload.filename || currentAttachmentRows[0]?.name || `step-${i + 1}-output.xlsx`,
+                  filename:
+                    downloadPayload.filename ||
+                    currentAttachmentRows[0]?.name ||
+                    `step-${i + 1}-output.xlsx`,
                   stepIndex: i,
                 },
                 userId,
@@ -356,25 +377,32 @@ export async function runTransformSteps({
                 stepPersistedSpreadsheetOutput = true;
                 currentAttachmentRows = [persisted.attachmentRow];
 
-                logger.info(
-                  "[Transform AI] Persisted step output from download_file fallback",
-                  { runId: runRow.id, stepIndex: i },
-                  userId,
+                log.info(
+                  "Persisted step output from download_file fallback (runId: {runId}, stepIndex: {stepIndex})",
+                  { runId: runRow.id, stepIndex: i, userId },
                 );
               }
             }
           } catch (downloadErr) {
-            logger.warn(
-              "[Transform AI] download_file fallback persistence failed",
-              { downloadErr, runId: runRow.id, stepIndex: i },
-              userId,
+            log.warn(
+              "download_file fallback persistence failed (runId: {runId}, stepIndex: {stepIndex})",
+              {
+                error:
+                  downloadErr instanceof Error
+                    ? downloadErr.message
+                    : String(downloadErr),
+                runId: runRow.id,
+                stepIndex: i,
+                userId,
+              },
             );
           }
         }
       }
     }
 
-    if (stepHasSpreadsheetMutations && activeWorkbookFilePath && !stepPersistedSpreadsheetOutput) {
+    // Fail-safe: mutations occurred but no spreadsheet output was saved — prevent silent data loss
+    if (stepHasSpreadsheetMutations && !stepPersistedSpreadsheetOutput) {
       const errorMessage = `Step "${step.name}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
 
       await db
@@ -395,8 +423,33 @@ export async function runTransformSteps({
       artifact: stepArtifact,
     });
 
-    logger.info("[Transform AI] Step completed", { runId: runRow.id, stepIndex: i }, userId);
+    log.info("Step completed (runId: {runId}, stepIndex: {stepIndex})", {
+      runId: runRow.id,
+      stepIndex: i,
+      userId,
+    });
+
+    // Human review gate: pause before continuing to the next step
+    if (step.requiresReview) {
+      await db
+        .update(transformRun)
+        .set({ status: "awaiting_review", currentStepIndex: i })
+        .where(eq(transformRun.id, runRow.id));
+
+      emit({
+        type: "transform-review-required",
+        runId: runRow.id,
+        stepIndex: i,
+      });
+
+      log.info(
+        "Paused for human review (runId: {runId}, stepIndex: {stepIndex})",
+        { runId: runRow.id, stepIndex: i, userId },
+      );
+
+      return { success: true, paused: true, currentOutputAttachmentIds };
+    }
   }
 
-  return { success: true, currentOutputAttachmentIds };
+  return { success: true, paused: false, currentOutputAttachmentIds };
 }

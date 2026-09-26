@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { nameField, descriptionField, renameSchema } from "../shared-fields";
+import {
+  descriptionField,
+  nameField,
+  renameSchema,
+} from "@/schemas/shared-fields";
 
 export const renameTransformAgentSchema = renameSchema;
 
@@ -39,7 +43,20 @@ export const createTransformAgentSchema = z.object({
   steps: z.array(transformStepSchema).optional().default([]),
 });
 
-export const updateTransformAgentSchema = createTransformAgentSchema.partial();
+export const updateTransformAgentSchema = createTransformAgentSchema
+  .omit({
+    tools: true,
+    knowledgeBaseIds: true,
+    requiresFileUpload: true,
+    steps: true,
+  })
+  .partial()
+  .extend({
+    tools: z.array(z.string()).optional(),
+    knowledgeBaseIds: z.array(z.string()).optional(),
+    requiresFileUpload: z.boolean().optional(),
+    steps: z.array(transformStepSchema).optional(),
+  });
 
 /**
  * Validates partial transform agent updates allowing selective field modification.

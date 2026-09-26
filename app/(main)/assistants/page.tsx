@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useAppStore } from "@/lib/store";
 import { Bot, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { AssistantCard } from "@/components/assistant/assistant-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/lib/store";
 import { CreateAssistantDialog } from "./_components/create-assistant-dialog";
 
 /**
@@ -37,7 +37,7 @@ export default function AssistantsPage() {
             onClick={() => setDialogOpen(true)}
             className="w-full md:w-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Assistant
           </Button>
         }

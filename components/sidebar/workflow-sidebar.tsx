@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  ChevronLeft,
+  ChevronsUpDown,
+  Languages,
+  LayoutGrid,
+  List,
+  LogOut,
+  Settings,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -22,21 +35,10 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
-import {
-  ChevronLeft,
-  ChevronsUpDown,
-  Languages,
-  LayoutGrid,
-  LogOut,
-  Settings,
-  User,
-  Zap,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import * as React from "react";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Sidebar for the /workflows section.
@@ -64,9 +66,9 @@ export function WorkflowSidebar({
       icon: Languages,
     },
     {
-      name: "Spreadsheets Automation",
+      name: ROUTES.WORKFLOWS.TRANSFORM.name,
       href: ROUTES.WORKFLOWS.TRANSFORM.path,
-      icon: Zap,
+      icon: List,
     },
   ];
 
@@ -167,7 +169,7 @@ export function WorkflowSidebar({
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.PROFILE.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
@@ -176,7 +178,7 @@ export function WorkflowSidebar({
                   <DropdownMenuItem asChild>
                     <Link
                       href={ROUTES.SETTINGS.path}
-                      className="cursor-pointer w-full"
+                      className="w-full cursor-pointer"
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
@@ -187,9 +189,12 @@ export function WorkflowSidebar({
                 <DropdownMenuItem
                   onClick={async () => {
                     await authClient.signOut();
+                    useAppStore.getState().resetEntityState();
+                    useAppStore.getState().resetChatState();
+                    hydratedResources.clear();
                     router.push(ROUTES.AUTH.LOGIN.path);
                   }}
-                  className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+                  className="cursor-pointer focus:bg-destructive focus:text-destructive-foreground"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

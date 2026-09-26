@@ -1,5 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { transformAgent } from "@/drizzle/schema";
+import type { InferSelectModel } from "drizzle-orm";
+import type { transformAgent } from "@/drizzle/schema";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database representation of a transform agent (multi-step workflow) from the Drizzle schema.
@@ -9,4 +10,5 @@ import { transformAgent } from "@/drizzle/schema";
  * @see {@link types/transform/transform-run.ts} for execution instances
  * @author Maruf Bepary
  */
-export type TransformAgentRow = InferSelectModel<typeof transformAgent>;
+export type TransformAgentRow = InferSelectModel<typeof transformAgent> &
+  TimedResource;

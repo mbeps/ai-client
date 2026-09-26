@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+tmp/**
 
 # debug
 npm-debug.log*
@@ -40,17 +41,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.github/copilot-instructions.md
+.github/**
 
 
-docs/**
+subagents/**
+.subagents/**
 scripts/hash-password.js
 reports/**
 **.xlsx
 graphify-out/**
 wiki/**
-GEMINI.md
-CLAUDE.md
-AGENT.md
-.github/instructions/convensions.instructions.md
-.github/instructions/graphify.instructions.md
+AGENTS.md
+.agents/**
+evaluations/**
+.archive/**

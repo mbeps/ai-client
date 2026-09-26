@@ -1,0 +1,29 @@
+"use server";
+
+import { createSkillZip } from "@/lib/skills/parser";
+import type { SkillBundledFile } from "@/types/skill/skill";
+import { getSkill } from "./get-skill";
+
+/**
+ * Generates and returns a base64-encoded ZIP archive of an Agent Skill and its bundled subfiles.
+ *
+ * @author Maruf Bepary
+ */
+export async function exportSkillZip(
+  skillId: string,
+): Promise<{ filename: string; base64: string }> {
+  const skill = await getSkill(skillId);
+
+  const zipBuf = createSkillZip({
+    name: skill.name,
+    displayName: skill.displayName,
+    description: skill.description,
+    content: skill.content,
+    files: (skill.files as SkillBundledFile[]) || [],
+  });
+
+  return {
+    filename: `${skill.name}.zip`,
+    base64: zipBuf.toString("base64"),
+  };
+}

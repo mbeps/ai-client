@@ -1,12 +1,14 @@
 "use client";
 
-import { useCreateBlockNote } from "@blocknote/react";
+import type { Block } from "@blocknote/core";
+import { logger } from "@/lib/logger";
+import "@blocknote/core/fonts/inter.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import "@blocknote/core/fonts/inter.css";
-import { useEffect, useState, useRef } from "react";
+import { useCreateBlockNote } from "@blocknote/react";
 import { Loader2 } from "lucide-react";
-import type { Block } from "@blocknote/core";
+import { useTheme } from "next-themes";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Props for MarkdownView artifact component.
@@ -43,19 +45,32 @@ function BlockNoteEditor({
     initialContent: blocks.length > 0 ? blocks : undefined,
   });
 
+  const { resolvedTheme } = useTheme();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return (
-    <div className="h-full w-full bg-background p-4 overflow-y-auto custom-scrollbar">
+    <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-4">
       <BlockNoteView
         editor={editor}
-        theme="light"
+        theme={resolvedTheme === "dark" ? "dark" : "light"}
         onChange={() => {
           if (onUpdate) {
             if (timerRef.current) clearTimeout(timerRef.current);
-            timerRef.current = setTimeout(() => {
-              const markdown = editor.blocksToMarkdownLossy(editor.document);
-              onUpdate(markdown);
+            timerRef.current = setTimeout(async () => {
+              try {
+                const markdown = await editor.blocksToMarkdownLossy(
+                  editor.document,
+                );
+                onUpdate(markdown);
+              } catch (e) {
+                logger.error("Failed to serialize markdown blocks", e);
+              }
             }, 1000);
           }
         }}
@@ -87,6 +102,7 @@ export default function MarkdownView({
   // not on every content update, to avoid re-parsing while typing.
   useEffect(() => {
     let cancelled = false;
+    setParsedBlocks(null);
 
     async function parseMarkdown() {
       try {
@@ -97,7 +113,7 @@ export default function MarkdownView({
           setParsedBlocks(blocks);
         }
       } catch (err) {
-        console.error("Failed to parse markdown", err);
+        logger.error("Failed to parse markdown", err);
         if (!cancelled) {
           setParsedBlocks([]);
         }
@@ -108,8 +124,7 @@ export default function MarkdownView({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [content]);
 
   if (!parsedBlocks) {
     return (

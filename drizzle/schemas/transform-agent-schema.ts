@@ -1,13 +1,13 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  integer,
   pgTable,
   text,
-  boolean,
-  integer,
   timestamp,
-  index,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
 
 export const transformAgent = pgTable(
   "transform_agent",
@@ -22,10 +22,7 @@ export const transformAgent = pgTable(
     description: text("description"),
     globalContext: text("global_context"),
     modelId: text("model_id"),
-    tools: text("tools")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    tools: text("tools").array().notNull().default(sql`'{}'::text[]`),
     knowledgeBaseIds: text("knowledge_base_ids")
       .array()
       .notNull()
@@ -35,7 +32,7 @@ export const transformAgent = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index("transform_agent_user_id_idx").on(table.userId)],
@@ -72,7 +69,7 @@ export const transformRun = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [

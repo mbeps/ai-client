@@ -1,3 +1,6 @@
+import { NotFoundPage } from "@/components/shared/not-found-page";
+import { ROUTES } from "@/config/routes";
+
 /**
  * Chat not found page: 404 fallback for missing or inaccessible chats.
  *
@@ -6,14 +9,12 @@
  *
  * @author Maruf Bepary
  */
-import { NotFoundPage } from "@/components/shared/not-found-page";
-
 export default function ChatNotFound() {
   return (
     <NotFoundPage
       title="Chat not found"
       description="This chat does not exist or you don't have access to it."
-      linkHref="/chats"
+      linkHref={ROUTES.CHATS.path}
       linkLabel="Back to chats"
     />
   );

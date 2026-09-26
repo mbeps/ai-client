@@ -1,13 +1,13 @@
-import { ROUTES } from "@/constants/routes";
+import { Languages, List } from "lucide-react";
+import Link from "next/link";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Languages, Zap } from "lucide-react";
-import Link from "next/link";
+import { ROUTES } from "@/config/routes";
 
 const WORKFLOWS = [
   {
@@ -19,18 +19,18 @@ const WORKFLOWS = [
     color: "text-blue-500",
   },
   {
-    name: "Spreadsheets Automation",
+    name: ROUTES.WORKFLOWS.TRANSFORM.name,
     description:
-      "Automate multi-step spreadsheet transformations with AI and human review gates.",
+      "Automate multi-step transformations with AI and human review gates.",
     href: ROUTES.WORKFLOWS.TRANSFORM.path,
-    icon: Zap,
+    icon: List,
     color: "text-amber-500",
   },
 ];
 
 /**
  * Workflows hub page providing entry point to all available workflows.
- * Displays workflow types including Translation and Spreadsheets Automation.
+ * Displays workflow types including Translation and Step-by-Step Automations.
  * Renders grid of workflow cards with descriptions and navigation links.
  *
  * @author Maruf Bepary
@@ -38,9 +38,9 @@ const WORKFLOWS = [
 
 export default function WorkflowsPage() {
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Workflows</h1>
         <p className="text-muted-foreground">
           Select an automated workflow to get started.
         </p>
@@ -49,18 +49,18 @@ export default function WorkflowsPage() {
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {WORKFLOWS.map((workflow) => (
           <Link key={workflow.name} href={workflow.href} className="group">
-            <Card className="h-full transition-all hover:shadow-md hover:border-primary/40 overflow-hidden p-0">
+            <Card className="h-full overflow-hidden p-0 transition-all hover:border-primary/40 hover:shadow-md">
               <CardHeader className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-secondary/50 group-hover:bg-secondary transition-colors shrink-0">
+                  <div className="shrink-0 rounded-lg bg-secondary/50 p-2 transition-colors group-hover:bg-secondary">
                     <workflow.icon className={`h-4 w-4 ${workflow.color}`} />
                   </div>
-                  <CardTitle className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
+                  <CardTitle className="truncate font-semibold text-sm transition-colors group-hover:text-primary">
                     {workflow.name}
                   </CardTitle>
                 </div>
                 <div className="mt-2">
-                  <CardDescription className="text-xs leading-relaxed line-clamp-2">
+                  <CardDescription className="line-clamp-2 text-xs leading-relaxed">
                     {workflow.description}
                   </CardDescription>
                 </div>
@@ -69,6 +69,6 @@ export default function WorkflowsPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,33 +1,33 @@
 "use client";
 
-import { EntityCard } from "@/components/shared/entity-card";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import {
-  Settings2,
-  Trash2,
-  Globe,
+  Activity,
   MoreVertical,
   RefreshCw,
-  Activity,
+  Settings2,
+  Trash2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import Link from "next/link";
+import { EntityCard } from "@/components/shared/entity-card";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ROUTES } from "@/config/routes";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 interface ProviderCardProps {
   provider: AiProviderRow;
   isBusy: boolean;
-  onEdit: () => void;
   onDelete: () => void;
   onToggle: (enabled: boolean) => void;
   onTest: () => void;
@@ -36,12 +36,11 @@ interface ProviderCardProps {
 
 /**
  * A specialized card for displaying and managing an AI Provider.
- * Displays provider name, base URL, and actions for editing, deleting,and toggling.
- * Includes buttons for testing connection and syncing available models.
+ * Displays provider name, base URL, and inline actions.
+ * The edit (settings) icon navigates to the dedicated provider detail page.
  *
  * @param props.provider - The provider entity to display.
  * @param props.isBusy - Whether the provider is currently processing an action.
- * @param props.onEdit - Callback to edit the provider.
  * @param props.onDelete - Callback to delete the provider.
  * @param props.onToggle - Callback to enable/disable the provider.
  * @param props.onTest - Callback to test the provider connection.
@@ -51,7 +50,6 @@ interface ProviderCardProps {
 export function ProviderCard({
   provider,
   isBusy,
-  onEdit,
   onDelete,
   onToggle,
   onTest,
@@ -60,8 +58,7 @@ export function ProviderCard({
   return (
     <EntityCard
       horizontal
-      className="shadow-none border hover:bg-muted/30 cursor-default"
-      icon={<Globe className="h-5 w-5 text-primary" />}
+      className="cursor-default border shadow-none hover:bg-muted/30"
       title={<span className="font-semibold">{provider.name}</span>}
       description={provider.baseUrl}
       rightActions={
@@ -72,11 +69,13 @@ export function ProviderCard({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={onEdit}
                 disabled={isBusy}
+                asChild
               >
-                <Settings2 className="h-4 w-4" />
-                <span className="sr-only">Edit Provider</span>
+                <Link href={ROUTES.SETTINGS.PROVIDERS.detail(provider.id)}>
+                  <Settings2 className="h-4 w-4" />
+                  <span className="sr-only">Edit Provider</span>
+                </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Edit Provider</TooltipContent>
@@ -98,7 +97,7 @@ export function ProviderCard({
             <TooltipContent>Sync Models</TooltipContent>
           </Tooltip>
 
-          <div className="flex items-center border-l pl-2 ml-1">
+          <div className="ml-1 flex items-center border-l pl-2">
             <Switch
               checked={provider.isEnabled}
               onCheckedChange={onToggle}

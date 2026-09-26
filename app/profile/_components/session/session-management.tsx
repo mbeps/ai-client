@@ -1,13 +1,13 @@
 "use client";
 
+import type { Session } from "better-auth";
+import { Monitor, Smartphone, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { UAParser } from "ua-parser-js";
 import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authClient } from "@/lib/auth/auth-client";
-import { Session } from "better-auth";
-import { Monitor, Smartphone, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { UAParser } from "ua-parser-js";
 
 /**
  * Displays the current session and provides controls to revoke other active device sessions.
@@ -46,7 +46,7 @@ export function SessionManagement({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Other Active Sessions</h3>
+          <h3 className="font-medium text-lg">Other Active Sessions</h3>
           {otherSessions.length > 0 && (
             <BetterAuthActionButton
               variant="destructive"
@@ -148,10 +148,10 @@ function SessionCard({
               <Monitor />
             )}
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Created: {formatDate(session.createdAt)}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Expires: {formatDate(session.expiresAt)}
               </p>
             </div>

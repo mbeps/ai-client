@@ -10,13 +10,16 @@
  */
 
 import { randomUUID } from "crypto";
+import { eq, sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
-import { uploadObject } from "@/lib/storage/s3-client";
-import { logger } from "@/lib/logger";
+import { getLogger } from "@/lib/logger";
+import { uploadObject } from "@/lib/storage/upload-object";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
+import { sanitiseFilename } from "@/lib/utils/sanitise-filename";
+
+const log = getLogger(["app", "transform", "artifact"]);
 
 /** Discriminated input for the two persistence paths. */
 export type PersistArtifactInput =
@@ -74,12 +77,37 @@ export async function persistTransformArtifact(
       const parsed = JSON.parse(artifactContent);
       const workbook = XLSX.utils.book_new();
 
-      for (const sheet of (parsed.sheets ?? []) as Array<{
-        name?: string;
-        data?: unknown[][];
-      }>) {
-        const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
-        XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+      if (Array.isArray(parsed)) {
+        const ws = XLSX.utils.aoa_to_sheet(parsed);
+        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as any).data)
+      ) {
+        const ws = XLSX.utils.aoa_to_sheet((parsed as any).data);
+        XLSX.utils.book_append_sheet(
+          workbook,
+          ws,
+          (parsed as any).name ?? "Sheet1",
+        );
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as any).sheets)
+      ) {
+        for (const sheet of (parsed as any).sheets as Array<{
+          name?: string;
+          data?: unknown[][];
+        }>) {
+          const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
+          XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+        }
+      }
+
+      if (workbook.SheetNames.length === 0) {
+        const ws = XLSX.utils.aoa_to_sheet([]);
+        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
       }
 
       xlsxBuffer = Buffer.from(
@@ -91,17 +119,17 @@ export async function persistTransformArtifact(
       outputName = `step-${input.stepIndex + 1}-output.xlsx`;
     } else {
       xlsxBuffer = Buffer.from(input.fileContent, "base64");
-      outputName = input.filename || `step-${input.stepIndex + 1}-output.xlsx`;
+      outputName = input.filename
+        ? sanitiseFilename(input.filename)
+        : `step-${input.stepIndex + 1}-output.xlsx`;
     }
 
     const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
     const mimeType =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    // 1. Upload to S3
-    await uploadObject(s3Key, xlsxBuffer, mimeType);
-
-    // 2. DB record
+    // 1. DB record first, then upload; compensate by deleting the row if S3
+    // fails so a failed upload never leaves a dangling attachment record.
     await db.insert(attachment).values({
       id: outputAttachmentId,
       userId,
@@ -112,11 +140,21 @@ export async function persistTransformArtifact(
       key: s3Key,
     });
 
-    // 3. Update the run record output state
-    // Persist in run record so resume logic picks up the latest workbook
+    try {
+      await uploadObject(s3Key, xlsxBuffer, mimeType);
+    } catch (err) {
+      await db.delete(attachment).where(eq(attachment.id, outputAttachmentId));
+      throw err;
+    }
+
+    // 2. Update the run record output state
+    // Persist in run record so resume logic picks up the latest workbook.
+    // Atomic append — concurrent steps must not overwrite each other's ids.
     await db
       .update(transformRun)
-      .set({ outputAttachmentIds: [outputAttachmentId] })
+      .set({
+        outputAttachmentIds: sql`array_append(output_attachment_ids, ${outputAttachmentId})`,
+      })
       .where(eq(transformRun.id, runId));
 
     const attachmentRow: AttachmentRow = {
@@ -132,7 +170,8 @@ export async function persistTransformArtifact(
       createdAt: new Date(),
     };
 
-    logger.info(`[Transform AI] Persisted ${input.kind} output`, {
+    log.info("Persisted {kind} output for run {runId} at step {stepIndex}", {
+      kind: input.kind,
       runId,
       stepIndex: input.stepIndex,
       outputAttachmentId,
@@ -144,11 +183,11 @@ export async function persistTransformArtifact(
       attachmentRow,
     };
   } catch (err) {
-    logger.warn(`[Transform AI] Failed to persist ${input.kind} output`, {
-      err,
+    log.warn("Failed to persist {kind} output for run {runId}: {error}", {
+      kind: input.kind,
       runId,
-      userId,
       stepIndex: input.stepIndex,
+      error: err instanceof Error ? err.message : String(err),
     });
     return null;
   }

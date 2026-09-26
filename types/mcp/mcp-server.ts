@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { mcpServerSchema } from "@/schemas/providers/mcp-server";
+import type { z } from "zod";
+import type { mcpServerSchema } from "@/schemas/providers/mcp-server";
 
 /**
  * Represents an MCP (Model Context Protocol) server configuration.

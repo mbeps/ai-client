@@ -1,63 +1,88 @@
 "use client";
 
+import { type RefObject, useCallback, useMemo, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import type { Prompt } from "@/types/prompt/prompt";
 import type { Assistant } from "@/types/assistant/assistant";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
-import { useCallback, useMemo, useState, type RefObject } from "react";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Skill } from "@/types/skill/skill";
 
-export type MentionTrigger = "/" | "@" | null;
+export type MentionTrigger = "/" | "@" | "#" | null;
 
 export type MentionPromptItem =
-  | (Prompt & { isMcp: false })
+  | (Prompt & { isMcp: false; isSkill?: false })
   | (DiscoveredPrompt & {
       id: string;
       title: string;
       shortcut: string;
       sourceServer: string;
       isMcp: true;
+      isSkill?: false;
     });
 
-export type MentionAssistantItem = Assistant & { isMcp: false };
+export type MentionSkillItem = Skill & {
+  isSkill: true;
+  isMcp: false;
+};
 
-export type MentionItem = MentionPromptItem | MentionAssistantItem;
+export type MentionAssistantItem = Assistant & {
+  isMcp: false;
+  isSkill?: false;
+};
+
+export type MentionKnowledgebaseItem = Knowledgebase & {
+  isMcp: false;
+  isSkill?: false;
+};
+
+export type MentionItem =
+  | MentionPromptItem
+  | MentionAssistantItem
+  | MentionSkillItem
+  | MentionKnowledgebaseItem;
 
 /**
  * Type guard for MentionPromptItem
  */
-function isPromptItem(item: MentionItem): item is MentionPromptItem {
-  return "shortcut" in item;
+export function isPromptItem(item: MentionItem): item is MentionPromptItem {
+  return "shortcut" in item && !("isSkill" in item && (item as any).isSkill);
+}
+
+/**
+ * Type guard for MentionSkillItem
+ */
+export function isSkillItem(item: MentionItem): item is MentionSkillItem {
+  return "isSkill" in item && (item as any).isSkill === true;
 }
 
 /**
  * Type guard for MentionAssistantItem
  */
-function isAssistantItem(item: MentionItem): item is MentionAssistantItem {
-  return !("shortcut" in item);
+export function isAssistantItem(
+  item: MentionItem,
+): item is MentionAssistantItem {
+  return (
+    !("shortcut" in item) &&
+    !("documentCount" in item) &&
+    !(item as any).isSkill
+  );
+}
+
+/**
+ * Type guard for MentionKnowledgebaseItem
+ */
+export function isKnowledgebaseItem(
+  item: MentionItem,
+): item is MentionKnowledgebaseItem {
+  return "documentCount" in item && "indexStatus" in item;
 }
 
 /**
  * Manages mention/slash-command UI state and filtering for chat input.
- * Supports two triggers: '/' for prompts (local + MCP) and '@' for assistants.
+ * Supports two triggers: '/' for prompts and skills, and '@' for assistants.
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
- * Tracks cursor position and selected items; inserts mention into input on selection.
- * Supports pre-selection of prompt/assistant for initial state (e.g. edit flows).
  *
- * Side effects: Updates input textarea, modifies text at cursor position, manages keyboard listeners.
- * Use case: Chat input mention autocomplete; MCP prompt + assistant discovery and selection.
- * Constraint: Requires ref to textarea element for cursor tracking; selected items are read-only (selection via keyboard only).
- *
- * @param input - Current input text value.
- * @param setInput - Callback to update input text.
- * @param textareaRef - Ref to textarea element for cursor tracking and insertion.
- * @param activeChatAssistantId - Optional ID of chat's associated assistant (disables '@' mention for that assistant).
- * @param initialSelectedPromptId - Optional prompt ID to pre-select (for edit flows).
- * @param initialSelectedAssistantId - Optional assistant ID to pre-select (for edit flows).
- * @param canMentionAssistant - Whether '@' mention should be enabled (default: true).
- * @param selectedServerIds - Optional set of enabled MCP server IDs to filter MCP prompts.
- * @returns Object with open trigger state, filtered items, selection index, handlers (handleInputChange, handleSelectItem, etc.).
- * @throws No exceptions thrown; all state changes are safe.
- * @see useMentionCommands for type definitions and usage patterns.
  * @author Maruf Bepary
  */
 export function useMentionCommands(
@@ -69,10 +94,15 @@ export function useMentionCommands(
   initialSelectedAssistantId?: string,
   canMentionAssistant: boolean = true,
   selectedServerIds?: Set<string>,
+  onSelectSkill?: (skill: Skill) => void,
+  onSelectKnowledgebase?: (kb: Knowledgebase) => void,
+  knowledgebases?: Knowledgebase[],
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
+  const skills = useAppStore((state) => state.skills);
   const mcpPrompts = useAppStore((state) => state.mcpPrompts);
+  const kbs = knowledgebases ?? [];
 
   const [openTrigger, setOpenTrigger] = useState<MentionTrigger>(null);
   const [commandQuery, setCommandQuery] = useState("");
@@ -83,7 +113,7 @@ export function useMentionCommands(
     useState<MentionPromptItem | null>(() => {
       if (!initialSelectedPromptId) return null;
       const local = prompts.find((p) => p.id === initialSelectedPromptId);
-      if (local) return { ...local, isMcp: false };
+      if (local) return { ...local, isMcp: false, isSkill: false };
 
       const mcp = mcpPrompts.find(
         (p) => `mcp:${p.serverId}:${p.name}` === initialSelectedPromptId,
@@ -96,6 +126,7 @@ export function useMentionCommands(
           shortcut: mcp.name,
           sourceServer: mcp.serverName,
           isMcp: true,
+          isSkill: false,
         };
       }
       return null;
@@ -107,30 +138,43 @@ export function useMentionCommands(
       : null,
   );
 
+  const [selectedKnowledgebase, setSelectedKnowledgebase] =
+    useState<Knowledgebase | null>(null);
+
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];
     const q = commandQuery.toLowerCase();
 
     if (openTrigger === "/") {
+      const matchingSkills = skills
+        .filter(
+          (s) =>
+            s.enabled &&
+            (s.name.toLowerCase().includes(q) ||
+              s.displayName.toLowerCase().includes(q) ||
+              s.description?.toLowerCase().includes(q)),
+        )
+        .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
+
       const local = prompts
         .filter(
           (p) =>
             p.shortcut.toLowerCase().includes(q) ||
             p.title.toLowerCase().includes(q),
         )
-        .map((p): MentionPromptItem => ({ ...p, isMcp: false }));
+        .map(
+          (p): MentionPromptItem => ({ ...p, isMcp: false, isSkill: false }),
+        );
 
       const mcp = mcpPrompts
         .filter((p) => {
-          // Filter by enabled servers if provided
           if (selectedServerIds && !selectedServerIds.has(p.serverId)) {
             return false;
           }
-
           return (
             p.name.toLowerCase().includes(q) ||
             p.serverName.toLowerCase().includes(q) ||
-            (p.description && p.description.toLowerCase().includes(q))
+            p.description?.toLowerCase().includes(q)
           );
         })
         .map(
@@ -141,10 +185,11 @@ export function useMentionCommands(
             shortcut: p.name,
             sourceServer: p.serverName,
             isMcp: true,
+            isSkill: false,
           }),
         );
 
-      return [...local, ...mcp];
+      return [...matchingSkills, ...local, ...mcp];
     }
 
     if (openTrigger === "@") {
@@ -152,17 +197,37 @@ export function useMentionCommands(
         .filter(
           (a) =>
             a.name.toLowerCase().includes(q) ||
-            (a.description && a.description.toLowerCase().includes(q)),
+            a.description?.toLowerCase().includes(q),
         )
-        .map((a): MentionAssistantItem => ({ ...a, isMcp: false }));
+        .map(
+          (a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }),
+        );
+    }
+
+    if (openTrigger === "#") {
+      return kbs
+        .filter(
+          (kb) =>
+            kb.name.toLowerCase().includes(q) ||
+            kb.description?.toLowerCase().includes(q),
+        )
+        .map(
+          (kb): MentionKnowledgebaseItem => ({
+            ...kb,
+            isMcp: false,
+            isSkill: false,
+          }),
+        );
     }
 
     return [];
   }, [
     commandQuery,
+    skills,
     prompts,
     mcpPrompts,
     assistants,
+    kbs,
     openTrigger,
     selectedServerIds,
   ]);
@@ -178,21 +243,33 @@ export function useMentionCommands(
 
       const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
       const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+      const lastHashIndex = textBeforeCursor.lastIndexOf("#");
 
       let triggerIndex = -1;
       let activeTrigger: MentionTrigger = null;
 
-      if (lastSlashIndex > lastAtIndex && !selectedPrompt) {
+      if (
+        lastSlashIndex > lastAtIndex &&
+        lastSlashIndex > lastHashIndex &&
+        !selectedPrompt
+      ) {
         triggerIndex = lastSlashIndex;
         activeTrigger = "/";
       } else if (
         lastAtIndex > lastSlashIndex &&
+        lastAtIndex > lastHashIndex &&
         !selectedAssistant &&
         !activeChatAssistantId &&
         canMentionAssistant
       ) {
         triggerIndex = lastAtIndex;
         activeTrigger = "@";
+      } else if (
+        lastHashIndex > lastSlashIndex &&
+        lastHashIndex > lastAtIndex
+      ) {
+        triggerIndex = lastHashIndex;
+        activeTrigger = "#";
       }
 
       if (triggerIndex !== -1) {
@@ -238,12 +315,19 @@ export function useMentionCommands(
         setInput(newInput);
 
         if (openTrigger === "/") {
-          if (isPromptItem(item)) {
+          if (isSkillItem(item)) {
+            onSelectSkill?.(item);
+          } else if (isPromptItem(item)) {
             setSelectedPrompt(item);
           }
         } else if (openTrigger === "@") {
           if (isAssistantItem(item)) {
             setSelectedAssistant(item);
+          }
+        } else if (openTrigger === "#") {
+          if (isKnowledgebaseItem(item)) {
+            setSelectedKnowledgebase(item);
+            onSelectKnowledgebase?.(item);
           }
         }
 
@@ -257,7 +341,15 @@ export function useMentionCommands(
         }, 0);
       }
     },
-    [input, cursorPosition, setInput, textareaRef, openTrigger],
+    [
+      input,
+      cursorPosition,
+      setInput,
+      textareaRef,
+      openTrigger,
+      onSelectSkill,
+      onSelectKnowledgebase,
+    ],
   );
 
   const handleKeyDown = useCallback(
@@ -304,6 +396,8 @@ export function useMentionCommands(
     setSelectedPrompt,
     selectedAssistant,
     setSelectedAssistant,
+    selectedKnowledgebase,
+    setSelectedKnowledgebase,
     handleInputChange,
     handleKeyDown,
     handleSelect,

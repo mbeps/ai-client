@@ -29,11 +29,11 @@ export function PageHeader({
   action,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
+    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          <h1 className="font-bold text-3xl tracking-tight">{title}</h1>
           <p className="text-muted-foreground">{description}</p>
         </div>
       </div>

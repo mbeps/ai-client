@@ -1,45 +1,114 @@
 "use client";
 
-import { persistMessage } from "@/lib/actions/chats/persist-message";
-import { reconstructThread } from "@/lib/chat/message-tree-utils";
-import { parseSseStream } from "@/lib/chat/parse-sse-stream";
-import { buildStreamRequestBody } from "@/lib/chat/build-stream-request-body";
-import {
-  resolveMcpPrompt,
-  resolveSlashPrompt,
-} from "@/lib/chat/resolve-stream-prompts";
-import { processAttachments } from "@/lib/chat/upload-attachments";
+import { useRealtime } from "inngest/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { buildChatFromRows } from "@/actions/chats/build-chat";
+import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
+import { getChat } from "@/actions/chats/get-chat";
+import { persistMessage } from "@/actions/chats/persist-message";
+import { PROMPTS } from "@/config/prompts";
+import { useApiError } from "@/hooks/use-api-error";
+import { processAttachments } from "@/lib/chat/attachments/process-attachments";
+import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
+import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
+import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import { PROMPTS } from "@/constants/prompts";
-import { useCallback, useRef, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { useApiError } from "@/hooks/use-api-error";
-import {
-  RATE_LIMIT_ERROR_CODE,
-  UNAUTHORIZED_ERROR_CODE,
-} from "@/lib/constants/errors";
 
 /**
- * Orchestrates AI response streaming with message persistence, tool integration, and artifact detection.
- * Handles SSE (Server-Sent Events) parsing, attachment uploads, message tree creation, and store updates.
- * Tracks tool call state (calling -> completed/failed) and reasoning token collection.
- * Manages AbortController for stream cancellation; deduplicates tool calls by ID.
+ * Builds the metadata object for the user message, tracking model, tools, and prompt info.
+ * @author Maruf Bepary
+ */
+function buildMetadata(
+  model: string,
+  selectedServerIds: string[],
+  selectedTools: string[],
+  selectedAssistantId?: string,
+  selectedKbIds?: string[],
+  selectedSkillIds?: string[],
+): Record<string, unknown> {
+  const metadataObj: Record<string, unknown> = {
+    model,
+    selectedServerIds,
+    selectedTools,
+  };
+  if (selectedAssistantId) metadataObj.assistantId = selectedAssistantId;
+  if (selectedKbIds && selectedKbIds.length > 0) {
+    metadataObj.selectedKbIds = selectedKbIds;
+  }
+  if (selectedSkillIds && selectedSkillIds.length > 0) {
+    metadataObj.selectedSkillIds = selectedSkillIds;
+  }
+  return metadataObj;
+}
+
+/**
+ * Resolves the final message content by handling MCP prompts and slash-command prompts.
+ * @author Maruf Bepary
+ */
+async function resolveContent(
+  content: string,
+  selectedPromptId?: string,
+  metadataObj?: Record<string, unknown>,
+): Promise<{ fullContent: string }> {
+  const meta = metadataObj ?? {};
+  if (!selectedPromptId) return { fullContent: content };
+
+  if (selectedPromptId.startsWith("mcp:")) {
+    const parts = selectedPromptId.split(":");
+    const serverId = parts[1];
+    const promptName = parts.slice(2).join(":");
+
+    try {
+      const mcpContent = await resolveMcpPrompt(serverId, promptName);
+      meta.promptId = selectedPromptId;
+      meta.userContent = content;
+      return {
+        fullContent:
+          mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content,
+      };
+    } catch (err) {
+      logger.error("Failed to load MCP prompt", err);
+      toast.error("Failed to load MCP prompt. Sending message without it.");
+      return { fullContent: content };
+    }
+  }
+
+  const prompts = useAppStore.getState().prompts;
+  const { fullContent, metadata } = resolveSlashPrompt(
+    selectedPromptId,
+    content,
+    prompts,
+  );
+  Object.assign(meta, metadata);
+  return { fullContent };
+}
+
+interface StreamRequestOptions {
+  chatId: string;
+  userMessageId: string;
+  model?: string;
+  selectedServerIds?: string[];
+  selectedTools?: string[];
+  selectedAssistantId?: string;
+  selectedSkillIds?: string[];
+  selectedKbIds?: string[];
+}
+
+/**
+ * Orchestrates AI response generation using Inngest background jobs and Inngest Realtime.
  *
- * Side effects: Persists messages to database, uploads attachments to storage, updates Zustand store,
- * calls onDone callback on stream completion, handles API errors via useApiError.
- * Use case: Chat input submission, AI response generation with tool use and reasoning.
- * Constraint: AbortController cleaned up on unmount; stopStream() must be called for graceful cancellation.
+ * Dispatches durable generation jobs that continue in the background even if the user
+ * navigates away or refreshes the page. Listens to token deltas, reasoning, and tool calls
+ * in real-time over the Inngest Realtime chat channel.
  *
  * @param chatId - Target chat session ID for message persistence.
  * @param options - Optional callbacks: onDone invoked with final content string on stream completion.
- * @returns Object with isLoading state, streamingContent, activeToolCalls, streamResponse function for submission.
- * @throws Errors from API are handled via handleApiError toast; stopStream() prevents recovery.
- * @see useApiError for error handling and navigation on auth failures.
- * @see buildStreamRequestBody for request body construction.
- * @see parseSseStream for SSE parsing implementation.
+ * @returns isLoading, streaming content/reasoning/tool-call state, streamResponse, stopStream.
+ * @see ChatUI for the primary consumer.
  * @author Maruf Bepary
  */
 export function useStreamResponse(
@@ -48,194 +117,376 @@ export function useStreamResponse(
     onDone?: (content: string) => void;
   },
 ) {
-  const router = useRouter();
   const { handleApiError } = useApiError();
   const addMessage = useAppStore((state) => state.addMessage);
+  const upsertChat = useAppStore((state) => state.upsertChat);
   const updateMessageAttachments = useAppStore(
     (state) => state.updateMessageAttachments,
   );
 
-  // Streaming state management (inlined from useStreamState)
-  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [streamingReasoning, setStreamingReasoning] = useState<string | null>(
     null,
   );
-  const [isStreamingReasoning, setIsStreamingReasoning] = useState(false);
-
-  // Tool call tracking (inlined from useToolCalls)
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
 
-  const addToolCall = useCallback(
-    (toolCallId: string, toolName: string, args?: unknown) => {
-      setActiveToolCalls((prev) => [
-        ...prev,
-        { toolCallId, toolName, args, status: "calling" },
-      ]);
+  const pendingRef = useRef<{
+    userMessageId: string | null;
+    model: string;
+    startTime: number;
+  }>({ userMessageId: null, model: "", startTime: 0 });
+
+  const lastChunkTimeRef = useRef(0);
+  const accumulatedTextRef = useRef("");
+  const accumulatedReasoningRef = useRef("");
+  const assistantMessageIdRef = useRef<string | null>(null);
+  const activeToolCallsRef = useRef<ToolCallState[]>([]);
+  const stoppedRef = useRef(false);
+
+  const handleStreamEvent = useCallback(
+    (event: ChatStreamEvent) => {
+      if (stoppedRef.current) return;
+      switch (event.type) {
+        case "start":
+          lastChunkTimeRef.current = Date.now();
+          assistantMessageIdRef.current = event.messageId;
+          setIsStreaming(true);
+          break;
+
+        case "text-delta":
+          lastChunkTimeRef.current = Date.now();
+          accumulatedTextRef.current += event.text;
+          setStreamingContent(accumulatedTextRef.current);
+          setIsStreaming(true);
+          break;
+
+        case "reasoning-delta":
+          lastChunkTimeRef.current = Date.now();
+          accumulatedReasoningRef.current += event.reasoning;
+          setStreamingReasoning(accumulatedReasoningRef.current);
+          setIsStreaming(true);
+          break;
+
+        case "tool-call": {
+          lastChunkTimeRef.current = Date.now();
+          const toolCall: ToolCallState = {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            args: event.args,
+            status: "calling",
+          };
+          activeToolCallsRef.current = [
+            ...activeToolCallsRef.current.filter(
+              (t) => t.toolCallId !== event.toolCallId,
+            ),
+            toolCall,
+          ];
+          setActiveToolCalls([...activeToolCallsRef.current]);
+          setIsStreaming(true);
+          break;
+        }
+
+        case "tool-result": {
+          lastChunkTimeRef.current = Date.now();
+          activeToolCallsRef.current = activeToolCallsRef.current.map((t) =>
+            t.toolCallId === event.toolCallId
+              ? { ...t, status: "complete", result: event.result }
+              : t,
+          );
+          setActiveToolCalls([...activeToolCallsRef.current]);
+          setIsStreaming(true);
+          break;
+        }
+
+        case "finish": {
+          lastChunkTimeRef.current = 0;
+          const text = accumulatedTextRef.current;
+          const reasoning = accumulatedReasoningRef.current;
+          const completedTools = activeToolCallsRef.current.filter(
+            (tc) => tc.status === "complete",
+          );
+
+          if (text || reasoning || completedTools.length > 0) {
+            const assistantId =
+              assistantMessageIdRef.current || crypto.randomUUID();
+            const durationMs =
+              pendingRef.current.startTime > 0
+                ? Date.now() - pendingRef.current.startTime
+                : undefined;
+
+            const metadata = JSON.stringify({
+              model: pendingRef.current.model,
+              reasoning,
+              toolCalls: completedTools.map((tc) => ({
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                args: tc.args,
+              })),
+              toolResults: completedTools
+                .filter((tc) => tc.result !== undefined)
+                .map((tc) => ({
+                  toolCallId: tc.toolCallId,
+                  toolName: tc.toolName,
+                  result: tc.result,
+                })),
+              usage: event.usage,
+              finishReason: event.finishReason,
+              durationMs,
+            });
+
+            addMessage(chatId, {
+              role: "assistant",
+              content: text,
+              parentId: pendingRef.current.userMessageId,
+              id: assistantId,
+              metadata,
+              reasoning: reasoning || undefined,
+            });
+
+            options?.onDone?.(text);
+          }
+
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          break;
+        }
+
+        case "error": {
+          lastChunkTimeRef.current = 0;
+          if (!handleApiError(event)) {
+            toast.error(event.message || "Failed to generate response");
+          }
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          break;
+        }
+      }
     },
-    [],
+    [chatId, addMessage, handleApiError, options],
   );
 
-  const updateToolCall = useCallback(
-    (
-      toolCallId: string,
-      updates: Partial<Pick<ToolCallState, "status" | "result">>,
-    ) => {
-      setActiveToolCalls((prev) =>
-        prev.map((tc) =>
-          tc.toolCallId === toolCallId ? { ...tc, ...updates } : tc,
-        ),
+  const fetchChatToken = useCallback(
+    () =>
+      chatId
+        ? getChatRealtimeToken(chatId)
+        : Promise.reject(new Error("No chatId")),
+    [chatId],
+  );
+
+  const apiBaseUrl = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    if (process.env.NODE_ENV !== "production") {
+      return `${window.location.protocol}//${window.location.hostname}:8288`;
+    }
+    return undefined;
+  }, []);
+
+  const {
+    messages,
+    error: realtimeError,
+    connectionStatus,
+  } = useRealtime({
+    channel: chatId ? chatChannel({ chatId }) : undefined,
+    topics: ["stream"] as const,
+    token: fetchChatToken,
+    enabled: !!chatId,
+    historyLimit: null,
+    apiBaseUrl,
+  });
+
+  const syncFromDb = useCallback(async () => {
+    if (!chatId) return false;
+    try {
+      const data = await getChat(chatId);
+      const userMsgId = pendingRef.current.userMessageId;
+      const assistantMsg = data.messages.find(
+        (m) =>
+          m.role === "assistant" &&
+          (userMsgId
+            ? m.parentId === userMsgId
+            : new Date(m.createdAt).getTime() >=
+              pendingRef.current.startTime - 2000),
       );
-    },
-    [],
-  );
 
-  const clearToolCalls = useCallback(() => {
-    setActiveToolCalls([]);
-  }, []);
+      if (assistantMsg) {
+        const fullChat = buildChatFromRows(data);
+        upsertChat(fullChat);
+        options?.onDone?.(assistantMsg.content);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return true;
+      }
+    } catch (err) {
+      logger.error("Failed to sync chat from DB", err);
+    }
+    return false;
+  }, [chatId, upsertChat, options]);
 
-  // AbortController management (inlined from useStreamAbort)
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const stopStream = useCallback(() => {
-    abortControllerRef.current?.abort();
-  }, []);
-
-  const setAbortController = useCallback((controller: AbortController) => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = controller;
-  }, []);
+  const connectionStatusRef = useRef(connectionStatus);
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
 
   useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
+    if (realtimeError) {
+      logger.error("Inngest Realtime connection error:", realtimeError);
+    }
+    if ((realtimeError || connectionStatus === "error") && isStreaming) {
+      void syncFromDb();
+    }
+  }, [realtimeError, connectionStatus, isStreaming, syncFromDb]);
 
-  /**
-   * Builds the metadata object for the user message, tracking model, tools, and prompt info.
-   */
-  const buildMetadata = (
-    model: string,
-    selectedServerIds: string[],
-    selectedTools: string[],
-    selectedAssistantId?: string,
-    selectedKbIds?: string[],
-    selectedPromptId?: string,
-  ): Record<string, unknown> => {
-    const metadataObj: Record<string, unknown> = {
-      model,
-      selectedServerIds,
-      selectedTools,
-    };
+  const lastProcessedIndexRef = useRef(0);
+  const processedMessagesRef = useRef<WeakSet<object>>(new WeakSet());
 
-    if (selectedAssistantId) {
-      metadataObj.assistantId = selectedAssistantId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer on chatId change
+  useEffect(() => {
+    lastProcessedIndexRef.current = 0;
+  }, [chatId]);
+
+  useEffect(() => {
+    const all = messages.all;
+    if (all && all.length > 0) {
+      if (all.length < lastProcessedIndexRef.current) {
+        lastProcessedIndexRef.current = 0;
+      }
+      if (all.length > lastProcessedIndexRef.current) {
+        for (let i = lastProcessedIndexRef.current; i < all.length; i++) {
+          const msg = all[i];
+          if (
+            msg &&
+            typeof msg === "object" &&
+            !processedMessagesRef.current.has(msg)
+          ) {
+            processedMessagesRef.current.add(msg);
+            if (msg.data) {
+              handleStreamEvent(msg.data as ChatStreamEvent);
+            }
+          }
+        }
+        lastProcessedIndexRef.current = all.length;
+      }
+      return;
     }
 
-    if (selectedKbIds && selectedKbIds.length > 0) {
-      metadataObj.selectedKbIds = selectedKbIds;
-    }
-
-    return metadataObj;
-  };
-
-  /**
-   * Resolves the final message content by handling MCP prompts and slash-command prompts.
-   */
-  const resolveContent = async (
-    content: string,
-    selectedPromptId?: string,
-    metadataObj?: Record<string, unknown>,
-  ): Promise<{ fullContent: string }> => {
-    const meta = metadataObj ?? {};
-    if (!selectedPromptId) return { fullContent: content };
-
-    if (selectedPromptId.startsWith("mcp:")) {
-      const parts = selectedPromptId.split(":");
-      const serverId = parts[1];
-      const promptName = parts.slice(2).join(":");
-
-      try {
-        const mcpContent = await resolveMcpPrompt(serverId, promptName);
-        meta.promptId = selectedPromptId;
-        meta.userContent = content;
-        return {
-          fullContent:
-            mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content,
-        };
-      } catch (err) {
-        console.error("Failed to load MCP prompt:", err);
-        toast.error("Failed to load MCP prompt. Sending message without it.");
-        return { fullContent: content };
+    // Fallback if environment only provides delta (e.g. legacy test mocks)
+    if (messages.delta && messages.delta.length > 0) {
+      for (const msg of messages.delta) {
+        if (
+          msg &&
+          typeof msg === "object" &&
+          !processedMessagesRef.current.has(msg)
+        ) {
+          processedMessagesRef.current.add(msg);
+          if (msg.data) {
+            handleStreamEvent(msg.data as ChatStreamEvent);
+          }
+        }
       }
     }
+  }, [messages.all, messages.delta, handleStreamEvent]);
 
-    const prompts = useAppStore.getState().prompts;
-    const { fullContent, metadata } = resolveSlashPrompt(
-      selectedPromptId,
-      content,
-      prompts,
-    );
-    Object.assign(meta, metadata);
-    return { fullContent };
-  };
+  // Watchdog & connection error recovery: prevent permanent "Thinking..." state
+  useEffect(() => {
+    if (!isStreaming) return;
 
-  /**
-   * Assembles the conversation history for the AI request.
-   * Uses store state with a fallback for race conditions (new chats, un-flushed leaf updates).
-   */
-  const assembleHistory = (
-    userMsgId: string,
-    fullContent: string,
-    userMsgMetadata: string | null,
-    attachments: Attachment[],
-  ) => {
-    const latestChat = useAppStore.getState().chats[chatId];
-    let latestThread = latestChat?.currentLeafId
-      ? reconstructThread(latestChat.messages, latestChat.currentLeafId)
-      : [];
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      const timeSinceLastChunk = Date.now() - lastChunkTimeRef.current;
+      const timeSinceStart = Date.now() - pendingRef.current.startTime;
 
-    // Fallback: ensure the current user message is included when the store
-    // hasn't fully flushed the leaf ID update (new chat or race condition).
-    if (!latestThread.some((m) => m.id === userMsgId)) {
-      const currentMsg = latestChat?.messages[userMsgId] || {
-        id: userMsgId,
-        role: "user" as const,
-        content: fullContent,
-        metadata: userMsgMetadata,
-        attachments,
-      };
-      latestThread = [...latestThread, currentMsg as any];
+      const isConnectionError =
+        connectionStatusRef.current === "error" || Boolean(realtimeError);
+      const isStalled = timeSinceStart > 5000 && timeSinceLastChunk > 5000;
+
+      if (isConnectionError || isStalled) {
+        const synced = await syncFromDb();
+        if (synced) {
+          clearInterval(interval);
+          return;
+        }
+
+        if ((isConnectionError && attempts >= 10) || attempts >= 30) {
+          clearInterval(interval);
+          setIsStreaming(false);
+          setStreamingContent(null);
+          setStreamingReasoning(null);
+          setActiveToolCalls([]);
+          if (isConnectionError) {
+            toast.error(
+              "Connection lost to generation stream. Please refresh if response is ready.",
+            );
+          }
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isStreaming, realtimeError, syncFromDb]);
+
+  const isLoading = isStreaming;
+  const isStreamingReasoning =
+    isStreaming && !!streamingReasoning && !streamingContent;
+
+  const stopStream = useCallback(() => {
+    stoppedRef.current = true;
+
+    const partialText = accumulatedTextRef.current;
+    const messageId = assistantMessageIdRef.current || crypto.randomUUID();
+    const chat = useAppStore.getState().chats?.[chatId];
+    const userMsgId =
+      pendingRef.current.userMessageId ||
+      (chat?.currentLeafId && chat.messages[chat.currentLeafId]?.role === "user"
+        ? chat.currentLeafId
+        : null);
+
+    // If there is partial streamed text, commit it immediately so the UI
+    // does not go blank and the content survives a page refresh.
+    if (partialText && userMsgId) {
+      addMessage(chatId, {
+        role: "assistant",
+        content: partialText,
+        parentId: userMsgId,
+        id: messageId,
+        metadata: JSON.stringify({
+          model: pendingRef.current.model,
+          finishReason: "stop",
+        }),
+      });
+      persistMessage(chatId, {
+        id: messageId,
+        role: "assistant",
+        content: partialText,
+        parentId: userMsgId,
+        metadata: JSON.stringify({
+          model: pendingRef.current.model,
+          finishReason: "stop",
+        }),
+      }).catch((err) => {
+        logger.error("Failed to persist stopped message", err);
+      });
     }
 
-    return latestThread.map((m) => ({
-      role: m.role,
-      content: m.content,
-      attachments: m.attachments,
-      metadata: m.metadata ?? undefined,
-    }));
-  };
+    lastChunkTimeRef.current = 0;
+    setIsStreaming(false);
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
+    fetch("/api/chat/stop", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId }),
+    }).catch(() => {});
+  }, [chatId, addMessage]);
 
-  /**
-   * Streams an AI response for a given user message and persists it to the store and database.
-   * Uploads attachments, reconstructs conversation thread, and streams response with tool calls and artifacts.
-   * Shows toast notifications for errors; catches and logs network and parsing errors gracefully.
-   *
-   * @param userMsgId - UUID of the user message triggering this stream.
-   * @param content - User's message content (plain text).
-   * @param parentId - Optional parent message ID for branching conversations.
-   * @param attachments - Optional array of file attachments (images, documents, spreadsheets).
-   * @param model - AI model to use (defaults to empty string, backend falls back to provider default).
-   * @param selectedServerIds - Optional array of MCP server IDs to enable for tools.
-   * @param selectedTools - Optional array of tool identifiers to make available to the AI.
-   * @param selectedPromptId - Optional slash-command prompt ID to prepend to content.
-   * @returns The complete accumulated AI response text on successful stream completion, or accumulated partial text if aborted.
-   * @throws Error when fetch fails (rate limit 429, auth failure 401, or generic stream error) — shows toast and throws.
-   * @throws Error when message persistence fails (shows warning toast but continues streaming).
-   * @throws AbortError when stream is cancelled via stopStream() — returns accumulated content without error.
-   * @see uploadAttachment for file upload details and size limits.
-   */
   const streamResponse = async (
     userMsgId: string,
     content: string,
@@ -247,10 +498,24 @@ export function useStreamResponse(
     selectedPromptId?: string,
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
-  ) => {
-    setIsLoading(true);
-    const controller = new AbortController();
-    setAbortController(controller);
+    selectedSkillIds: string[] = [],
+  ): Promise<string> => {
+    pendingRef.current = {
+      userMessageId: userMsgId,
+      model,
+      startTime: Date.now(),
+    };
+    lastChunkTimeRef.current = Date.now();
+
+    stoppedRef.current = false;
+    accumulatedTextRef.current = "";
+    accumulatedReasoningRef.current = "";
+    assistantMessageIdRef.current = null;
+    activeToolCallsRef.current = [];
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
+    setIsStreaming(true);
 
     // 1. Build metadata object
     const metadataObj = buildMetadata(
@@ -259,7 +524,7 @@ export function useStreamResponse(
       selectedTools,
       selectedAssistantId,
       selectedKbIds,
-      selectedPromptId,
+      selectedSkillIds,
     );
 
     // 2. Resolve prompt content (MCP / slash-command)
@@ -271,17 +536,17 @@ export function useStreamResponse(
     const userMsgMetadata = JSON.stringify(metadataObj);
 
     // 3. Optimistic store insert
-    addMessage(
-      chatId,
-      "user",
-      fullContent,
+    addMessage(chatId, {
+      role: "user",
+      content: fullContent,
       parentId,
-      userMsgId,
-      userMsgMetadata,
+      id: userMsgId,
+      metadata: userMsgMetadata,
       attachments,
-    );
+    });
 
-    // 4. Persist message (non-blocking for stream)
+    // 4. Persist BEFORE the API call — the server reads this row to rebuild
+    //    the thread; a missing row would silently truncate context.
     try {
       await persistMessage(chatId, {
         id: userMsgId,
@@ -291,7 +556,7 @@ export function useStreamResponse(
         metadata: userMsgMetadata ?? undefined,
       });
     } catch (err) {
-      console.error("Failed to persist message:", err);
+      logger.error("Failed to persist message", err);
       toast.error(
         "Message may not have been saved. Please check your connection.",
       );
@@ -306,157 +571,38 @@ export function useStreamResponse(
       updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
     }
 
-    // 6. Assemble conversation history
-    const history = assembleHistory(
-      userMsgId,
-      fullContent,
-      userMsgMetadata,
-      attachments,
-    );
-
-    // 7. Stream the AI response
-    let accumulated = "";
-    let accumulatedReasoning = "";
-
+    // 6. Dispatch background job to Inngest via /api/chat
     try {
-      const requestBody = buildStreamRequestBody({
-        chatId,
-        userMessageId: userMsgId,
-        messages: history,
-        model,
-        selectedServerIds,
-        selectedTools,
-        selectedAssistantId,
-        selectedKbIds,
-      });
-
-      const response = await fetch("/api/chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
+        body: JSON.stringify({
+          chatId,
+          userMessageId: userMsgId,
+          model,
+          selectedServerIds,
+          selectedTools,
+          selectedAssistantId,
+          selectedSkillIds,
+          selectedKbIds,
+        } satisfies StreamRequestOptions),
       });
 
-      if (!response.ok || !response.body) {
-        const errorData = await response.json().catch(() => ({}));
-        const err = new Error(
-          errorData.message || errorData.error || "Stream request failed",
-        ) as any;
-        err.code =
-          errorData.code ||
-          (response.status === 401
-            ? UNAUTHORIZED_ERROR_CODE
-            : response.status === 429
-              ? RATE_LIMIT_ERROR_CODE
-              : undefined);
-        err.status = response.status;
-        throw err;
-      }
-
-      for await (const event of parseSseStream(response.body)) {
-        if (event.type === "reasoning" && event.delta) {
-          accumulatedReasoning += event.delta;
-          setStreamingReasoning(accumulatedReasoning);
-          setIsStreamingReasoning(true);
-        } else if (event.type === "text" && event.delta) {
-          setIsStreamingReasoning(false);
-          accumulated += event.delta;
-          setStreamingContent(accumulated);
-        } else if (
-          event.type === "tool-call" &&
-          event.toolCallId &&
-          event.toolName
-        ) {
-          setIsStreamingReasoning(false);
-          setActiveToolCalls((prev) => [
-            ...prev,
-            {
-              toolCallId: event.toolCallId!,
-              toolName: event.toolName!,
-              args: event.args,
-              status: "calling",
-            },
-          ]);
-        } else if (event.type === "tool-result" && event.toolCallId) {
-          setActiveToolCalls((prev) =>
-            prev.map((tc) =>
-              tc.toolCallId === event.toolCallId
-                ? {
-                    ...tc,
-                    status: "complete" as const,
-                    result: event.result,
-                  }
-                : tc,
-            ),
-          );
-        } else if (event.type === "done" && event.id) {
-          const metadata = event.metadata
-            ? JSON.stringify(event.metadata)
-            : null;
-          addMessage(
-            chatId,
-            "assistant",
-            accumulated,
-            userMsgId,
-            event.id,
-            metadata,
-            undefined,
-            accumulatedReasoning || undefined,
-          );
-
-          // Reset streaming states
-          setStreamingContent(null);
-          setStreamingReasoning(null);
-          setIsStreamingReasoning(false);
-          setActiveToolCalls([]);
-
-          options?.onDone?.(accumulated);
-          return accumulated;
-        } else if (event.type === "error") {
-          const err = new Error(
-            event.message || "An error occurred during generation",
-          ) as any;
-          err.code = event.code;
-          throw err;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (!handleApiError(errorData)) {
+          toast.error(errorData.error || "Failed to generate response");
         }
+        setIsStreaming(false);
       }
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        toast.info("Generation stopped");
-        if (accumulated.trim()) {
-          addMessage(
-            chatId,
-            "assistant",
-            accumulated,
-            userMsgId,
-            undefined,
-            null,
-            undefined,
-            accumulatedReasoning || undefined,
-          );
-        }
-      } else {
-        console.error("Stream error:", err);
-        if (!handleApiError(err)) {
-          toast.error(err.message || "Failed to generate response");
-        }
-
-        addMessage(
-          chatId,
-          "assistant",
-          err.message ||
-            "Sorry, I couldn't generate a response. Please try again.",
-          userMsgId,
-        );
+      if (!handleApiError(err)) {
+        toast.error(err.message || "Failed to generate response");
       }
-    } finally {
-      abortControllerRef.current = null;
-      setStreamingContent(null);
-      setStreamingReasoning(null);
-      setIsStreamingReasoning(false);
-      setActiveToolCalls([]);
-      setIsLoading(false);
+      setIsStreaming(false);
     }
+
+    return "";
   };
 
   return {

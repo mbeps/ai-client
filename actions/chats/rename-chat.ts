@@ -1,0 +1,42 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/drizzle/db";
+import { chat } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { renameChatSchema } from "@/schemas/chat/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
+
+/**
+ * Renames a chat with ownership check.
+ *
+ * @param chatId - The ID of the chat to rename.
+ * @param title - The new title for the chat.
+ * @returns The updated chat record.
+ * @throws Error if session is not authenticated (requireSession call fails).
+ * @throws Error if chatId is not a valid UUID format.
+ * @throws ZodError if title fails schema validation (empty or exceeds max length).
+ * @throws Error if chat does not exist or user does not own it (returns "Chat not found or unauthorized").
+ * @throws Error if database update fails due to constraints or connection issues.
+ */
+export async function renameChat(
+  chatId: string,
+  title: string,
+): Promise<ChatRow> {
+  const session = await requireSession();
+
+  // Validate inputs
+  const validatedChatId = z.string().uuid().parse(chatId);
+  const { title: validatedTitle } = renameChatSchema.parse({ title });
+
+  const [updated] = await db
+    .update(chat)
+    .set({ title: validatedTitle, updatedAt: new Date() })
+    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
+    .returning();
+
+  if (!updated) throw new Error("Not Found");
+
+  return updated;
+}

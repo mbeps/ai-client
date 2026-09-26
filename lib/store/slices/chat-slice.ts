@@ -1,26 +1,22 @@
-import { StateCreator } from "zustand";
-import {
-  getDeepestLeaf,
-  insertMessage,
-  removeMessageSubtree,
-} from "@/lib/chat/message-tree-utils";
-import { createChat } from "@/lib/actions/chats/create-chat";
-import { deleteChat } from "@/lib/actions/chats/delete-chat";
-import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
-import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
-import { deleteMessage as deleteMessageAction } from "@/lib/actions/chats/delete-message";
-import { updateCurrentLeaf as updateCurrentLeafAction } from "@/lib/actions/chats/update-current-leaf";
-import { updateMessageMetadata as updateMessageMetadataAction } from "@/lib/actions/chats/update-message-metadata";
-import { updateChatKnowledgebase } from "@/lib/actions/chats/update-chat-knowledgebase";
+import type { StateCreator } from "zustand";
+import { createChat } from "@/actions/chats/create-chat";
+import { deleteChat } from "@/actions/chats/delete-chat";
+import { deleteMessage as deleteMessageAction } from "@/actions/chats/delete-message";
+import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
+import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
+import { updateChatKnowledgebase } from "@/actions/chats/update-chat-knowledgebase";
+import { updateCurrentLeaf as updateCurrentLeafAction } from "@/actions/chats/update-current-leaf";
+import { updateMessageMetadata as updateMessageMetadataAction } from "@/actions/chats/update-message-metadata";
+import { ALLOWED_SPREADSHEET_TYPES } from "@/config/attachments";
+import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import { insertMessage } from "@/lib/chat/insert-message";
 
-import { mapMessageFromDb } from "../mappers/message-mapper";
+import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
+import { removeSubtree as removeMessageSubtree } from "@/lib/chat/remove-subtree";
 import type { AppState } from "@/types/app/app-state";
-import type { Message } from "@/types/message/message";
-import type { Chat } from "@/types/chat/chat";
-import type { ChatRow } from "@/types/chat/chat-row";
-import type { MessageRow } from "@/types/message/message-row";
-import type { AttachmentRow } from "@/types/attachment/attachment-row";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { Chat } from "@/types/chat/chat";
+import type { Message } from "@/types/message/message";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.
@@ -43,8 +39,9 @@ type ChatSlice = Pick<
   | "moveChatDb"
   | "createChatDb"
   | "deleteChatDb"
-  | "setKnowledgebase"
+  | "setKnowledgebaseDb"
   | "setCurrentLeafDb"
+  | "resetChatState"
 >;
 
 /**
@@ -69,13 +66,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
 
   addMessage: (
     chatId,
-    role,
-    content,
-    parentId,
-    id,
-    metadata,
-    attachments,
-    reasoning,
+    { role, content, parentId, id, metadata, attachments, reasoning },
   ) => {
     const newMessageId = id ?? crypto.randomUUID();
     set((state) => {
@@ -154,7 +145,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await deleteMessageAction(chatId, messageId, newLeafId);
     } catch (error) {
-      set(previous);
+      set({ chats: previous.chats });
       throw error;
     }
   },
@@ -177,7 +168,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateCurrentLeafAction(chatId, leafId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -231,14 +222,32 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateMessageMetadataAction(messageId, metadata);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
   loadChats: (rows, messageRows, attachmentRows) => {
+    const existingChats = get().chats;
+
+    // Group messageRows by chatId
+    const messageRowsByChatId = new Map<string, typeof messageRows>();
+    for (const m of messageRows) {
+      const list = messageRowsByChatId.get(m.chatId);
+      if (list) {
+        list.push(m);
+      } else {
+        messageRowsByChatId.set(m.chatId, [m]);
+      }
+    }
+
     const chats: Record<string, Chat> = {};
 
     for (const row of rows) {
+      const existing = existingChats[row.id];
+      const incomingMsgs = messageRowsByChatId.get(row.id);
+      const hasIncomingMsgs =
+        incomingMsgs !== undefined && incomingMsgs.length > 0;
+
       chats[row.id] = {
         id: row.id,
         title: row.title,
@@ -246,8 +255,10 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         assistantId: row.assistantId ?? undefined,
         knowledgebaseId: row.knowledgebaseId ?? null,
         updatedAt: new Date(row.updatedAt),
-        messages: {},
-        currentLeafId: row.currentLeafId ?? null,
+        messages: hasIncomingMsgs ? {} : (existing?.messages ?? {}),
+        currentLeafId: hasIncomingMsgs
+          ? (row.currentLeafId ?? existing?.currentLeafId ?? null)
+          : (existing?.currentLeafId ?? row.currentLeafId ?? null),
       };
     }
 
@@ -267,9 +278,14 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         .filter((a) => a.messageId === m.id)
         .map((att) => {
           const isImage = att.mimeType.startsWith("image/");
+          const isSpreadsheet = ALLOWED_SPREADSHEET_TYPES.has(att.mimeType);
           return {
             id: att.id,
-            type: isImage ? "image" : "document",
+            type: isImage
+              ? "image"
+              : isSpreadsheet
+                ? "spreadsheet"
+                : "document",
             name: att.name,
             mimeType: att.mimeType,
             sizeBytes: att.size,
@@ -301,9 +317,26 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   upsertChat: (chat) => {
-    set((state) => ({
-      chats: { ...state.chats, [chat.id]: chat },
-    }));
+    set((state) => {
+      const existing = state.chats[chat.id];
+      const hasIncomingMessages =
+        chat.messages && Object.keys(chat.messages).length > 0;
+
+      return {
+        chats: {
+          ...state.chats,
+          [chat.id]: {
+            ...chat,
+            messages: hasIncomingMessages
+              ? chat.messages
+              : (existing?.messages ?? {}),
+            currentLeafId: hasIncomingMessages
+              ? chat.currentLeafId
+              : (existing?.currentLeafId ?? chat.currentLeafId ?? null),
+          },
+        },
+      };
+    });
   },
 
   renameChatDb: async (id, title) => {
@@ -325,7 +358,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await renameChatAction(id, title);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -348,7 +381,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await moveChatAction(id, projectId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
@@ -377,11 +410,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await deleteChat(chatId);
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
   },
 
-  setKnowledgebase: async (chatId, kbId) => {
+  setKnowledgebaseDb: async (chatId, kbId) => {
     const previous = get();
     set((state) => {
       const chat = state.chats[chatId];
@@ -396,7 +429,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
     } catch {
-      set(previous);
+      set({ chats: previous.chats });
     }
+  },
+
+  resetChatState: () => {
+    set({ chats: {} });
   },
 });

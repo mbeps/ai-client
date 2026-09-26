@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailField, passwordField, nameField } from "@/schemas/shared-fields";
+import { emailField, nameField, passwordField } from "@/schemas/shared-fields";
 
 /**
  * Validates sign-up registration form data with email verification enforcement.

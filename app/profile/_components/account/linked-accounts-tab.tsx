@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
+import { auth } from "@/lib/auth/auth";
 import { AccountLinking } from "./account-linking";
 
 /**

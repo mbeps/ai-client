@@ -1,9 +1,9 @@
 "use client";
 
-import { RenameDialog } from "@/components/shared/rename-dialog";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { ResponsiveMenu } from "@/components/shared/responsive-menu";
+import { RenameDialog } from "@/components/shared/rename-dialog";
 import type { MenuItem } from "@/components/shared/responsive-menu";
+import { ResponsiveMenu } from "@/components/shared/responsive-menu";
 
 /**
  * Shared UI pattern for entity option menus: a responsive menu (DropdownMenu on
