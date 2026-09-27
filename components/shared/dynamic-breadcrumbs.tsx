@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useShallow } from "zustand/react/shallow";
 import { getKnowledgebase } from "@/actions/knowledgebases/get-knowledgebase";
+import { listProviders } from "@/actions/providers/list-providers";
 import { getSkill } from "@/actions/skills/get-skill";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
 import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
@@ -183,7 +184,6 @@ export function DynamicBreadcrumbs() {
 
   // Resolve IDs that aren't in state
   React.useEffect(() => {
-    let ignore = false;
     const segments = getPathSegments(pathname);
 
     const resolveAll = async () => {
@@ -207,7 +207,6 @@ export function DynamicBreadcrumbs() {
             !resolutionAttempted.current.has(segment) &&
             !inStore
           ) {
-            resolutionAttempted.current.add(segment);
             const prevSegment = segments[index - 1];
 
             // 1. Check if it's a Run segment (URL: /workflows/transform/[agentId]/[runId])
@@ -257,7 +256,19 @@ export function DynamicBreadcrumbs() {
                 logger.error("Failed to resolve knowledgebase label", err);
               }
             }
-            // 4. Check if it's a Skill segment (URL: /settings/skills/[id])
+            // 4. Check if it's an AI Provider segment (URL: /settings/providers/[id])
+            else if (prevSegment === "providers") {
+              try {
+                const allProviders = await listProviders();
+                const provider = allProviders.find((p) => p.id === segment);
+                if (provider) {
+                  updates[segment] = provider.name;
+                }
+              } catch (err) {
+                logger.error("Failed to resolve provider label", err);
+              }
+            }
+            // 5. Check if it's a Skill segment (URL: /settings/skills/[id])
             else if (prevSegment === "skills") {
               try {
                 const skill = await getSkill(segment);
@@ -272,16 +283,18 @@ export function DynamicBreadcrumbs() {
         }),
       );
 
-      if (!ignore && Object.keys(updates).length > 0) {
+      if (Object.keys(updates).length > 0) {
+        // Only mark as attempted once a label actually lands, so a failed
+        // fetch (or an unmount) retries on the next effect run instead of
+        // permanently falling back to the raw ID.
+        for (const id of Object.keys(updates)) {
+          resolutionAttempted.current.add(id);
+        }
         setResolvedLabels((prev) => ({ ...prev, ...updates }));
       }
     };
 
     resolveAll();
-
-    return () => {
-      ignore = true;
-    };
   }, [
     pathname,
     projects,

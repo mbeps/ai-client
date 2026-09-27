@@ -612,11 +612,7 @@ export function ChatInput({
             </Popover>
           )}
 
-          <ModelSelector
-            value={modelId}
-            onValueChange={setModelId}
-            className="border-none bg-transparent shadow-none hover:bg-accent/50"
-          />
+          <ModelSelector value={modelId} onValueChange={setModelId} />
         </div>
 
         <div className="flex items-center gap-1.5">

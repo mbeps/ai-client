@@ -39,6 +39,11 @@ vi.mock("@/actions/skills/get-skill", () => ({
   }),
 }));
 
+const mockListProviders = vi.fn();
+vi.mock("@/actions/providers/list-providers", () => ({
+  listProviders: (...args: any[]) => mockListProviders(...args),
+}));
+
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
 import { useAppStore } from "@/lib/store";
 
@@ -79,6 +84,40 @@ describe("DynamicBreadcrumbs", () => {
     expect(screen.getByText("Settings")).toBeDefined();
     expect(screen.getByText("Skills")).toBeDefined();
     expect(screen.getByText("AI SDK NextJS")).toBeDefined();
+  });
+
+  it("renders provider name in breadcrumb for /settings/providers/[id]", async () => {
+    const providerId = "0bd3d31b-0d47-4811-952c-a8fca8323ca3";
+    mockListProviders.mockResolvedValue([{ id: providerId, name: "OpenRouter" }]);
+
+    mockPathname.mockReturnValue(`/settings/providers/${providerId}`);
+
+    render(<DynamicBreadcrumbs />);
+
+    expect(await screen.findByText("OpenRouter")).toBeDefined();
+  });
+
+  it("still resolves provider name when store hydration re-runs the effect mid-fetch", async () => {
+    const providerId = "0bd3d31b-0d47-4811-952c-a8fca8323ca3";
+    let resolveProviders: (value: unknown[]) => void = () => {};
+    mockListProviders.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProviders = resolve as (value: unknown[]) => void;
+      }),
+    );
+
+    mockPathname.mockReturnValue(`/settings/providers/${providerId}`);
+
+    const { rerender } = render(<DynamicBreadcrumbs />);
+
+    // Simulate a store slice hydrating while the provider fetch is still in
+    // flight, which previously cancelled the pending label update.
+    useAppStore.setState({ publicMcpServers: [{ id: "srv-1" } as any] });
+    rerender(<DynamicBreadcrumbs />);
+
+    resolveProviders([{ id: providerId, name: "OpenRouter" }]);
+
+    expect(await screen.findByText("OpenRouter")).toBeDefined();
   });
 
   it("renders Step-by-Step Automations in breadcrumb for /workflows/transform", () => {
