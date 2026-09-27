@@ -131,9 +131,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start services (Postgres & MinIO)
-        run: docker compose up -d
-
       - name: Detect package manager
         id: detect-package-manager
         shell: bash
@@ -161,23 +158,9 @@ jobs:
 
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
-      
-      - name: Wait for DB to be ready
-        run: |
-          until docker exec $(docker compose ps -q db) pg_isready -U $DB_USER -d $DB_NAME; do
-            echo "Waiting for database..."
-            sleep 2
-          done
-
-      - name: Run Migrations
-        run: ${{ steps.detect-package-manager.outputs.manager }} run db:push
 
       - name: Build
         run: ${{ steps.detect-package-manager.outputs.manager }} run build
-
-      - name: Shutdown services
-        if: always()
-        run: docker compose down
 
   test:
     name: Test - Node ${{ matrix.node-version }}
