@@ -1,7 +1,7 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,6 +85,31 @@ function ComboboxInput({
       </InputGroupAddon>
       {children}
     </InputGroup>
+  );
+}
+
+function ComboboxFilterInput({
+  className,
+  ...props
+}: ComboboxPrimitive.Input.Props) {
+  return (
+    <div
+      data-slot="combobox-filter"
+      className="flex items-center gap-2 border-b px-3"
+    >
+      <SearchIcon
+        data-slot="combobox-filter-icon"
+        className="pointer-events-none size-4 shrink-0 text-muted-foreground"
+      />
+      <ComboboxPrimitive.Input
+        data-slot="combobox-filter-input"
+        className={cn(
+          "h-9 w-full border-0 bg-transparent text-sm shadow-none outline-none focus-visible:ring-0",
+          className,
+        )}
+        {...props}
+      />
+    </div>
   );
 }
 
@@ -297,6 +322,7 @@ export {
   ComboboxCollection,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxFilterInput,
   ComboboxGroup,
   ComboboxInput,
   ComboboxItem,

@@ -390,8 +390,6 @@ export function ChatInput({
     knowledgebases,
   );
 
-
-
   // -- Model initialisation --
   useEffect(() => {
     if (chatModels.length === 0 || isModelsLoading) return;
@@ -617,7 +615,7 @@ export function ChatInput({
           <ModelSelector
             value={modelId}
             onValueChange={setModelId}
-            showTrigger={false}
+            className="border-none bg-transparent shadow-none hover:bg-accent/50"
           />
         </div>
 
