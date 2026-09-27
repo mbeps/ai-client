@@ -39,6 +39,41 @@ vi.mock("ai", () => ({
   tool: vi.fn((def) => def),
 }));
 
+const mockMcpCleanup = vi.hoisted(() => vi.fn(async () => {}));
+const mockRegisterMcpTools = vi.hoisted(() => vi.fn());
+const abortState = vi.hoisted(() => ({
+  controller: undefined as AbortController | undefined,
+}));
+
+// The real registry hides its AbortController, so abort paths are untestable
+// without this seam. Tests assign `abortState.controller` per scenario.
+vi.mock("@/lib/chat/chat-abort-registry", () => ({
+  chatAbortRegistry: {
+    register: vi.fn(() => abortState.controller),
+    delete: vi.fn(),
+  },
+}));
+
+// Mirrors the real module's observable contract: tools exist only when servers
+// are scoped or the artifact tool is explicitly selected.
+vi.mock("@/lib/chat/register-mcp-tools", () => ({
+  registerMcpTools: mockRegisterMcpTools,
+}));
+
+// Dual export shape per .agents/testing.md: domain-scoped getLogger plus the
+// `logger` facade. Log assertions prove which branch ran.
+const mockLog = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => mockLog),
+  logger: mockLog,
+}));
+
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
 import { inngest } from "@/lib/inngest/client";
 
@@ -46,6 +81,22 @@ describe("generateChatResponse Inngest Function", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUserSettings.mockResolvedValue(null);
+    abortState.controller = new AbortController();
+    mockRegisterMcpTools.mockImplementation(
+      async (
+        _servers: unknown,
+        _selectedTools: unknown,
+        isArtifactToolSelected: boolean,
+      ) => ({
+        mcpTools: isArtifactToolSelected
+          ? { manage_artifact: { description: "artifact" } }
+          : {},
+        toolSourceMap: isArtifactToolSelected
+          ? { manage_artifact: "Internal" }
+          : {},
+        mcpCleanup: mockMcpCleanup,
+      }),
+    );
 
     mockResolveProvider.mockResolvedValue({
       modelId: "gpt-4o",
@@ -500,6 +551,576 @@ describe("generateChatResponse Inngest Function", () => {
       toolCallId: "tc-interrupted",
       toolName: "slow_tool",
       result: { error: "Tool execution was interrupted" },
+    });
+  });
+
+  describe("abort handling", () => {
+    it("skips the start event entirely when already aborted before any emit", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      abortState.controller = controller;
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-pre-aborted",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      // `emit` short-circuits on the aborted signal, so no event is published
+      // (not even the start event).
+      expect(inngest.realtime.publish).not.toHaveBeenCalled();
+      // The already-aborted signal also trips the loop guard on the first
+      // iteration, so the stream loop returns before any chunk is processed.
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Stream loop aborted by user (chatId: {chatId})",
+        { chatId: "chat-pre-aborted" },
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+    });
+
+    it("returns from inside the stream loop when the signal aborts mid-stream", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      // The first chunk yields normally; the stream generator aborts the
+      // controller afterwards, so the second iteration hits the loop guard.
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "partial" };
+          controller.abort();
+          yield { type: "text-delta", text: "unreachable" };
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-loop-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Stream loop aborted by user (chatId: {chatId})",
+        { chatId: "chat-loop-abort" },
+      );
+      // Early return means nothing is persisted and no finish event is emitted
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "text-delta", text: "unreachable" }),
+      );
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+    });
+
+    it("returns after the stream loop when the signal aborts before persisting", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      // The generator aborts the controller as it closes, so the loop itself
+      // never sees an aborted signal on entry and exits normally. The
+      // post-loop guard is then the only check that can stop persistence.
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "first" };
+          controller.abort();
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+
+      const result = await fn({
+        event: {
+          data: {
+            chatId: "chat-post-loop-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(result).toBeUndefined();
+      // The first chunk was emitted, then the guard returned before persisting
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        { type: "text-delta", text: "first" },
+      );
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Chat generation cleanly aborted by user (chatId: {chatId})",
+        { chatId: "chat-post-loop-abort" },
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+      expect(mockMcpCleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns without emitting an error when the catch block sees an aborted signal", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      mockLoadChatContext.mockImplementationOnce(async () => {
+        controller.abort();
+        throw new Error("Boom after abort");
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      const result = await fn({
+        event: {
+          data: {
+            chatId: "chat-catch-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Chat generation cleanly aborted by user (chatId: {chatId})",
+        { chatId: "chat-catch-abort" },
+      );
+      // The abort path must not surface an error event to the client
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "error" }),
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      // registration never completed, so the default no-op cleanup is used
+      expect(mockMcpCleanup).not.toHaveBeenCalled();
+    });
+
+    it("treats an AbortError-named error as a clean abort when the signal is not aborted", async () => {
+      const abortError = new Error("The operation was aborted");
+      abortError.name = "AbortError";
+      mockLoadChatContext.mockRejectedValueOnce(abortError);
+
+      const fn = (generateChatResponse as any).fn;
+
+      const result = await fn({
+        event: {
+          data: {
+            chatId: "chat-abort-error-name",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Chat generation cleanly aborted by user (chatId: {chatId})",
+        { chatId: "chat-abort-error-name" },
+      );
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "error" }),
+      );
+    });
+  });
+
+  describe("tool chunk normalisation", () => {
+    const runWithChunks = async (
+      chatId: string,
+      chunks: Array<Record<string, unknown>>,
+    ) => {
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          for (const chunk of chunks) yield chunk;
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId,
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+    };
+
+    it("falls back to `output` when a tool-result chunk has no `result` field", async () => {
+      await runWithChunks("chat-output-fallback", [
+        {
+          type: "tool-call",
+          toolCallId: "tc-1",
+          toolName: "fetch_api",
+          args: { endpoint: "/a" },
+        },
+        {
+          type: "tool-result",
+          toolCallId: "tc-1",
+          toolName: "fetch_api",
+          output: { ok: true, value: 42 },
+        },
+      ]);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "tool-result",
+          toolCallId: "tc-1",
+          result: { ok: true, value: 42 },
+        }),
+      );
+
+      const metadata = JSON.parse(
+        mockPersistResponse.mock.calls.find(
+          (c: any[]) => c[0]?.chatId === "chat-output-fallback",
+        )[0].metadata,
+      );
+      // the `output` fallback must also feed the persisted toolResults
+      expect(metadata.toolResults[0].result).toEqual({ ok: true, value: 42 });
+    });
+
+    it("ignores a tool-result chunk with no matching tool-call and still emits it", async () => {
+      await runWithChunks("chat-orphan-result", [
+        {
+          type: "tool-result",
+          toolCallId: "tc-unknown",
+          toolName: "orphan_tool",
+          result: { ok: true },
+        },
+      ]);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "tool-result",
+          toolCallId: "tc-unknown",
+          result: { ok: true },
+        }),
+      );
+      // No tool call was recorded, so there is nothing to persist
+      const metadata = JSON.parse(
+        mockPersistResponse.mock.calls.find(
+          (c: any[]) => c[0]?.chatId === "chat-orphan-result",
+        )[0].metadata,
+      );
+      expect(metadata.toolCalls).toEqual([]);
+      expect(metadata.toolResults).toEqual([]);
+    });
+
+    it("stringifies a tool-error whose throwable is a plain object", async () => {
+      await runWithChunks("chat-err-object", [
+        {
+          type: "tool-call",
+          toolCallId: "tc-1",
+          toolName: "flaky",
+          args: {},
+        },
+        {
+          type: "tool-error",
+          toolCallId: "tc-1",
+          toolName: "flaky",
+          error: { statusCode: 500, reason: "upstream exploded" },
+        },
+      ]);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "tool-result",
+          toolCallId: "tc-1",
+          result: { error: '{"statusCode":500,"reason":"upstream exploded"}' },
+        }),
+      );
+
+      const metadata = JSON.parse(
+        mockPersistResponse.mock.calls.find(
+          (c: any[]) => c[0]?.chatId === "chat-err-object",
+        )[0].metadata,
+      );
+      expect(metadata.toolResults[0].result).toEqual({
+        error: '{"statusCode":500,"reason":"upstream exploded"}',
+      });
+    });
+
+    it("uses the raw string when a tool-error throwable is a string", async () => {
+      await runWithChunks("chat-err-string", [
+        {
+          type: "tool-call",
+          toolCallId: "tc-1",
+          toolName: "flaky",
+          args: {},
+        },
+        {
+          type: "tool-error",
+          toolCallId: "tc-1",
+          toolName: "flaky",
+          error: "Tool timed out after 30s",
+        },
+      ]);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "tool-result",
+          toolCallId: "tc-1",
+          result: { error: "Tool timed out after 30s" },
+        }),
+      );
+    });
+
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+    ])(
+      "falls back to the default message when a tool-error throwable is %s",
+      async (_label, errorValue) => {
+        await runWithChunks(`chat-err-${_label}`, [
+          {
+            type: "tool-call",
+            toolCallId: "tc-1",
+            toolName: "flaky",
+            args: {},
+          },
+          {
+            type: "tool-error",
+            toolCallId: "tc-1",
+            toolName: "flaky",
+            error: errorValue,
+          },
+        ]);
+
+        // JSON.stringify('Tool execution failed') yields a quoted string
+        expect(inngest.realtime.publish).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            type: "tool-result",
+            toolCallId: "tc-1",
+            result: { error: '"Tool execution failed"' },
+          }),
+        );
+      },
+    );
+
+    it("emits a tool-result for a tool-error chunk with no matching tool-call", async () => {
+      await runWithChunks("chat-err-orphan", [
+        {
+          type: "tool-error",
+          toolCallId: "tc-orphan",
+          toolName: "unknown_tool",
+          error: new Error("nope"),
+        },
+      ]);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "tool-result",
+          toolCallId: "tc-orphan",
+          result: { error: "nope" },
+        }),
+      );
+      const metadata = JSON.parse(
+        mockPersistResponse.mock.calls.find(
+          (c: any[]) => c[0]?.chatId === "chat-err-orphan",
+        )[0].metadata,
+      );
+      expect(metadata.toolCalls).toEqual([]);
+    });
+  });
+
+  describe("thread and tool registration variants", () => {
+    it("handles thread messages with no attachments field at all", async () => {
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "msg-1", role: "user", content: "no attachments key" },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-no-attachments",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      // `m.attachments ?? []` yields no file attachments, so no file-url tool
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({ tools: undefined }),
+      );
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ chatId: "chat-no-attachments" }),
+      );
+    });
+
+    it("passes an empty tool set when MCP tools exist but a file tool is absent", async () => {
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "msg-1", role: "user", content: "hi", attachments: [] },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-mcp-only",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            selectedTools: ["internal:tool:manage_artifact"],
+          },
+        },
+      });
+
+      const tools = mockStreamText.mock.calls[0][0].tools;
+      // only the MCP-provided artifact tool, no get_file_url or load_skill
+      expect(Object.keys(tools)).toEqual(["manage_artifact"]);
+    });
+
+    it("drops attachments that have no storage key when building file tools", async () => {
+      mockLoadThread.mockResolvedValueOnce([
+        {
+          id: "msg-1",
+          role: "user",
+          content: "mixed",
+          attachments: [
+            { id: "a-1", name: "kept.xlsx", key: "uploads/kept.xlsx", type: "spreadsheet" },
+            { id: "a-2", name: "orphan.csv", type: "spreadsheet" },
+          ],
+        },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-key-filter",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      const tools = mockStreamText.mock.calls[0][0].tools;
+      expect(tools.get_file_url).toBeDefined();
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          instructions: expect.stringContaining("kept.xlsx"),
+        }),
+      );
+      expect(mockStreamText.mock.calls[0][0].instructions).not.toContain(
+        "orphan.csv",
+      );
+    });
+  });
+
+  describe("outer error handling", () => {
+    it("rethrows a non-Error throwable and emits a generic message", async () => {
+      const thrown = { code: "E_PROVIDER", detail: "socket hang up" };
+      mockLoadChatContext.mockRejectedValueOnce(thrown);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-non-error",
+              userId: "user-1",
+              userMessageId: "msg-1",
+              model: "gpt-4o",
+            },
+          },
+        }),
+      ).rejects.toBe(thrown);
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "error",
+          message: "Generation failed",
+          code: "E_PROVIDER",
+        }),
+      );
+      expect(mockLog.error).toHaveBeenCalledWith(
+        "Chat generation failed in Inngest (chatId: {chatId}): {error}",
+        { chatId: "chat-non-error", error: "Generation failed" },
+      );
+    });
+
+    it("logs a stringified publish failure when the realtime channel throws a non-Error", async () => {
+      (inngest.realtime.publish as any).mockRejectedValueOnce("redis exploded");
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-publish-string",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Failed to publish chat stream event to Inngest Realtime",
+        { error: "redis exploded", type: "start" },
+      );
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("calls the MCP cleanup returned by registerMcpTools even on failure", async () => {
+      mockLoadChatContext.mockRejectedValueOnce(new Error("Context load failed"));
+
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-cleanup-on-error",
+              userId: "user-1",
+              userMessageId: "msg-1",
+              model: "gpt-4o",
+            },
+          },
+        }),
+      ).rejects.toThrow("Context load failed");
+
+      // registerMcpTools never ran, so the no-op default must be used
+      expect(mockMcpCleanup).not.toHaveBeenCalled();
     });
   });
 });

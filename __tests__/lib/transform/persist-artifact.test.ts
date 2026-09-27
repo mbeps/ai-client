@@ -33,6 +33,47 @@ vi.mock("@/lib/storage/upload-object", () => ({
   uploadObject: uploadObjectMock,
 }));
 
+const logMock = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => logMock),
+  logger: logMock,
+}));
+
+// Pass-through spies over the real xlsx so sheet naming / empty-sheet
+// fallbacks can be asserted directly instead of being inferred.
+const xlsxSpies = vi.hoisted(() => ({
+  aoaToSheet: vi.fn(),
+  bookAppendSheet: vi.fn(),
+}));
+
+vi.mock("xlsx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("xlsx")>();
+  return {
+    ...actual,
+    utils: {
+      ...actual.utils,
+      aoa_to_sheet: (...args: unknown[]) => {
+        xlsxSpies.aoaToSheet(...args);
+        return (actual.utils.aoa_to_sheet as (...a: unknown[]) => unknown)(
+          ...args,
+        );
+      },
+      book_append_sheet: (...args: unknown[]) => {
+        xlsxSpies.bookAppendSheet(...args);
+        return (
+          actual.utils.book_append_sheet as (...a: unknown[]) => unknown
+        )(...args);
+      },
+    },
+  };
+});
+
 import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
@@ -47,6 +88,8 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
     chainable.delete.mockReturnValue(chainable);
     chainable.where.mockImplementation(() => chainable);
     uploadObjectMock.mockResolvedValue(undefined);
+    xlsxSpies.aoaToSheet.mockClear();
+    xlsxSpies.bookAppendSheet.mockClear();
   });
 
   it("returns null for non-spreadsheet artifact", async () => {
@@ -286,5 +329,111 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
     );
 
     expect(result).toBeNull();
+  });
+
+  it("returns null when artifact has no type at all (type ?? '' falls back)", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        // no `type` key at all
+        artifact: { content: JSON.stringify([["A"]]) },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    // "" !== "spreadsheet" so it bails before touching xlsx or the DB
+    expect(result).toBeNull();
+    expect(xlsxSpies.aoaToSheet).not.toHaveBeenCalled();
+    expect(chainable.insert).not.toHaveBeenCalled();
+  });
+
+  it("returns null when artifact has no content at all (content ?? '' falls back)", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        // no `content` key at all
+        artifact: { type: "spreadsheet" },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).toBeNull();
+    expect(xlsxSpies.aoaToSheet).not.toHaveBeenCalled();
+    expect(chainable.insert).not.toHaveBeenCalled();
+  });
+
+  it("names the sheet 'Sheet1' when parsed .data object has no name", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          // `data` present, `name` absent
+          content: JSON.stringify({ data: [["a", "b"]] }),
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(xlsxSpies.bookAppendSheet).toHaveBeenCalledTimes(1);
+    // 3rd arg is the sheet name
+    expect(xlsxSpies.bookAppendSheet.mock.calls[0][2]).toBe("Sheet1");
+  });
+
+  it("passes an empty array to aoa_to_sheet when a sheet entry has no data", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "spreadsheet",
+          // second sheet entry has no `data` key
+          content: JSON.stringify({
+            sheets: [{ name: "HasData", data: [[1, 2]] }, { name: "NoData" }],
+          }),
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(xlsxSpies.aoaToSheet).toHaveBeenCalledTimes(2);
+    expect(xlsxSpies.aoaToSheet.mock.calls[0][0]).toEqual([[1, 2]]);
+    expect(xlsxSpies.aoaToSheet.mock.calls[1][0]).toEqual([]);
+    // sheet name still resolves via the defined arm
+    expect(xlsxSpies.bookAppendSheet.mock.calls[1][2]).toBe("NoData");
+  });
+
+  it("logs a non-Error throwable verbatim when the artifact is not JSON-parseable", async () => {
+    // XLSX.write throws a plain (non-Error) value for some inputs; force it
+    // so the String(err) arm of the outer catch is exercised.
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        // A Proxy whose JSON.parse-relevant property access throws a string.
+        artifact: {
+          type: "spreadsheet",
+          get content(): string {
+            throw "raw-string-boom";
+          },
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).toBeNull();
+    expect(logMock.warn).toHaveBeenCalled();
+    const loggedPayload = logMock.warn.mock.calls.at(-1)?.[1];
+    expect(loggedPayload.error).toBe("raw-string-boom");
   });
 });

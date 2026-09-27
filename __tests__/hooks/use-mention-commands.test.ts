@@ -804,6 +804,251 @@ describe("useMentionCommands", () => {
       expect(mcpItems).toHaveLength(SAMPLE_MCP_PROMPTS.length);
     });
   });
+
+  // ── Additional branch coverage ──────────────────────────────────────────
+
+  describe("additional branch coverage", () => {
+    it("matches a skill on displayName alone and on description alone", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-display",
+            name: "alpha-helper",
+            displayName: "Gamma Helper",
+            description: "nothing relevant",
+            enabled: true,
+          },
+          {
+            id: "sk-desc",
+            name: "bravo-helper",
+            displayName: "Zeta Helper",
+            description: "does omega things",
+            enabled: true,
+          },
+          {
+            id: "sk-nodesc",
+            name: "charlie-helper",
+            displayName: "Yankee Helper",
+            description: undefined,
+            enabled: true,
+          },
+          {
+            id: "sk-off",
+            name: "gamma-helper",
+            displayName: "Gamma Helper",
+            description: "nothing relevant",
+            enabled: false,
+          },
+        ] as any,
+      });
+      const setInput = vi.fn();
+      const { result, rerender } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/gamma", 6));
+      });
+      // Name does not match; displayName does. The disabled twin is excluded.
+      expect(result.current.filteredItems.map((i: any) => i.id)).toEqual([
+        "sk-display",
+      ]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/omega", 7));
+      });
+      // Neither name nor displayName match; only description does.
+      expect(result.current.filteredItems.map((i: any) => i.id)).toEqual([
+        "sk-desc",
+      ]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/yankee", 7));
+      });
+      // description is undefined — the optional call must not throw.
+      expect(result.current.filteredItems.map((i: any) => i.id)).toEqual([
+        "sk-nodesc",
+      ]);
+
+      rerender();
+    });
+
+    it("matches an MCP prompt on serverName alone and on description alone", () => {
+      useAppStore.setState({
+        mcpPrompts: [
+          {
+            serverId: "s1",
+            serverName: "Omega Server",
+            name: "alpha",
+            description: "nothing",
+          },
+          {
+            serverId: "s2",
+            serverName: "Zeta Server",
+            name: "bravo",
+            description: "gamma description",
+          },
+        ] as any,
+      });
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/omega", 6));
+      });
+      expect(
+        result.current.filteredItems.filter((i: any) => i.isMcp),
+      ).toHaveLength(1);
+      expect((result.current.filteredItems[0] as any).sourceServer).toBe(
+        "Omega Server",
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/gamma", 6));
+      });
+      expect(
+        result.current.filteredItems.filter((i: any) => i.isMcp),
+      ).toHaveLength(1);
+      expect((result.current.filteredItems[0] as any).sourceServer).toBe(
+        "Zeta Server",
+      );
+    });
+
+    it("treats a missing selectionStart as cursor position 0", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: "some text", selectionStart: null },
+        } as unknown as React.ChangeEvent<HTMLTextAreaElement>);
+      });
+
+      // Cursor lands at 0, so no trigger is ever "before the cursor".
+      expect(result.current.openTrigger).toBeNull();
+      expect(setInput).toHaveBeenCalledWith("some text");
+    });
+
+    it("does not edit the input when the trigger is absent from the text before the cursor", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("no trigger here", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.setOpenTrigger("/");
+      });
+      expect(result.current.openTrigger).toBe("/");
+
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0]);
+      });
+
+      expect(setInput).not.toHaveBeenCalled();
+      expect(result.current.openTrigger).toBe("/");
+      expect(result.current.selectedPrompt).toBeNull();
+    });
+
+    it("closes the palette without selecting when a '/' item is neither a skill nor a prompt", () => {
+      const setInput = vi.fn();
+      const onSelectSkill = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("/sum", setInput, textareaRef, null, undefined, undefined, true, undefined, onSelectSkill),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/sum", 4));
+      });
+      act(() => {
+        result.current.handleSelect({ id: "other", name: "plain" } as any);
+      });
+
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(onSelectSkill).not.toHaveBeenCalled();
+      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("closes the palette without selecting when an '@' item is not an assistant", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("@code", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("@code", 5));
+      });
+      act(() => {
+        // A knowledgebase-shaped item: not an assistant, and the '#'
+        // branch of the dispatch chain must not run for a '@' trigger.
+        result.current.handleSelect(SAMPLE_KNOWLEDGEBASES[0] as any);
+      });
+
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(result.current.selectedAssistant).toBeNull();
+      expect(result.current.selectedKnowledgebase).toBeNull();
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("closes the palette without selecting when a '#' item is not a knowledgebase", () => {
+      const setInput = vi.fn();
+      const onSelectKnowledgebase = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "#proj",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          onSelectKnowledgebase,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("#proj", 5));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0] as any);
+      });
+
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(onSelectKnowledgebase).not.toHaveBeenCalled();
+      expect(result.current.selectedKnowledgebase).toBeNull();
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("consumes Enter without selecting when the filtered list is empty", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("/zzz", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/zzz", 4));
+      });
+      expect(result.current.filteredItems).toHaveLength(0);
+      setInput.mockClear();
+
+      let handled = false;
+      act(() => {
+        handled = result.current.handleKeyDown(makeKeyEvent("Enter"));
+      });
+
+      expect(handled).toBe(true);
+      expect(setInput).not.toHaveBeenCalled();
+      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.openTrigger).toBe("/");
+    });
+  });
 });
 
 

@@ -191,4 +191,30 @@ describe("extractArtifactFromToolResult", () => {
       content: "",
     });
   });
+
+  it("returns null when a stringified result parses to a JSON number", () => {
+    expect(
+      extractArtifactFromToolResult({
+        toolName: "manage_artifact",
+        result: JSON.stringify(42),
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when a stringified result parses to a JSON string", () => {
+    expect(
+      extractArtifactFromToolResult({
+        toolName: "manage_artifact",
+        result: JSON.stringify("just a message"),
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when both result and output are absent", () => {
+    // `record.result ?? record.output` yields undefined, which is falsy, so the
+    // `!parsed` side of the guard fires rather than the typeof check.
+    expect(
+      extractArtifactFromToolResult({ toolName: "manage_artifact" }),
+    ).toBeNull();
+  });
 });

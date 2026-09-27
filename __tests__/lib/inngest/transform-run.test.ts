@@ -44,6 +44,20 @@ vi.mock("@/lib/transform/lifecycle-service", () => ({
   validateStepOrders: vi.fn(),
 }));
 
+// Dual export shape per .agents/testing.md. The emit catch only surfaces its
+// chosen message through the log, so the log proves which ternary arm ran.
+const mockLog = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => mockLog),
+  logger: mockLog,
+}));
+
 import { executeTransformRun } from "@/lib/inngest/functions/transform-run";
 import { inngest } from "@/lib/inngest/client";
 
@@ -532,5 +546,226 @@ describe("executeTransformRun Inngest Workflow", () => {
     });
 
     expect(result).toEqual({ success: true, completed: true });
+  });
+
+  it("logs a stringified non-Error throwable when realtime publish rejects", async () => {
+    const publishSpy = vi
+      .spyOn(inngest.realtime, "publish")
+      .mockRejectedValueOnce("realtime channel closed");
+
+    const runRow = {
+      id: "run-nonerror",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([]),
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: { runId: "run-nonerror", userId: "user-1", startFromStep: 0 },
+      },
+      step: mockStep,
+    });
+
+    // Asserts the `String(err)` arm rather than `err.message`.
+    expect(mockLog.warn).toHaveBeenCalledWith(
+      "Failed to publish realtime event (runId: {runId}): {err}",
+      { runId: "run-nonerror", err: "realtime channel closed" },
+    );
+    // The failure is swallowed, so the run still finalises.
+    expect(result).toEqual({ success: true, completed: true });
+    expect(publishSpy).toHaveBeenCalled();
+  });
+
+  it("starts at step 0 when startFromStep is absent from the event", async () => {
+    const runRow = {
+      id: "run-nostart",
+      agentId: "agent-nostart",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-nostart",
+      requiresFileUpload: false,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0 },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 3) return Promise.resolve([runRow]);
+      if (selectCall === 4) return Promise.resolve([agentRow]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      currentOutputAttachmentIds: ["out-1"],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      // `startFromStep` deliberately omitted, so `?? 0` applies.
+      event: { data: { runId: "run-nostart", userId: "user-1" } },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    // The single step must have run, proving the loop began at index 0
+    // rather than being skipped.
+    expect(mockRunSteps).toHaveBeenCalledTimes(1);
+    expect(mockRunSteps).toHaveBeenCalledWith(
+      expect.objectContaining({ startFromStep: 0 }),
+    );
+    expect(mockStep.run).toHaveBeenCalledWith(
+      "execute-step-0",
+      expect.any(Function),
+    );
+  });
+
+  it("falls back to the persisted outputAttachmentIds when no step produced any", async () => {
+    const runRow = {
+      id: "run-fallback",
+      agentId: "agent-fallback",
+      currentStepIndex: 0,
+      inputAttachmentIds: null,
+      outputAttachmentIds: null,
+    };
+    const agentRow = {
+      id: "agent-fallback",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s0", name: "Step 0", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      // 1 init run, 2 init agent, 3 step run, 4 step agent, 5 finalize run
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 4) return Promise.resolve([agentRow]);
+      if (selectCall === 5) {
+        return Promise.resolve([{ ...runRow, outputAttachmentIds: ["stored-1"] }]);
+      }
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      // No attachments produced, so finalOutputAttachmentIds stays empty and
+      // the finalize step must read them off the run row instead.
+      currentOutputAttachmentIds: [],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await fn({
+      event: {
+        data: {
+          runId: "run-fallback",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    // Assert the DB write, not just the emit: proves the fallback arm fed
+    // `outputIds` rather than the (empty) step result.
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "completed",
+        outputAttachmentIds: ["stored-1"],
+      }),
+    );
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "transform-complete",
+        runId: "run-fallback",
+        outputAttachmentIds: ["stored-1"],
+      }),
+    );
+  });
+
+  it("defaults the persisted output attachment ids to an empty list when the run row is missing", async () => {
+    const runRow = {
+      id: "run-missing-row",
+      agentId: "agent-missing-row",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-missing-row",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s0", name: "Step 0", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 4) return Promise.resolve([agentRow]);
+      // Finalize lookup finds nothing, so `finalRun?.outputAttachmentIds`
+      // must fall through to `?? []`.
+      if (selectCall === 5) return Promise.resolve([]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      currentOutputAttachmentIds: [],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await fn({
+      event: {
+        data: {
+          runId: "run-missing-row",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ outputAttachmentIds: [] }),
+    );
   });
 });

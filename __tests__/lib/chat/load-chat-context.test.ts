@@ -244,4 +244,51 @@ describe("loadChatContext KB ownership", () => {
 
     expect(ctx.servers).toEqual([]);
   });
+
+  it("returns a null assistantRow when the assistant lookup matches no row", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: null,
+        assistantId: "asst-missing",
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+      },
+    ]);
+    // The assistant query runs first inside Promise.all; an empty result set
+    // selects the `?? null` arm rather than `rows[0]`.
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
+    chainable.__queueWhere([]); // user skills
+
+    const ctx = await loadChatContext("chat-1", "user-1");
+
+    expect(ctx.assistantRow).toBeNull();
+  });
+
+  it("returns the assistant prompt when the lookup matches a row", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: null,
+        assistantId: "asst-1",
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+      },
+    ]);
+    chainable.__queueWhere([{ prompt: "Be terse" }]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+
+    const ctx = await loadChatContext("chat-1", "user-1");
+
+    // Pins the `rows[0]` arm so the null test above is meaningful.
+    expect(ctx.assistantRow).toEqual({ prompt: "Be terse" });
+  });
 });

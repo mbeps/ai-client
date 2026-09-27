@@ -41,6 +41,36 @@ describe("splitRecursive", () => {
     expect(chunks.length).toBeGreaterThan(1);
   });
 
+  it("keeps the carried overlap when it still fits inside chunkSize", () => {
+    // The flush guard `piece.length > chunkSize || current.length >= chunkSize`
+    // must be false for the overlap to survive: the new piece alone fits and the
+    // carried tail is still under the target. Here current is 90 A's, the
+    // incoming piece pushes the candidate over 100, so the carry branch runs —
+    // and the guard must decline to flush.
+    const current = "A".repeat(90);
+    const piece = "B".repeat(20);
+    const tail = "C".repeat(5);
+    const chunks = splitRecursive(
+      [current, piece, tail].join("\n"),
+      ["\n"],
+      100,
+      10,
+    );
+
+    // First chunk flushed in full, second keeps the 10-char overlap tail.
+    expect(chunks).toEqual([current, `${"A".repeat(10)}\n${piece}\n${tail}`]);
+  });
+
+  it("does not push empty slices when chunkSize is zero", () => {
+    // Force-split path runs with chunkSize 0, so piece.slice(i, i + 0) is
+    // always "". The `if (slice)` guard must reject every one of them, so no
+    // empty string is ever pushed.
+    const chunks = splitRecursive("abc", [""], 0, 0);
+
+    expect(chunks).toEqual([]);
+    expect(chunks.every((c) => c.length > 0)).toBe(true);
+  });
+
   it("covers all content across chunks", () => {
     const text = "alpha beta\ngamma delta\n\nepsilon zeta. eta theta";
     const chunks = splitRecursive(text, ["\n\n", "\n", ". ", " ", ""], 15, 4);

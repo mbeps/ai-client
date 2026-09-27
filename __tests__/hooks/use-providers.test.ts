@@ -156,5 +156,28 @@ describe("useProviders hook", () => {
 
     expect(result.current.error).toBe("Failed to load providers");
   });
+
+  it("falls back to an empty cached-length when the providers cache is undefined", async () => {
+    vi.mocked(getProviderRegistryCachedData).mockReturnValue(undefined);
+    vi.mocked(isProviderRegistryCacheFresh).mockReturnValue(true);
+    vi.mocked(subscribeProviderRegistryCache).mockReturnValue(() => {});
+    vi.mocked(fetchProviderRegistryWithCache).mockResolvedValue([
+      { id: "prov-1", name: "OpenAI", isEnabled: true },
+    ]);
+
+    const { result } = renderHook(() => useProviders());
+
+    // undefined?.length ?? 0 → 0 → hasCached false → fetches even though
+    // the cache is reported fresh.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(fetchProviderRegistryWithCache).toHaveBeenCalledWith(
+      "providers",
+      expect.any(Function),
+      { force: false },
+    );
+    expect(result.current.providers).toHaveLength(1);
+  });
 });
 

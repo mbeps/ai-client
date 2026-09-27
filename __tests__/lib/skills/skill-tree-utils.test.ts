@@ -90,6 +90,47 @@ describe("skill-tree-utils", () => {
       expect(tree).toHaveLength(61);
     });
 
+    // Exercises the comparator against a root-level tree containing many
+    // folders and files, so the sort performs a large number of comparisons
+    // rather than the single comparison an empty file list produces.
+    it("pins root SKILL.md first when sorting a mixed folder and file tree", () => {
+      const files: SkillBundledFile[] = [
+        { path: "zeta.txt", content: "z" },
+        { path: "references/guide.md", content: "g" },
+        { path: "assets/logo.svg", content: "l" },
+        { path: "alpha.txt", content: "a" },
+        { path: "scripts/run.sh", content: "s" },
+        { path: "docs/api/endpoints.md", content: "e" },
+        { path: "beta.md", content: "b" },
+      ];
+
+      const tree = buildSkillTree(files);
+
+      expect(tree[0]).toEqual({
+        id: "SKILL.md",
+        name: "SKILL.md",
+        path: "SKILL.md",
+        type: "file",
+        isRootSkillMd: true,
+      });
+
+      // Folders sort before files; files sort alphabetically after SKILL.md.
+      expect(tree.map((n) => n.name)).toEqual([
+        "SKILL.md",
+        "assets",
+        "docs",
+        "references",
+        "scripts",
+        "alpha.txt",
+        "beta.md",
+        "zeta.txt",
+      ]);
+
+      // Exactly one root SKILL.md, and it is not duplicated into any folder.
+      expect(tree.filter((n) => n.isRootSkillMd)).toHaveLength(1);
+      expect(tree.slice(1).every((n) => n.isRootSkillMd === undefined)).toBe(true);
+    });
+
     it("ignores duplicate or SKILL.md inside files array", () => {
       const files: SkillBundledFile[] = [
         { path: "SKILL.md", content: "duplicate" },
@@ -292,6 +333,38 @@ describe("skill-tree-utils", () => {
       const tree = buildSkillTree(files);
       expect(tree[0].name).toBe("SKILL.md");
       expect(tree[1].name).toBe("a.txt");
+    });
+
+    it("keeps the root SKILL.md node first even when a root file sorts before it", () => {
+      // The comparator short-circuits on isRootSkillMd, so SKILL.md wins the
+      // sort regardless of name or type ordering. "!SKILL.md".localeCompare("a.txt")
+      // is positive, so without the early return SKILL.md would sort second.
+      const files: SkillBundledFile[] = [
+        { path: "!bang.txt", content: "bang" },
+        { path: "a.txt", content: "a" },
+      ];
+      const tree = buildSkillTree(files);
+
+      expect(tree.map((n) => n.name)).toEqual([
+        "SKILL.md",
+        "!bang.txt",
+        "a.txt",
+      ]);
+      expect(tree[0].isRootSkillMd).toBe(true);
+    });
+
+    it("sorts folders ahead of files while still pinning SKILL.md at the root", () => {
+      // Exercises the b.isRootSkillMd arm: SKILL.md is reached as the *second*
+      // comparator argument when a sibling sorts ahead of it.
+      const files: SkillBundledFile[] = [
+        { path: "zzz/deep.txt", content: "deep" },
+        { path: "zzz.txt", content: "z" },
+      ];
+      const tree = buildSkillTree(files);
+
+      expect(tree.map((n) => n.name)).toEqual(["SKILL.md", "zzz", "zzz.txt"]);
+      expect(tree[1].type).toBe("folder");
+      expect(tree[2].type).toBe("file");
     });
   });
 });

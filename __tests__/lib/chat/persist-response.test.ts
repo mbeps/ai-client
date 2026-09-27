@@ -86,4 +86,42 @@ describe("persistAssistantResponse", () => {
     // Since returning is [], the update chat block should NOT be called
     expect(chainable.update).not.toHaveBeenCalled();
   });
+
+  it("skips insertion when the client already persisted a partial reply for the parent", async () => {
+    chainable.insert.mockClear();
+    chainable.update.mockClear();
+    // A sibling assistant row already exists for this parentId (user pressed Stop).
+    chainable.limit.mockResolvedValueOnce([{ id: "msg-partial" }]);
+
+    await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-new",
+      content: "Full streamed answer",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(chainable.limit).toHaveBeenCalledOnce();
+    // The early return must skip both the insert and the chat leaf update.
+    expect(chainable.insert).not.toHaveBeenCalled();
+    expect(chainable.values).not.toHaveBeenCalled();
+    expect(chainable.update).not.toHaveBeenCalled();
+  });
+
+  it("does not query for an existing reply when parentId is undefined", async () => {
+    chainable.limit.mockClear();
+    chainable.insert.mockClear();
+
+    await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-3",
+      content: "First message",
+      parentId: undefined,
+      metadata: null,
+    });
+
+    // The `if (parentId)` guard skips the lookup entirely for a root message.
+    expect(chainable.limit).not.toHaveBeenCalled();
+    expect(chainable.insert).toHaveBeenCalledOnce();
+  });
 });

@@ -153,6 +153,28 @@ describe("transform run actions", () => {
       );
     });
 
+    it("normalises an empty-string inputAttachmentIds to an empty array", async () => {
+      const mockAgent = { id: agentId, userId };
+      const createdRun = { id: runId, agentId, userId, status: "pending" };
+
+      chainable.then = (onFulfilled: any) => Promise.resolve([mockAgent]).then(onFulfilled);
+      chainable.returning.mockResolvedValueOnce([createdRun]);
+
+      // "" is a valid string for the union, but falsy and not an array, so the
+      // ternary must fall through to the `: []` arm rather than `["" ]`.
+      const result = await createTransformRun({
+        agentId,
+        inputAttachmentIds: "" as any,
+      });
+
+      expect(result).toEqual(createdRun);
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inputAttachmentIds: [],
+        }),
+      );
+    });
+
     it("creates a transform run with default dryRun and no attachments", async () => {
       const mockAgent = { id: agentId, userId };
       const createdRun = { id: runId, agentId, userId, status: "pending", dryRun: false };

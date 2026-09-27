@@ -175,6 +175,58 @@ describe("useUserModels hook", () => {
     expect(bothResult.current.models[0].modelType).toBe("both");
   });
 
+  // The unknown "custom-unknown" modelType never reaches the map: the
+  // `typeSet.has(model.modelType)` filter runs first and rejects it, so
+  // toUserModelType's `?? "chat"` fallback is unreachable through this hook.
+  // These assertions pin that filtering contract down explicitly.
+  it("drops models with an unrecognised modelType before normalisation", async () => {
+    const mockModels = [
+      {
+        id: "m-unknown",
+        modelId: "mystery",
+        label: "Mystery",
+        modelType: "custom-unknown" as never,
+        isEnabled: true,
+        providerId: "p1",
+        providerName: "OpenAI",
+        providerIsEnabled: true,
+      },
+      {
+        id: "m-chat",
+        modelId: "gpt-4o",
+        label: "GPT-4o",
+        modelType: "chat",
+        isEnabled: true,
+        providerId: "p1",
+        providerName: "OpenAI",
+        providerIsEnabled: true,
+      },
+    ];
+
+    vi.mocked(getProviderRegistryCachedData).mockReturnValue(mockModels as never);
+    vi.mocked(isProviderRegistryCacheFresh).mockReturnValue(true);
+    vi.mocked(subscribeProviderRegistryCache).mockReturnValue(() => {});
+
+    const { result } = renderHook(() => useUserModels("chat"));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // rawModels keeps the unnormalised value...
+    expect(result.current.rawModels).toHaveLength(2);
+    // ...but the unknown type is filtered out of the surfaced options, so every
+    // surfaced modelType is one of the three valid values.
+    expect(result.current.models.map((m) => m.id)).toEqual(["m-chat"]);
+    for (const model of result.current.models) {
+      expect(["chat", "embedding", "both"]).toContain(model.modelType);
+    }
+
+    // The "both" filter is the strictest: an unknown type is dropped there too.
+    const { result: bothResult } = renderHook(() => useUserModels("both"));
+    expect(bothResult.current.models).toEqual([]);
+  });
+
   it("handles empty cache, fetches models, subscribes to updates, and refreshes", async () => {
     let subscriberCb: (() => void) | undefined;
     const initialFetched = [
@@ -277,6 +329,26 @@ describe("useUserModels hook", () => {
       expect(nonErrResult.current.isLoading).toBe(false);
     });
     expect(nonErrResult.current.error).toBe("Failed to load models");
+  });
+
+  it("falls back to an empty cached-length when the models cache is undefined", async () => {
+    vi.mocked(getProviderRegistryCachedData).mockReturnValue(undefined);
+    vi.mocked(isProviderRegistryCacheFresh).mockReturnValue(true);
+    vi.mocked(subscribeProviderRegistryCache).mockReturnValue(() => {});
+    vi.mocked(fetchProviderRegistryWithCache).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useUserModels("chat"));
+
+    // undefined?.length ?? 0 → 0 → hasCached false → fetches.
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(fetchProviderRegistryWithCache).toHaveBeenCalledWith(
+      "models",
+      expect.any(Function),
+      { force: false },
+    );
+    expect(result.current.models).toEqual([]);
   });
 });
 

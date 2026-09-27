@@ -326,6 +326,43 @@ describe("triggerTranslation action", () => {
       }),
     });
   });
+
+  it("falls back to an empty source text and forwards image data for an image with no text", async () => {
+    dbChainable.returning.mockResolvedValueOnce([
+      { id: "trans-img-1", userId: "user-1", status: "pending" },
+    ]);
+
+    const result = await triggerTranslation({
+      sourceLanguage: "English",
+      targetLanguage: "Japanese",
+      attachment: {
+        name: "sign.png",
+        type: "image",
+        mimeType: "image/png",
+        dataUrl: "data:image/png;base64,AAA",
+      },
+    });
+
+    expect(result).toEqual({ translationId: "trans-img-1" });
+    // sourceText falls through both `||` operands to the "" literal
+    expect(dbChainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceText: "",
+        attachmentName: "sign.png",
+        attachmentType: "image",
+      }),
+    );
+    // isImage is true, so dataUrl/mimeType are forwarded rather than undefined
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "workflows/translate.execute",
+      data: expect.objectContaining({
+        isImage: true,
+        sourceText: "",
+        attachmentDataUrl: "data:image/png;base64,AAA",
+        attachmentMimeType: "image/png",
+      }),
+    });
+  });
 });
 
 describe("getTranslationRealtimeToken action", () => {

@@ -168,6 +168,22 @@ describe("ROUTES — dynamic helpers", () => {
     );
   });
 
+  it("SETTINGS.PROVIDERS.detail returns correct path", () => {
+    expect(ROUTES.SETTINGS.PROVIDERS.detail("provider-id")).toBe(
+      "/settings/providers/provider-id",
+    );
+  });
+
+  it("SETTINGS.PROVIDERS.detail appends the id after the providers base path", () => {
+    // Guards against the helper being hardcoded or dropping the id.
+    expect(ROUTES.SETTINGS.PROVIDERS.detail("openai")).toBe(
+      `${ROUTES.SETTINGS.PROVIDERS.path}/openai`,
+    );
+    expect(ROUTES.SETTINGS.PROVIDERS.detail("a b/c")).toBe(
+      "/settings/providers/a b/c",
+    );
+  });
+
   it("SETTINGS.SKILLS.detail returns correct path", () => {
     expect(ROUTES.SETTINGS.SKILLS.detail("skill-id")).toBe(
       "/settings/skills/skill-id",

@@ -203,4 +203,27 @@ describe("useResourceHydration", () => {
 
     expect(hydratedResources.has("mcpPrompts")).toBe(true);
   });
+
+  it("skips a resource whose store loader is not a function", async () => {
+    hydratedResources.clear();
+    // loadProjects is replaced with a non-callable value, so the
+    // `typeof loader === "function"` guard rejects it.
+    useAppStore.setState({ loadProjects: "not-a-function" as any });
+
+    const { result } = renderHook(() => useResourceHydration(["projects"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // The guard short-circuits before the try/finally, so the resource is
+    // never hydrated and no error is logged.
+    expect(hydratedResources.has("projects")).toBe(false);
+    // BUG (hooks/use-resource-hydration.ts): the resource is added to
+    // loadingResources *before* the `typeof loader === "function"` check, and
+    // only the inner `finally` removes it. A non-function loader therefore
+    // leaves the hook stuck in isLoading === true forever. Asserted as-is.
+    expect(result.current.loadingResources).toEqual(["projects"]);
+    expect(result.current.isLoading).toBe(true);
+  });
 });

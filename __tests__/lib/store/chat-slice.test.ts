@@ -1379,3 +1379,262 @@ describe("T5.3 scoped rollback does not clobber entity state", () => {
     expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
   });
 });
+
+// ─── Early-return guards: the reducer must return the SAME state object ────
+// Each guard does `if (!x) return state;`. Zustand's `set` short-circuits on
+// `Object.is(nextState, state)`, so the observable proof that the guard fired
+// is that the store's top-level state reference is untouched. If a guard were
+// deleted, the reducer would spread `undefined` into a new state object and the
+// identity assertion below would fail.
+describe("ChatSlice — missing-entity early-return guards", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("setCurrentLeafDb returns the same state when the chat does not exist", async () => {
+    useAppStore.getState().addMessage("nope", {
+      role: "user",
+      content: "unused",
+      parentId: null,
+      id: "seed",
+    });
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().setCurrentLeafDb("nope", "leaf-1");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(after.chats).toEqual({});
+  });
+
+  it("updateMessageAttachments returns the same state when the message does not exist", () => {
+    const chatId = createChatInStore();
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+    const messagesBefore = chatsBefore[chatId].messages;
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments(chatId, "ghost-msg", [makeAttachment("att-x")]);
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(after.chats[chatId].messages).toBe(messagesBefore);
+  });
+
+  it("loadChats skips pass-2 linking when a child row's chat is not loaded", () => {
+    // The orphan's chatId is absent from `rows`, so `chats[m.chatId]` is
+    // undefined in pass 2 (its parentId is set, so the loop body is reached).
+    // The `continue` keeps the walk alive; without it the loop would throw on
+    // `undefined.messages`.
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: "child",
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "child",
+          chatId: "c1",
+          role: "assistant",
+          content: "answer",
+          parentId: "orphan-parent",
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "orphan",
+          chatId: "c-missing",
+          role: "user",
+          content: "orphan",
+          parentId: "some-parent",
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    );
+
+    const chat = useAppStore.getState().chats.c1;
+    expect(Object.keys(chat.messages)).toEqual(["child"]);
+    // The orphaned parent does not exist, so no childrenIds entry is created.
+    expect(chat.messages.child.childrenIds).toEqual([]);
+  });
+
+  it("renameChatDb returns the same state when the chat does not exist", async () => {
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().renameChatDb("ghost", "Renamed");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    // The server action is still attempted; a rejected call is swallowed.
+    expect(vi.mocked(renameChatAction)).toHaveBeenCalledWith("ghost", "Renamed");
+  });
+
+  it("moveChatDb returns the same state when the chat does not exist", async () => {
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().moveChatDb("ghost", "proj-9");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(vi.mocked(moveChatAction)).toHaveBeenCalledWith("ghost", "proj-9");
+  });
+});
+
+// ─── updateMessageAttachments: defined-attachments arm + pass-through ──────
+describe("ChatSlice — updateMessageAttachments attachment mapping", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("leaves attachments absent from the update map as the same object", () => {
+    const chatId = createChatInStore();
+    const kept = makeAttachment("att-keep");
+    const replaced = makeAttachment("att-replace");
+    useAppStore.getState().addMessage(chatId, {
+      role: "user",
+      content: "Hi",
+      parentId: null,
+      id: "msg-1",
+      attachments: [kept, replaced],
+    });
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments(chatId, "msg-1", [
+        { ...replaced, dataUrl: "data:image/png;base64,zzz" },
+      ]);
+
+    const updated = useAppStore.getState().chats[chatId].messages["msg-1"]
+      .attachments;
+    expect(updated).toHaveLength(2);
+    // Not in the update map → the ternary's `: a` arm returns the original
+    // object by reference, untouched.
+    expect(updated[0]).toBe(kept);
+    expect(updated[0].dataUrl).toBe("");
+    // In the update map → a merged copy, not the input object.
+    expect(updated[1]).not.toBe(replaced);
+    expect(updated[1].dataUrl).toBe("data:image/png;base64,zzz");
+    expect(updated[1].id).toBe("att-replace");
+  });
+
+  it("maps spreadsheet mime types during loadChats", () => {
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: "m1",
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "m1",
+          chatId: "c1",
+          role: "user",
+          content: "here is the sheet",
+          parentId: null,
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "a1",
+          messageId: "m1",
+          name: "data.csv",
+          mimeType: "text/csv",
+          size: 20,
+          key: "uploads/user-1/data.csv",
+          extractedText: "a,b",
+        },
+        {
+          id: "a2",
+          messageId: "m1",
+          name: "notes.txt",
+          mimeType: "text/plain",
+          size: 5,
+          key: "uploads/user-1/notes.txt",
+          extractedText: null,
+        },
+      ],
+    );
+
+    const atts = useAppStore.getState().chats.c1.messages.m1.attachments!;
+    expect(atts.map((a) => [a.name, a.type])).toEqual([
+      ["data.csv", "spreadsheet"],
+      ["notes.txt", "document"],
+    ]);
+  });
+
+  it("maps an empty array when the stored message has no attachments field", () => {
+    // `msg.attachments ?? []` — the left operand is nullish, so the fallback
+    // array is mapped instead. addMessage always normalises to [], so the
+    // state is seeded directly to produce a genuinely absent field.
+    useAppStore.setState({
+      chats: {
+        c1: {
+          id: "c1",
+          title: "Chat",
+          updatedAt: new Date(),
+          currentLeafId: null,
+          messages: {
+            m1: {
+              id: "m1",
+              role: "user",
+              content: "Hi",
+              parentId: null,
+              childrenIds: [],
+              createdAt: new Date(),
+              metadata: null,
+            } as never,
+          },
+        },
+      },
+    });
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments("c1", "m1", [makeAttachment("att-1")]);
+
+    const updated = useAppStore.getState().chats.c1.messages.m1.attachments;
+    expect(updated).toEqual([]);
+  });
+});
+
+describe("ChatSlice — resetChatState", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("clears chats but leaves other slices untouched", () => {
+    createChatInStore("proj-1", "asst-1");
+    useAppStore.setState((s) => ({ projects: [{ id: "p1" } as never] }));
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(1);
+
+    useAppStore.getState().resetChatState();
+
+    expect(useAppStore.getState().chats).toEqual({});
+    expect(useAppStore.getState().projects).toEqual([{ id: "p1" }]);
+  });
+});

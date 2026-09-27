@@ -1,4 +1,19 @@
-import { describe, expect, it } from "vitest";
+// Dual export shape per .agents/testing.md. The metadata catch block only
+// reports through the logger, so the log is how a non-Error throwable is
+// distinguished from an Error one.
+const mockLog = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => mockLog),
+  logger: mockLog,
+}));
+
+import { describe, expect, it, vi } from "vitest";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 
 describe("assembleModelMessages — tool results (T10.4)", () => {
@@ -275,5 +290,128 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
         value: { error: "Tool execution did not return a result" },
       },
     });
+  });
+
+  it("defaults an image attachment's mediaType to image when mimeType is absent", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "user",
+        content: "look",
+        attachments: [
+          {
+            id: "att-1",
+            name: "shot",
+            type: "image",
+            url: "https://example.com/shot",
+            // mimeType deliberately absent
+          },
+        ] as any,
+      },
+    ]);
+
+    const parts = messages[0].content as any[];
+    const filePart = parts.find((p) => p.type === "file");
+    expect(filePart.mediaType).toBe("image");
+    expect(filePart.data).toEqual({
+      type: "url",
+      url: "https://example.com/shot",
+    });
+  });
+
+  it("falls back to the legacy `input` field when a tool call carries only that", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "",
+        metadata: JSON.stringify({
+          toolCalls: [
+            {
+              toolCallId: "call_1",
+              toolName: "legacy_tool",
+              // `args` absent; only the legacy `input` key is present
+              input: { legacy: true },
+            },
+          ],
+          toolResults: [
+            { toolCallId: "call_1", toolName: "legacy_tool", result: { ok: 1 } },
+          ],
+        }),
+      },
+    ]);
+
+    const toolCallPart = (messages[0] as any).content.find(
+      (p: any) => p.type === "tool-call",
+    );
+    expect(toolCallPart.input).toEqual({ legacy: true });
+    expect(toolCallPart.args).toEqual({ legacy: true });
+  });
+
+  it("emits an empty text value when a matched tool result is nullish", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "",
+        metadata: JSON.stringify({
+          toolCalls: [{ toolCallId: "call_1", toolName: "void_tool", args: {} }],
+          toolResults: [
+            // result is explicitly null: it is neither undefined nor an object,
+            // so it survives the `.result ?? .output` selection as null.
+            { toolCallId: "call_1", toolName: "void_tool", result: null },
+          ],
+        }),
+      },
+    ]);
+
+    const part = (messages[1] as any).content[0];
+    // Asserts the `raw ?? ""` fallback specifically: String(null) would be
+    // "null", so this can only be the empty-string arm.
+    expect(part.output).toEqual({ type: "text", value: "" });
+  });
+
+  it("logs a stringified non-Error throwable when metadata coercion fails", () => {
+    const hostileMetadata = {
+      toString() {
+        // JSON.parse coerces its input, so a throwing toString escapes as a
+        // plain string rather than a SyntaxError.
+        throw "metadata exploded";
+      },
+    } as unknown as string;
+
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "Original assistant message",
+        metadata: hostileMetadata,
+      },
+    ]);
+
+    expect(mockLog.warn).toHaveBeenCalledWith(
+      "Failed to parse metadata for history: {error}",
+      { error: "metadata exploded" },
+    );
+    // The message must survive the failed parse rather than being dropped.
+    expect(messages).toEqual([
+      { role: "assistant", content: "Original assistant message" },
+    ]);
+  });
+
+  it("logs the Error message when metadata is invalid JSON", () => {
+    assembleModelMessages([
+      {
+        role: "assistant",
+        content: "fallback",
+        metadata: "{not json",
+      },
+    ]);
+
+    // Pins the Error arm of the same ternary.
+    expect(mockLog.warn).toHaveBeenCalledWith(
+      "Failed to parse metadata for history: {error}",
+      expect.objectContaining({
+        error: expect.any(String),
+      }),
+    );
+    const logged = mockLog.warn.mock.calls[0][1] as { error: string };
+    expect(logged.error).toContain("JSON");
   });
 });

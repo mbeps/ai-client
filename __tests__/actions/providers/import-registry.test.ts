@@ -394,6 +394,59 @@ describe("importProviderRegistry action", () => {
     expect(result.providersUpdated).toBe(1);
   });
 
+  it("creates a new provider defaulting isEnabled to true when omitted", async () => {
+    // 1st select: provider check -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // insert provider returning
+    insertReturningMock.mockResolvedValueOnce([{ id: "prov-default-on" }]);
+    // 2nd select: model check -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "NoFlagProvider",
+          baseUrl: "https://api.noflag.com/v1",
+          requiresKey: false,
+          models: [
+            {
+              modelId: "m-default",
+              label: "M Default",
+              modelType: "chat" as const,
+              contextWindow: 4096,
+              embeddingDimensions: null,
+              capabilities: {
+                tools: false,
+                vision: false,
+                reasoning: false,
+                structuredOutput: false,
+              },
+              isManuallyAdded: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = await importProviderRegistry(payload);
+
+    expect(result).toEqual({
+      providersCreated: 1,
+      providersUpdated: 0,
+      modelsCreated: 1,
+      modelsSkipped: 0,
+    });
+    // isEnabled absent on input must fall back to `true` on the INSERT path
+    expect(insertValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "NoFlagProvider",
+        isEnabled: true,
+      }),
+    );
+  });
+
   it("throws ModelDuplicateImportError if duplicate models exist for a provider", async () => {
     // 1st select: provider check -> found
     selectWhereMock.mockResolvedValueOnce([

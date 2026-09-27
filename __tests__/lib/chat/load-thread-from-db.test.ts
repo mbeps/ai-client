@@ -191,4 +191,22 @@ describe("loadThreadFromDb", () => {
     // m2 has no attachments
     expect(thread[1].attachments).toBeUndefined();
   });
+
+  it("always runs the attachment query because the branch always holds at least the leaf", async () => {
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    // Self-referential parentId: the walk stops on `seen`, yet the leaf has
+    // already been pushed, so the branch is never empty.
+    chainable.__queueWhere([
+      { id: "self", role: "user", content: "hi", parentId: "self" },
+    ]);
+    chainable.__queueWhere([]); // attachments
+
+    const thread = await loadThreadFromDb("chat-1", "self", "user-1");
+
+    // Documents why the `messageIds.length > 0` false arm is unreachable:
+    // branch.length is 1 even in the degenerate self-cycle case, so the guard
+    // is always true and the attachment query always runs.
+    expect(thread).toHaveLength(1);
+    expect(chainable.where).toHaveBeenCalledTimes(3);
+  });
 });

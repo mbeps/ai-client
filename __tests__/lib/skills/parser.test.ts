@@ -1,12 +1,24 @@
 import { deflateSync } from "zlib";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSkillZip,
   extractSkillFromZip,
   formatSkillMarkdown,
   parseSkillMarkdown,
+  parseZipBuffer,
   sanitizeSkillSlug,
 } from "@/lib/skills/parser";
+
+const { logError } = vi.hoisted(() => ({ logError: vi.fn() }));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: () => ({ error: logError }),
+  logger: { error: logError },
+}));
+
+beforeEach(() => {
+  logError.mockClear();
+});
 
 describe("sanitizeSkillSlug", () => {
   it("normalizes mixed strings into valid slugs", () => {
@@ -613,5 +625,270 @@ description: This is line one
     const zipWithDir = createSkillZip(skillData);
     const extractedDir = extractSkillFromZip(zipWithDir);
     expect(extractedDir.files.map((f) => f.path)).toEqual(["normal.txt"]);
+  });
+});
+
+describe("parseSkillMarkdown frontmatter branch coverage", () => {
+  it("handles empty inline values, folded continuations, and unknown keys", () => {
+    // "name:" yields an empty match[2] (the `|| ""` fallback), and the
+    // indented continuation is the first append onto that empty buffer, so the
+    // `(currentVal ? " " : "")` ternary must take its empty-prefix arm. The
+    // "version" key hits the final else-if and falls through unassigned, and the
+    // blank line hits the else-if with a line that is neither space- nor
+    // tab-indented.
+    const raw = `---
+name:
+  folded-skill
+version: 2
+author: someone
+
+---
+Body`;
+
+    const parsed = parseSkillMarkdown(raw);
+
+    // Leading space from the empty-prefix arm is absent: the folded value is
+    // exactly the trimmed continuation, not " folded-skill".
+    expect(parsed.name).toBe("folded-skill");
+    expect(parsed.displayName).toBe("Folded Skill");
+    expect(parsed.content).toBe("Body");
+  });
+
+  it("separates folded continuations with a space when a prefix already exists", () => {
+    // The other arm of `(currentVal ? " " : "")`: two continuations appended
+    // onto a non-empty buffer must be joined by a single space.
+    const raw = `---
+name: prefix-skill
+  continued here
+  and again
+---
+Body`;
+    expect(parseSkillMarkdown(raw).name).toBe("prefix-skill-continued-here-and-again");
+  });
+});
+
+describe("parseZipBuffer directory detection", () => {
+  /**
+   * Builds a stored (method 0) local file header plus its central directory entry.
+   *
+   * @param name - File name to record in both headers (may be empty).
+   * @param data - Uncompressed payload bytes.
+   * @returns Concatenated local header and central directory buffers.
+   */
+  const storedEntry = (name: string, data: Buffer) => {
+    const nameBuf = Buffer.from(name, "utf8");
+    const local = Buffer.alloc(30 + nameBuf.length + data.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt32LE(0, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+    nameBuf.copy(local, 30);
+    data.copy(local, 30 + nameBuf.length);
+
+    const cd = Buffer.alloc(46 + nameBuf.length);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4);
+    cd.writeUInt16LE(20, 6);
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(0, 10);
+    cd.writeUInt32LE(0, 16);
+    cd.writeUInt32LE(data.length, 20);
+    cd.writeUInt32LE(data.length, 24);
+    cd.writeUInt16LE(nameBuf.length, 28);
+    cd.writeUInt32LE(0, 42);
+    nameBuf.copy(cd, 46);
+
+    return { local, cd };
+  };
+
+  /**
+   * Assembles local headers, central directory, and EOCD into a complete zip.
+   *
+   * @param entries - Pre-built local and central directory buffers in order.
+   * @returns A zip buffer with a valid end-of-central-directory record.
+   */
+  const assembleZip = (entries: { local: Buffer; cd: Buffer }[]) => {
+    const localPart = Buffer.concat(entries.map((e) => e.local));
+    const cdPart = Buffer.concat(entries.map((e) => e.cd));
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(entries.length, 8);
+    eocd.writeUInt16LE(entries.length, 10);
+    eocd.writeUInt32LE(cdPart.length, 12);
+    eocd.writeUInt32LE(localPart.length, 16);
+    return Buffer.concat([localPart, cdPart, eocd]);
+  };
+
+  it("marks a zero-length-name entry as a directory only via the size check", () => {
+    // The name check `fileName.endsWith("/")` is false for an empty name, so the
+    // directory verdict must come from the size arm instead.
+    const zip = assembleZip([
+      storedEntry("SKILL.md", Buffer.from("# Sizes")),
+      storedEntry("", Buffer.from("nameless payload")),
+    ]);
+
+    const extracted = extractSkillFromZip(zip);
+
+    expect(extracted.content).toBe("# Sizes");
+    // The nameless entry is a directory by size, so it is never bundled.
+    expect(extracted.files).toEqual([]);
+  });
+
+  it("skips entries whose relative path resolves to an empty string", () => {
+    // A non-directory entry with a zero-length name is not filtered by the
+    // isDirectory or OS-artifact guards, so the relativePath empty check is the
+    // only thing that stops it being bundled.
+    const zip = assembleZip([
+      storedEntry("SKILL.md", Buffer.from("# Empty Path")),
+      storedEntry("", Buffer.from("orphan bytes")),
+    ]);
+
+    const extracted = extractSkillFromZip(zip);
+
+    expect(extracted.content).toBe("# Empty Path");
+    expect(extracted.files.map((f) => f.path)).not.toContain("");
+    expect(extracted.files).toHaveLength(0);
+  });
+});
+
+
+/**
+ * Builds a real skill ZIP, then overwrites the deflate payload of every entry so
+ * Node's zlib genuinely fails to inflate it. The parser must try `inflateRawSync`,
+ * then `inflateSync`, then fall back to the raw bytes and log the failure.
+ *
+ * `node:zlib` is a Node builtin. `vi.mock` intercepts it in the importing test
+ * module but not inside `lib/skills/parser.ts`, so the throw must come from real
+ * corrupted bytes rather than from a mocked zlib.
+ *
+ * @param files - Bundled files to place in the archive.
+ * @returns The corrupted ZIP as a Buffer.
+ */
+const corruptSkillZip = (
+  files: { path: string; content: string }[] = [
+    { path: "notes.txt", content: "compressible text to deflate" },
+  ],
+): Buffer => {
+  const zip = Buffer.from(
+    createSkillZip({
+      name: "corrupt-skill",
+      description: "zip with a broken deflate payload",
+      content: "# Corrupt",
+      files,
+    }),
+  );
+
+  // Walk each local file header and smash the start of its compressed data.
+  const localSig = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+  let offset = zip.indexOf(localSig);
+  while (offset !== -1) {
+    const nameLen = zip.readUInt16LE(offset + 26);
+    const extraLen = zip.readUInt16LE(offset + 28);
+    const dataStart = offset + 30 + nameLen + extraLen;
+    for (let i = dataStart; i < dataStart + 12 && i < zip.length; i++) {
+      zip[i] = 0xff;
+    }
+    offset = zip.indexOf(localSig, dataStart + 12);
+  }
+  return zip;
+};
+
+describe("parseZipBuffer decompression error handling", () => {
+  it("falls back to the raw bytes and logs when both inflates fail", () => {
+    const entries = parseZipBuffer(corruptSkillZip());
+
+    // Every entry still surfaces, with its name intact.
+    expect(entries.map((e) => e.path)).toContain("SKILL.md");
+    expect(entries.map((e) => e.path)).toContain("notes.txt");
+
+    // zlib raises a real Error here, so the log carries `err.message` rather
+    // than a String() fallback. One log per compressed entry.
+    expect(logError).toHaveBeenCalled();
+    const logged = JSON.stringify(logError.mock.calls);
+    expect(logged).toContain("Failed to decompress");
+    expect(logged).toContain("SKILL.md");
+
+    // The raw deflate bytes are kept verbatim, so SKILL.md is no longer readable.
+    const skillEntry = entries.find((e) => e.path === "SKILL.md");
+    expect(skillEntry?.data.toString("utf8")).not.toBe("# Corrupt");
+  });
+
+  it("logs the failure for the sequential local-header fallback path", () => {
+    const zip = corruptSkillZip([]);
+    // Corrupt the EOCD signature so parseZipBuffer cannot use the central
+    // directory and must fall through to the sequential local-header parser,
+    // which has its own separate catch block.
+    const eocdSig = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+    zip.writeUInt32LE(0, zip.lastIndexOf(eocdSig));
+
+    const entries = parseZipBuffer(zip);
+
+    expect(entries.map((e) => e.path)).toContain("SKILL.md");
+    expect(logError).toHaveBeenCalled();
+    expect(JSON.stringify(logError.mock.calls)).toContain(
+      "Failed to decompress",
+    );
+  });
+
+  it("falls back to an empty value for a frontmatter key with no captured text", () => {
+    // `/^([a-zA-Z0-9_-]+):\s*(.*)$/` matches `name:` with capture group 2
+    // being the empty string, so `match[2] || ""` must take its fallback arm.
+    const parsed = parseSkillMarkdown(`---
+name:
+description:
+---
+# Body`);
+
+    // Both keys flush as empty strings, so name falls back to the default slug
+    // and description falls back to the sliced content.
+    expect(parsed.name).toBe("custom-skill");
+    expect(parsed.description).toBe("# Body");
+    expect(parsed.content).toBe("# Body");
+  });
+
+  it("treats a central-directory entry with both sizes zero as a directory", () => {
+    // `isDirectory` is `fileName.endsWith("/") || (uncompressedSize === 0 && compressedSize === 0)`.
+    // "emptyfile" does not end with "/", so the second operand must be
+    // evaluated to reach the second arm.
+    const fileName = Buffer.from("emptyfile");
+    const local = Buffer.alloc(30 + fileName.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(0, 8); // stored
+    local.writeUInt32LE(0, 18); // compressed size 0
+    local.writeUInt32LE(0, 22); // uncompressed size 0
+    local.writeUInt16LE(fileName.length, 26);
+    local.writeUInt16LE(0, 28);
+    fileName.copy(local, 30);
+
+    const cd = Buffer.alloc(46 + fileName.length);
+    cd.writeUInt32LE(0x02014b50, 0);
+    cd.writeUInt16LE(20, 4);
+    cd.writeUInt16LE(20, 6);
+    cd.writeUInt16LE(0, 8);
+    cd.writeUInt16LE(0, 10); // stored
+    cd.writeUInt32LE(0, 20); // compressed size 0
+    cd.writeUInt32LE(0, 24); // uncompressed size 0
+    cd.writeUInt16LE(fileName.length, 28);
+    cd.writeUInt32LE(0, 42);
+    fileName.copy(cd, 46);
+
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(1, 10);
+    eocd.writeUInt32LE(cd.length, 12);
+    eocd.writeUInt32LE(local.length, 16);
+
+    const entries = parseZipBuffer(Buffer.concat([local, cd, eocd]));
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].path).toBe("emptyfile");
+    expect(entries[0].isDirectory).toBe(true);
   });
 });

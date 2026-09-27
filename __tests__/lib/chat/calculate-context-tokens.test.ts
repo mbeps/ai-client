@@ -325,5 +325,111 @@ describe("calculate-context-tokens utility", () => {
       });
       expect(result.displayPercentage).toBe("< 1%");
     });
+
+    it("defaults the context window to 128K when no model is selected", () => {
+      const result = calculateContextUsage({});
+
+      // Asserts the `|| 128_000` fallback. A missing model and a zero context
+      // window both land here, so pin the value, not just the call.
+      expect(result.maxTokens).toBe(128_000);
+    });
+
+    it("defaults the context window to 128K when the model reports a zero window", () => {
+      const zeroWindowModel: UserModelOption = {
+        id: "zero",
+        modelId: "zero",
+        name: "Zero",
+        providerName: "Local",
+        contextWindow: 0,
+        capVision: false,
+        capTools: false,
+        modelType: "chat",
+        pricing: { inputRatePer1m: 0, outputRatePer1m: 0 },
+      };
+
+      const result = calculateContextUsage({ selectedModel: zeroWindowModel });
+
+      // `||` treats 0 as absent, so the fallback wins here too.
+      expect(result.maxTokens).toBe(128_000);
+    });
+
+    it("ignores metadata with no toolData when tallying tool result tokens", () => {
+      const withToolData = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "m-1",
+            role: "assistant",
+            content: "",
+            metadata: JSON.stringify({
+              toolCalls: [{ toolCallId: "1", toolName: "t", args: { a: 1 } }],
+              toolResults: [
+                { toolCallId: "1", toolName: "t", result: { b: 2 } },
+              ],
+            }),
+          },
+        ] as any,
+      });
+
+      const withoutToolData = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "m-1",
+            role: "assistant",
+            content: "",
+            // toolData is null here, so both `if` guards take their false arm.
+            metadata: JSON.stringify({ reasoning: "just thinking" }),
+          },
+        ] as any,
+      });
+
+      expect(withoutToolData.breakdown.toolResults).toBe(0);
+      expect(withoutToolData.breakdown.messages).toBeGreaterThan(0);
+      expect(withToolData.breakdown.toolResults).toBeGreaterThan(0);
+    });
+
+    it("stringifies a non-string tool result when tallying tokens", () => {
+      const withObjectResult = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "m-1",
+            role: "assistant",
+            content: "",
+            metadata: JSON.stringify({
+              toolCalls: [{ toolCallId: "1", toolName: "t", args: { a: 1 } }],
+              toolResults: [
+                { toolCallId: "1", toolName: "t", result: { b: 2 } },
+              ],
+            }),
+          },
+        ] as any,
+      });
+
+      const withStringResult = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "m-2",
+            role: "assistant",
+            content: "",
+            metadata: JSON.stringify({
+              toolCalls: [{ toolCallId: "1", toolName: "t", args: { a: 1 } }],
+              toolResults: [
+                { toolCallId: "1", toolName: "t", result: "xyz" },
+              ],
+            }),
+          },
+        ] as any,
+      });
+
+      // Both arms of `typeof tr.result === "string"` feed the same estimate
+      // helper, so compare the two tallies: the object arm JSON.stringifies,
+      // which yields a different character count than the raw string.
+      const objectOnly =
+        withObjectResult.breakdown.toolResults - withStringResult.breakdown.toolResults;
+      expect(objectOnly).toBeGreaterThan(0);
+    });
   });
 });

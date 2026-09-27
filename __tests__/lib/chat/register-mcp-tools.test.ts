@@ -29,6 +29,21 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: hybridSearchMock,
 }));
 
+// Dual export shape per .agents/testing.md: domain-scoped getLogger plus the
+// `logger` facade. Catch branches only surface their chosen message via the log,
+// so the log is the only observable proof of which ternary arm ran.
+const mockLog = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => mockLog),
+  logger: mockLog,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
@@ -322,5 +337,162 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
       "user-1",
     );
     expect(Object.keys(failTools)).toHaveLength(0);
+  });
+});
+
+describe("registerMcpTools — fallback branches", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hybridSearchMock.mockResolvedValue(searchRows);
+  });
+
+  /**
+   * Builds an args object whose `type` access throws a non-Error throwable.
+   * That is the only way into the catch block, since `tool.execute` is called
+   * directly and therefore skips input-schema validation.
+   */
+  const argsThrowing = (throwable: unknown) => ({
+    action: "create",
+    get type(): string {
+      throw throwable;
+    },
+  });
+
+  const registerArtifactTool = async () => {
+    const { mcpTools } = await registerMcpTools(
+      [],
+      undefined,
+      true,
+      undefined,
+      false,
+      "user-1",
+    );
+    return mcpTools.manage_artifact as any;
+  };
+
+  it("logs the stringified throwable when getMcpTools rejects with a non-Error", async () => {
+    vi.mocked(getMcpTools).mockRejectedValueOnce("socket hang up");
+
+    const { mcpTools, mcpCleanup } = await registerMcpTools(
+      [{ id: "s1", name: "server", url: "http://x" } as any],
+      undefined,
+      false,
+      undefined,
+      false,
+      "user-1",
+    );
+
+    // Assert the log payload, not just that something was logged: the ternary
+    // only differs in which value reaches `error`.
+    expect(mockLog.warn).toHaveBeenCalledWith(
+      "Failed to load MCP tools: {error}",
+      { error: "socket hang up" },
+    );
+    // The rejection leaves the default no-op cleanup in place.
+    expect(Object.keys(mcpTools)).toHaveLength(0);
+    await expect(mcpCleanup()).resolves.toBeUndefined();
+  });
+
+  it("returns the default no-op mcpCleanup when there are no scoped servers", async () => {
+    const { mcpCleanup } = await registerMcpTools(
+      [],
+      undefined,
+      false,
+      undefined,
+      false,
+      "user-1",
+    );
+
+    // Covers the `async () => {}` default assignment. Asserting it resolves
+    // proves the declared no-op (not `result.cleanup`) is what was returned,
+    // because a server-backed run would have returned the MCP cleanup instead.
+    await expect(mcpCleanup()).resolves.toBeUndefined();
+    expect(getMcpTools).not.toHaveBeenCalled();
+  });
+
+  it("uses the whole parsed object when stringified sheets is a JSON object with a sheets key", async () => {
+    const artTool = await registerArtifactTool();
+
+    const res = await artTool.execute({
+      action: "create",
+      type: "spreadsheet",
+      sheets: JSON.stringify({ version: 1, sheets: [{ name: "S", data: [["v"]] }] }),
+    });
+
+    expect(res.success).toBe(true);
+    // Whole object preserved, not re-wrapped under a second `sheets` key.
+    expect(JSON.parse(res.artifact.content)).toEqual({
+      version: 1,
+      sheets: [{ name: "S", data: [["v"]] }],
+    });
+  });
+
+  it("leaves content empty when stringified sheets is a JSON object with no sheets key", async () => {
+    const artTool = await registerArtifactTool();
+
+    const res = await artTool.execute({
+      action: "create",
+      type: "spreadsheet",
+      sheets: JSON.stringify({ version: 1 }),
+    });
+
+    // Neither the array branch nor the `.sheets` branch applies, and the
+    // fallback `""` is what reaches the artifact. `res.success` alone could not
+    // tell this apart from a branch that did fire.
+    expect(res.success).toBe(true);
+    expect(res.artifact.content).toBe("");
+  });
+
+  it("falls back to the default title when the model omits one", async () => {
+    const artTool = await registerArtifactTool();
+
+    const res = await artTool.execute({
+      action: "create",
+      type: "markdown",
+      content: "# Body",
+    });
+
+    expect(res.artifact.title).toBe("Generated Artifact");
+  });
+
+  it("stringifies a non-Error throwable in the artifact catch log and response", async () => {
+    const artTool = await registerArtifactTool();
+
+    const res = await artTool.execute(argsThrowing("tool harness exploded"));
+
+    // Both ternaries share the same non-Error arm; assert the log AND the
+    // response message, which pick different fallbacks.
+    expect(mockLog.error).toHaveBeenCalledWith(
+      "Failed to process artifact tool call: {error}",
+      { error: "tool harness exploded" },
+    );
+    expect(res).toEqual({ success: false, message: "Unknown error occurred" });
+  });
+
+  it("prefers the Error message over the generic fallback for Error throwables", async () => {
+    const artTool = await registerArtifactTool();
+
+    const res = await artTool.execute(argsThrowing(new Error("disk quota")));
+
+    expect(res).toEqual({ success: false, message: "disk quota" });
+  });
+
+  it("treats a missing query as empty and never hits the search backend", async () => {
+    const { mcpTools } = await registerMcpTools(
+      [],
+      undefined,
+      false,
+      "kb-1",
+      true,
+      "user-1",
+    );
+    const searchTool = mcpTools.search_knowledge_base as any;
+
+    const res = await searchTool.execute({});
+
+    expect(res.success).toBe(false);
+    expect(res.error).toContain("Missing mandatory 'query' parameter");
+    // Proves the `query || ""` fallback fed the guard, not a real value.
+    expect(hybridSearch).not.toHaveBeenCalled();
   });
 });
