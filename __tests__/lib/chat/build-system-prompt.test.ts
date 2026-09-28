@@ -30,10 +30,9 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
   });
 
   it("mentions get_file_url tool and lists file names when attachments are present", () => {
-    const result = buildSystemPrompt(null, null, null, false, [
-      "data.xlsx",
-      "report.csv",
-    ]);
+    const result = buildSystemPrompt(null, null, null, false, {
+      attachmentNames: ["data.xlsx", "report.csv"],
+    });
     expect(result).toContain("get_file_url");
     expect(result).toContain("data.xlsx");
     expect(result).toContain("report.csv");
@@ -42,7 +41,9 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
   });
 
   it("does not include attachment section when attachmentNames is empty", () => {
-    const result = buildSystemPrompt(null, null, null, false, []);
+    const result = buildSystemPrompt(null, null, null, false, {
+      attachmentNames: [],
+    });
     expect(result).not.toContain("get_file_url");
   });
 
@@ -59,16 +60,11 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
         description: "Pragmatic code quality.",
       },
     ];
-    const result = buildSystemPrompt(
-      null,
-      null,
-      null,
-      false,
-      [],
+    const result = buildSystemPrompt(null, null, null, false, {
       availableSkills,
-      [],
-      true,
-    );
+      selectedSkills: [],
+      supportsTools: true,
+    });
     expect(result).toContain("<available_skills>");
     expect(result).toContain("<name>clean-code</name>");
     expect(result).toContain("load_skill");
@@ -89,20 +85,63 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
         updatedAt: new Date(),
       },
     ];
-    const result = buildSystemPrompt(
-      null,
-      null,
-      null,
-      false,
-      [],
-      [],
+    const result = buildSystemPrompt(null, null, null, false, {
       selectedSkills,
-      true,
-    );
+      supportsTools: true,
+    });
     expect(result).toContain(
       "## Active Skill: Frontend Design (frontend-design)",
     );
     expect(result).toContain("# Frontend Guidelines");
     expect(result).toContain("Theme rules");
+  });
+
+  describe("user context", () => {
+    it("injects name and email when both are provided", () => {
+      const result = buildSystemPrompt(null, null, null, false, {
+        userContext: { name: "Alice Smith", email: "alice@example.com" },
+      });
+      expect(result).toContain("## About the User");
+      expect(result).toContain("- Name: Alice Smith");
+      expect(result).toContain("- Email: alice@example.com");
+    });
+
+    it("injects only the fields that are present", () => {
+      const result = buildSystemPrompt(null, null, null, false, {
+        userContext: { name: "Bob", email: null },
+      });
+      expect(result).toContain("- Name: Bob");
+      expect(result).not.toContain("- Email:");
+    });
+
+    it("omits the block when name and email are absent or blank", () => {
+      const blank = buildSystemPrompt(null, null, null, false, {
+        userContext: { name: null, email: "   " },
+      });
+      const absent = buildSystemPrompt(null, null, null, false, {
+        userContext: { name: null, email: undefined },
+      });
+      const missing = buildSystemPrompt(null, null, null, false);
+      expect(blank).not.toContain("## About the User");
+      expect(absent).not.toContain("## About the User");
+      expect(missing).not.toContain("## About the User");
+    });
+
+    it("places user context before the global prompt", () => {
+      const result = buildSystemPrompt("My global prompt", null, null, false, {
+        userContext: { name: "Alice", email: "alice@example.com" },
+      });
+      expect(result.indexOf("## About the User")).toBeLessThan(
+        result.indexOf("My global prompt"),
+      );
+    });
+
+    it("trims surrounding whitespace from injected values", () => {
+      const result = buildSystemPrompt(null, null, null, false, {
+        userContext: { name: "  Alice  ", email: "  alice@example.com  " },
+      });
+      expect(result).toContain("- Name: Alice\n");
+      expect(result).toContain("- Email: alice@example.com");
+    });
   });
 });

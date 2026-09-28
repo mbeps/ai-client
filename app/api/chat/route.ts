@@ -74,6 +74,8 @@ export async function POST(req: Request) {
       data: {
         chatId,
         userId,
+        userName: session.user.name,
+        userEmail: session.user.email,
         userMessageId,
         model,
         selectedServerIds,

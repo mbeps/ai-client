@@ -8,10 +8,16 @@ const mockLoadThread = vi.hoisted(() => vi.fn());
 const mockStreamText = vi.hoisted(() => vi.fn());
 const mockGetUserSettings = vi.hoisted(() => vi.fn());
 
-vi.mock("@/actions/user-settings/get-user-settings", () => ({
-  getUserSettings: vi.fn().mockResolvedValue(null),
-  getUserSettings: mockGetUserSettings,
+vi.mock("@/lib/user/get-user-settings-by-id", () => ({
+  getUserSettingsByUserId: mockGetUserSettings,
 }));
+
+// Wrapped, not replaced: other tests assert on the real composed prompt.
+vi.mock("@/lib/chat/build-system-prompt", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/chat/build-system-prompt")>();
+  return { buildSystemPrompt: vi.fn(actual.buildSystemPrompt) };
+});
 
 vi.mock("@/lib/chat/resolve-provider", () => ({
   resolveProvider: mockResolveProvider,
@@ -75,6 +81,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
+import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { inngest } from "@/lib/inngest/client";
 
 describe("generateChatResponse Inngest Function", () => {
@@ -169,6 +176,30 @@ describe("generateChatResponse Inngest Function", () => {
         chatId: "chat-123",
         content: "Hello there!",
         parentId: "msg-1",
+      }),
+    );
+  });
+
+  it("forwards the user's name and email to buildSystemPrompt", async () => {
+    const fn = (generateChatResponse as any).fn;
+
+    await fn({
+      event: {
+        data: {
+          chatId: "chat-123",
+          userId: "user-123",
+          userName: "Alice Smith",
+          userEmail: "alice@example.com",
+          userMessageId: "msg-1",
+          model: "gpt-4o",
+        },
+      },
+    });
+
+    const [, , , , options] = vi.mocked(buildSystemPrompt).mock.calls[0];
+    expect(options).toEqual(
+      expect.objectContaining({
+        userContext: { name: "Alice Smith", email: "alice@example.com" },
       }),
     );
   });

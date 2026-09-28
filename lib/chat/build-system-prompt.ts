@@ -6,19 +6,28 @@ import type {
 } from "@/types/skill/skill";
 
 /**
+ * Optional layers composed into the system prompt on top of the three
+ * project-scoped prompts.
+ */
+export interface SystemPromptOptions {
+  attachmentNames?: string[];
+  availableSkills?: SkillSummary[];
+  selectedSkills?: Skill[] | any[];
+  supportsTools?: boolean;
+  userContext?: { name?: string | null; email?: string | null };
+}
+
+/**
  * Builds the system prompt for a chat request by composing multiple prompt layers.
- * Merges global app prompts, project-level prompts, assistant-specific prompts,
- * knowledge base instructions, active skills catalog (progressive disclosure),
- * and pre-selected skills.
+ * Merges the authenticated user's identity, global app prompts, project-level
+ * prompts, assistant-specific prompts, knowledge base instructions, active
+ * skills catalog (progressive disclosure), and pre-selected skills.
  *
  * @param globalPrompt - Global application system prompt (optional)
  * @param projectPrompt - Project-specific system prompt (optional)
  * @param assistantPrompt - Assistant-specific system prompt (optional)
  * @param hasKnowledgeBase - Whether knowledge base tool is available
- * @param attachmentNames - Names of files the user has attached (empty array = none)
- * @param availableSkills - List of available skills for dynamic progressive disclosure catalog
- * @param selectedSkills - List of user-selected skills to pre-inject
- * @param supportsTools - Whether the current model supports tool calling
+ * @param options - Optional layers: attachments, skills, tool support, user identity
  * @returns Composed system prompt string
  * @author Maruf Bepary
  */
@@ -27,12 +36,27 @@ export function buildSystemPrompt(
   projectPrompt: string | null | undefined,
   assistantPrompt: string | null | undefined,
   hasKnowledgeBase: boolean,
-  attachmentNames?: string[],
-  availableSkills?: SkillSummary[],
-  selectedSkills?: Skill[] | any[],
-  supportsTools?: boolean,
+  options: SystemPromptOptions = {},
 ): string {
+  const {
+    attachmentNames,
+    availableSkills,
+    selectedSkills,
+    supportsTools,
+    userContext,
+  } = options;
+
   const systemParts: string[] = [];
+
+  // Identity goes first so later prompt layers can address the user directly,
+  // regardless of what a custom prompt contains.
+  if (userContext?.name?.trim() || userContext?.email?.trim()) {
+    const identity = [
+      userContext.name?.trim() && `- Name: ${userContext.name.trim()}`,
+      userContext.email?.trim() && `- Email: ${userContext.email.trim()}`,
+    ].filter(Boolean);
+    systemParts.push(`## About the User\n${identity.join("\n")}`);
+  }
 
   if (globalPrompt?.trim()) {
     systemParts.push(globalPrompt.trim());

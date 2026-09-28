@@ -45,6 +45,8 @@ export const generateChatResponse = inngest.createFunction(
     const {
       chatId,
       userId,
+      userName,
+      userEmail,
       userMessageId,
       model,
       selectedServerIds,
@@ -145,10 +147,13 @@ export const generateChatResponse = inngest.createFunction(
           ctx.projectRow?.globalPrompt,
           ctx.assistantRow?.prompt,
           ctx.kbIsReady,
-          fileAttachments.map((a) => a.name),
-          ctx.availableSkills,
-          ctx.selectedSkills,
-          isToolCallingModel,
+          {
+            attachmentNames: fileAttachments.map((a) => a.name),
+            availableSkills: ctx.availableSkills,
+            selectedSkills: ctx.selectedSkills,
+            supportsTools: isToolCallingModel,
+            userContext: { name: userName, email: userEmail },
+          },
         ),
         messages: finalMessages,
         tools: hasAnyTools

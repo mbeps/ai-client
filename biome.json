@@ -24,7 +24,8 @@
       "!__tests__",
       "!tests",
       "!.vscode",
-      "!wiki"
+      "!wiki",
+      "!.agents"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true
