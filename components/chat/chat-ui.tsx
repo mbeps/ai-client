@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { extractCitations } from "@/lib/chat/extract-citations";
@@ -127,9 +128,25 @@ export function ChatUI({
   }, [thread, currentProject, currentAssistant, userSettings]);
 
   // -- Initial Tools Resolution (Inlined) --
+  /**
+   * Resolves initial tools and MCP servers for the chat input.
+   *
+   * @decision Architecture Approach 1 - Active by default tools: If an assistant or project
+   * explicitly defines tools, respect their custom selection. When no custom tools are configured,
+   * activate default internal tools (Canvas) so features like artifacts are enabled out-of-the-box
+   * while remaining toggleable.
+   */
   const { initialServerIds, initialSelectedTools } = useMemo(() => {
     const projectTools = currentProject?.tools;
     const assistantTools = currentAssistant?.tools;
+
+    const hasCustomTools =
+      (projectTools !== undefined &&
+        projectTools !== null &&
+        projectTools.length > 0) ||
+      (assistantTools !== undefined &&
+        assistantTools !== null &&
+        assistantTools.length > 0);
 
     const combined = new Set<string>();
     if (projectTools) {
@@ -150,7 +167,10 @@ export function ChatUI({
       if (serverId) serverIds.add(serverId);
     });
 
-    const selectedTools = combinedArray.filter((t) => t.includes(":tool:"));
+    const customTools = combinedArray.filter((t) => t.includes(":tool:"));
+    const selectedTools = hasCustomTools
+      ? customTools
+      : [...DEFAULT_ENABLED_TOOLS];
 
     return {
       initialServerIds: Array.from(serverIds),

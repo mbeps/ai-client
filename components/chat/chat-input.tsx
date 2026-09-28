@@ -20,6 +20,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -83,8 +84,14 @@ interface ChatInputProps {
   /** Initial MCP server IDs to select. */
   initialSelectedServerIds?: string[];
 
-  /** Initial tool identifiers to select. */
-  initialSelectedTools?: string[];
+  /**
+   * Initial tool identifiers to select.
+   * Defaults to DEFAULT_ENABLED_TOOLS (e.g., internal tools such as Canvas).
+   *
+   * @decision Architecture Approach 1 - Active by default tools: internal tools are
+   * pre-selected on initialisation, allowing immediate use without manual user activation.
+   */
+  initialSelectedTools?: readonly string[] | string[];
 
   /** Initial prompt ID if editing a slash-command message. */
   initialSelectedPromptId?: string;
@@ -130,7 +137,7 @@ export function ChatInput({
   initialModelId,
   initialAttachments = [],
   initialSelectedServerIds = [],
-  initialSelectedTools = [],
+  initialSelectedTools = DEFAULT_ENABLED_TOOLS,
   initialSelectedPromptId,
   initialSelectedAssistantId,
   initialSelectedKbs = [],
@@ -426,12 +433,20 @@ export function ChatInput({
         selectedSkills.size > 0) &&
       !isLoading
     ) {
+      // Auto-suppress tools when the current model does not support tool calling (capTools: false).
+      // This prevents ToolsNotSupportedError on the backend while preserving the user's tool toggle
+      // preferences in the UI if they switch back to a tool-capable model.
+      const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
+      const effectiveServerIds = supportsTools
+        ? Array.from(selectedServerIds)
+        : [];
+
       onSend(
         input,
         attachments,
         modelId,
-        Array.from(selectedServerIds),
-        Array.from(selectedTools),
+        effectiveServerIds,
+        effectiveTools,
         selectedPrompt?.id,
         selectedAssistant?.id,
         Array.from(selectedKbs),
@@ -621,8 +636,8 @@ export function ChatInput({
             selectedModel={selectedModelObj ?? undefined}
             input={input}
             draftAttachments={attachments}
-            toolNames={Array.from(selectedTools)}
-            mcpServerCount={selectedServerIds.size}
+            toolNames={supportsTools ? Array.from(selectedTools) : []}
+            mcpServerCount={supportsTools ? selectedServerIds.size : 0}
             selectedSkillTokens={selectedSkillTokens}
             availableSkillCount={availableSkillCount}
           />
@@ -659,6 +674,7 @@ export function ChatInput({
               size="icon"
               className="h-7 w-7 rounded-full"
               onClick={handleSend}
+              aria-label={submitLabel || "Send message"}
               disabled={
                 hasNoModels ||
                 (!input.trim() &&

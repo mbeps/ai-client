@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import { cn } from "@/lib/utils";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
@@ -229,7 +230,7 @@ export function ToolPickerList({
                   <span className="font-medium text-primary">
                     Internal Tools
                   </span>
-                  {selectedTools.has("internal:tool:manage_artifact") && (
+                  {selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) && (
                     <Badge variant="secondary" className="h-4 px-1 text-[10px]">
                       1 selected
                     </Badge>
@@ -241,7 +242,7 @@ export function ToolPickerList({
                     onClick={(e) => {
                       e.stopPropagation();
                       const isAllSelected = selectedTools.has(
-                        "internal:tool:manage_artifact",
+                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                       );
                       onBulkSelect(
                         "internal",
@@ -252,7 +253,7 @@ export function ToolPickerList({
                   >
                     <Checkbox
                       checked={selectedTools.has(
-                        "internal:tool:manage_artifact",
+                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                       )}
                       aria-label="Select all internal tools"
                       className="h-4 w-4"
@@ -269,7 +270,7 @@ export function ToolPickerList({
                         <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
                           <Checkbox
                             checked={selectedTools.has(
-                              "internal:tool:manage_artifact",
+                              INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                             )}
                             onCheckedChange={() =>
                               onToggleTool("internal", "manage_artifact")
