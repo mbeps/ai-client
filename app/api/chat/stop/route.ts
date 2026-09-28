@@ -1,8 +1,6 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
-import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
-import { chatChannel } from "@/lib/inngest/channels";
-import { inngest } from "@/lib/inngest/client";
+import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { getLogger } from "@/lib/logger";
 import { stopChatRequestSchema } from "@/schemas/chat/chat";
 
@@ -40,36 +38,7 @@ export async function DELETE(req: Request) {
   const { chatId } = parsed.data;
   const userId = session.user.id;
 
-  // 1. Immediately abort the active stream in Node.js (< 1ms)
-  const abortedLocally = chatAbortRegistry.abort(chatId);
-
-  // 2. Publish finish event to Realtime so all connected browsers close the stream immediately
-  try {
-    await inngest.realtime.publish(chatChannel({ chatId }).stream, {
-      type: "finish",
-      finishReason: "stop",
-    });
-  } catch (realtimeErr) {
-    log.warn("Failed to publish stop to Realtime: {err}", {
-      err:
-        realtimeErr instanceof Error
-          ? realtimeErr.message
-          : String(realtimeErr),
-    });
-  }
-
-  // 3. Send Inngest cancel event for dashboard status bookkeeping
-  try {
-    await inngest.send({
-      name: "chat/response.cancel",
-      data: { chatId, userId },
-    });
-  } catch (inngestErr) {
-    log.warn("Failed to send cancel event to Inngest: {err}", {
-      err:
-        inngestErr instanceof Error ? inngestErr.message : String(inngestErr),
-    });
-  }
+  const abortedLocally = await abortChatStream(chatId, userId);
 
   log.info(
     "Stop processed (chatId: {chatId}, abortedLocally: {abortedLocally})",

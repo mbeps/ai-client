@@ -35,7 +35,6 @@ const WORKFLOWS = [
  *
  * @author Maruf Bepary
  */
-
 export default function WorkflowsPage() {
   return (
     <PageContainer className="space-y-6">
