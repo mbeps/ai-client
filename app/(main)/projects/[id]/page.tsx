@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BrainCircuit,
   FileText,
   FolderKanban,
   Library,
@@ -26,6 +27,7 @@ import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
+import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -39,6 +41,7 @@ import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
 import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
+import type { SkillMode } from "@/schemas/skill/skill-config";
 
 /**
  * Project detail page — client component for viewing and editing project configuration.
@@ -64,6 +67,7 @@ export default function ProjectPage() {
   const loadProjects = useAppStore((state) => state.loadProjects);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  const skills = useAppStore((state) => state.skills);
 
   const { normalizedKnowledgebases } = useKnowledgebases();
 
@@ -71,6 +75,7 @@ export default function ProjectPage() {
   const { isLoading: hydrationLoading } = useResourceHydration([
     "projects",
     "mcpServers",
+    "skills",
   ]);
 
   const [_loadingChats, setLoadingChats] = useState(false);
@@ -84,6 +89,13 @@ export default function ProjectPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(project?.tools || []),
   );
+  const [skillMode, setSkillMode] = useState<SkillMode>(
+    project?.skillMode ?? "dynamic",
+  );
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(
+    new Set(project?.skillIds || []),
+  );
+  const [savingSkills, setSavingSkills] = useState(false);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(
     project?.knowledgebaseId ?? null,
   );
@@ -121,6 +133,8 @@ export default function ProjectPage() {
       setDescription(project.description ?? "");
       setGlobalPrompt(project.globalPrompt ?? "");
       setSelectedTools(new Set(project.tools || []));
+      setSkillMode(project.skillMode ?? "dynamic");
+      setSelectedSkillIds(new Set(project.skillIds || []));
       setSelectedKbId(project.knowledgebaseId ?? null);
     }
   }, [project]);
@@ -140,6 +154,23 @@ export default function ProjectPage() {
   }
 
   const handleNewChat = () => createNewChat("New Chat", projectId);
+
+  const handleSaveSkills = async () => {
+    setSavingSkills(true);
+    try {
+      await updateProject(projectId, {
+        skillMode,
+        skillIds: Array.from(selectedSkillIds),
+      });
+      toast.success("Project skills saved");
+      await loadProjects();
+      router.refresh();
+    } catch {
+      toast.error("Failed to save project skills");
+    } finally {
+      setSavingSkills(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -258,6 +289,10 @@ export default function ProjectPage() {
             <Wrench className="mr-2 h-4 w-4" />
             <span>Tools</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="skills">
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            <span>Skills</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
@@ -310,6 +345,21 @@ export default function ProjectPage() {
             onBulkSelect={onBulkSelect}
             onSave={handleSaveSettings}
             isSaving={savingSettings}
+          />
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="skills">
+          <SkillsConfigTab
+            skillMode={skillMode}
+            onSkillModeChange={setSkillMode}
+            selectedSkillIds={selectedSkillIds}
+            onToggleSkill={(id) =>
+              setSelectedSkillIds((prev) => toggleSetItem(prev, id))
+            }
+            onSelectSkills={setSelectedSkillIds}
+            skills={skills}
+            onSave={handleSaveSkills}
+            isSaving={savingSkills}
           />
         </SidebarTabsContent>
 
