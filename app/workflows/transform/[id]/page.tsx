@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ArrowLeft,
+  BrainCircuit,
   Database,
   FileText,
   History,
@@ -30,6 +31,7 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
+import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -48,6 +50,7 @@ import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
 import { useAppStore } from "@/lib/store";
 import { toggleSetItem } from "@/lib/utils";
+import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import type { TransformStep } from "@/types/transform/transform-step";
 
@@ -66,7 +69,7 @@ export default function AgentEditorPage() {
   const id = params.id as string;
   const isNew = id === "new";
 
-  const { mcpServers, loadMcpServers } = useAppStore();
+  const { mcpServers, loadMcpServers, skills, loadSkills } = useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
   const { models: chatModels } = useUserModels("chat");
   const hasNoModels = chatModels.length === 0;
@@ -76,6 +79,8 @@ export default function AgentEditorPage() {
   const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState<string>("");
   const [tools, setTools] = useState<Set<string>>(new Set());
+  const [skillMode, setSkillMode] = useState<SkillMode>("dynamic");
+  const [skillIds, setSkillIds] = useState<Set<string>>(new Set());
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
     new Set(),
   );
@@ -103,12 +108,15 @@ export default function AgentEditorPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Load MCP servers if empty
+  // Load MCP servers and skills if empty
   useEffect(() => {
     if (mcpServers.length === 0) {
       loadMcpServers();
     }
-  }, [mcpServers.length, loadMcpServers]);
+    if (skills.length === 0) {
+      loadSkills();
+    }
+  }, [mcpServers.length, loadMcpServers, skills.length, loadSkills]);
 
   // Load agent data if editing
   useEffect(() => {
@@ -127,6 +135,8 @@ export default function AgentEditorPage() {
           setGlobalContext(agent.globalContext ?? "");
           setModelId(agent.modelId ?? "");
           setTools(new Set(agent.tools ?? []));
+          setSkillMode((agent.skillMode as SkillMode) ?? "dynamic");
+          setSkillIds(new Set(agent.skillIds ?? []));
           setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
           setRequiresFileUpload(agent.requiresFileUpload);
           const rawSteps =
@@ -240,6 +250,8 @@ export default function AgentEditorPage() {
         globalContext: globalContext.trim() || undefined,
         modelId: modelId.trim() || undefined,
         tools: Array.from(tools),
+        skillMode,
+        skillIds: Array.from(skillIds),
         knowledgeBaseIds: Array.from(knowledgeBaseIds),
         requiresFileUpload,
         steps: steps.map((s, i) => ({
@@ -419,6 +431,10 @@ export default function AgentEditorPage() {
             <Wrench className="mr-2 h-4 w-4" />
             <span>Tools</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="skills">
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            <span>Skills</span>
+          </SidebarTabsTrigger>
           {!isNew && (
             <SidebarTabsTrigger value="runs">
               <History className="mr-2 h-4 w-4" />
@@ -488,6 +504,21 @@ export default function AgentEditorPage() {
               onBulkSelect={toggleAllTools}
             />
           </div>
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="skills">
+          <SkillsConfigTab
+            skillMode={skillMode}
+            onSkillModeChange={setSkillMode}
+            selectedSkillIds={skillIds}
+            onToggleSkill={(id) =>
+              setSkillIds((prev) => toggleSetItem(prev, id))
+            }
+            onSelectSkills={setSkillIds}
+            skills={skills}
+            onSave={handleSave}
+            isSaving={isSaving}
+          />
         </SidebarTabsContent>
 
         {!isNew && (
