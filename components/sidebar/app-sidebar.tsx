@@ -13,6 +13,7 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 import { listChats } from "@/actions/chats/list-chats";
 import { ChatOptions } from "@/components/chat/chat-options";
@@ -56,6 +57,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
   const createNewChat = useCreateChat();
+  const pathname = usePathname();
   const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
   const recentChats = sortByUpdatedAt(
@@ -185,7 +187,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   : ROUTES.CHATS.detail(chat.id);
                 return (
                   <SidebarMenuItem key={chat.id}>
-                    <SidebarMenuButton asChild tooltip={chat.title}>
+                    <SidebarMenuButton
+                        asChild
+                        tooltip={chat.title}
+                        isActive={pathname === href}
+                      >
                       <Link href={href}>
                         <MessageSquare className="h-4 w-4" />
                         <span className="truncate">{chat.title}</span>
