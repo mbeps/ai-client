@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
   assistant,
@@ -31,9 +31,11 @@ type ChatContext = {
     globalPrompt: string | null;
     knowledgebaseId: string | null;
   } | null;
-  /** The effective KB id for this request */
+  /** The effective primary KB id for this request */
   activeKbId: string | null;
-  /** Whether the active KB has been fully indexed */
+  /** All effective ready KB ids for this request */
+  activeKbIds: string[];
+  /** Whether at least one active KB is ready */
   kbIsReady: boolean;
   /** Assistant prompt (null when no assistant is associated) */
   assistantRow: { prompt: string | null } | null;
@@ -110,14 +112,15 @@ export async function loadChatContext(
         }
       : null;
 
-  const activeKbId =
-    selectedKbIds?.[0] ??
-    chatRow.knowledgebaseId ??
-    projectRow?.knowledgebaseId ??
-    null;
+  const candidateKbIds: string[] =
+    selectedKbIds && selectedKbIds.length > 0
+      ? selectedKbIds
+      : [chatRow.knowledgebaseId ?? projectRow?.knowledgebaseId ?? null].filter(
+          (id): id is string => Boolean(id),
+        );
 
-  // 2. Parallel queries that depend on chatRow and activeKbId
-  const [assistantRow, servers, kbRow, userSkills] = await Promise.all([
+  // 2. Parallel queries that depend on chatRow and candidateKbIds
+  const [assistantRow, servers, kbRows, userSkills] = await Promise.all([
     // Assistant lookup (if applicable)
     (() => {
       const effectiveAssistantId =
@@ -169,18 +172,34 @@ export async function loadChatContext(
 
     // KB readiness check (if applicable)
     (() => {
-      if (!activeKbId) return Promise.resolve(null);
+      if (candidateKbIds.length === 0) return Promise.resolve([]);
+      if (candidateKbIds.length === 1) {
+        return db
+          .select({
+            id: knowledgebase.id,
+            indexStatus: knowledgebase.indexStatus,
+          })
+          .from(knowledgebase)
+          .where(
+            and(
+              eq(knowledgebase.id, candidateKbIds[0]),
+              eq(knowledgebase.userId, userId),
+            ),
+          )
+          .limit(1);
+      }
       return db
-        .select({ indexStatus: knowledgebase.indexStatus })
+        .select({
+          id: knowledgebase.id,
+          indexStatus: knowledgebase.indexStatus,
+        })
         .from(knowledgebase)
         .where(
           and(
-            eq(knowledgebase.id, activeKbId),
+            inArray(knowledgebase.id, candidateKbIds),
             eq(knowledgebase.userId, userId),
           ),
-        )
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
+        );
     })(),
 
     // Enabled user skills
@@ -193,7 +212,13 @@ export async function loadChatContext(
   ]);
 
   // 3. Derive composite values
-  const kbIsReady = activeKbId ? kbRow?.indexStatus === "ready" : false;
+  const readyKbIds = kbRows
+    .filter((k) => k.indexStatus === "ready")
+    .map((k, idx) => k.id ?? candidateKbIds[idx])
+    .filter(Boolean);
+  const activeKbIds = readyKbIds;
+  const activeKbId = activeKbIds[0] ?? null;
+  const kbIsReady = activeKbIds.length > 0;
 
   // 4. Filter servers by selection if provided
   const filteredServers =
@@ -223,6 +248,7 @@ export async function loadChatContext(
     chatRow,
     projectRow,
     activeKbId,
+    activeKbIds,
     kbIsReady,
     assistantRow,
     servers: filteredServers,

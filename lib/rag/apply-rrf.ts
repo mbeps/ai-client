@@ -48,5 +48,7 @@ export function applyRRF(
       s3Key: row.s3_key,
       chunkIndex: row.chunk_index,
       score,
+      ...(row.kb_id ? { kbId: row.kb_id } : {}),
+      ...(row.kb_name ? { kbName: row.kb_name } : {}),
     }));
 }

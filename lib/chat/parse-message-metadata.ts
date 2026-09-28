@@ -26,6 +26,7 @@ export function parseMessageMetadata(
     selectedServerIds: null,
     selectedTools: null,
     selectedKbIds: null,
+    selectedSkillIds: null,
     reasoning: undefined,
     usage: null,
     finishReason: null,
@@ -38,11 +39,19 @@ export function parseMessageMetadata(
     const parsed =
       typeof metadata === "string" ? JSON.parse(metadata) : metadata;
 
+    const rawPromptIds = Array.isArray(parsed.promptIds)
+      ? (parsed.promptIds.filter(
+          (id: unknown) => typeof id === "string",
+        ) as string[])
+      : typeof parsed.promptId === "string"
+        ? [parsed.promptId]
+        : [];
+
     const promptMeta =
-      typeof parsed.promptId === "string" &&
-      typeof parsed.userContent === "string"
+      rawPromptIds.length > 0 && typeof parsed.userContent === "string"
         ? {
-            promptId: parsed.promptId,
+            promptId: rawPromptIds[0],
+            promptIds: rawPromptIds,
             userContent: parsed.userContent,
           }
         : null;
@@ -69,6 +78,10 @@ export function parseMessageMetadata(
 
     const selectedKbIds = Array.isArray(parsed.selectedKbIds)
       ? (parsed.selectedKbIds as string[])
+      : null;
+
+    const selectedSkillIds = Array.isArray(parsed.selectedSkillIds)
+      ? (parsed.selectedSkillIds as string[])
       : null;
 
     const reasoning =
@@ -106,6 +119,7 @@ export function parseMessageMetadata(
       selectedServerIds,
       selectedTools,
       selectedKbIds,
+      selectedSkillIds,
       reasoning,
       usage,
       finishReason,

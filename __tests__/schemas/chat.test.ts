@@ -261,9 +261,19 @@ describe("chatRequestSchema", () => {
       selectedTools: ["search"],
       selectedAssistantId: VALID_UUID,
       selectedPromptId: VALID_UUID,
+      selectedPromptIds: [VALID_UUID],
       selectedKbIds: [VALID_UUID],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects more than 10 selectedPromptIds", () => {
+    const result = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      selectedPromptIds: Array.from({ length: 11 }, () => "prompt-id"),
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects non-UUID chatId", () => {

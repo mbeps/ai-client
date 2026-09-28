@@ -123,6 +123,52 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
     expect(result.results[0]).not.toHaveProperty("s3Key");
   });
 
+  it("passes multiple KB IDs to hybridSearch and includes kbId and kbName in results", async () => {
+    vi.mocked(hybridSearch).mockResolvedValueOnce([
+      {
+        id: "chunk-1",
+        content: "chunk text",
+        score: 0.87,
+        documentId: "doc-1",
+        documentName: "Doc One",
+        s3Key: "s3-key-1",
+        chunkIndex: 0,
+        kbId: "kb-1",
+        kbName: "Docs",
+      },
+    ]);
+
+    const { mcpTools } = await registerMcpTools(
+      [],
+      undefined,
+      false,
+      "kb-1",
+      true,
+      "user-1",
+      ["kb-1", "kb-2"],
+    );
+    const tool = mcpTools.search_knowledge_base;
+
+    const result = await tool.execute({ query: "multi query" }, {
+      messages: [],
+    } as any);
+
+    expect(hybridSearch).toHaveBeenCalledWith(
+      ["kb-1", "kb-2"],
+      "multi query",
+      "user-1",
+      5,
+    );
+    expect(result.results[0]).toEqual({
+      content: "chunk text",
+      relevanceScore: 0.87,
+      documentId: "doc-1",
+      documentName: "Doc One",
+      kbId: "kb-1",
+      kbName: "Docs",
+    });
+  });
+
   it("advertises a non-empty inputSchema for search_knowledge_base", async () => {
     const { mcpTools } = await registerMcpTools(
       [],

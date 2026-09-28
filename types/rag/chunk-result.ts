@@ -11,4 +11,6 @@ export type ChunkResult = {
   s3Key: string;
   chunkIndex: number;
   score: number;
+  kbId?: string;
+  kbName?: string;
 };

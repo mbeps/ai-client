@@ -11,7 +11,6 @@ import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
-import { resolveSlashPrompt } from "@/lib/chat/resolve-slash-prompt";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
@@ -51,40 +50,50 @@ function buildMetadata(
  */
 async function resolveContent(
   content: string,
-  selectedPromptId?: string,
+  selectedPromptIds: string[] = [],
   metadataObj?: Record<string, unknown>,
 ): Promise<{ fullContent: string }> {
   const meta = metadataObj ?? {};
-  if (!selectedPromptId) return { fullContent: content };
+  if (selectedPromptIds.length === 0) return { fullContent: content };
 
-  if (selectedPromptId.startsWith("mcp:")) {
-    const parts = selectedPromptId.split(":");
-    const serverId = parts[1];
-    const promptName = parts.slice(2).join(":");
+  const promptChunks: string[] = [];
+  const prompts = useAppStore.getState().prompts;
 
-    try {
-      const mcpContent = await resolveMcpPrompt(serverId, promptName);
-      meta.promptId = selectedPromptId;
-      meta.userContent = content;
-      return {
-        fullContent:
-          mcpContent + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + content,
-      };
-    } catch (err) {
-      logger.error("Failed to load MCP prompt", err);
-      toast.error("Failed to load MCP prompt. Sending message without it.");
-      return { fullContent: content };
+  for (const promptId of selectedPromptIds) {
+    if (promptId.startsWith("mcp:")) {
+      const parts = promptId.split(":");
+      const serverId = parts[1];
+      const promptName = parts.slice(2).join(":");
+
+      try {
+        const mcpContent = await resolveMcpPrompt(serverId, promptName);
+        if (mcpContent) promptChunks.push(mcpContent);
+      } catch (err) {
+        logger.error("Failed to load MCP prompt", err);
+        toast.error("Failed to load MCP prompt. Sending message without it.");
+      }
+    } else {
+      const local = prompts.find((p) => p.id === promptId);
+      if (local?.content) {
+        promptChunks.push(local.content);
+      }
     }
   }
 
-  const prompts = useAppStore.getState().prompts;
-  const { fullContent, metadata } = resolveSlashPrompt(
-    selectedPromptId,
-    content,
-    prompts,
-  );
-  Object.assign(meta, metadata);
-  return { fullContent };
+  meta.promptIds = selectedPromptIds;
+  if (selectedPromptIds[0]) meta.promptId = selectedPromptIds[0];
+  meta.userContent = content;
+
+  if (promptChunks.length === 0) {
+    return { fullContent: content };
+  }
+
+  return {
+    fullContent:
+      promptChunks.join(PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR) +
+      PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+      content,
+  };
 }
 
 interface StreamRequestOptions {
@@ -94,6 +103,8 @@ interface StreamRequestOptions {
   selectedServerIds?: string[];
   selectedTools?: string[];
   selectedAssistantId?: string;
+  selectedPromptIds?: string[];
+  selectedPromptId?: string;
   selectedSkillIds?: string[];
   selectedKbIds?: string[];
 }
@@ -495,11 +506,17 @@ export function useStreamResponse(
     model = "",
     selectedServerIds: string[] = [],
     selectedTools: string[] = [],
-    selectedPromptId?: string,
+    selectedPromptId?: string | string[],
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
     selectedSkillIds: string[] = [],
   ): Promise<string> => {
+    const promptIds = Array.isArray(selectedPromptId)
+      ? selectedPromptId
+      : selectedPromptId
+        ? [selectedPromptId]
+        : [];
+
     pendingRef.current = {
       userMessageId: userMsgId,
       model,
@@ -530,7 +547,7 @@ export function useStreamResponse(
     // 2. Resolve prompt content (MCP / slash-command)
     const { fullContent } = await resolveContent(
       content,
-      selectedPromptId,
+      promptIds,
       metadataObj,
     );
     const userMsgMetadata = JSON.stringify(metadataObj);
@@ -583,6 +600,8 @@ export function useStreamResponse(
           selectedServerIds,
           selectedTools,
           selectedAssistantId,
+          selectedPromptIds: promptIds,
+          selectedPromptId: promptIds[0],
           selectedSkillIds,
           selectedKbIds,
         } satisfies StreamRequestOptions),

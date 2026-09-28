@@ -23,6 +23,7 @@ describe("parseMessageMetadata", () => {
       selectedServerIds: null,
       selectedTools: null,
       selectedKbIds: null,
+      selectedSkillIds: null,
       reasoning: undefined,
       usage: null,
       finishReason: null,
@@ -89,6 +90,20 @@ describe("parseMessageMetadata", () => {
     );
     expect(both.promptMeta).toEqual({
       promptId: "p-1",
+      promptIds: ["p-1"],
+      userContent: "Summarise this",
+    });
+
+    // Multiple promptIds array parsing
+    const multi = parseMessageMetadata(
+      JSON.stringify({
+        promptIds: ["p-1", "p-2"],
+        userContent: "Summarise this",
+      }),
+    );
+    expect(multi.promptMeta).toEqual({
+      promptId: "p-1",
+      promptIds: ["p-1", "p-2"],
       userContent: "Summarise this",
     });
 
@@ -255,6 +270,7 @@ describe("parseMessageMetadata", () => {
       selectedServerIds: null,
       selectedTools: null,
       selectedKbIds: null,
+      selectedSkillIds: null,
       reasoning: undefined,
       usage: null,
       finishReason: null,

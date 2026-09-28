@@ -90,13 +90,14 @@ export function useMentionCommands(
   setInput: (value: string) => void,
   textareaRef: RefObject<HTMLTextAreaElement | null>,
   activeChatAssistantId?: string | null,
-  initialSelectedPromptId?: string,
+  initialSelectedPromptId?: string | string[],
   initialSelectedAssistantId?: string,
   canMentionAssistant: boolean = true,
   selectedServerIds?: Set<string>,
   onSelectSkill?: (skill: Skill) => void,
   onSelectKnowledgebase?: (kb: Knowledgebase) => void,
   knowledgebases?: Knowledgebase[],
+  onSelectPrompt?: (prompt: MentionPromptItem) => void,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
@@ -109,28 +110,47 @@ export function useMentionCommands(
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const [selectedPrompt, setSelectedPrompt] =
-    useState<MentionPromptItem | null>(() => {
-      if (!initialSelectedPromptId) return null;
-      const local = prompts.find((p) => p.id === initialSelectedPromptId);
-      if (local) return { ...local, isMcp: false, isSkill: false };
+  const [selectedPrompts, setSelectedPrompts] = useState<MentionPromptItem[]>(
+    () => {
+      if (!initialSelectedPromptId) return [];
+      const ids = Array.isArray(initialSelectedPromptId)
+        ? initialSelectedPromptId
+        : [initialSelectedPromptId];
+      const items: MentionPromptItem[] = [];
+      for (const id of ids) {
+        const local = prompts.find((p) => p.id === id);
+        if (local) {
+          items.push({ ...local, isMcp: false, isSkill: false });
+          continue;
+        }
 
-      const mcp = mcpPrompts.find(
-        (p) => `mcp:${p.serverId}:${p.name}` === initialSelectedPromptId,
-      );
-      if (mcp) {
-        return {
-          ...mcp,
-          id: `mcp:${mcp.serverId}:${mcp.name}`,
-          title: mcp.name,
-          shortcut: mcp.name,
-          sourceServer: mcp.serverName,
-          isMcp: true,
-          isSkill: false,
-        };
+        const mcp = mcpPrompts.find(
+          (p) => `mcp:${p.serverId}:${p.name}` === id,
+        );
+        if (mcp) {
+          items.push({
+            ...mcp,
+            id: `mcp:${mcp.serverId}:${mcp.name}`,
+            title: mcp.name,
+            shortcut: mcp.name,
+            sourceServer: mcp.serverName,
+            isMcp: true,
+            isSkill: false,
+          });
+        }
       }
-      return null;
-    });
+      return items;
+    },
+  );
+
+  const selectedPrompt = selectedPrompts[0] ?? null;
+  const setSelectedPrompt = useCallback((prompt: MentionPromptItem | null) => {
+    if (!prompt) {
+      setSelectedPrompts([]);
+    } else {
+      setSelectedPrompts([prompt]);
+    }
+  }, []);
 
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
     initialSelectedAssistantId
@@ -248,11 +268,7 @@ export function useMentionCommands(
       let triggerIndex = -1;
       let activeTrigger: MentionTrigger = null;
 
-      if (
-        lastSlashIndex > lastAtIndex &&
-        lastSlashIndex > lastHashIndex &&
-        !selectedPrompt
-      ) {
+      if (lastSlashIndex > lastAtIndex && lastSlashIndex > lastHashIndex) {
         triggerIndex = lastSlashIndex;
         activeTrigger = "/";
       } else if (
@@ -292,13 +308,7 @@ export function useMentionCommands(
         setOpenTrigger(null);
       }
     },
-    [
-      setInput,
-      selectedPrompt,
-      selectedAssistant,
-      activeChatAssistantId,
-      canMentionAssistant,
-    ],
+    [setInput, selectedAssistant, activeChatAssistantId, canMentionAssistant],
   );
 
   const handleSelect = useCallback(
@@ -318,7 +328,11 @@ export function useMentionCommands(
           if (isSkillItem(item)) {
             onSelectSkill?.(item);
           } else if (isPromptItem(item)) {
-            setSelectedPrompt(item);
+            setSelectedPrompts((prev) => {
+              if (prev.some((p) => p.id === item.id)) return prev;
+              return [...prev, item];
+            });
+            onSelectPrompt?.(item);
           }
         } else if (openTrigger === "@") {
           if (isAssistantItem(item)) {
@@ -349,6 +363,7 @@ export function useMentionCommands(
       openTrigger,
       onSelectSkill,
       onSelectKnowledgebase,
+      onSelectPrompt,
     ],
   );
 
@@ -394,6 +409,8 @@ export function useMentionCommands(
     setSelectedIndex,
     selectedPrompt,
     setSelectedPrompt,
+    selectedPrompts,
+    setSelectedPrompts,
     selectedAssistant,
     setSelectedAssistant,
     selectedKnowledgebase,

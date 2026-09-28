@@ -40,6 +40,9 @@ interface AttachmentsMenuProps {
   mcpPrompts?: DiscoveredPrompt[];
   selectedPrompt?: MentionPromptItem | null;
   onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
+  selectedPromptIds?: Set<string>;
+  onTogglePrompt?: (prompt: MentionPromptItem) => void;
+  onClearPrompts?: () => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
 }
@@ -65,9 +68,19 @@ export const AttachmentsMenu = ({
   mcpPrompts = [],
   selectedPrompt = null,
   onSelectPrompt,
+  selectedPromptIds,
+  onTogglePrompt,
+  onClearPrompts,
   supportsVision: _supportsVision = true,
   supportsTools = true,
 }: AttachmentsMenuProps) => {
+  const promptCount =
+    selectedPromptIds !== undefined
+      ? selectedPromptIds.size
+      : selectedPrompt
+        ? 1
+        : 0;
+
   return (
     <div className="flex flex-col gap-0.5 p-1">
       <Button
@@ -94,17 +107,20 @@ export const AttachmentsMenu = ({
         />
       )}
 
-      {onSelectPrompt && (
+      {(onTogglePrompt || onSelectPrompt) && (
         <PromptPickerDialog
           prompts={prompts}
           mcpPrompts={mcpPrompts}
           selectedPrompt={selectedPrompt}
           onSelectPrompt={onSelectPrompt}
+          selectedPromptIds={selectedPromptIds}
+          onTogglePrompt={onTogglePrompt}
+          onClearAll={onClearPrompts}
           trigger={
             <Button variant="ghost" size="sm" className="w-full justify-start">
               <SquareTerminal className="mr-2 h-4 w-4" />
-              Select Prompt
-              {selectedPrompt ? " (1)" : ""}
+              Select Prompts
+              {promptCount > 0 ? ` (${promptCount})` : ""}
             </Button>
           }
         />

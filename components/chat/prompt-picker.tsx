@@ -25,7 +25,11 @@ interface PromptPickerProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
   selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt: (prompt: MentionPromptItem | null) => void;
+  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
+  selectedPromptIds?: Set<string>;
+  onTogglePrompt?: (prompt: MentionPromptItem) => void;
+  onSelectAll?: (prompts: MentionPromptItem[]) => void;
+  onClearAll?: () => void;
   className?: string;
   maxHeight?: string;
   defaultExpanded?: boolean;
@@ -48,6 +52,10 @@ export function PromptPicker({
   mcpPrompts = [],
   selectedPrompt,
   onSelectPrompt,
+  selectedPromptIds,
+  onTogglePrompt,
+  onSelectAll,
+  onClearAll,
   className,
   maxHeight = "350px",
   defaultExpanded = false,
@@ -59,6 +67,14 @@ export function PromptPicker({
       initial.add("internal");
       mcpPrompts.forEach((p) => {
         initial.add(p.serverId || p.serverName || "mcp");
+      });
+    } else if (selectedPromptIds && selectedPromptIds.size > 0) {
+      initial.add("internal");
+      mcpPrompts.forEach((p) => {
+        const sId = p.serverId || p.serverName || "mcp";
+        if (selectedPromptIds.has(`mcp:${p.serverId}:${p.name}`)) {
+          initial.add(sId);
+        }
       });
     } else if (selectedPrompt) {
       if (selectedPrompt.isMcp) {
@@ -196,33 +212,68 @@ export function PromptPicker({
     return list;
   }, [filteredItems, search, prompts.length, mcpPrompts]);
 
-  const isAllSelected = selectedPrompt !== null;
+  const isAllSelected = useMemo(() => {
+    if (filteredItems.length === 0) return false;
+    if (selectedPromptIds) {
+      return filteredItems.every((item) => selectedPromptIds.has(item.id));
+    }
+    return selectedPrompt !== null;
+  }, [filteredItems, selectedPromptIds, selectedPrompt]);
 
   const handleToggle = (item: MentionPromptItem) => {
-    if (selectedPrompt?.id === item.id) {
-      onSelectPrompt(null);
-    } else {
-      onSelectPrompt(item);
+    if (onTogglePrompt) {
+      onTogglePrompt(item);
+    } else if (onSelectPrompt) {
+      if (selectedPrompt?.id === item.id) {
+        onSelectPrompt(null);
+      } else {
+        onSelectPrompt(item);
+      }
     }
   };
 
   const handleToggleAll = () => {
-    if (isAllSelected) {
-      onSelectPrompt(null);
-    } else if (filteredItems.length > 0) {
-      onSelectPrompt(filteredItems[0]);
+    if (onSelectAll && onClearAll) {
+      if (isAllSelected) {
+        onClearAll();
+      } else {
+        onSelectAll(filteredItems);
+      }
+    } else if (onTogglePrompt && selectedPromptIds) {
+      if (isAllSelected) {
+        filteredItems.forEach((item) => {
+          if (selectedPromptIds.has(item.id)) onTogglePrompt(item);
+        });
+      } else {
+        filteredItems.forEach((item) => {
+          if (!selectedPromptIds.has(item.id)) onTogglePrompt(item);
+        });
+      }
+    } else if (onSelectPrompt) {
+      if (isAllSelected) {
+        onSelectPrompt(null);
+      } else if (filteredItems.length > 0) {
+        onSelectPrompt(filteredItems[0]);
+      }
     }
   };
 
-  const isSelectedInView = useMemo(() => {
+  const selectedCount = useMemo(() => {
+    if (selectedPromptIds) {
+      return filteredItems.filter((item) => selectedPromptIds.has(item.id))
+        .length;
+    }
     return selectedPrompt
       ? filteredItems.some((item) => item.id === selectedPrompt.id)
-      : false;
-  }, [selectedPrompt, filteredItems]);
-  const selectedCount = isSelectedInView ? 1 : 0;
+        ? 1
+        : 0
+      : 0;
+  }, [filteredItems, selectedPromptIds, selectedPrompt]);
 
   const renderPromptCard = (item: MentionPromptItem) => {
-    const isSelected = selectedPrompt?.id === item.id;
+    const isSelected = selectedPromptIds
+      ? selectedPromptIds.has(item.id)
+      : selectedPrompt?.id === item.id;
 
     return (
       <div
@@ -322,8 +373,10 @@ export function PromptPicker({
             groups.map((group) => {
               const isExpanded =
                 expandedGroups.has(group.id) || search.length > 0;
-              const selectedInGroup = group.items.filter(
-                (item) => selectedPrompt?.id === item.id,
+              const selectedInGroup = group.items.filter((item) =>
+                selectedPromptIds
+                  ? selectedPromptIds.has(item.id)
+                  : selectedPrompt?.id === item.id,
               ).length;
 
               if (group.isInternal) {
@@ -360,9 +413,9 @@ export function PromptPicker({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (selectedInGroup > 0) {
-                              onSelectPrompt(null);
+                              onSelectPrompt?.(null);
                             } else if (group.items.length > 0) {
-                              onSelectPrompt(group.items[0]);
+                              onSelectPrompt?.(group.items[0]);
                             }
                           }}
                         >
@@ -416,9 +469,9 @@ export function PromptPicker({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (selectedInGroup > 0) {
-                            onSelectPrompt(null);
+                            onSelectPrompt?.(null);
                           } else if (group.items.length > 0) {
-                            onSelectPrompt(group.items[0]);
+                            onSelectPrompt?.(group.items[0]);
                           }
                         }}
                       >
@@ -451,7 +504,10 @@ interface PromptPickerDialogProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
   selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt: (prompt: MentionPromptItem | null) => void;
+  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
+  selectedPromptIds?: Set<string>;
+  onTogglePrompt?: (prompt: MentionPromptItem) => void;
+  onClearAll?: () => void;
   trigger?: React.ReactNode;
 }
 
@@ -465,9 +521,15 @@ export function PromptPickerDialog({
   mcpPrompts = [],
   selectedPrompt,
   onSelectPrompt,
+  selectedPromptIds,
+  onTogglePrompt,
+  onClearAll,
   trigger,
 }: PromptPickerDialogProps) {
   const totalCount = prompts.length + mcpPrompts.length;
+  const hasSelection =
+    (selectedPromptIds && selectedPromptIds.size > 0) ||
+    Boolean(selectedPrompt);
 
   return (
     <PickerDialog
@@ -493,11 +555,14 @@ export function PromptPickerDialog({
         href: ROUTES.SETTINGS.PROMPTS.path,
       }}
       extraActions={
-        selectedPrompt ? (
+        hasSelection ? (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onSelectPrompt(null)}
+            onClick={() => {
+              onClearAll?.();
+              onSelectPrompt?.(null);
+            }}
             className="h-8 text-xs"
           >
             <X className="mr-1 h-3.5 w-3.5" />
@@ -511,6 +576,9 @@ export function PromptPickerDialog({
         mcpPrompts={mcpPrompts}
         selectedPrompt={selectedPrompt}
         onSelectPrompt={onSelectPrompt}
+        selectedPromptIds={selectedPromptIds}
+        onTogglePrompt={onTogglePrompt}
+        onClearAll={onClearAll}
         className="flex min-h-0 flex-1 flex-col p-4"
       />
     </PickerDialog>

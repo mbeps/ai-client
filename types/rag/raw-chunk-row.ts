@@ -11,4 +11,6 @@ export type RawChunkRow = {
   chunk_index: number;
   document_name: string;
   s3_key: string;
+  kb_id?: string;
+  kb_name?: string;
 } & BaseResource;

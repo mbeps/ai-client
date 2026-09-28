@@ -40,6 +40,7 @@ export async function registerMcpTools(
   activeKbId: string | null,
   kbIsReady: boolean,
   userId: string,
+  activeKbIds?: string[],
 ): Promise<{
   mcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -147,8 +148,14 @@ export async function registerMcpTools(
     });
   }
 
-  if (activeKbId && kbIsReady) {
-    const kbId = activeKbId;
+  const targetKbIds =
+    activeKbIds && activeKbIds.length > 0
+      ? activeKbIds
+      : activeKbId
+        ? [activeKbId]
+        : [];
+
+  if (targetKbIds.length > 0 && kbIsReady) {
     toolSourceMap.search_knowledge_base = "System";
     mcpTools.search_knowledge_base = tool({
       description: PROMPTS.TOOLS.SEARCH_KNOWLEDGE_BASE.DESCRIPTION,
@@ -165,7 +172,12 @@ export async function registerMcpTools(
           };
         }
 
-        const results = await hybridSearch(kbId, normalizedQuery, userId, 5);
+        const results = await hybridSearch(
+          targetKbIds.length === 1 ? targetKbIds[0] : targetKbIds,
+          normalizedQuery,
+          userId,
+          5,
+        );
 
         if (results.length === 0) {
           return {
@@ -182,6 +194,8 @@ export async function registerMcpTools(
             relevanceScore: r.score,
             documentId: r.documentId,
             documentName: r.documentName,
+            ...(r.kbId ? { kbId: r.kbId } : {}),
+            ...(r.kbName ? { kbName: r.kbName } : {}),
           })),
           resultCount: results.length,
         };

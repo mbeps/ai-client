@@ -399,7 +399,7 @@ export function ChatUI({
       model = "",
       selectedServerIds: string[] = [],
       selectedTools: string[] = [],
-      selectedPromptId?: string,
+      selectedPromptId?: string | string[],
       selectedAssistantId?: string,
       selectedKbIds: string[] = [],
       selectedSkillIds: string[] = [],
@@ -503,7 +503,7 @@ export function ChatUI({
     model: string,
     serverIds: string[],
     toolIds: string[],
-    promptId?: string,
+    promptId?: string | string[],
     assistantId?: string,
     selectedKbIds?: string[],
     selectedSkillIds?: string[],
@@ -532,7 +532,7 @@ export function ChatUI({
     const parentMsg = chat?.messages[msg.parentId];
     if (!parentMsg) return;
 
-    let promptId: string | undefined;
+    let promptIds: string[] | undefined;
     let assistantId: string | undefined;
     let model: string = "";
     let serverIds: string[] = [];
@@ -544,8 +544,11 @@ export function ChatUI({
     if (parentMsg.metadata) {
       try {
         const meta = JSON.parse(parentMsg.metadata);
-        if (meta.promptId) {
-          promptId = meta.promptId;
+        if (Array.isArray(meta.promptIds) && meta.promptIds.length > 0) {
+          promptIds = meta.promptIds;
+          userContent = meta.userContent || parentMsg.content;
+        } else if (meta.promptId) {
+          promptIds = [meta.promptId];
           userContent = meta.userContent || parentMsg.content;
         }
         if (meta.assistantId) {
@@ -577,7 +580,7 @@ export function ChatUI({
       model,
       serverIds,
       toolIds,
-      promptId,
+      promptIds,
       assistantId,
       selectedKbIds,
       selectedSkillIds,

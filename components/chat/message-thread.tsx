@@ -24,8 +24,10 @@ interface MessageThreadProps {
     model: string,
     serverIds: string[],
     toolIds: string[],
-    promptId?: string,
+    promptId?: string | string[],
     assistantId?: string,
+    kbs?: string[],
+    selectedSkillIds?: string[],
   ) => void;
   /** Callback to delete a message. */
   onDelete: (id: string) => void;

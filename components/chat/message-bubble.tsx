@@ -1,6 +1,15 @@
 "use client";
 
-import { Bot, Check, Command, Database, User, X } from "lucide-react";
+import {
+  Bot,
+  BrainCircuit,
+  Check,
+  Command,
+  Database,
+  User,
+  X,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
@@ -48,9 +57,10 @@ interface MessageBubbleProps {
     model: string,
     serverIds: string[],
     toolIds: string[],
-    promptId?: string,
+    promptId?: string | string[],
     assistantId?: string,
     kbs?: string[],
+    selectedSkillIds?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -113,6 +123,7 @@ export function MessageBubble({
     selectedServerIds: parsedServerIds,
     selectedTools: parsedToolIds,
     selectedKbIds: parsedKbIds,
+    selectedSkillIds: parsedSkillIds,
   } = parsedMetadata;
 
   const citations = useMemo(() => {
@@ -123,10 +134,19 @@ export function MessageBubble({
   }, [rawToolData, streamingCitations]);
   const promptMeta = isUser ? rawPromptMeta : null;
   const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
+  const selectedSkillIds = isUser && parsedSkillIds ? parsedSkillIds : [];
+  const skills = useAppStore((state) => state.skills);
   const toolData = isUser ? null : rawToolData;
-  const promptEntry = promptMeta
-    ? prompts.find((p) => p.id === promptMeta.promptId)
-    : null;
+  const promptIds = useMemo(() => {
+    if (!promptMeta) return [];
+    if (
+      Array.isArray(promptMeta.promptIds) &&
+      promptMeta.promptIds.length > 0
+    ) {
+      return promptMeta.promptIds;
+    }
+    return promptMeta.promptId ? [promptMeta.promptId] : [];
+  }, [promptMeta]);
 
   const modelName = useMemo(() => {
     if (isUser || !parsedModelId) return null;
@@ -161,9 +181,10 @@ export function MessageBubble({
       parsedModelId || "",
       parsedServerIds || [],
       parsedToolIds || [],
-      promptMeta?.promptId,
+      promptIds.length > 0 ? promptIds : promptMeta?.promptId,
       assistantId || undefined,
       selectedKbIds,
+      selectedSkillIds,
     );
     setIsEditing(false);
   };
@@ -218,17 +239,46 @@ export function MessageBubble({
           )}
           {isUser ? (
             <div>
-              {(promptMeta || selectedKbIds.length > 0) && (
+              {(promptIds.length > 0 ||
+                selectedSkillIds.length > 0 ||
+                selectedKbIds.length > 0) && (
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  {promptMeta && (
-                    <Link
-                      href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
-                    >
-                      <Command className="h-3 w-3" />/
-                      {promptEntry?.shortcut ?? promptMeta.promptId}
-                    </Link>
-                  )}
+                  {promptIds.map((pid) => {
+                    const promptEntry = prompts.find((p) => p.id === pid);
+                    const isMcp = pid.startsWith("mcp:");
+                    return isMcp ? (
+                      <span
+                        key={pid}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs"
+                      >
+                        <Zap className="h-3 w-3 text-amber-500" />/
+                        {promptEntry?.title ?? pid}
+                      </span>
+                    ) : (
+                      <Link
+                        key={pid}
+                        href={ROUTES.SETTINGS.PROMPTS.detail(pid)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
+                      >
+                        <Command className="h-3 w-3" />/
+                        {promptEntry?.shortcut ?? promptEntry?.title ?? pid}
+                      </Link>
+                    );
+                  })}
+                  {selectedSkillIds.map((skillId) => {
+                    const skill = skills.find(
+                      (s) => s.id === skillId || s.name === skillId,
+                    );
+                    return (
+                      <span
+                        key={skillId}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs"
+                      >
+                        <BrainCircuit className="h-3 w-3 text-primary" />/
+                        {skill?.displayName ?? skill?.name ?? skillId}
+                      </span>
+                    );
+                  })}
                   {selectedKbIds.map((kbId) => {
                     const kb = knowledgebases.find((k) => k.id === kbId);
                     return (

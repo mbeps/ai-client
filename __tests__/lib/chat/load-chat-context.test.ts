@@ -221,6 +221,38 @@ describe("loadChatContext KB ownership", () => {
     ]);
 
     expect(ctx.activeKbId).toBe("override-kb-1");
+    expect(ctx.activeKbIds).toEqual(["override-kb-1"]);
+    expect(ctx.kbIsReady).toBe(true);
+  });
+
+  it("handles multiple selectedKbIds and filters to only ready KBs", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: null,
+        assistantId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+      },
+    ]);
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
+    // KB query for multiple KBs returns one ready, one indexing
+    chainable.__queueWhere([
+      { id: "kb-1", indexStatus: "ready" },
+      { id: "kb-2", indexStatus: "indexing" },
+    ]);
+    chainable.__queueWhere([]); // user skills
+
+    const ctx = await loadChatContext("chat-1", "user-1", undefined, [
+      "kb-1",
+      "kb-2",
+    ]);
+
+    expect(ctx.activeKbIds).toEqual(["kb-1"]);
+    expect(ctx.activeKbId).toBe("kb-1");
     expect(ctx.kbIsReady).toBe(true);
   });
 

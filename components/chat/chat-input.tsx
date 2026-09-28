@@ -21,7 +21,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
-import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
+import {
+  type MentionPromptItem,
+  useMentionCommands,
+} from "@/hooks/chat/use-mention-commands";
 import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
@@ -54,7 +57,7 @@ interface ChatInputProps {
     model: string,
     selectedServerIds: string[],
     selectedTools: string[],
-    selectedPromptId?: string,
+    selectedPromptId?: string | string[],
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
     selectedSkillIds?: string[],
@@ -93,8 +96,8 @@ interface ChatInputProps {
    */
   initialSelectedTools?: readonly string[] | string[];
 
-  /** Initial prompt ID if editing a slash-command message. */
-  initialSelectedPromptId?: string;
+  /** Initial prompt ID or IDs if editing a slash-command message. */
+  initialSelectedPromptId?: string | string[];
 
   /** Initial assistant ID if editing a message that used an assistant mention. */
   initialSelectedAssistantId?: string;
@@ -378,6 +381,8 @@ export function ChatInput({
     selectedIndex,
     selectedPrompt,
     setSelectedPrompt,
+    selectedPrompts,
+    setSelectedPrompts,
     selectedAssistant,
     setSelectedAssistant,
     handleInputChange,
@@ -395,6 +400,42 @@ export function ChatInput({
     (skill) => setSelectedSkills((prev) => new Set(prev).add(skill.id)),
     (kb) => setSelectedKbs((prev) => new Set(prev).add(kb.id)),
     knowledgebases,
+  );
+
+  const promptList = selectedPrompts || [];
+  const selectedPromptIds = useMemo(
+    () => new Set(promptList.map((p) => p.id)),
+    [promptList],
+  );
+
+  const handleTogglePrompt = useCallback(
+    (prompt: MentionPromptItem) => {
+      if (setSelectedPrompts) {
+        setSelectedPrompts((prev = []) => {
+          if (prev.some((p) => p.id === prompt.id)) {
+            return prev.filter((p) => p.id !== prompt.id);
+          }
+          return [...prev, prompt];
+        });
+      } else {
+        setSelectedPrompt(prompt);
+      }
+    },
+    [setSelectedPrompts, setSelectedPrompt],
+  );
+
+  const handleRemovePrompt = useCallback(
+    (promptId?: string) => {
+      if (setSelectedPrompts) {
+        setSelectedPrompts((prev = []) => {
+          if (!promptId) return [];
+          return prev.filter((p) => p.id !== promptId);
+        });
+      } else {
+        setSelectedPrompt(null);
+      }
+    },
+    [setSelectedPrompts, setSelectedPrompt],
   );
 
   // -- Model initialisation --
@@ -425,12 +466,14 @@ export function ChatInput({
 
   // -- Action handlers --
   const handleSend = () => {
+    const hasPrompts = promptList.length > 0 || Boolean(selectedPrompt);
     if (
       (input.trim() ||
         attachments.length > 0 ||
-        selectedPrompt ||
+        hasPrompts ||
         selectedAssistant ||
-        selectedSkills.size > 0) &&
+        selectedSkills.size > 0 ||
+        selectedKbs.size > 0) &&
       !isLoading
     ) {
       // Auto-suppress tools when the current model does not support tool calling (capTools: false).
@@ -441,20 +484,32 @@ export function ChatInput({
         ? Array.from(selectedServerIds)
         : [];
 
+      const promptIds = promptList.map((p) => p.id);
+      const promptPayload =
+        promptIds.length > 0
+          ? promptIds
+          : selectedPrompt?.id
+            ? [selectedPrompt.id]
+            : undefined;
+
       onSend(
         input,
         attachments,
         modelId,
         effectiveServerIds,
         effectiveTools,
-        selectedPrompt?.id,
+        promptPayload,
         selectedAssistant?.id,
         Array.from(selectedKbs),
         Array.from(selectedSkills),
       );
       setInput("");
       clearAttachments();
-      setSelectedPrompt(null);
+      if (setSelectedPrompts) {
+        setSelectedPrompts([]);
+      } else {
+        setSelectedPrompt(null);
+      }
       setSelectedAssistant(null);
       setSelectedSkills(new Set());
     }
@@ -503,12 +558,13 @@ export function ChatInput({
       <ActiveSelectionChips
         selectedAssistant={selectedAssistant}
         selectedPrompt={selectedPrompt}
+        selectedPrompts={selectedPrompts}
         selectedKbs={selectedKbs}
         knowledgebases={knowledgebases}
         selectedSkills={selectedSkills}
         skills={skills}
         onRemoveAssistant={() => setSelectedAssistant(null)}
-        onRemovePrompt={() => setSelectedPrompt(null)}
+        onRemovePrompt={handleRemovePrompt}
         onRemoveKb={handleRemoveKb}
         onRemoveSkill={handleRemoveSkill}
       />
@@ -580,6 +636,9 @@ export function ChatInput({
                   mcpPrompts={mcpPrompts}
                   selectedPrompt={selectedPrompt}
                   onSelectPrompt={setSelectedPrompt}
+                  selectedPromptIds={selectedPromptIds}
+                  onTogglePrompt={handleTogglePrompt}
+                  onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -620,6 +679,9 @@ export function ChatInput({
                   mcpPrompts={mcpPrompts}
                   selectedPrompt={selectedPrompt}
                   onSelectPrompt={setSelectedPrompt}
+                  selectedPromptIds={selectedPromptIds}
+                  onTogglePrompt={handleTogglePrompt}
+                  onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -679,6 +741,7 @@ export function ChatInput({
                 hasNoModels ||
                 (!input.trim() &&
                   attachments.length === 0 &&
+                  promptList.length === 0 &&
                   !selectedPrompt &&
                   !selectedAssistant &&
                   selectedSkills.size === 0 &&

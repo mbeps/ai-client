@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PROMPTS } from "@/config/prompts";
 
 // ── mock inngest/react useRealtime ──────────────────────────────────────────
 const realtimeState = vi.hoisted(() => ({
@@ -857,6 +858,40 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       "chat-1",
       expect.objectContaining({
         content: expect.stringContaining("You are an assistant"),
+      }),
+    );
+  });
+
+  it("resolves multiple slash prompts from store in order", async () => {
+    mockStoreState.prompts = [
+      { id: "local-p1", content: "Prompt One" },
+      { id: "local-p2", content: "Prompt Two" },
+    ] as any;
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-2",
+        "user question",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        ["local-p1", "local-p2"],
+      );
+    });
+
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content:
+          "Prompt One" +
+          PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+          "Prompt Two" +
+          PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+          "user question",
       }),
     );
   });

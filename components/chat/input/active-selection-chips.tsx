@@ -9,13 +9,14 @@ import type { Skill } from "@/types/skill/skill";
 
 interface ActiveSelectionChipsProps {
   selectedAssistant: { name: string } | null;
-  selectedPrompt: MentionPromptItem | null;
+  selectedPrompt?: MentionPromptItem | null;
+  selectedPrompts?: MentionPromptItem[];
   selectedKbs: Set<string>;
   knowledgebases: Knowledgebase[];
   selectedSkills?: Set<string>;
   skills?: Skill[];
   onRemoveAssistant: () => void;
-  onRemovePrompt: () => void;
+  onRemovePrompt: (promptId?: string) => void;
   onRemoveKb: (id: string) => void;
   onRemoveSkill?: (id: string) => void;
 }
@@ -30,6 +31,7 @@ interface ActiveSelectionChipsProps {
 export function ActiveSelectionChips({
   selectedAssistant,
   selectedPrompt,
+  selectedPrompts = [],
   selectedKbs,
   knowledgebases,
   selectedSkills = new Set(),
@@ -39,9 +41,16 @@ export function ActiveSelectionChips({
   onRemoveKb,
   onRemoveSkill,
 }: ActiveSelectionChipsProps) {
+  const promptList: MentionPromptItem[] =
+    selectedPrompts.length > 0
+      ? selectedPrompts
+      : selectedPrompt
+        ? [selectedPrompt]
+        : [];
+
   if (
     !selectedAssistant &&
-    !selectedPrompt &&
+    promptList.length === 0 &&
     selectedKbs.size === 0 &&
     selectedSkills.size === 0
   ) {
@@ -66,37 +75,38 @@ export function ActiveSelectionChips({
         </div>
       )}
 
-      {selectedPrompt && (
-        <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
-          {selectedPrompt.isMcp ? (
+      {promptList.map((prompt) => (
+        <div
+          key={prompt.id}
+          className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+        >
+          {prompt.isMcp ? (
             <Zap className="h-3 w-3 text-amber-500" />
           ) : (
             <Command className="h-3 w-3 text-muted-foreground" />
           )}
-          {selectedPrompt.isMcp ? (
+          {prompt.isMcp ? (
             <span className="max-w-[160px] truncate">
-              /{(selectedPrompt as any).title}
+              /{(prompt as any).title}
             </span>
           ) : (
             <Link
-              href={ROUTES.SETTINGS.PROMPTS.detail(selectedPrompt.id)}
+              href={ROUTES.SETTINGS.PROMPTS.detail(prompt.id)}
               className="max-w-[160px] truncate hover:underline"
               target="_blank"
             >
-              /
-              {(selectedPrompt as any).shortcut ||
-                (selectedPrompt as any).title}
+              /{(prompt as any).shortcut || (prompt as any).title}
             </Link>
           )}
           <button
             type="button"
-            onClick={onRemovePrompt}
+            onClick={() => onRemovePrompt(prompt.id)}
             className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
           >
             <X className="h-3 w-3" />
           </button>
         </div>
-      )}
+      ))}
 
       {Array.from(selectedSkills).map((skillId) => {
         const item = skills.find((s) => s.id === skillId || s.name === skillId);

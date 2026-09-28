@@ -36,6 +36,19 @@ vi.mock("@/lib/rag/apply-rrf", () => ({
 }));
 
 describe("hybridSearch", () => {
+  const setupKbMock = (rows: Array<{ id: string; indexStatus: string }>) => {
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockImplementation(() => {
+        const promise = Promise.resolve(rows);
+        return Object.assign(promise, {
+          limit: vi.fn().mockResolvedValue(rows),
+        });
+      }),
+    };
+    dbMock.select.mockReturnValue(mockSelect);
+  };
+
   it("returns empty array when query is empty or whitespace", async () => {
     const result = await hybridSearch("kb-1", "   ", "user-1");
     expect(result).toEqual([]);
@@ -43,12 +56,7 @@ describe("hybridSearch", () => {
   });
 
   it("throws Error when knowledge base is not found", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([]);
 
     await expect(hybridSearch("kb-1", "test query", "user-1")).rejects.toThrow(
       "Knowledge base not found",
@@ -56,12 +64,7 @@ describe("hybridSearch", () => {
   });
 
   it("throws KnowledgebaseNotReadyError when KB indexStatus is not ready", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "processing" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "processing" }]);
 
     await expect(hybridSearch("kb-1", "test query", "user-1")).rejects.toThrow(
       KnowledgebaseNotReadyError,
@@ -69,12 +72,7 @@ describe("hybridSearch", () => {
   });
 
   it("throws RateLimitError when embedding fails with rate limit", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "ready" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockRejectedValue(new Error("Rate limit"));
     isRateLimitErrorMock.mockReturnValue(true);
     normalizeRateLimitMessageMock.mockReturnValue("Normalized rate limit");
@@ -85,12 +83,7 @@ describe("hybridSearch", () => {
   });
 
   it("executes hybrid search and applies RRF when ready", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "ready" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
     dbMock.execute
@@ -108,13 +101,41 @@ describe("hybridSearch", () => {
     );
   });
 
+  it("executes multi-KB hybrid search across multiple ready KBs", async () => {
+    setupKbMock([
+      { id: "kb-1", indexStatus: "ready" },
+      { id: "kb-2", indexStatus: "ready" },
+    ]);
+    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+
+    dbMock.execute
+      .mockResolvedValueOnce({
+        rows: [{ id: "chunk-1", kb_id: "kb-1", kb_name: "Docs" }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: "chunk-2", kb_id: "kb-2", kb_name: "Manuals" }],
+      });
+
+    applyRRFMock.mockReturnValue([
+      { id: "chunk-1", kbId: "kb-1", kbName: "Docs" },
+    ]);
+
+    const result = await hybridSearch(
+      ["kb-1", "kb-2"],
+      "multi kb query",
+      "user-1",
+      5,
+    );
+    expect(result).toEqual([{ id: "chunk-1", kbId: "kb-1", kbName: "Docs" }]);
+    expect(applyRRFMock).toHaveBeenCalledWith(
+      [{ id: "chunk-1", kb_id: "kb-1", kb_name: "Docs" }],
+      [{ id: "chunk-2", kb_id: "kb-2", kb_name: "Manuals" }],
+      5,
+    );
+  });
+
   it("rethrows error when embedding throws a non-rate-limit error", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "ready" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockRejectedValue(new Error("Database connection lost"));
     isRateLimitErrorMock.mockReturnValue(false);
 
@@ -124,12 +145,7 @@ describe("hybridSearch", () => {
   });
 
   it("catches FTS Error and falls back to empty ftsRows", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "ready" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
     dbMock.execute
@@ -144,12 +160,7 @@ describe("hybridSearch", () => {
   });
 
   it("catches non-Error thrown during FTS and falls back to empty ftsRows", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ indexStatus: "ready" }]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
     dbMock.execute

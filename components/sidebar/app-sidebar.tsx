@@ -188,10 +188,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 return (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton
-                        asChild
-                        tooltip={chat.title}
-                        isActive={pathname === href}
-                      >
+                      asChild
+                      tooltip={chat.title}
+                      isActive={pathname === href}
+                    >
                       <Link href={href}>
                         <MessageSquare className="h-4 w-4" />
                         <span className="truncate">{chat.title}</span>

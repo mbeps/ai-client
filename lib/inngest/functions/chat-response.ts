@@ -113,6 +113,7 @@ export const generateChatResponse = inngest.createFunction(
           ctx.activeKbId,
           ctx.kbIsReady,
           userId,
+          ctx.activeKbIds,
         );
       mcpCleanup = registeredCleanup;
 

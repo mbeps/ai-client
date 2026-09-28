@@ -34,12 +34,17 @@ export type MessageUsage = {
  * @author Maruf Bepary
  */
 export type ParsedMessageMetadata = {
-  promptMeta: { promptId: string; userContent: string } | null;
+  promptMeta: {
+    promptId: string;
+    promptIds: string[];
+    userContent: string;
+  } | null;
   toolData: { toolCalls: ToolCall[]; toolResults: ToolResult[] } | null;
   modelId: string | null;
   selectedServerIds: string[] | null;
   selectedTools: string[] | null;
   selectedKbIds: string[] | null;
+  selectedSkillIds: string[] | null;
   reasoning: string | undefined;
   usage: MessageUsage | null;
   finishReason: string | null;
