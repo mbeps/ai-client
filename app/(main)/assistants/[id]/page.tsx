@@ -2,6 +2,7 @@
 
 import {
   Bot,
+  BrainCircuit,
   FileText,
   Loader2,
   MessageSquare,
@@ -24,6 +25,7 @@ import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
+import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import {
   SidebarTabs,
   SidebarTabsContent,
@@ -36,6 +38,7 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
 import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
+import type { SkillMode } from "@/schemas/skill/skill-config";
 
 /**
  * Assistant detail page — client component for viewing and editing assistant configuration.
@@ -60,11 +63,13 @@ export default function AssistantPage() {
   const loadAssistants = useAppStore((state) => state.loadAssistants);
   const loadChats = useAppStore((state) => state.loadChats);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  const skills = useAppStore((state) => state.skills);
 
   // Centralised hydration for required entities
   const { isLoading: hydrationLoading } = useResourceHydration([
     "assistants",
     "mcpServers",
+    "skills",
   ]);
 
   const [_loadingChats, setLoadingChats] = useState(false);
@@ -78,6 +83,13 @@ export default function AssistantPage() {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(assistant?.tools || []),
   );
+  const [skillMode, setSkillMode] = useState<SkillMode>(
+    assistant?.skillMode ?? "dynamic",
+  );
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(
+    new Set(assistant?.skillIds || []),
+  );
+  const [savingSkills, setSavingSkills] = useState(false);
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsString.withDefault("settings").withOptions({
@@ -111,6 +123,8 @@ export default function AssistantPage() {
       setDescription(assistant.description ?? "");
       setPrompt(assistant.prompt ?? "");
       setSelectedTools(new Set(assistant.tools || []));
+      setSkillMode(assistant.skillMode ?? "dynamic");
+      setSelectedSkillIds(new Set(assistant.skillIds || []));
     }
   }, [assistant]);
 
@@ -129,6 +143,23 @@ export default function AssistantPage() {
   }
 
   const handleNewChat = () => createNewChat("New Chat", undefined, assistantId);
+
+  const handleSaveSkills = async () => {
+    setSavingSkills(true);
+    try {
+      await updateAssistant(assistantId, {
+        skillMode,
+        skillIds: Array.from(selectedSkillIds),
+      });
+      toast.success("Assistant skills saved");
+      await loadAssistants();
+      router.refresh();
+    } catch {
+      toast.error("Failed to save assistant skills");
+    } finally {
+      setSavingSkills(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -223,6 +254,10 @@ export default function AssistantPage() {
             <Wrench className="mr-2 h-4 w-4" />
             <span>Tools</span>
           </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="skills">
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            <span>Skills</span>
+          </SidebarTabsTrigger>
           <SidebarTabsTrigger value="danger">
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
@@ -265,6 +300,21 @@ export default function AssistantPage() {
             onBulkSelect={onBulkSelect}
             onSave={handleSave}
             isSaving={saving}
+          />
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="skills">
+          <SkillsConfigTab
+            skillMode={skillMode}
+            onSkillModeChange={setSkillMode}
+            selectedSkillIds={selectedSkillIds}
+            onToggleSkill={(id) =>
+              setSelectedSkillIds((prev) => toggleSetItem(prev, id))
+            }
+            onSelectSkills={setSelectedSkillIds}
+            skills={skills}
+            onSave={handleSaveSkills}
+            isSaving={savingSkills}
           />
         </SidebarTabsContent>
 
