@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "@/drizzle/schemas/auth-schema";
 
@@ -20,6 +21,13 @@ export const project = pgTable(
     description: text("description"),
     globalPrompt: text("global_prompt"),
     tools: text("tools").array(),
+    skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
+      .notNull()
+      .default("dynamic"),
+    skillIds: text("skill_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     knowledgebaseId: text("knowledgebase_id"),
     isPinned: boolean("is_pinned").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),

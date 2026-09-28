@@ -23,6 +23,13 @@ export const transformAgent = pgTable(
     globalContext: text("global_context"),
     modelId: text("model_id"),
     tools: text("tools").array().notNull().default(sql`'{}'::text[]`),
+    skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
+      .notNull()
+      .default("dynamic"),
+    skillIds: text("skill_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     knowledgeBaseIds: text("knowledge_base_ids")
       .array()
       .notNull()

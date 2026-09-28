@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "@/drizzle/schemas/auth-schema";
 
@@ -20,6 +21,13 @@ export const assistant = pgTable(
     description: text("description"),
     prompt: text("prompt"),
     tools: text("tools").array(),
+    skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
+      .notNull()
+      .default("dynamic"),
+    skillIds: text("skill_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     avatar: text("avatar"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
