@@ -36,6 +36,8 @@ export async function createTransformAgent(
       globalContext: validated.globalContext ?? null,
       modelId: validated.modelId ?? null,
       tools: validated.tools,
+      skillMode: validated.skillMode ?? "dynamic",
+      skillIds: validated.skillIds ?? [],
       knowledgeBaseIds: validated.knowledgeBaseIds,
       requiresFileUpload: validated.requiresFileUpload,
       steps: JSON.stringify(validated.steps),

@@ -41,6 +41,8 @@ export async function updateTransformAgent(
   if (validated.modelId !== undefined)
     values.modelId = validated.modelId ?? null;
   if (validated.tools !== undefined) values.tools = validated.tools;
+  if (validated.skillMode !== undefined) values.skillMode = validated.skillMode;
+  if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;
   if (validated.knowledgeBaseIds !== undefined)
     values.knowledgeBaseIds = validated.knowledgeBaseIds;
   if (validated.requiresFileUpload !== undefined)

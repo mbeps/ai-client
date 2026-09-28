@@ -29,11 +29,16 @@ export const updateAssistant = updateEntityFactory<
 >({
   table: assistant,
   schema: updateAssistantSchema,
-  mapValues: (data) => ({
-    name: data.name,
-    description: data.description ?? null,
-    prompt: data.prompt ?? null,
-    tools: data.tools ?? [],
-    avatar: data.avatar ?? null,
-  }),
+  mapValues: (data) => {
+    const values: Record<string, any> = {};
+    if (data.name !== undefined) values.name = data.name;
+    if (data.description !== undefined)
+      values.description = data.description ?? null;
+    if (data.prompt !== undefined) values.prompt = data.prompt ?? null;
+    if (data.tools !== undefined) values.tools = data.tools;
+    if (data.skillMode !== undefined) values.skillMode = data.skillMode;
+    if (data.skillIds !== undefined) values.skillIds = data.skillIds;
+    if (data.avatar !== undefined) values.avatar = data.avatar ?? null;
+    return values;
+  },
 });

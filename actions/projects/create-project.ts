@@ -29,6 +29,8 @@ export const createProject = createEntityFactory<
     description: validated.description ?? null,
     globalPrompt: validated.globalPrompt ?? null,
     tools: validated.tools ?? [],
+    skillMode: validated.skillMode ?? "dynamic",
+    skillIds: validated.skillIds ?? [],
     knowledgebaseId: validated.knowledgebaseId ?? null,
     userId,
   }),

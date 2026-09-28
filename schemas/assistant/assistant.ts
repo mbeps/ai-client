@@ -5,6 +5,10 @@ import {
   nameField,
   renameSchema,
 } from "@/schemas/shared-fields";
+import {
+  skillIdsSchema,
+  skillModeSchema,
+} from "@/schemas/skill/skill-config";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.
@@ -25,6 +29,8 @@ export const createAssistantSchema = z.object({
   description: descriptionField,
   prompt: contentField.optional(),
   tools: z.array(z.string()).optional(),
+  skillMode: skillModeSchema.optional(),
+  skillIds: skillIdsSchema.optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 
@@ -67,6 +73,8 @@ export const assistantSchema = z.object({
   description: z.string(),
   prompt: z.string(),
   tools: z.array(z.string()),
+  skillMode: skillModeSchema,
+  skillIds: skillIdsSchema,
   avatar: z.string().url().max(1024).nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),

@@ -29,6 +29,8 @@ export const createAssistant = createEntityFactory<
     description: validated.description ?? null,
     prompt: validated.prompt ?? null,
     tools: validated.tools ?? [],
+    skillMode: validated.skillMode ?? "dynamic",
+    skillIds: validated.skillIds ?? [],
     avatar: validated.avatar ?? null,
     userId,
   }),
