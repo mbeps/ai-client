@@ -20,6 +20,7 @@ vi.mock("@/config/env", () => ({
 }));
 
 vi.mock("ai", () => ({
+  tool: vi.fn((config: unknown) => config),
   generateText: vi.fn().mockResolvedValue({ text: "step done", steps: [] }),
   isStepCount: vi.fn(),
 }));

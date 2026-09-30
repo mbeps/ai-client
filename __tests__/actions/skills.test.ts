@@ -188,6 +188,8 @@ describe("getSkill", () => {
 describe("updateSkill", () => {
   it("updates skill and returns updated row", async () => {
     const updated = { ...SKILL_ROW, displayName: "Updated Clean Code" };
+    // First probe resolves the owned row, then the write returns the new one.
+    chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
     chainable.returning.mockResolvedValueOnce([updated]);
 
     const result = await updateSkill(SKILL_ROW.id, {
@@ -211,10 +213,16 @@ describe("toggleSkillEnabled", () => {
 
 describe("deleteSkill", () => {
   it("deletes skill by id", async () => {
+    chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
     chainable.returning.mockResolvedValueOnce([{ id: SKILL_ROW.id }]);
     await expect(deleteSkill(SKILL_ROW.id)).resolves.toEqual({
       deletedCount: 1,
     });
     expect(chainable.delete).toHaveBeenCalledOnce();
+  });
+
+  it("throws Not Found when the skill is not visible to the user", async () => {
+    chainable.limit.mockResolvedValueOnce([]);
+    await expect(deleteSkill(SKILL_ROW.id)).rejects.toThrow("Not Found");
   });
 });

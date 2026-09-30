@@ -78,6 +78,7 @@ const mockStoreState = vi.hoisted(() => ({
   addMessage: vi.fn(),
   updateMessageAttachments: vi.fn(),
   upsertChat: vi.fn(),
+  loadSkills: vi.fn(),
   prompts: [],
   chats: {} as Record<string, any>,
 }));
@@ -432,6 +433,116 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         },
       },
     ]);
+  });
+
+  it("reloads the skills store when a skill authoring tool wrote a skill", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "make a skill", null);
+    });
+
+    mockStoreState.loadSkills.mockClear();
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "tc-1",
+              toolName: "create_skill",
+              args: { name: "clean-code" },
+            },
+          },
+          {
+            data: {
+              type: "tool-result",
+              toolCallId: "tc-1",
+              toolName: "create_skill",
+              result: { success: true, skillId: "skill-1" },
+            },
+          },
+          { data: { type: "text-delta", text: "Created it." } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockStoreState.loadSkills).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload the skills store when no authoring tool ran", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    mockStoreState.loadSkills.mockClear();
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          { data: { type: "text-delta", text: "Hi." } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockStoreState.loadSkills).not.toHaveBeenCalled();
+  });
+
+  it("does not reload the skills store when a skill tool failed", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "make a skill", null);
+    });
+
+    mockStoreState.loadSkills.mockClear();
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "tc-1",
+              toolName: "write_skill_file",
+              args: { path: "../escape.md" },
+            },
+          },
+          {
+            data: {
+              type: "tool-result",
+              toolCallId: "tc-1",
+              toolName: "write_skill_file",
+              result: { error: "Invalid skill file path." },
+            },
+          },
+          { data: { type: "text-delta", text: "Refused." } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockStoreState.loadSkills).not.toHaveBeenCalled();
   });
 
   it("skips syncing when the assistant produced no content", async () => {

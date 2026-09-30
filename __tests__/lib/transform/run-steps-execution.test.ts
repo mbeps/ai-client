@@ -31,6 +31,7 @@ vi.mock("@/lib/transform/persist-artifact", () => ({
 
 const generateTextMock = vi.hoisted(() => vi.fn());
 vi.mock("ai", () => ({
+  tool: vi.fn((config: unknown) => config),
   generateText: generateTextMock,
   isStepCount: vi.fn(),
 }));

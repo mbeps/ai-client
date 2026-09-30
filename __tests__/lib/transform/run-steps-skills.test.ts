@@ -40,6 +40,11 @@ vi.mock("@/lib/chat/register-skill-tool", () => ({
   registerSkillTool: registerSkillToolMock,
 }));
 
+const registerSkillAuthoringToolsMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/register-skill-authoring-tools", () => ({
+  registerSkillAuthoringTools: registerSkillAuthoringToolsMock,
+}));
+
 const logMock = vi.hoisted(() => ({
   warn: vi.fn(),
   info: vi.fn(),
@@ -115,6 +120,35 @@ describe("runTransformSteps — skill wiring", () => {
     });
     generateTextMock.mockResolvedValue({ text: "done", steps: [] });
     registerSkillToolMock.mockReturnValue({ load_skill: { kind: "tool" } });
+    registerSkillAuthoringToolsMock.mockReturnValue({
+      create_skill: { kind: "tool" },
+      write_skill_file: { kind: "tool" },
+    });
+  });
+
+  it("registers the skill authoring tools for every run", async () => {
+    await runTransformSteps({
+      steps: [STEP],
+      startFromStep: 0,
+      runRow: { id: "run-1" },
+      agentRow: AGENT_ROW as any,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      // No skills exist yet, which must not disable authoring.
+      availableSkills: [],
+      selectedSkills: [],
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(registerSkillAuthoringToolsMock).toHaveBeenCalledWith("user-1");
+    const call = getCall();
+    expect(Object.keys(call.tools)).toContain("create_skill");
+    expect(Object.keys(call.tools)).toContain("write_skill_file");
   });
 
   it("registers load_skill and injects the catalog when skills are available", async () => {

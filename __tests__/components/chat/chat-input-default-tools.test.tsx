@@ -80,7 +80,12 @@ describe("Default Active Tools", () => {
     expect(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT).toBe(
       "internal:tool:manage_artifact",
     );
-    expect(DEFAULT_ENABLED_TOOLS).toEqual(["internal:tool:manage_artifact"]);
+    expect(INTERNAL_TOOL_IDS.MANAGE_SKILL).toBe("internal:tool:manage_skill");
+    // Both internal tools are on by default, artifact and skill authoring.
+    expect(DEFAULT_ENABLED_TOOLS).toEqual([
+      "internal:tool:manage_artifact",
+      "internal:tool:manage_skill",
+    ]);
   });
 
   it("submits with DEFAULT_ENABLED_TOOLS when initialSelectedTools is not provided", () => {
@@ -109,7 +114,8 @@ describe("Default Active Tools", () => {
 
     expect(handleSend).toHaveBeenCalledTimes(1);
     const selectedToolsPassed = handleSend.mock.calls[0][4];
-    expect(selectedToolsPassed).toEqual(["internal:tool:manage_artifact"]);
+    // Asserted against the constant so adding a default tool does not fail here.
+    expect(selectedToolsPassed).toEqual(DEFAULT_ENABLED_TOOLS);
   });
 
   it("auto-suppresses default tools when selected model lacks tool calling support", () => {

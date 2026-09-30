@@ -1003,16 +1003,18 @@ describe("generateChatResponse Inngest Function", () => {
         },
       });
 
-      // `m.attachments ?? []` yields no file attachments, so no file-url tool
-      expect(mockStreamText).toHaveBeenCalledWith(
-        expect.objectContaining({ tools: undefined }),
-      );
+      // `m.attachments ?? []` yields no file attachments, so no file-url tool.
+      // Skill authoring is unconditional, so the tool set is present.
+      const tools = mockStreamText.mock.calls[0][0].tools;
+      expect(tools.get_file_url).toBeUndefined();
+      expect(tools.load_skill).toBeUndefined();
+      expect(Object.keys(tools)).toContain("create_skill");
       expect(mockPersistResponse).toHaveBeenCalledWith(
         expect.objectContaining({ chatId: "chat-no-attachments" }),
       );
     });
 
-    it("passes an empty tool set when MCP tools exist but a file tool is absent", async () => {
+    it("registers only MCP tools and skill authoring when no file or skill catalog exists", async () => {
       mockLoadThread.mockResolvedValueOnce([
         { id: "msg-1", role: "user", content: "hi", attachments: [] },
       ]);
@@ -1032,8 +1034,18 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       const tools = mockStreamText.mock.calls[0][0].tools;
-      // only the MCP-provided artifact tool, no get_file_url or load_skill
-      expect(Object.keys(tools)).toEqual(["manage_artifact"]);
+      // No get_file_url and no load_skill, but authoring is always offered and
+      // must not be shadowed by the MCP tools spread.
+      expect(tools.get_file_url).toBeUndefined();
+      expect(tools.load_skill).toBeUndefined();
+      expect(Object.keys(tools).sort()).toEqual([
+        "create_skill",
+        "delete_skill_file",
+        "manage_artifact",
+        "read_skill_file",
+        "update_skill",
+        "write_skill_file",
+      ]);
     });
 
     it("drops attachments that have no storage key when building file tools", async () => {

@@ -29,6 +29,7 @@ vi.mock("@/lib/transform/persist-artifact", () => ({
 // generateText returns a step with a write_cells tool result (known mutation)
 // but no upload_file was called, so activeWorkbookFilePath stays null.
 vi.mock("ai", () => ({
+  tool: vi.fn((config: unknown) => config),
   generateText: vi.fn().mockResolvedValue({
     text: "step done",
     steps: [

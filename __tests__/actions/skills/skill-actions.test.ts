@@ -187,7 +187,8 @@ describe("Agent Skill Server Actions", () => {
 
   describe("updateSkill", () => {
     it("updates all fields when provided and name is unique", async () => {
-      // Check existing skill with same name: none found
+      // First probe resolves the row, second checks the new slug is free.
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.limit.mockResolvedValueOnce([]);
       const updated = {
         ...SAMPLE_SKILL,
@@ -213,6 +214,7 @@ describe("Agent Skill Server Actions", () => {
     });
 
     it("throws error when updated name collides with another skill", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.limit.mockResolvedValueOnce([{ id: "another-id" }]);
 
       await expect(
@@ -220,7 +222,8 @@ describe("Agent Skill Server Actions", () => {
       ).rejects.toThrow('A skill with name "colliding-name" already exists.');
     });
 
-    it("updates without name check when name is omitted", async () => {
+    it("updates without a slug check when name is omitted", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.returning.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await updateSkill(SKILL_ID, {
@@ -230,10 +233,12 @@ describe("Agent Skill Server Actions", () => {
       });
 
       expect(result).toEqual(SAMPLE_SKILL);
-      expect(chainable.limit).not.toHaveBeenCalled();
+      // One probe only: the ownership lookup, with no duplicate-slug probe.
+      expect(chainable.limit).toHaveBeenCalledTimes(1);
     });
 
     it("updates even fields (name, description, files) while omitting odd fields", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.limit.mockResolvedValueOnce([]);
       chainable.returning.mockResolvedValueOnce([SAMPLE_SKILL]);
 
@@ -246,7 +251,17 @@ describe("Agent Skill Server Actions", () => {
       expect(result).toEqual(SAMPLE_SKILL);
     });
 
-    it("throws 'Not Found' when updated row is not found", async () => {
+    it("throws 'Not Found' when the skill is not visible to the user", async () => {
+      chainable.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        updateSkill(SKILL_ID, { displayName: "No Row" }),
+      ).rejects.toThrow("Not Found");
+      expect(chainable.returning).not.toHaveBeenCalled();
+    });
+
+    it("throws 'Not Found' when the write returns no row", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.returning.mockResolvedValueOnce([]);
 
       await expect(
@@ -256,13 +271,23 @@ describe("Agent Skill Server Actions", () => {
   });
 
   describe("deleteSkill", () => {
-    it("deletes skill using entity factory", async () => {
-      chainable.where.mockReturnValueOnce({
-        returning: vi.fn().mockResolvedValue([{ id: SKILL_ID }]),
-      });
+    it("deletes skill and reports the count", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
+      chainable.returning.mockResolvedValueOnce([{ id: SKILL_ID }]);
 
       const result = await deleteSkill(SKILL_ID);
       expect(result).toEqual({ deletedCount: 1 });
+    });
+
+    it("throws 'Not Found' when the skill is not visible to the user", async () => {
+      chainable.limit.mockResolvedValueOnce([]);
+
+      await expect(deleteSkill(SKILL_ID)).rejects.toThrow("Not Found");
+    });
+
+    it("returns zero without a query when given no ids", async () => {
+      expect(await deleteSkill([])).toEqual({ deletedCount: 0 });
+      expect(chainable.limit).not.toHaveBeenCalled();
     });
   });
 

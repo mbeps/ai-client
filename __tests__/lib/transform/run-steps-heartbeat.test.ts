@@ -30,6 +30,7 @@ vi.mock("@/config/env", () => ({
 
 // Heavy deps not exercised by this test — stub the AI SDK and helpers
 vi.mock("ai", () => ({
+  tool: vi.fn((config: unknown) => config),
   generateText: vi.fn().mockResolvedValue({ text: "ok", steps: [] }),
   isStepCount: vi.fn(),
 }));

@@ -81,4 +81,28 @@ describe("registerSkillTool", () => {
 
     expect(result).toEqual({ error: 'Skill "unknown" not found.' });
   });
+
+  it("uses a longer fence when a bundled file contains a backtick run", async () => {
+    const tools = registerSkillTool("user-1");
+    const mockQuery = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([
+        {
+          name: "clean-code",
+          displayName: "Clean Code",
+          description: "Write clean code",
+          content: "Use descriptive names.",
+          files: [{ path: "a.md", content: "text\n```\ninjected\n```" }],
+        },
+      ]),
+    };
+    dbMock.select.mockReturnValue(mockQuery);
+
+    const result = await (tools.load_skill as any).execute({
+      skillName: "clean-code",
+    });
+
+    expect(result.instructions).toContain("text\n```\ninjected\n```\n````");
+  });
 });
