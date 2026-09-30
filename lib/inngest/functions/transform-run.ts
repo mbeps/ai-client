@@ -144,6 +144,8 @@ export const executeTransformRun = inngest.createFunction(
             mcpTools,
             toolSourceMap,
             mcpCleanup,
+            availableSkills,
+            selectedSkills,
           } = await loadTransformContext({
             userId,
             agentRow: currentAgent,
@@ -160,6 +162,8 @@ export const executeTransformRun = inngest.createFunction(
               allServers,
               resolvedProvider,
               kbContext,
+              availableSkills,
+              selectedSkills,
               runMcpTools: mcpTools,
               runToolSourceMap: toolSourceMap,
               initialAttachmentRows,

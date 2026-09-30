@@ -1,12 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
-import { mcpServer } from "@/drizzle/schema";
+import { mcpServer, skill } from "@/drizzle/schema";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getLogger } from "@/lib/logger";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
+import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
+import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { SkillRow } from "@/types/skill/skill-row";
 
 const log = getLogger(["app", "transform", "context"]);
 
@@ -20,6 +23,8 @@ interface LoadTransformContextArgs {
     knowledgeBaseIds?: string[];
     globalContext?: string | null;
     tools?: string[];
+    skillMode?: SkillMode;
+    skillIds?: string[];
     steps: string;
   };
   modelOverride?: string | null;
@@ -49,6 +54,18 @@ export async function loadTransformContext({
   const providerPromise = model
     ? resolveProvider(userId, model)
     : resolveDefaultChatProvider(userId);
+
+  // Enabled user skills. Skipped entirely when skills are disabled for this agent.
+  const skillMode: SkillMode = agentRow.skillMode ?? "dynamic";
+  const skillsPromise: Promise<SkillRow[]> =
+    skillMode === "none"
+      ? Promise.resolve([])
+      : (db
+          .select()
+          .from(skill)
+          .where(
+            and(eq(skill.userId, userId), eq(skill.enabled, true)),
+          ) as Promise<SkillRow[]>);
 
   // KB Search if applicable
   let kbContextPromise: Promise<string> = Promise.resolve("");
@@ -83,11 +100,19 @@ export async function loadTransformContext({
     })();
   }
 
-  const [allServers, resolvedProvider, kbContext] = await Promise.all([
-    serversPromise,
-    providerPromise,
-    kbContextPromise,
-  ]);
+  const [allServers, resolvedProvider, kbContext, userSkills] =
+    await Promise.all([
+      serversPromise,
+      providerPromise,
+      kbContextPromise,
+      skillsPromise,
+    ]);
+
+  const { availableSkills, selectedSkills } = resolveContextSkills({
+    skillMode,
+    skillIds: agentRow.skillIds ?? [],
+    userSkills,
+  });
 
   /* 2. Determine tool requirements */
   let steps: any[] = [];
@@ -118,6 +143,8 @@ export async function loadTransformContext({
     allServers,
     resolvedProvider,
     kbContext,
+    availableSkills,
+    selectedSkills,
     mcpTools,
     toolSourceMap,
     mcpCleanup,

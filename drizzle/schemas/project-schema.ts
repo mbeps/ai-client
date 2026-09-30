@@ -24,10 +24,7 @@ export const project = pgTable(
     skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
       .notNull()
       .default("dynamic"),
-    skillIds: text("skill_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    skillIds: text("skill_ids").array().notNull().default(sql`'{}'::text[]`),
     knowledgebaseId: text("knowledgebase_id"),
     isPinned: boolean("is_pinned").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),

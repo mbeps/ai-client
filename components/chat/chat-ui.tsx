@@ -183,6 +183,15 @@ export function ChatUI({
     return kbId ? [kbId] : [];
   }, [chat?.knowledgebaseId, currentProject?.knowledgebaseId]);
 
+  // Entity skill config, mirrored from the server-side resolution in
+  // `loadChatContext` (assistant wins over project). Surfaced here so the
+  // composer shows inherited skills as pills instead of silently pre-loading
+  // them. Only `specific` mode pre-loads; `dynamic` leaves selection to the user.
+  const initialSkillIds = useMemo(() => {
+    const source = currentAssistant ?? currentProject;
+    return source?.skillMode === "specific" ? (source.skillIds ?? []) : [];
+  }, [currentAssistant, currentProject]);
+
   const allEnabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
   }, [mcpServers]);
@@ -651,6 +660,7 @@ export function ChatUI({
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedKbs={initialKbIds}
+              initialSelectedSkillIds={initialSkillIds}
               initialModelId={initialModelId}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}

@@ -3,10 +3,15 @@ import { eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
+import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import { RATE_LIMIT_ERROR_CODE } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
+import {
+  formatActiveSkill,
+  formatSkillCatalog,
+} from "@/lib/skills/build-skill-prompt";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 
 const log = getLogger(["app", "transform", "steps"]);
@@ -18,6 +23,8 @@ import { extractUploadedFilePath } from "@/lib/transform/extract-uploaded-file-p
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
+import type { SkillSummary } from "@/types/skill/skill";
+import type { SkillRow } from "@/types/skill/skill-row";
 import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
@@ -41,6 +48,8 @@ interface RunTransformStepsOptions {
   allServers: any[];
   resolvedProvider: ResolvedProvider;
   kbContext: string;
+  availableSkills?: SkillSummary[];
+  selectedSkills?: SkillRow[];
   runMcpTools: Record<string, any>;
   runToolSourceMap: Record<string, string>;
   initialAttachmentRows: AttachmentRow[];
@@ -74,11 +83,15 @@ export async function runTransformSteps({
   allServers,
   resolvedProvider,
   kbContext,
+  availableSkills,
+  selectedSkills,
   runMcpTools,
   runToolSourceMap,
   initialAttachmentRows,
   emit,
 }: RunTransformStepsOptions) {
+  const skillCatalog = availableSkills ?? [];
+  const preloadedSkills = selectedSkills ?? [];
   let currentAttachmentRows = initialAttachmentRows;
   let activeWorkbookFilePath: string | null = null;
   let currentOutputAttachmentIds: string[] = [];
@@ -153,6 +166,10 @@ export async function runTransformSteps({
     });
 
     const filteredTools = Object.fromEntries(filteredEntries);
+    // Skills are entity-scoped, not step-scoped: the same catalog applies to every step.
+    if (skillCatalog.length > 0) {
+      Object.assign(filteredTools, registerSkillTool(userId));
+    }
     const toolSourceMap = Object.fromEntries(
       filteredEntries.map(([toolName]) => [
         toolName,
@@ -188,6 +205,8 @@ export async function runTransformSteps({
     const systemPrompt = [
       agentRow.globalContext ? `Context:\n${agentRow.globalContext}` : null,
       kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
+      ...preloadedSkills.map((s) => formatActiveSkill(s)),
+      ...(skillCatalog.length > 0 ? [formatSkillCatalog(skillCatalog)] : []),
       "You are a helpful AI assistant performing a task.",
       `Instructions for this step:\n${step.prompt}`,
       `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,

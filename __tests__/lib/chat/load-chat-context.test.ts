@@ -148,7 +148,9 @@ describe("loadChatContext KB ownership", () => {
     expect(ctx.servers[0].id).toBe("srv-1");
     expect(ctx.selectedSkills).toHaveLength(1);
     expect(ctx.selectedSkills[0].name).toBe("skill-two");
-    expect(ctx.availableSkills).toHaveLength(2);
+    // Pre-loaded skills are fully injected, so they are omitted from the catalog.
+    expect(ctx.availableSkills).toHaveLength(1);
+    expect(ctx.availableSkills[0].name).toBe("skill-one");
   });
 
   it("inherits knowledgebase from project when chat has no knowledgebase", async () => {

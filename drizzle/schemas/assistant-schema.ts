@@ -24,10 +24,7 @@ export const assistant = pgTable(
     skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
       .notNull()
       .default("dynamic"),
-    skillIds: text("skill_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    skillIds: text("skill_ids").array().notNull().default(sql`'{}'::text[]`),
     avatar: text("avatar"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

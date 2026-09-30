@@ -9,6 +9,8 @@ import {
   skill,
   userMcpServerInstall,
 } from "@/drizzle/schema";
+import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
+import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
@@ -39,6 +41,10 @@ type ChatContext = {
   kbIsReady: boolean;
   /** Assistant prompt (null when no assistant is associated) */
   assistantRow: { prompt: string | null } | null;
+  /** Effective skill mode inherited from the assistant, else the project, else `dynamic` */
+  skillMode: SkillMode;
+  /** Effective pre-configured skill IDs inherited from the assistant, else the project */
+  skillIds: string[];
   /** Enabled MCP servers, optionally filtered by selectedServerIds */
   servers: Array<{
     id: string;
@@ -85,6 +91,8 @@ export async function loadChatContext(
       projectTableId: project.id,
       projectGlobalPrompt: project.globalPrompt,
       projectKnowledgebaseId: project.knowledgebaseId,
+      projectSkillMode: project.skillMode,
+      projectSkillIds: project.skillIds,
     })
     .from(chat)
     .leftJoin(
@@ -127,7 +135,11 @@ export async function loadChatContext(
         chatRow.assistantId || selectedAssistantId || null;
       return effectiveAssistantId
         ? db
-            .select({ prompt: assistant.prompt })
+            .select({
+              prompt: assistant.prompt,
+              skillMode: assistant.skillMode,
+              skillIds: assistant.skillIds,
+            })
             .from(assistant)
             .where(
               and(
@@ -212,6 +224,11 @@ export async function loadChatContext(
   ]);
 
   // 3. Derive composite values
+  const skillMode: SkillMode =
+    assistantRow?.skillMode ?? row.projectSkillMode ?? "dynamic";
+  const skillIds: string[] =
+    assistantRow?.skillIds ?? row.projectSkillIds ?? [];
+
   const readyKbIds = kbRows
     .filter((k) => k.indexStatus === "ready")
     .map((k, idx) => k.id ?? candidateKbIds[idx])
@@ -228,21 +245,13 @@ export async function loadChatContext(
         ? [] // Explicitly no MCP servers
         : servers.filter((s) => selectedServerIds.includes(s.id));
 
-  // 5. Build available skills summary & match selected skills
-  const availableSkills: SkillSummary[] = userSkills.map((s) => ({
-    name: s.name,
-    displayName: s.displayName,
-    description: s.description,
-  }));
-
-  const selectedSkills: SkillRow[] =
-    selectedSkillIds && selectedSkillIds.length > 0
-      ? userSkills.filter(
-          (s) =>
-            selectedSkillIds.includes(s.id) ||
-            selectedSkillIds.includes(s.name),
-        )
-      : [];
+  // 5. Resolve skill configuration (entity inheritance + per-chat selection)
+  const { availableSkills, selectedSkills } = resolveContextSkills({
+    skillMode,
+    skillIds,
+    userSkills,
+    chatSkillIds: selectedSkillIds,
+  });
 
   return {
     chatRow,
@@ -251,6 +260,8 @@ export async function loadChatContext(
     activeKbIds,
     kbIsReady,
     assistantRow,
+    skillMode,
+    skillIds,
     servers: filteredServers,
     availableSkills,
     selectedSkills,

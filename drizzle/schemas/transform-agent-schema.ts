@@ -26,10 +26,7 @@ export const transformAgent = pgTable(
     skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
       .notNull()
       .default("dynamic"),
-    skillIds: text("skill_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    skillIds: text("skill_ids").array().notNull().default(sql`'{}'::text[]`),
     knowledgeBaseIds: text("knowledge_base_ids")
       .array()
       .notNull()

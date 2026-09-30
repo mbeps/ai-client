@@ -1,9 +1,9 @@
 import { PROMPTS } from "@/config/prompts";
-import type {
-  Skill,
-  SkillBundledFile,
-  SkillSummary,
-} from "@/types/skill/skill";
+import {
+  formatActiveSkill,
+  formatSkillCatalog,
+} from "@/lib/skills/build-skill-prompt";
+import type { Skill, SkillSummary } from "@/types/skill/skill";
 
 /**
  * Optional layers composed into the system prompt on top of the three
@@ -82,39 +82,13 @@ export function buildSystemPrompt(
   }
 
   // Pre-injected user-selected skills
-  if (selectedSkills && selectedSkills.length > 0) {
-    for (const s of selectedSkills) {
-      let skillText = `## Active Skill: ${s.displayName} (${s.name})\n${s.content}`;
-      const files = (s.files as SkillBundledFile[]) ?? [];
-      if (files.length > 0) {
-        skillText +=
-          "\n\n### Bundled Reference Files:\n" +
-          files
-            .map((f) => `#### File: ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
-            .join("\n\n");
-      }
-      systemParts.push(skillText);
-    }
+  for (const s of selectedSkills ?? []) {
+    systemParts.push(formatActiveSkill(s));
   }
 
   // Available skills catalog for progressive disclosure via load_skill tool
   if (supportsTools && availableSkills && availableSkills.length > 0) {
-    const catalogXml = availableSkills
-      .map(
-        (s) =>
-          `  <skill>\n    <name>${s.name}</name>\n    <description>${s.description}</description>\n  </skill>`,
-      )
-      .join("\n");
-
-    const skillsInstruction = `## Available Agent Skills
-You have access to specialized agent skills for domain workflows.
-If a task matches an available skill's description, call the \`load_skill\` tool with the skill's name to retrieve its full procedural instructions before responding.
-
-<available_skills>
-${catalogXml}
-</available_skills>`;
-
-    systemParts.push(skillsInstruction);
+    systemParts.push(formatSkillCatalog(availableSkills));
   }
 
   if (systemParts.length === 0) {

@@ -341,6 +341,17 @@ export function ChatInput({
     new Set(initialSelectedSkillIds),
   );
 
+  // The seed comes from store-backed entities, which hydrate AFTER this
+  // component mounts, so `useState` alone never picks them up. Re-sync when the
+  // seed changes; a no-op once hydrated, and it never clobbers user toggles.
+  const skillSeedKey = initialSelectedSkillIds.join(" ");
+  const lastSkillSeedKey = useRef(skillSeedKey);
+  useEffect(() => {
+    if (lastSkillSeedKey.current === skillSeedKey) return;
+    lastSkillSeedKey.current = skillSeedKey;
+    setSelectedSkills(new Set(initialSelectedSkillIds));
+  }, [skillSeedKey, initialSelectedSkillIds]);
+
   const handleToggleSkill = useCallback((id: string) => {
     setSelectedSkills((prev) => toggleSetItem(prev, id));
   }, []);

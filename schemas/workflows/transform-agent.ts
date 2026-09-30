@@ -4,10 +4,7 @@ import {
   nameField,
   renameSchema,
 } from "@/schemas/shared-fields";
-import {
-  skillIdsSchema,
-  skillModeSchema,
-} from "@/schemas/skill/skill-config";
+import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
 export const renameTransformAgentSchema = renameSchema;
 
@@ -61,8 +58,11 @@ export const updateTransformAgentSchema = createTransformAgentSchema
   .partial()
   .extend({
     tools: z.array(z.string()).optional(),
-    skillMode: skillModeSchema.optional(),
-    skillIds: skillIdsSchema.optional(),
+    // Not `skillModeSchema.optional()`: in Zod v4 an `.optional()` wrapper still
+    // applies the inner `.default()`, so a partial update would silently reset
+    // the agent's skill configuration.
+    skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
+    skillIds: z.array(z.string()).optional(),
     knowledgeBaseIds: z.array(z.string()).optional(),
     requiresFileUpload: z.boolean().optional(),
     steps: z.array(transformStepSchema).optional(),

@@ -44,7 +44,6 @@ next-env.d.ts
 .github/**
 
 
-subagents/**
 .subagents/**
 scripts/hash-password.js
 reports/**
@@ -55,3 +54,7 @@ AGENTS.md
 .agents/**
 evaluations/**
 .archive/**
+.plans/**
+.superpowers/**
+checklist.md
+mcp.json

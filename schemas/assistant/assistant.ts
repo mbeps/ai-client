@@ -5,10 +5,7 @@ import {
   nameField,
   renameSchema,
 } from "@/schemas/shared-fields";
-import {
-  skillIdsSchema,
-  skillModeSchema,
-} from "@/schemas/skill/skill-config";
+import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
 /**
  * Validates new assistant creation data with name, description, system prompt, and optional avatar URL.

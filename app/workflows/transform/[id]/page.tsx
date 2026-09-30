@@ -31,13 +31,13 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
-import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import {
   SidebarTabs,
   SidebarTabsContent,
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { Button } from "@/components/ui/button";
 import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
 import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";

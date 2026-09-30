@@ -6,10 +6,7 @@ import {
   nameField,
   renameSchema,
 } from "@/schemas/shared-fields";
-import {
-  skillIdsSchema,
-  skillModeSchema,
-} from "@/schemas/skill/skill-config";
+import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.

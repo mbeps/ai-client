@@ -63,4 +63,14 @@ describe("Skill Config Schemas", () => {
     expect(updateData.skillMode).toBe("specific");
     expect(updateData.skillIds).toEqual(["skill-x"]);
   });
+
+  it("should not inject skill defaults into a partial update", () => {
+    // Regression: `skillModeSchema.optional()` still applies the inner `.default()`
+    // in Zod v4, so a partial update would silently reset the agent's skills.
+    const partial = updateTransformAgentSchema.parse({ name: "Renamed" });
+    expect(partial.skillMode).toBeUndefined();
+    expect(partial.skillIds).toBeUndefined();
+    expect(partial.tools).toBeUndefined();
+    expect(partial.steps).toBeUndefined();
+  });
 });
