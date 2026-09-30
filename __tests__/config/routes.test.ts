@@ -66,6 +66,10 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.SETTINGS.SKILLS.new).toBe("/settings/skills/new");
   });
 
+  it("SETTINGS.TOOLS path", () => {
+    expect(ROUTES.SETTINGS.TOOLS.path).toBe("/settings/tools");
+  });
+
   it("CONNECTORS.new path", () => {
     expect(ROUTES.CONNECTORS.new).toBe("/settings/connectors/new");
   });
@@ -242,6 +246,10 @@ describe("ROUTES — name properties", () => {
 
   it("SETTINGS.CONNECTORS has correct name", () => {
     expect(ROUTES.SETTINGS.CONNECTORS.name).toBe("Connectors");
+  });
+
+  it("SETTINGS.TOOLS has correct name", () => {
+    expect(ROUTES.SETTINGS.TOOLS.name).toBe("Tools");
   });
 
   it("KNOWLEDGEBASES has correct name", () => {

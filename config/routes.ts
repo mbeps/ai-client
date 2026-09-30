@@ -113,6 +113,7 @@ export const ROUTES = {
       new: `${SETTINGS_BASE}/skills/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
     },
+    TOOLS: { path: `${SETTINGS_BASE}/tools` as const, name: "Tools" },
   },
   CONNECTORS: {
     path: `${SETTINGS_BASE}/connectors` as const,

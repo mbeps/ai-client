@@ -8,6 +8,7 @@ import {
   LogOut,
   Plug,
   Settings,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,6 +69,11 @@ export function SettingsSidebar({
       href: ROUTES.SETTINGS.SKILLS.path,
       icon: BrainCircuit,
     },
+    {
+      name: "Tools",
+      href: ROUTES.SETTINGS.TOOLS.path,
+      icon: Wrench,
+    },
   ];
 
   return (
@@ -110,7 +116,9 @@ export function SettingsSidebar({
                     (item.name === "Prompts" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path)) ||
                     (item.name === "Skills" &&
-                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path))
+                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path)) ||
+                    (item.name === "Tools" &&
+                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path))
                   }
                   tooltip={item.name}
                 >
