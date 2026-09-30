@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
+import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
@@ -170,6 +171,9 @@ export async function runTransformSteps({
     if (skillCatalog.length > 0) {
       Object.assign(filteredTools, registerSkillTool(userId));
     }
+    // Authoring is always available so an agent can create a skill it does not
+    // have yet, which is the whole point of the capability.
+    Object.assign(filteredTools, registerSkillAuthoringTools(userId));
     const toolSourceMap = Object.fromEntries(
       filteredEntries.map(([toolName]) => [
         toolName,

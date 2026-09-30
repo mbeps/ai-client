@@ -8,6 +8,7 @@ import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -137,8 +138,13 @@ export const generateChatResponse = inngest.createFunction(
         throw new ToolsNotSupportedError();
       }
 
+      // Skill authoring is offered to every tool-calling model, even when the
+      // user has no skills yet, because creating the first one is the use case.
+      const hasSkillAuthoring = isToolCallingModel;
+
       const hasAnyTools =
-        isToolCallingModel && (hasMcpTools || hasFileAttachments || hasSkills);
+        isToolCallingModel &&
+        (hasMcpTools || hasFileAttachments || hasSkills || hasSkillAuthoring);
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
@@ -163,6 +169,9 @@ export const generateChatResponse = inngest.createFunction(
                 ? registerFileUrlTool(fileAttachments)
                 : {}),
               ...(hasSkills ? registerSkillTool(userId) : {}),
+              // Spread before the MCP tools so an MCP server cannot shadow an
+              // internal tool by reusing its name.
+              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
               ...(hasMcpTools ? mcpTools : {}),
             }
           : undefined,

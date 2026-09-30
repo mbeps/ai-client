@@ -1,22 +1,18 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { listSkillsForUser } from "@/lib/skills/skill-service";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * Fetches all saved Agent Skills for the authenticated user, ordered by most recently updated first.
  *
+ * @decision Delegates to the skill service so the ordering and ownership rules
+ * have one owner, shared with the AI tools.
  * @author Maruf Bepary
  */
 export async function listSkills(): Promise<SkillRow[]> {
   const session = await requireSession();
 
-  return db
-    .select()
-    .from(skill)
-    .where(eq(skill.userId, session.user.id))
-    .orderBy(desc(skill.updatedAt)) as Promise<SkillRow[]>;
+  return listSkillsForUser(session.user.id);
 }

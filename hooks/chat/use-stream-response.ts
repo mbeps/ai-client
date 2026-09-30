@@ -10,6 +10,7 @@ import { persistMessage } from "@/actions/chats/persist-message";
 import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
+import { extractSkillChangesFromToolResults } from "@/lib/chat/extract-skill-changes-from-tool-results";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { logger } from "@/lib/logger";
@@ -226,6 +227,20 @@ export function useStreamResponse(
                 ? Date.now() - pendingRef.current.startTime
                 : undefined;
 
+            const toolResults = completedTools
+              .filter((tc) => tc.result !== undefined)
+              .map((tc) => ({
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                result: tc.result,
+              }));
+
+            // A skill the model just wrote is not in the store, so the skills
+            // screens would show a stale list until the next full hydration.
+            if (extractSkillChangesFromToolResults(toolResults).length > 0) {
+              void useAppStore.getState().loadSkills();
+            }
+
             const metadata = JSON.stringify({
               model: pendingRef.current.model,
               reasoning,
@@ -234,13 +249,7 @@ export function useStreamResponse(
                 toolName: tc.toolName,
                 args: tc.args,
               })),
-              toolResults: completedTools
-                .filter((tc) => tc.result !== undefined)
-                .map((tc) => ({
-                  toolCallId: tc.toolCallId,
-                  toolName: tc.toolName,
-                  result: tc.result,
-                })),
+              toolResults,
               usage: event.usage,
               finishReason: event.finishReason,
               durationMs,

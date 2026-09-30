@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schema";
+import { fenceBlock } from "@/lib/skills/build-skill-prompt";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
@@ -44,7 +45,7 @@ export function registerSkillTool(userId: string) {
           filesText =
             "\n\n### Bundled Reference Files:\n" +
             files
-              .map((f) => `#### File: ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
+              .map((f) => `#### File: ${f.path}\n${fenceBlock(f.content)}`)
               .join("\n\n");
         }
 
