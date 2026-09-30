@@ -5,12 +5,12 @@ import { ErrorPage } from "@/components/shared/error-page";
 import { ROUTES } from "@/config/routes";
 
 /**
- * Tool error boundary page — displays error UI when MCP server detail page fails to load.
- * Shows retry button and link back to tools list.
+ * Connector error boundary page — displays error UI when MCP server detail page fails to load.
+ * Shows retry button and link back to the connectors list.
  *
  * @author Maruf Bepary
  */
-export default function ToolError({
+export default function ConnectorError({
   error,
   reset,
 }: {
@@ -21,10 +21,10 @@ export default function ToolError({
     <ErrorPage
       error={error}
       reset={reset}
-      heading="Failed to load tool"
-      fallbackDescription="This tool could not be loaded. Please try again."
-      linkHref={ROUTES.TOOLS.path}
-      linkLabel="Back to tools"
+      heading="Failed to load connector"
+      fallbackDescription="This connector could not be loaded. Please try again."
+      linkHref={ROUTES.CONNECTORS.path}
+      linkLabel="Back to connectors"
       linkIcon={Wrench}
       resetIcon={RotateCcw}
     />

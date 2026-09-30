@@ -10,7 +10,7 @@ import ProjectNotFound from "@/app/(main)/projects/[id]/not-found";
 import RootNotFound from "@/app/not-found";
 import PromptNotFound from "@/app/settings/prompts/[id]/not-found";
 import SkillNotFound from "@/app/settings/skills/[id]/not-found";
-import ToolNotFound from "@/app/settings/tools/[id]/not-found";
+import ConnectorNotFound from "@/app/settings/connectors/[id]/not-found";
 import TransformRunNotFound from "@/app/workflows/transform/[id]/[runId]/not-found";
 import TransformAgentNotFound from "@/app/workflows/transform/[id]/not-found";
 import { ROUTES } from "@/config/routes";
@@ -72,11 +72,11 @@ describe("Not Found Pages", () => {
     expect(link).toHaveAttribute("href", ROUTES.KNOWLEDGEBASES.path);
   });
 
-  it("renders ToolNotFound with link to tools", () => {
-    render(<ToolNotFound />);
-    expect(screen.getByText("Tool not found")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /back to tools/i });
-    expect(link).toHaveAttribute("href", ROUTES.TOOLS.path);
+  it("renders ConnectorNotFound with link to connectors", () => {
+    render(<ConnectorNotFound />);
+    expect(screen.getByText("Connector not found")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /back to connectors/i });
+    expect(link).toHaveAttribute("href", ROUTES.CONNECTORS.path);
   });
 
   it("renders PromptNotFound with link to prompts", () => {

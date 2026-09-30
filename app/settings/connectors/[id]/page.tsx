@@ -99,9 +99,9 @@ export default function McpServerPage() {
         asChild
         className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
       >
-        <Link href={ROUTES.TOOLS.path}>
+        <Link href={ROUTES.CONNECTORS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Back to Tools
+          Back to Connectors
         </Link>
       </Button>
 

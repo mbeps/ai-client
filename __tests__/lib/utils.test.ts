@@ -98,9 +98,9 @@ describe("sortByUpdatedAt", () => {
 
 describe("getPathSegments", () => {
   it("extracts non-empty path segments", () => {
-    expect(getPathSegments("/settings/tools/123/")).toEqual([
+    expect(getPathSegments("/settings/connectors/123/")).toEqual([
       "settings",
-      "tools",
+      "connectors",
       "123",
     ]);
   });

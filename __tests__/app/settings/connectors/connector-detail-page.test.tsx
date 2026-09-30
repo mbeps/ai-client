@@ -83,7 +83,7 @@ vi.mock("@/components/mcp/server-settings", () => ({
 
 import React from "react";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
-import McpServerPage from "@/app/settings/tools/[id]/page";
+import McpServerPage from "@/app/settings/connectors/[id]/page";
 import { useAppStore } from "@/lib/store";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
@@ -120,7 +120,7 @@ const mockServer: McpServer = {
   updatedAt: new Date(),
 };
 
-describe("McpServerPage (Tools Detail Page)", () => {
+describe("McpServerPage (Connector Detail Page)", () => {
   beforeEach(() => {
     currentParamId = "server-1";
     useAppStore.setState({
@@ -155,7 +155,7 @@ describe("McpServerPage (Tools Detail Page)", () => {
     render(<McpServerPage />);
 
     expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
-    expect(screen.getByText("Back to Tools")).toBeInTheDocument();
+    expect(screen.getByText("Back to Connectors")).toBeInTheDocument();
     expect(screen.getByTestId("tool-list")).toBeInTheDocument();
   });
 

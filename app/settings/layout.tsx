@@ -7,7 +7,7 @@ import { SettingsSidebar } from "@/components/sidebar/settings-sidebar";
  * Authentication-guarded layout for all app settings routes.
  * Renders settings sidebar navigation within AuthenticatedLayout.
  * Requires active session — redirects unauthenticated users to login.
- * Route group: /settings/general, /settings/app, /settings/profile, /settings/prompts, /settings/tools.
+ * Route group: /settings/general, /settings/app, /settings/profile, /settings/prompts, /settings/connectors.
  *
  * @param children Settings sub-page content.
  * @returns Settings scaffold with sidebar and centered content area.

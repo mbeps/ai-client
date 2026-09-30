@@ -6,8 +6,8 @@ import {
   Command,
   Database,
   LogOut,
+  Plug,
   Settings,
-  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,7 +31,7 @@ import { useAppStore } from "@/lib/store";
 
 /**
  * Sidebar for the /settings section.
- * Provides navigation to General (app preferences), Tools (MCP server management), and Prompts (slash-command shortcuts).
+ * Provides navigation to General (app preferences), Connectors (MCP server management), and Prompts (slash-command shortcuts).
  * "Back to Home" button returns to main chat interface. Active route is highlighted based on `pathname`.
  *
  * @see ROUTES.SETTINGS for available settings page routes
@@ -49,9 +49,9 @@ export function SettingsSidebar({
       icon: Settings,
     },
     {
-      name: "Tools",
-      href: ROUTES.SETTINGS.TOOLS.path,
-      icon: Wrench,
+      name: "Connectors",
+      href: ROUTES.SETTINGS.CONNECTORS.path,
+      icon: Plug,
     },
     {
       name: "Providers",
@@ -103,8 +103,8 @@ export function SettingsSidebar({
                   asChild
                   isActive={
                     pathname === item.href ||
-                    (item.name === "Tools" &&
-                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path)) ||
+                    (item.name === "Connectors" &&
+                      pathname.startsWith(ROUTES.SETTINGS.CONNECTORS.path)) ||
                     (item.name === "Providers" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
                     (item.name === "Prompts" &&

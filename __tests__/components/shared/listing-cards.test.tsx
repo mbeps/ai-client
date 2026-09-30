@@ -194,11 +194,14 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       updatedAt: new Date(),
     };
 
-    it("renders Link with ROUTES.TOOLS.detail", () => {
+    it("renders Link with ROUTES.CONNECTORS.detail", () => {
       render(<ServerCard server={mockServer} />);
 
       const link = screen.getByRole("link", { name: /github tools/i });
-      expect(link).toHaveAttribute("href", ROUTES.TOOLS.detail("server-123"));
+      expect(link).toHaveAttribute(
+        "href",
+        ROUTES.CONNECTORS.detail("server-123"),
+      );
       expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
       expect(screen.getByText("https://api.github.com")).toBeInTheDocument();
     });

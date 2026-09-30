@@ -35,7 +35,7 @@ interface ServerCardProps {
 export function ServerCard({ server }: ServerCardProps) {
   return (
     <Link
-      href={ROUTES.TOOLS.detail(server.id)}
+      href={ROUTES.CONNECTORS.detail(server.id)}
       className="group block h-full focus-visible:outline-none"
     >
       <Card className="flex h-full min-h-[100px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50">

@@ -7,7 +7,7 @@
  * @example
  * import { ROUTES } from "@/config/routes";
  * const chatPath = ROUTES.CHATS.detail("chat-123");  // "/chats/chat-123"
- * const settingsPath = ROUTES.SETTINGS.TOOLS.path;  // "/settings/tools"
+ * const settingsPath = ROUTES.SETTINGS.CONNECTORS.path;  // "/settings/connectors"
  */
 
 /** Base path segment shared by all authentication routes. */
@@ -95,11 +95,11 @@ export const ROUTES = {
       new: `${SETTINGS_BASE}/providers/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/providers/${id}` as const,
     },
-    TOOLS: {
-      path: `${SETTINGS_BASE}/tools` as const,
-      name: "Tools",
-      new: `${SETTINGS_BASE}/tools/new` as const,
-      detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
+    CONNECTORS: {
+      path: `${SETTINGS_BASE}/connectors` as const,
+      name: "Connectors",
+      new: `${SETTINGS_BASE}/connectors/new` as const,
+      detail: (id: string) => `${SETTINGS_BASE}/connectors/${id}` as const,
     },
     PROMPTS: {
       path: `${SETTINGS_BASE}/prompts` as const,
@@ -114,11 +114,11 @@ export const ROUTES = {
       detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
     },
   },
-  TOOLS: {
-    path: `${SETTINGS_BASE}/tools` as const,
-    name: "Tools",
-    new: `${SETTINGS_BASE}/tools/new` as const,
-    detail: (id: string) => `${SETTINGS_BASE}/tools/${id}` as const,
+  CONNECTORS: {
+    path: `${SETTINGS_BASE}/connectors` as const,
+    name: "Connectors",
+    new: `${SETTINGS_BASE}/connectors/new` as const,
+    detail: (id: string) => `${SETTINGS_BASE}/connectors/${id}` as const,
   },
   PROMPTS: {
     path: `${SETTINGS_BASE}/prompts` as const,

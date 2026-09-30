@@ -38,7 +38,7 @@ export interface ServerSettingsProps {
  * Settings panel for managing an MCP server configuration.
  * Displays public sharing toggle and permanent deletion option with confirmation.
  * Shows warning about deletion impact on assistants and chats.
- * Redirects to tools list after successful deletion.
+ * Redirects to the connectors list after successful deletion.
  *
  * @param props - Component props
  * @param props.serverId - ID of the server to manage settings for; used in delete and toggle operations
@@ -68,7 +68,7 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
       await deleteMcpServer(serverId);
       toast.success("MCP server deleted");
       router.refresh();
-      router.push(ROUTES.TOOLS.path);
+      router.push(ROUTES.CONNECTORS.path);
     } catch {
       toast.error("Failed to delete MCP server");
       setDeleting(false);

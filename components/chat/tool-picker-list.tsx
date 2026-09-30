@@ -512,7 +512,7 @@ export function ToolPickerDialog({
       }
       manageAction={{
         label: "Manage Tools",
-        href: ROUTES.SETTINGS.TOOLS.path,
+        href: ROUTES.SETTINGS.CONNECTORS.path,
       }}
     >
       <ToolPickerList

@@ -65,7 +65,7 @@ export default function NewMcpServerPage() {
       await createMcpServer(data);
       toast.success("MCP server added");
       await loadMcpServers();
-      router.push(ROUTES.SETTINGS.TOOLS.path);
+      router.push(ROUTES.SETTINGS.CONNECTORS.path);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to add MCP server";
@@ -81,9 +81,9 @@ export default function NewMcpServerPage() {
         asChild
         className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
       >
-        <Link href={ROUTES.SETTINGS.TOOLS.path}>
+        <Link href={ROUTES.SETTINGS.CONNECTORS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Back to Tools
+          Back to Connectors
         </Link>
       </Button>
 
@@ -124,7 +124,7 @@ export default function NewMcpServerPage() {
 
               <div className="flex items-center gap-3 pt-2">
                 <Button variant="outline" asChild>
-                  <Link href={ROUTES.SETTINGS.TOOLS.path}>
+                  <Link href={ROUTES.SETTINGS.CONNECTORS.path}>
                     <X className="mr-2 h-4 w-4" />
                     Cancel
                   </Link>
@@ -145,7 +145,7 @@ export default function NewMcpServerPage() {
         <SidebarTabsContent value="discover" className="space-y-6">
           <PublicServerDiscovery
             onSuccess={() => {
-              router.push(ROUTES.SETTINGS.TOOLS.path);
+              router.push(ROUTES.SETTINGS.CONNECTORS.path);
             }}
           />
         </SidebarTabsContent>

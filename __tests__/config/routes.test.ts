@@ -42,12 +42,12 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.SETTINGS.APP.path).toBe("/settings/app");
   });
 
-  it("SETTINGS.TOOLS path", () => {
-    expect(ROUTES.SETTINGS.TOOLS.path).toBe("/settings/tools");
+  it("SETTINGS.CONNECTORS path", () => {
+    expect(ROUTES.SETTINGS.CONNECTORS.path).toBe("/settings/connectors");
   });
 
-  it("SETTINGS.TOOLS.new path", () => {
-    expect(ROUTES.SETTINGS.TOOLS.new).toBe("/settings/tools/new");
+  it("SETTINGS.CONNECTORS.new path", () => {
+    expect(ROUTES.SETTINGS.CONNECTORS.new).toBe("/settings/connectors/new");
   });
 
   it("SETTINGS.PROMPTS path", () => {
@@ -66,8 +66,8 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.SETTINGS.SKILLS.new).toBe("/settings/skills/new");
   });
 
-  it("TOOLS.new path", () => {
-    expect(ROUTES.TOOLS.new).toBe("/settings/tools/new");
+  it("CONNECTORS.new path", () => {
+    expect(ROUTES.CONNECTORS.new).toBe("/settings/connectors/new");
   });
 
   it("PROMPTS.new path", () => {
@@ -156,9 +156,9 @@ describe("ROUTES — dynamic helpers", () => {
     );
   });
 
-  it("SETTINGS.TOOLS.detail returns correct path", () => {
-    expect(ROUTES.SETTINGS.TOOLS.detail("tool-id")).toBe(
-      "/settings/tools/tool-id",
+  it("SETTINGS.CONNECTORS.detail returns correct path", () => {
+    expect(ROUTES.SETTINGS.CONNECTORS.detail("connector-id")).toBe(
+      "/settings/connectors/connector-id",
     );
   });
 
@@ -190,8 +190,10 @@ describe("ROUTES — dynamic helpers", () => {
     );
   });
 
-  it("TOOLS.detail returns correct path", () => {
-    expect(ROUTES.TOOLS.detail("tool-xyz")).toBe("/settings/tools/tool-xyz");
+  it("CONNECTORS.detail returns correct path", () => {
+    expect(ROUTES.CONNECTORS.detail("connector-xyz")).toBe(
+      "/settings/connectors/connector-xyz",
+    );
   });
 
   it("PROMPTS.detail returns correct path", () => {
@@ -238,8 +240,8 @@ describe("ROUTES — name properties", () => {
     expect(ROUTES.AUTH.LOGIN.name).toBe("Login");
   });
 
-  it("SETTINGS.TOOLS has correct name", () => {
-    expect(ROUTES.SETTINGS.TOOLS.name).toBe("Tools");
+  it("SETTINGS.CONNECTORS has correct name", () => {
+    expect(ROUTES.SETTINGS.CONNECTORS.name).toBe("Connectors");
   });
 
   it("KNOWLEDGEBASES has correct name", () => {
