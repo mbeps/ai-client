@@ -80,8 +80,16 @@ export function TwoFactorAuth({ isEnabled }: { isEnabled: boolean }) {
 
     if (result.error) {
       toast.error(result.error.message || "Failed to enable 2FA");
+      return;
     }
-    form.reset();
+
+    // Only TOTP is configured server-side, so `otp` never comes back.
+    if (result.data.method !== "totp") {
+      toast.error("Only authenticator app codes are supported");
+      return;
+    }
+
+    setTwoFactorData(result.data);
   }
 
   if (twoFactorData != null) {

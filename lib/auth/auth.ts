@@ -5,11 +5,15 @@ import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { env } from "@/config/env";
+import { SITE_CONFIG } from "@/config/site";
 import { db } from "@/drizzle/db";
+import { getLogger } from "@/lib/logger";
 import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
 import { sendEmailVerificationEmail } from "../emails/email-verification";
 import { sendPasswordResetEmail } from "../emails/password-reset-email";
 import { sendWelcomeEmail } from "../emails/welcome-email";
+
+const log = getLogger(["lib", "auth"]);
 
 /**
  * Better Auth server instance for all authentication operations. **SERVER-ONLY** — never import in client components.
@@ -23,7 +27,7 @@ import { sendWelcomeEmail } from "../emails/welcome-email";
  * @author Maruf Bepary
  */
 export const auth = betterAuth({
-  appName: "Better Auth Demo",
+  appName: SITE_CONFIG.NAME,
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   user: {
@@ -100,7 +104,12 @@ export const auth = betterAuth({
         };
 
         if (user != null) {
-          await sendWelcomeEmail(user);
+          // Non-critical: a mail outage must not fail sign-up.
+          ctx.context.runInBackground(
+            sendWelcomeEmail(user).catch((error: unknown) => {
+              log.error("Welcome email failed: {error}", { error });
+            }),
+          );
         }
       }
     }),

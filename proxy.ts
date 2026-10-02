@@ -31,7 +31,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Resolve session from JWT cookie — no DB round-trip due to strategy: "jwt" + refreshCache
+  // Resolve session from the cookie cache — strategy: "jwt" avoids a DB hit per request
   const session = await auth.api.getSession({
     headers: request.headers,
   });
@@ -51,11 +51,11 @@ export async function proxy(request: NextRequest) {
 
 /**
  * Run proxy on all routes except Next.js internals and static assets.
- * Run proxy on all routes except Next.js internals, static assets, and Inngest serve endpoint.
+ * `/api/inngest` is excluded from the matcher but still reaches this function;
+ * PUBLIC_PREFIXES is what actually bypasses the session check for it.
  */
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-    "/((?!_next/static|_next/image|favicon.ico|api/inngest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

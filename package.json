@@ -16,7 +16,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "auth:generate": "npx @better-auth/cli@latest generate --config ./lib/auth/auth.ts --output ./drizzle/schemas/new-auth-schema.ts --yes",
+    "auth:generate": "npx @better-auth/cli@latest generate --config ./lib/auth/auth.ts --output ./drizzle/schemas/auth-schema.ts --yes",
     "lint": "biome check .",
     "lint:fix": "biome check --write --unsafe .",
     "format": "biome format --write .",
