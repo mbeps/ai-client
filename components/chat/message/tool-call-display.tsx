@@ -12,7 +12,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useApprovalRound } from "@/hooks/chat/use-approval-round";
 import { cn } from "@/lib/utils";
+import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
+import { ToolApprovalButtons } from "./tool-approval-buttons";
 
 type ToolCall = {
   toolCallId: string;
@@ -32,6 +35,16 @@ interface ToolCallDisplayProps {
   toolCalls: ToolCall[];
   toolResults: ToolResult[];
   initialOpen?: boolean;
+  /** Tool calls the SDK has blocked, waiting on the user. */
+  pendingApprovals?: PendingApproval[];
+  /**
+   * Called with the full batch once every pending call has a decision.
+   *
+   * @param decisions - One verdict per blocked call, in decision order.
+   */
+  onApproveDecisions?: (decisions: ApprovalDecision[]) => void;
+  /** Whether a decision batch is already in flight. */
+  approvalsDisabled?: boolean;
 }
 
 /**
@@ -42,29 +55,67 @@ interface ToolCallDisplayProps {
  * @param props.toolCalls - Array of tool calls initiated by the model.
  * @param props.toolResults - Array of tool execution results.
  * @param props.initialOpen - Whether to show tool details expanded on first render.
+ * @param props.pendingApprovals - Tool calls blocked by the approval gate.
+ * @param props.onApproveDecisions - Receives the full batch of decisions.
+ * @param props.approvalsDisabled - Whether a decision batch is in flight.
  * @author Maruf Bepary
  */
 export function ToolCallDisplay({
   toolCalls,
   toolResults,
   initialOpen = false,
+  pendingApprovals,
+  onApproveDecisions,
+  approvalsDisabled,
 }: ToolCallDisplayProps) {
-  if (!toolCalls || toolCalls.length === 0) return null;
+  const blockedCalls = pendingApprovals ?? [];
+  // The verdicts live in the round, not in a control, so each call can be
+  // answered on its own row while the batch is still submitted as one unit.
+  const round = useApprovalRound(
+    blockedCalls,
+    onApproveDecisions ?? (() => {}),
+    approvalsDisabled || !onApproveDecisions,
+  );
+
+  const approvalFor = (toolCallId: string) =>
+    blockedCalls.find((a) => a.toolCallId === toolCallId);
+
+  // A parked round stores the blocked call under pendingApprovals only, so it
+  // has no toolCalls entry. Merge both so every pending call gets a row.
+  const rows = [
+    ...toolCalls.map((tc) => ({
+      key: tc.toolCallId,
+      toolCall: tc,
+      result: toolResults.find((tr) => tr.toolCallId === tc.toolCallId),
+    })),
+    ...blockedCalls
+      .filter((a) => !toolCalls.some((tc) => tc.toolCallId === a.toolCallId))
+      .map((a) => ({
+        key: a.toolCallId,
+        toolCall: {
+          toolCallId: a.toolCallId,
+          toolName: a.toolName,
+          serverName: a.serverName,
+          args: a.args,
+        },
+        result: undefined as ToolResult | undefined,
+      })),
+  ];
+
+  if (rows.length === 0) return null;
 
   return (
     <div className="mb-3 space-y-2">
-      {toolCalls.map((tc) => {
-        const result = toolResults.find(
-          (tr) => tr.toolCallId === tc.toolCallId,
-        );
+      {rows.map(({ key, toolCall: tc, result }) => {
         const isCompleted = !!result;
         const isError = isCompleted && (result.result as any)?.error;
+        const approval = approvalFor(tc.toolCallId);
 
         return (
-          <div key={tc.toolCallId} className="group/tool">
+          <div key={key} className="group/tool flex items-stretch gap-2">
             <Collapsible
               defaultOpen={initialOpen}
-              className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"
+              className="min-w-0 flex-1 overflow-hidden rounded-lg border border-muted bg-muted/20"
             >
               <CollapsibleTrigger className="flex w-full items-center gap-2 p-2.5 font-medium text-sm outline-none transition-colors hover:bg-muted/30">
                 <div className="flex flex-1 items-center gap-2 text-muted-foreground">
@@ -150,6 +201,25 @@ export function ToolCallDisplay({
                 </div>
               </CollapsibleContent>
             </Collapsible>
+            {approval && (
+              // One control per blocked call, sitting on that call's own row,
+              // so a decision is never ambiguous about which tool it answers.
+              <div
+                data-testid="tool-approval-row"
+                className="flex shrink-0 items-center rounded-lg border border-amber-500/40 bg-amber-500/5 px-2 py-1"
+              >
+                <ToolApprovalButtons
+                  decision={round.decisionFor(approval.approvalId)}
+                  decided={round.isDecided(approval.approvalId)}
+                  disabled={approvalsDisabled || !onApproveDecisions}
+                  canUndo={round.canUndo()}
+                  onDecide={(approved) =>
+                    round.decide(approval.approvalId, approved)
+                  }
+                  onUndo={() => round.undo(approval.approvalId)}
+                />
+              </div>
+            )}
           </div>
         );
       })}

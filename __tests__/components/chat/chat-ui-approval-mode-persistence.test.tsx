@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatUI } from "@/components/chat/chat-ui";
 import type { Chat } from "@/types/chat/chat";
@@ -85,6 +85,8 @@ function buildChat(overrides: Partial<Chat> = {}): Chat {
 }
 
 function renderChatUI(chat: Chat) {
+  // The mode now lives in the store, so the mock has to behave like one:
+  // a write must be visible to the next render.
   mockStoreState = {
     chats: { [chat.id]: chat },
     mcpServers: [],
@@ -94,6 +96,10 @@ function renderChatUI(chat: Chat) {
     prompts: [],
     skills: [],
     userSettings: null,
+    approvalMode: "ask",
+    setApprovalMode: (mode: string) => {
+      mockStoreState.approvalMode = mode;
+    },
     updateMessageMetadataDb: vi.fn(),
     deleteMessageDb: vi.fn(),
     setCurrentLeafDb: vi.fn(),
@@ -103,98 +109,56 @@ function renderChatUI(chat: Chat) {
   return lastChatInputProps;
 }
 
-describe("ChatUI - entity skill configuration reaches the composer", () => {
+describe("ChatUI approval mode persistence", () => {
   beforeEach(() => {
     lastChatInputProps = null;
   });
 
-  it("passes assistant skills to the composer when the chat has an assistant", () => {
-    mockStoreState = {
-      chats: {},
-      mcpServers: [],
-      loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
-        {
-          id: "asst-1",
-          name: "Helper",
-          skillMode: "specific",
-          skillIds: ["sk-1", "sk-2"],
-        },
-      ],
-      projects: [],
-      prompts: [],
-      skills: [],
-      userSettings: null,
-      updateMessageMetadataDb: vi.fn(),
-      deleteMessageDb: vi.fn(),
-      setCurrentLeafDb: vi.fn(),
-      setKnowledgebaseDb: vi.fn(),
-    };
+  it("keeps auto-approve enabled after a message is sent", async () => {
+    renderChatUI(buildChat());
 
-    const chat = buildChat({ assistantId: "asst-1" });
-    render(<ChatUI chatId="chat-1" initialChat={chat} />);
+    // The user turned auto-approve on.
+    act(() => {
+      lastChatInputProps?.onApprovalModeChange?.("auto");
+    });
+    expect(mockStoreState.approvalMode).toBe("auto");
 
-    expect(lastChatInputProps?.initialSelectedSkillIds).toEqual([
-      "sk-1",
-      "sk-2",
-    ]);
+    // Sending a message must not silently revert it. Resetting to "ask" here
+    // meant approval was demanded again for every tool after the first one.
+    await act(async () => {
+      await lastChatInputProps?.onSend?.("hello");
+    });
+
+    expect(mockStoreState.approvalMode).toBe("auto");
   });
 
-  it("falls back to project skills when the chat has no assistant", () => {
-    mockStoreState = {
-      chats: {},
-      mcpServers: [],
-      loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [],
-      projects: [
-        {
-          id: "proj-1",
-          name: "Project",
-          skillMode: "specific",
-          skillIds: ["sk-9"],
-        },
-      ],
-      prompts: [],
-      skills: [],
-      userSettings: null,
-      updateMessageMetadataDb: vi.fn(),
-      deleteMessageDb: vi.fn(),
-      setCurrentLeafDb: vi.fn(),
-      setKnowledgebaseDb: vi.fn(),
-    };
+  it("keeps ask mode after a message is sent", async () => {
+    renderChatUI(buildChat());
 
-    const chat = buildChat({ projectId: "proj-1" });
-    render(<ChatUI chatId="chat-1" initialChat={chat} />);
+    expect(lastChatInputProps?.initialApprovalMode).toBe("ask");
 
-    expect(lastChatInputProps?.initialSelectedSkillIds).toEqual(["sk-9"]);
+    await act(async () => {
+      await lastChatInputProps?.onSend?.("hello");
+    });
+
+    expect(lastChatInputProps?.initialApprovalMode).toBe("ask");
   });
 
-  it("passes no skills when the entity disables skills entirely", () => {
-    mockStoreState = {
-      chats: {},
-      mcpServers: [],
-      loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
-        {
-          id: "asst-1",
-          name: "Helper",
-          skillMode: "none",
-          skillIds: ["sk-1"],
-        },
-      ],
-      projects: [],
-      prompts: [],
-      skills: [],
-      userSettings: null,
-      updateMessageMetadataDb: vi.fn(),
-      deleteMessageDb: vi.fn(),
-      setCurrentLeafDb: vi.fn(),
-      setKnowledgebaseDb: vi.fn(),
-    };
+  it("passes the session mode to every send", async () => {
+    const sentModes: unknown[] = [];
+    renderChatUI(buildChat());
 
-    const chat = buildChat({ assistantId: "asst-1" });
-    render(<ChatUI chatId="chat-1" initialChat={chat} />);
+    act(() => {
+      lastChatInputProps?.onApprovalModeChange?.("auto");
+    });
 
-    expect(lastChatInputProps?.initialSelectedSkillIds).toEqual([]);
+    await act(async () => {
+      await lastChatInputProps?.onSend?.("first");
+      sentModes.push(mockStoreState.approvalMode);
+      await lastChatInputProps?.onSend?.("second");
+      sentModes.push(mockStoreState.approvalMode);
+    });
+
+    expect(sentModes).toEqual(["auto", "auto"]);
   });
 });

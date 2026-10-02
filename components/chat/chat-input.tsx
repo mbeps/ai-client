@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowRight, Mic, Plus, Save, Square, X } from "lucide-react";
+import {
+  ArrowRight,
+  Mic,
+  Plus,
+  Save,
+  ShieldCheck,
+  ShieldOff,
+  Square,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
@@ -38,6 +47,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
+import type { ApprovalMode } from "@/types/tool/approval";
 import { AttachmentsMenu } from "./attachments-menu";
 import { ContextUsagePill } from "./context-usage-pill";
 import { MentionCommands } from "./mention-commands";
@@ -61,7 +71,26 @@ interface ChatInputProps {
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
     selectedSkillIds?: string[],
+    // Optional only because it follows optional parameters. Callers outside the
+    // chat composer (the new-chat page) do not pass it, so it is absent there
+    // and defaults to "ask" on the server. Never treat absence as "auto".
+    approvalMode?: ApprovalMode,
   ) => void;
+
+  /**
+   * Whether tool calls pause for approval before running.
+   *
+   * @decision Defaults to "ask". Auto mode is a per-send choice, not a saved
+   * preference, so it can never silently outlive the message that turned it on.
+   */
+  initialApprovalMode?: ApprovalMode;
+
+  /**
+   * Called whenever the user flips the toggle, and used by the owner to reset
+   * the mode after a send. Without it the button would keep showing the old
+   * value while the effective mode had already changed.
+   */
+  onApprovalModeChange?: (mode: ApprovalMode) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
   onCancel?: () => void;
@@ -150,8 +179,27 @@ export function ChatInput({
   canMentionAssistant = true,
   submitLabel,
   thread = [],
+  initialApprovalMode = "ask",
+  onApprovalModeChange,
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
+  const [approvalMode, setApprovalModeState] =
+    useState<ApprovalMode>(initialApprovalMode);
+
+  // The parent owns the mode for the whole session, so the button follows the
+  // prop rather than keeping a private copy. Regenerate also rewrites it from
+  // the branch being replayed, which is the one case where a reset is wanted.
+  useEffect(() => {
+    setApprovalModeState(initialApprovalMode);
+  }, [initialApprovalMode]);
+
+  const setApprovalMode = useCallback(
+    (next: ApprovalMode) => {
+      setApprovalModeState(next);
+      onApprovalModeChange?.(next);
+    },
+    [onApprovalModeChange],
+  );
   const { models: chatModels, isLoading: isModelsLoading } =
     useUserModels("chat");
   const hasNoModels = chatModels.length === 0 && !isModelsLoading;
@@ -513,6 +561,7 @@ export function ChatInput({
         selectedAssistant?.id,
         Array.from(selectedKbs),
         Array.from(selectedSkills),
+        approvalMode,
       );
       setInput("");
       clearAttachments();
@@ -733,6 +782,36 @@ export function ChatInput({
           >
             <Mic className="h-3.5 w-3.5" />
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                data-mode={approvalMode}
+                aria-label={
+                  approvalMode === "ask"
+                    ? "Approval mode: asking before each tool call. Activate to auto-approve."
+                    : "Approval mode: auto-approve tools without asking. Activate to ask first."
+                }
+                onClick={() =>
+                  setApprovalMode(approvalMode === "ask" ? "auto" : "ask")
+                }
+              >
+                {approvalMode === "auto" ? (
+                  <ShieldOff className="h-3.5 w-3.5 text-amber-600" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {approvalMode === "ask"
+                ? "Ask before running tools"
+                : "Auto-approve all tools"}
+            </TooltipContent>
+          </Tooltip>
           {isLoading ? (
             <Button
               size="icon"

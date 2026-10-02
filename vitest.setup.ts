@@ -24,6 +24,10 @@ process.env.INNGEST_EVENT_KEY =
 process.env.INNGEST_SIGNING_KEY =
   process.env.INNGEST_SIGNING_KEY || "test-inngest-signing-key";
 process.env.INNGEST_DEV = process.env.INNGEST_DEV || "1";
+// config/env.ts requires at least 32 characters, so tests that transitively
+// import it would otherwise throw at module load.
+process.env.TOOL_APPROVAL_SECRET =
+  process.env.TOOL_APPROVAL_SECRET || "test-tool-approval-secret-32chars";
 
 if (typeof window !== "undefined") {
   if (!global.ResizeObserver) {

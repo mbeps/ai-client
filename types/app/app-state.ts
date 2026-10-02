@@ -10,6 +10,7 @@ import type { MessageRow } from "@/types/message/message-row";
 import type { Project } from "@/types/project/project";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
+import type { ApprovalMode } from "@/types/tool/approval";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
@@ -338,6 +339,22 @@ export type AppState = {
    * @returns Promise resolving when change completes on server
    */
   setKnowledgebaseDb: (chatId: string, kbId: string | null) => Promise<void>;
+
+  /**
+   * Whether the composer may run tools without asking.
+   *
+   * Held in the store rather than component state because it is a session
+   * preference: it has to survive the navigation between the home page and a
+   * chat page, which remounts whichever component hosts the composer.
+   */
+  approvalMode: ApprovalMode;
+
+  /**
+   * Records the mode the user chose.
+   *
+   * @param mode - "ask" to gate every tool, "auto" to run them directly.
+   */
+  setApprovalMode: (mode: ApprovalMode) => void;
 
   resetEntityState: () => void;
   resetChatState: () => void;

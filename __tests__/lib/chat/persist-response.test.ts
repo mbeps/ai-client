@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  persistAssistantResponse,
+  updateAssistantResponse,
+} from "@/lib/chat/persist-response";
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
@@ -18,6 +21,19 @@ const chainable = vi.hoisted(() => {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
+
+/**
+ * Restores the shared chainable. Several tests use `mockResolvedValueOnce` on
+ * `limit` and `returning`, and a leaked once-value would silently change what
+ * the next test observes.
+ */
+beforeEach(() => {
+  chainable.select.mockClear();
+  chainable.insert.mockClear();
+  chainable.update.mockClear();
+  chainable.limit.mockReset().mockResolvedValue([]);
+  chainable.returning.mockReset().mockResolvedValue([{ id: "msg-1" }]);
+});
 
 
 describe("persistAssistantResponse", () => {
@@ -123,5 +139,46 @@ describe("persistAssistantResponse", () => {
     // The `if (parentId)` guard skips the lookup entirely for a root message.
     expect(chainable.limit).not.toHaveBeenCalled();
     expect(chainable.insert).toHaveBeenCalledOnce();
+  });
+});
+
+describe("updateAssistantResponse", () => {
+  it("overwrites the row and re-points the chat leaf at the same id", async () => {
+    await updateAssistantResponse({
+      messageId: "msg-1",
+      chatId: "chat-1",
+      content: "Resumed answer",
+      metadata: '{"pendingApprovals":[]}',
+    });
+
+    expect(chainable.update).toHaveBeenCalledTimes(2);
+    expect(chainable.set).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        content: "Resumed answer",
+        metadata: '{"pendingApprovals":[]}',
+      }),
+    );
+    // The resume is not a new branch, so the leaf stays on the same message.
+    expect(chainable.set).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ currentLeafId: "msg-1" }),
+    );
+  });
+
+  it("throws when no row matched, so a deleted parked message is not silent", async () => {
+    chainable.returning.mockResolvedValueOnce([]);
+
+    await expect(
+      updateAssistantResponse({
+        messageId: "msg-gone",
+        chatId: "chat-1",
+        content: "orphan",
+        metadata: "{}",
+      }),
+    ).rejects.toThrow(/Not Found/);
+
+    // The leaf must not be moved when nothing was rewritten.
+    expect(chainable.update).toHaveBeenCalledOnce();
   });
 });

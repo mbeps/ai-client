@@ -1,4 +1,5 @@
 import { channel, staticSchema } from "inngest/realtime";
+import type { PendingApproval } from "@/types/tool/approval";
 
 export type ChatStreamEvent =
   | { type: "start"; messageId: string }
@@ -17,6 +18,11 @@ export type ChatStreamEvent =
       toolName: string;
       result: unknown;
       serverName?: string;
+    }
+  | {
+      type: "tool-approval-required";
+      approvals: PendingApproval[];
+      round: number;
     }
   | { type: "finish"; finishReason?: string; usage?: unknown }
   | { type: "error"; message: string; code?: string };

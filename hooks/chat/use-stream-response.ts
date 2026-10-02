@@ -7,15 +7,22 @@ import { buildChatFromRows } from "@/actions/chats/build-chat";
 import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
 import { getChat } from "@/actions/chats/get-chat";
 import { persistMessage } from "@/actions/chats/persist-message";
+import { respondToToolApproval } from "@/actions/chats/respond-to-tool-approval";
 import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { extractSkillChangesFromToolResults } from "@/lib/chat/extract-skill-changes-from-tool-results";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
+import type {
+  ApprovalDecision,
+  ApprovalMode,
+  PendingApproval,
+} from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
@@ -29,11 +36,13 @@ function buildMetadata(
   selectedAssistantId?: string,
   selectedKbIds?: string[],
   selectedSkillIds?: string[],
+  approvalMode: ApprovalMode = "ask",
 ): Record<string, unknown> {
   const metadataObj: Record<string, unknown> = {
     model,
     selectedServerIds,
     selectedTools,
+    approvalMode,
   };
   if (selectedAssistantId) metadataObj.assistantId = selectedAssistantId;
   if (selectedKbIds && selectedKbIds.length > 0) {
@@ -101,6 +110,7 @@ interface StreamRequestOptions {
   chatId: string;
   userMessageId: string;
   model?: string;
+  approvalMode: ApprovalMode;
   selectedServerIds?: string[];
   selectedTools?: string[];
   selectedAssistantId?: string;
@@ -142,6 +152,10 @@ export function useStreamResponse(
     null,
   );
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
+    [],
+  );
+  const [approvalsDisabled, setApprovalsDisabled] = useState(false);
 
   const pendingRef = useRef<{
     userMessageId: string | null;
@@ -155,6 +169,9 @@ export function useStreamResponse(
   const assistantMessageIdRef = useRef<string | null>(null);
   const activeToolCallsRef = useRef<ToolCallState[]>([]);
   const stoppedRef = useRef(false);
+  // While a decision is outstanding no chunk can arrive for minutes. Without
+  // this the watchdog would treat the pause as a stall and wipe the UI.
+  const awaitingApprovalRef = useRef(false);
 
   const handleStreamEvent = useCallback(
     (event: ChatStreamEvent) => {
@@ -207,6 +224,18 @@ export function useStreamResponse(
               : t,
           );
           setActiveToolCalls([...activeToolCallsRef.current]);
+          setIsStreaming(true);
+          break;
+        }
+
+        case "tool-approval-required": {
+          awaitingApprovalRef.current = true;
+          lastChunkTimeRef.current = Date.now();
+          setPendingApprovals(event.approvals);
+          // A resume can park another round on the same mounted stream. The
+          // previous submit set this flag and nothing cleared it, so the new
+          // row rendered greyed out with no way to answer it.
+          setApprovalsDisabled(false);
           setIsStreaming(true);
           break;
         }
@@ -271,6 +300,9 @@ export function useStreamResponse(
           setStreamingContent(null);
           setStreamingReasoning(null);
           setActiveToolCalls([]);
+          awaitingApprovalRef.current = false;
+          setPendingApprovals([]);
+          setApprovalsDisabled(false);
           break;
         }
 
@@ -283,6 +315,9 @@ export function useStreamResponse(
           setStreamingContent(null);
           setStreamingReasoning(null);
           setActiveToolCalls([]);
+          awaitingApprovalRef.current = false;
+          setPendingApprovals([]);
+          setApprovalsDisabled(false);
           break;
         }
       }
@@ -371,6 +406,28 @@ export function useStreamResponse(
     lastProcessedIndexRef.current = 0;
   }, [chatId]);
 
+  // The live `tool-approval-required` event is not replayed on reconnect, so a
+  // refresh would otherwise leave the user with no way to unblock the gate.
+  useEffect(() => {
+    const chat = useAppStore.getState().chats?.[chatId];
+    const leafId = chat?.currentLeafId;
+    const leaf = leafId ? chat?.messages[leafId] : undefined;
+    const pending = leaf
+      ? parseMessageMetadata(leaf.metadata).pendingApprovals
+      : [];
+    if (pending.length > 0) {
+      awaitingApprovalRef.current = true;
+      // Without this the buttons render but cannot be submitted after a
+      // refresh, because no `start` event replays to set the id.
+      assistantMessageIdRef.current = leafId;
+      setPendingApprovals(pending);
+      setIsStreaming(true);
+    } else {
+      awaitingApprovalRef.current = false;
+      setPendingApprovals([]);
+    }
+  }, [chatId]);
+
   useEffect(() => {
     const all = messages.all;
     if (all && all.length > 0) {
@@ -415,7 +472,9 @@ export function useStreamResponse(
 
   // Watchdog & connection error recovery: prevent permanent "Thinking..." state
   useEffect(() => {
-    if (!isStreaming) return;
+    // A pending approval is not a stall: it can sit untouched for as long as
+    // the user reads it. See awaitingApprovalRef.
+    if (!isStreaming || awaitingApprovalRef.current) return;
 
     let attempts = 0;
     const interval = setInterval(async () => {
@@ -500,6 +559,9 @@ export function useStreamResponse(
     setStreamingContent(null);
     setStreamingReasoning(null);
     setActiveToolCalls([]);
+    awaitingApprovalRef.current = false;
+    setPendingApprovals([]);
+    setApprovalsDisabled(false);
     fetch("/api/chat/stop", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -519,6 +581,7 @@ export function useStreamResponse(
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
     selectedSkillIds: string[] = [],
+    approvalMode: ApprovalMode = "ask",
   ): Promise<string> => {
     const promptIds = Array.isArray(selectedPromptId)
       ? selectedPromptId
@@ -551,6 +614,7 @@ export function useStreamResponse(
       selectedAssistantId,
       selectedKbIds,
       selectedSkillIds,
+      approvalMode,
     );
 
     // 2. Resolve prompt content (MCP / slash-command)
@@ -606,6 +670,9 @@ export function useStreamResponse(
           chatId,
           userMessageId: userMsgId,
           model,
+          // Without this the server defaults to "ask", so switching
+          // auto-approve on would still gate every tool call.
+          approvalMode,
           selectedServerIds,
           selectedTools,
           selectedAssistantId,
@@ -633,12 +700,41 @@ export function useStreamResponse(
     return "";
   };
 
+  const respondToApprovals = useCallback(
+    async (decisions: ApprovalDecision[]) => {
+      const assistantId = assistantMessageIdRef.current;
+      if (!assistantId) {
+        toast.error("This tool call is no longer awaiting approval.");
+        return;
+      }
+      setApprovalsDisabled(true);
+      try {
+        await respondToToolApproval({
+          assistantMessageId: assistantId,
+          decisions,
+        });
+      } catch (err) {
+        logger.error("Failed to record tool approval decisions", err);
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Failed to record the decision. Please try again.",
+        );
+        setApprovalsDisabled(false);
+      }
+    },
+    [],
+  );
+
   return {
     isLoading,
     streamingContent,
     streamingReasoning,
     isStreamingReasoning,
     activeToolCalls,
+    pendingApprovals,
+    approvalsDisabled,
+    respondToApprovals,
     streamResponse,
     stopStream,
   };

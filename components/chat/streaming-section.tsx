@@ -28,12 +28,24 @@ interface StreamingSectionProps {
   activeArtifactId?: string | null;
   /** Whether canvas panel is currently open. */
   isCanvasOpen?: boolean;
+  /**
+   * How many tool calls are waiting on a decision.
+   *
+   * The count is enough, and the approvals themselves are deliberately not
+   * passed: the gate belongs to the committed assistant row, so this section
+   * only needs to know it should stay out of the way.
+   */
+  pendingApprovalsCount?: number;
 }
 
 /**
  * Renders the streaming response area below the existing message thread.
  * Shows a loading placeholder while waiting for the first token, active tool
  * call status messages, and a streaming MessageBubble once content arrives.
+ *
+ * The approval gate is deliberately absent here. It belongs to the assistant
+ * row in the thread, which reads it from persisted metadata; rendering it on
+ * this transient bubble as well made two bubbles answer one round.
  *
  * @param props - Streaming state and tool call tracking.
  * @returns A fragment containing the loading indicator, tool call statuses,
@@ -49,12 +61,19 @@ export function StreamingSection({
   onToggleArtifact,
   activeArtifactId,
   isCanvasOpen,
+  pendingApprovalsCount = 0,
 }: StreamingSectionProps) {
+  // A parked round leaves isLoading true with no streamed text, because the
+  // tool call is the only thing that has happened. The committed assistant
+  // row already renders that call from persisted metadata, so drawing it here
+  // too would show the same round twice.
+  const isParked = pendingApprovalsCount > 0;
+
   const hasStreamingContent =
     streamingContent !== null ||
     streamingReasoning !== null ||
     streamingCitations.length > 0 ||
-    activeToolCalls.length > 0;
+    (activeToolCalls.length > 0 && !isParked);
 
   if (
     !isLoading &&
@@ -62,6 +81,11 @@ export function StreamingSection({
     streamingReasoning === null &&
     activeToolCalls.length === 0
   ) {
+    return null;
+  }
+
+  // Nothing new is streaming, and the gate has its own home on the thread.
+  if (!hasStreamingContent) {
     return null;
   }
 

@@ -1,5 +1,6 @@
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 
 /**
  * Token usage data from the AI model response.
@@ -30,6 +31,10 @@ export type MessageUsage = {
  * @property {MessageUsage | null} usage - Token usage statistics from the model response
  * @property {string | null} finishReason - Why the model stopped generating (e.g. "stop", "length")
  * @property {number | null} durationMs - Wall-clock generation time in milliseconds
+ * @property {PendingApproval[]} pendingApprovals - Tool calls blocked awaiting a user decision; empty once resolved
+ * @property {number} approvalRound - How many approval rounds this message has already been through
+ * @property {string | null} parentUserMessageId - Id of the user message this assistant turn answers; the resume path needs it to reload the thread without truncating the approval pair away
+ * @property {ApprovalMode | null} approvalMode - Mode the turn was started under; the resume path needs it or it re-gates every tool
  *
  * @author Maruf Bepary
  */
@@ -49,4 +54,19 @@ export type ParsedMessageMetadata = {
   usage: MessageUsage | null;
   finishReason: string | null;
   durationMs: number | null;
+  /** Tool calls blocked awaiting a user decision. Empty once resolved. */
+  pendingApprovals: PendingApproval[];
+  /** How many approval rounds this message has already been through. */
+  approvalRound: number;
+  /**
+   * Mode the turn was started under. The resume path reads it so a round
+   * resumed under auto-approve does not suddenly demand approval.
+   */
+  approvalMode: ApprovalMode | null;
+  /**
+   * Id of the user message this assistant turn answers. Needed by the resume
+   * path, which reloads the thread up to that message and would otherwise
+   * truncate the approval pair away.
+   */
+  parentUserMessageId: string | null;
 };

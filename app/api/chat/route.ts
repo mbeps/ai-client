@@ -78,6 +78,8 @@ export async function POST(req: Request) {
         userEmail: session.user.email,
         userMessageId,
         model,
+        // Fail closed: an absent or invalid mode must not mean "no gate".
+        approvalMode: parsed.data.approvalMode ?? "ask",
         selectedServerIds,
         selectedTools,
         selectedAssistantId,

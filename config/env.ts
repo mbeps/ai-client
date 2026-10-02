@@ -73,6 +73,17 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .string()
     .default("10")
     .transform((v) => parseInt(v, 10)),
+  // HMAC secret for AI SDK tool approval signatures. Approval is
+  // unauthenticated without it: any caller can craft a matching request and
+  // response pair and force a tool to execute.
+  TOOL_APPROVAL_SECRET: z.string().min(32),
+  // Ceiling on approval rounds for one user message. A resume re-invokes the
+  // model, so a model that keeps re-requesting the same tool would otherwise
+  // loop forever.
+  CHAT_MAX_APPROVAL_ROUNDS: z
+    .string()
+    .default("10")
+    .transform((v) => parseInt(v, 10)),
   RATE_LIMIT_CHAT_RPM: z
     .string()
     .default("20")
@@ -163,6 +174,8 @@ export function validateEnv(
         DEFAULT_CHUNK_SIZE: process.env.DEFAULT_CHUNK_SIZE,
         DEFAULT_CHUNK_OVERLAP: process.env.DEFAULT_CHUNK_OVERLAP,
         CHAT_MAX_STEPS: process.env.CHAT_MAX_STEPS,
+        TOOL_APPROVAL_SECRET: process.env.TOOL_APPROVAL_SECRET,
+        CHAT_MAX_APPROVAL_ROUNDS: process.env.CHAT_MAX_APPROVAL_ROUNDS,
         RATE_LIMIT_CHAT_RPM: process.env.RATE_LIMIT_CHAT_RPM,
         RATE_LIMIT_UPLOAD_RPM: process.env.RATE_LIMIT_UPLOAD_RPM,
         POSTMARK_SERVER_TOKEN: process.env.POSTMARK_SERVER_TOKEN,

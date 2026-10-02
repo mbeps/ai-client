@@ -17,6 +17,7 @@ import type { AppState } from "@/types/app/app-state";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Type representing the chat-specific slice of the global Zustand store.
@@ -41,6 +42,8 @@ type ChatSlice = Pick<
   | "deleteChatDb"
   | "setKnowledgebaseDb"
   | "setCurrentLeafDb"
+  | "approvalMode"
+  | "setApprovalMode"
   | "resetChatState"
 >;
 
@@ -62,6 +65,15 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   set,
   get,
 ) => ({
+  // Session-wide, so it is held here rather than in the component that hosts
+  // the composer. That component unmounts on every navigation, which silently
+  // reverted the user's choice to "ask".
+  approvalMode: "ask" as ApprovalMode,
+
+  setApprovalMode: (mode: ApprovalMode) => {
+    set({ approvalMode: mode });
+  },
+
   chats: {},
 
   addMessage: (

@@ -215,6 +215,50 @@ describe("messageMetadataSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts pendingApprovals with a full entry", () => {
+    const result = messageMetadataSchema.safeParse({
+      pendingApprovals: [
+        {
+          approvalId: "a1",
+          toolCallId: "c1",
+          toolName: "mcp_send_email",
+          serverName: "mail",
+          args: { to: "a@b.c" },
+          reason: "Sends mail",
+          signature: "sig",
+        },
+      ],
+      approvalRound: 2,
+      parentUserMessageId: "msg-1",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a pending approval with arbitrary args and no optional fields", () => {
+    const result = messageMetadataSchema.safeParse({
+      pendingApprovals: [
+        { approvalId: "a1", toolCallId: "c1", toolName: "t", args: 42, signature: "sig" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a pending approval missing its signature", () => {
+    const result = messageMetadataSchema.safeParse({
+      pendingApprovals: [{ approvalId: "a1", toolCallId: "c1", toolName: "t", args: {} }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative or fractional approvalRound", () => {
+    expect(
+      messageMetadataSchema.safeParse({ approvalRound: -1 }).success,
+    ).toBe(false);
+    expect(
+      messageMetadataSchema.safeParse({ approvalRound: 1.5 }).success,
+    ).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

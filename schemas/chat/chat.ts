@@ -112,8 +112,65 @@ export const messageMetadataSchema = z.object({
       }),
     )
     .optional(),
+  pendingApprovals: z
+    .array(
+      z.object({
+        approvalId: z
+          .string()
+          .min(1)
+          .describe(
+            "Runtime id the AI SDK generated. Matched exactly on resume.",
+          ),
+        toolCallId: z
+          .string()
+          .min(1)
+          .describe("Provider-assigned id of the blocked tool call."),
+        toolName: z.string().min(1).describe("Registered tool name."),
+        serverName: z
+          .string()
+          .optional()
+          .describe("MCP server the tool came from, for an MCP tool."),
+        args: z
+          .unknown()
+          .describe("Parsed tool input. Arbitrary, so never validated here."),
+        reason: z
+          .string()
+          .optional()
+          .describe("Why the SDK asked, when it supplied a reason."),
+        signature: z
+          .string()
+          .min(1)
+          .describe("HMAC binding this approval to its tool call."),
+      }),
+    )
+    .optional()
+    .describe("Tool calls blocked awaiting a user decision."),
+  approvalRound: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("Approval rounds this message has already been through."),
+  parentUserMessageId: z
+    .string()
+    .optional()
+    .describe("Id of the user message this assistant turn answers."),
   reasoning: z.string().optional(),
   model: z.string().optional(),
+});
+
+/**
+ * The only field a client may set on a pending approval.
+ *
+ * Tool name, arguments, and signature are read back from the stored message
+ * on the server, so a tampered payload cannot redirect an approval onto a
+ * different tool call.
+ *
+ * @author Maruf Bepary
+ */
+export const approvalDecisionSchema = z.object({
+  approvalId: z.string().min(1),
+  approved: z.boolean(),
 });
 
 /**
@@ -128,6 +185,7 @@ export const chatRequestSchema = z
     chatId: idField,
     userMessageId: idField,
     model: z.string().max(100).optional(),
+    approvalMode: z.enum(["ask", "auto"]).optional(),
     selectedServerIds: z.array(z.string()).max(20).optional(),
     selectedTools: z.array(z.string()).max(100).optional(),
     selectedAssistantId: idField.optional(),

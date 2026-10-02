@@ -26,6 +26,7 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
+import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
@@ -85,6 +86,15 @@ interface MessageBubbleProps {
   streamingCitations?: Citation[];
   /** Tool invocations currently in flight during streaming. */
   activeToolCalls?: ToolCallState[];
+  /** Called with the full batch once every pending tool call has a decision. */
+  onApproveDecisions?: (decisions: ApprovalDecision[]) => void;
+  /** Whether a decision batch is already in flight. */
+  approvalsDisabled?: boolean;
+  /**
+   * Live approvals for a bubble that has no persisted row yet, such as the
+   * streaming bubble. Falls back to the message's own metadata.
+   */
+  pendingApprovals?: PendingApproval[];
   /** Knowledge bases available for display in KB chips. */
   knowledgebases?: KnowledgebaseWithCount[];
 }
@@ -107,6 +117,9 @@ export function MessageBubble({
   isCanvasOpen,
   streamingCitations,
   activeToolCalls,
+  onApproveDecisions,
+  approvalsDisabled,
+  pendingApprovals: livePendingApprovals,
   knowledgebases = [],
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
@@ -137,6 +150,8 @@ export function MessageBubble({
   const selectedSkillIds = isUser && parsedSkillIds ? parsedSkillIds : [];
   const skills = useAppStore((state) => state.skills);
   const toolData = isUser ? null : rawToolData;
+  const pendingApprovals: PendingApproval[] =
+    livePendingApprovals ?? parsedMetadata.pendingApprovals ?? [];
   const promptIds = useMemo(() => {
     if (!promptMeta) return [];
     if (
@@ -231,6 +246,9 @@ export function MessageBubble({
               toolResults={toolData?.toolResults}
               activeToolCalls={activeToolCalls}
               isLatest={isLatest}
+              pendingApprovals={pendingApprovals}
+              onApproveDecisions={onApproveDecisions}
+              approvalsDisabled={approvalsDisabled}
             />
           )}
 

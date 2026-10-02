@@ -69,6 +69,13 @@ vi.mock("@/lib/chat/attachments/process-attachments", () => ({
   processAttachments: mockProcessAttachments,
 }));
 
+const respondToToolApprovalMock = vi.hoisted(() =>
+  vi.fn(async () => ({ success: true as const })),
+);
+vi.mock("@/actions/chats/respond-to-tool-approval", () => ({
+  respondToToolApproval: respondToToolApprovalMock,
+}));
+
 const mockGetMcpPrompt = vi.hoisted(() => vi.fn());
 vi.mock("@/actions/mcp/get-mcp-prompt", () => ({
   getMcpPrompt: mockGetMcpPrompt,
@@ -89,6 +96,31 @@ vi.mock("@/lib/store", () => ({
     { getState: () => mockStoreState },
   ),
 }));
+
+/**
+ * Writes a chat whose leaf is an assistant message carrying pending approvals,
+ * which is the shape a refresh leaves in the store.
+ */
+const seedStoreWithPendingChat = (
+  chatId: string,
+  leafId: string,
+  pendingApprovals: unknown[],
+) => {
+  mockStoreState.chats[chatId] = {
+    currentLeafId: leafId,
+    messages: {
+      [leafId]: {
+        id: leafId,
+        role: "assistant",
+        content: "",
+        parentId: "user-1",
+        createdAt: new Date(),
+        childrenIds: [],
+        metadata: JSON.stringify({ pendingApprovals, approvalRound: 1 }),
+      },
+    },
+  };
+};
 
 const mockLogError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/logger", () => {
@@ -200,6 +232,58 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       selectedAssistantId: "asst-1",
       selectedKbIds: ["kb-1"],
     });
+  });
+
+  it("sends the approval mode so auto-approve reaches the server", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-x",
+        ["srv1"],
+        ["srv1:tool:t"],
+        undefined,
+        "asst-1",
+        ["kb-1"],
+        ["skill-1"],
+        "auto",
+      );
+    });
+
+    // Without this the server defaults to "ask", so the gate appears even
+    // though the user switched auto-approve on.
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("/api/chat");
+    expect(JSON.parse(init.body)).toMatchObject({ approvalMode: "auto" });
+  });
+
+  it("persists the approval mode on the user message", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-2",
+        "hello",
+        null,
+        [],
+        "gpt-x",
+        [],
+        [],
+        undefined,
+        undefined,
+        [],
+        [],
+        "auto",
+      );
+    });
+
+    // A resume rebuilds the turn from this row, so the mode has to survive it.
+    const [, persistArg] = mockPersist.mock.calls[0];
+    expect(JSON.parse(persistArg.metadata).approvalMode).toBe("auto");
   });
 
   it("optimistically inserts the user message into the store", async () => {
@@ -1444,5 +1528,439 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
     expect(mockToastError).toHaveBeenCalledWith("Failed to generate response");
     expect(result.current.isLoading).toBe(false);
+  });
+
+  // ── Tool approval gate ───────────────────────────────────────────────────
+
+  it("holds pending approvals and keeps streaming state alive", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "delete_skill_file",
+                  args: {},
+                  signature: "s1",
+                },
+              ],
+              round: 1,
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.pendingApprovals).toHaveLength(1);
+    expect(result.current.pendingApprovals[0].approvalId).toBe("a1");
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it("does not fire the watchdog while an approval is pending (Review Focus 1)", async () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "t",
+                  args: {},
+                  signature: "s",
+                },
+              ],
+              round: 1,
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    // A human reading a gate prompt can take far longer than the stall window.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(mockGetChat).not.toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.pendingApprovals).toHaveLength(1);
+
+    vi.useRealTimers();
+  });
+
+  it("clears pending approvals on finish", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "t",
+                  args: {},
+                  signature: "s",
+                },
+              ],
+              round: 1,
+            },
+          },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.pendingApprovals).toHaveLength(0);
+    expect(result.current.approvalsDisabled).toBe(false);
+  });
+
+  it("clears pending approvals on error", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "t",
+                  args: {},
+                  signature: "s",
+                },
+              ],
+              round: 1,
+            },
+          },
+          { data: { type: "error", message: "boom" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.pendingApprovals).toHaveLength(0);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("records the approval mode on the user message so regenerate replays it", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-1",
+        "hi",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+        undefined,
+        undefined,
+        [],
+        [],
+        "auto",
+      );
+    });
+
+    const added = mockStoreState.addMessage.mock.calls[0][1];
+    expect(JSON.parse(added.metadata).approvalMode).toBe("auto");
+  });
+
+  it("records ask when no mode is supplied", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-2",
+        "hi",
+        null,
+        [],
+        "gpt-4o",
+        [],
+        [],
+      );
+    });
+
+    const added = mockStoreState.addMessage.mock.calls[0][1];
+    expect(JSON.parse(added.metadata).approvalMode).toBe("ask");
+  });
+
+  it("submits against the leaf id after a refresh, with no start event (Review Focus 1)", async () => {
+    seedStoreWithPendingChat("chat-1", "assistant-9", [
+      {
+        approvalId: "a1",
+        toolCallId: "c1",
+        toolName: "delete_skill_file",
+        args: {},
+        signature: "s1",
+      },
+    ]);
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    expect(result.current.pendingApprovals).toHaveLength(1);
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(respondToToolApprovalMock).toHaveBeenCalledWith({
+      assistantMessageId: "assistant-9",
+      decisions: [{ approvalId: "a1", approved: true }],
+    });
+  });
+
+  it("clears rehydrated approvals once the leaf no longer carries any", async () => {
+    seedStoreWithPendingChat("chat-1", "assistant-9", [
+      {
+        approvalId: "a1",
+        toolCallId: "c1",
+        toolName: "t",
+        args: {},
+        signature: "s",
+      },
+    ]);
+
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useStreamResponse(id),
+      { initialProps: { id: "chat-1" } },
+    );
+
+    expect(result.current.pendingApprovals).toHaveLength(1);
+
+    // The resume landed: the persisted row no longer carries the round.
+    seedStoreWithPendingChat("chat-1", "assistant-9", []);
+    await act(async () => {
+      rerender({ id: "chat-2" });
+    });
+    await act(async () => {
+      rerender({ id: "chat-1" });
+    });
+
+    expect(result.current.pendingApprovals).toHaveLength(0);
+  });
+
+  it("posts decisions and disables the buttons while in flight", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [{ data: { type: "start", messageId: "assistant-1" } }],
+      };
+      rerender();
+    });
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(respondToToolApprovalMock).toHaveBeenCalledWith({
+      assistantMessageId: "assistant-1",
+      decisions: [{ approvalId: "a1", approved: true }],
+    });
+    expect(result.current.approvalsDisabled).toBe(true);
+  });
+
+  it("re-enables the buttons when a resume parks a fresh approval round", async () => {
+    // Round two arrives as another `tool-approval-required` event on the same
+    // stream, with the component still mounted and `approvalsDisabled` still
+    // true from the round-one submit. Nothing cleared it, so the new row
+    // rendered greyed out with no way to answer it.
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "assistant-1" } },
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "t",
+                  args: {},
+                  signature: "s",
+                },
+              ],
+              round: 1,
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(result.current.approvalsDisabled).toBe(true);
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a2",
+                  toolCallId: "c2",
+                  toolName: "get_workbook_metadata",
+                  args: {},
+                  signature: "s2",
+                },
+              ],
+              round: 2,
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.pendingApprovals[0].approvalId).toBe("a2");
+    expect(result.current.approvalsDisabled).toBe(false);
+  });
+
+  it("refuses to submit a decision when no assistant message is known", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(respondToToolApprovalMock).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith(
+      "This tool call is no longer awaiting approval.",
+    );
+    expect(result.current.approvalsDisabled).toBe(false);
+  });
+
+  it("surfaces a rejected decision as a toast and re-enables the buttons", async () => {
+    respondToToolApprovalMock.mockRejectedValueOnce(
+      new Error("All pending tool calls must be answered together"),
+    );
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [{ data: { type: "start", messageId: "assistant-1" } }],
+      };
+      rerender();
+    });
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "All pending tool calls must be answered together",
+    );
+    expect(result.current.approvalsDisabled).toBe(false);
+  });
+
+  it("falls back to a generic toast when a rejection is not an Error", async () => {
+    respondToToolApprovalMock.mockRejectedValueOnce("opaque failure");
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [{ data: { type: "start", messageId: "assistant-1" } }],
+      };
+      rerender();
+    });
+
+    await act(async () => {
+      await result.current.respondToApprovals([
+        { approvalId: "a1", approved: true },
+      ]);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to record the decision. Please try again.",
+    );
+    expect(result.current.approvalsDisabled).toBe(false);
+  });
+
+  it("clears pending approvals when the stream is stopped", async () => {
+    const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-approval-required",
+              approvals: [
+                {
+                  approvalId: "a1",
+                  toolCallId: "c1",
+                  toolName: "t",
+                  args: {},
+                  signature: "s",
+                },
+              ],
+              round: 1,
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    await act(async () => {
+      result.current.stopStream();
+    });
+
+    expect(result.current.pendingApprovals).toHaveLength(0);
+    expect(result.current.approvalsDisabled).toBe(false);
   });
 });

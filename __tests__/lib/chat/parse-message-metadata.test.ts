@@ -28,6 +28,10 @@ describe("parseMessageMetadata", () => {
       usage: null,
       finishReason: null,
       durationMs: null,
+      pendingApprovals: [],
+      approvalRound: 0,
+      approvalMode: null,
+      parentUserMessageId: null,
     });
   });
 
@@ -275,6 +279,10 @@ describe("parseMessageMetadata", () => {
       usage: null,
       finishReason: null,
       durationMs: null,
+      pendingApprovals: [],
+      approvalRound: 0,
+      approvalMode: null,
+      parentUserMessageId: null,
     });
 
     vi.restoreAllMocks();
@@ -288,5 +296,146 @@ describe("parseMessageMetadata", () => {
       expect.objectContaining({ error: expect.any(String) }),
     );
     expect(result.modelId).toBeNull();
+  });
+
+  describe("pendingApprovals", () => {
+    it("keeps well-formed entries and normalises optional strings", () => {
+      const raw = JSON.stringify({
+        pendingApprovals: [
+          {
+            approvalId: "a1",
+            toolCallId: "c1",
+            toolName: "delete_skill_file",
+            serverName: "mail",
+            args: { path: "notes.md" },
+            reason: "Writes to disk",
+            signature: "sig",
+          },
+          {
+            approvalId: "a2",
+            toolCallId: "c2",
+            toolName: "read_skill_file",
+            serverName: 42,
+            reason: {},
+            args: null,
+            signature: "sig2",
+          },
+        ],
+      });
+
+      expect(parseMessageMetadata(raw).pendingApprovals).toEqual([
+        {
+          approvalId: "a1",
+          toolCallId: "c1",
+          toolName: "delete_skill_file",
+          serverName: "mail",
+          args: { path: "notes.md" },
+          reason: "Writes to disk",
+          signature: "sig",
+        },
+        {
+          approvalId: "a2",
+          toolCallId: "c2",
+          toolName: "read_skill_file",
+          serverName: undefined,
+          args: null,
+          reason: undefined,
+          signature: "sig2",
+        },
+      ]);
+    });
+
+    it("drops entries that are null or missing a required string", () => {
+      const raw = JSON.stringify({
+        pendingApprovals: [
+          null,
+          "nope",
+          { approvalId: "a1" },
+          { approvalId: "a2", toolCallId: "c2", toolName: "t" },
+          {
+            approvalId: "a3",
+            toolCallId: "c3",
+            toolName: "t",
+            signature: "sig",
+          },
+        ],
+      });
+
+      expect(parseMessageMetadata(raw).pendingApprovals.map((a) => a.approvalId))
+        .toEqual(["a3"]);
+    });
+
+    it("falls back to an empty array when the field is not an array", () => {
+      expect(
+        parseMessageMetadata(JSON.stringify({ pendingApprovals: "nope" }))
+          .pendingApprovals,
+      ).toEqual([]);
+    });
+  });
+
+  describe("approvalRound", () => {
+    it("keeps a non-negative number", () => {
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalRound: 3 })).approvalRound,
+      ).toBe(3);
+    });
+
+    it("falls back to zero for a negative or non-number value", () => {
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalRound: -1 }))
+          .approvalRound,
+      ).toBe(0);
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalRound: "2" }))
+          .approvalRound,
+      ).toBe(0);
+    });
+  });
+
+  describe("parentUserMessageId", () => {
+    it("keeps a string id", () => {
+      expect(
+        parseMessageMetadata(
+          JSON.stringify({ parentUserMessageId: "msg-1" }),
+        ).parentUserMessageId,
+      ).toBe("msg-1");
+    });
+
+    it("falls back to null for a non-string value", () => {
+      expect(
+        parseMessageMetadata(JSON.stringify({ parentUserMessageId: 7 }))
+          .parentUserMessageId,
+      ).toBeNull();
+    });
+  });
+
+  describe("approvalMode", () => {
+    it("keeps a known mode", () => {
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalMode: "auto" }))
+          .approvalMode,
+      ).toBe("auto");
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalMode: "ask" }))
+          .approvalMode,
+      ).toBe("ask");
+    });
+
+    it("falls back to null for an unknown mode so the caller fails closed", () => {
+      // An unrecognised mode must never be read as "no gate", so the resume
+      // path treats null as "ask".
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalMode: "yolo" }))
+          .approvalMode,
+      ).toBeNull();
+      expect(
+        parseMessageMetadata(JSON.stringify({ approvalMode: true }))
+          .approvalMode,
+      ).toBeNull();
+    });
+
+    it("is null when absent", () => {
+      expect(parseMessageMetadata(JSON.stringify({})).approvalMode).toBeNull();
+    });
   });
 });

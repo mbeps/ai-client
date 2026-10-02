@@ -285,5 +285,79 @@ describe("MessageBubble message editing", () => {
       screen.queryByRole("button", { name: /^open$/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders the approval row for a parked round that has no toolCalls yet", () => {
+    // A parked round stores the blocked call under pendingApprovals only, so
+    // toolCalls is empty. Without an explicit pendingApprovals guard the
+    // ResponseTimeline bails early and the user can never unblock the gate.
+    const parkedMsg: Message = {
+      id: "msg-parked",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date("2026-10-01T21:00:00Z"),
+      metadata: JSON.stringify({
+        toolCalls: [],
+        toolResults: [],
+        pendingApprovals: [
+          {
+            approvalId: "aitxt-1",
+            toolCallId: "call-1",
+            toolName: "create_skill",
+            args: { name: "test-skill" },
+            signature: "sig-1",
+          },
+        ],
+        approvalRound: 1,
+        parentUserMessageId: "msg-1",
+      }),
+    };
+
+    renderMessageBubble({
+      message: parkedMsg,
+      isLatest: true,
+      siblings: [parkedMsg],
+      currentSiblingIndex: 0,
+      onApproveDecisions: vi.fn(),
+    });
+
+    expect(
+      screen.getByRole("button", { name: /approve tool call/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /deny tool call/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not offer approval buttons for a resolved round", () => {
+    const resolvedMsg: Message = {
+      id: "msg-resolved",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Done.",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date("2026-10-01T21:00:00Z"),
+      metadata: JSON.stringify({
+        toolCalls: [],
+        toolResults: [],
+        pendingApprovals: [],
+      }),
+    };
+
+    renderMessageBubble({
+      message: resolvedMsg,
+      isLatest: true,
+      siblings: [resolvedMsg],
+      currentSiblingIndex: 0,
+      onApproveDecisions: vi.fn(),
+    });
+
+    expect(
+      screen.queryByRole("button", { name: /approve tool call/i }),
+    ).not.toBeInTheDocument();
+  });
 });
 

@@ -1,32 +1,52 @@
-import { isStepCount, streamText } from "ai";
-import { env } from "@/config/env";
-import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/drizzle/db";
+import { message } from "@/drizzle/schema";
+import { buildApprovalResumeMessages } from "@/lib/chat/build-approval-resume";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
-import { loadChatContext } from "@/lib/chat/load-chat-context";
-import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
-import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
-import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
-import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
-import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
-import { registerSkillTool } from "@/lib/chat/register-skill-tool";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { resolveProvider } from "@/lib/chat/resolve-provider";
-import { checkVisionSupport } from "@/lib/chat/vision-guard";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import {
+  persistAssistantResponse,
+  updateAssistantResponse,
+} from "@/lib/chat/persist-response";
+import { runChatGeneration } from "@/lib/chat/run-chat-generation";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
+import { NotFoundError } from "@/lib/errors";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
-import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
+import type { ApprovalDecision, ApprovalMode } from "@/types/tool/approval";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
+/** Generation starts either from a new message or from an approval verdict. */
+const GENERATE_EVENT = "chat/response.generate";
+const APPROVAL_EVENT = "chat/approval.respond";
+
+/** Both events carry the same identity fields; only the extras differ. */
+interface ChatRoundEventData {
+  chatId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userMessageId: string;
+  model?: string;
+  approvalMode?: ApprovalMode;
+  selectedServerIds?: string[];
+  selectedTools?: string[];
+  selectedAssistantId?: string;
+  selectedSkillIds?: string[];
+  selectedKbIds?: string[];
+  assistantMessageId?: string;
+  decisions?: ApprovalDecision[];
+}
+
 /**
  * Inngest durable function generating AI chat responses in the background.
- * Streams tokens, reasoning, and tool calls to Inngest Realtime channel,
- * survives client disconnections and page refreshes, and persists the
- * assistant message to the database upon completion.
+ *
+ * One body serves both triggers. `chat/response.generate` starts a fresh
+ * round; `chat/approval.respond` resumes a round that parked on a tool
+ * approval gate, rewriting the assistant row that round wrote so the thread
+ * gains no second message.
  *
  * @author Maruf Bepary
  */
@@ -34,7 +54,7 @@ export const generateChatResponse = inngest.createFunction(
   {
     id: "generate-chat-response",
     retries: 0,
-    triggers: [{ event: "chat/response.generate" }],
+    triggers: [{ event: GENERATE_EVENT }, { event: APPROVAL_EVENT }],
     cancelOn: [
       {
         event: "chat/response.cancel",
@@ -43,6 +63,7 @@ export const generateChatResponse = inngest.createFunction(
     ],
   },
   async ({ event }) => {
+    const data = event.data as ChatRoundEventData;
     const {
       chatId,
       userId,
@@ -50,253 +71,138 @@ export const generateChatResponse = inngest.createFunction(
       userEmail,
       userMessageId,
       model,
+      approvalMode,
       selectedServerIds,
       selectedTools,
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
-    } = event.data;
+    } = data;
 
+    const isResume = event.name === APPROVAL_EVENT;
     const abortController = chatAbortRegistry.register(chatId);
-
     const ch = chatChannel({ chatId });
-    const assistantMessageId = crypto.randomUUID();
 
-    const emit = async (data: ChatStreamEvent) => {
+    const emit = async (streamEvent: ChatStreamEvent) => {
       if (abortController.signal.aborted) return;
       try {
-        await inngest.realtime.publish(ch.stream, data);
+        await inngest.realtime.publish(ch.stream, streamEvent);
       } catch (err) {
         log.warn("Failed to publish chat stream event to Inngest Realtime", {
           error: err instanceof Error ? err.message : String(err),
-          type: data.type,
+          type: streamEvent.type,
         });
       }
     };
 
-    let mcpCleanup: () => Promise<void> = async () => {};
-
     try {
-      await emit({ type: "start", messageId: assistantMessageId });
+      let assistantMessageId: string;
+      let outcome: Awaited<ReturnType<typeof runChatGeneration>>;
 
-      const [userSettings, resolved, ctx, thread] = await Promise.all([
-        getUserSettingsByUserId(userId).catch(() => null),
-        model
-          ? resolveProvider(userId, model)
-          : resolveDefaultChatProvider(userId),
-        loadChatContext(
+      if (isResume) {
+        assistantMessageId = data.assistantMessageId as string;
+        const parked = await readParkedApproval(assistantMessageId, chatId);
+        // The resume path reloads the tool selection from the user message
+        // that started the turn. Without it no tool is registered, so the SDK
+        // cannot execute the approval being answered.
+        const selection = await readUserSelection(
+          parked.parentUserMessageId,
           chatId,
+        );
+        // `start` is not emitted because the client already has the message.
+        outcome = await runChatGeneration({
           userId,
+          userName,
+          userEmail,
+          chatId,
+          userMessageId: parked.parentUserMessageId,
+          // The turn was started under the mode the user chose. Hardcoding
+          // "ask" would re-gate every tool the user had already auto-approved.
+          approvalMode: selection.approvalMode,
+          model: selection.model,
+          selectedServerIds: selection.selectedServerIds,
+          selectedTools: selection.selectedTools,
+          selectedSkillIds: selection.selectedSkillIds,
+          selectedKbIds: selection.selectedKbIds,
+          resumeMessages: buildApprovalResumeMessages(
+            parked.pendingApprovals,
+            data.decisions ?? [],
+          ),
+          previousRound: parked.approvalRound,
+          abortSignal: abortController.signal,
+          emit,
+        });
+      } else {
+        assistantMessageId = crypto.randomUUID();
+        await emit({ type: "start", messageId: assistantMessageId });
+        outcome = await runChatGeneration({
+          userId,
+          userName,
+          userEmail,
+          chatId,
+          userMessageId,
+          model,
+          // Fail closed: an absent mode must not mean "no gate".
+          approvalMode: approvalMode ?? "ask",
           selectedServerIds,
-          selectedKbIds,
+          selectedTools,
           selectedAssistantId,
           selectedSkillIds,
-        ),
-        loadThreadFromDb(chatId, userMessageId, userId),
-      ]);
-
-      const globalSystemPrompt = userSettings?.globalSystemPrompt;
-      const resolvedModelRow = {
-        capVision: resolved.modelRow.capVision,
-        capTools: resolved.modelRow.capTools,
-      };
-      const resolvedModelId = resolved.modelId;
-
-      const isArtifactToolSelected = selectedTools?.includes(
-        "internal:tool:manage_artifact",
-      );
-
-      const { mcpTools, mcpCleanup: registeredCleanup } =
-        await registerMcpTools(
-          ctx.servers as any,
-          selectedTools,
-          !!isArtifactToolSelected,
-          ctx.activeKbId,
-          ctx.kbIsReady,
-          userId,
-          ctx.activeKbIds,
-        );
-      mcpCleanup = registeredCleanup;
-
-      const hasMcpTools = Object.keys(mcpTools).length > 0;
-      const hasSkills = ctx.availableSkills.length > 0;
-
-      if (!checkVisionSupport(thread as any, !!resolvedModelRow?.capVision)) {
-        throw new VisionNotSupportedError();
+          selectedKbIds,
+          previousRound: 0,
+          abortSignal: abortController.signal,
+          emit,
+        });
       }
 
-      const fileAttachments = thread
-        .flatMap((m) => m.attachments ?? [])
-        .map((a) => ({ name: a.name, key: a.key, type: a.type }))
-        .filter((a) => a.key);
-      const hasFileAttachments = fileAttachments.length > 0;
-
-      const finalMessages = prepareChatMessages({ history: thread });
-
-      const isToolCallingModel = !!resolvedModelRow?.capTools;
-      if (!isToolCallingModel && hasMcpTools) {
-        throw new ToolsNotSupportedError();
-      }
-
-      // Skill authoring is offered to every tool-calling model, even when the
-      // user has no skills yet, because creating the first one is the use case.
-      const hasSkillAuthoring = isToolCallingModel;
-
-      const hasAnyTools =
-        isToolCallingModel &&
-        (hasMcpTools || hasFileAttachments || hasSkills || hasSkillAuthoring);
-
-      const result = streamText({
-        model: resolved.sdkProvider.chat(resolvedModelId),
-        abortSignal: abortController.signal,
-        instructions: buildSystemPrompt(
-          globalSystemPrompt,
-          ctx.projectRow?.globalPrompt,
-          ctx.assistantRow?.prompt,
-          ctx.kbIsReady,
-          {
-            attachmentNames: fileAttachments.map((a) => a.name),
-            availableSkills: ctx.availableSkills,
-            selectedSkills: ctx.selectedSkills,
-            supportsTools: isToolCallingModel,
-            userContext: { name: userName, email: userEmail },
-          },
-        ),
-        messages: finalMessages,
-        tools: hasAnyTools
-          ? {
-              ...(hasFileAttachments
-                ? registerFileUrlTool(fileAttachments)
-                : {}),
-              ...(hasSkills ? registerSkillTool(userId) : {}),
-              // Spread before the MCP tools so an MCP server cannot shadow an
-              // internal tool by reusing its name.
-              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
-              ...(hasMcpTools ? mcpTools : {}),
-            }
-          : undefined,
-        stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
+      // Held as the narrowed value, not a boolean, so the parked fields type-check.
+      const parked = outcome.kind === "awaiting-approval" ? outcome : null;
+      // `model` is the raw request field and may be undefined. runChatGeneration
+      // resolved the actual id and returned it, so persisted metadata names the
+      // model that ran.
+      const metadata = JSON.stringify({
+        model: outcome.modelId,
+        reasoning: outcome.reasoning,
+        toolCalls: outcome.toolCalls,
+        toolResults: outcome.toolResults,
+        usage: outcome.usage,
+        finishReason: outcome.finishReason,
+        pendingApprovals: parked?.approvals ?? [],
+        ...(parked
+          ? { approvalRound: parked.round, parentUserMessageId: userMessageId }
+          : {}),
       });
 
-      const safeFinishReason = Promise.resolve(result.finishReason).catch(
-        () => "stop",
-      );
-      const safeUsage = Promise.resolve(result.usage).catch(() => undefined);
-
-      let accumulatedText = "";
-      let accumulatedReasoning = "";
-      const completedTools: Array<{
-        toolCallId: string;
-        toolName: string;
-        args: any;
-        result?: any;
-      }> = [];
-
-      for await (const chunk of result.fullStream) {
-        if (abortController.signal.aborted) {
-          log.info("Stream loop aborted by user (chatId: {chatId})", {
-            chatId,
-          });
-          return;
-        }
-        if (chunk.type === "text-delta") {
-          accumulatedText += chunk.text;
-          await emit({ type: "text-delta", text: chunk.text });
-        } else if (chunk.type === "reasoning-delta") {
-          accumulatedReasoning += chunk.text;
-          await emit({ type: "reasoning-delta", reasoning: chunk.text });
-        } else if (chunk.type === "tool-call") {
-          completedTools.push({
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            args: (chunk as any).args ?? (chunk as any).input,
-          });
-          await emit({
-            type: "tool-call",
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            args: (chunk as any).args ?? (chunk as any).input,
-          });
-        } else if (chunk.type === "tool-result") {
-          const tc = completedTools.find(
-            (t) => t.toolCallId === chunk.toolCallId,
-          );
-          if (tc) {
-            tc.result = (chunk as any).result ?? (chunk as any).output;
-          }
-          await emit({
-            type: "tool-result",
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            result: (chunk as any).result ?? (chunk as any).output,
-          });
-        } else if (chunk.type === "tool-error") {
-          const tc = completedTools.find(
-            (t) => t.toolCallId === chunk.toolCallId,
-          );
-          const rawErr = (chunk as any).error;
-          const errorMsg =
-            rawErr instanceof Error
-              ? rawErr.message
-              : typeof rawErr === "string"
-                ? rawErr
-                : JSON.stringify(rawErr ?? "Tool execution failed");
-          const errorResult = { error: errorMsg };
-          if (tc) {
-            tc.result = errorResult;
-          }
-          await emit({
-            type: "tool-result",
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            result: errorResult,
-          });
-        }
+      // A resume rewrites the row the parked round wrote; a fresh round inserts.
+      if (isResume) {
+        await updateAssistantResponse({
+          messageId: assistantMessageId,
+          chatId,
+          content: outcome.content,
+          metadata,
+        });
+      } else {
+        await persistAssistantResponse({
+          chatId,
+          assistantMessageId,
+          content: outcome.content,
+          parentId: userMessageId,
+          metadata,
+        });
       }
 
-      if (abortController.signal.aborted) {
-        log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
-          chatId,
-        });
+      if (parked) {
+        log.info(
+          "Chat paused for tool approval (chatId: {chatId}, round: {round})",
+          { chatId, round: parked.round },
+        );
         return;
       }
 
-      const finishReason = await safeFinishReason;
-      const usage = await safeUsage;
-
-      const metadata = JSON.stringify({
-        model: resolvedModelId,
-        reasoning: accumulatedReasoning,
-        toolCalls: completedTools.map((tc) => ({
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          args: tc.args,
-        })),
-        toolResults: completedTools.map((tc) => ({
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          result:
-            tc.result !== undefined
-              ? tc.result
-              : { error: "Tool execution was interrupted" },
-        })),
-        usage,
-        finishReason,
-      });
-
-      // Persist completed assistant message to database
-      await persistAssistantResponse({
-        chatId,
-        assistantMessageId,
-        content: accumulatedText,
-        parentId: userMessageId,
-        metadata,
-      });
-
       await emit({
         type: "finish",
-        finishReason,
-        usage,
+        finishReason: outcome.finishReason,
+        usage: outcome.usage,
       });
 
       log.info(
@@ -319,19 +225,97 @@ export const generateChatResponse = inngest.createFunction(
         effectiveError instanceof Error
           ? effectiveError.message
           : "Generation failed";
-      const errorCode = (effectiveError as any)?.code;
+      const errorCode = (effectiveError as unknown as { code?: string })?.code;
       log.error(
         "Chat generation failed in Inngest (chatId: {chatId}): {error}",
-        {
-          chatId,
-          error: errorMsg,
-        },
+        { chatId, error: errorMsg },
       );
       await emit({ type: "error", message: errorMsg, code: errorCode });
+      // Rethrown so Inngest records the run as failed rather than successful.
       throw error;
     } finally {
       chatAbortRegistry.delete(chatId);
-      await mcpCleanup();
     }
   },
 );
+
+/** Unresolved state a parked round needs in order to be resumed. */
+interface ParkedApprovalState {
+  pendingApprovals: ReturnType<typeof parseMessageMetadata>["pendingApprovals"];
+  approvalRound: number;
+  parentUserMessageId: string;
+}
+
+/**
+ * Reads back the tool selection the parked round was started with.
+ *
+ * The resume event does not carry it, and `runChatGeneration` registers no
+ * tools without it, so the SDK would have nothing to execute for the approval
+ * being answered and the model would simply claim the tool ran. The selection
+ * lives on the user message that started the turn.
+ *
+ * @param userMessageId - Row the parked round's parent must be.
+ * @param chatId - Chat that row must belong to.
+ * @returns The mode and selection fields, defaulting to nothing selected.
+ */
+async function readUserSelection(
+  userMessageId: string,
+  chatId: string,
+): Promise<{
+  model: string | undefined;
+  approvalMode: ApprovalMode;
+  selectedServerIds: string[];
+  selectedTools: string[];
+  selectedSkillIds: string[];
+  selectedKbIds: string[];
+}> {
+  const [row] = await db
+    .select({ metadata: message.metadata })
+    .from(message)
+    .where(and(eq(message.id, userMessageId), eq(message.chatId, chatId)));
+
+  const meta = row ? parseMessageMetadata(row.metadata) : null;
+  return {
+    model: meta?.modelId ?? undefined,
+    // Fail closed: a row predating the gate has no mode, and "ask" is the
+    // safe default because it never grants an unapproved tool.
+    approvalMode: meta?.approvalMode === "auto" ? "auto" : "ask",
+    selectedServerIds: meta?.selectedServerIds ?? [],
+    selectedTools: meta?.selectedTools ?? [],
+    selectedSkillIds: meta?.selectedSkillIds ?? [],
+    selectedKbIds: meta?.selectedKbIds ?? [],
+  };
+}
+
+/**
+ * Reads back the state the parked round persisted.
+ *
+ * @param assistantMessageId - Row the paused round wrote.
+ * @param chatId - Chat that row must belong to.
+ * @returns The pending approvals, the round consumed so far, and the parent id.
+ * @throws {NotFoundError} When the row is gone, or when it has no parent user
+ *   message. `runChatGeneration` loads the thread up to that id, so a missing
+ *   one would truncate the thread and drop the approval pair being resumed.
+ */
+async function readParkedApproval(
+  assistantMessageId: string,
+  chatId: string,
+): Promise<ParkedApprovalState> {
+  const [row] = await db
+    .select({ metadata: message.metadata })
+    .from(message)
+    .where(and(eq(message.id, assistantMessageId), eq(message.chatId, chatId)));
+
+  if (!row) throw new NotFoundError("Message Not Found");
+
+  const meta = parseMessageMetadata(row.metadata);
+  if (!meta.parentUserMessageId) {
+    throw new NotFoundError("Approval Context Not Found");
+  }
+
+  return {
+    pendingApprovals: meta.pendingApprovals,
+    approvalRound: meta.approvalRound,
+    parentUserMessageId: meta.parentUserMessageId,
+  };
+}

@@ -13,6 +13,7 @@ const baseRequiredServerEnv = {
   S3_ACCESS_KEY: "key",
   S3_SECRET_KEY: "secret",
   S3_BUCKET: "bucket",
+  TOOL_APPROVAL_SECRET: "test-tool-approval-secret-at-least-32-chars",
 };
 
 const newVars = [
@@ -25,6 +26,7 @@ const newVars = [
   "DEFAULT_CHUNK_SIZE",
   "DEFAULT_CHUNK_OVERLAP",
   "CHAT_MAX_STEPS",
+  "CHAT_MAX_APPROVAL_ROUNDS",
   "S3_FORCE_PATH_STYLE",
   "RATE_LIMIT_CHAT_RPM",
   "RATE_LIMIT_UPLOAD_RPM",
@@ -40,6 +42,7 @@ const expectedDefaults: Record<(typeof newVars)[number], number | boolean> = {
   DEFAULT_CHUNK_SIZE: 1600,
   DEFAULT_CHUNK_OVERLAP: 200,
   CHAT_MAX_STEPS: 10,
+  CHAT_MAX_APPROVAL_ROUNDS: 10,
   S3_FORCE_PATH_STYLE: true,
   RATE_LIMIT_CHAT_RPM: 20,
   RATE_LIMIT_UPLOAD_RPM: 30,

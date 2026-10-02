@@ -16,6 +16,7 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { ApprovalMode } from "@/types/tool/approval";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
 import { ChatInput } from "./chat-input";
@@ -203,6 +204,9 @@ export function ChatUI({
     streamingReasoning,
     isStreamingReasoning,
     activeToolCalls,
+    pendingApprovals,
+    approvalsDisabled,
+    respondToApprovals,
     streamResponse,
     stopStream,
   } = useStreamResponse(chatId);
@@ -235,6 +239,19 @@ export function ChatUI({
   const [isArtifactOpen, setIsArtifactOpen] = useState(false);
   const [prevArtifactsLength, setPrevArtifactsLength] = useState(0);
   const [prevChatId, setPrevChatId] = useState(chatId);
+
+  /**
+   * Whether the composer may auto-approve tool calls.
+   *
+   * @decision Session-wide, and held in the store rather than local state.
+   * It must never revert to "ask" on inertia, but neither should it outlive
+   * the page: navigating between the home page and a chat page remounts this
+   * component, which silently reset the user's choice. `resetChatState` does
+   * not clear it either, because switching chats is not the same as starting
+   * a new session.
+   */
+  const approvalMode = useAppStore((state) => state.approvalMode);
+  const setApprovalMode = useAppStore((state) => state.setApprovalMode);
 
   // Reset artifact states on chat switch
   if (chatId !== prevChatId) {
@@ -412,6 +429,7 @@ export function ChatUI({
       selectedAssistantId?: string,
       selectedKbIds: string[] = [],
       selectedSkillIds: string[] = [],
+      sentApprovalMode: ApprovalMode = "ask",
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -425,7 +443,11 @@ export function ChatUI({
         selectedAssistantId,
         selectedKbIds,
         selectedSkillIds,
+        sentApprovalMode,
       );
+      // The mode is deliberately not reset. It is a session preference, so
+      // clearing it here meant approval was demanded again for every tool
+      // after the first one until the user toggled it again.
     },
     [chat?.currentLeafId, streamResponse],
   );
@@ -471,11 +493,16 @@ export function ChatUI({
         chat.assistantId || undefined,
         initialKbIds,
         [],
+        // The mode is a session preference, so a message started from the
+        // home page composer must run under it. Omitting it fell back to
+        // "ask" and gated the first tool call.
+        approvalMode,
       );
     }
   }, [
     chat,
     initialMessage,
+    approvalMode,
     handleSend,
     onInitialMessageSent,
     initialModelId,
@@ -548,6 +575,9 @@ export function ChatUI({
     let toolIds: string[] = [];
     let selectedKbIds: string[] = [];
     let selectedSkillIds: string[] = [];
+    // Fail closed: metadata predating the approval gate has no key, and the
+    // key only starts being written once the composer sends it.
+    let approvalMode: ApprovalMode = "ask";
     let userContent = parentMsg.content;
 
     if (parentMsg.metadata) {
@@ -578,6 +608,9 @@ export function ChatUI({
         if (Array.isArray(meta.selectedSkillIds)) {
           selectedSkillIds = meta.selectedSkillIds;
         }
+        if (meta.approvalMode === "auto") {
+          approvalMode = "auto";
+        }
       } catch {}
     }
 
@@ -593,7 +626,9 @@ export function ChatUI({
       assistantId,
       selectedKbIds,
       selectedSkillIds,
+      approvalMode,
     );
+    setApprovalMode(approvalMode);
   };
 
   const handleNavigateBranch = useCallback(
@@ -630,8 +665,15 @@ export function ChatUI({
                 onToggleArtifact={handleToggleArtifact}
                 activeArtifactId={activeArtifact?.id}
                 isCanvasOpen={isArtifactOpen}
+                onApproveDecisions={respondToApprovals}
+                approvalsDisabled={approvalsDisabled}
+                pendingApprovals={pendingApprovals}
               />
 
+              {/* The approval gate belongs to the assistant row in the
+                  thread, which reads it from persisted metadata. Passing it
+                  here as well made two bubbles answer one round, which the
+                  user saw as a second copy of the page. */}
               <StreamingSection
                 isLoading={isLoading}
                 streamingContent={streamingContent}
@@ -642,6 +684,7 @@ export function ChatUI({
                 onToggleArtifact={handleToggleArtifact}
                 activeArtifactId={activeArtifact?.id}
                 isCanvasOpen={isArtifactOpen}
+                pendingApprovalsCount={pendingApprovals.length}
               />
             </div>
           </div>
@@ -664,6 +707,8 @@ export function ChatUI({
               initialModelId={initialModelId}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
+              initialApprovalMode={approvalMode}
+              onApprovalModeChange={setApprovalMode}
             />
           </div>
         </div>

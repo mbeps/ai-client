@@ -8,6 +8,7 @@ import type {
   MessageUsage,
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 
 /**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
@@ -31,6 +32,10 @@ export function parseMessageMetadata(
     usage: null,
     finishReason: null,
     durationMs: null,
+    pendingApprovals: [],
+    approvalRound: 0,
+    approvalMode: null,
+    parentUserMessageId: null,
   };
 
   if (!metadata) return empty;
@@ -112,6 +117,55 @@ export function parseMessageMetadata(
     const durationMs =
       typeof parsed.durationMs === "number" ? parsed.durationMs : null;
 
+    // A pending approval without its signature cannot be resumed safely, so an
+    // entry missing any of the required strings is dropped rather than trusted.
+    const pendingApprovals: PendingApproval[] = Array.isArray(
+      parsed.pendingApprovals,
+    )
+      ? parsed.pendingApprovals
+          .filter(
+            (a: unknown) =>
+              a !== null &&
+              typeof a === "object" &&
+              typeof (a as Record<string, unknown>).approvalId === "string" &&
+              typeof (a as Record<string, unknown>).toolCallId === "string" &&
+              typeof (a as Record<string, unknown>).toolName === "string" &&
+              typeof (a as Record<string, unknown>).signature === "string",
+          )
+          .map((a: unknown) => {
+            const entry = a as Record<string, unknown>;
+            return {
+              approvalId: entry.approvalId as string,
+              toolCallId: entry.toolCallId as string,
+              toolName: entry.toolName as string,
+              serverName:
+                typeof entry.serverName === "string"
+                  ? entry.serverName
+                  : undefined,
+              args: entry.args,
+              reason:
+                typeof entry.reason === "string" ? entry.reason : undefined,
+              signature: entry.signature as string,
+            };
+          })
+      : [];
+
+    const approvalRound =
+      typeof parsed.approvalRound === "number" && parsed.approvalRound >= 0
+        ? parsed.approvalRound
+        : 0;
+
+    const parentUserMessageId =
+      typeof parsed.parentUserMessageId === "string"
+        ? parsed.parentUserMessageId
+        : null;
+
+    // Unknown values fall back to null so the caller fails closed to "ask".
+    const approvalMode: ApprovalMode | null =
+      parsed.approvalMode === "auto" || parsed.approvalMode === "ask"
+        ? parsed.approvalMode
+        : null;
+
     return {
       promptMeta,
       toolData,
@@ -124,6 +178,10 @@ export function parseMessageMetadata(
       usage,
       finishReason,
       durationMs,
+      pendingApprovals,
+      approvalRound,
+      approvalMode,
+      parentUserMessageId,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

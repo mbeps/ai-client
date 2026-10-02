@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
+import { NotFoundError } from "@/lib/errors";
 
 type PersistAssistantResponseParams = {
   chatId: string;
@@ -66,5 +67,41 @@ export async function persistAssistantResponse(
   await db
     .update(chat)
     .set({ currentLeafId: assistantMessageId, updatedAt: new Date() })
+    .where(eq(chat.id, chatId));
+}
+
+/**
+ * Overwrites an assistant row a paused round already wrote.
+ *
+ * A resumed round must replace the pending state, not add a second message,
+ * so the leaf pointer and the content stay on one row. The chat leaf is
+ * re-pointed at the same id because the resume is not a new branch.
+ *
+ * @param params - Target row, chat, new content, and serialised metadata.
+ * @throws {NotFoundError} When no row matches, which means the parked message
+ *   was deleted and the resume has nothing to attach to.
+ * @author Maruf Bepary
+ */
+export async function updateAssistantResponse(params: {
+  messageId: string;
+  chatId: string;
+  content: string;
+  metadata: string;
+}): Promise<void> {
+  const { messageId, chatId, content, metadata } = params;
+
+  const [updated] = await db
+    .update(message)
+    .set({ content, metadata, updatedAt: new Date() })
+    .where(and(eq(message.id, messageId), eq(message.chatId, chatId)))
+    .returning({ id: message.id });
+
+  if (!updated) {
+    throw new NotFoundError("Message Not Found");
+  }
+
+  await db
+    .update(chat)
+    .set({ currentLeafId: messageId, updatedAt: new Date() })
     .where(eq(chat.id, chatId));
 }

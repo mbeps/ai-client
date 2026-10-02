@@ -26,6 +26,10 @@ export default function HomePage() {
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  // The composer here and the one on a chat page must share one mode, or the
+  // user's choice silently reverts when the redirect lands on the new chat.
+  const approvalMode = useAppStore((state) => state.approvalMode);
+  const setApprovalMode = useAppStore((state) => state.setApprovalMode);
   const { models: chatModels } = useUserModels("chat");
 
   useResourceHydration(["mcpServers", "assistants", "prompts", "skills"]);
@@ -123,7 +127,12 @@ export default function HomePage() {
 
         {/* Chat input */}
         <div className="mt-auto w-full max-w-3xl pb-2 md:mt-0 md:pb-0">
-          <ChatInput onSend={handleStart} servers={enabledServers} />
+          <ChatInput
+            onSend={handleStart}
+            servers={enabledServers}
+            initialApprovalMode={approvalMode}
+            onApprovalModeChange={setApprovalMode}
+          />
         </div>
       </div>
     </div>

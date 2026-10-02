@@ -6,6 +6,7 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
 import { MessageBubble } from "./message-bubble";
 
 /**
@@ -41,6 +42,16 @@ interface MessageThreadProps {
   activeArtifactId?: string | null;
   /** Whether canvas panel is currently open. */
   isCanvasOpen?: boolean;
+  /** Receives the full batch of decisions once every pending call has one. */
+  onApproveDecisions?: (decisions: ApprovalDecision[]) => void;
+  /** Whether a decision batch is already in flight. */
+  approvalsDisabled?: boolean;
+  /**
+   * Live approvals to render on the latest assistant bubble. A refresh
+   * rehydrates the gate from the database rather than from the stream, so the
+   * persisted path has to be able to submit decisions too.
+   */
+  pendingApprovals?: PendingApproval[];
 }
 
 /**
@@ -61,6 +72,9 @@ export function MessageThread({
   onToggleArtifact,
   activeArtifactId,
   isCanvasOpen,
+  onApproveDecisions,
+  approvalsDisabled,
+  pendingApprovals,
 }: MessageThreadProps) {
   const { knowledgebases } = useKnowledgebases();
   const handleNavigateBranch = useCallback(
@@ -112,6 +126,11 @@ export function MessageThread({
             activeArtifactId={activeArtifactId}
             isCanvasOpen={isCanvasOpen}
             knowledgebases={knowledgebases}
+            onApproveDecisions={onApproveDecisions}
+            approvalsDisabled={approvalsDisabled}
+            pendingApprovals={
+              index === thread.length - 1 ? pendingApprovals : undefined
+            }
           />
         );
       })}
