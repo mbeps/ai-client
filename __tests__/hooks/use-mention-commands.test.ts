@@ -1049,6 +1049,236 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBe("/");
     });
   });
+
+  describe("multiple initial prompt ids", () => {
+    it("hydrates one entry per id when initialSelectedPromptId is an array", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, ["p1", "p2"]),
+      );
+
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual([
+        "p1",
+        "p2",
+      ]);
+      for (const prompt of result.current.selectedPrompts) {
+        expect(prompt).toEqual(
+          expect.objectContaining({ isMcp: false, isSkill: false }),
+        );
+      }
+      // selectedPrompt is the head of the array.
+      expect(result.current.selectedPrompt?.id).toBe("p1");
+    });
+
+    it("skips ids that resolve to neither a local nor an MCP prompt", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          ["p1", "missing", "mcp:unknown-server:unknown-prompt"],
+        ),
+      );
+
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
+    });
+  });
+
+  describe("setSelectedPrompt", () => {
+    it("clears the whole selection when passed null", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, ["p1", "p2"]),
+      );
+      expect(result.current.selectedPrompts).toHaveLength(2);
+
+      act(() => {
+        result.current.setSelectedPrompt(null);
+      });
+
+      expect(result.current.selectedPrompts).toEqual([]);
+      expect(result.current.selectedPrompt).toBeNull();
+    });
+
+    it("replaces the selection with the single prompt passed", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, ["p1", "p2"]),
+      );
+      expect(result.current.selectedPrompts).toHaveLength(2);
+
+      const single: any = {
+        ...SAMPLE_PROMPTS[1],
+        isMcp: false,
+        isSkill: false,
+      };
+
+      act(() => {
+        result.current.setSelectedPrompt(single);
+      });
+
+      expect(result.current.selectedPrompts).toEqual([single]);
+      expect(result.current.selectedPrompt).toEqual(single);
+    });
+
+    it("accepts an MCP prompt item and keeps its id intact", () => {
+      useAppStore.setState({
+        mcpPrompts: [
+          {
+            serverId: "srv-1",
+            serverName: "Server 1",
+            name: "mcp-test",
+            description: "Test mcp prompt",
+          },
+        ] as any,
+      });
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.setSelectedPrompt({
+          id: "mcp:srv-1:mcp-test",
+          title: "mcp-test",
+          shortcut: "mcp-test",
+          sourceServer: "Server 1",
+          isMcp: true,
+        } as any);
+      });
+
+      expect(result.current.selectedPrompt).toEqual(
+        expect.objectContaining({ id: "mcp:srv-1:mcp-test", isMcp: true }),
+      );
+    });
+  });
+
+  describe("multi-prompt selection guard", () => {
+    it("appends a new prompt to an existing selection", () => {
+      const setInput = vi.fn();
+      const onSelectPrompt = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/trans",
+          setInput,
+          textareaRef,
+          null,
+          "p1",
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          onSelectPrompt,
+        ),
+      );
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/trans", 6));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[1] as any);
+      });
+
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual([
+        "p1",
+        "p2",
+      ]);
+      // onSelectPrompt still fires for the newly appended prompt.
+      expect(onSelectPrompt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "p2" }),
+      );
+      expect(result.current.openTrigger).toBeNull();
+    });
+
+    it("keeps the selection unchanged when the prompt is already selected", () => {
+      const setInput = vi.fn();
+      const onSelectPrompt = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/sum",
+          setInput,
+          textareaRef,
+          null,
+          "p1",
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          onSelectPrompt,
+        ),
+      );
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/sum", 4));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0] as any);
+      });
+
+      // Still one entry, not a duplicate.
+      expect(result.current.selectedPrompts).toHaveLength(1);
+      expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
+      expect(onSelectPrompt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "p1" }),
+      );
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(result.current.openTrigger).toBeNull();
+    });
+  });
+
+  describe("unknown open trigger", () => {
+    it("still strips the trigger and closes the palette for a trigger outside '/', '@' and '#'", () => {
+      const setInput = vi.fn();
+      const onSelectSkill = vi.fn();
+      const onSelectPrompt = vi.fn();
+      const onSelectKnowledgebase = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "!bang",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          onSelectSkill,
+          onSelectKnowledgebase,
+          SAMPLE_KNOWLEDGEBASES,
+          onSelectPrompt,
+        ),
+      );
+
+      // The hook types openTrigger as "/" | "@" | "#" | null, so an unknown
+      // trigger can only reach it through the setter the hook exposes.
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("!bang", 5));
+      });
+      act(() => {
+        result.current.setOpenTrigger("!" as never);
+      });
+      expect(result.current.openTrigger).toBe("!");
+
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0] as any);
+      });
+
+      expect(setInput).toHaveBeenLastCalledWith("");
+      expect(onSelectSkill).not.toHaveBeenCalled();
+      expect(onSelectPrompt).not.toHaveBeenCalled();
+      expect(onSelectKnowledgebase).not.toHaveBeenCalled();
+      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.openTrigger).toBeNull();
+    });
+  });
 });
 
 

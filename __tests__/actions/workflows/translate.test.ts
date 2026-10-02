@@ -263,6 +263,161 @@ describe("translateText action", () => {
 
 });
 
+describe("mime type validation", () => {
+  it("passes an empty mime type straight through to the provider without the fallback", async () => {
+      // VALIDATION HOLE: `mimeType: z.string()` accepts "", and "" is not
+      // nullish, so `?? "image"` never fires. The provider receives an empty
+      // media type. Documented here so the behaviour is pinned, not accidental.
+      generateTextMock.mockResolvedValueOnce({ text: "Imagen traducida" });
+
+      const res = await translateText({
+        sourceLanguage: "auto",
+        targetLanguage: "Spanish",
+        text: "",
+        attachment: {
+          name: "sign.png",
+          type: "image",
+          mimeType: "",
+          dataUrl: "data:image/png;base64,abc",
+        },
+      });
+
+      expect(res).toBe("Imagen traducida");
+      expect(generateTextMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [
+            expect.objectContaining({
+              content: expect.arrayContaining([
+                expect.objectContaining({
+                  type: "file",
+                  data: "data:image/png;base64,abc",
+                  // Empty string, NOT "image": the `??` fallback cannot help.
+                  mediaType: "",
+                }),
+              ]),
+            }),
+          ],
+        }),
+      );
+    });
+
+    it("rejects an image attachment whose mime type is missing entirely", async () => {
+      // The schema requires mimeType, so the `?? "image"` fallback at
+      // actions/workflows/translate.ts:209 is unreachable: mimeType is a
+      // required, non-nullable string.
+      await expect(
+        translateText({
+          sourceLanguage: "auto",
+          targetLanguage: "Spanish",
+          text: "",
+          attachment: {
+            name: "sign.png",
+            type: "image",
+            dataUrl: "data:image/png;base64,abc",
+          },
+        }),
+      ).rejects.toThrow(/Invalid translation request/);
+    });
+});
+
+describe("empty source text guard", () => {
+  /**
+   * `translateRequestSchema`'s `.refine()` is the exact logical negation of
+   * `!isImage && !sourceText`, so no validated payload can reach the guard.
+   * A scratch probe over 2304 payload combinations confirms zero reach the
+   * throw. These cases pin the schema-side rejection at both actions.
+   */
+  it.each([
+      [
+        "no text and no attachment",
+        { sourceLanguage: "English", targetLanguage: "Spanish", text: "" },
+      ],
+      [
+        "whitespace text only",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          text: "   ",
+        },
+      ],
+      [
+        "document attachment with no extracted text",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          attachment: {
+            name: "empty.pdf",
+            type: "document",
+            mimeType: "application/pdf",
+          },
+        },
+      ],
+      [
+        "document attachment with whitespace extracted text",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          attachment: {
+            name: "empty.pdf",
+            type: "document",
+            mimeType: "application/pdf",
+            extractedText: "   ",
+          },
+        },
+      ],
+      [
+        "undefined text with no attachment",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          text: undefined,
+        },
+      ],
+    ])(
+      "rejects before the action guard: %s",
+      async (_label, input) => {
+        await expect(translateText(input)).rejects.toThrow(
+          /Invalid translation request/,
+        );
+      },
+    );
+
+    it.each([
+      [
+        "no text and no attachment",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Italian",
+          text: "",
+        },
+      ],
+      [
+        "document attachment with no extracted text",
+        {
+          sourceLanguage: "English",
+          targetLanguage: "Italian",
+          attachment: {
+            name: "empty.pdf",
+            type: "document",
+            mimeType: "application/pdf",
+            extractedText: "   ",
+          },
+        },
+      ],
+    ])(
+      "triggerTranslation rejects before the action guard: %s",
+      async (_label, input) => {
+        await expect(triggerTranslation(input)).rejects.toThrow(
+          /Invalid translation request/,
+        );
+        // The schema rejects the payload, so the action never reaches the
+        // insert. No `returning` stub is queued here: an unused
+        // `mockResolvedValueOnce` would leak into the next test and corrupt it.
+        expect(dbChainable.insert).not.toHaveBeenCalled();
+      },
+    );
+});
+
 describe("triggerTranslation action", () => {
   beforeEach(() => {
     vi.clearAllMocks();

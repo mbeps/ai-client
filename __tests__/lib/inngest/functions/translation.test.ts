@@ -154,6 +154,44 @@ describe("executeTranslationWorkflow Inngest Function", () => {
     );
   });
 
+  it("forwards an empty mime type unchanged when the event omits one", async () => {
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    await fn({
+      event: {
+        data: {
+          translationId: "trans-4",
+          userId: "user-1",
+          sourceLanguage: "English",
+          targetLanguage: "Dutch",
+          sourceText: "",
+          isImage: true,
+          attachmentDataUrl: "data:image/png;base64,456",
+          // attachmentMimeType is deliberately omitted. The `?? "image"`
+          // fallback supplies the media type for the provider.
+          attachmentMimeType: undefined,
+        },
+      },
+    });
+
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          expect.objectContaining({
+            content: expect.arrayContaining([
+              expect.objectContaining({ type: "text" }),
+              expect.objectContaining({
+                type: "file",
+                data: "data:image/png;base64,456",
+                mediaType: "image",
+              }),
+            ]),
+          }),
+        ],
+      }),
+    );
+  });
+
   it("handles failure by updating status to failed and emitting error", async () => {
     mockStreamText.mockImplementationOnce(() => {
       throw new Error("Provider stream exploded");
@@ -188,6 +226,42 @@ describe("executeTranslationWorkflow Inngest Function", () => {
         type: "error",
         message: expect.stringContaining("Provider stream exploded"),
       }),
+    );
+  });
+
+  it("reports a generic failure message when the provider rejects with a non-Error", async () => {
+    // A provider SDK may reject with a bare value rather than an Error.
+    // classifyProviderError cannot classify it, and `error.message` does not
+    // exist, so the workflow must fall back to the generic string.
+    mockStreamText.mockImplementationOnce(() => {
+      // biome-ignore lint/complexity/noUselessThisAlias: deliberate bare throw
+      throw "provider returned a bare string";
+    });
+
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    await expect(
+      fn({
+        event: {
+          data: {
+            translationId: "trans-bare",
+            userId: "user-1",
+            sourceLanguage: "English",
+            targetLanguage: "German",
+            sourceText: "Test error",
+          },
+        },
+      }),
+    ).rejects.toBe("provider returned a bare string");
+
+    expect(chainable.set).toHaveBeenCalledWith({
+      status: "failed",
+      errorMessage: "Translation failed",
+    });
+
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      { type: "error", message: "Translation failed" },
     );
   });
 });

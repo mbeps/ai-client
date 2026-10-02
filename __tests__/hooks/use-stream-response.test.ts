@@ -1445,4 +1445,175 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     expect(mockToastError).toHaveBeenCalledWith("Failed to generate response");
     expect(result.current.isLoading).toBe(false);
   });
+
+  describe("prompt metadata resolution", () => {
+    it("skips an MCP prompt that resolves to empty content", async () => {
+      // getMcpPrompt resolves, but resolveMcpPrompt maps every message to "",
+      // so the `if (mcpContent)` guard sees a falsy value and pushes nothing.
+      mockGetMcpPrompt.mockResolvedValueOnce({
+        messages: [{ content: { type: "image" } }],
+      });
+      mockStoreState.prompts = [
+        { id: "local-p1", content: "Local prompt body" },
+      ] as any;
+
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "user-msg-1",
+          "hello",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          ["mcp:srv-1:empty", "local-p1"],
+        );
+      });
+
+      // Only the local prompt contributes content.
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-1",
+        expect.objectContaining({
+          content:
+            "Local prompt body" +
+            PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR +
+            "hello",
+        }),
+      );
+    });
+
+    it("skips a local prompt whose content is empty", async () => {
+      mockStoreState.prompts = [
+        { id: "local-p1", content: "" },
+        { id: "local-p2", content: "Real body" },
+      ] as any;
+
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "user-msg-1",
+          "hello",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          ["local-p1", "local-p2"],
+        );
+      });
+
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-1",
+        expect.objectContaining({
+          content:
+            "Real body" + PROMPTS.COMPOSITION.SLASH_PROMPT_SEPARATOR + "hello",
+        }),
+      );
+    });
+
+    it("skips a local prompt id that is absent from the store", async () => {
+      mockStoreState.prompts = [] as any;
+
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "user-msg-1",
+          "hello",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          "not-in-store",
+        );
+      });
+
+      // No prompt chunk resolved, so the raw content is sent through untouched.
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-1",
+        expect.objectContaining({ content: "hello" }),
+      );
+    });
+
+    it("omits promptId from the metadata when every MCP prompt yields empty content", async () => {
+      mockGetMcpPrompt.mockResolvedValueOnce({
+        messages: [{ content: { type: "image" } }],
+      });
+
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "user-msg-1",
+          "hello",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          "mcp:srv-1:empty",
+        );
+      });
+
+      // selectedPromptIds[0] is truthy, so meta.promptId is still written.
+      const metadata = JSON.parse(
+        mockPersist.mock.calls[0][1].metadata as string,
+      );
+      expect(metadata.promptId).toBe("mcp:srv-1:empty");
+      expect(metadata.promptIds).toEqual(["mcp:srv-1:empty"]);
+      expect(metadata.userContent).toBe("hello");
+    });
+
+    it("writes a defined metadata string to both the optimistic insert and persistMessage", async () => {
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse("user-msg-1", "hello", null);
+      });
+
+      const optimisticMetadata =
+        mockStoreState.addMessage.mock.calls[0][1].metadata;
+      const persistedMetadata = mockPersist.mock.calls[0][1].metadata;
+
+      // JSON.stringify always returns a string here, so the
+      // `userMsgMetadata ?? undefined` fallback arm is never taken.
+      expect(typeof optimisticMetadata).toBe("string");
+      expect(typeof persistedMetadata).toBe("string");
+      expect(persistedMetadata).toBe(optimisticMetadata);
+    });
+
+    it("omits promptId when the selected prompt array starts with an empty id", async () => {
+      mockStoreState.prompts = [
+        { id: "", content: "Headless prompt body" },
+        { id: "local-p2", content: "Second" },
+      ] as any;
+
+      const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "user-msg-1",
+          "hello",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          ["", "local-p2"],
+        );
+      });
+
+      // selectedPromptIds[0] is "" (falsy), so meta.promptId is not written
+      // while meta.promptIds still carries the full list.
+      const metadata = JSON.parse(
+        mockPersist.mock.calls[0][1].metadata as string,
+      );
+      expect(metadata).not.toHaveProperty("promptId");
+      expect(metadata.promptIds).toEqual(["", "local-p2"]);
+    });
+  });
 });

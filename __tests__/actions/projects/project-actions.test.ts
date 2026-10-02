@@ -121,6 +121,34 @@ describe("Project Server Actions", () => {
       });
 
       expect(result).toEqual(minimalProject);
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: null,
+          globalPrompt: null,
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          knowledgebaseId: null,
+          userId: "user-1",
+        }),
+      );
+    });
+
+    it("stores skillMode and skillIds when supplied", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      await createProject({
+        name: "Test Project",
+        skillMode: "specific",
+        skillIds: ["skill-1"],
+      });
+
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skillMode: "specific",
+          skillIds: ["skill-1"],
+        }),
+      );
     });
   });
 
@@ -233,6 +261,52 @@ describe("Project Server Actions", () => {
       await expect(
         updateProject(PROJECT_ID, { name: "Non-existent" }),
       ).rejects.toThrow("Not Found");
+    });
+
+    it("always writes skillMode and skillIds, which the schema defaults to 'dynamic' and []", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      await updateProject(PROJECT_ID, { name: "Name Only" });
+
+      const values = chainable.set.mock.calls[0]?.[0] as Record<
+        string,
+        unknown
+      >;
+      expect(values.name).toBe("Name Only");
+      expect(values.skillMode).toBe("dynamic");
+      expect(values.skillIds).toEqual([]);
+    });
+
+    it("maps skillMode and skillIds when supplied", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      await updateProject(PROJECT_ID, {
+        skillMode: "none",
+        skillIds: ["skill-1", "skill-2"],
+      });
+
+      expect(chainable.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skillMode: "none",
+          skillIds: ["skill-1", "skill-2"],
+        }),
+      );
+    });
+
+    it("maps description and globalPrompt when supplied", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      await updateProject(PROJECT_ID, {
+        description: "Mapped description",
+        globalPrompt: "Mapped global prompt",
+      });
+
+      expect(chainable.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Mapped description",
+          globalPrompt: "Mapped global prompt",
+        }),
+      );
     });
   });
 });

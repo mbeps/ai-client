@@ -167,6 +167,7 @@ describe("parseMessageMetadata", () => {
         selectedServerIds: ["srv-1", "srv-2"],
         selectedTools: ["manage_artifact", "search_web"],
         selectedKbIds: ["kb-1"],
+        selectedSkillIds: ["skill-a", "skill-b"],
         reasoning: "The user wants a diagram.",
         finishReason: "length",
         durationMs: 87,
@@ -176,9 +177,49 @@ describe("parseMessageMetadata", () => {
     expect(result.selectedServerIds).toEqual(["srv-1", "srv-2"]);
     expect(result.selectedTools).toEqual(["manage_artifact", "search_web"]);
     expect(result.selectedKbIds).toEqual(["kb-1"]);
+    expect(result.selectedSkillIds).toEqual(["skill-a", "skill-b"]);
     expect(result.reasoning).toBe("The user wants a diagram.");
     expect(result.finishReason).toBe("length");
     expect(result.durationMs).toBe(87);
+  });
+
+  it("keeps an empty selectedSkillIds array rather than nulling it", () => {
+    // [] IS an array, so the Array.isArray arm must win even though the array
+    // is empty. A `||` based guard would wrongly return null here.
+    const result = parseMessageMetadata(JSON.stringify({ selectedSkillIds: [] }));
+
+    expect(result.selectedSkillIds).toEqual([]);
+  });
+
+  it("nulls selectedSkillIds when the key is absent", () => {
+    const result = parseMessageMetadata(JSON.stringify({ selectedKbIds: ["kb-1"] }));
+
+    expect(result.selectedSkillIds).toBeNull();
+  });
+
+  it("nulls selectedSkillIds when the value is present but not an array", () => {
+    const result = parseMessageMetadata(
+      JSON.stringify({ selectedSkillIds: "skill-a" }),
+    );
+
+    expect(result.selectedSkillIds).toBeNull();
+  });
+
+  it("nulls selectedSkillIds when the value is null", () => {
+    const result = parseMessageMetadata(
+      JSON.stringify({ selectedSkillIds: null }),
+    );
+
+    expect(result.selectedSkillIds).toBeNull();
+  });
+
+  it("returns every default when the metadata JSON is malformed", () => {
+    const result = parseMessageMetadata("{ not json");
+
+    expect(result.selectedSkillIds).toBeNull();
+    expect(result.selectedKbIds).toBeNull();
+    expect(result.modelId).toBeNull();
+    expect(result.usage).toBeNull();
   });
 
   it("sums prompt and completion tokens when totalTokens is absent", () => {

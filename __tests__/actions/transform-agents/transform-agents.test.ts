@@ -142,6 +142,40 @@ describe("transform agents actions", () => {
         }),
       );
     });
+
+    it("applies schema defaults for skillMode and skillIds when omitted", async () => {
+      chainable.returning.mockResolvedValueOnce([
+        { id: agentId, name: "Minimal Agent", userId },
+      ]);
+
+      await createTransformAgent({ name: "Minimal Agent" });
+
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skillMode: "dynamic",
+          skillIds: [],
+        }),
+      );
+    });
+
+    it("stores skillMode and skillIds when supplied", async () => {
+      chainable.returning.mockResolvedValueOnce([
+        { id: agentId, name: "Agent 2", userId },
+      ]);
+
+      await createTransformAgent({
+        name: "Agent 2",
+        skillMode: "none",
+        skillIds: ["skill-1"],
+      });
+
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skillMode: "none",
+          skillIds: ["skill-1"],
+        }),
+      );
+    });
   });
 
   describe("deleteTransformAgent", () => {
@@ -246,6 +280,22 @@ describe("transform agents actions", () => {
         modelId: undefined,
       });
       expect(result).toEqual(updated);
+    });
+
+    it("updates skillMode and skillIds when supplied", async () => {
+      const updated = { id: agentId, name: "Existing Agent" };
+      chainable.returning.mockResolvedValueOnce([updated]);
+
+      const result = await updateTransformAgent(agentId, {
+        skillMode: "specific",
+        skillIds: ["skill-a", "skill-b"],
+      });
+
+      expect(result).toEqual(updated);
+      expect(chainable.set).toHaveBeenCalledWith({
+        skillMode: "specific",
+        skillIds: ["skill-a", "skill-b"],
+      });
     });
 
     it("throws Not Found when agent is not found or not owned", async () => {

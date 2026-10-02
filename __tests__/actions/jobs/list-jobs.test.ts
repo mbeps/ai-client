@@ -90,7 +90,7 @@ vi.mock("@/drizzle/db", () => {
   };
 });
 
-import { listJobs } from "@/actions/jobs/list-jobs";
+import { listJobs, listUserJobsAction } from "@/actions/jobs/list-jobs";
 
 describe("listJobs Server Action", () => {
   const mockUser = { id: "user-123", email: "test@example.com" };
@@ -734,5 +734,70 @@ describe("listJobs Server Action", () => {
         options,
       );
     });
+  });
+});
+
+describe("listUserJobsAction alias", () => {
+  const mockUser = { id: "user-123", email: "test@example.com" };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRequireSession.mockResolvedValue({
+      user: mockUser,
+      session: { id: "session-abc" },
+    });
+    mockDbData.chats = [];
+    mockDbData.transformRuns = [];
+    mockDbData.translations = [];
+    mockDbData.kbDocs = [];
+    mockDbData.knowledgebases = [];
+  });
+
+  it("delegates to listJobs and returns the offline result", async () => {
+    mockFetchUserInngestRuns.mockResolvedValueOnce({
+      jobs: [],
+      offline: true,
+      error: "Inngest daemon unreachable",
+    });
+
+    const result = await listUserJobsAction();
+
+    expect(result).toEqual({
+      jobs: [],
+      offline: true,
+      error: "Inngest daemon unreachable",
+    });
+    expect(mockFetchUserInngestRuns).toHaveBeenCalledWith(mockUser.id, undefined);
+  });
+
+  it("forwards filter options and returns enriched jobs", async () => {
+    const rawJob: JobItem = {
+      id: "run-1",
+      type: "chat",
+      status: "RUNNING",
+      entityId: "chat-1",
+      title: null,
+      url: null,
+      entityDeleted: false,
+      startedAt: "2024-01-01T00:00:00.000Z",
+    } as JobItem;
+
+    mockFetchUserInngestRuns.mockResolvedValueOnce({
+      jobs: [rawJob],
+      offline: false,
+    });
+    mockDbData.chats = [
+      { id: "chat-1", title: "Aliased Chat", isPinned: false },
+    ];
+
+    const options = { status: ["RUNNING" as const], limit: 5 };
+    const result = await listUserJobsAction(options);
+
+    expect(mockFetchUserInngestRuns).toHaveBeenCalledWith(
+      mockUser.id,
+      options,
+    );
+    expect(result.jobs).toHaveLength(1);
+    expect(result.jobs[0].title).toBe("Aliased Chat");
   });
 });

@@ -55,6 +55,38 @@ describe("hybridSearch", () => {
     expect(dbMock.select).not.toHaveBeenCalled();
   });
 
+  it("returns empty array without touching the DB when every supplied kb id is falsy", async () => {
+    const result = await hybridSearch(["", ""], "test query", "user-1");
+
+    expect(result).toEqual([]);
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(dbMock.execute).not.toHaveBeenCalled();
+    expect(embedQueryMock).not.toHaveBeenCalled();
+  });
+
+  it("returns empty array without touching the DB for an empty kb id array", async () => {
+    const result = await hybridSearch([], "test query", "user-1");
+
+    expect(result).toEqual([]);
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(dbMock.execute).not.toHaveBeenCalled();
+  });
+
+  it("drops falsy kb ids but still searches when at least one id survives", async () => {
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
+    embedQueryMock.mockResolvedValue([0.1]);
+    dbMock.execute
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    applyRRFMock.mockReturnValue([]);
+
+    const result = await hybridSearch(["", "kb-1", ""], "test query", "user-1");
+
+    expect(result).toEqual([]);
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+    expect(embedQueryMock).toHaveBeenCalledWith("test query", "user-1");
+  });
+
   it("throws Error when knowledge base is not found", async () => {
     setupKbMock([]);
 

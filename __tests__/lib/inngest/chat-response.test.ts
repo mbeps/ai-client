@@ -41,12 +41,13 @@ vi.mock("@/lib/chat/persist-response", () => ({
 
 vi.mock("ai", () => ({
   streamText: mockStreamText,
-  isStepCount: vi.fn(),
+  isStepCount: mockIsStepCount,
   tool: vi.fn((def) => def),
 }));
 
 const mockMcpCleanup = vi.hoisted(() => vi.fn(async () => {}));
 const mockRegisterMcpTools = vi.hoisted(() => vi.fn());
+const mockIsStepCount = vi.hoisted(() => vi.fn(() => ({ isStepCount: true })));
 const abortState = vi.hoisted(() => ({
   controller: undefined as AbortController | undefined,
 }));
@@ -1083,6 +1084,121 @@ describe("generateChatResponse Inngest Function", () => {
       );
       expect(mockStreamText.mock.calls[0][0].instructions).not.toContain(
         "orphan.csv",
+      );
+    });
+  });
+
+  describe("tool availability gating", () => {
+    /**
+     * A model without tool support must reach streamText with NO tools and no
+     * step limit. `hasSkillAuthoring` and `hasAnyTools` both collapse to false,
+     * which is the only way to reach the falsy arms of the three conditionals
+     * that build the `tools` object and the `stopWhen` limit.
+     *
+     * No MCP tools may be present, because `!isToolCallingModel && hasMcpTools`
+     * throws ToolsNotSupportedError before streamText is ever called.
+     */
+    it("sends no tools and no step limit for a non-tool-calling model", async () => {
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "plain-chat",
+        modelRow: { capVision: true, capTools: false },
+        sdkProvider: { chat: () => () => {} },
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "msg-1", role: "user", content: "just chat", attachments: [] },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-no-tools-gate",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "plain-chat",
+          },
+        },
+      });
+
+      const call = mockStreamText.mock.calls[0][0];
+      // Skill authoring is offered only to tool-calling models.
+      expect(call.tools).toBeUndefined();
+      // No multi-step loop without tools.
+      expect(call.stopWhen).toBeUndefined();
+      // The model still produces a normal completion.
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-no-tools-gate",
+          content: "Hello there!",
+        }),
+      );
+    });
+
+    it("registers skill authoring and a step limit for a tool-calling model", async () => {
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-tools-gate",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      const call = mockStreamText.mock.calls[0][0];
+      expect(Object.keys(call.tools)).toContain("create_skill");
+      // The multi-step limit is produced by `isStepCount(env.CHAT_MAX_STEPS)`.
+      expect(call.stopWhen).toBe(mockIsStepCount.mock.results[0].value);
+      expect(mockIsStepCount).toHaveBeenCalled();
+    });
+  });
+
+  describe("stream chunk dispatch", () => {
+    /**
+     * The chunk dispatcher is a single if/else-if chain. A lifecycle chunk that
+     * matches none of the five handled types (text-delta, reasoning-delta,
+     * tool-call, tool-result, tool-error) falls off the end of the chain and
+     * must be ignored rather than treated as a failure.
+     */
+    it("ignores lifecycle chunks that match no handler in the chain", async () => {
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "start" };
+          yield { type: "step-start" };
+          yield { type: "text-delta", text: "Only real text survives." };
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-lifecycle-chunks",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-lifecycle-chunks",
+          content: "Only real text survives.",
+        }),
+      );
+      // Unhandled chunks must not be forwarded to the client as deltas
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "text-delta", text: "start" }),
       );
     });
   });

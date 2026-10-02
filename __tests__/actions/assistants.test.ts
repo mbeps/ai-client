@@ -174,6 +174,35 @@ describe("createAssistant", () => {
     );
   });
 
+  it("applies schema defaults for skillMode and skillIds when omitted", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+    await createAssistant({ name: "Test Bot" });
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skillMode: "dynamic",
+        skillIds: [],
+        tools: [],
+      }),
+    );
+  });
+
+  it("stores tools, skillMode and skillIds when supplied", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+    await createAssistant({
+      name: "Test Bot",
+      tools: ["web_search"],
+      skillMode: "specific",
+      skillIds: ["skill-1", "skill-2"],
+    });
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: ["web_search"],
+        skillMode: "specific",
+        skillIds: ["skill-1", "skill-2"],
+      }),
+    );
+  });
+
   it("throws ZodError when name is empty", async () => {
     await expect(createAssistant({ name: "" })).rejects.toThrow();
   });
@@ -320,5 +349,120 @@ describe("updateAssistant", () => {
     await expect(
       updateAssistant(VALID_UUID, { name: "Updated" }),
     ).rejects.toThrow("Unauthorized");
+  });
+
+  it("omits every field that has no schema default when not supplied", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, { name: "Only Name" });
+
+    const values = chainable.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(values.name).toBe("Only Name");
+    for (const omitted of ["description", "prompt", "tools", "avatar"]) {
+      expect(omitted in values).toBe(false);
+    }
+  });
+
+  it("always writes skillMode and skillIds, which the schema defaults to 'dynamic' and []", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, { name: "Only Name" });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ skillMode: "dynamic", skillIds: [] }),
+    );
+  });
+
+  it("accepts an empty payload and writes only the defaulted fields", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, {});
+
+    const values = chainable.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect("name" in values).toBe(false);
+    expect(values.skillMode).toBe("dynamic");
+    expect(values.skillIds).toEqual([]);
+  });
+
+  it("maps description, prompt and tools when supplied", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, {
+      description: "Some description",
+      prompt: "Be terse.",
+      tools: ["web_search", "calculator"],
+    });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Some description",
+        prompt: "Be terse.",
+        tools: ["web_search", "calculator"],
+      }),
+    );
+  });
+
+  it("maps skillMode and skillIds when supplied", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, {
+      skillMode: "specific",
+      skillIds: ["skill-a", "skill-b"],
+    });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skillMode: "specific",
+        skillIds: ["skill-a", "skill-b"],
+      }),
+    );
+  });
+
+  it("clears the avatar by storing null", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, { avatar: null });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar: null }),
+    );
+  });
+
+  it("keeps a supplied avatar URL", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, {
+      avatar: "https://example.com/avatar.png",
+    });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar: "https://example.com/avatar.png" }),
+    );
+  });
+
+  it("maps every optional field in a single full payload", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+
+    await updateAssistant(VALID_UUID, {
+      name: "Full Bot",
+      description: "Everything set",
+      prompt: "Follow the rules.",
+      tools: ["t-1"],
+      skillMode: "none",
+      skillIds: ["s-1"],
+      avatar: "https://example.com/full.png",
+    });
+
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Full Bot",
+        description: "Everything set",
+        prompt: "Follow the rules.",
+        tools: ["t-1"],
+        skillMode: "none",
+        skillIds: ["s-1"],
+        avatar: "https://example.com/full.png",
+      }),
+    );
   });
 });
