@@ -1,17 +1,16 @@
-import type { ChatRow } from "@/types/chat/chat-row";
-import type { MessageRow } from "@/types/message/message-row";
-import type { AttachmentRow } from "@/types/attachment/attachment-row";
-import type { Prompt } from "@/types/prompt/prompt";
-import type { Project } from "@/types/project/project";
 import type { Assistant } from "@/types/assistant/assistant";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { AttachmentRow } from "@/types/attachment/attachment-row";
+import type { Chat } from "@/types/chat/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
-import type { Attachment } from "@/types/attachment/attachment";
-import type { Message } from "@/types/message/message";
-import type { Chat } from "@/types/chat/chat";
-import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
+import type { MessageRow } from "@/types/message/message-row";
+import type { Project } from "@/types/project/project";
+import type { Prompt } from "@/types/prompt/prompt";
+import type { Skill } from "@/types/skill/skill";
 import type { TransformAgent } from "@/types/transform/transform-agent";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
@@ -50,6 +49,12 @@ export type AppState = {
   prompts: Prompt[];
 
   /**
+   * All user-defined Agent Skills.
+   * Modular packages of procedural knowledge and instructions adhering to Open Agent Skills format.
+   */
+  skills: Skill[];
+
+  /**
    * Application-wide user settings.
    * Contains default models, global system prompt, and user preferences. One per user.
    */
@@ -86,6 +91,12 @@ export type AppState = {
    */
   mcpPrompts: DiscoveredPrompt[];
 
+  /**
+   * Error message from the most recent entity load failure, or null.
+   * Shared across all entity loaders; cleared on next successful load or reset.
+   */
+  loadError: string | null;
+
   // ---- Transform Agent Actions ----
 
   /**
@@ -112,23 +123,20 @@ export type AppState = {
    * Uses parentId to enable tree structure for branching conversations.
    *
    * @param chatId - ID of the chat to add message to
-   * @param role - Message author role (user or assistant)
-   * @param content - Message text content
-   * @param parentId - ID of parent message for tree structure, null for root
-   * @param id - Optional custom message ID; auto-generated if not provided
-   * @param metadata - Optional JSON-serialized metadata (tool calls, reasoning tokens)
-   * @param attachments - Optional array of file attachments
-   * @param reasoning - Optional model reasoning output (extended thinking)
+   * @param input - Message fields (role, content, parentId and optional id,
+   * metadata, attachments, reasoning)
    */
   addMessage: (
     chatId: string,
-    role: "user" | "assistant",
-    content: string,
-    parentId: string | null,
-    id?: string,
-    metadata?: string | null,
-    attachments?: Attachment[],
-    reasoning?: string,
+    input: {
+      role: "user" | "assistant";
+      content: string;
+      parentId: string | null;
+      id?: string;
+      metadata?: string | null;
+      attachments?: Attachment[];
+      reasoning?: string;
+    },
   ) => void;
 
   /**
@@ -240,6 +248,14 @@ export type AppState = {
   loadPrompts: () => Promise<void>;
 
   /**
+   * Loads all Agent Skills for the current user from the server.
+   * Populates skills array for skill catalog, mention commands, and management.
+   *
+   * @returns Promise resolving when skills are loaded
+   */
+  loadSkills: () => Promise<void>;
+
+  /**
    * Loads user-wide settings (global prompt, default model, preferences) from the server.
    * Initializes userSettings on app startup.
    *
@@ -321,5 +337,8 @@ export type AppState = {
    * @param kbId - Knowledge base ID to bind, or null to unbind
    * @returns Promise resolving when change completes on server
    */
-  setKnowledgebase: (chatId: string, kbId: string | null) => Promise<void>;
+  setKnowledgebaseDb: (chatId: string, kbId: string | null) => Promise<void>;
+
+  resetEntityState: () => void;
+  resetChatState: () => void;
 };

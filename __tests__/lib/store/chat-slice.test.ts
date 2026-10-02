@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     BETTER_AUTH_SECRET: "test-secret",
@@ -22,43 +22,49 @@ vi.mock("@/drizzle/db", () => ({ db: {} }));
 vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 
 // ─── Mock all server actions ───────────────────────────────────────────────
-vi.mock("@/lib/actions/chats/create-chat", () => ({
+vi.mock("@/actions/chats/create-chat", () => ({
   createChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-chat", () => ({
+vi.mock("@/actions/chats/delete-chat", () => ({
   deleteChat: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/rename-chat", () => ({
+vi.mock("@/actions/chats/rename-chat", () => ({
   renameChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/move-chat", () => ({
+vi.mock("@/actions/chats/move-chat", () => ({
   moveChat: vi.fn(),
 }));
-vi.mock("@/lib/actions/chats/delete-message", () => ({
+vi.mock("@/actions/chats/delete-message", () => ({
   deleteMessage: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/update-current-leaf", () => ({
+vi.mock("@/actions/chats/update-current-leaf", () => ({
   updateCurrentLeaf: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/actions/chats/update-message-metadata", () => ({
+vi.mock("@/actions/chats/update-message-metadata", () => ({
   updateMessageMetadata: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/actions/chats/update-chat-knowledgebase", () => ({
+  updateChatKnowledgebase: vi.fn().mockResolvedValue(undefined),
+}));
 // Entity slice stubs (needed because useAppStore loads all slices)
-vi.mock("@/lib/actions/projects/list-projects", () => ({
+vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/lib/actions/assistants/list-assistants", () => ({
+vi.mock("@/actions/assistants/list-assistants", () => ({
   listAssistants: vi.fn(),
 }));
-vi.mock("@/lib/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
-vi.mock("@/lib/actions/mcp-servers/list-mcp-servers", () => ({
+vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
+vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
 // ─── Import mocked modules for per-test configuration ─────────────────────
-import { createChat as createChatAction } from "@/lib/actions/chats/create-chat";
-import { renameChat as renameChatAction } from "@/lib/actions/chats/rename-chat";
-import { moveChat as moveChatAction } from "@/lib/actions/chats/move-chat";
+import { createChat as createChatAction } from "@/actions/chats/create-chat";
+import { deleteChat as deleteChatAction } from "@/actions/chats/delete-chat";
+import { deleteMessage as deleteMessageAction } from "@/actions/chats/delete-message";
+import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
+import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
+import { updateChatKnowledgebase as updateChatKnowledgebaseAction } from "@/actions/chats/update-chat-knowledgebase";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const RESET_STATE = {
@@ -178,7 +184,12 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   describe("addMessage", () => {
     it("adds a root message and sets currentLeafId", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
       const chat = useAppStore.getState().chats[chatId];
       expect(chat.messages["msg-1"]).toBeDefined();
       expect(chat.currentLeafId).toBe("msg-1");
@@ -186,19 +197,30 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
 
     it("links message to its parent's childrenIds", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Reply", "root", "child");
-      const parent = useAppStore.getState().chats[chatId].messages["root"];
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Reply",
+        parentId: "root",
+        id: "child",
+      });
+      const parent = useAppStore.getState().chats[chatId].messages.root;
       expect(parent.childrenIds).toContain("child");
     });
 
     it("sets message role correctly", () => {
       const chatId = createChatInStore();
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Hi", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Hi",
+        parentId: null,
+        id: "msg-1",
+      });
       expect(useAppStore.getState().chats[chatId].messages["msg-1"].role).toBe(
         "assistant",
       );
@@ -206,7 +228,11 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
 
     it("generates a UUID when id is not provided", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hi", null);
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hi",
+        parentId: null,
+      });
       const messages = useAppStore.getState().chats[chatId].messages;
       expect(Object.keys(messages)).toHaveLength(1);
     });
@@ -214,19 +240,26 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     it("stores attachments on the message", () => {
       const chatId = createChatInStore();
       const att = makeAttachment("att-1");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "user", "Hi", null, "msg-1", null, [att]);
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hi",
+        parentId: null,
+        id: "msg-1",
+        attachments: [att],
+      });
       expect(
         useAppStore.getState().chats[chatId].messages["msg-1"].attachments,
       ).toEqual([att]);
     });
 
     it("does nothing when chatId does not exist", () => {
-      useAppStore
-        .getState()
-        .addMessage("nonexistent", "user", "Hi", null, "msg-1");
-      expect(useAppStore.getState().chats["nonexistent"]).toBeUndefined();
+      useAppStore.getState().addMessage("nonexistent", {
+        role: "user",
+        content: "Hi",
+        parentId: null,
+        id: "msg-1",
+      });
+      expect(useAppStore.getState().chats.nonexistent).toBeUndefined();
     });
   });
 
@@ -234,7 +267,12 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   describe("deleteMessage", () => {
     it("removes the message from the chat", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hi", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hi",
+        parentId: null,
+        id: "msg-1",
+      });
       useAppStore.getState().deleteMessage(chatId, "msg-1");
       expect(
         useAppStore.getState().chats[chatId].messages["msg-1"],
@@ -243,45 +281,72 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
 
     it("removes the message from parent's childrenIds", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Child", "root", "child");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Child",
+        parentId: "root",
+        id: "child",
+      });
       useAppStore.getState().deleteMessage(chatId, "child");
       expect(
-        useAppStore.getState().chats[chatId].messages["root"].childrenIds,
+        useAppStore.getState().chats[chatId].messages.root.childrenIds,
       ).not.toContain("child");
     });
 
     it("recursively removes children of the deleted message", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Child", "root", "child");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "user", "Grandchild", "child", "grandchild");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Child",
+        parentId: "root",
+        id: "child",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Grandchild",
+        parentId: "child",
+        id: "grandchild",
+      });
       useAppStore.getState().deleteMessage(chatId, "child");
       const msgs = useAppStore.getState().chats[chatId].messages;
-      expect(msgs["child"]).toBeUndefined();
-      expect(msgs["grandchild"]).toBeUndefined();
-      expect(msgs["root"]).toBeDefined();
+      expect(msgs.child).toBeUndefined();
+      expect(msgs.grandchild).toBeUndefined();
+      expect(msgs.root).toBeDefined();
     });
 
     it("sets currentLeafId to parent after deletion", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Child", "root", "child");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Child",
+        parentId: "root",
+        id: "child",
+      });
       useAppStore.getState().deleteMessage(chatId, "child");
       expect(useAppStore.getState().chats[chatId].currentLeafId).toBe("root");
     });
 
     it("does nothing when chatId does not exist", () => {
       useAppStore.getState().deleteMessage("nonexistent", "msg-1");
-      expect(useAppStore.getState().chats["nonexistent"]).toBeUndefined();
+      expect(useAppStore.getState().chats.nonexistent).toBeUndefined();
     });
   });
 
@@ -289,13 +354,24 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
   describe("setCurrentLeaf (helper)", () => {
     it("updates currentLeafId for the given chat", () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "A", "root", "branch-a");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "user", "Root", null, "branch-b");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "A",
+        parentId: "root",
+        id: "branch-a",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "branch-b",
+      });
       setCurrentLeafInStore(chatId, "branch-a");
       expect(useAppStore.getState().chats[chatId].currentLeafId).toBe(
         "branch-a",
@@ -304,7 +380,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
 
     it("does nothing when chat does not exist", () => {
       setCurrentLeafInStore("nonexistent", "msg-1");
-      expect(useAppStore.getState().chats["nonexistent"]).toBeUndefined();
+      expect(useAppStore.getState().chats.nonexistent).toBeUndefined();
     });
   });
 
@@ -329,9 +405,13 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
     it("merges updated attachment data into existing attachments", () => {
       const chatId = createChatInStore();
       const att = makeAttachment("att-1");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "user", "Hi", null, "msg-1", null, [att]);
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hi",
+        parentId: null,
+        id: "msg-1",
+        attachments: [att],
+      });
       useAppStore
         .getState()
         .updateMessageAttachments(chatId, "msg-1", [
@@ -347,7 +427,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       useAppStore
         .getState()
         .updateMessageAttachments("ghost", "msg-1", [makeAttachment("a")]);
-      expect(useAppStore.getState().chats["ghost"]).toBeUndefined();
+      expect(useAppStore.getState().chats.ghost).toBeUndefined();
     });
   });
 
@@ -367,7 +447,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       });
     });
 
-    it("replaces an existing chat", () => {
+    it("replaces an existing chat metadata", () => {
       const chatId = createChatInStore();
       const updated: Chat = {
         id: chatId,
@@ -378,6 +458,71 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       };
       useAppStore.getState().upsertChat(updated);
       expect(useAppStore.getState().chats[chatId].title).toBe("Replaced");
+    });
+
+    it("preserves existing messages and currentLeafId when called with empty messages", () => {
+      const chatId = createChatInStore();
+      useAppStore.getState().addMessage(chatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Hello world",
+      });
+
+      const existingChat = useAppStore.getState().chats[chatId];
+      expect(Object.keys(existingChat.messages)).toHaveLength(1);
+      expect(existingChat.currentLeafId).toBe("msg-1");
+
+      const updatePayload: Chat = {
+        id: chatId,
+        title: "Updated Title via Metadata Sync",
+        updatedAt: new Date(),
+        messages: {},
+        currentLeafId: null,
+      };
+
+      useAppStore.getState().upsertChat(updatePayload);
+
+      const updatedChat = useAppStore.getState().chats[chatId];
+      expect(updatedChat.title).toBe("Updated Title via Metadata Sync");
+      expect(updatedChat.messages).toEqual(existingChat.messages);
+      expect(updatedChat.currentLeafId).toBe("msg-1");
+    });
+
+    it("replaces messages and currentLeafId when called with non-empty messages", () => {
+      const chatId = createChatInStore();
+      useAppStore.getState().addMessage(chatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Initial message",
+      });
+
+      const newMessages = {
+        "msg-replacement": {
+          id: "msg-replacement",
+          role: "assistant" as const,
+          content: "Replaced message content",
+          createdAt: new Date(),
+          parentId: null,
+          childrenIds: [],
+          metadata: null,
+          attachments: [],
+        },
+      };
+
+      const updatePayload: Chat = {
+        id: chatId,
+        title: "Full Chat Replacement",
+        updatedAt: new Date(),
+        messages: newMessages,
+        currentLeafId: "msg-replacement",
+      };
+
+      useAppStore.getState().upsertChat(updatePayload);
+
+      const updatedChat = useAppStore.getState().chats[chatId];
+      expect(updatedChat.title).toBe("Full Chat Replacement");
+      expect(updatedChat.messages).toEqual(newMessages);
+      expect(updatedChat.currentLeafId).toBe("msg-replacement");
     });
   });
 
@@ -397,8 +542,8 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
         ],
         [],
       );
-      expect(useAppStore.getState().chats["c1"]).toBeDefined();
-      expect(useAppStore.getState().chats["c1"].title).toBe("Chat 1");
+      expect(useAppStore.getState().chats.c1).toBeDefined();
+      expect(useAppStore.getState().chats.c1.title).toBe("Chat 1");
     });
 
     it("links parent and child messages via childrenIds", () => {
@@ -435,7 +580,7 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
           },
         ],
       );
-      const msgs = useAppStore.getState().chats["c1"].messages;
+      const msgs = useAppStore.getState().chats.c1.messages;
       expect(msgs["msg-1"].childrenIds).toContain("msg-2");
     });
 
@@ -456,7 +601,102 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       );
       // original chat gone
       expect(useAppStore.getState().chats[chatId]).toBeUndefined();
-      expect(useAppStore.getState().chats["fresh"]).toBeDefined();
+      expect(useAppStore.getState().chats.fresh).toBeDefined();
+    });
+
+    it("preserves existing chat messages and currentLeafId when loadChats is called with empty messageRows, while pruning unlisted chats", () => {
+      const activeChatId = createChatInStore();
+      const unlistedChatId = createChatInStore();
+
+      useAppStore.getState().addMessage(activeChatId, {
+        id: "msg-1",
+        role: "user",
+        content: "Existing prompt",
+        parentId: null,
+      });
+      useAppStore.getState().addMessage(activeChatId, {
+        id: "msg-2",
+        role: "assistant",
+        content: "Existing response",
+        parentId: "msg-1",
+      });
+
+      expect(useAppStore.getState().chats[activeChatId].currentLeafId).toBe("msg-2");
+      expect(Object.keys(useAppStore.getState().chats[activeChatId].messages)).toHaveLength(2);
+
+      const now = new Date().toISOString();
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: activeChatId,
+            title: "Updated Title",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: null,
+            updatedAt: now,
+          },
+        ],
+        [],
+      );
+
+      const state = useAppStore.getState();
+      expect(state.chats[unlistedChatId]).toBeUndefined();
+      expect(state.chats[activeChatId]).toBeDefined();
+      expect(state.chats[activeChatId].title).toBe("Updated Title");
+      expect(state.chats[activeChatId].messages["msg-1"]).toBeDefined();
+      expect(state.chats[activeChatId].messages["msg-2"]).toBeDefined();
+      expect(state.chats[activeChatId].currentLeafId).toBe("msg-2");
+    });
+
+    it("updates messages when incoming message rows are provided for a specific chat", () => {
+      const chatId = createChatInStore();
+
+      useAppStore.getState().addMessage(chatId, {
+        id: "old-msg",
+        role: "user",
+        content: "Old message",
+        parentId: null,
+      });
+
+      const now = new Date().toISOString();
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: chatId,
+            title: "Chat with new messages",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: "new-msg-2",
+            updatedAt: now,
+          },
+        ],
+        [
+          {
+            id: "new-msg-1",
+            chatId,
+            role: "user",
+            content: "New prompt",
+            parentId: null,
+            metadata: null,
+            createdAt: now,
+          },
+          {
+            id: "new-msg-2",
+            chatId,
+            role: "assistant",
+            content: "New reply",
+            parentId: "new-msg-1",
+            metadata: null,
+            createdAt: now,
+          },
+        ],
+      );
+
+      const chat = useAppStore.getState().chats[chatId];
+      expect(chat.messages["old-msg"]).toBeUndefined();
+      expect(chat.messages["new-msg-1"]).toBeDefined();
+      expect(chat.messages["new-msg-2"]).toBeDefined();
+      expect(chat.currentLeafId).toBe("new-msg-2");
     });
   });
 });
@@ -553,7 +793,12 @@ describe("ChatSlice — DB actions", () => {
   describe("deleteMessageDb", () => {
     it("removes the message from the store and calls server action", async () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
       await useAppStore.getState().deleteMessageDb(chatId, "msg-1");
       expect(
         useAppStore.getState().chats[chatId].messages["msg-1"],
@@ -561,11 +806,17 @@ describe("ChatSlice — DB actions", () => {
     });
 
     it("rejects and does not update store when the server action fails", async () => {
-      const { deleteMessage: deleteMsgAction } =
-        await import("@/lib/actions/chats/delete-message");
+      const { deleteMessage: deleteMsgAction } = await import(
+        "@/actions/chats/delete-message"
+      );
       vi.mocked(deleteMsgAction).mockRejectedValueOnce(new Error("DB error"));
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
       await expect(
         useAppStore.getState().deleteMessageDb(chatId, "msg-1"),
       ).rejects.toThrow("DB error");
@@ -578,17 +829,26 @@ describe("ChatSlice — DB actions", () => {
   describe("setCurrentLeafDb", () => {
     it("updates currentLeafId in store and calls server action", async () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Root", null, "root");
-      useAppStore
-        .getState()
-        .addMessage(chatId, "assistant", "Child", "root", "child");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Root",
+        parentId: null,
+        id: "root",
+      });
+      useAppStore.getState().addMessage(chatId, {
+        role: "assistant",
+        content: "Child",
+        parentId: "root",
+        id: "child",
+      });
       await useAppStore.getState().setCurrentLeafDb(chatId, "root");
       expect(useAppStore.getState().chats[chatId].currentLeafId).toBe("root");
     });
 
     it("swallows errors from the server action", async () => {
-      const { updateCurrentLeaf } =
-        await import("@/lib/actions/chats/update-current-leaf");
+      const { updateCurrentLeaf } = await import(
+        "@/actions/chats/update-current-leaf"
+      );
       vi.mocked(updateCurrentLeaf).mockRejectedValueOnce(new Error("DB error"));
       const chatId = createChatInStore();
       await expect(
@@ -600,7 +860,12 @@ describe("ChatSlice — DB actions", () => {
   describe("updateMessageMetadataDb", () => {
     it("updates metadata in store and calls server action", async () => {
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
       const metadata = JSON.stringify({ reasoning: "Some reasoning" });
       await useAppStore
         .getState()
@@ -626,13 +891,19 @@ describe("ChatSlice — DB actions", () => {
     });
 
     it("swallows errors from the server action", async () => {
-      const { updateMessageMetadata } =
-        await import("@/lib/actions/chats/update-message-metadata");
+      const { updateMessageMetadata } = await import(
+        "@/actions/chats/update-message-metadata"
+      );
       vi.mocked(updateMessageMetadata).mockRejectedValueOnce(
         new Error("DB error"),
       );
       const chatId = createChatInStore();
-      useAppStore.getState().addMessage(chatId, "user", "Hello", null, "msg-1");
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
       await expect(
         useAppStore.getState().updateMessageMetadataDb(chatId, "msg-1", "{}"),
       ).resolves.toBeUndefined();
@@ -671,7 +942,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
         },
       ],
     );
-    const chat = useAppStore.getState().chats["c1"];
+    const chat = useAppStore.getState().chats.c1;
     expect(Object.keys(chat.messages)).toHaveLength(0);
   });
 
@@ -700,7 +971,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
         },
       ],
     );
-    const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
+    const msg = useAppStore.getState().chats.c1.messages["msg-1"];
     expect(msg).toBeDefined();
     expect(msg.reasoning).toBeUndefined();
   });
@@ -732,7 +1003,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
         },
       ],
     );
-    const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
+    const msg = useAppStore.getState().chats.c1.messages["msg-1"];
     expect(msg.reasoning).toBeUndefined();
   });
 
@@ -772,7 +1043,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
       ],
     );
     const attachments =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+      useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(attachments).toHaveLength(1);
     expect(attachments[0].type).toBe("image");
     expect(attachments[0].name).toBe("photo.png");
@@ -814,7 +1085,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
       ],
     );
     const attachments =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+      useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(attachments[0].type).toBe("document");
   });
 
@@ -854,7 +1125,7 @@ describe("ChatSlice — loadChats branch coverage", () => {
       ],
     );
     const attachments =
-      useAppStore.getState().chats["c1"].messages["msg-1"].attachments;
+      useAppStore.getState().chats.c1.messages["msg-1"].attachments;
     expect(attachments).toHaveLength(0);
   });
 
@@ -883,7 +1154,487 @@ describe("ChatSlice — loadChats branch coverage", () => {
         },
       ],
     );
-    const msg = useAppStore.getState().chats["c1"].messages["msg-1"];
+    const msg = useAppStore.getState().chats.c1.messages["msg-1"];
     expect(msg.childrenIds).toHaveLength(0);
+  });
+});
+
+// ─── T5.3 scoped rollback ──────────────────────────────────────────────────
+describe("T5.3 scoped rollback does not clobber entity state", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("renameChatDb failure preserves projects array", async () => {
+    useAppStore.setState((s) => ({
+      ...s,
+      projects: [
+        {
+          id: "p1",
+          name: "Project 1",
+          userId: "u1",
+          description: "",
+          isPinned: false,
+          globalPrompt: "",
+          tools: [],
+          knowledgebaseId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    }));
+    useAppStore.setState((s) => ({
+      ...s,
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "old",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    }));
+    vi.mocked(renameChatAction).mockRejectedValueOnce(new Error("DB error"));
+    await useAppStore
+      .getState()
+      .renameChatDb("chat1", "new title")
+      .catch(() => {});
+    expect(useAppStore.getState().projects).toHaveLength(1);
+    expect(useAppStore.getState().projects[0].id).toBe("p1");
+  });
+
+  it("deleteMessageDb calculates newLeafId from deepest leaf of parent and handles rollback", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {
+            root: {
+              id: "root",
+              parentId: null,
+              childrenIds: ["child1"],
+              role: "user",
+              content: "root",
+              parts: [],
+              createdAt: new Date(),
+            },
+            child1: {
+              id: "child1",
+              parentId: "root",
+              childrenIds: [],
+              role: "assistant",
+              content: "child",
+              parts: [],
+              createdAt: new Date(),
+            },
+          },
+          currentLeafId: "child1",
+        },
+      },
+    });
+
+    // 1. Success case
+    await useAppStore.getState().deleteMessageDb("chat1", "child1");
+    expect(deleteMessageAction).toHaveBeenCalledWith("chat1", "child1", "root");
+    expect(useAppStore.getState().chats.chat1.messages.child1).toBeUndefined();
+
+    // 2. Chat not found
+    await useAppStore.getState().deleteMessageDb("missing-chat", "msg");
+
+    // 3. Rollback on failure
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {
+            m1: {
+              id: "m1",
+              parentId: null,
+              childrenIds: [],
+              role: "user",
+              content: "m1",
+              parts: [],
+              createdAt: new Date(),
+            },
+          },
+          currentLeafId: "m1",
+        },
+      },
+    });
+    vi.mocked(deleteMessageAction).mockRejectedValueOnce(new Error("DB delete fail"));
+    await expect(
+      useAppStore.getState().deleteMessageDb("chat1", "m1"),
+    ).rejects.toThrow("DB delete fail");
+    expect(useAppStore.getState().chats.chat1.messages.m1).toBeDefined();
+  });
+
+  it("moveChatDb rolls back on server action failure", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: "proj-old",
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    vi.mocked(moveChatAction).mockRejectedValueOnce(new Error("Move failed"));
+    await useAppStore.getState().moveChatDb("chat1", "proj-new");
+    expect(useAppStore.getState().chats.chat1.projectId).toBe("proj-old");
+  });
+
+  it("deleteChatDb deletes chat from store and rolls back on failure", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    // 1. Success
+    await useAppStore.getState().deleteChatDb("chat1");
+    expect(useAppStore.getState().chats.chat1).toBeUndefined();
+
+    // 2. Failure with rollback
+    useAppStore.setState({
+      chats: {
+        chat2: {
+          id: "chat2",
+          title: "Chat 2",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+    vi.mocked(deleteChatAction).mockRejectedValueOnce(new Error("Delete failed"));
+    await useAppStore.getState().deleteChatDb("chat2");
+    expect(useAppStore.getState().chats.chat2).toBeDefined();
+  });
+
+  it("setKnowledgebaseDb updates knowledgebase on chat and handles missing chat and rollback", async () => {
+    useAppStore.setState({
+      chats: {
+        chat1: {
+          id: "chat1",
+          title: "Chat 1",
+          projectId: undefined,
+          assistantId: undefined,
+          knowledgebaseId: null,
+          updatedAt: new Date(),
+          messages: {},
+          currentLeafId: null,
+        },
+      },
+    });
+
+    // 1. Chat does not exist
+    await useAppStore.getState().setKnowledgebaseDb("missing-chat", "kb-1");
+
+    // 2. Success
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-1");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
+    expect(updateChatKnowledgebaseAction).toHaveBeenCalledWith({
+      chatId: "chat1",
+      knowledgebaseId: "kb-1",
+    });
+
+    // 3. Rollback on failure
+    vi.mocked(updateChatKnowledgebaseAction).mockRejectedValueOnce(
+      new Error("KB update failed"),
+    );
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-2");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
+  });
+});
+
+// ─── Early-return guards: the reducer must return the SAME state object ────
+// Each guard does `if (!x) return state;`. Zustand's `set` short-circuits on
+// `Object.is(nextState, state)`, so the observable proof that the guard fired
+// is that the store's top-level state reference is untouched. If a guard were
+// deleted, the reducer would spread `undefined` into a new state object and the
+// identity assertion below would fail.
+describe("ChatSlice — missing-entity early-return guards", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("setCurrentLeafDb returns the same state when the chat does not exist", async () => {
+    useAppStore.getState().addMessage("nope", {
+      role: "user",
+      content: "unused",
+      parentId: null,
+      id: "seed",
+    });
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().setCurrentLeafDb("nope", "leaf-1");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(after.chats).toEqual({});
+  });
+
+  it("updateMessageAttachments returns the same state when the message does not exist", () => {
+    const chatId = createChatInStore();
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+    const messagesBefore = chatsBefore[chatId].messages;
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments(chatId, "ghost-msg", [makeAttachment("att-x")]);
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(after.chats[chatId].messages).toBe(messagesBefore);
+  });
+
+  it("loadChats skips pass-2 linking when a child row's chat is not loaded", () => {
+    // The orphan's chatId is absent from `rows`, so `chats[m.chatId]` is
+    // undefined in pass 2 (its parentId is set, so the loop body is reached).
+    // The `continue` keeps the walk alive; without it the loop would throw on
+    // `undefined.messages`.
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: "child",
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "child",
+          chatId: "c1",
+          role: "assistant",
+          content: "answer",
+          parentId: "orphan-parent",
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "orphan",
+          chatId: "c-missing",
+          role: "user",
+          content: "orphan",
+          parentId: "some-parent",
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    );
+
+    const chat = useAppStore.getState().chats.c1;
+    expect(Object.keys(chat.messages)).toEqual(["child"]);
+    // The orphaned parent does not exist, so no childrenIds entry is created.
+    expect(chat.messages.child.childrenIds).toEqual([]);
+  });
+
+  it("renameChatDb returns the same state when the chat does not exist", async () => {
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().renameChatDb("ghost", "Renamed");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    // The server action is still attempted; a rejected call is swallowed.
+    expect(vi.mocked(renameChatAction)).toHaveBeenCalledWith("ghost", "Renamed");
+  });
+
+  it("moveChatDb returns the same state when the chat does not exist", async () => {
+    const before = useAppStore.getState();
+    const chatsBefore = before.chats;
+
+    await useAppStore.getState().moveChatDb("ghost", "proj-9");
+
+    const after = useAppStore.getState();
+    expect(after).toBe(before);
+    expect(after.chats).toBe(chatsBefore);
+    expect(vi.mocked(moveChatAction)).toHaveBeenCalledWith("ghost", "proj-9");
+  });
+});
+
+// ─── updateMessageAttachments: defined-attachments arm + pass-through ──────
+describe("ChatSlice — updateMessageAttachments attachment mapping", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("leaves attachments absent from the update map as the same object", () => {
+    const chatId = createChatInStore();
+    const kept = makeAttachment("att-keep");
+    const replaced = makeAttachment("att-replace");
+    useAppStore.getState().addMessage(chatId, {
+      role: "user",
+      content: "Hi",
+      parentId: null,
+      id: "msg-1",
+      attachments: [kept, replaced],
+    });
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments(chatId, "msg-1", [
+        { ...replaced, dataUrl: "data:image/png;base64,zzz" },
+      ]);
+
+    const updated = useAppStore.getState().chats[chatId].messages["msg-1"]
+      .attachments;
+    expect(updated).toHaveLength(2);
+    // Not in the update map → the ternary's `: a` arm returns the original
+    // object by reference, untouched.
+    expect(updated[0]).toBe(kept);
+    expect(updated[0].dataUrl).toBe("");
+    // In the update map → a merged copy, not the input object.
+    expect(updated[1]).not.toBe(replaced);
+    expect(updated[1].dataUrl).toBe("data:image/png;base64,zzz");
+    expect(updated[1].id).toBe("att-replace");
+  });
+
+  it("maps spreadsheet mime types during loadChats", () => {
+    useAppStore.getState().loadChats(
+      [
+        {
+          id: "c1",
+          title: "Chat",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: "m1",
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "m1",
+          chatId: "c1",
+          role: "user",
+          content: "here is the sheet",
+          parentId: null,
+          metadata: null,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      [
+        {
+          id: "a1",
+          messageId: "m1",
+          name: "data.csv",
+          mimeType: "text/csv",
+          size: 20,
+          key: "uploads/user-1/data.csv",
+          extractedText: "a,b",
+        },
+        {
+          id: "a2",
+          messageId: "m1",
+          name: "notes.txt",
+          mimeType: "text/plain",
+          size: 5,
+          key: "uploads/user-1/notes.txt",
+          extractedText: null,
+        },
+      ],
+    );
+
+    const atts = useAppStore.getState().chats.c1.messages.m1.attachments!;
+    expect(atts.map((a) => [a.name, a.type])).toEqual([
+      ["data.csv", "spreadsheet"],
+      ["notes.txt", "document"],
+    ]);
+  });
+
+  it("maps an empty array when the stored message has no attachments field", () => {
+    // `msg.attachments ?? []` — the left operand is nullish, so the fallback
+    // array is mapped instead. addMessage always normalises to [], so the
+    // state is seeded directly to produce a genuinely absent field.
+    useAppStore.setState({
+      chats: {
+        c1: {
+          id: "c1",
+          title: "Chat",
+          updatedAt: new Date(),
+          currentLeafId: null,
+          messages: {
+            m1: {
+              id: "m1",
+              role: "user",
+              content: "Hi",
+              parentId: null,
+              childrenIds: [],
+              createdAt: new Date(),
+              metadata: null,
+            } as never,
+          },
+        },
+      },
+    });
+
+    useAppStore
+      .getState()
+      .updateMessageAttachments("c1", "m1", [makeAttachment("att-1")]);
+
+    const updated = useAppStore.getState().chats.c1.messages.m1.attachments;
+    expect(updated).toEqual([]);
+  });
+});
+
+describe("ChatSlice — resetChatState", () => {
+  beforeEach(() => {
+    useAppStore.setState(RESET_STATE);
+    vi.clearAllMocks();
+  });
+
+  it("clears chats but leaves other slices untouched", () => {
+    createChatInStore("proj-1", "asst-1");
+    useAppStore.setState((s) => ({ projects: [{ id: "p1" } as never] }));
+    expect(Object.keys(useAppStore.getState().chats)).toHaveLength(1);
+
+    useAppStore.getState().resetChatState();
+
+    expect(useAppStore.getState().chats).toEqual({});
+    expect(useAppStore.getState().projects).toEqual([{ id: "p1" }]);
   });
 });

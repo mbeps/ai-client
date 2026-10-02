@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { signInSchema } from "@/schemas/auth/sign-in";
 
 describe("signInSchema", () => {

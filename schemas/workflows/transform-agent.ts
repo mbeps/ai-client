@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { nameField, descriptionField, renameSchema } from "../shared-fields";
+import {
+  descriptionField,
+  nameField,
+  renameSchema,
+} from "@/schemas/shared-fields";
+import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
 export const renameTransformAgentSchema = renameSchema;
 
@@ -34,12 +39,34 @@ export const createTransformAgentSchema = z.object({
   globalContext: z.string().max(2000).optional(),
   modelId: z.string().max(100).optional(),
   tools: z.array(z.string()).optional().default([]),
+  skillMode: skillModeSchema.optional(),
+  skillIds: skillIdsSchema.optional(),
   knowledgeBaseIds: z.array(z.string()).optional().default([]),
   requiresFileUpload: z.boolean().optional().default(true),
   steps: z.array(transformStepSchema).optional().default([]),
 });
 
-export const updateTransformAgentSchema = createTransformAgentSchema.partial();
+export const updateTransformAgentSchema = createTransformAgentSchema
+  .omit({
+    tools: true,
+    skillMode: true,
+    skillIds: true,
+    knowledgeBaseIds: true,
+    requiresFileUpload: true,
+    steps: true,
+  })
+  .partial()
+  .extend({
+    tools: z.array(z.string()).optional(),
+    // Not `skillModeSchema.optional()`: in Zod v4 an `.optional()` wrapper still
+    // applies the inner `.default()`, so a partial update would silently reset
+    // the agent's skill configuration.
+    skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
+    skillIds: z.array(z.string()).optional(),
+    knowledgeBaseIds: z.array(z.string()).optional(),
+    requiresFileUpload: z.boolean().optional(),
+    steps: z.array(transformStepSchema).optional(),
+  });
 
 /**
  * Validates partial transform agent updates allowing selective field modification.

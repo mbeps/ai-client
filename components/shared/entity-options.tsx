@@ -1,12 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useAppStore } from "@/lib/store";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { ChatOptions } from "@/components/chat/chat-options";
-import { ProjectOptions } from "@/components/project/project-options";
+import { useShallow } from "zustand/react/shallow";
 import { AssistantOptions } from "@/components/assistant/assistant-options";
+import { ChatOptions } from "@/components/chat/chat-options";
 import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-options";
+import { ProjectOptions } from "@/components/project/project-options";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useAppStore } from "@/lib/store";
+import { getPathSegments } from "@/lib/utils";
 
 /**
  * Global component rendered in the main header that contextually provides
@@ -17,10 +19,16 @@ import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-o
  */
 export function EntityOptions() {
   const pathname = usePathname();
-  const { chats, projects, assistants } = useAppStore();
+  const { chats, projects, assistants } = useAppStore(
+    useShallow((s) => ({
+      chats: s.chats,
+      projects: s.projects,
+      assistants: s.assistants,
+    })),
+  );
   const { normalizedKnowledgebases } = useKnowledgebases();
 
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = getPathSegments(pathname);
   if (segments.length === 0) return null;
 
   // Walk backward through URL segments to find the most specific entity ID

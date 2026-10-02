@@ -1,5 +1,5 @@
-import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 
 /**
  * Converts McpServerRow to McpServerConfig for SDK use. Maps id, name, url, headers only.

@@ -1,8 +1,11 @@
 "use client";
 
+import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit2 } from "lucide-react";
+import { createModel } from "@/actions/models/create-model";
+import { updateModels } from "@/actions/models/update-model";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,9 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createModel } from "@/lib/actions/models/create-model";
-import { updateModel } from "@/lib/actions/models/update-model";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
+import { Switch } from "@/components/ui/switch";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -131,7 +131,7 @@ export function ModelFormDialog({
       };
 
       if (isEdit && model) {
-        await updateModel(model.id, {
+        await updateModels(model.id, {
           label: payload.label,
           modelType: payload.modelType,
           contextWindow: payload.contextWindow,
@@ -303,10 +303,26 @@ export function ModelFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            {isSaving ? "Saving..." : isEdit ? "Save Changes" : "Create Model"}
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : isEdit ? (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Model
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,11 +1,10 @@
-import { listChats } from "@/lib/actions/chats/list-chats";
-import { listProjects } from "@/lib/actions/projects/list-projects";
-import { listAssistants } from "@/lib/actions/assistants/list-assistants";
-
-import { SearchClient } from "./_components/search-client";
+import { listAssistants } from "@/actions/assistants/list-assistants";
+import { listChats } from "@/actions/chats/list-chats";
+import { listProjects } from "@/actions/projects/list-projects";
+import type { AssistantRow } from "@/types/assistant/assistant-row";
 import type { ChatRow } from "@/types/chat/chat-row";
 import type { ProjectRow } from "@/types/project/project-row";
-import type { AssistantRow } from "@/types/assistant/assistant-row";
+import { SearchClient } from "./_components/search-client";
 
 /**
  * Global search page: Unified interface for finding chats, projects, and assistants.
@@ -41,6 +40,8 @@ export default async function SearchPage() {
     isPinned: row.isPinned,
     globalPrompt: row.globalPrompt ?? "",
     tools: row.tools ?? [],
+    skillMode: row.skillMode as "dynamic" | "none" | "specific",
+    skillIds: row.skillIds ?? [],
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -52,6 +53,8 @@ export default async function SearchPage() {
     description: row.description ?? "",
     prompt: row.prompt ?? "",
     tools: row.tools ?? [],
+    skillMode: row.skillMode as "dynamic" | "none" | "specific",
+    skillIds: row.skillIds ?? [],
     avatar: row.avatar ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),

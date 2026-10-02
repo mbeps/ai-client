@@ -1,15 +1,14 @@
 "use client";
 
-import { Trash2, Edit2, MessageSquare, Settings2 } from "lucide-react";
-import type { Assistant } from "@/types/assistant/assistant";
+import { Edit2, MessageSquare, Settings2, Trash2 } from "lucide-react";
+import { deleteAssistant } from "@/actions/assistants/delete-assistant";
+import { renameAssistant } from "@/actions/assistants/rename-assistant";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { useRouter } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameAssistant } from "@/lib/actions/assistants/rename-assistant";
-import { deleteAssistant } from "@/lib/actions/assistants/delete-assistant";
 import { useAppStore } from "@/lib/store";
+import type { Assistant } from "@/types/assistant/assistant";
 
 /**
  * Dropdown/Drawer menu with New Chat, Manage, Rename, and Delete options for assistants.
@@ -22,7 +21,6 @@ import { useAppStore } from "@/lib/store";
  * @see ResponsiveMenu for desktop/mobile responsive menu wrapper.
  */
 export function AssistantOptions({ assistant }: { assistant: Assistant }) {
-  const router = useRouter();
   const createNewChat = useCreateChat();
   const loadAssistants = useAppStore((state) => state.loadAssistants);
 
@@ -54,7 +52,7 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
     {
       label: "Manage",
       icon: <Settings2 className="mr-2 h-4 w-4" />,
-      onClick: () => router.push(ROUTES.ASSISTANTS.detail(assistant.id)),
+      href: ROUTES.ASSISTANTS.detail(assistant.id),
       separator: true,
     },
     {

@@ -1,0 +1,81 @@
+"use client";
+
+import { ChevronLeft, Command, Plus } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { createPrompt } from "@/actions/prompts/create-prompt";
+import { PageHeader } from "@/components/page-header";
+import {
+  PromptForm,
+  type PromptFormValues,
+} from "@/components/prompt/prompt-form";
+import { PageContainer } from "@/components/shared/page-container";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
+import { useAppStore } from "@/lib/store";
+
+/**
+ * Dedicated page for creating a new custom prompt shortcut.
+ * Provides a spacious editor layout for managing large prompt templates.
+ *
+ * @author Maruf Bepary
+ */
+export default function NewPromptPage() {
+  const router = useRouter();
+  const loadPrompts = useAppStore((state) => state.loadPrompts);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSubmit = async (values: PromptFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await createPrompt({
+        title: values.title.trim(),
+        shortcut: values.shortcut.trim(),
+        content: values.content.trim(),
+      });
+      toast.success("Prompt created");
+      await loadPrompts();
+      router.push(ROUTES.SETTINGS.PROMPTS.path);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create prompt";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <PageContainer variant="default">
+      <Button
+        variant="ghost"
+        size="sm"
+        asChild
+        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Link href={ROUTES.SETTINGS.PROMPTS.path}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Prompts
+        </Link>
+      </Button>
+
+      <PageHeader
+        icon={<Command className="h-8 w-8 text-primary" />}
+        title="New Prompt"
+        description="Create a custom prompt shortcut to quickly insert text into your chats."
+      />
+
+      <div className="mt-6">
+        <PromptForm
+          onSubmit={onSubmit}
+          onCancel={() => router.push(ROUTES.SETTINGS.PROMPTS.path)}
+          submitLabel="Create Prompt"
+          submitIcon={<Plus className="mr-2 h-4 w-4" />}
+          isSubmitting={isSubmitting}
+        />
+      </div>
+    </PageContainer>
+  );
+}

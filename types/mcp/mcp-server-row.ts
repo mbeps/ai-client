@@ -1,5 +1,6 @@
-import { type InferSelectModel } from "drizzle-orm";
-import { mcpServer } from "@/drizzle/schema";
+import type { InferSelectModel } from "drizzle-orm";
+import type { mcpServer } from "@/drizzle/schema";
+import type { TimedResource } from "@/types/shared/resource";
 
 /**
  * Database representation of an MCP (Model Context Protocol) server configuration.
@@ -11,4 +12,8 @@ import { mcpServer } from "@/drizzle/schema";
  * @see {@link types/mcp/public-mcp-server.ts} for public server variant
  * @author Maruf Bepary
  */
-export type McpServerRow = InferSelectModel<typeof mcpServer>;
+export type McpServerRow = InferSelectModel<typeof mcpServer> &
+  TimedResource & {
+    isInstalled?: boolean;
+    installId?: string;
+  };

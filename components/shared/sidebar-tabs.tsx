@@ -1,18 +1,24 @@
-import * as React from "react";
+import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 /**
  * A layout component that positions tabs vertically on the right side of the content.
  * Wraps the standard Shadcn UI Tabs component but applies sidebar-style layout.
- * 
+ *
  * @param props Standard Tabs components props
  */
-export function SidebarTabs({ className, ...props }: React.ComponentProps<typeof Tabs>) {
+export function SidebarTabs({
+  className,
+  ...props
+}: React.ComponentProps<typeof Tabs>) {
   return (
     <Tabs
       orientation="vertical"
-      className={cn("flex flex-col md:flex-row-reverse items-start gap-8", className)}
+      className={cn(
+        "flex flex-col items-start gap-8 md:flex-row-reverse",
+        className,
+      )}
       {...props}
     />
   );
@@ -21,12 +27,15 @@ export function SidebarTabs({ className, ...props }: React.ComponentProps<typeof
 /**
  * The list container for sidebar tabs, styled as a vertical column.
  */
-export function SidebarTabsList({ className, ...props }: React.ComponentProps<typeof TabsList>) {
+export function SidebarTabsList({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsList>) {
   return (
     <TabsList
       className={cn(
-        "flex flex-col h-auto w-full md:w-52 bg-transparent border-l border-border rounded-none p-0 items-stretch gap-1 shrink-0",
-        className
+        "flex h-auto w-full shrink-0 flex-col items-stretch gap-1 rounded-none border-border border-l bg-transparent p-0 md:w-52",
+        className,
       )}
       {...props}
     />
@@ -36,18 +45,20 @@ export function SidebarTabsList({ className, ...props }: React.ComponentProps<ty
 /**
  * Individual tab trigger for the sidebar, styled to look like a navigation link.
  */
-export function SidebarTabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsTrigger>) {
+export function SidebarTabsTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsTrigger>) {
   return (
     <TabsTrigger
       className={cn(
-        "justify-start px-4 py-3 h-auto data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:shadow-none border-0 border-l-2 border-transparent data-[state=active]:border-primary rounded-none transition-all hover:bg-muted/30 text-left whitespace-normal font-medium font-sans",
-        className
+        "h-auto justify-start whitespace-normal rounded-none border-0 border-transparent border-l-2 px-4 py-3 text-left font-medium font-sans transition-all hover:bg-muted/30 data-[state=active]:border-primary data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:shadow-none",
+        className,
       )}
       {...props}
     />
   );
 }
-
 
 /**
  * Re-exporting TabsContent for consistency in naming.

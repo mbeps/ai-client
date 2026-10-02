@@ -20,8 +20,8 @@
  * @see ChatSlice and EntitySlice for implementation details
  */
 import { create } from "zustand";
-import { createChatSlice } from "./slices/chat-slice";
-import { createEntitySlice } from "./slices/entity-slice";
+import { createChatSlice } from "@/lib/store/slices/chat-slice";
+import { createEntitySlice } from "@/lib/store/slices/entity-slice";
 import type { AppState } from "@/types/app/app-state";
 
 /**

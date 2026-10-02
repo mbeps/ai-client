@@ -21,6 +21,19 @@ export const translateRequestSchema = z
       })
       .optional(),
   })
-  .refine((data) => data.text || data.attachment, {
-    message: "Either text or an attachment must be provided",
-  });
+  .refine(
+    (data) => {
+      if (data.text?.trim()) return true;
+      if (data.attachment?.type === "image") return true;
+      if (
+        data.attachment?.type === "document" &&
+        data.attachment.extractedText?.trim()
+      ) {
+        return true;
+      }
+      return false;
+    },
+    {
+      message: "Either text or an attachment with content must be provided",
+    },
+  );

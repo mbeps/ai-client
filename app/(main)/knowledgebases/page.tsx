@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback, useTransition } from "react";
-import { Database, Plus, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, Database, Plus, Settings } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import {
+  type KnowledgebaseWithCount,
+  listKnowledgebases,
+} from "@/actions/knowledgebases/list-knowledgebases";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
-import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
-import {
-  listKnowledgebases,
-  type KnowledgebaseWithCount,
-} from "@/lib/actions/knowledgebases/list-knowledgebases";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
 import { useUserModels } from "@/hooks/use-user-models";
-import { useRouter } from "next/navigation";
-import { ROUTES } from "@/constants/routes";
+import { logger } from "@/lib/logger";
+import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
 
 /**
  * Knowledgebases page: Manage RAG document collections.
@@ -24,7 +25,6 @@ import { ROUTES } from "@/constants/routes";
  * @author Maruf Bepary
  */
 export default function KnowledgebasesPage() {
-  const router = useRouter();
   const { models } = useUserModels("embedding");
   const hasNoModels = models.length === 0;
 
@@ -41,7 +41,7 @@ export default function KnowledgebasesPage() {
         setKnowledgebases(data);
       });
     } catch (error) {
-      console.error("Failed to load knowledgebases:", error);
+      logger.error("Failed to load knowledgebases", error);
     }
   }, []);
 
@@ -52,11 +52,11 @@ export default function KnowledgebasesPage() {
   return (
     <>
       {hasNoModels && (
-        <div className="page-container pb-0 mb-[-1rem]">
-          <div className="flex items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl">
+        <div className="page-container mb-[-1rem] pb-0">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <p className="text-xs font-medium text-red-800 dark:text-red-200">
+              <p className="font-medium text-red-800 text-xs dark:text-red-200">
                 No embedding models configured. Please set up a provider with
                 embedding support to create knowledgebases.
               </p>
@@ -64,10 +64,13 @@ export default function KnowledgebasesPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-[10px] border-red-200 hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-              onClick={() => router.push(ROUTES.SETTINGS.PROVIDERS.path)}
+              asChild
+              className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
             >
-              Go to Settings
+              <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
+                <Settings className="mr-1.5 h-3 w-3" />
+                Go to Settings
+              </Link>
             </Button>
           </div>
         </div>
@@ -94,7 +97,7 @@ export default function KnowledgebasesPage() {
             onClick={() => setDialogOpen(true)}
             disabled={hasNoModels}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Knowledgebase
           </Button>
         }

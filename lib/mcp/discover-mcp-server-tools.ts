@@ -1,14 +1,14 @@
 "use server";
 
-import { requireSession } from "@/lib/auth/require-session";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer } from "@/drizzle/schema";
-import { eq, and, or } from "drizzle-orm";
+import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import { discoverToolsAndResources } from "./discover-tools-and-resources";
 import { mcpServerRowToConfig } from "./mappers";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 
 /**
  * Discovers available tools, resources, and prompts exposed by an MCP server.
@@ -29,17 +29,38 @@ export async function discoverMcpServerTools(serverId: string): Promise<{
 }> {
   const session = await requireSession();
 
-  const [row] = await db
-    .select()
-    .from(mcpServer)
-    .where(
-      and(
-        eq(mcpServer.id, serverId),
-        or(eq(mcpServer.userId, session.user.id), eq(mcpServer.isPublic, true)),
-      ),
-    );
+  const [row, installRow] = await Promise.all([
+    db
+      .select()
+      .from(mcpServer)
+      .where(
+        and(
+          eq(mcpServer.id, serverId),
+          or(
+            eq(mcpServer.userId, session.user.id),
+            eq(mcpServer.isPublic, true),
+          ),
+        ),
+      )
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({ headers: userMcpServerInstall.headers })
+      .from(userMcpServerInstall)
+      .where(
+        and(
+          eq(userMcpServerInstall.userId, session.user.id),
+          eq(userMcpServerInstall.serverId, serverId),
+        ),
+      )
+      .then((rows) => rows[0] ?? null),
+  ]);
 
   if (!row) throw new Error("Not Found");
 
-  return discoverToolsAndResources(mcpServerRowToConfig(row));
+  const effectiveRow = {
+    ...row,
+    headers: installRow?.headers ?? row.headers,
+  };
+
+  return discoverToolsAndResources(mcpServerRowToConfig(effectiveRow));
 }

@@ -1,17 +1,21 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { toast } from "sonner";
+import type { z } from "zod";
+import { createAssistant } from "@/actions/assistants/create-assistant";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -23,21 +27,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PROMPTS } from "@/constants/prompts";
-import { createAssistant } from "@/lib/actions/assistants/create-assistant";
+import { PROMPTS } from "@/config/prompts";
 import { useAppStore } from "@/lib/store";
-import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { createAssistantSchema } from "@/schemas/assistant/assistant";
 
-// TODO: Move to schema
-const schema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  prompt: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<typeof createAssistantSchema>;
 
 interface CreateAssistantDialogProps {
   open: boolean;
@@ -62,18 +56,14 @@ export function CreateAssistantDialog({
   const loadAssistants = useAppStore((state) => state.loadAssistants);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(createAssistantSchema),
     defaultValues: { name: "", description: "", prompt: "" },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      await createAssistant({
-        name: values.name,
-        description: values.description || undefined,
-        prompt: values.prompt || undefined,
-      });
+      await createAssistant(values);
       toast.success("Assistant created");
       form.reset();
       onOpenChange(false);
@@ -160,7 +150,10 @@ export function CreateAssistantDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  "Creating..."
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />

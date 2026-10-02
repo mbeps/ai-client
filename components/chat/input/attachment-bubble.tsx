@@ -1,7 +1,7 @@
 "use client";
 
+import { FileSpreadsheet, FileText, ImageIcon, X, Zap } from "lucide-react";
 import Image from "next/image";
-import { X, FileText, FileSpreadsheet, ImageIcon, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 
@@ -60,7 +60,7 @@ export function AttachmentBubble({
             <ImageIcon className="h-4 w-4 text-muted-foreground" />
           )}
           {isImageUnsupported && (
-            <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm">
+            <div className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground shadow-sm">
               <Zap className="h-2 w-2" />
             </div>
           )}
@@ -73,7 +73,7 @@ export function AttachmentBubble({
       <div className="flex flex-col">
         <span className="max-w-[120px] truncate">{attachment.name}</span>
         {isImageUnsupported && (
-          <span className="text-[10px] text-destructive font-medium">
+          <span className="font-medium text-[10px] text-destructive">
             Unsupported
           </span>
         )}
@@ -81,7 +81,7 @@ export function AttachmentBubble({
       <button
         type="button"
         onClick={() => onRemove(attachment.id)}
-        className="ml-1 rounded-full p-0.5 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+        className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
       >
         <X className="h-3 w-3" />
       </button>

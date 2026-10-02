@@ -1,0 +1,86 @@
+"use server";
+
+import { and, eq, or } from "drizzle-orm";
+import { MCP_SETTINGS } from "@/config/mcp";
+import { db } from "@/drizzle/db";
+import { mcpServer } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
+
+const log = getLogger(["app", "actions", "mcp"]);
+
+import { withMcpServer } from "@/lib/mcp/with-mcp-server";
+import { withTimeout } from "@/lib/mcp/with-timeout";
+
+/**
+ * Retrieves a specific prompt from an MCP server.
+ *
+ * @param serverId - The unique ID of the MCP server
+ * @param promptName - The name of the prompt to retrieve
+ * @param args - Optional arguments for the prompt
+ * @returns The prompt result including messages
+ */
+export async function getMcpPrompt(
+  serverId: string,
+  promptName: string,
+  args?: Record<string, string>,
+) {
+  const session = await requireSession();
+
+  // 1. Find the server and verify access
+  const [server] = await db
+    .select()
+    .from(mcpServer)
+    .where(
+      and(
+        eq(mcpServer.id, serverId),
+        or(eq(mcpServer.userId, session.user.id), eq(mcpServer.isPublic, true)),
+      ),
+    );
+
+  if (!server) {
+    throw new Error("Not Found");
+  }
+
+  if (!server.enabled) {
+    throw new Error("MCP server is disabled");
+  }
+
+  // 2. Connect and fetch prompt
+  try {
+    const config = mcpServerRowToConfig(server);
+
+    return await withMcpServer(config, async (client) => {
+      try {
+        const result = await withTimeout(
+          client.experimental_getPrompt({
+            name: promptName,
+            arguments: args,
+          }),
+          MCP_SETTINGS.MCP_TIMEOUT_MS,
+          `getPrompt ${promptName}`,
+        );
+
+        return result;
+      } catch (error) {
+        log.error(
+          "Failed to get prompt '{promptName}' from server '{serverName}': {error}",
+          {
+            promptName,
+            serverName: server.name,
+            error: error instanceof Error ? error.message : String(error),
+            userId: session.user.id,
+          },
+        );
+        throw error;
+      }
+    });
+  } catch (error) {
+    log.error("Error in getMcpPrompt: {error}", {
+      error: error instanceof Error ? error.message : String(error),
+      userId: session?.user?.id,
+    });
+    throw error;
+  }
+}

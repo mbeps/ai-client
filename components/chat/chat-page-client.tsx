@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChatUI } from "@/components/chat/chat-ui";
 import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
-import { ChatUI } from "@/components/chat/chat-ui";
 
 /**
  * Props for the ChatPageClient component.
@@ -33,15 +33,28 @@ export function ChatPageClient({
   initialMessage,
 }: ChatPageClientProps) {
   const upsertChat = useAppStore((state) => state.upsertChat);
-  const [hasSentInitial, setHasSentInitial] = useState(false);
+  const hasExistingMessages = Object.keys(initialChat.messages).length > 0;
+  const [hasSentInitial, setHasSentInitial] = useState(hasExistingMessages);
 
   useEffect(() => {
     upsertChat(initialChat);
-  }, [initialChat, upsertChat]);
+    if (initialMessage && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("msg")) {
+        url.searchParams.delete("msg");
+        window.history.replaceState(
+          {},
+          "",
+          url.pathname + (url.search ? url.search : ""),
+        );
+      }
+    }
+  }, [initialChat, upsertChat, initialMessage]);
 
   return (
     <ChatUI
       chatId={initialChat.id}
+      initialChat={initialChat}
       initialMessage={!hasSentInitial ? initialMessage : undefined}
       onInitialMessageSent={() => {
         setHasSentInitial(true);

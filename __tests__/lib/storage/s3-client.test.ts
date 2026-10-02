@@ -1,4 +1,4 @@
-vi.mock("@/lib/env", () => ({
+vi.mock("@/config/env", () => ({
   env: {
     DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     S3_BUCKET: "test-bucket",
@@ -46,16 +46,13 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
     .mockResolvedValue("https://example.com/presigned-url?token=abc"),
 }));
 
-import {
-  uploadObject,
-  deleteObject,
-  deleteObjects,
-  getPresignedUrl,
-  downloadObject,
-  ensureBucket,
-  S3_BUCKET,
-} from "@/lib/storage/s3-client";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { deleteObject } from "@/lib/storage/delete-object";
+import { deleteObjects } from "@/lib/storage/delete-objects";
+import { downloadObject } from "@/lib/storage/download-object";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
+import { S3_BUCKET } from "@/lib/storage/s3-instance";
+import { uploadObject } from "@/lib/storage/upload-object";
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -236,8 +233,14 @@ describe("downloadObject", () => {
 });
 
 describe("ensureBucket", () => {
-  beforeEach(() => {
+  // Reset module cache before each test so bucketVerified starts false
+  let ensureBucket: () => Promise<void>;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
+    const mod = await import("@/lib/storage/ensure-bucket");
+    ensureBucket = mod.ensureBucket;
   });
 
   it("does nothing when bucket already exists (HeadBucket succeeds)", async () => {

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { requiredPasswordField, sixDigitCodeField } from "../shared-fields";
+import {
+  requiredPasswordField,
+  sixDigitCodeField,
+} from "@/schemas/shared-fields";
 
 /**
  * Validates the password confirmation step for enabling or disabling two-factor authentication.

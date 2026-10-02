@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_CONFIG } from "@/config/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,14 +18,13 @@ const geistMono = Geist_Mono({
  * Default SEO metadata shared across all routes.
  */
 export const metadata: Metadata = {
-  title: "AI Chat Client",
-  description:
-    "AI chat client with support for streaming, tools and knowledge bases.",
+  title: SITE_CONFIG.NAME,
+  description: SITE_CONFIG.DESCRIPTION,
 };
 
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { PopoverProvider } from "@/components/ui/popover";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { PopoverProvider } from "@/components/ui/popover";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
  * Root layout providing global fonts (Geist), CSS, and UI providers.

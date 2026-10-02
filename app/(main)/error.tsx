@@ -1,7 +1,7 @@
 "use client";
 
+import { Home, RotateCcw } from "lucide-react";
 import { ErrorPage } from "@/components/shared/error-page";
-import { RotateCcw, Home } from "lucide-react";
 
 /**
  * Error boundary for main app routes (/chats, /assistants, /projects, /settings).

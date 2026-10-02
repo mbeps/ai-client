@@ -1,10 +1,10 @@
 "use client";
 
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { type ComponentProps, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useState, type ComponentProps } from "react";
 
 /**
  * Password input with an inline visibility toggle button.

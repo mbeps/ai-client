@@ -17,9 +17,9 @@ interface EmptyStateProps {
  */
 export function EmptyState({ message }: EmptyStateProps) {
   return (
-    <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed rounded-lg bg-muted/20">
-      <Inbox className="h-10 w-10 mx-auto mb-4 opacity-20" />
-      <p className="max-w-[250px] mx-auto text-sm">{message}</p>
+    <div className="col-span-full rounded-lg border border-dashed bg-muted/20 py-12 text-center text-muted-foreground">
+      <Inbox className="mx-auto mb-4 h-10 w-10 opacity-20" />
+      <p className="mx-auto max-w-[250px] text-sm">{message}</p>
     </div>
   );
 }

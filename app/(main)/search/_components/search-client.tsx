@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AssistantCard } from "@/components/assistant/assistant-card";
+import { ChatCard } from "@/components/chat/chat-card";
+import { ProjectCard } from "@/components/project/project-card";
+import { ResourceListPage } from "@/components/shared/resource-list-page";
 import {
   Select,
   SelectContent,
@@ -9,13 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ResourceListPage } from "@/components/shared/resource-list-page";
-import { ChatCard } from "@/components/chat/chat-card";
-import { ProjectCard } from "@/components/project/project-card";
-import { AssistantCard } from "@/components/assistant/assistant-card";
+import type { Assistant } from "@/types/assistant/assistant";
 import type { Chat } from "@/types/chat/chat";
 import type { Project } from "@/types/project/project";
-import type { Assistant } from "@/types/assistant/assistant";
 
 interface SearchClientProps {
   initialChats: Chat[];
@@ -97,13 +97,13 @@ export function SearchClient({
       <div className="space-y-10">
         {projects.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Projects</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+            <div className="mb-4 flex items-center gap-2">
+              <h2 className="font-bold text-xl tracking-tight">Projects</h2>
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
                 {projects.length}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {projects.map((item) => (
                 <ProjectCard key={item.id} project={item.data} />
               ))}
@@ -113,13 +113,13 @@ export function SearchClient({
 
         {assistants.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Assistants</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+            <div className="mb-4 flex items-center gap-2">
+              <h2 className="font-bold text-xl tracking-tight">Assistants</h2>
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
                 {assistants.length}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {assistants.map((item) => (
                 <AssistantCard key={item.id} assistant={item.data} />
               ))}
@@ -129,13 +129,13 @@ export function SearchClient({
 
         {chats.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Chats</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+            <div className="mb-4 flex items-center gap-2">
+              <h2 className="font-bold text-xl tracking-tight">Chats</h2>
+              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
                 {chats.length}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {chats.map((item) => (
                 <ChatCard key={item.id} chat={item.data} />
               ))}

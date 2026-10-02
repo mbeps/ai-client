@@ -1,14 +1,14 @@
 "use client";
 
+import { Brain, ChevronDown, Loader2 } from "lucide-react";
+import { useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Brain, ChevronDown, Loader2 } from "lucide-react";
-import { MarkdownRenderer } from "../markdown-renderer";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { MarkdownRenderer } from "../markdown-renderer";
 
 interface ThinkingDisplayProps {
   reasoning: string;
@@ -50,21 +50,21 @@ export function ThinkingDisplay({
       <Collapsible
         open={isOpen}
         onOpenChange={setIsOpen}
-        className="w-full rounded-lg border border-muted bg-muted/20 overflow-hidden"
+        className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"
       >
         <CollapsibleTrigger
           className={cn(
-            "flex items-center gap-2 p-3 w-full text-sm font-medium transition-colors hover:bg-muted/30 outline-none",
-            isOpen ? "border-b border-muted" : "",
+            "flex w-full items-center gap-2 p-3 font-medium text-sm outline-none transition-colors hover:bg-muted/30",
+            isOpen ? "border-muted border-b" : "",
           )}
         >
-          <div className="flex items-center gap-2 flex-1 text-muted-foreground">
+          <div className="flex flex-1 items-center gap-2 text-muted-foreground">
             {isStreaming ? (
               <Loader2 className="size-4 animate-spin text-primary" />
             ) : (
               <Brain className="size-4" />
             )}
-            <span className="text-xs uppercase tracking-wider font-semibold">
+            <span className="font-semibold text-xs uppercase tracking-wider">
               {stepNumber ? `Step ${stepNumber}: ` : ""}
               {isStreaming ? "Thinking..." : "Thought process"}
             </span>
@@ -77,10 +77,10 @@ export function ThinkingDisplay({
           />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="p-4 text-sm text-muted-foreground/90 bg-muted/10 leading-relaxed max-h-[500px] overflow-y-auto custom-scrollbar">
+          <div className="custom-scrollbar max-h-[500px] overflow-y-auto bg-muted/10 p-4 text-muted-foreground/90 text-sm leading-relaxed">
             <MarkdownRenderer content={reasoning} />
             {isStreaming && (
-              <span className="inline-block w-1.5 h-4 ml-1 bg-primary/40 animate-pulse align-middle" />
+              <span className="ml-1 inline-block h-4 w-1.5 animate-pulse bg-primary/40 align-middle" />
             )}
           </div>
         </CollapsibleContent>

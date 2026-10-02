@@ -1,5 +1,8 @@
 "use client";
 
+import { Bot, BrainCircuit, Database, SquareTerminal, Zap } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandEmpty,
@@ -7,16 +10,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import type { Prompt } from "@/types/prompt/prompt";
-import type { Assistant } from "@/types/assistant/assistant";
-import { cn } from "@/lib/utils";
-import type {
-  MentionTrigger,
-  MentionItem,
+import {
+  isAssistantItem,
+  isKnowledgebaseItem,
+  isPromptItem,
+  isSkillItem,
+  type MentionItem,
+  type MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bot, Zap, SquareTerminal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { Assistant } from "@/types/assistant/assistant";
 
 interface MentionCommandsProps {
   items: MentionItem[];
@@ -28,16 +31,9 @@ interface MentionCommandsProps {
 }
 
 /**
- * Dropdown menu for mention commands (prompts via `/` and assistants via `@`).
- * Renders items with icons, names, and optional badges.
- * Navigates with keyboard arrows and closes on selection or escape.
+ * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`).
+ * Separates Skills into their own distinct group from Prompts.
  *
- * @param props.items - Array of promptsor assistants to display.
- * @param props.trigger - Trigger character ('/' for prompts, '@' for assistants).
- * @param props.selectedIndex - Current keyboard selection index.
- * @param props.onSelect - Callback when user selects an item.
- * @param props.onClose - Callback to close the menu.
- * @param props.className - Optional CSS classes for positioning.
  * @author Maruf Bepary
  */
 export function MentionCommands({
@@ -45,69 +41,102 @@ export function MentionCommands({
   trigger,
   selectedIndex,
   onSelect,
-  onClose,
   className,
 }: MentionCommandsProps) {
   if (!trigger) return null;
 
+  const skillItems = items.filter(isSkillItem);
+  const promptItems = items.filter(isPromptItem);
+  const assistantItems = items.filter(isAssistantItem);
+  const knowledgebaseItems = items.filter(isKnowledgebaseItem);
+
+  const getEmptyMessage = () => {
+    switch (trigger) {
+      case "/":
+        return "skills or prompts";
+      case "@":
+        return "assistants";
+      case "#":
+        return "knowledgebases";
+      default:
+        return "items";
+    }
+  };
+
   return (
     <div
       className={cn(
-        "z-50 w-[350px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
+        "fade-in-0 zoom-in-95 z-50 w-[380px] animate-in overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
         className,
       )}
     >
-      <Command className="h-auto" value={items[selectedIndex]?.id}>
-        <CommandList className="max-h-[250px]">
-          <CommandEmpty>
-            No {trigger === "/" ? "prompts" : "assistants"} found.
-          </CommandEmpty>
-          <CommandGroup heading={trigger === "/" ? "Prompts" : "Assistants"}>
-            {items.map((item, index) => {
-              const isPromptTrigger = trigger === "/";
-              const isAssistantTrigger = trigger === "@";
+      <Command
+        className="h-auto"
+        value={items[selectedIndex]?.id}
+        shouldFilter={false}
+      >
+        <CommandList className="max-h-[300px]">
+          <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
-              const isMcp = "isMcp" in item && item.isMcp;
-
-              return (
-                <CommandItem
-                  key={item.id}
-                  value={item.id}
-                  onSelect={() => onSelect(item)}
-                  className={cn(
-                    "flex items-center gap-2 py-2 px-3",
-                    index === selectedIndex &&
-                      "bg-accent text-accent-foreground",
-                  )}
-                >
-                  {isAssistantTrigger && !isMcp && (
-                    <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage
-                        src={(item as Assistant).avatar ?? undefined}
-                      />
-                      <AvatarFallback>
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  {isPromptTrigger && isMcp && (
-                    <Zap className="h-4 w-4 text-amber-500 shrink-0" />
-                  )}
-                  {isPromptTrigger && !isMcp && (
-                    <SquareTerminal className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
-
-                  <div className="flex flex-col w-full overflow-hidden">
-                    <div className="flex w-full items-center justify-between">
-                      <span className="font-medium truncate">
-                        {isMcp
-                          ? (item as any).name
-                          : isPromptTrigger
-                            ? (item as any).title
-                            : (item as any).name}
+          {trigger === "/" && skillItems.length > 0 && (
+            <CommandGroup heading="Skills">
+              {skillItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <BrainCircuit className="h-4 w-4 shrink-0 text-primary" />
+                    <div className="flex w-full items-center justify-between overflow-hidden">
+                      <span className="truncate font-medium">
+                        {item.displayName || item.name}
                       </span>
-                      {isPromptTrigger && !isMcp && (
-                        <span className="text-[10px] text-muted-foreground uppercase bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0">
+                      <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        /{item.name}
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {trigger === "/" && promptItems.length > 0 && (
+            <CommandGroup heading="Prompts">
+              {promptItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                const isMcp = "isMcp" in item && item.isMcp;
+
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    {isMcp ? (
+                      <Zap className="h-4 w-4 shrink-0 text-amber-500" />
+                    ) : (
+                      <SquareTerminal className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+
+                    <div className="flex w-full items-center justify-between overflow-hidden">
+                      <span className="truncate font-medium">
+                        {isMcp ? (item as any).name : (item as any).title}
+                      </span>
+                      {!isMcp && (
+                        <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">
                           {(item as any).shortcut.startsWith("/")
                             ? (item as any).shortcut
                             : `/${(item as any).shortcut}`}
@@ -116,27 +145,90 @@ export function MentionCommands({
                       {isMcp && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1 py-0 h-4 ml-2 max-w-[100px] truncate"
+                          className="ml-2 h-4 max-w-[100px] truncate px-1 py-0 font-normal text-[10px]"
                         >
                           {(item as any).sourceServer}
                         </Badge>
                       )}
                     </div>
-                    {((!isMcp &&
-                      isAssistantTrigger &&
-                      (item as Assistant).description) ||
-                      (isMcp && (item as any).description)) && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        {isMcp
-                          ? (item as any).description
-                          : (item as Assistant).description}
-                      </span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {trigger === "@" && assistantItems.length > 0 && (
+            <CommandGroup heading="Assistants">
+              {assistantItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
                     )}
-                  </div>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
+                  >
+                    <Avatar className="h-6 w-6 shrink-0">
+                      <AvatarImage
+                        src={(item as Assistant).avatar ?? undefined}
+                      />
+                      <AvatarFallback>
+                        <Bot className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">
+                        {(item as Assistant).name}
+                      </span>
+                      {(item as Assistant).description && (
+                        <span className="truncate text-muted-foreground text-xs">
+                          {(item as Assistant).description}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {trigger === "#" && knowledgebaseItems.length > 0 && (
+            <CommandGroup heading="Knowledgebases">
+              {knowledgebaseItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <Database className="h-4 w-4 shrink-0 text-blue-500" />
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">{item.name}</span>
+                      {item.description && (
+                        <span className="truncate text-muted-foreground text-xs">
+                          {item.description}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs">
+                        {item.documentCount} documents • {item.indexStatus}
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
         </CommandList>
       </Command>
     </div>

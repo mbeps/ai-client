@@ -1,6 +1,18 @@
 "use client";
 
-import * as React from "react";
+import {
+  BrainCircuit,
+  ChevronLeft,
+  Command,
+  Database,
+  LogOut,
+  Plug,
+  Settings,
+  Wrench,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type * as React from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,22 +25,14 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import {
-  Settings,
-  Wrench,
-  ChevronLeft,
-  LogOut,
-  Command,
-  Database,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { ROUTES } from "@/config/routes";
+import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Sidebar for the /settings section.
- * Provides navigation to General (app preferences), Tools (MCP server management), and Prompts (slash-command shortcuts).
+ * Provides navigation to General (app preferences), Connectors (MCP server management), and Prompts (slash-command shortcuts).
  * "Back to Home" button returns to main chat interface. Active route is highlighted based on `pathname`.
  *
  * @see ROUTES.SETTINGS for available settings page routes
@@ -46,9 +50,9 @@ export function SettingsSidebar({
       icon: Settings,
     },
     {
-      name: "Tools",
-      href: ROUTES.SETTINGS.TOOLS.path,
-      icon: Wrench,
+      name: "Connectors",
+      href: ROUTES.SETTINGS.CONNECTORS.path,
+      icon: Plug,
     },
     {
       name: "Providers",
@@ -59,6 +63,16 @@ export function SettingsSidebar({
       name: "Prompts",
       href: ROUTES.SETTINGS.PROMPTS.path,
       icon: Command,
+    },
+    {
+      name: "Skills",
+      href: ROUTES.SETTINGS.SKILLS.path,
+      icon: BrainCircuit,
+    },
+    {
+      name: "Tools",
+      href: ROUTES.SETTINGS.TOOLS.path,
+      icon: Wrench,
     },
   ];
 
@@ -77,8 +91,8 @@ export function SettingsSidebar({
           <SidebarSeparator className="mx-0 my-2" />
           <SidebarMenuItem>
             <div className="px-3 py-2">
-              <h2 className="text-lg font-semibold tracking-tight">Settings</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="font-semibold text-lg tracking-tight">Settings</h2>
+              <p className="text-muted-foreground text-xs">
                 Manage your application preferences
               </p>
             </div>
@@ -95,12 +109,16 @@ export function SettingsSidebar({
                   asChild
                   isActive={
                     pathname === item.href ||
-                    (item.name === "Tools" &&
-                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path)) ||
+                    (item.name === "Connectors" &&
+                      pathname.startsWith(ROUTES.SETTINGS.CONNECTORS.path)) ||
                     (item.name === "Providers" &&
                       pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
                     (item.name === "Prompts" &&
-                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path))
+                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path)) ||
+                    (item.name === "Skills" &&
+                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path)) ||
+                    (item.name === "Tools" &&
+                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path))
                   }
                   tooltip={item.name}
                 >
@@ -121,6 +139,9 @@ export function SettingsSidebar({
             <SidebarMenuButton
               onClick={async () => {
                 await authClient.signOut();
+                useAppStore.getState().resetEntityState();
+                useAppStore.getState().resetChatState();
+                hydratedResources.clear();
                 router.push(ROUTES.AUTH.LOGIN.path);
               }}
               className="text-destructive hover:text-destructive focus:text-destructive"

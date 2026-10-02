@@ -1,13 +1,29 @@
 "use client";
 
+import {
+  Activity,
+  Bot,
+  ChevronRight,
+  Database,
+  FolderOpen,
+  MessageSquare,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Search,
+  Workflow,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as React from "react";
+import { listChats } from "@/actions/chats/list-chats";
+import { ChatOptions } from "@/components/chat/chat-options";
+import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupAction,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -15,71 +31,40 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  MessageSquarePlus,
-  FolderOpen,
-  Bot,
-  Database,
-  Wrench,
-  Search,
-  MessageSquare,
-  Settings,
-  ChevronsUpDown,
-  LogOut,
-  User,
-  ChevronRight,
-  MoreHorizontal,
-  Workflow,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAppStore } from "@/lib/store";
-import { listChats } from "@/lib/actions/chats/list-chats";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth/auth-client";
-import { ROUTES } from "@/constants/routes";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-  DropdownMenuGroup,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-
-import { ChatOptions } from "@/components/chat/chat-options";
+import { useAppStore } from "@/lib/store";
+import { cn, sortByUpdatedAt } from "@/lib/utils";
 
 /**
  * Main application sidebar for authenticated routes.
  * Renders the "New Chat" button, navigation sections (Projects, Assistants, Knowledgebases),
  * up to 20 recent chats (sorted by `updatedAt` from Zustand store), and user footer with avatar dropdown.
  * Fetches chat history on mount via `listChats()` and handles optimistic UI with Zustand.
- * Responsive: collapses on mobile via `useSidebar()` hook.
  *
  * @see ChatActionMenu for per-chat action menu (rename, move, delete)
  * @see useCreateChat for new chat initialization
  * @see useAppStore for chat state management
+ * @see SidebarUserFooter for the user profile footer and action dropdown
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter();
-  const { data: session } = authClient.useSession();
-  const { isMobile } = useSidebar();
-
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
   const createNewChat = useCreateChat();
+  const pathname = usePathname();
   const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
-  const recentChats = Object.values(chats)
-    .filter((chat) => !chat.projectId)
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-    .slice(0, 20);
+  const recentChats = sortByUpdatedAt(
+    Object.values(chats).filter((chat) => !chat.projectId),
+  ).slice(0, 20);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats once on sidebar mount
   React.useEffect(() => {
     listChats()
       .then((rows) => {
@@ -88,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .catch(() => {
         // silently ignore — sidebar will show empty state
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleNewChat = () => createNewChat();
 
@@ -100,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               onClick={handleNewChat}
               tooltip="New Chat"
-              className="font-semibold h-10"
+              className="h-10 font-semibold"
             >
               <MessageSquarePlus className="h-4 w-4" />
               New Chat
@@ -153,6 +138,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Running Jobs">
+                <Link href={ROUTES.JOBS.path}>
+                  <Activity className="h-4 w-4" />
+                  <span>Running Jobs</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 
@@ -163,22 +156,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel asChild>
             <Link
               href={ROUTES.CHATS.path}
-              className="hover:text-primary cursor-pointer flex items-center w-full"
+              className="flex w-full cursor-pointer items-center hover:text-primary"
             >
               Recent Chats
             </Link>
           </SidebarGroupLabel>
-          <SidebarGroupAction
-            onClick={() => setIsChatsCollapsed(!isChatsCollapsed)}
-            title={isChatsCollapsed ? "Expand" : "Collapse"}
-          >
-            <ChevronRight
-              className={cn(
-                "transition-transform duration-200",
-                !isChatsCollapsed && "rotate-90",
-              )}
-            />
-          </SidebarGroupAction>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarGroupAction
+                onClick={() => setIsChatsCollapsed(!isChatsCollapsed)}
+                aria-label={isChatsCollapsed ? "Expand" : "Collapse"}
+              >
+                <ChevronRight
+                  className={cn(
+                    "transition-transform duration-200",
+                    !isChatsCollapsed && "rotate-90",
+                  )}
+                />
+              </SidebarGroupAction>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isChatsCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
           {!isChatsCollapsed && (
             <SidebarMenu>
               {recentChats.map((chat) => {
@@ -187,7 +187,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   : ROUTES.CHATS.detail(chat.id);
                 return (
                   <SidebarMenuItem key={chat.id}>
-                    <SidebarMenuButton asChild tooltip={chat.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={chat.title}
+                      isActive={pathname === href}
+                    >
                       <Link href={href}>
                         <MessageSquare className="h-4 w-4" />
                         <span className="truncate">{chat.title}</span>
@@ -210,99 +214,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                >
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage
-                      src={session?.user?.image || undefined}
-                      alt={session?.user?.name || ""}
-                    />
-                    <AvatarFallback className="rounded-lg">
-                      {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {session?.user?.name}
-                    </span>
-                    <span className="truncate text-xs">
-                      {session?.user?.email}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-auto size-4" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side={isMobile ? "bottom" : "right"}
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="p-0 font-normal">
-                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage
-                        src={session?.user?.image || undefined}
-                        alt={session?.user?.name || ""}
-                      />
-                      <AvatarFallback className="rounded-lg">
-                        {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">
-                        {session?.user?.name}
-                      </span>
-                      <span className="truncate text-xs">
-                        {session?.user?.email}
-                      </span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={ROUTES.PROFILE.path}
-                      className="cursor-pointer w-full"
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={ROUTES.SETTINGS.path}
-                      className="cursor-pointer w-full"
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={async () => {
-                    await authClient.signOut();
-                    router.push(ROUTES.AUTH.LOGIN.path);
-                  }}
-                  className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      <SidebarUserFooter />
+
       <SidebarRail />
     </Sidebar>
   );

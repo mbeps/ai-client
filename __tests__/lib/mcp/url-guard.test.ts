@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isBlockedUrl } from "@/lib/mcp/url-guard";
-import { isBlockedUrlSync } from "@/lib/mcp/url-guard-core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { env } from "@/config/env";
+import { isBlockedIPv6 } from "@/lib/mcp/url-guard/is-blocked-ipv6";
+import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
+import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 
 // Mock DNS resolver to return controlled results, avoiding network dependency in tests
 const { mockDnsResolver } = vi.hoisted(() => ({
@@ -16,9 +18,12 @@ describe("isBlockedUrl", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    // SSRF guard reads the parsed env object; default to blocked
+    vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(false);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     process.env = originalEnv;
   });
 
@@ -210,24 +215,25 @@ describe("isBlockedUrl", () => {
     });
   });
 
-  describe("NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
+  describe("ALLOW_PRIVATE_NETWORK_MCP toggle", () => {
+    // is-blocked-url* now reads the parsed `env` object, so stub it directly
     it("blocks localhost by default (env=false)", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "false";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(false);
       expect(await isBlockedUrl("http://localhost")).toBe(true);
     });
 
     it("allows localhost when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("http://localhost")).toBe(false);
     });
 
     it("allows private IPv4 when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("http://192.168.1.1")).toBe(false);
     });
 
     it("still blocks unparseable URLs even when env is true", async () => {
-      process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP = "true";
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("not-a-url")).toBe(true);
     });
   });
@@ -344,6 +350,79 @@ describe("isBlockedUrl", () => {
       await isBlockedUrl("http://localhost");
       expect(mockDnsResolver).not.toHaveBeenCalled();
     });
+
+    // DNS rebinding hardening (F-03/SEC-05): resolveHostname returns [] when
+    // both A and AAAA lookups fail gracefully — an empty result must block,
+    // not allow.
+    it("blocks hostname resolving to empty address list (silent DNS failure)", async () => {
+      mockDnsResolver.mockResolvedValue([]);
+      expect(await isBlockedUrl("http://empty-dns.example.com")).toBe(true);
+    });
+
+    it("blocks hostname whose resolved addresses include a private IP mixed with public IPs", async () => {
+      mockDnsResolver.mockResolvedValue(["93.184.216.34", "10.0.0.5"]);
+      expect(await isBlockedUrl("http://mixed.example.com")).toBe(true);
+    });
+
+    it("re-checks every resolved address on each call (no cached trust)", async () => {
+      mockDnsResolver
+        .mockResolvedValueOnce(["93.184.216.34"]) // first call: public → allowed
+        .mockResolvedValueOnce(["192.168.1.1"]); // second call: rotated DNS → blocked
+      expect(await isBlockedUrl("http://rotating.example.com")).toBe(false);
+      expect(await isBlockedUrl("http://rotating.example.com")).toBe(true);
+    });
+
+    it("blocks when DNS resolution times out after 5s", async () => {
+      vi.useFakeTimers();
+      mockDnsResolver.mockReturnValue(new Promise(() => {})); // never resolves
+      const promise = isBlockedUrl("http://hanging.example.com");
+      await vi.advanceTimersByTimeAsync(5001);
+      const result = await promise;
+      expect(result).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it("handles URL parse failure inside isBlockedUrl body defensively", async () => {
+      const origURL = globalThis.URL;
+      let count = 0;
+      vi.spyOn(globalThis, "URL").mockImplementation(function (this: any, ...args: any[]) {
+        count++;
+        if (count === 1) {
+          // isBlockedUrlSync passes
+          return new origURL(args[0], args[1]);
+        }
+        // isBlockedUrl second call throws
+        throw new Error("corrupted url");
+      } as any);
+
+      expect(await isBlockedUrl("https://defensive-check.example.com")).toBe(true);
+      vi.restoreAllMocks();
+    });
+  });
+});
+
+describe("isBlockedIPv6 direct checks", () => {
+  it("validates IPv4-mapped IPv6 addresses", () => {
+    expect(isBlockedIPv6("::ffff:192.168.1.1")).toBe(true);
+    expect(isBlockedIPv6("::ffff:8.8.8.8")).toBe(false);
+  });
+
+  it("handles empty or invalid first group", () => {
+    expect(isBlockedIPv6("::")).toBe(false);
+    expect(isBlockedIPv6("zzzz::1")).toBe(false);
+  });
+
+  it("handles split returning empty array to hit defensive fallback", () => {
+    const origSplit = String.prototype.split;
+    vi.spyOn(String.prototype, "split").mockImplementation(function (this: string, ...args: any[]) {
+      if (this === "mock-empty-split") {
+        return [] as any;
+      }
+      return origSplit.apply(this, args as any);
+    });
+
+    expect(isBlockedIPv6("mock-empty-split")).toBe(false);
+    vi.restoreAllMocks();
   });
 });
 
@@ -364,6 +443,12 @@ describe("isBlockedUrlSync", () => {
 
   it("blocks private IP (sync)", () => {
     expect(isBlockedUrlSync("http://192.168.1.1")).toBe(true);
+  });
+
+  it("blocks CGNAT 100.64.0.0/10 IP (sync)", () => {
+    expect(isBlockedUrlSync("http://100.64.0.1")).toBe(true);
+    expect(isBlockedUrlSync("http://100.127.255.255")).toBe(true);
+    expect(isBlockedUrlSync("http://100.128.0.1")).toBe(false);
   });
 
   it("allows public IP (sync)", () => {
