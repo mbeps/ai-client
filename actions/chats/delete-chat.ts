@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { getLogger } from "@/lib/logger";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
 
@@ -44,6 +45,8 @@ export async function deleteChat(chatId: string): Promise<void> {
     .returning({ id: chat.id });
 
   if (!deleted) throw new Error("Not Found");
+
+  await abortChatStream(validatedChatId, session.user.id);
 
   await sweepOrphanedAttachmentKeys(keys.map((k) => k.key));
 

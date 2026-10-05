@@ -144,7 +144,7 @@ beforeEach(() => {
   mockIsChatGenerating.mockReset();
   mockIsChatGenerating.mockResolvedValue(false);
   mockStoreState.upsertChat.mockClear();
-  mockStoreState.chats = {};
+  mockStoreState.chats = { "chat-1": { id: "chat-1", messages: {} } };
   mockLogError.mockClear();
   mockHandleApiError.mockReset();
   mockHandleApiError.mockReturnValue(false);
@@ -2019,6 +2019,122 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       expect(mockGetChat).toHaveBeenCalledWith("chat-1");
       expect(mockStoreState.upsertChat).toHaveBeenCalled();
       expect(onDone).toHaveBeenCalledWith("already finished reply");
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  describe("resilience against deleted chats", () => {
+    it("skips getChat in syncFromDb when chat is not in store", async () => {
+      mockStoreState.chats = {}; // Empty store / deleted chat
+      mockIsChatGenerating.mockResolvedValue(true);
+      const { rerender } = renderHook(() => useStreamResponse("chat-deleted"));
+
+      // Trigger connection error to cause syncFromDb invocation
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerender();
+      });
+
+      expect(mockGetChat).not.toHaveBeenCalled();
+    });
+
+    it("absorbs 'Not Found' error in syncFromDb without logging an error", async () => {
+      mockStoreState.chats = {
+        "chat-1": {
+          id: "chat-1",
+          currentLeafId: "user-1",
+          messages: { "user-1": { id: "user-1", role: "user", content: "hi" } },
+        },
+      };
+      mockIsChatGenerating.mockResolvedValue(true);
+      mockGetChat.mockRejectedValueOnce(new Error("Not Found"));
+
+      const { rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Trigger connection error to cause syncFromDb invocation
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerender();
+      });
+
+      expect(mockGetChat).toHaveBeenCalledWith("chat-1");
+      expect(mockLogError).not.toHaveBeenCalled();
+    });
+
+    it("skips getChat and resets streaming state when finish event arrives for a deleted rejoined chat", async () => {
+      mockIsChatGenerating.mockResolvedValue(true);
+      mockStoreState.chats = {
+        "chat-1": {
+          id: "chat-1",
+          currentLeafId: "user-1",
+          messages: { "user-1": { id: "user-1", role: "user", content: "hi" } },
+        },
+      };
+
+      const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.isLoading).toBe(true);
+
+      // Now chat is deleted from store
+      mockStoreState.chats = {};
+
+      // Finish event arrives over realtime
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [{ data: { type: "finish", finishReason: "stop" } }],
+        };
+        rerender();
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockGetChat).not.toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it("absorbs 'Not Found' error on rejoin finish without logging an error", async () => {
+      mockIsChatGenerating.mockResolvedValue(true);
+      mockStoreState.chats = {
+        "chat-1": {
+          id: "chat-1",
+          currentLeafId: "user-1",
+          messages: { "user-1": { id: "user-1", role: "user", content: "hi" } },
+        },
+      };
+      mockGetChat.mockRejectedValueOnce(new Error("Not Found"));
+
+      const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.isLoading).toBe(true);
+
+      // Finish event arrives over realtime
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [{ data: { type: "finish", finishReason: "stop" } }],
+        };
+        rerender();
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockGetChat).toHaveBeenCalledWith("chat-1");
+      expect(mockLogError).not.toHaveBeenCalled();
       expect(result.current.isLoading).toBe(false);
     });
   });

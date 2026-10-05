@@ -261,9 +261,10 @@ export function useStreamResponse(
 
         case "finish": {
           lastChunkTimeRef.current = 0;
+          const chatExists = Boolean(useAppStore.getState().chats?.[chatId]);
 
           if (rejoinedRef.current) {
-            if (chatId) {
+            if (chatId && chatExists) {
               try {
                 const data = await getChat(chatId);
                 const fullChat = buildChatFromRows(data);
@@ -285,7 +286,11 @@ export function useStreamResponse(
                   options?.onDone?.(assistantMsg.content);
                 }
               } catch (err) {
-                logger.error("Failed to refetch chat on rejoin finish", err);
+                if (err instanceof Error && err.message.includes("Not Found")) {
+                  // Chat was deleted concurrently; gracefully ignore
+                } else {
+                  logger.error("Failed to refetch chat on rejoin finish", err);
+                }
               }
             }
 
@@ -404,6 +409,7 @@ export function useStreamResponse(
 
   const syncFromDb = useCallback(async () => {
     if (!chatId) return false;
+    if (!useAppStore.getState().chats?.[chatId]) return false;
     try {
       const data = await getChat(chatId);
       const userMsgId = pendingRef.current.userMessageId;
@@ -430,6 +436,9 @@ export function useStreamResponse(
         return true;
       }
     } catch (err) {
+      if (err instanceof Error && err.message.includes("Not Found")) {
+        return false;
+      }
       logger.error("Failed to sync chat from DB", err);
     }
     return false;

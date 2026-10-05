@@ -3,7 +3,10 @@ import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
-import { loadChatContext } from "@/lib/chat/load-chat-context";
+import {
+  ChatNotFoundError,
+  loadChatContext,
+} from "@/lib/chat/load-chat-context";
 import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
@@ -331,14 +334,31 @@ export const generateChatResponse = inngest.createFunction(
         finishReason,
       });
 
+      // Pre-persistence abort check: halt if aborted during completion processing
+      if (abortController.signal.aborted) {
+        log.info(
+          "Chat generation cleanly aborted before persistence (chatId: {chatId})",
+          { chatId },
+        );
+        return;
+      }
+
       // Persist completed assistant message to database
-      await persistAssistantResponse({
+      const persisted = await persistAssistantResponse({
         chatId,
         assistantMessageId,
         content: accumulatedText,
         parentId: userMessageId,
         metadata,
       });
+
+      if (!persisted) {
+        log.info(
+          "Chat was deleted concurrently; skipping completion emit (chatId: {chatId})",
+          { chatId },
+        );
+        return;
+      }
 
       await emit({
         type: "finish",
@@ -358,6 +378,16 @@ export const generateChatResponse = inngest.createFunction(
         log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
           chatId,
         });
+        return;
+      }
+      if (
+        error instanceof ChatNotFoundError ||
+        (error as Record<string, unknown> | null)?.code === "CHAT_NOT_FOUND"
+      ) {
+        log.info(
+          "Chat generation cleanly aborted or chat not found (chatId: {chatId})",
+          { chatId },
+        );
         return;
       }
       const classified = classifyProviderError(error);

@@ -27,9 +27,14 @@ vi.mock("@/lib/chat/resolve-default-chat-provider", () => ({
   resolveDefaultChatProvider: mockResolveProvider,
 }));
 
-vi.mock("@/lib/chat/load-chat-context", () => ({
-  loadChatContext: mockLoadChatContext,
-}));
+vi.mock("@/lib/chat/load-chat-context", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/chat/load-chat-context")>();
+  return {
+    ...actual,
+    loadChatContext: mockLoadChatContext,
+  };
+});
 
 vi.mock("@/lib/chat/load-thread-from-db", () => ({
   loadThreadFromDb: mockLoadThread,
@@ -87,11 +92,13 @@ vi.mock("@/lib/logger", () => ({
 
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
 import { inngest } from "@/lib/inngest/client";
 
 describe("generateChatResponse Inngest Function", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPersistResponse.mockResolvedValue(true);
     mockGetUserSettings.mockResolvedValue(null);
     abortState.controller = new AbortController();
     mockRegisterMcpTools.mockImplementation(
@@ -832,6 +839,83 @@ describe("generateChatResponse Inngest Function", () => {
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ type: "error" }),
+      );
+    });
+
+    it("skips finish emission and exits cleanly when persistAssistantResponse returns false", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-concurrent-delete",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+    });
+
+    it("exits cleanly without error event or rethrow when ChatNotFoundError is raised", async () => {
+      mockLoadChatContext.mockRejectedValueOnce(new ChatNotFoundError("chat-deleted"));
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-deleted",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "error" }),
+      );
+    });
+
+    it("exits cleanly and skips persistence if stream was aborted before persistAssistantResponse", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      mockStreamText.mockReturnValue({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Text" };
+        })(),
+        finishReason: Promise.resolve("stop").then((res) => {
+          controller.abort();
+          return res;
+        }),
+        usage: Promise.resolve(undefined),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
       );
     });
   });

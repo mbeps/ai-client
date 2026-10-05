@@ -84,8 +84,13 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
+vi.mock("@/lib/chat/abort-chat-stream", () => ({
+  abortChatStream: vi.fn().mockResolvedValue(true),
+}));
+
 import { createChat } from "@/actions/chats/create-chat";
 import { deleteChat } from "@/actions/chats/delete-chat";
+import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { getChat } from "@/actions/chats/get-chat";
 import { listChats } from "@/actions/chats/list-chats";
 import { moveChat } from "@/actions/chats/move-chat";
@@ -253,6 +258,7 @@ describe("deleteChat", () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deleteChat(VALID_UUID)).resolves.toBeUndefined();
     expect(chainable.delete).toHaveBeenCalledOnce();
+    expect(abortChatStream).toHaveBeenCalledWith(VALID_UUID, "user-1");
   });
 
   it("throws 'Not Found' when chat does not exist or is not owned", async () => {
@@ -262,6 +268,7 @@ describe("deleteChat", () => {
     }));
     chainable.returning.mockResolvedValueOnce([]);
     await expect(deleteChat(VALID_UUID)).rejects.toThrow("Not Found");
+    expect(abortChatStream).not.toHaveBeenCalled();
   });
 
   it("throws ZodError when chatId is not a UUID", async () => {

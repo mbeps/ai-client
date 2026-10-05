@@ -21,6 +21,20 @@ vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
 
 describe("persistAssistantResponse", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    chainable.select.mockImplementation(() => chainable);
+    chainable.from.mockImplementation(() => chainable);
+    chainable.insert.mockImplementation(() => chainable);
+    chainable.values.mockImplementation(() => chainable);
+    chainable.update.mockImplementation(() => chainable);
+    chainable.set.mockImplementation(() => chainable);
+    chainable.where.mockImplementation(() => chainable);
+    chainable.limit.mockResolvedValue([]);
+    chainable.onConflictDoNothing.mockImplementation(() => chainable);
+    chainable.returning.mockResolvedValue([{ id: "msg-1" }]);
+  });
+
   it("inserts message and updates chat leaf", async () => {
     await persistAssistantResponse({
       chatId: "chat-1",
@@ -123,5 +137,86 @@ describe("persistAssistantResponse", () => {
     // The `if (parentId)` guard skips the lookup entirely for a root message.
     expect(chainable.limit).not.toHaveBeenCalled();
     expect(chainable.insert).toHaveBeenCalledOnce();
+  });
+
+  it("returns true when assistant response is successfully inserted and chat updated", async () => {
+    chainable.limit.mockResolvedValueOnce([]);
+    chainable.returning.mockResolvedValueOnce([{ id: "msg-1" }]);
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-1",
+      content: "Hello",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(true);
+    expect(chainable.update).toHaveBeenCalled();
+  });
+
+  it("returns false when skipping insertion because partial reply already exists", async () => {
+    chainable.limit.mockResolvedValueOnce([{ id: "msg-partial" }]);
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-new",
+      content: "Full answer",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when insert is skipped due to conflict (!inserted)", async () => {
+    chainable.limit.mockResolvedValueOnce([]);
+    chainable.returning.mockResolvedValueOnce([]);
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-1",
+      assistantMessageId: "msg-duplicate",
+      content: "Duplicate",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false without throwing when foreign key violation (23503) occurs on delete", async () => {
+    chainable.limit.mockResolvedValueOnce([]);
+    const fkViolation = new Error(
+      'insert violates foreign key constraint "message_chat_id_chat_id_fk"',
+    );
+    (fkViolation as any).code = "23503";
+    chainable.returning.mockRejectedValueOnce(fkViolation);
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-deleted",
+      assistantMessageId: "msg-1",
+      content: "Hello",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("re-throws unexpected database errors", async () => {
+    chainable.limit.mockResolvedValueOnce([]);
+    const dbErr = new Error("Connection terminated unexpectedly");
+    (dbErr as any).code = "08006";
+    chainable.returning.mockRejectedValueOnce(dbErr);
+
+    await expect(
+      persistAssistantResponse({
+        chatId: "chat-1",
+        assistantMessageId: "msg-1",
+        content: "Hello",
+        parentId: "msg-0",
+        metadata: null,
+      }),
+    ).rejects.toThrow("Connection terminated unexpectedly");
   });
 });
