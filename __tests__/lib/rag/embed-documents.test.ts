@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const embedManyMock = vi.hoisted(() => vi.fn());
 
 vi.mock("ai", () => ({ embedMany: embedManyMock }));
-vi.mock("@/lib/chat/resolve-embedding-provider", () => ({
+vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
   resolveEmbeddingProvider: vi.fn().mockResolvedValue({
     sdkProvider: { embeddingModel: vi.fn() },
     modelId: "test-model",
@@ -14,7 +14,7 @@ vi.mock("@/lib/rag/prefixed-embedding-models", () => ({
   PREFIXED_EMBEDDING_MODELS: new Set<string>(["prefixed-model"]),
 }));
 
-import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { embedDocuments } from "../../../lib/rag/embed-documents";
 
 describe("embedDocuments batching", () => {

@@ -5,7 +5,6 @@ import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { abortChatStream } from "@/lib/chat/abort-chat-stream";
-import { inngest } from "@/lib/inngest/client";
 import { cancelInngestRun } from "@/lib/inngest/run-service";
 
 /**
@@ -14,7 +13,7 @@ import { cancelInngestRun } from "@/lib/inngest/run-service";
 export interface CancelJobOptions {
   /** Optional chat ID to abort in-memory streaming and dispatch `chat/response.cancel`. */
   chatId?: string;
-  /** Optional transform run ID to mark failed in DB and dispatch `workflows/transform.cancel`. */
+  /** Optional transform run ID to mark failed in DB. */
   transformRunId?: string;
 }
 
@@ -26,7 +25,7 @@ export interface CancelJobOptions {
  * - If `chatId` is provided: triggers `chatAbortRegistry.abort(chatId)` to terminate the in-memory
  *   HTTP connection to the LLM provider in <1ms, and broadcasts `chat/response.cancel` via Inngest.
  * - If `transformRunId` is provided: updates the `transformRun` database record to `status: "failed"`
- *   with errorMessage "Cancelled by user", and broadcasts `workflows/transform.cancel` via Inngest.
+ *   with errorMessage "Cancelled by user".
  *
  * @param runId Inngest run identifier to cancel.
  * @param options Contextual entity IDs for dual-layer cancellation.
@@ -56,7 +55,7 @@ export async function cancelJob(
     }
   }
 
-  // 2. If this is a transform run, update DB record and broadcast event
+  // 2. If this is a transform run, update DB record to failed
   if (options?.transformRunId) {
     await db
       .update(transformRun)
@@ -70,14 +69,6 @@ export async function cancelJob(
           eq(transformRun.userId, userId),
         ),
       );
-
-    await inngest.send({
-      name: "workflows/transform.cancel",
-      data: {
-        runId: options.transformRunId,
-        userId,
-      },
-    });
   }
 
   // 3. For non-chat jobs (e.g. transform, translation, or generic Inngest runs),

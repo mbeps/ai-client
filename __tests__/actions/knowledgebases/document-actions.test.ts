@@ -53,7 +53,7 @@ vi.mock("@/lib/storage/s3-instance", () => ({
 }));
 
 const resolveEmbeddingMock = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/chat/resolve-embedding-provider", () => ({
+vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
   resolveEmbeddingProvider: resolveEmbeddingMock,
 }));
 

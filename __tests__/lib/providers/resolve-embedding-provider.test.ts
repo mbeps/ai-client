@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ProviderNotConfiguredError } from "@/lib/errors";
-import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),

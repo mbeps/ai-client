@@ -211,7 +211,6 @@ export const MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE =
  * @see VisionNotSupportedError for vision capability errors
  * @see ToolsNotSupportedError for tool calling errors
  * @see ReasoningNotSupportedError for reasoning token errors
- * @see StructuredOutputNotSupportedError for structured output errors
  * @author Maruf Bepary
  */
 export class ModelCapabilityError extends Error {
@@ -272,24 +271,6 @@ export class ReasoningNotSupportedError extends ModelCapabilityError {
   ) {
     super(message);
     this.name = "ReasoningNotSupportedError";
-  }
-}
-
-/**
- * Error thrown when attempting to use structured output/schema with an incompatible model.
- * Thrown when schema-based response formatting is requested from models that do not support it.
- *
- * @see ModelCapabilityError for base capability error
- * @author Maruf Bepary
- */
-export class StructuredOutputNotSupportedError extends ModelCapabilityError {
-  override readonly code = STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE;
-
-  constructor(
-    message = "The selected model does not support schema-based structured output.",
-  ) {
-    super(message);
-    this.name = "StructuredOutputNotSupportedError";
   }
 }
 
