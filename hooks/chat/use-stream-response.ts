@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { buildChatFromRows } from "@/actions/chats/build-chat";
 import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
 import { getChat } from "@/actions/chats/get-chat";
+import { isChatGenerating } from "@/actions/chats/is-chat-generating";
 import { persistMessage } from "@/actions/chats/persist-message";
 import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
@@ -155,10 +156,57 @@ export function useStreamResponse(
   const assistantMessageIdRef = useRef<string | null>(null);
   const activeToolCallsRef = useRef<ToolCallState[]>([]);
   const stoppedRef = useRef(false);
+  const rejoinedRef = useRef(false);
+  const checkedChatIdRef = useRef<string | null>(null);
+
+  const currentChat = useAppStore((state) =>
+    chatId ? state.chats?.[chatId] : undefined,
+  );
+
+  const activeLeaf = useMemo(() => {
+    if (!currentChat?.currentLeafId) return undefined;
+    return currentChat.messages?.[currentChat.currentLeafId];
+  }, [currentChat]);
+
+  // Mount effect: detect in-flight generation after page refresh
+  useEffect(() => {
+    if (!chatId) return;
+    if (checkedChatIdRef.current === chatId) return;
+    if (isStreaming || pendingRef.current.userMessageId !== null) return;
+    if (!currentChat) return;
+
+    if (activeLeaf?.role !== "user") {
+      checkedChatIdRef.current = chatId;
+      return;
+    }
+
+    checkedChatIdRef.current = chatId;
+    const leafId = activeLeaf.id;
+
+    void isChatGenerating(chatId)
+      .then((generating) => {
+        if (generating && pendingRef.current.userMessageId === null) {
+          rejoinedRef.current = true;
+          pendingRef.current = {
+            userMessageId: leafId,
+            model: "",
+            startTime: Date.now(),
+          };
+          lastChunkTimeRef.current = Date.now();
+          setIsStreaming(true);
+        }
+      })
+      .catch(() => {
+        // Swallow rejections
+      });
+  }, [chatId, currentChat, activeLeaf, isStreaming]);
 
   const handleStreamEvent = useCallback(
-    (event: ChatStreamEvent) => {
+    async (event: ChatStreamEvent) => {
       if (stoppedRef.current) return;
+      if (pendingRef.current.userMessageId === null) {
+        rejoinedRef.current = true;
+      }
       switch (event.type) {
         case "start":
           lastChunkTimeRef.current = Date.now();
@@ -213,6 +261,41 @@ export function useStreamResponse(
 
         case "finish": {
           lastChunkTimeRef.current = 0;
+
+          if (rejoinedRef.current) {
+            if (chatId) {
+              try {
+                const data = await getChat(chatId);
+                const fullChat = buildChatFromRows(data);
+                upsertChat(fullChat);
+
+                const userMsgId = pendingRef.current.userMessageId;
+                const assistantId = assistantMessageIdRef.current;
+                const assistantMsg = data.messages.find(
+                  (m) =>
+                    m.role === "assistant" &&
+                    (assistantId
+                      ? m.id === assistantId
+                      : userMsgId
+                        ? m.parentId === userMsgId
+                        : true),
+                );
+
+                if (assistantMsg) {
+                  options?.onDone?.(assistantMsg.content);
+                }
+              } catch (err) {
+                logger.error("Failed to refetch chat on rejoin finish", err);
+              }
+            }
+
+            setIsStreaming(false);
+            setStreamingContent(null);
+            setStreamingReasoning(null);
+            setActiveToolCalls([]);
+            break;
+          }
+
           const text = accumulatedTextRef.current;
           const reasoning = accumulatedReasoningRef.current;
           const completedTools = activeToolCallsRef.current.filter(
@@ -287,7 +370,7 @@ export function useStreamResponse(
         }
       }
     },
-    [chatId, addMessage, handleApiError, options],
+    [chatId, addMessage, upsertChat, handleApiError, options],
   );
 
   const fetchChatToken = useCallback(
@@ -324,13 +407,16 @@ export function useStreamResponse(
     try {
       const data = await getChat(chatId);
       const userMsgId = pendingRef.current.userMessageId;
+      const assistantId = assistantMessageIdRef.current;
+
+      if (!assistantId && !userMsgId) {
+        return false;
+      }
+
       const assistantMsg = data.messages.find(
         (m) =>
           m.role === "assistant" &&
-          (userMsgId
-            ? m.parentId === userMsgId
-            : new Date(m.createdAt).getTime() >=
-              pendingRef.current.startTime - 2000),
+          (assistantId ? m.id === assistantId : m.parentId === userMsgId),
       );
 
       if (assistantMsg) {
@@ -366,9 +452,15 @@ export function useStreamResponse(
   const lastProcessedIndexRef = useRef(0);
   const processedMessagesRef = useRef<WeakSet<object>>(new WeakSet());
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer on chatId change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer and streaming state on chatId change
   useEffect(() => {
     lastProcessedIndexRef.current = 0;
+    rejoinedRef.current = false;
+    pendingRef.current = { userMessageId: null, model: "", startTime: 0 };
+    setIsStreaming(false);
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
   }, [chatId]);
 
   useEffect(() => {
@@ -470,7 +562,8 @@ export function useStreamResponse(
 
     // If there is partial streamed text, commit it immediately so the UI
     // does not go blank and the content survives a page refresh.
-    if (partialText && userMsgId) {
+    // If this hook instance rejoined a running stream, skip committing the partial tail.
+    if (!rejoinedRef.current && partialText && userMsgId) {
       addMessage(chatId, {
         role: "assistant",
         content: partialText,
@@ -526,6 +619,7 @@ export function useStreamResponse(
         ? [selectedPromptId]
         : [];
 
+    rejoinedRef.current = false;
     pendingRef.current = {
       userMessageId: userMsgId,
       model,
