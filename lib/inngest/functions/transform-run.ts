@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
 import { transformRunChannel } from "@/lib/inngest/channels";
@@ -133,7 +134,7 @@ export const executeTransformRun = inngest.createFunction(
           try {
             const parsedSteps: TransformStep[] = JSON.parse(currentAgent.steps);
             anyArtifactToolSelected = parsedSteps.some((s) =>
-              s.toolIds?.includes("internal:tool:manage_artifact"),
+              s.toolIds?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT),
             );
           } catch {}
 

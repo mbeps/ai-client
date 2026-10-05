@@ -1,13 +1,19 @@
 import { generateText, isStepCount } from "ai";
 import { eq } from "drizzle-orm";
 import { env } from "@/config/env";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schema";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
+import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { RATE_LIMIT_ERROR_CODE } from "@/lib/errors";
+import {
+  RATE_LIMIT_ERROR_CODE,
+  ToolsNotSupportedError,
+  VisionNotSupportedError,
+} from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import {
   formatActiveSkill,
@@ -171,9 +177,13 @@ export async function runTransformSteps({
     if (skillCatalog.length > 0) {
       Object.assign(filteredTools, registerSkillTool(userId));
     }
-    // Authoring is always available so an agent can create a skill it does not
-    // have yet, which is the whole point of the capability.
-    Object.assign(filteredTools, registerSkillAuthoringTools(userId));
+    // Skill authoring is gated on selection (item 5)
+    const allowSkillAuthoring =
+      allowedToolIds.size === 0 ||
+      allowedToolIds.has(INTERNAL_TOOL_IDS.MANAGE_SKILL);
+    if (allowSkillAuthoring) {
+      Object.assign(filteredTools, registerSkillAuthoringTools(userId));
+    }
     const toolSourceMap = Object.fromEntries(
       filteredEntries.map(([toolName]) => [
         toolName,
@@ -223,6 +233,35 @@ export async function runTransformSteps({
     let stepArtifact: Record<string, unknown> | null = null;
 
     try {
+      // Capability & Vision guards (item 4)
+      const capTools = resolvedProvider.modelRow?.capTools ?? true;
+      if (!capTools && Object.keys(filteredTools).length > 0) {
+        throw new ToolsNotSupportedError();
+      }
+
+      const capVision = resolvedProvider.modelRow?.capVision ?? true;
+      const hasImageAttachments = currentAttachmentRows.some(
+        (a) => a.mimeType?.startsWith("image/") || (a as any).type === "image",
+      );
+      if (hasImageAttachments) {
+        const stepMessages = [
+          {
+            role: "user",
+            attachments: currentAttachmentRows.map((a) => ({
+              id: a.id,
+              name: a.name,
+              mimeType: a.mimeType,
+              type: a.mimeType?.startsWith("image/")
+                ? "image"
+                : (a as any).type,
+            })),
+          },
+        ];
+        if (!checkVisionSupport(stepMessages as any, !!capVision)) {
+          throw new VisionNotSupportedError();
+        }
+      }
+
       const result = await generateText({
         model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
         // v7 rejects role:"system" messages in messages[] by default.
@@ -309,7 +348,11 @@ export async function runTransformSteps({
       let msg = stepErr instanceof Error ? stepErr.message : "Step failed";
       let code = "ERROR";
 
-      if (isRateLimitError(stepErr)) {
+      if (stepErr instanceof ToolsNotSupportedError) {
+        code = "TOOLS_NOT_SUPPORTED";
+      } else if (stepErr instanceof VisionNotSupportedError) {
+        code = "VISION_NOT_SUPPORTED";
+      } else if (isRateLimitError(stepErr)) {
         msg = normalizeRateLimitMessage(stepErr);
         code = RATE_LIMIT_ERROR_CODE;
       }

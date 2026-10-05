@@ -91,17 +91,15 @@ describe("generateChatResponse Inngest Function", () => {
     mockGetUserSettings.mockResolvedValue(null);
     abortState.controller = new AbortController();
     mockRegisterMcpTools.mockImplementation(
-      async (
-        _servers: unknown,
-        _selectedTools: unknown,
-        isArtifactToolSelected: boolean,
-      ) => ({
-        mcpTools: isArtifactToolSelected
-          ? { manage_artifact: { description: "artifact" } }
-          : {},
-        toolSourceMap: isArtifactToolSelected
-          ? { manage_artifact: "Internal" }
-          : {},
+      async (servers: unknown) => ({
+        mcpTools:
+          Array.isArray(servers) && servers.length > 0
+            ? { external_mcp_tool: { description: "external tool" } }
+            : {},
+        toolSourceMap:
+          Array.isArray(servers) && servers.length > 0
+            ? { external_mcp_tool: "MCP" }
+            : {},
         mcpCleanup: mockMcpCleanup,
       }),
     );
@@ -413,6 +411,57 @@ describe("generateChatResponse Inngest Function", () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it("does not throw ToolsNotSupportedError when model lacks tools support but knowledge base is attached", async () => {
+    mockResolveProvider.mockResolvedValueOnce({
+      modelId: "no-tools",
+      modelRow: { capVision: true, capTools: false },
+      sdkProvider: { chat: () => () => {} },
+    });
+
+    mockLoadChatContext.mockResolvedValueOnce({
+      servers: [],
+      activeKbId: "kb-1",
+      kbIsReady: true,
+      availableSkills: [],
+      selectedSkills: [],
+      projectRow: null,
+      assistantRow: null,
+    });
+
+    mockLoadThread.mockResolvedValueOnce([
+      { id: "msg-1", role: "user", content: "Tell me something" },
+    ]);
+
+    mockStreamText.mockReturnValueOnce({
+      fullStream: (async function* () {
+        yield { type: "text-delta", text: "Answer without tools." };
+      })(),
+      finishReason: Promise.resolve("stop"),
+      usage: Promise.resolve({ promptTokens: 5, completionTokens: 10 }),
+    });
+
+    const fn = (generateChatResponse as any).fn;
+
+    await expect(
+      fn({
+        event: {
+          data: {
+            chatId: "chat-123",
+            userId: "user-123",
+            userMessageId: "msg-1",
+            model: "no-tools",
+          },
+        },
+      }),
+    ).resolves.not.toThrow();
+
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: undefined,
+      }),
+    );
   });
 
   it("registers file url tool and skill tool when thread has files and skills are present", async () => {
@@ -1029,7 +1078,10 @@ describe("generateChatResponse Inngest Function", () => {
             userId: "user-1",
             userMessageId: "msg-1",
             model: "gpt-4o",
-            selectedTools: ["internal:tool:manage_artifact"],
+            selectedTools: [
+              "internal:tool:manage_artifact",
+              "internal:tool:manage_skill",
+            ],
           },
         },
       });

@@ -1,12 +1,15 @@
 import { isStepCount, streamText } from "ai";
 import { env } from "@/config/env";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { loadChatContext } from "@/lib/chat/load-chat-context";
 import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
+import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
+import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
@@ -102,24 +105,33 @@ export const generateChatResponse = inngest.createFunction(
       };
       const resolvedModelId = resolved.modelId;
 
-      const isArtifactToolSelected = selectedTools?.includes(
-        "internal:tool:manage_artifact",
-      );
+      const isArtifactToolSelected =
+        selectedTools === undefined ||
+        selectedTools.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
 
       const { mcpTools, mcpCleanup: registeredCleanup } =
-        await registerMcpTools(
-          ctx.servers as any,
-          selectedTools,
-          !!isArtifactToolSelected,
-          ctx.activeKbId,
-          ctx.kbIsReady,
-          userId,
-          ctx.activeKbIds,
-        );
+        await registerMcpTools(ctx.servers as any, selectedTools);
       mcpCleanup = registeredCleanup;
 
-      const hasMcpTools = Object.keys(mcpTools).length > 0;
-      const hasSkills = ctx.availableSkills.length > 0;
+      const hasExternalMcpTools = Object.keys(mcpTools).length > 0;
+      const isToolCallingModel = !!resolvedModelRow?.capTools;
+
+      // If user explicitly requested external MCP tools but model lacks tool capability, throw
+      const requestedExternalMcp =
+        hasExternalMcpTools ||
+        Boolean(
+          selectedTools?.some(
+            (id: string) =>
+              !id.startsWith("internal:tool:") &&
+              id !== "search_knowledge_base" &&
+              id !== "get_file_url" &&
+              id !== "load_skill",
+          ),
+        );
+
+      if (!isToolCallingModel && requestedExternalMcp) {
+        throw new ToolsNotSupportedError();
+      }
 
       if (!checkVisionSupport(thread as any, !!resolvedModelRow?.capVision)) {
         throw new VisionNotSupportedError();
@@ -133,18 +145,47 @@ export const generateChatResponse = inngest.createFunction(
 
       const finalMessages = prepareChatMessages({ history: thread });
 
-      const isToolCallingModel = !!resolvedModelRow?.capTools;
-      if (!isToolCallingModel && hasMcpTools) {
-        throw new ToolsNotSupportedError();
-      }
+      // Target knowledge base IDs
+      const targetKbIds =
+        ctx.activeKbIds && ctx.activeKbIds.length > 0
+          ? ctx.activeKbIds
+          : ctx.activeKbId
+            ? [ctx.activeKbId]
+            : [];
 
-      // Skill authoring is offered to every tool-calling model, even when the
-      // user has no skills yet, because creating the first one is the use case.
-      const hasSkillAuthoring = isToolCallingModel;
+      // Internal tools registration
+      const kbTools = isToolCallingModel
+        ? registerKnowledgebaseTool(
+            targetKbIds,
+            ctx.kbIsReady,
+            userId,
+            selectedTools,
+          )
+        : {};
+      const hasKbTool = Object.keys(kbTools).length > 0;
+
+      const artifactTools =
+        isToolCallingModel && isArtifactToolSelected
+          ? registerArtifactTool()
+          : {};
+      const hasArtifactTool = Object.keys(artifactTools).length > 0;
+
+      const hasSkills = isToolCallingModel && ctx.availableSkills.length > 0;
+
+      // Skill authoring is gated on model tool support AND tool selection (item 5)
+      const hasSkillAuthoring =
+        isToolCallingModel &&
+        (selectedTools === undefined ||
+          selectedTools.includes(INTERNAL_TOOL_IDS.MANAGE_SKILL));
 
       const hasAnyTools =
         isToolCallingModel &&
-        (hasMcpTools || hasFileAttachments || hasSkills || hasSkillAuthoring);
+        (hasExternalMcpTools ||
+          hasArtifactTool ||
+          hasKbTool ||
+          hasFileAttachments ||
+          hasSkills ||
+          hasSkillAuthoring);
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
@@ -153,7 +194,7 @@ export const generateChatResponse = inngest.createFunction(
           globalSystemPrompt,
           ctx.projectRow?.globalPrompt,
           ctx.assistantRow?.prompt,
-          ctx.kbIsReady,
+          isToolCallingModel && hasKbTool,
           {
             attachmentNames: fileAttachments.map((a) => a.name),
             availableSkills: ctx.availableSkills,
@@ -165,14 +206,15 @@ export const generateChatResponse = inngest.createFunction(
         messages: finalMessages,
         tools: hasAnyTools
           ? {
+              // External MCP tools spread FIRST so internal tools cannot be shadowed
+              ...(hasExternalMcpTools ? mcpTools : {}),
+              ...(hasArtifactTool ? artifactTools : {}),
+              ...(hasKbTool ? kbTools : {}),
+              ...(hasSkills ? registerSkillTool(userId) : {}),
+              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
               ...(hasFileAttachments
                 ? registerFileUrlTool(fileAttachments)
                 : {}),
-              ...(hasSkills ? registerSkillTool(userId) : {}),
-              // Spread before the MCP tools so an MCP server cannot shadow an
-              // internal tool by reusing its name.
-              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
-              ...(hasMcpTools ? mcpTools : {}),
             }
           : undefined,
         stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
