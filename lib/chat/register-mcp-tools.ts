@@ -5,6 +5,7 @@ import { getLogger } from "@/lib/logger";
 const log = getLogger(["app", "chat", "tools"]);
 
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
+import { sanitiseToolNames } from "@/lib/mcp/sanitise-tool-names";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import {
   manageArtifactSchema,
@@ -82,6 +83,11 @@ export async function registerMcpTools(
         }
         mcpTools = filteredTools;
       }
+
+      // Sanitise remote MCP tool names to ensure LLM provider charset compliance (e.g. OpenAI ^[a-zA-Z0-9_-]{1,64}$)
+      const sanitised = sanitiseToolNames(mcpTools, toolSourceMap);
+      mcpTools = sanitised.tools;
+      toolSourceMap = sanitised.toolSourceMap;
 
       mcpCleanup = result.cleanup;
     } catch (error) {

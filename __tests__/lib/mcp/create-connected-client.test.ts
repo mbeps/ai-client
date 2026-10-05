@@ -42,13 +42,32 @@ describe("createConnectedClient", () => {
     const result = await createConnectedClient(server);
 
     expect(buildTransportMock).toHaveBeenCalledWith(server);
-    expect(createMCPClientMock).toHaveBeenCalledWith({ transport: mockTransport });
+    expect(createMCPClientMock).toHaveBeenCalledWith({
+      transport: mockTransport,
+      onUncaughtError: expect.any(Function),
+    });
     expect(withTimeoutMock).toHaveBeenCalledWith(
       mockClientPromise,
       expect.any(Number),
       "connect to Weather Server",
     );
     expect(result).toBe(mockClient);
+  });
+
+  it("handles uncaught errors through onUncaughtError callback", async () => {
+    const mockTransport = { type: "sse" };
+    buildTransportMock.mockResolvedValueOnce(mockTransport);
+    createMCPClientMock.mockReturnValueOnce(Promise.resolve({}));
+    withTimeoutMock.mockResolvedValueOnce({});
+
+    await createConnectedClient(server);
+
+    const clientCall = createMCPClientMock.mock.calls[0][0];
+    expect(clientCall.onUncaughtError).toBeTypeOf("function");
+
+    // Invoke with Error instance and non-Error instance
+    clientCall.onUncaughtError(new Error("Stream terminated abruptly"));
+    clientCall.onUncaughtError("Raw string failure");
   });
 
   it("uses custom label when provided", async () => {

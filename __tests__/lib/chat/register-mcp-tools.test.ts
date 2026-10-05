@@ -541,4 +541,29 @@ describe("registerMcpTools — fallback branches", () => {
     // Proves the `query || ""` fallback fed the guard, not a real value.
     expect(hybridSearch).not.toHaveBeenCalled();
   });
+
+  it("sanitises remote MCP tool names to conform to provider charset constraints", async () => {
+    const getMcpToolsMock = vi.mocked(getMcpTools);
+    getMcpToolsMock.mockResolvedValueOnce({
+      tools: {
+        "github.create_issue": { description: "Create Issue" },
+      },
+      toolSourceMap: { "github.create_issue": "GitHub" },
+      toolServerIdMap: { "github.create_issue": "srv-1" },
+      cleanup: vi.fn(),
+    });
+
+    const { mcpTools, toolSourceMap } = await registerMcpTools(
+      [{ id: "srv-1", name: "GitHub" }] as any,
+      undefined,
+      false,
+      undefined,
+      false,
+      "user-1",
+    );
+
+    expect(mcpTools).toHaveProperty("github_create_issue");
+    expect(mcpTools).not.toHaveProperty("github.create_issue");
+    expect(toolSourceMap.github_create_issue).toBe("GitHub");
+  });
 });

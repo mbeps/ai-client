@@ -9,13 +9,47 @@ import { isBlockedIPv4 } from "./is-blocked-ipv4";
 export function isBlockedIPv6(ip: string): boolean {
   const normalized = ip.toLowerCase();
 
+  // :: unspecified address (RFC 4291)
+  const groups = normalized.split(":");
+  if (
+    normalized === "::" ||
+    (groups.length > 1 &&
+      groups.every((g) => g === "" || parseInt(g, 16) === 0))
+  ) {
+    return true;
+  }
+
   // ::1 loopback
   if (normalized === "::1" || normalized === "0:0:0:0:0:0:0:1") return true;
 
-  // ::ffff:x.x.x.x — IPv4-mapped IPv6: extract IPv4 part and validate
-  if (normalized.startsWith("::ffff:")) {
-    const ipv4Part = normalized.slice(7);
-    if (isBlockedIPv4(ipv4Part)) return true;
+  // ::ffff:x.x.x.x or ::ffff:hhhh:hhhh — IPv4-mapped IPv6: extract IPv4 part and validate
+  if (
+    normalized.startsWith("::ffff:") ||
+    normalized.startsWith("0:0:0:0:0:ffff:")
+  ) {
+    const tail = normalized.startsWith("::ffff:")
+      ? normalized.slice(7)
+      : normalized.slice(15);
+
+    if (isBlockedIPv4(tail)) return true;
+
+    // The WHATWG URL parser normalises dotted-decimal to two hex groups (e.g. ::ffff:7f00:1)
+    const hexGroups = tail.split(":");
+    if (hexGroups.length === 2) {
+      const high = parseInt(hexGroups[0] ?? "", 16);
+      const low = parseInt(hexGroups[1] ?? "", 16);
+      if (
+        !Number.isNaN(high) &&
+        !Number.isNaN(low) &&
+        high >= 0 &&
+        high <= 0xffff &&
+        low >= 0 &&
+        low <= 0xffff
+      ) {
+        const reconstructed = `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+        if (isBlockedIPv4(reconstructed)) return true;
+      }
+    }
   }
 
   // fe80::/10 — link-local IPv6
