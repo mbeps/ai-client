@@ -143,6 +143,13 @@ describe("generateChatResponse Inngest Function", () => {
     });
   });
 
+  it("is configured with concurrency limit 1 keyed on event.data.chatId", () => {
+    expect((generateChatResponse as any).opts.concurrency).toEqual({
+      key: "event.data.chatId",
+      limit: 1,
+    });
+  });
+
   it("streams text tokens and persists assistant message on finish", async () => {
     const fn = (generateChatResponse as any).fn;
 

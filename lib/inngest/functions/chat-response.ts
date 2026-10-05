@@ -37,6 +37,10 @@ export const generateChatResponse = inngest.createFunction(
   {
     id: "generate-chat-response",
     retries: 0,
+    concurrency: {
+      key: "event.data.chatId",
+      limit: 1,
+    },
     triggers: [{ event: "chat/response.generate" }],
     cancelOn: [
       {
