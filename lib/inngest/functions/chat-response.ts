@@ -60,7 +60,8 @@ export const generateChatResponse = inngest.createFunction(
       selectedKbIds,
     } = event.data;
 
-    const abortController = chatAbortRegistry.register(chatId);
+    const { controller: abortController, release: releaseAbortController } =
+      chatAbortRegistry.register(chatId);
 
     const ch = chatChannel({ chatId });
     const assistantMessageId = crypto.randomUUID();
@@ -372,7 +373,7 @@ export const generateChatResponse = inngest.createFunction(
       await emit({ type: "error", message: errorMsg, code: errorCode });
       throw error;
     } finally {
-      chatAbortRegistry.delete(chatId);
+      releaseAbortController();
       await mcpCleanup();
     }
   },

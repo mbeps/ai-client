@@ -80,6 +80,17 @@ describe("env configuration and validation", () => {
       expect(parsed.S3_FORCE_PATH_STYLE).toBe(false);
     });
 
+    it("parses INNGEST_SERVE_ORIGIN when provided", () => {
+      const parsed = validateEnv(
+        {
+          ...baseRequiredServerEnv,
+          INNGEST_SERVE_ORIGIN: "http://host.docker.internal:3000",
+        },
+        true,
+      );
+      expect(parsed.INNGEST_SERVE_ORIGIN).toBe("http://host.docker.internal:3000");
+    });
+
     it("throws error when critical server variables are missing", () => {
       expect(() =>
         validateEnv(

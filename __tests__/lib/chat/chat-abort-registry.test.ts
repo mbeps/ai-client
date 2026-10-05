@@ -28,17 +28,18 @@ describe("chatAbortRegistry", () => {
   });
 
   describe("register", () => {
-    it("creates a live controller when none is registered for the chat", () => {
-      const controller = chatAbortRegistry.register("chat-a");
+    it("creates a live controller and release handle when none is registered for the chat", () => {
+      const { controller, release } = chatAbortRegistry.register("chat-a");
 
       expect(controller).toBeInstanceOf(AbortController);
       expect(controller.signal.aborted).toBe(false);
+      expect(typeof release).toBe("function");
       expect(mockLog.debug).not.toHaveBeenCalled();
     });
 
     it("aborts the previous controller and replaces it on re-register", () => {
-      const first = chatAbortRegistry.register("chat-a");
-      const second = chatAbortRegistry.register("chat-a");
+      const { controller: first } = chatAbortRegistry.register("chat-a");
+      const { controller: second } = chatAbortRegistry.register("chat-a");
 
       expect(first.signal.aborted).toBe(true);
       expect(second).not.toBe(first);
@@ -50,19 +51,46 @@ describe("chatAbortRegistry", () => {
     });
 
     it("keeps controllers for different chats independent", () => {
-      const a = chatAbortRegistry.register("chat-a");
-      const b = chatAbortRegistry.register("chat-b");
-      const aAgain = chatAbortRegistry.register("chat-a");
+      const { controller: a } = chatAbortRegistry.register("chat-a");
+      const { controller: b } = chatAbortRegistry.register("chat-b");
+      const { controller: aAgain } = chatAbortRegistry.register("chat-a");
 
       expect(a.signal.aborted).toBe(true);
       expect(b.signal.aborted).toBe(false);
       expect(aAgain.signal.aborted).toBe(false);
     });
+
+    it("conditional release only deletes the controller if it is still active", () => {
+      const { controller: first, release: releaseFirst } =
+        chatAbortRegistry.register("chat-a");
+      const { controller: second, release: releaseSecond } =
+        chatAbortRegistry.register("chat-a");
+
+      // First run finishes after second run started; releasing first run must NOT clear second run
+      releaseFirst();
+
+      // Second run is still registered and active
+      expect(chatAbortRegistry.abort("chat-a")).toBe(true);
+      expect(second.signal.aborted).toBe(true);
+
+      // Releasing second run cleans it up
+      releaseSecond();
+      expect(chatAbortRegistry.abort("chat-a")).toBe(false);
+    });
+
+    it("calling release on the active controller unregisters it", () => {
+      const { controller, release } = chatAbortRegistry.register("chat-a");
+
+      release();
+
+      expect(controller.signal.aborted).toBe(false);
+      expect(chatAbortRegistry.abort("chat-a")).toBe(false);
+    });
   });
 
   describe("abort", () => {
     it("aborts and forgets a registered controller, returning true", () => {
-      const controller = chatAbortRegistry.register("chat-a");
+      const { controller } = chatAbortRegistry.register("chat-a");
 
       const result = chatAbortRegistry.abort("chat-a");
 
@@ -77,7 +105,7 @@ describe("chatAbortRegistry", () => {
     });
 
     it("returns false and leaves other controllers alone when the chat is absent", () => {
-      const other = chatAbortRegistry.register("chat-b");
+      const { controller: other } = chatAbortRegistry.register("chat-b");
 
       const result = chatAbortRegistry.abort("chat-a");
 
@@ -89,7 +117,7 @@ describe("chatAbortRegistry", () => {
 
   describe("delete", () => {
     it("removes a present controller without aborting it", () => {
-      const controller = chatAbortRegistry.register("chat-a");
+      const { controller } = chatAbortRegistry.register("chat-a");
 
       chatAbortRegistry.delete("chat-a");
 
@@ -98,7 +126,7 @@ describe("chatAbortRegistry", () => {
     });
 
     it("is a no-op for an absent key", () => {
-      const controller = chatAbortRegistry.register("chat-b");
+      const { controller } = chatAbortRegistry.register("chat-b");
 
       expect(() => chatAbortRegistry.delete("chat-c")).not.toThrow();
 

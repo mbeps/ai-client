@@ -24,6 +24,8 @@ process.env.INNGEST_EVENT_KEY =
 process.env.INNGEST_SIGNING_KEY =
   process.env.INNGEST_SIGNING_KEY || "test-inngest-signing-key";
 process.env.INNGEST_DEV = process.env.INNGEST_DEV || "1";
+process.env.INNGEST_SERVE_ORIGIN =
+  process.env.INNGEST_SERVE_ORIGIN || "http://localhost:3000";
 
 if (typeof window !== "undefined") {
   if (!global.ResizeObserver) {

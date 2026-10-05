@@ -15,6 +15,7 @@ const log = getLogger(["inngest", "kb", "reindex"]);
 export const reindexKbFunction = inngest.createFunction(
   {
     id: "reindex-knowledgebase",
+    singleton: { key: "event.data.kbId", mode: "skip" },
     retries: 1,
     triggers: [{ event: "knowledgebase/reindex" }],
   },
@@ -67,6 +68,7 @@ export const reindexKbFunction = inngest.createFunction(
     // 2. Fan-out ingestion events for all documents
     await step.run("fan-out-doc-ingest", async () => {
       const events = docs.map((doc) => ({
+        id: `${event.id}:${doc.id}`,
         name: "knowledgebase/document.ingest" as const,
         data: { documentId: doc.id, userId },
       }));

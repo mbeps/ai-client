@@ -2,6 +2,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "abort-registry"]);
 
+export interface RegisteredChatAbortHandle {
+  controller: AbortController;
+  release: () => void;
+}
+
 /**
  * Global in-memory registry of AbortControllers for active chat streams.
  * Allows /api/chat/stop to immediately abort the underlying HTTP connection
@@ -13,8 +18,10 @@ class ChatAbortRegistry {
   /**
    * Registers a new AbortController for a chat.
    * If an active controller already exists for this chat, aborts it first.
+   * Returns the controller and a conditional release handle that only removes
+   * the registry entry if this specific controller is still the active one.
    */
-  register(chatId: string): AbortController {
+  register(chatId: string): RegisteredChatAbortHandle {
     const existing = this.controllers.get(chatId);
     if (existing) {
       log.debug("Aborting previous stream for chat (chatId: {chatId})", {
@@ -24,7 +31,17 @@ class ChatAbortRegistry {
     }
     const controller = new AbortController();
     this.controllers.set(chatId, controller);
-    return controller;
+    return {
+      controller,
+      release: () => {
+        if (this.controllers.get(chatId) === controller) {
+          this.controllers.delete(chatId);
+          log.debug("Released active controller for chat (chatId: {chatId})", {
+            chatId,
+          });
+        }
+      },
+    };
   }
 
   /**

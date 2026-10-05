@@ -13,6 +13,7 @@ const log = getLogger(["inngest", "kb", "ingest"]);
 export const ingestKbDocumentFunction = inngest.createFunction(
   {
     id: "ingest-kb-document",
+    singleton: { key: "event.data.documentId", mode: "skip" },
     retries: 2,
     triggers: [{ event: "knowledgebase/document.ingest" }],
   },

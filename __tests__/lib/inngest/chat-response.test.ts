@@ -50,13 +50,17 @@ const mockRegisterMcpTools = vi.hoisted(() => vi.fn());
 const mockIsStepCount = vi.hoisted(() => vi.fn(() => ({ isStepCount: true })));
 const abortState = vi.hoisted(() => ({
   controller: undefined as AbortController | undefined,
+  release: vi.fn(),
 }));
 
 // The real registry hides its AbortController, so abort paths are untestable
 // without this seam. Tests assign `abortState.controller` per scenario.
 vi.mock("@/lib/chat/chat-abort-registry", () => ({
   chatAbortRegistry: {
-    register: vi.fn(() => abortState.controller),
+    register: vi.fn(() => ({
+      controller: abortState.controller!,
+      release: abortState.release,
+    })),
     delete: vi.fn(),
   },
 }));

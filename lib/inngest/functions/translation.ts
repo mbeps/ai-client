@@ -6,7 +6,10 @@ import { workflowTranslation } from "@/drizzle/schema";
 import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { translationChannel } from "@/lib/inngest/channels";
+import {
+  type TranslationStreamEvent,
+  translationChannel,
+} from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 
@@ -52,13 +55,28 @@ export const executeTranslationWorkflow = inngest.createFunction(
 
     const ch = translationChannel({ translationId });
 
+    const emit = async (data: TranslationStreamEvent) => {
+      try {
+        await inngest.realtime.publish(ch.stream, data);
+      } catch (err) {
+        log.warn(
+          "Failed to publish translation stream event to Inngest Realtime",
+          {
+            error: err instanceof Error ? err.message : String(err),
+            type: data.type,
+            translationId,
+          },
+        );
+      }
+    };
+
     try {
       await db
         .update(workflowTranslation)
         .set({ status: "translating" })
         .where(eq(workflowTranslation.id, translationId));
 
-      await inngest.realtime.publish(ch.stream, {
+      await emit({
         type: "start",
         translationId,
       });
@@ -103,7 +121,7 @@ export const executeTranslationWorkflow = inngest.createFunction(
       let accumulated = "";
       for await (const chunk of result.textStream) {
         accumulated += chunk;
-        await inngest.realtime.publish(ch.stream, {
+        await emit({
           type: "text-delta",
           text: chunk,
         });
@@ -119,7 +137,7 @@ export const executeTranslationWorkflow = inngest.createFunction(
         })
         .where(eq(workflowTranslation.id, translationId));
 
-      await inngest.realtime.publish(ch.stream, {
+      await emit({
         type: "finish",
         translatedText: finalTranslated,
       });
@@ -147,7 +165,7 @@ export const executeTranslationWorkflow = inngest.createFunction(
         })
         .where(eq(workflowTranslation.id, translationId));
 
-      await inngest.realtime.publish(ch.stream, {
+      await emit({
         type: "error",
         message: errorMessage,
       });

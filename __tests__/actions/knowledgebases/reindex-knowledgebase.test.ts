@@ -21,6 +21,7 @@ const chainable = vi.hoisted(() => {
   for (const m of ["select", "from", "where", "update", "set"]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
+  c.transaction = vi.fn().mockImplementation(async (cb: (tx: any) => any) => cb(c));
   return c;
 });
 
@@ -50,6 +51,7 @@ describe("reindexKnowledgebase action", () => {
     chainable.from.mockReturnValue(chainable);
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
+    chainable.transaction.mockImplementation(async (cb: (tx: any) => any) => cb(chainable));
     sendMock.mockResolvedValue({ ids: ["event-1"] });
   });
 
@@ -59,7 +61,7 @@ describe("reindexKnowledgebase action", () => {
     await expect(reindexKnowledgebase(KB_ID)).rejects.toThrow("Not Found");
   });
 
-  it("successfully updates status, dispatches inngest event, and returns summary", async () => {
+  it("successfully updates status in a transaction, dispatches inngest event, and returns summary", async () => {
     // 1. KB lookup
     chainable.where.mockResolvedValueOnce([{ id: KB_ID, userId: "user-1" }]);
     // 2. KB update (not returning rows)
@@ -72,11 +74,36 @@ describe("reindexKnowledgebase action", () => {
     const result = await reindexKnowledgebase(KB_ID);
 
     expect(result).toEqual({ processedCount: 2, failedCount: 0 });
+    expect(chainable.transaction).toHaveBeenCalledTimes(1);
     expect(chainable.update).toHaveBeenCalledTimes(2);
     expect(sendMock).toHaveBeenCalledWith({
       name: "knowledgebase/reindex",
       data: { kbId: KB_ID, userId: "user-1" },
     });
+  });
+
+  it("rolls back indexStatus to ready when inngest.send fails", async () => {
+    // 1. KB lookup
+    chainable.where.mockResolvedValueOnce([{ id: KB_ID, userId: "user-1" }]);
+    // 2. KB update in tx
+    chainable.where.mockReturnValueOnce(chainable);
+    // 3. Document statusMessage update in tx
+    chainable.where.mockReturnValueOnce(chainable);
+    // 4. Document select in tx
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+    // 5. Inngest dispatch failure
+    sendMock.mockRejectedValueOnce(new Error("Inngest dispatch failed"));
+    // 6. Rollback update
+    chainable.where.mockReturnValueOnce(chainable);
+
+    await expect(reindexKnowledgebase(KB_ID)).rejects.toThrow("Inngest dispatch failed");
+
+    expect(chainable.transaction).toHaveBeenCalledTimes(1);
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "ready",
+      }),
+    );
   });
 });
 

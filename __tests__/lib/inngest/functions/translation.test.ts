@@ -264,5 +264,34 @@ describe("executeTranslationWorkflow Inngest Function", () => {
       { type: "error", message: "Translation failed" },
     );
   });
+
+  it("survives transient realtime publish failures and successfully completes translation", async () => {
+    vi.mocked(inngest.realtime.publish).mockRejectedValue(new Error("Connection reset by peer"));
+
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    const result = await fn({
+      event: {
+        data: {
+          translationId: "trans-resilient",
+          userId: "user-1",
+          sourceLanguage: "English",
+          targetLanguage: "Italian",
+          sourceText: "Hello world!",
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      success: true,
+      translationId: "trans-resilient",
+      translatedText: "Ciao mondo!",
+    });
+
+    expect(chainable.set).toHaveBeenCalledWith({
+      status: "completed",
+      translatedText: "Ciao mondo!",
+    });
+  });
 });
 
