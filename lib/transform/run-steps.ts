@@ -10,6 +10,7 @@ import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import {
+  InvalidArtifactFormatError,
   RATE_LIMIT_ERROR_CODE,
   ToolsNotSupportedError,
   VisionNotSupportedError,
@@ -376,27 +377,45 @@ export async function runTransformSteps({
       (stepArtifact as any).type.toLowerCase() === "spreadsheet" &&
       typeof (stepArtifact as any).content === "string"
     ) {
-      const persisted = await persistTransformArtifact(
-        { kind: "artifact", artifact: stepArtifact, stepIndex: i },
-        userId,
-        runRow.id,
-      );
-
-      if (persisted) {
-        currentOutputAttachmentIds = persisted.outputAttachmentIds;
-        stepPersistedSpreadsheetOutput = true;
-        currentAttachmentRows = [persisted.attachmentRow];
-        activeWorkbookFilePath = null;
-
-        log.info(
-          "Active workbook replaced with step output (runId: {runId}, stepIndex: {stepIndex})",
-          {
-            runId: runRow.id,
-            stepIndex: i,
-            activeWorkbookAttachmentId: persisted.attachmentRow.id,
-            userId,
-          },
+      try {
+        const persisted = await persistTransformArtifact(
+          { kind: "artifact", artifact: stepArtifact, stepIndex: i },
+          userId,
+          runRow.id,
         );
+
+        if (persisted) {
+          currentOutputAttachmentIds = persisted.outputAttachmentIds;
+          stepPersistedSpreadsheetOutput = true;
+          currentAttachmentRows = [persisted.attachmentRow];
+          activeWorkbookFilePath = null;
+
+          log.info(
+            "Active workbook replaced with step output (runId: {runId}, stepIndex: {stepIndex})",
+            {
+              runId: runRow.id,
+              stepIndex: i,
+              activeWorkbookAttachmentId: persisted.attachmentRow.id,
+              userId,
+            },
+          );
+        }
+      } catch (err) {
+        if (err instanceof InvalidArtifactFormatError) {
+          const msg = `Step "${step.name}" produced invalid spreadsheet artifact: ${err.message}`;
+          await db
+            .update(transformRun)
+            .set({ status: "failed", errorMessage: msg })
+            .where(eq(transformRun.id, runRow.id));
+
+          emit({
+            type: "error",
+            message: msg,
+            code: err.code,
+          });
+          return { success: false };
+        }
+        throw err;
       }
     }
 

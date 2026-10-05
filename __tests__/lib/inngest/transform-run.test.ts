@@ -401,14 +401,14 @@ describe("executeTransformRun Inngest Workflow", () => {
     };
 
     const fn = (executeTransformRun as any).fn;
-    const result = await fn({
-      event: {
-        data: { runId: "run-malformed", userId: "user-1" },
-      },
-      step: mockStep,
-    });
-
-    expect(result).toEqual({ success: true, completed: true });
+    await expect(
+      fn({
+        event: {
+          data: { runId: "run-malformed", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid JSON in steps for agent agent-malformed");
     expect(mockRunSteps).not.toHaveBeenCalled();
   });
 
@@ -477,18 +477,51 @@ describe("executeTransformRun Inngest Workflow", () => {
     };
 
     const fn = (executeTransformRun as any).fn;
-    const result = await fn({
-      event: {
-        data: {
-          runId: "run-corrupted",
-          userId: "user-1",
-          startFromStep: 0,
+    await expect(
+      fn({
+        event: {
+          data: {
+            runId: "run-corrupted",
+            userId: "user-1",
+            startFromStep: 0,
+          },
         },
-      },
-      step: mockStep,
-    });
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid JSON in steps for agent agent-corrupted");
+  });
 
-    expect(result).toEqual({ success: true, completed: true });
+  it("fails run when agentRow.steps fails transformStepSchema validation", async () => {
+    const runRow = {
+      id: "run-invalid-schema",
+      agentId: "agent-invalid-schema",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-invalid-schema",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "", name: "" }]),
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await expect(
+      fn({
+        event: {
+          data: { runId: "run-invalid-schema", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid transform steps for agent agent-invalid-schema");
   });
 
   it("handles requiresFileUpload at step 0 with nullish inputs and invalid agent steps JSON in execute-step", async () => {

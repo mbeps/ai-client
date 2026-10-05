@@ -17,9 +17,9 @@ export const renameTransformAgentSchema = renameSchema;
  * @author Maruf Bepary
  */
 export const transformStepSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   name: nameField,
-  prompt: z.string().min(1, "Prompt is required").max(4000),
+  prompt: z.string().max(4000),
   mcpServerIds: z.array(z.string()),
   toolIds: z.array(z.string()),
   order: z.number().int().min(0),
