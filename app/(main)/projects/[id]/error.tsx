@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorPage } from "@/components/shared/error-page";
+import { ROUTES } from "@/config/routes";
 
 /**
  * Project page error boundary: Graceful error handling for failed project loads.
@@ -23,7 +24,7 @@ export default function ProjectError({
       reset={reset}
       heading="Failed to load project"
       fallbackDescription="This project could not be loaded. Please try again."
-      linkHref="/projects"
+      linkHref={ROUTES.PROJECTS.path}
       linkLabel="Back to projects"
     />
   );

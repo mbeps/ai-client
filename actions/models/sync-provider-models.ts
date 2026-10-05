@@ -1,0 +1,274 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { db } from "@/drizzle/db";
+import { aiModel, aiProvider } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { ModelMalformedIdError } from "@/lib/errors";
+import { getLogger } from "@/lib/logger";
+import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
+import { decodeProviderRecord } from "@/lib/providers/provider-utils";
+
+const log = getLogger(["app", "actions", "model"]);
+
+/**
+ * Synchronises models from an external AI provider's /models endpoint.
+ * Fetches model listings via OpenAI-compatible API, inserts new models, skips existing ones.
+ * Enforces SSRF URL guard checks to prevent server-side request forgery attacks.
+ * Returns sync results with count of added/unchanged models and optional discovery limits.
+ * Logs sync operations for audit and troubleshooting purposes.
+ * Runs on server only — typically called when user adds or configures a new provider.
+ *
+ * @param providerId - UUID of the provider to sync models from; must be owned by the authenticated user.
+ * @returns Object with added (count of new models inserted), unchanged (count of skipped duplicates), limitExceeded (boolean if discovery capped), totalDiscovered (optional count).
+ * @throws Error if session is not authenticated.
+ * @throws Error if provider is not found or user does not own it (returns "Not Found").
+ * @throws Error if provider URL is blocked by SSRF guard (returns "Provider URL is blocked by SSRF guard").
+ * @throws Error if the /models endpoint returns error status or is unreachable.
+ * @see createModel to manually register a single model.
+ * @author Maruf Bepary
+ */
+export type SyncProviderModelsResult = {
+  added: number;
+  unchanged: number;
+  limitExceeded?: boolean;
+  totalDiscovered?: number;
+};
+
+type ProviderModelsResponse = {
+  data?: Array<{
+    id?: string;
+  }>;
+};
+
+export async function syncProviderModels(
+  providerId: string,
+): Promise<SyncProviderModelsResult> {
+  const session = await requireSession();
+
+  log.info("Starting provider model sync (providerId: {providerId})", {
+    providerId,
+    userId: session.user.id,
+  });
+
+  const [provider] = await db
+    .select()
+    .from(aiProvider)
+    .where(
+      and(
+        eq(aiProvider.id, providerId),
+        eq(aiProvider.userId, session.user.id),
+      ),
+    );
+
+  if (!provider) {
+    throw new Error("Not Found");
+  }
+
+  if (await isBlockedUrl(provider.baseUrl)) {
+    throw new Error("Provider URL is blocked by SSRF guard");
+  }
+
+  const decoded = decodeProviderRecord(provider);
+  const baseUrl = provider.baseUrl.replace(/\/$/, "");
+
+  const commonHeaders = {
+    ...(decoded.apiKey ? { Authorization: `Bearer ${decoded.apiKey}` } : {}),
+    ...decoded.headers,
+  };
+
+  /**
+   * Helper to fetch models from a specific endpoint.
+   * Returns empty array on failure instead of throwing.
+   */
+  async function fetchModels(url: string) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: commonHeaders,
+      });
+
+      if (!response.ok) {
+        log.warn(
+          "Endpoint returned error status (status: {status}, url: {url})",
+          {
+            url,
+            status: response.status,
+            userId: session.user.id,
+          },
+        );
+        return [];
+      }
+
+      const payload = (await response.json()) as ProviderModelsResponse;
+      return payload.data ?? [];
+    } catch (err) {
+      log.error("Failed to fetch models from endpoint: {error}", {
+        error: err instanceof Error ? err.message : String(err),
+        url,
+        userId: session.user.id,
+      });
+      return [];
+    }
+  }
+
+  // Probe both endpoints
+  const [standardList, embeddingList] = await Promise.all([
+    fetchModels(`${baseUrl}/models`),
+    fetchModels(`${baseUrl}/embeddings/models`),
+  ]);
+
+  // Aggregate models and determine types
+  type DiscoveredModel = {
+    id: string;
+    types: Set<"chat" | "embedding">;
+  };
+  const modelsMap = new Map<string, DiscoveredModel>();
+  const invalidModels: Array<{ endpoint: string; source: string }> = [];
+
+  // Helper to determine type from ID heuristic
+  const isIdxEmbedding = (modelId: string) => {
+    const lower = modelId.toLowerCase();
+    return (
+      lower.includes("embed") ||
+      lower.includes("bge-") ||
+      lower.includes("text-embedding")
+    );
+  };
+
+  // Process standard list
+  for (const m of standardList) {
+    if (!m.id) {
+      invalidModels.push({ endpoint: "/models", source: "standard" });
+      continue;
+    }
+    const modelId = m.id.trim();
+    if (!modelId) {
+      invalidModels.push({ endpoint: "/models", source: "standard (empty)" });
+      continue;
+    }
+    if (!modelsMap.has(modelId)) {
+      modelsMap.set(modelId, { id: modelId, types: new Set() });
+    }
+    modelsMap
+      .get(modelId)!
+      .types.add(isIdxEmbedding(modelId) ? "embedding" : "chat");
+  }
+
+  // Process specialized embedding list
+  for (const m of embeddingList) {
+    if (!m.id) {
+      invalidModels.push({
+        endpoint: "/embeddings/models",
+        source: "embedding",
+      });
+      continue;
+    }
+    const modelId = m.id.trim();
+    if (!modelId) {
+      invalidModels.push({
+        endpoint: "/embeddings/models",
+        source: "embedding (empty)",
+      });
+      continue;
+    }
+    if (!modelsMap.has(modelId)) {
+      modelsMap.set(modelId, { id: modelId, types: new Set() });
+    }
+    modelsMap.get(modelId)!.types.add("embedding");
+  }
+
+  // If any models have malformed IDs, throw error after collecting all data
+  if (invalidModels.length > 0) {
+    log.warn("Found models with malformed or missing IDs (count: {count})", {
+      count: invalidModels.length,
+      providerId,
+      samples: invalidModels.slice(0, 5),
+      userId: session.user.id,
+    });
+
+    throw new ModelMalformedIdError(invalidModels.length);
+  }
+
+  let added = 0;
+  let unchanged = 0;
+
+  // Check if model count exceeds 1000-model limit
+  const totalDiscovered = modelsMap.size;
+  const limitExceeded = totalDiscovered > 1000;
+
+  // Process discovered models (limit to 1000 to prevent OOM)
+  const allModels = Array.from(modelsMap.values()).slice(0, 1000);
+
+  for (const discovered of allModels) {
+    const modelId = discovered.id;
+
+    // Resolve final model type
+    let modelType: "chat" | "embedding" | "both" = "chat";
+    const hasChat = discovered.types.has("chat");
+    const hasEmbed = discovered.types.has("embedding");
+
+    if (hasChat && hasEmbed) {
+      modelType = "both";
+    } else if (hasEmbed) {
+      modelType = "embedding";
+    }
+
+    const [existing] = await db
+      .select({ id: aiModel.id, isManuallyAdded: aiModel.isManuallyAdded })
+      .from(aiModel)
+      .where(
+        and(eq(aiModel.providerId, provider.id), eq(aiModel.modelId, modelId)),
+      );
+
+    if (existing?.isManuallyAdded) {
+      unchanged += 1;
+      continue;
+    }
+
+    if (existing) {
+      await db
+        .update(aiModel)
+        .set({
+          label: modelId,
+          modelType,
+          isEnabled: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(aiModel.id, existing.id));
+      unchanged += 1;
+      continue;
+    }
+
+    await db.insert(aiModel).values({
+      providerId: provider.id,
+      userId: session.user.id,
+      modelId,
+      label: modelId,
+      modelType,
+      contextWindow: 4096,
+      capTools: false,
+      capVision: false,
+      capReasoning: false,
+      capStructuredOutput: false,
+      isManuallyAdded: false,
+      isEnabled: true,
+    });
+
+    added += 1;
+  }
+
+  log.info(
+    "Provider model sync complete (added: {added}, unchanged: {unchanged})",
+    {
+      providerId,
+      added,
+      unchanged,
+      totalDiscovered,
+      limitExceeded,
+      userId: session.user.id,
+    },
+  );
+
+  return { added, unchanged, limitExceeded, totalDiscovered };
+}

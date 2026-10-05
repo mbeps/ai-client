@@ -1,0 +1,60 @@
+"use server";
+
+import { and, eq, or } from "drizzle-orm";
+import { db } from "@/drizzle/db";
+import { mcpServer } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
+
+const log = getLogger(["app", "actions", "mcp"]);
+
+import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
+import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
+
+/**
+ * Discovers prompts from all enabled MCP servers (user-owned or public) in parallel.
+ * Per-server failures logged, don't block other servers. Returns aggregated results.
+ *
+ * @returns Array of DiscoveredPrompt; empty array if no servers enabled or all fail
+ * @throws If session cannot be established
+ * @author Maruf Bepary
+ */
+export async function discoverAllPrompts(): Promise<DiscoveredPrompt[]> {
+  const session = await requireSession();
+
+  const enabledServers = await db
+    .select()
+    .from(mcpServer)
+    .where(
+      and(
+        eq(mcpServer.enabled, true),
+        or(eq(mcpServer.userId, session.user.id), eq(mcpServer.isPublic, true)),
+      ),
+    );
+
+  const allPrompts: DiscoveredPrompt[] = [];
+
+  const discoveryPromises = enabledServers.map(async (server) => {
+    try {
+      const result = await discoverToolsAndResources(
+        mcpServerRowToConfig(server),
+      );
+      return result.prompts;
+    } catch (e) {
+      log.error("Failed to discover prompts for server {serverName}: {error}", {
+        serverName: server.name,
+        error: e instanceof Error ? e.message : String(e),
+        userId: session.user.id,
+      });
+      return [];
+    }
+  });
+
+  const results = await Promise.all(discoveryPromises);
+  results.forEach((prompts) => {
+    allPrompts.push(...prompts);
+  });
+
+  return allPrompts;
+}

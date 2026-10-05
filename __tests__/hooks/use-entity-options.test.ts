@@ -1,15 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useEntityOptions } from "@/hooks/use-entity-options";
 
 // ─── Hoisted mock variables (must run before vi.mock factories) ────────────
 const mockPush = vi.hoisted(() => vi.fn());
+const mockRefresh = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const mockToastError = vi.hoisted(() => vi.fn());
 
 // ─── Mocks ─────────────────────────────────────────────────────────────────
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn().mockReturnValue({ push: mockPush }),
+  useRouter: vi.fn().mockReturnValue({ push: mockPush, refresh: mockRefresh }),
 }));
 
 vi.mock("sonner", () => ({
@@ -233,6 +235,44 @@ describe("useEntityOptions", () => {
       });
 
       expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it("refreshes router on delete when useRouterRefresh is true", async () => {
+      const onDelete = vi.fn().mockResolvedValue(undefined);
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onDelete,
+          useRouterRefresh: true,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleDelete();
+      });
+
+      expect(mockRefresh).toHaveBeenCalled();
+    });
+  });
+
+  describe("useRouterRefresh on rename", () => {
+    it("refreshes router on rename when useRouterRefresh is true", async () => {
+      const onRename = vi.fn().mockResolvedValue(undefined);
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onRename,
+          useRouterRefresh: true,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleRename("New Name");
+      });
+
+      expect(mockRefresh).toHaveBeenCalled();
     });
   });
 });

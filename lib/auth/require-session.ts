@@ -1,7 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
+import { auth } from "@/lib/auth/auth";
 
 /**
  * Retrieves the authenticated session for the current request.

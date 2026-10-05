@@ -1,0 +1,56 @@
+"use server";
+
+import { db } from "@/drizzle/db";
+import { chat } from "@/drizzle/schema";
+import { requireSession } from "@/lib/auth/require-session";
+import { getLogger } from "@/lib/logger";
+import { createChatSchema } from "@/schemas/chat/chat";
+
+const log = getLogger(["app", "actions", "chat"]);
+
+import type { ChatRow } from "@/types/chat/chat-row";
+
+/**
+ * Creates a new chat session for the authenticated user.
+ * Validates all inputs against createChatSchema and inserts a new chat record with optional project and assistant bindings.
+ * Runs on server only — invoked from client via Server Action.
+ *
+ * @param title - Optional initial title; defaults to "New Chat" if not provided.
+ * @param projectId - Optional project ID to scope chat within a specific project context.
+ * @param assistantId - Optional assistant ID to bind a persona to the chat.
+ * @returns The newly created chat row with all fields populated.
+ * @throws Error if session is not authenticated.
+ * @throws ZodError if any input fails schema validation.
+ * @see getChat to fetch a single chat with messages.
+ * @see deleteChat to remove a chat.
+ */
+export async function createChat(
+  title?: string,
+  projectId?: string,
+  assistantId?: string,
+): Promise<ChatRow> {
+  const session = await requireSession();
+
+  // Validate inputs
+  const validated = createChatSchema.parse({ title, projectId, assistantId });
+
+  const [newChat] = await db
+    .insert(chat)
+    .values({
+      id: crypto.randomUUID(),
+      title: validated.title ?? "New Chat",
+      userId: session.user.id,
+      projectId: validated.projectId ?? null,
+      assistantId: validated.assistantId ?? null,
+    })
+    .returning();
+
+  log.info("Chat created (id: {chatId})", {
+    chatId: newChat.id,
+    userId: session.user.id,
+    projectId: newChat.projectId,
+    assistantId: newChat.assistantId,
+  });
+
+  return newChat;
+}

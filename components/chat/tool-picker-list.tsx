@@ -1,21 +1,10 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
-import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
-import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import {
   AlertCircle,
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  Database,
   Loader2,
   RefreshCw,
   Search,
@@ -23,10 +12,21 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PickerDialog } from "@/components/chat/picker-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { ROUTES } from "@/config/routes";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import { cn } from "@/lib/utils";
+import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
 export interface ToolPickerListProps {
-  servers: (McpServer | PublicMcpServer)[];
+  servers?: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
   onBulkSelect: (
@@ -35,6 +35,7 @@ export interface ToolPickerListProps {
     select: boolean,
   ) => void;
   className?: string;
+  maxHeight?: string;
 }
 
 type ServerContent = {
@@ -53,14 +54,16 @@ type ServerContent = {
  * @param props.onToggleTool - Callback to toggle a single tool's selection.
  * @param props.onBulkSelect - Callback to bulk-select or deselect all tools from a server.
  * @param props.className - Optional CSS classes for styling.
+ * @param props.maxHeight - Optional maxHeight for the scrollable container.
  * @author Maruf Bepary
  */
 export function ToolPickerList({
-  servers,
+  servers = [],
   selectedTools,
   onToggleTool,
   onBulkSelect,
   className,
+  maxHeight,
 }: ToolPickerListProps) {
   const [search, setSearch] = useState("");
   const [serverContent, setServerContent] = useState<
@@ -98,13 +101,13 @@ export function ToolPickerList({
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Fetch server content for new servers
   useEffect(() => {
     servers.forEach((server) => {
       if (!serverContent[server.id]) {
         fetchServerContent(server);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servers]);
 
   const toggleExpand = (serverId: string) => {
@@ -122,10 +125,10 @@ export function ToolPickerList({
     return servers.filter((server) => {
       const content = serverContent[server.id];
       const nameMatch = server.name.toLowerCase().includes(lowerSearch);
-      const toolMatch = content?.tools.some(
+      const toolMatch = content?.tools?.some(
         (t) =>
           t.name.toLowerCase().includes(lowerSearch) ||
-          t.description.toLowerCase().includes(lowerSearch),
+          t.description?.toLowerCase().includes(lowerSearch),
       );
       return nameMatch || toolMatch;
     });
@@ -153,7 +156,7 @@ export function ToolPickerList({
     onBulkSelect("internal", ["manage_artifact"], shouldSelect);
     servers.forEach((s) => {
       const content = serverContent[s.id];
-      if (content) {
+      if (content?.tools) {
         onBulkSelect(
           s.id,
           content.tools.map((t) => t.name),
@@ -163,22 +166,30 @@ export function ToolPickerList({
     });
   };
 
+  const selectedCount = useMemo(() => {
+    return allDiscoveredTools.filter((t) =>
+      selectedTools.has(`${t.serverId}:tool:${t.name}`),
+    ).length;
+  }, [allDiscoveredTools, selectedTools]);
+
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="p-2 border-b shrink-0 flex items-center justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tools and resources..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+    <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
+      <div className="relative shrink-0">
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search tools and resources..."
+          className="pl-9"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
         <Button
-          variant="outline"
+          type="button"
+          variant="ghost"
           size="sm"
-          className="h-9 gap-2 shrink-0"
+          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
           onClick={toggleAll}
           disabled={allDiscoveredTools.length === 0}
         >
@@ -187,28 +198,51 @@ export function ToolPickerList({
           ) : (
             <CheckSquare className="h-3.5 w-3.5" />
           )}
-          {isAllSelected ? "Deselect All" : "Select All"}
+          <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
         </Button>
+        <span>
+          {selectedCount > 0
+            ? `${selectedCount}/${allDiscoveredTools.length} selected ${allDiscoveredTools.length === 1 ? "tool" : "tools"}`
+            : `${allDiscoveredTools.length} ${allDiscoveredTools.length === 1 ? "tool" : "tools"} available`}
+        </span>
       </div>
 
-      <ScrollArea className="flex-1 p-4 min-h-0">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+        style={maxHeight ? { maxHeight } : undefined}
+      >
         <div className="space-y-4">
           {(!search ||
             "artifacts canvas manage_artifact".includes(
               search.toLowerCase(),
             )) && (
-            <div className="border rounded-lg overflow-hidden flex flex-col border-primary/20">
+            <div className="flex flex-col overflow-hidden rounded-lg border border-primary/20">
               <div
-                className="flex items-center justify-between p-3 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors shrink-0"
+                className="flex shrink-0 cursor-pointer items-center justify-between bg-primary/5 p-3 transition-colors hover:bg-primary/10"
                 onClick={() => toggleExpand("internal")}
               >
                 <div className="flex items-center gap-3">
+                  {expandedServers.has("internal") || search.length > 0 ? (
+                    <ChevronDown className="h-4 w-4 text-primary" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-primary" />
+                  )}
+                  <span className="font-medium text-primary">
+                    Internal Tools
+                  </span>
+                  {selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                      1 selected
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
                   <div
                     className="flex items-center"
                     onClick={(e) => {
                       e.stopPropagation();
                       const isAllSelected = selectedTools.has(
-                        "internal:tool:manage_artifact",
+                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                       );
                       onBulkSelect(
                         "internal",
@@ -219,50 +253,35 @@ export function ToolPickerList({
                   >
                     <Checkbox
                       checked={selectedTools.has(
-                        "internal:tool:manage_artifact",
+                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                       )}
+                      aria-label="Select all internal tools"
                       className="h-4 w-4"
                     />
                   </div>
-                  {expandedServers.has("internal") || search.length > 0 ? (
-                    <ChevronDown className="h-4 w-4 text-primary" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-primary" />
-                  )}
-                  <span className="font-medium text-primary">
-                    Internal Tools
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] uppercase bg-primary/10 text-primary"
-                  >
-                    built-in
-                  </Badge>
                 </div>
               </div>
 
               {(expandedServers.has("internal") || search.length > 0) && (
-                <div className="p-3 space-y-4 border-t border-primary/20 bg-card/50">
-                  <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                <div className="space-y-4 border-primary/20 border-t bg-card/50 p-3">
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex flex-col gap-1">
-                        <label className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group">
+                        <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
                           <Checkbox
                             checked={selectedTools.has(
-                              "internal:tool:manage_artifact",
+                              INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
                             )}
                             onCheckedChange={() =>
                               onToggleTool("internal", "manage_artifact")
                             }
                             className="mt-0.5"
                           />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-medium truncate">
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium text-xs">
                               Artifacts / Canvas
                             </span>
-                            <span className="text-[10px] text-muted-foreground line-clamp-2">
+                            <span className="line-clamp-2 text-[10px] text-muted-foreground">
                               Allows the AI to generate interactive Markdown,
                               Spreadsheets, HTML UI, and Mermaid diagrams in a
                               side panel.
@@ -282,7 +301,7 @@ export function ToolPickerList({
             !"artifacts canvas manage_artifact".includes(
               search.toLowerCase(),
             ) && (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 No tools found matching &quot;{search}&quot;
               </div>
             )}
@@ -305,13 +324,35 @@ export function ToolPickerList({
             return (
               <div
                 key={server.id}
-                className="border rounded-lg overflow-hidden flex flex-col"
+                className="flex flex-col overflow-hidden rounded-lg border"
               >
                 <div
-                  className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors shrink-0"
+                  className="flex shrink-0 cursor-pointer items-center justify-between bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   onClick={() => toggleExpand(server.id)}
                 >
                   <div className="flex items-center gap-3">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    <span className="font-medium">{server.name}</span>
+                    {selectedInServer > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="h-4 px-1 text-[10px]"
+                      >
+                        {selectedInServer} selected
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {content?.loading && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                    {content?.error && (
+                      <AlertCircle className="h-3 w-3 text-destructive" />
+                    )}
                     <div
                       className="flex items-center"
                       onClick={(e) => {
@@ -325,46 +366,23 @@ export function ToolPickerList({
                     >
                       <Checkbox
                         checked={isServerAllSelected}
+                        disabled={totalInServer === 0}
+                        aria-label={`Select all ${server.name} tools`}
                         className="h-4 w-4"
                       />
                     </div>
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    <span className="font-medium">{server.name}</span>
-                    {selectedInServer > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] h-4 px-1"
-                      >
-                        {selectedInServer} selected
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {content?.loading && (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                    )}
-                    {content?.error && (
-                      <AlertCircle className="h-3 w-3 text-destructive" />
-                    )}
-                    <Badge variant="outline" className="text-[10px] uppercase">
-                      HTTP
-                    </Badge>
                   </div>
                 </div>
 
                 {(isExpanded || search.length > 0) && (
-                  <div className="p-3 space-y-4 border-t bg-card/50">
+                  <div className="space-y-4 border-t bg-card/50 p-3">
                     {content?.loading ? (
-                      <div className="flex items-center justify-center py-4 gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Discovering tools...
                       </div>
                     ) : content?.error ? (
-                      <div className="flex items-center justify-between py-2 text-sm text-destructive">
+                      <div className="flex items-center justify-between py-2 text-destructive text-sm">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4" />
                           <span>{content.error}</span>
@@ -379,11 +397,11 @@ export function ToolPickerList({
                         </Button>
                       </div>
                     ) : (
-                      <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                      <div className="space-y-4">
                         {/* Tools section */}
                         {serverTools.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1.5 px-1 sticky top-0 bg-background/95 backdrop-blur py-1 z-10">
+                            <h4 className="sticky top-0 z-10 flex items-center gap-1.5 bg-background/95 px-1 py-1 font-bold text-[10px] text-muted-foreground uppercase backdrop-blur">
                               <Wrench className="h-3 w-3" /> Tools
                             </h4>
                             <div className="flex flex-col gap-1">
@@ -404,7 +422,7 @@ export function ToolPickerList({
                                   return (
                                     <label
                                       key={tool.name}
-                                      className="flex items-start gap-2 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group"
+                                      className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent"
                                     >
                                       <Checkbox
                                         checked={isChecked}
@@ -413,12 +431,12 @@ export function ToolPickerList({
                                         }
                                         className="mt-0.5"
                                       />
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-medium truncate">
+                                      <div className="flex min-w-0 flex-col">
+                                        <span className="truncate font-medium text-xs">
                                           {tool.name}
                                         </span>
                                         {tool.description && (
-                                          <span className="text-[10px] text-muted-foreground line-clamp-1">
+                                          <span className="line-clamp-1 text-[10px] text-muted-foreground">
                                             {tool.description}
                                           </span>
                                         )}
@@ -431,7 +449,7 @@ export function ToolPickerList({
                         )}
 
                         {serverTools.length === 0 && (
-                          <div className="text-xs text-muted-foreground py-2 text-center">
+                          <div className="py-2 text-center text-muted-foreground text-xs">
                             No tools available
                           </div>
                         )}
@@ -443,7 +461,67 @@ export function ToolPickerList({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
+  );
+}
+
+export interface ToolPickerDialogProps {
+  servers?: (McpServer | PublicMcpServer)[];
+  selectedTools: Set<string>;
+  onToggleTool: (serverId: string, toolName: string) => void;
+  onBulkSelect: (
+    serverId: string,
+    toolNames: string[],
+    select: boolean,
+  ) => void;
+  supportsTools?: boolean;
+  trigger?: React.ReactNode;
+}
+
+/**
+ * Dialog wrapper for ToolPickerList.
+ *
+ * @author Maruf Bepary
+ */
+export function ToolPickerDialog({
+  servers = [],
+  selectedTools,
+  onToggleTool,
+  onBulkSelect,
+  supportsTools = true,
+  trigger,
+}: ToolPickerDialogProps) {
+  return (
+    <PickerDialog
+      title="Select Tools"
+      description="Choose tools and integrations to enable in your session"
+      trigger={
+        trigger || (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            disabled={!supportsTools}
+          >
+            <Wrench className="mr-2 h-4 w-4" />
+            {supportsTools ? "Select Tools" : "Tools Unsupported"}
+            {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
+          </Button>
+        )
+      }
+      manageAction={{
+        label: "Manage Tools",
+        href: ROUTES.SETTINGS.CONNECTORS.path,
+      }}
+    >
+      <ToolPickerList
+        servers={servers}
+        selectedTools={selectedTools}
+        onToggleTool={onToggleTool}
+        onBulkSelect={onBulkSelect}
+        className="flex min-h-0 flex-1 flex-col p-4"
+      />
+    </PickerDialog>
   );
 }

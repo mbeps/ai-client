@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
+
+// Module-level: tracks resources that have been successfully hydrated this session.
+// Exported for test teardown only — do not mutate outside this module.
+export const hydratedResources = new Set<string>();
 
 export type HydratableResource =
   | "projects"
   | "assistants"
   | "prompts"
+  | "skills"
   | "mcpServers"
   | "publicMcpServers"
   | "transformAgents"
@@ -30,7 +37,28 @@ export type HydratableResource =
  * @author Maruf Bepary
  */
 export function useResourceHydration(resources: HydratableResource[]) {
-  const store = useAppStore();
+  const store = useAppStore(
+    useShallow((s) => ({
+      projects: s.projects,
+      assistants: s.assistants,
+      prompts: s.prompts,
+      skills: s.skills,
+      mcpServers: s.mcpServers,
+      publicMcpServers: s.publicMcpServers,
+      transformAgents: s.transformAgents,
+      mcpPrompts: s.mcpPrompts,
+      userSettings: s.userSettings,
+      loadProjects: s.loadProjects,
+      loadAssistants: s.loadAssistants,
+      loadPrompts: s.loadPrompts,
+      loadSkills: s.loadSkills,
+      loadMcpServers: s.loadMcpServers,
+      loadPublicMcpServers: s.loadPublicMcpServers,
+      loadTransformAgents: s.loadTransformAgents,
+      loadMcpPrompts: s.loadMcpPrompts,
+      loadUserSettings: s.loadUserSettings,
+    })),
+  );
   const [loadingResources, setLoadingResources] = useState<Set<string>>(
     new Set(),
   );
@@ -38,26 +66,23 @@ export function useResourceHydration(resources: HydratableResource[]) {
 
   const hydrate = useCallback(async () => {
     const toLoad = resources.filter((res) => {
-      const data = store[res];
-
-      // Determine if resource is already loaded
-      const isLoaded =
-        res === "userSettings"
-          ? data !== null
-          : Array.isArray(data) && data.length > 0;
-
-      const isPending = hydrationAttempted.current.has(res);
-      return !isLoaded && !isPending;
+      const isPending =
+        hydrationAttempted.current.has(res) || hydratedResources.has(res);
+      return !isPending;
     });
 
     if (toLoad.length === 0) return;
 
     // Mark as attempted to prevent duplicate calls in StrictMode
-    toLoad.forEach((res) => hydrationAttempted.current.add(res));
+    toLoad.forEach((res) => {
+      hydrationAttempted.current.add(res);
+    });
 
     setLoadingResources((prev) => {
       const next = new Set(prev);
-      toLoad.forEach((r) => next.add(r));
+      toLoad.forEach((r) => {
+        next.add(r);
+      });
       return next;
     });
 
@@ -66,15 +91,16 @@ export function useResourceHydration(resources: HydratableResource[]) {
       const loaderName =
         res === "mcpPrompts"
           ? "loadMcpPrompts"
-          : (`load\${res.charAt(0).toUpperCase()}\${res.slice(1)}` as keyof typeof store);
+          : (`load${res.charAt(0).toUpperCase()}${res.slice(1)}` as keyof typeof store);
 
       const loader = store[loaderName];
 
       if (typeof loader === "function") {
         try {
           await (loader as () => Promise<void>)();
+          hydratedResources.add(res);
         } catch (error) {
-          console.error(`[Hydration] Failed to load ${res}:`, error);
+          logger.error(`[Hydration] Failed to load ${res}`, error);
         } finally {
           setLoadingResources((prev) => {
             const next = new Set(prev);

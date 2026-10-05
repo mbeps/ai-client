@@ -10,7 +10,7 @@ export function buildServerConfig(parsed: CreateMcpServer) {
   return {
     name: parsed.name,
     url: parsed.url,
-    headers: parsed.headers ?? null,
+    headers: parsed.headers || null, // empty string → null (no headers)
     isPublic: parsed.isPublic ?? false,
   };
 }

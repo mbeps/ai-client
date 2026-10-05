@@ -1,13 +1,16 @@
+import { sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
+  index,
+  integer,
   pgTable,
   text,
-  integer,
   timestamp,
-  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
-import { knowledgebase } from "./knowledgebase-schema";
+import { user } from "@/drizzle/schemas/auth-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 
 /**
  * Stores documents uploaded to a knowledge base, tracking ingestion status and chunk counts.
@@ -36,6 +39,7 @@ export const kbDocument = pgTable(
     statusMessage: text("status_message"),
     chunkCount: integer("chunk_count").notNull().default(0),
     tokenCount: integer("token_count").notNull().default(0),
+    truncated: boolean("truncated").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -45,5 +49,9 @@ export const kbDocument = pgTable(
   (table) => [
     index("kb_document_kb_id_idx").on(table.kbId),
     uniqueIndex("kb_document_s3_key_idx").on(table.s3Key),
+    check(
+      "kb_document_status_check",
+      sql`${table.status} in ('pending', 'processing', 'ready', 'failed')`,
+    ),
   ],
 );

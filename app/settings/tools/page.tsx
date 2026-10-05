@@ -1,75 +1,52 @@
-"use client";
-
-import { useAppStore } from "@/lib/store";
-import { useState } from "react";
-import { Wrench, Plus, Globe, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ServerCard } from "@/components/mcp/server-card";
-import { AddServerDialog } from "@/components/mcp/add-server-dialog";
-import { DiscoverCommunityToolsDialog } from "@/components/mcp/discover-community-tools-dialog";
-import { ResourceListPage } from "@/components/shared/resource-list-page";
-import { ResponsiveMenu, MenuItem } from "@/components/shared/responsive-menu";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { Wrench } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { InternalToolCard } from "@/components/settings/internal-tool-card";
+import { PageContainer } from "@/components/shared/page-container";
+import { groupToolsByCategory } from "@/config/tools";
+import { requireSession } from "@/lib/auth/require-session";
 
 /**
- * Tools/MCP servers listing page — client component displaying all configured MCP servers.
- * Features: searchable grid of MCP server cards, add new server configuration, discover community tools.
- * MCP servers provide external tools and resources that can be used in chat interactions.
+ * Internal tools page — server component describing every tool registered inside the app.
+ * Route: /settings/tools. Tools are grouped by the category recorded in the
+ * catalogue. Read-only: the catalogue is static config, there is no per-tool
+ * enable/disable record yet.
  *
  * @author Maruf Bepary
+ * @see INTERNAL_TOOL_CATALOGUE in config/tools.ts for the source of truth.
  */
-export default function ToolsPage() {
-  const mcpServers = useAppStore((state) => state.mcpServers);
-  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [discoverOpen, setDiscoverOpen] = useState(false);
-  const isMobile = useIsMobile();
-
-  const addMenu: MenuItem[] = [
-    {
-      label: "Manual Configuration",
-      icon: <Plus className="h-4 w-4 mr-2" />,
-      onClick: () => setDialogOpen(true),
-    },
-    {
-      label: "Discover Community Tools",
-      icon: <Globe className="h-4 w-4 mr-2" />,
-      onClick: () => setDiscoverOpen(true),
-    },
-  ];
+export default async function ToolsSettingsPage() {
+  await requireSession();
+  const groups = groupToolsByCategory();
 
   return (
-    <>
-      <ResourceListPage
-        icon={<Wrench className="h-8 w-8 text-primary" />}
+    <PageContainer className="space-y-8">
+      <PageHeader
+        icon={<Wrench className="size-8 text-primary" />}
         title="Tools"
-        description="Manage MCP servers and their tools."
-        items={mcpServers}
-        renderCard={(server) => <ServerCard server={server} />}
-        emptyStateMessage="No MCP servers yet. Add one to connect external tools to your chats."
-        searchPlaceholder="Search servers..."
-        action={
-          <ResponsiveMenu
-            isMobile={isMobile}
-            title="Add Server"
-            items={addMenu}
-            trigger={
-              <Button className="w-full md:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Server
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            }
-          />
-        }
-        filterFn={(s, q) => s.name.toLowerCase().includes(q.toLowerCase())}
-        onMount={loadMcpServers}
+        description="The tools built into the assistant. Connectors add more tools of their own."
       />
-      <AddServerDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <DiscoverCommunityToolsDialog
-        open={discoverOpen}
-        onOpenChange={setDiscoverOpen}
-      />
-    </>
+
+      {groups.map(([category, tools]) => (
+        <section key={category} className="space-y-4">
+          <div className="flex items-baseline gap-3">
+            <h2 className="font-semibold text-xl tracking-tight">{category}</h2>
+            <span className="text-muted-foreground text-sm">
+              {tools.length} {tools.length === 1 ? "tool" : "tools"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {tools.map((tool) => (
+              <InternalToolCard
+                key={tool.id}
+                name={tool.name}
+                description={tool.description}
+                availability={tool.availability}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </PageContainer>
   );
 }

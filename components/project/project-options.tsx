@@ -1,15 +1,15 @@
 "use client";
-import { Trash2, Pin, PinOff, Edit2 } from "lucide-react";
-import type { Project } from "@/types/project/project";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { toast } from "sonner";
-import { ROUTES } from "@/constants/routes";
-import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameProject } from "@/lib/actions/projects/rename-project";
-import { deleteProject } from "@/lib/actions/projects/delete-project";
-import { togglePinProject } from "@/lib/actions/projects/toggle-pin-project";
+import { Edit2, Pin, PinOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { deleteProject } from "@/actions/projects/delete-project";
+import { renameProject } from "@/actions/projects/rename-project";
+import { togglePinProject } from "@/actions/projects/toggle-pin-project";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { ROUTES } from "@/config/routes";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 import { useAppStore } from "@/lib/store";
+import type { Project } from "@/types/project/project";
 
 /**
  * Dropdown/Drawer menu with Pin/Unpin, Rename, and Delete options for projects.

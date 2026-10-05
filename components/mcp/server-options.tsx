@@ -1,14 +1,14 @@
 "use client";
-import { Trash2, Edit2, ToggleLeft, ToggleRight } from "lucide-react";
-import type { McpServer } from "@/types/mcp/mcp-server";
-import { BaseEntityOptions } from "@/components/shared/base-entity-options";
-import { toast } from "sonner";
-import { useEntityOptions } from "@/hooks/use-entity-options";
-import { renameMcpServer } from "@/lib/actions/mcp-servers/rename-mcp-server";
-import { toggleMcpServer } from "@/lib/actions/mcp-servers/toggle-mcp-server";
-import { deleteMcpServer } from "@/lib/actions/mcp-servers/delete-mcp-server";
+import { Edit2, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
+import { renameMcpServer } from "@/actions/mcp-servers/rename-mcp-server";
+import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
+import { BaseEntityOptions } from "@/components/shared/base-entity-options";
+import { useEntityOptions } from "@/hooks/use-entity-options";
 import { useAppStore } from "@/lib/store";
+import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
  * Props for ServerOptions component.
@@ -67,11 +67,15 @@ export function ServerOptions({ server }: ServerOptionsProps) {
   };
 
   const items = [
-    {
-      label: "Rename Server",
-      icon: <Edit2 className="mr-2 h-4 w-4" />,
-      onClick: () => setShowRename(true),
-    },
+    ...(!server.isInstalled
+      ? [
+          {
+            label: "Rename Server",
+            icon: <Edit2 className="mr-2 h-4 w-4" />,
+            onClick: () => setShowRename(true),
+          },
+        ]
+      : []),
     {
       label: server.enabled ? "Disable Server" : "Enable Server",
       icon: server.enabled ? (
@@ -82,7 +86,7 @@ export function ServerOptions({ server }: ServerOptionsProps) {
       onClick: handleToggle,
     },
     {
-      label: "Delete Server",
+      label: server.isInstalled ? "Uninstall Tool" : "Delete Server",
       icon: <Trash2 className="mr-2 h-4 w-4" />,
       onClick: () => setShowDelete(true),
       isDestructive: true,
@@ -102,7 +106,7 @@ export function ServerOptions({ server }: ServerOptionsProps) {
       handleRename={handleRename}
       handleDelete={handleDelete}
       renameTitle="Rename Server"
-      deleteTitle="Delete Server"
+      deleteTitle={server.isInstalled ? "Uninstall Tool" : "Delete Server"}
     />
   );
 }

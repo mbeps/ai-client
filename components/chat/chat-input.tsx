@@ -1,32 +1,46 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { ArrowRight, Mic, Plus, Save, Square, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
+import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
+import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
+import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Mic, Send, Square, X, Save } from "lucide-react";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
+import {
+  type MentionPromptItem,
+  useMentionCommands,
+} from "@/hooks/chat/use-mention-commands";
+import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { useUserModels } from "@/hooks/use-user-models";
+import { processAttachment } from "@/lib/attachments/process-attachment";
+import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
+import { AttachmentVisionUnsupportedError } from "@/lib/errors";
+import { useAppStore } from "@/lib/store";
+import { toggleSetItem } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Message } from "@/types/message/message";
 import { AttachmentsMenu } from "./attachments-menu";
+import { ContextUsagePill } from "./context-usage-pill";
 import { MentionCommands } from "./mention-commands";
-import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
-import { useUserModels } from "@/hooks/use-user-models";
-import { ModelSelector } from "@/components/shared/model-selector";
-import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
-import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
-import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
-import { processAttachment } from "@/lib/attachments/process-attachment";
-import { AttachmentVisionUnsupportedError } from "@/lib/constants/errors";
-import { useApiError } from "@/hooks/use-api-error";
-import { toast } from "sonner";
 
 /**
  * Props for the ChatInput component.
@@ -35,8 +49,7 @@ import { toast } from "sonner";
 interface ChatInputProps {
   /**
    * Callback invoked when user submits a message with content, attachments,
-   * model selection, and MCP server/tool/resource selections.
-   * Called after validation confirms non-empty content or attachments.
+   * model selection, MCP tools, knowledgebases, and skills.
    */
   onSend: (
     content: string,
@@ -44,9 +57,10 @@ interface ChatInputProps {
     model: string,
     selectedServerIds: string[],
     selectedTools: string[],
-    selectedPromptId?: string,
+    selectedPromptId?: string | string[],
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
+    selectedSkillIds?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -73,17 +87,26 @@ interface ChatInputProps {
   /** Initial MCP server IDs to select. */
   initialSelectedServerIds?: string[];
 
-  /** Initial tool identifiers to select. */
-  initialSelectedTools?: string[];
+  /**
+   * Initial tool identifiers to select.
+   * Defaults to DEFAULT_ENABLED_TOOLS (e.g., internal tools such as Canvas).
+   *
+   * @decision Architecture Approach 1 - Active by default tools: internal tools are
+   * pre-selected on initialisation, allowing immediate use without manual user activation.
+   */
+  initialSelectedTools?: readonly string[] | string[];
 
-  /** Initial prompt ID if editing a slash-command message. */
-  initialSelectedPromptId?: string;
+  /** Initial prompt ID or IDs if editing a slash-command message. */
+  initialSelectedPromptId?: string | string[];
 
   /** Initial assistant ID if editing a message that used an assistant mention. */
   initialSelectedAssistantId?: string;
 
   /** Initial knowledgebase IDs to select. */
   initialSelectedKbs?: string[];
+
+  /** Initial skill IDs to select. */
+  initialSelectedSkillIds?: string[];
 
   /** Callback invoked when the user toggles a knowledge base selection. */
   onKnowledgebaseChange?: (kbIds: string[]) => void;
@@ -96,20 +119,16 @@ interface ChatInputProps {
 
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
+
+  /** Active thread messages for live context token usage calculation. */
+  thread?: Message[];
 }
 
 /**
  * Comprehensive message input component with file upload, model selection,
- * and MCP tool/resource picker. Supports drag-and-drop file attachment,
- * slash-command prompts, auto-expanding textarea, and multi-server tool selection.
- * Validates file count (3 images, 5 total) and size limits (2/20/50 MB).
- * Integrates with ToolPickerDialog for server/tool/resource management.
+ * MCP tools, knowledgebases, and agent skills.
  *
- * @param props - Callbacks, loading state, and available MCP servers.
- * @returns Input form with textarea, attachments menu, model picker, and send button.
- * @see usePromptCommands for slash-command handling.
- * @see processAttachment for file validation and metadata extraction.
- * @see ToolPickerDialog for MCP server/tool UI.
+ * @author Maruf Bepary
  */
 export function ChatInput({
   onSend,
@@ -121,14 +140,16 @@ export function ChatInput({
   initialModelId,
   initialAttachments = [],
   initialSelectedServerIds = [],
-  initialSelectedTools = [],
+  initialSelectedTools = DEFAULT_ENABLED_TOOLS,
   initialSelectedPromptId,
   initialSelectedAssistantId,
   initialSelectedKbs = [],
+  initialSelectedSkillIds = [],
   onKnowledgebaseChange,
   activeChatAssistantId,
   canMentionAssistant = true,
   submitLabel,
+  thread = [],
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -137,6 +158,9 @@ export function ChatInput({
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
 
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
+  const skills = useAppStore((state) => state.skills);
+  const prompts = useAppStore((state) => state.prompts);
+  const mcpPrompts = useAppStore((state) => state.mcpPrompts);
 
   // -- Derived model capabilities --
   const selectedModelObj = useMemo(
@@ -160,7 +184,7 @@ export function ChatInput({
   const isMobile = useIsMobile();
   const { handleApiError } = useApiError();
 
-  // -- File Upload Logic (Inlined) --
+  // -- File Upload Logic --
   const [attachments, setAttachments] =
     useState<Attachment[]>(initialAttachments);
   const [isDragging, setIsDragging] = useState(false);
@@ -223,7 +247,7 @@ export function ChatInput({
     [addFiles],
   );
 
-  // -- MCP Selection Logic (Inlined) --
+  // -- MCP Selection Logic --
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
     new Set(initialSelectedServerIds),
   );
@@ -231,7 +255,7 @@ export function ChatInput({
     new Set(initialSelectedTools),
   );
 
-  const toggleServer = useCallback((id: string) => {
+  const _toggleServer = useCallback((id: string) => {
     setSelectedServerIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -253,15 +277,9 @@ export function ChatInput({
   const toggleTool = useCallback((serverId: string, toolName: string) => {
     const toolId = `${serverId}:tool:${toolName}`;
     setSelectedTools((prev) => {
-      const next = new Set(prev);
-      if (next.has(toolId)) next.delete(toolId);
-      else {
-        next.add(toolId);
-        setSelectedServerIds((prevServers) =>
-          new Set(prevServers).add(serverId),
-        );
-      }
-      return next;
+      if (prev.has(toolId)) return toggleSetItem(prev, toolId);
+      setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
+      return toggleSetItem(prev, toolId);
     });
   }, []);
 
@@ -271,13 +289,17 @@ export function ChatInput({
         setSelectedServerIds((prev) => new Set(prev).add(serverId));
         setSelectedTools((prev) => {
           const next = new Set(prev);
-          toolNames.forEach((name) => next.add(`${serverId}:tool:${name}`));
+          toolNames.forEach((name) => {
+            next.add(`${serverId}:tool:${name}`);
+          });
           return next;
         });
       } else {
         setSelectedTools((prev) => {
           const next = new Set(prev);
-          toolNames.forEach((name) => next.delete(`${serverId}:tool:${name}`));
+          toolNames.forEach((name) => {
+            next.delete(`${serverId}:tool:${name}`);
+          });
           return next;
         });
       }
@@ -285,7 +307,7 @@ export function ChatInput({
     [],
   );
 
-  // -- KB Selection Logic (Inlined) --
+  // -- KB Selection Logic --
   const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
     new Set(initialSelectedKbs),
   );
@@ -314,6 +336,55 @@ export function ChatInput({
     [onKnowledgebaseChange],
   );
 
+  // -- Skills Selection Logic --
+  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(
+    new Set(initialSelectedSkillIds),
+  );
+
+  // The seed comes from store-backed entities, which hydrate AFTER this
+  // component mounts, so `useState` alone never picks them up. Re-sync when the
+  // seed changes; a no-op once hydrated, and it never clobbers user toggles.
+  const skillSeedKey = initialSelectedSkillIds.join(" ");
+  const lastSkillSeedKey = useRef(skillSeedKey);
+  useEffect(() => {
+    if (lastSkillSeedKey.current === skillSeedKey) return;
+    lastSkillSeedKey.current = skillSeedKey;
+    setSelectedSkills(new Set(initialSelectedSkillIds));
+  }, [skillSeedKey, initialSelectedSkillIds]);
+
+  const handleToggleSkill = useCallback((id: string) => {
+    setSelectedSkills((prev) => toggleSetItem(prev, id));
+  }, []);
+
+  const handleRemoveSkill = useCallback((id: string) => {
+    setSelectedSkills((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  // Estimate tokens consumed by skills in the system prompt.
+  // Selected skills are fully injected (content + bundled files).
+  // The catalog (available skills) includes ALL enabled skills when the model
+  // supports tools — matching buildSystemPrompt which always lists all skills
+  // in the catalog regardless of which are pre-selected.
+  const { selectedSkillTokens, availableSkillCount } = useMemo(() => {
+    const enabledSkills = skills.filter((s) => s.enabled);
+    let injected = 0;
+    for (const skill of enabledSkills) {
+      if (selectedSkills.has(skill.id)) {
+        injected += estimateTokens(skill.content);
+        for (const f of skill.files ?? []) {
+          injected += estimateTokens(f.content);
+        }
+      }
+    }
+    // Catalog only appears when the model supports tool calling
+    const catalog = supportsTools ? enabledSkills.length : 0;
+    return { selectedSkillTokens: injected, availableSkillCount: catalog };
+  }, [skills, selectedSkills, supportsTools]);
+
   const {
     openTrigger,
     setOpenTrigger,
@@ -321,6 +392,8 @@ export function ChatInput({
     selectedIndex,
     selectedPrompt,
     setSelectedPrompt,
+    selectedPrompts,
+    setSelectedPrompts,
     selectedAssistant,
     setSelectedAssistant,
     handleInputChange,
@@ -335,17 +408,46 @@ export function ChatInput({
     initialSelectedAssistantId,
     canMentionAssistant,
     selectedServerIds,
+    (skill) => setSelectedSkills((prev) => new Set(prev).add(skill.id)),
+    (kb) => setSelectedKbs((prev) => new Set(prev).add(kb.id)),
+    knowledgebases,
   );
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        200,
-      )}px`;
-    }
-  }, [input]);
+  const promptList = selectedPrompts || [];
+  const selectedPromptIds = useMemo(
+    () => new Set(promptList.map((p) => p.id)),
+    [promptList],
+  );
+
+  const handleTogglePrompt = useCallback(
+    (prompt: MentionPromptItem) => {
+      if (setSelectedPrompts) {
+        setSelectedPrompts((prev = []) => {
+          if (prev.some((p) => p.id === prompt.id)) {
+            return prev.filter((p) => p.id !== prompt.id);
+          }
+          return [...prev, prompt];
+        });
+      } else {
+        setSelectedPrompt(prompt);
+      }
+    },
+    [setSelectedPrompts, setSelectedPrompt],
+  );
+
+  const handleRemovePrompt = useCallback(
+    (promptId?: string) => {
+      if (setSelectedPrompts) {
+        setSelectedPrompts((prev = []) => {
+          if (!promptId) return [];
+          return prev.filter((p) => p.id !== promptId);
+        });
+      } else {
+        setSelectedPrompt(null);
+      }
+    },
+    [setSelectedPrompts, setSelectedPrompt],
+  );
 
   // -- Model initialisation --
   useEffect(() => {
@@ -375,30 +477,52 @@ export function ChatInput({
 
   // -- Action handlers --
   const handleSend = () => {
+    const hasPrompts = promptList.length > 0 || Boolean(selectedPrompt);
     if (
       (input.trim() ||
         attachments.length > 0 ||
-        selectedPrompt ||
-        selectedAssistant) &&
+        hasPrompts ||
+        selectedAssistant ||
+        selectedSkills.size > 0 ||
+        selectedKbs.size > 0) &&
       !isLoading
     ) {
+      // Auto-suppress tools when the current model does not support tool calling (capTools: false).
+      // This prevents ToolsNotSupportedError on the backend while preserving the user's tool toggle
+      // preferences in the UI if they switch back to a tool-capable model.
+      const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
+      const effectiveServerIds = supportsTools
+        ? Array.from(selectedServerIds)
+        : [];
+
+      const promptIds = promptList.map((p) => p.id);
+      const promptPayload =
+        promptIds.length > 0
+          ? promptIds
+          : selectedPrompt?.id
+            ? [selectedPrompt.id]
+            : undefined;
+
       onSend(
         input,
         attachments,
         modelId,
-        Array.from(selectedServerIds),
-        Array.from(selectedTools),
-        selectedPrompt?.id,
+        effectiveServerIds,
+        effectiveTools,
+        promptPayload,
         selectedAssistant?.id,
         Array.from(selectedKbs),
+        Array.from(selectedSkills),
       );
       setInput("");
       clearAttachments();
-      setSelectedPrompt(null);
-      setSelectedAssistant(null);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+      if (setSelectedPrompts) {
+        setSelectedPrompts([]);
+      } else {
+        setSelectedPrompt(null);
       }
+      setSelectedAssistant(null);
+      setSelectedSkills(new Set());
     }
   };
 
@@ -414,7 +538,7 @@ export function ChatInput({
 
   return (
     <div
-      className={`w-full max-w-4xl mx-auto px-3 py-2 bg-background border rounded-2xl md:mb-4 shadow-sm md:bg-muted/30 transition-colors relative ${isDragging ? "ring-2 ring-primary bg-primary/5" : ""}`}
+      className={`relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30 ${isDragging ? "bg-primary/5 ring-2 ring-primary" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -445,11 +569,15 @@ export function ChatInput({
       <ActiveSelectionChips
         selectedAssistant={selectedAssistant}
         selectedPrompt={selectedPrompt}
+        selectedPrompts={selectedPrompts}
         selectedKbs={selectedKbs}
         knowledgebases={knowledgebases}
+        selectedSkills={selectedSkills}
+        skills={skills}
         onRemoveAssistant={() => setSelectedAssistant(null)}
-        onRemovePrompt={() => setSelectedPrompt(null)}
+        onRemovePrompt={handleRemovePrompt}
         onRemoveKb={handleRemoveKb}
+        onRemoveSkill={handleRemoveSkill}
       />
 
       <ModelCapabilityBanner hasNoModels={hasNoModels} />
@@ -475,10 +603,10 @@ export function ChatInput({
         placeholder={
           hasNoModels
             ? "Set up a provider to start chatting..."
-            : "Ask anything... Use / for commands, @ for assistant"
+            : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases"
         }
-        className="min-h-[40px] resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent p-0 overflow-y-auto"
-        rows={1}
+        className="max-h-[120px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+        rows={2}
         disabled={hasNoModels}
       />
 
@@ -486,16 +614,22 @@ export function ChatInput({
         <div className="flex items-center gap-1.5">
           {isMobile ? (
             <Drawer>
-              <DrawerTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  disabled={hasNoModels}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </DrawerTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DrawerTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      disabled={hasNoModels}
+                      aria-label="Attach files, tools & more"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </DrawerTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Attach files, tools & more</TooltipContent>
+              </Tooltip>
               <DrawerContent>
                 <AttachmentsMenu
                   servers={servers}
@@ -506,6 +640,16 @@ export function ChatInput({
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
                   onToggleKb={handleToggleKb}
+                  skills={skills}
+                  selectedSkills={selectedSkills}
+                  onToggleSkill={handleToggleSkill}
+                  prompts={prompts}
+                  mcpPrompts={mcpPrompts}
+                  selectedPrompt={selectedPrompt}
+                  onSelectPrompt={setSelectedPrompt}
+                  selectedPromptIds={selectedPromptIds}
+                  onTogglePrompt={handleTogglePrompt}
+                  onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -513,16 +657,22 @@ export function ChatInput({
             </Drawer>
           ) : (
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  disabled={hasNoModels}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      disabled={hasNoModels}
+                      aria-label="Attach files, tools & more"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Attach files, tools & more</TooltipContent>
+              </Tooltip>
               <PopoverContent side="top" align="start" className="w-56 p-1">
                 <AttachmentsMenu
                   servers={servers}
@@ -533,6 +683,16 @@ export function ChatInput({
                   knowledgebases={knowledgebases}
                   selectedKbs={selectedKbs}
                   onToggleKb={handleToggleKb}
+                  skills={skills}
+                  selectedSkills={selectedSkills}
+                  onToggleSkill={handleToggleSkill}
+                  prompts={prompts}
+                  mcpPrompts={mcpPrompts}
+                  selectedPrompt={selectedPrompt}
+                  onSelectPrompt={setSelectedPrompt}
+                  selectedPromptIds={selectedPromptIds}
+                  onTogglePrompt={handleTogglePrompt}
+                  onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
                 />
@@ -540,14 +700,20 @@ export function ChatInput({
             </Popover>
           )}
 
-          <ModelSelector
-            value={modelId}
-            onValueChange={setModelId}
-            showTrigger={false}
-          />
+          <ModelSelector value={modelId} onValueChange={setModelId} />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <ContextUsagePill
+            thread={thread}
+            selectedModel={selectedModelObj ?? undefined}
+            input={input}
+            draftAttachments={attachments}
+            toolNames={supportsTools ? Array.from(selectedTools) : []}
+            mcpServerCount={supportsTools ? selectedServerIds.size : 0}
+            selectedSkillTokens={selectedSkillTokens}
+            availableSkillCount={availableSkillCount}
+          />
           {onCancel && (
             <Button
               variant="ghost"
@@ -581,19 +747,22 @@ export function ChatInput({
               size="icon"
               className="h-7 w-7 rounded-full"
               onClick={handleSend}
+              aria-label={submitLabel || "Send message"}
               disabled={
                 hasNoModels ||
                 (!input.trim() &&
                   attachments.length === 0 &&
+                  promptList.length === 0 &&
                   !selectedPrompt &&
                   !selectedAssistant &&
+                  selectedSkills.size === 0 &&
                   selectedKbs.size === 0)
               }
             >
               {submitLabel === "Save" ? (
                 <Save className="h-3.5 w-3.5" />
               ) : (
-                <Send className="h-3.5 w-3.5 ml-0.5" />
+                <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
               )}
             </Button>
           )}

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { isBlockedUrlSync } from "@/lib/mcp/url-guard-core";
-import { jsonObjectSchema, idField } from "../shared-fields";
+import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
+import { idField, jsonObjectSchema } from "@/schemas/shared-fields";
 
 /**
  * Validates MCP (Model Context Protocol) server configuration.
@@ -22,7 +22,7 @@ const mcpServerBaseSchema = z.object({
     .refine((val) => !isBlockedUrlSync(val), {
       message: "URL points to a blocked or internal address",
     }),
-  headers: jsonObjectSchema.optional(),
+  headers: jsonObjectSchema.or(z.literal("")).optional(),
   isPublic: z.boolean(),
 });
 
@@ -61,6 +61,8 @@ export const mcpServerSchema = z
     name: z.string(),
     enabled: z.boolean(),
     isPublic: z.boolean(),
+    isInstalled: z.boolean().optional(),
+    installId: z.string().optional(),
     createdAt: z.date(),
     updatedAt: z.date(),
   })

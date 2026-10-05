@@ -1,11 +1,12 @@
 import { z } from "zod";
 import {
-  nameField,
-  descriptionField,
   contentField,
-  renameSchema,
+  descriptionField,
   idField,
-} from "../shared-fields";
+  nameField,
+  renameSchema,
+} from "@/schemas/shared-fields";
+import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
 /**
  * Validates new project creation data for organizing chats with shared system prompts.
@@ -24,6 +25,8 @@ export const createProjectSchema = z.object({
   description: descriptionField,
   globalPrompt: contentField.optional(),
   tools: z.array(z.string()).optional(),
+  skillMode: skillModeSchema.optional(),
+  skillIds: skillIdsSchema.optional(),
   knowledgebaseId: z.string().nullable().optional(),
 });
 
@@ -67,6 +70,8 @@ export const projectSchema = z.object({
   isPinned: z.boolean(),
   globalPrompt: z.string(),
   tools: z.array(z.string()),
+  skillMode: skillModeSchema,
+  skillIds: skillIdsSchema,
   knowledgebaseId: idField.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),

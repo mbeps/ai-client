@@ -1,232 +1,142 @@
-/**
- * Log level types for structured logging.
- * DEBUG: Development-only verbose logs
- * INFO: General information
- * WARN: Warning messages
- * ERROR: Error conditions with stack traces
- * AUDIT: Security and compliance audit events
- * @author Maruf Bepary
- */
-type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "AUDIT";
+import {
+  configureSync,
+  getAnsiColorFormatter,
+  getConsoleSink,
+  getLogger as getLogTapeLogger,
+  type LogLevel,
+} from "@logtape/logtape";
+import { env } from "@/config/env";
+
+let initialized = false;
+
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
 
 /**
- * Structured log entry format.
- * @author Maruf Bepary
+ * ANSI console formatter with aligned columns, generous spacing, and subtle delimiters.
  */
-interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  context?: Record<string, any>;
-  userId?: string;
-  traceId?: string;
+const consoleFormatter = getAnsiColorFormatter({
+  timestamp: "time",
+  level: "FULL",
+  categoryStyle: "dim",
+  timestampStyle: "dim",
+  format({ timestamp, level, category, message, record }) {
+    // 1. Join category parts with a middle dot and pad to 24 characters
+    const rawCategory = record.category.join("·");
+    const padLength = Math.max(0, 24 - rawCategory.length);
+    const paddedCategory = category + " ".repeat(padLength);
+
+    // 2. Pad level string to 7 characters (longest is "WARNING")
+    // Use record.level (unformatted string) to calculate padding, ignoring ANSI escape sequences
+    const levelStr = record.level.toUpperCase();
+    const levelPad = " ".repeat(Math.max(0, 7 - levelStr.length));
+
+    // 3. Assemble aligned row
+    return `${timestamp}  ${level}${levelPad}  ${paddedCategory}  ${DIM}│${RESET}  ${message}`;
+  },
+});
+
+/**
+ * Synchronously configures the LogTape logging system with non-blocking console sink.
+ */
+export function configureLoggingSync(): void {
+  if (initialized) return;
+
+  const isTest =
+    typeof process !== "undefined" &&
+    (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST));
+
+  const logLevel =
+    typeof process !== "undefined" && (env as any)?.LOG_LEVEL
+      ? ((env as any).LOG_LEVEL as LogLevel)
+      : "info";
+
+  try {
+    configureSync({
+      sinks: {
+        console: getConsoleSink({
+          formatter: consoleFormatter,
+          // Non-blocking in runtime to never stall requests; synchronous in tests to avoid runner teardown races
+          nonBlocking: !isTest,
+        }),
+      },
+      loggers: [
+        // Silence LogTape internal meta logger diagnostic notice
+        {
+          category: ["logtape", "meta"],
+          lowestLevel: "warning",
+          sinks: ["console"],
+        },
+        // Root application logger
+        {
+          category: ["app"],
+          lowestLevel: logLevel,
+          sinks: ["console"],
+        },
+      ],
+    });
+    initialized = true;
+  } catch {
+    initialized = true;
+  }
 }
 
-const SENSITIVE_KEYS = [
-  "password",
-  "token",
-  "secret",
-  "apiKey",
-  "credentials",
-  "email",
-  "account_id",
-  "authorization",
-  "cookie",
-];
-
 /**
- * Recursively sanitizes an object by masking sensitive keys.
- * Redacts passwords, tokens, API keys, emails, and other sensitive data
- * to prevent them from appearing in logs.
- *
- * @param obj - Object to sanitize (may be nested)
- * @returns Sanitized copy with sensitive values replaced by '[REDACTED]'
- * @author Maruf Bepary
+ * Async entry point for application startup (optional instrumentation hook).
  */
-function sanitize(obj: any): any {
-  if (obj === null || typeof obj !== "object") {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(sanitize);
-  }
-
-  const sanitized: Record<string, any> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      if (
-        SENSITIVE_KEYS.some((sk) =>
-          key.toLowerCase().includes(sk.toLowerCase()),
-        )
-      ) {
-        sanitized[key] = "[REDACTED]";
-      } else {
-        sanitized[key] = sanitize(obj[key]);
-      }
-    }
-  }
-  return sanitized;
+export async function configureLogging(): Promise<void> {
+  configureLoggingSync();
 }
 
 /**
- * Serializes an error object into a plain object for JSON logging.
- * Extracts name, message, and stack trace; preserves custom properties.
- *
- * @param err - Error object to serialize
- * @returns Plain object with error details
- * @author Maruf Bepary
+ * Export getLogger from LogTape, guaranteeing the logging system is configured.
  */
-function serializeError(err: any): any {
-  if (err instanceof Error) {
-    return {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-      ...(err as any),
-    };
+export function getLogger(
+  ...args: Parameters<typeof getLogTapeLogger>
+): ReturnType<typeof getLogTapeLogger> {
+  if (!initialized) {
+    configureLoggingSync();
   }
-  return err;
+  return getLogTapeLogger(...args);
 }
 
-const formatLog = (entry: LogEntry) => {
-  const sanitizedEntry = {
-    ...entry,
-    context: entry.context ? sanitize(entry.context) : undefined,
-  };
-  return JSON.stringify(sanitizedEntry, null, 2);
-};
-
-const isDev = process.env.NODE_ENV === "development";
-
 /**
- * Structured logger for consistent application-wide logging.
- * Supports development/production modes, sanitization of sensitive data,
- * and optional user/trace context for request correlation.
- *
- * Usage:
- * ```
- * logger.info('User logged in', { userId: 123 }, userId, traceId);
- * logger.error('API call failed', error, { endpoint: '/api/chat' }, userId);
- * logger.audit('Account deleted', { userId, reason: 'user_request' });
- * ```
- *
- * @author Maruf Bepary
+ * Backward-compatible facade delegating to LogTape's root app logger.
+ * Preserves legacy callsites while core modules migrate to domain-scoped getLogger.
  */
 export const logger = {
-  /**
-   * Logs a debug message (development-only).
-   * @param msg - Message to log
-   * @param ctx - Optional context object
-   * @param userId - Optional authenticated user ID for correlation
-   * @param traceId - Optional trace ID for request correlation
-   * @author Maruf Bepary
-   */
-  debug: (msg: string, ctx?: any, userId?: string, traceId?: string) => {
-    if (isDev) {
-      console.debug(
-        formatLog({
-          timestamp: new Date().toISOString(),
-          level: "DEBUG",
-          message: msg,
-          context: ctx,
-          userId,
-          traceId,
-        }),
-      );
-    }
+  debug: (msg: string, ctx?: any, _userId?: string, _traceId?: string) => {
+    getLogger(["app"]).debug(msg, ctx ?? {});
   },
-  /**
-   * Logs an info message to record general application events.
-   * @param msg - Message to log
-   * @param ctx - Optional context object
-   * @param userId - Optional authenticated user ID for correlation
-   * @param traceId - Optional trace ID for request correlation
-   * @author Maruf Bepary
-   */
-  info: (msg: string, ctx?: any, userId?: string, traceId?: string) => {
-    console.log(
-      formatLog({
-        timestamp: new Date().toISOString(),
-        level: "INFO",
-        message: msg,
-        context: ctx,
-        userId,
-        traceId,
-      }),
-    );
+  info: (msg: string, ctx?: any, _userId?: string, _traceId?: string) => {
+    getLogger(["app"]).info(msg, ctx ?? {});
   },
-  /**
-   * Logs a warning for potentially problematic conditions.
-   * @param msg - Message to log
-   * @param ctx - Optional context object
-   * @param userId - Optional authenticated user ID for correlation
-   * @param traceId - Optional trace ID for request correlation
-   * @author Maruf Bepary
-   */
-  warn: (msg: string, ctx?: any, userId?: string, traceId?: string) => {
-    console.warn(
-      formatLog({
-        timestamp: new Date().toISOString(),
-        level: "WARN",
-        message: msg,
-        context: ctx,
-        userId,
-        traceId,
-      }),
-    );
+  warn: (msg: string, ctx?: any, _userId?: string, _traceId?: string) => {
+    getLogger(["app"]).warn(msg, ctx ?? {});
   },
-  /**
-   * Logs an error with full context and stack trace.
-   * @param msg - Message to log
-   * @param err - Error object (will be serialized with stack)
-   * @param ctx - Optional additional context object
-   * @param userId - Optional authenticated user ID for correlation
-   * @param traceId - Optional trace ID for request correlation
-   * @author Maruf Bepary
-   */
   error: (
     msg: string,
     err?: any,
     ctx?: any,
-    userId?: string,
-    traceId?: string,
+    _userId?: string,
+    _traceId?: string,
   ) => {
-    console.error(
-      formatLog({
-        timestamp: new Date().toISOString(),
-        level: "ERROR",
-        message: msg,
-        context: {
-          ...ctx,
-          error: serializeError(err),
-        },
-        userId,
-        traceId,
-      }),
-    );
+    const errorDetails =
+      err instanceof Error
+        ? { message: err.message, stack: err.stack, ...ctx }
+        : err !== undefined
+          ? { error: err, ...ctx }
+          : (ctx ?? {});
+    getLogger(["app"]).error(msg, errorDetails);
   },
-  /**
-   * Logs a security audit event (e.g., login, permission change, account deletion).
-   * @param action - Action being audited
-   * @param metadata - Audit metadata, must include userId and relevant context
-   * @param traceId - Optional trace ID for request correlation
-   * @author Maruf Bepary
-   */
   audit: (
     action: string,
     metadata: { userId: string; [key: string]: any },
-    traceId?: string,
+    _traceId?: string,
   ) => {
-    console.log(
-      formatLog({
-        timestamp: new Date().toISOString(),
-        level: "AUDIT",
-        message: action,
-        context: metadata,
-        userId: metadata.userId,
-        traceId,
-      }),
-    );
+    getLogger(["app", "audit"]).info("Audit: {action}", {
+      action,
+      ...metadata,
+    });
   },
 };

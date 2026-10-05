@@ -1,7 +1,28 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import type { Passkey } from "@better-auth/passkey";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Fingerprint, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -11,30 +32,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { authClient } from "@/lib/auth/auth-client";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Passkey } from "@better-auth/passkey";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { BetterAuthActionButton } from "@/components/auth/buttons/better-auth-action-button";
-import { Fingerprint, Plus, Trash2, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useState } from "react";
-import { passkeySchema, PasskeyForm } from "@/schemas/auth/passkey";
+import { type PasskeyForm, passkeySchema } from "@/schemas/auth/passkey";
 
 /**
  * Manages user passkeys (WebAuthn credentials) with create and delete functionality.
@@ -93,7 +93,7 @@ export function PasskeyManagement({ passkeys }: { passkeys: Passkey[] }) {
         <div className="space-y-4">
           {passkeys.map((passkey) => (
             <Card key={passkey.id}>
-              <CardHeader className="flex gap-2 items-center justify-between">
+              <CardHeader className="flex items-center justify-between gap-2">
                 <div className="space-y-1">
                   <CardTitle>{passkey.name}</CardTitle>
                   <CardDescription>

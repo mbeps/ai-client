@@ -1,27 +1,38 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { authClient } from "@/lib/auth/auth-client";
-import Link from "next/link";
-import { useAppStore } from "@/lib/store";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import type { Message } from "@/types/message/message";
-import type { Attachment } from "@/types/attachment/attachment";
-import type { ToolCallState } from "@/types/tool/tool-call";
-import { ROUTES } from "@/constants/routes";
-import { Bot, Command, Database, User } from "lucide-react";
-import { useMemo, useState } from "react";
-import { MarkdownRenderer } from "./markdown-renderer";
-import { ResponseTimeline } from "./message/response-timeline";
-import { MessageActions } from "./message/message-actions";
 import {
-  parseMessageMetadata,
-  extractCitations,
-  type Citation,
-} from "@/lib/store/mappers/message-mapper";
+  Bot,
+  BrainCircuit,
+  Check,
+  Command,
+  Database,
+  User,
+  X,
+  Zap,
+} from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
+import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
+import { authClient } from "@/lib/auth/auth-client";
+import { extractCitations } from "@/lib/chat/extract-citations";
+import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { useAppStore } from "@/lib/store";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { Citation } from "@/types/chat/citation";
+import type { Message } from "@/types/message/message";
+import type { ToolCallState } from "@/types/tool/tool-call";
+import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
+import { CanvasCard } from "./message/canvas-card";
 import { CitationsList } from "./message/citations-list";
-import { ChatInput } from "./chat-input";
+import { MessageActions } from "./message/message-actions";
+import { ResponseTimeline } from "./message/response-timeline";
 
 /**
  * Props for the MessageBubble component.
@@ -46,7 +57,10 @@ interface MessageBubbleProps {
     model: string,
     serverIds: string[],
     toolIds: string[],
-    promptId?: string,
+    promptId?: string | string[],
+    assistantId?: string,
+    kbs?: string[],
+    selectedSkillIds?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -61,33 +75,24 @@ interface MessageBubbleProps {
   reasoning?: string;
   /** True while the model is actively streaming its reasoning. */
   isStreamingReasoning?: boolean;
-  /** Callback to show the artifact associated with this message. */
-  onShowArtifact?: () => void;
+  /** Callback to toggle a canvas artifact. */
+  onToggleArtifact?: (artifact: ArtifactData) => void;
+  /** Active artifact id if canvas is currently open. */
+  activeArtifactId?: string | null;
+  /** Whether canvas panel is currently open. */
+  isCanvasOpen?: boolean;
   /** Optional citations to show during streaming before they are persisted in metadata. */
   streamingCitations?: Citation[];
   /** Tool invocations currently in flight during streaming. */
   activeToolCalls?: ToolCallState[];
+  /** Knowledge bases available for display in KB chips. */
+  knowledgebases?: KnowledgebaseWithCount[];
 }
 
-/**
- * Renders a single message within the conversation thread.
- * User messages display as plain pre-wrapped text; assistant messages render via
- * MarkdownRenderer with support for tool calls, reasoning tokens, and artifacts.
- * Shows left/right navigation arrows on hover when siblings exist for branching.
- * Supports inline editing (creates new sibling), deletion, and regeneration.
- * Fetches and caches presigned URLs for attachments on mount.
- *
- * @param props - Message data, callbacks, and siblings for branch navigation.
- * @returns Avatar, message content, optional thinking display, attachments, and actions.
- * @see MarkdownRenderer for assistant message content rendering.
- * @see ToolCallDisplay for visualizing tool invocations.
- * @see ThinkingDisplay for streaming reasoning output.
- * @see MessageActions for edit/delete/regenerate UI.
- */
 export function MessageBubble({
   message,
   isLatest,
-  isFirst,
+  isFirst: _isFirst,
   assistantId,
   onDelete,
   onEdit,
@@ -97,13 +102,20 @@ export function MessageBubble({
   reasoning,
   isStreamingReasoning,
   onRegenerate,
-  onShowArtifact,
+  onToggleArtifact,
+  activeArtifactId,
+  isCanvasOpen,
   streamingCitations,
   activeToolCalls,
+  knowledgebases = [],
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
+  const parsedMetadata = useMemo(
+    () => parseMessageMetadata(message.metadata),
+    [message.metadata],
+  );
   const {
     promptMeta: rawPromptMeta,
     toolData: rawToolData,
@@ -111,7 +123,8 @@ export function MessageBubble({
     selectedServerIds: parsedServerIds,
     selectedTools: parsedToolIds,
     selectedKbIds: parsedKbIds,
-  } = useMemo(() => parseMessageMetadata(message.metadata), [message.metadata]);
+    selectedSkillIds: parsedSkillIds,
+  } = parsedMetadata;
 
   const citations = useMemo(() => {
     if (streamingCitations && streamingCitations.length > 0)
@@ -119,32 +132,71 @@ export function MessageBubble({
     if (!rawToolData) return [];
     return extractCitations(rawToolData.toolResults);
   }, [rawToolData, streamingCitations]);
-  const mcpServers = useAppStore((state) => state.mcpServers);
-  const { knowledgebases } = useKnowledgebases();
   const promptMeta = isUser ? rawPromptMeta : null;
   const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
+  const selectedSkillIds = isUser && parsedSkillIds ? parsedSkillIds : [];
+  const skills = useAppStore((state) => state.skills);
   const toolData = isUser ? null : rawToolData;
-  const promptEntry = promptMeta
-    ? prompts.find((p) => p.id === promptMeta.promptId)
-    : null;
+  const promptIds = useMemo(() => {
+    if (!promptMeta) return [];
+    if (
+      Array.isArray(promptMeta.promptIds) &&
+      promptMeta.promptIds.length > 0
+    ) {
+      return promptMeta.promptIds;
+    }
+    return promptMeta.promptId ? [promptMeta.promptId] : [];
+  }, [promptMeta]);
 
   const modelName = useMemo(() => {
     if (isUser || !parsedModelId) return null;
     return parsedModelId;
   }, [isUser, parsedModelId]);
 
-  const hasArtifact = useMemo(() => {
-    if (!toolData) return false;
-    return toolData.toolResults.some(
-      (tr) => tr.toolName === "manage_artifact" && (tr.result as any)?.artifact,
-    );
-  }, [toolData]);
+  const messageArtifacts = useMemo(
+    () => extractMessageArtifacts(message, activeToolCalls),
+    [message, activeToolCalls],
+  );
 
+  const initialContent = promptMeta ? promptMeta.userContent : message.content;
   const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(initialContent);
+
+  const handleStartEdit = () => {
+    setEditContent(promptMeta ? promptMeta.userContent : message.content);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (
+      !editContent.trim() &&
+      (!message.attachments || message.attachments.length === 0)
+    ) {
+      return;
+    }
+    onEdit(
+      message.id,
+      editContent,
+      message.attachments || [],
+      parsedModelId || "",
+      parsedServerIds || [],
+      parsedToolIds || [],
+      promptIds.length > 0 ? promptIds : promptMeta?.promptId,
+      assistantId || undefined,
+      selectedKbIds,
+      selectedSkillIds,
+    );
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(promptMeta ? promptMeta.userContent : message.content);
+    setIsEditing(false);
+  };
 
   return (
     <div
-      className={`flex flex-col gap-2 p-4 w-full group ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
+      className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "rounded-lg bg-muted/30"}`}
     >
       <div className="flex items-center gap-2">
         <Avatar className="h-6 w-6">
@@ -164,9 +216,9 @@ export function MessageBubble({
             </AvatarFallback>
           )}
         </Avatar>
-        <div className="font-semibold text-sm">
-          {isUser ? "You" : "Assistant"}
-        </div>
+        <span className="font-semibold text-sm">
+          {isUser ? "You" : modelName ? modelName : "Assistant"}
+        </span>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -187,24 +239,53 @@ export function MessageBubble({
           )}
           {isUser ? (
             <div>
-              {(promptMeta || selectedKbIds.length > 0) && (
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {promptMeta && (
-                    <Link
-                      href={ROUTES.SETTINGS.PROMPTS.detail(promptMeta.promptId)}
-                      className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
-                    >
-                      <Command className="h-3 w-3" />/
-                      {promptEntry?.shortcut ?? promptMeta.promptId}
-                    </Link>
-                  )}
+              {(promptIds.length > 0 ||
+                selectedSkillIds.length > 0 ||
+                selectedKbIds.length > 0) && (
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  {promptIds.map((pid) => {
+                    const promptEntry = prompts.find((p) => p.id === pid);
+                    const isMcp = pid.startsWith("mcp:");
+                    return isMcp ? (
+                      <span
+                        key={pid}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs"
+                      >
+                        <Zap className="h-3 w-3 text-amber-500" />/
+                        {promptEntry?.title ?? pid}
+                      </span>
+                    ) : (
+                      <Link
+                        key={pid}
+                        href={ROUTES.SETTINGS.PROMPTS.detail(pid)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
+                      >
+                        <Command className="h-3 w-3" />/
+                        {promptEntry?.shortcut ?? promptEntry?.title ?? pid}
+                      </Link>
+                    );
+                  })}
+                  {selectedSkillIds.map((skillId) => {
+                    const skill = skills.find(
+                      (s) => s.id === skillId || s.name === skillId,
+                    );
+                    return (
+                      <span
+                        key={skillId}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs"
+                      >
+                        <BrainCircuit className="h-3 w-3 text-primary" />/
+                        {skill?.displayName ?? skill?.name ?? skillId}
+                      </span>
+                    );
+                  })}
                   {selectedKbIds.map((kbId) => {
                     const kb = knowledgebases.find((k) => k.id === kbId);
                     return (
                       <Link
                         key={kbId}
                         href={ROUTES.KNOWLEDGEBASES.detail(kbId)}
-                        className="inline-flex items-center gap-1 text-xs rounded-md bg-primary/10 text-primary px-2 py-0.5 hover:bg-primary/20 transition-colors cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
                       >
                         <Database className="h-3 w-3" />
                         {kb?.name ?? kbId}
@@ -214,40 +295,40 @@ export function MessageBubble({
                 </div>
               )}
               {isEditing ? (
-                <ChatInput
-                  initialValue={
-                    promptMeta ? promptMeta.userContent : message.content
-                  }
-                  initialModelId={parsedModelId || undefined}
-                  initialAttachments={message.attachments || []}
-                  initialSelectedServerIds={parsedServerIds || []}
-                  initialSelectedTools={parsedToolIds || []}
-                  initialSelectedPromptId={promptMeta?.promptId}
-                  submitLabel="Save"
-                  onSend={(
-                    content,
-                    attachments,
-                    model,
-                    serverIds,
-                    toolIds,
-                    _resources,
-                    promptId,
-                  ) => {
-                    onEdit(
-                      message.id,
-                      content,
-                      attachments,
-                      model,
-                      serverIds,
-                      toolIds,
-                      promptId,
-                    );
-                    setIsEditing(false);
-                  }}
-                  onCancel={() => setIsEditing(false)}
-                  servers={mcpServers.filter((s) => s.enabled)}
-                  canMentionAssistant={isFirst && !assistantId}
-                />
+                <div className="my-2 w-full space-y-3">
+                  <MarkdownTabEditor
+                    value={editContent}
+                    onChange={setEditContent}
+                    placeholder="Edit your message..."
+                    minHeight="min-h-[140px]"
+                    maxHeight="max-h-[500px]"
+                    defaultTab="rich"
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                      className="cursor-pointer"
+                    >
+                      <X className="mr-1.5 h-3.5 w-3.5" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={
+                        !editContent.trim() &&
+                        (!message.attachments ||
+                          message.attachments.length === 0)
+                      }
+                      className="cursor-pointer"
+                    >
+                      <Check className="mr-1.5 h-3.5 w-3.5" />
+                      Save & Submit
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <MarkdownRenderer
                   content={
@@ -257,7 +338,18 @@ export function MessageBubble({
               )}
             </div>
           ) : (
-            <MarkdownRenderer content={message.content} />
+            <>
+              {messageArtifacts.map((art) => (
+                <CanvasCard
+                  key={art.id}
+                  artifact={art}
+                  isOpen={isCanvasOpen && activeArtifactId === art.id}
+                  onToggle={() => onToggleArtifact?.(art)}
+                  createdAt={message.createdAt}
+                />
+              ))}
+              <MarkdownRenderer content={message.content} />
+            </>
           )}
           <CitationsList citations={citations} />
         </div>
@@ -267,16 +359,14 @@ export function MessageBubble({
             message={message}
             isUser={isUser}
             contentToCopy={message.content}
-            onEdit={() => setIsEditing(true)}
+            onEdit={handleStartEdit}
             onDelete={onDelete}
             siblings={siblings}
             currentSiblingIndex={currentSiblingIndex}
             onNavigateBranch={onNavigateBranch}
             onRegenerate={onRegenerate}
             editContent={promptMeta ? promptMeta.userContent : undefined}
-            modelName={modelName}
-            onShowArtifact={onShowArtifact}
-            hasArtifact={hasArtifact}
+            metadata={parsedMetadata}
           />
         )}
       </div>

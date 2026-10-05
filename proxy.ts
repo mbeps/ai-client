@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "proxy"]);
 
 /**
  * Public path prefixes that bypass authentication checks.
@@ -8,6 +11,7 @@ import { auth } from "@/lib/auth/auth";
 const PUBLIC_PREFIXES = [
   "/auth", // login, 2fa, reset-password
   "/api/auth", // Better Auth handler at app/api/auth/[...all]/route.ts
+  "/api/inngest", // Inngest serve handler
 ];
 
 /**
@@ -23,24 +27,32 @@ export async function proxy(request: NextRequest) {
 
   // Allow all public paths through without a session check
   if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    log.debug("Bypassing public path {pathname}", { pathname });
     return NextResponse.next();
   }
 
-  // Resolve session from JWT cookie — no DB round-trip due to strategy: "jwt" + refreshCache
+  // Resolve session from the cookie cache — strategy: "jwt" avoids a DB hit per request
   const session = await auth.api.getSession({
     headers: request.headers,
   });
 
   if (!session) {
+    log.debug(
+      "Unauthenticated request to {pathname}, redirecting to /auth/login",
+      { pathname },
+    );
     const loginUrl = new URL("/auth/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
+  log.debug("Session verified for {pathname}", { pathname });
   return NextResponse.next();
 }
 
 /**
  * Run proxy on all routes except Next.js internals and static assets.
+ * `/api/inngest` is excluded from the matcher but still reaches this function;
+ * PUBLIC_PREFIXES is what actually bypasses the session check for it.
  */
 export const config = {
   matcher: [

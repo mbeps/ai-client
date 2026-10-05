@@ -1,8 +1,15 @@
 "use client";
 
+import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { syncProviderModels } from "@/actions/models/sync-provider-models";
+import { deleteProvider } from "@/actions/providers/delete-provider";
+import { testProviderConnection } from "@/actions/providers/test-provider-connection";
+import { toggleProvider } from "@/actions/providers/toggle-provider";
+import { ProviderCard } from "@/components/settings/providers/provider-card";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,16 +18,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { deleteProvider } from "@/lib/actions/providers/delete-provider";
-import { toggleProvider } from "@/lib/actions/providers/toggle-provider";
-import { testProviderConnection } from "@/lib/actions/providers/test-provider-connection";
-import { syncProviderModels } from "@/lib/actions/models/sync-provider-models";
-import { ProviderFormDialog } from "@/components/settings/providers/provider-form-dialog";
-import { ProviderCard } from "@/components/settings/providers/provider-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
-import { invalidateProviderRegistryCache } from "@/hooks/provider-registry-cache";
-import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+import { ROUTES } from "@/config/routes";
+import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ProviderListProps = {
   providers: AiProviderRow[];
@@ -29,9 +30,8 @@ type ProviderListProps = {
 };
 
 /**
- * Lists all configured AI providers with search, edit, delete, and test controls.
- * Shows model count per provider and enables toggling provider availability.
- * Integrates with ProviderCard and ModelFormDialog for inline management.
+ * Lists all configured AI providers with search, toggle, test, sync, and delete controls.
+ * Clicking a provider card's edit action navigates to the dedicated provider detail page.
  *
  * @param props.providers - Array of configured providers to display.
  * @param props.models - Array of models (for counting models per provider).
@@ -44,15 +44,11 @@ export function ProviderList({
   onRefresh,
 }: ProviderListProps) {
   const [search, setSearch] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<AiProviderRow | null>(
-    null,
-  );
   const [providerToDelete, setProviderToDelete] =
     useState<AiProviderRow | null>(null);
   const [busyProviderId, setBusyProviderId] = useState<string | null>(null);
 
-  const modelCountByProvider = useMemo(
+  const _modelCountByProvider = useMemo(
     () =>
       models.reduce<Record<string, number>>((acc, model) => {
         acc[model.providerId] = (acc[model.providerId] ?? 0) + 1;
@@ -64,26 +60,15 @@ export function ProviderList({
   const filteredProviders = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = query
-      ? providers.filter((provider) => {
-          return (
-            provider.name.toLowerCase().includes(query) ||
-            provider.baseUrl.toLowerCase().includes(query)
-          );
-        })
+      ? providers.filter(
+          (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.baseUrl.toLowerCase().includes(query),
+        )
       : providers;
 
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [providers, search]);
-
-  const openCreateDialog = (): void => {
-    setEditingProvider(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (provider: AiProviderRow): void => {
-    setEditingProvider(provider);
-    setDialogOpen(true);
-  };
 
   const runAction = async (
     providerId: string,
@@ -108,13 +93,15 @@ export function ProviderList({
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <Input
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search providers..."
           className="max-w-md"
         />
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Provider
+        <Button asChild>
+          <Link href={ROUTES.SETTINGS.PROVIDERS.new}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Provider
+          </Link>
         </Button>
       </div>
 
@@ -128,59 +115,45 @@ export function ProviderList({
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 grid-cols-1">
-          {filteredProviders.map((provider) => {
-            const isBusy = busyProviderId === provider.id;
-
-            return (
-              <ProviderCard
-                key={provider.id}
-                provider={provider}
-                isBusy={isBusy}
-                onEdit={() => openEditDialog(provider)}
-                onDelete={() => setProviderToDelete(provider)}
-                onToggle={(checked) =>
-                  void runAction(provider.id, async () => {
-                    await toggleProvider(provider.id, checked);
-                  })
-                }
-                onTest={() =>
-                  void runAction(provider.id, async () => {
-                    const result = await testProviderConnection(provider.id);
-                    if (!result.ok) {
-                      throw new Error(result.error ?? "Connection failed");
-                    }
-                    toast.success("Connection successful");
-                  })
-                }
-                onSync={() =>
-                  void runAction(provider.id, async () => {
-                    const result = await syncProviderModels(provider.id);
-                    if (result.limitExceeded) {
-                      toast.warning("Model Limit Reached", {
-                        description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
-                      });
-                    } else {
-                      toast.success(
-                        `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
-                      );
-                    }
-                  })
-                }
-              />
-            );
-          })}
+        <div className="grid grid-cols-1 gap-4">
+          {filteredProviders.map((provider) => (
+            <ProviderCard
+              key={provider.id}
+              provider={provider}
+              isBusy={busyProviderId === provider.id}
+              onDelete={() => setProviderToDelete(provider)}
+              onToggle={(checked) =>
+                void runAction(provider.id, () =>
+                  toggleProvider(provider.id, checked),
+                )
+              }
+              onTest={() =>
+                void runAction(provider.id, async () => {
+                  const result = await testProviderConnection(provider.id);
+                  if (!result.ok) {
+                    throw new Error(result.error ?? "Connection failed");
+                  }
+                  toast.success("Connection successful");
+                })
+              }
+              onSync={() =>
+                void runAction(provider.id, async () => {
+                  const result = await syncProviderModels(provider.id);
+                  if (result.limitExceeded) {
+                    toast.warning("Model Limit Reached", {
+                      description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
+                    });
+                  } else {
+                    toast.success(
+                      `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
+                    );
+                  }
+                })
+              }
+            />
+          ))}
         </div>
       )}
-
-      <ProviderFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        provider={editingProvider}
-        onSaved={() => {
-          void onRefresh();
-        }}
-      />
 
       <DeleteConfirmDialog
         isOpen={!!providerToDelete}

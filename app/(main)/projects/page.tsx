@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useAppStore } from "@/lib/store";
 import { FolderOpen, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { ProjectCard } from "@/components/project/project-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/lib/store";
 import { CreateProjectDialog } from "./_components/create-project-dialog";
 
 /**
@@ -37,7 +37,7 @@ export default function ProjectsPage() {
             onClick={() => setDialogOpen(true)}
             className="w-full md:w-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Project
           </Button>
         }

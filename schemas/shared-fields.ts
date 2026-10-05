@@ -156,27 +156,6 @@ export const idField = z.string().uuid("Invalid ID format");
 export const dateField = z.coerce.date();
 
 /**
- * Validates a string as valid JSON array (square bracket notation).
- * Rejects empty strings, null values, objects, and non-array JSON types.
- * Used for MCP command arguments, tool schemas, and array-based configuration.
- * Useful for environment variables and form fields containing JSON arrays.
- *
- * @example
- * z.object({ args: jsonArraySchema })
- * @author Maruf Bepary
- */
-export const jsonArraySchema = z.string().refine(
-  (val) => {
-    try {
-      return Array.isArray(JSON.parse(val));
-    } catch {
-      return false;
-    }
-  },
-  { message: "Must be a valid JSON array" },
-);
-
-/**
  * Validates a string as valid JSON object (curly brace notation).
  * Rejects empty strings, null, arrays, and primitives; requires a non-null object.
  * Used for MCP headers, environment variables, metadata, and provider configuration.

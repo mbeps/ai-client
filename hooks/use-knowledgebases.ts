@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  listKnowledgebases,
   type KnowledgebaseWithCount,
-} from "@/lib/actions/knowledgebases/list-knowledgebases";
+  listKnowledgebases,
+} from "@/actions/knowledgebases/list-knowledgebases";
+import { logger } from "@/lib/logger";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**
@@ -40,10 +41,7 @@ export function useKnowledgebases() {
       const data = await listKnowledgebases();
       setKnowledgebases(data);
     } catch (error) {
-      console.error(
-        "[useKnowledgebases] Failed to load knowledgebases:",
-        error,
-      );
+      logger.error("[useKnowledgebases] Failed to load knowledgebases", error);
     } finally {
       setIsLoading(false);
     }

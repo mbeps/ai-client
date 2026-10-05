@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getChat } from "@/lib/actions/chats/get-chat";
-import { buildChatFromRows } from "@/lib/actions/chats/build-chat";
+import { buildChatFromRows } from "@/actions/chats/build-chat";
+import { getChat } from "@/actions/chats/get-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
+import type { Chat } from "@/types/chat/chat";
 
 /**
  * Chat detail page within a project context — server component with validation.
@@ -20,16 +21,17 @@ export default async function ProjectChatPage({
 }) {
   const { id, chatId } = await params;
 
-  let chat;
+  let chat: Chat;
   try {
     const data = await getChat(chatId);
     chat = buildChatFromRows(data);
-    if (chat.projectId !== id) {
-      notFound();
-    }
   } catch {
     notFound();
   }
 
-  return <ChatPageClient initialChat={chat!} />;
+  if (chat.projectId !== id) {
+    notFound();
+  }
+
+  return <ChatPageClient initialChat={chat} />;
 }

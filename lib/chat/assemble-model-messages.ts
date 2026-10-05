@@ -1,4 +1,7 @@
 import type { ModelMessage } from "ai";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["app", "chat", "messages"]);
 
 /**
  * Text content part for Vercel AI SDK model messages.
@@ -7,10 +10,14 @@ import type { ModelMessage } from "ai";
 type TextPart = { type: "text"; text: string };
 
 /**
- * Image content part for Vercel AI SDK model messages.
+ * File content part for Vercel AI SDK v7 model messages.
  * @author Maruf Bepary
  */
-type ImagePart = { type: "image"; image: URL | string; mimeType?: string };
+type FilePart = {
+  type: "file";
+  data: { type: "url"; url: string };
+  mediaType: string;
+};
 
 /**
  * Chat message from the request, including attachments and metadata.
@@ -25,10 +32,10 @@ type HistoryMessage = {
   attachments?: Array<{
     id: string;
     type?: string;
-    dataUrl?: string;
+    url?: string;
     name: string;
     mimeType?: string;
-    extractedText?: string;
+    extractedText?: string | null;
     key?: string;
   }>;
   metadata?: string | null;
@@ -50,14 +57,28 @@ export function assembleModelMessages(
   messages: HistoryMessage[],
 ): ModelMessage[] {
   return messages.flatMap((m) => {
+    // In AI SDK v7, system instructions are supplied via `instructions:` option.
+    // Explicit system messages in `messages[]` trigger InvalidPromptError.
+    if (m.role === "system") {
+      return [];
+    }
+
     if (m.role === "user" && m.attachments && m.attachments.length > 0) {
-      const parts: Array<TextPart | ImagePart> = [];
+      const parts: Array<TextPart | FilePart> = [];
 
       for (const att of m.attachments) {
         if (att.type === "document" && att.extractedText) {
           parts.push({
             type: "text",
             text: `[Document: ${att.name}]\n${att.extractedText}`,
+          });
+        } else if (att.type !== "image") {
+          // Spreadsheets, archives, and other non-extractable attachments have
+          // no embedded text. Emit an inline tag so the model knows the file
+          // exists and should use get_file_url to access it.
+          parts.push({
+            type: "text",
+            text: `[Attached File: ${att.name} (${att.type})]`,
           });
         }
       }
@@ -67,11 +88,12 @@ export function assembleModelMessages(
       }
 
       for (const att of m.attachments) {
-        if (att.type === "image" && att.dataUrl) {
+        // Server-reconstructed threads carry presigned URLs.
+        if (att.type === "image" && att.url) {
           parts.push({
-            type: "image",
-            image: att.dataUrl,
-            mimeType: att.mimeType,
+            type: "file",
+            data: { type: "url", url: att.url },
+            mediaType: att.mimeType ?? "image",
           });
         }
       }
@@ -97,36 +119,63 @@ export function assembleModelMessages(
           }
 
           for (const tc of meta.toolCalls) {
+            let parsedInput = tc.args ?? tc.input;
+            if (typeof parsedInput === "string") {
+              try {
+                parsedInput = JSON.parse(parsedInput);
+              } catch {
+                // Keep raw string if parsing fails
+              }
+            }
             parts.push({
               type: "tool-call",
               toolCallId: tc.toolCallId,
               toolName: tc.toolName,
-              args: typeof tc.args === "string" ? JSON.parse(tc.args) : tc.args,
+              input: parsedInput,
+              args: parsedInput,
             });
           }
 
           const msgs: any[] = [{ role: "assistant", content: parts }];
 
-          if (Array.isArray(meta.toolResults) && meta.toolResults.length > 0) {
-            const resultParts = meta.toolResults.map((tr: any) => {
-              const rawResult =
-                typeof tr.result === "string"
-                  ? JSON.parse(tr.result)
-                  : tr.result;
-              return {
-                type: "tool-result",
-                toolCallId: tr.toolCallId,
-                toolName: tr.toolName,
-                output: { type: "json", value: rawResult },
-              };
-            });
-            msgs.push({ role: "tool", content: resultParts });
-          }
+          const toolResultsList = Array.isArray(meta.toolResults)
+            ? meta.toolResults
+            : [];
+          const resultParts = meta.toolCalls.map((tc: any) => {
+            const tr = toolResultsList.find(
+              (r: any) => r.toolCallId === tc.toolCallId,
+            );
+            const raw =
+              tr && (tr.result !== undefined || tr.output !== undefined)
+                ? (tr.result ?? tr.output)
+                : { error: "Tool execution did not return a result" };
+            let outputValue = raw;
+            let isJson = typeof raw === "object" && raw !== null;
+            if (typeof raw === "string") {
+              try {
+                outputValue = JSON.parse(raw);
+                isJson = true;
+              } catch {
+                isJson = false;
+              }
+            }
+            return {
+              type: "tool-result",
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              output: isJson
+                ? { type: "json", value: outputValue }
+                : { type: "text", value: String(raw ?? "") },
+            };
+          });
+          msgs.push({ role: "tool", content: resultParts });
 
           return msgs;
         }
       } catch (e) {
-        console.warn("[Chat API] Failed to parse metadata for history:", e);
+        log.warn("Failed to parse metadata for history: {error}", {
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 

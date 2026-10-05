@@ -3,10 +3,10 @@
  * workbooks / input files are available and providing presigned URLs.
  */
 
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schema";
-import { inArray } from "drizzle-orm";
-import { getPresignedUrl } from "@/lib/storage/s3-client";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /** A row from the attachment table that we pass around during the run. */
 export type AttachmentRow = typeof attachment.$inferSelect;
@@ -38,7 +38,12 @@ export async function buildFileContext(
   const attachmentRows = await db
     .select()
     .from(attachment)
-    .where(inArray(attachment.id, inputAttachmentIds));
+    .where(
+      and(
+        inArray(attachment.id, inputAttachmentIds),
+        eq(attachment.userId, userId),
+      ),
+    );
 
   if (attachmentRows.length === 0) {
     return { fileContext: "", attachmentRows: [] };
@@ -70,26 +75,4 @@ export async function buildFileContext(
   }
 
   return { fileContext, attachmentRows };
-}
-
-/**
- * Builds the per-step file context, taking the active workbook into account.
- * If a workbook is already loaded in the MCP session, returns a short
- * instruction to reuse it; otherwise delegates to the URL-based builder.
- */
-export function buildPerStepFileContext(
-  activeWorkbookFilePath: string | null,
-  currentAttachmentRows: AttachmentRow[],
-): string {
-  if (activeWorkbookFilePath) {
-    return `A workbook is already loaded in the MCP session for this run. Reuse this exact file path for spreadsheet tools: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
-  }
-
-  if (currentAttachmentRows.length === 0) {
-    return "";
-  }
-
-  // The URL-based builder is async, so this is a placeholder —
-  // the actual async variant is used in the step loop.
-  return "";
 }
