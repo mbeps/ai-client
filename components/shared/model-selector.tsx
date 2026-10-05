@@ -57,8 +57,8 @@ export function ModelSelector({
   disabled,
   type = "chat",
 }: ModelSelectorProps) {
-  const { models } = useUserModels(type);
-  const isEmpty = models.length === 0;
+  const { models, isLoading } = useUserModels(type);
+  const isEmpty = !isLoading && models.length === 0;
 
   const selectedModel = useMemo(
     () =>
@@ -89,7 +89,7 @@ export function ModelSelector({
         val && onValueChange((val as UserModelOption).modelId)
       }
       itemToStringValue={(m) => (m as UserModelOption).label}
-      disabled={disabled || isEmpty}
+      disabled={disabled || isLoading || isEmpty}
     >
       <ComboboxTrigger
         aria-label="Select model"
@@ -98,8 +98,17 @@ export function ModelSelector({
           className,
         )}
       >
-        <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
-          <ComboboxValue placeholder="No models configured" />
+        <span
+          className={cn(
+            "truncate",
+            (isLoading || isEmpty) && "text-muted-foreground",
+          )}
+        >
+          <ComboboxValue
+            placeholder={
+              isLoading ? "Loading models..." : "No models configured"
+            }
+          />
         </span>
       </ComboboxTrigger>
 

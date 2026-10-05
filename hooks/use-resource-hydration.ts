@@ -95,19 +95,26 @@ export function useResourceHydration(resources: HydratableResource[]) {
 
       const loader = store[loaderName];
 
-      if (typeof loader === "function") {
-        try {
-          await (loader as () => Promise<void>)();
-          hydratedResources.add(res);
-        } catch (error) {
-          logger.error(`[Hydration] Failed to load ${res}`, error);
-        } finally {
-          setLoadingResources((prev) => {
-            const next = new Set(prev);
-            next.delete(res);
-            return next;
-          });
-        }
+      if (typeof loader !== "function") {
+        setLoadingResources((prev) => {
+          const next = new Set(prev);
+          next.delete(res);
+          return next;
+        });
+        return;
+      }
+
+      try {
+        await (loader as () => Promise<void>)();
+        hydratedResources.add(res);
+      } catch (error) {
+        logger.error(`[Hydration] Failed to load ${res}`, error);
+      } finally {
+        setLoadingResources((prev) => {
+          const next = new Set(prev);
+          next.delete(res);
+          return next;
+        });
       }
     });
 

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ContextUsagePill } from "@/components/chat/context-usage-pill";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ModelRegistryItem } from "@/types/models";
 
 const mockModel: ModelRegistryItem = {
@@ -19,7 +20,11 @@ const mockModel: ModelRegistryItem = {
 
 describe("ContextUsagePill", () => {
   it("renders trigger button with formatted percentage", () => {
-    render(<ContextUsagePill selectedModel={mockModel} input="Hello world" />);
+    render(
+      <TooltipProvider>
+        <ContextUsagePill selectedModel={mockModel} input="Hello world" />
+      </TooltipProvider>,
+    );
 
     const button = screen.getByRole("button");
     expect(button).toBeDefined();

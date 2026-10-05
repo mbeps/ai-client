@@ -26,7 +26,8 @@ export default function HomePage() {
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
-  const { models: chatModels } = useUserModels("chat");
+  const { models: chatModels, isLoading: isModelsLoading } =
+    useUserModels("chat");
 
   useResourceHydration(["mcpServers", "assistants", "prompts", "skills"]);
 
@@ -36,6 +37,8 @@ export default function HomePage() {
 
   const handleStart = async (content: string) => {
     if (!content.trim()) return;
+
+    if (isModelsLoading) return;
 
     if (chatModels.length === 0) {
       toast.error("No AI models configured. Please set up a provider first.", {

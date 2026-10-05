@@ -69,8 +69,8 @@ export function MessageActions({
   metadata,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
-  const { models } = useUserModels("chat");
-  const hasNoModels = models.length === 0;
+  const { models, isLoading } = useUserModels("chat");
+  const hasNoModels = !isLoading && models.length === 0;
 
   const handleCopy = async () => {
     try {
@@ -184,7 +184,7 @@ export function MessageActions({
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
               aria-label="Regenerate response"
               onClick={() => onRegenerate(message.id)}
-              disabled={hasNoModels}
+              disabled={isLoading || hasNoModels}
             >
               <RotateCcw className="h-3 w-3" />
             </Button>

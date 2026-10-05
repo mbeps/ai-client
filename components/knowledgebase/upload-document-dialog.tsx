@@ -56,8 +56,8 @@ export function UploadDocumentDialog({
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const { models } = useUserModels("embedding");
-  const hasNoModels = models.length === 0;
+  const { models, isLoading: isModelsLoading } = useUserModels("embedding");
+  const hasNoModels = !isModelsLoading && models.length === 0;
 
   const isLoading = phase === "uploading" || phase === "ingesting";
 
@@ -181,7 +181,9 @@ export function UploadDocumentDialog({
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={!file || isLoading || !!error || hasNoModels}
+            disabled={
+              !file || isLoading || !!error || isModelsLoading || hasNoModels
+            }
           >
             {isLoading ? (
               <>

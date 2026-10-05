@@ -27,6 +27,7 @@ type CacheEntry<T> = {
   fetchedAt: number;
   updatedAt: number;
   inFlight: Promise<T> | null;
+  generation: number;
   listeners: Set<() => void>;
 };
 
@@ -41,6 +42,7 @@ const cache: {
     fetchedAt: 0,
     updatedAt: 0,
     inFlight: null,
+    generation: 0,
     listeners: new Set(),
   },
   models: {
@@ -48,6 +50,7 @@ const cache: {
     fetchedAt: 0,
     updatedAt: 0,
     inFlight: null,
+    generation: 0,
     listeners: new Set(),
   },
 };
@@ -161,8 +164,13 @@ export async function fetchProviderRegistryWithCache<T>(
     return entry.inFlight;
   }
 
+  const currentGeneration = entry.generation;
+
   const request = fetcher()
     .then((result) => {
+      if (entry.generation !== currentGeneration) {
+        return result;
+      }
       const ts = now();
       entry.data = result;
       entry.fetchedAt = ts;
@@ -171,7 +179,9 @@ export async function fetchProviderRegistryWithCache<T>(
       return result;
     })
     .finally(() => {
-      entry.inFlight = null;
+      if (entry.generation === currentGeneration) {
+        entry.inFlight = null;
+      }
     });
 
   entry.inFlight = request;
@@ -181,7 +191,9 @@ export async function fetchProviderRegistryWithCache<T>(
 /**
  * Clears all cached data (both providers and models), forcing refresh on next fetch.
  * Runs garbage collection before clearing. Emits listener notifications.
- * Useful when user credentials or provider config changes.
+ * Cancels active in-flight request bindings so in-flight requests from the current session
+ * cannot resolve into a subsequent session.
+ * Useful when user credentials or provider config changes, or during sign-out.
  *
  * Side effects: Clears cache entries, notifies all subscribers, may trigger app-wide refetches.
  * Constraint: Affects all hook instances globally; use sparingly to avoid excessive refetches.
@@ -195,6 +207,8 @@ export function invalidateProviderRegistryCache(keys?: CacheKey[]): void {
 
   for (const key of targetKeys) {
     const entry = cache[key];
+    entry.generation++;
+    entry.inFlight = null;
     entry.data = null; // Clear data to avoid stale UI while refetching
     entry.fetchedAt = 0;
     entry.updatedAt = ts;

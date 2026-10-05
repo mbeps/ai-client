@@ -23,6 +23,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
 
 const mockResetEntityState = vi.fn();
 const mockResetChatState = vi.fn();
+const mockResetClientState = vi.fn();
 vi.mock("@/lib/store", () => ({
   useAppStore: {
     getState: () => ({
@@ -30,6 +31,7 @@ vi.mock("@/lib/store", () => ({
       resetChatState: mockResetChatState,
     }),
   },
+  resetClientState: () => mockResetClientState(),
 }));
 
 const mockClearHydratedResources = vi.fn();
@@ -142,7 +144,7 @@ describe("SidebarUserFooter", () => {
     expect(settingsLink).toHaveAttribute("href", ROUTES.SETTINGS.path);
   });
 
-  it("calls signOut, resets store state, clears hydrated resources, and redirects to login on Log out click", async () => {
+  it("calls signOut, resets client state, and redirects to login on Log out click", async () => {
     const user = userEvent.setup();
 
     render(
@@ -160,9 +162,7 @@ describe("SidebarUserFooter", () => {
     await user.click(logoutItem);
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockResetEntityState).toHaveBeenCalledTimes(1);
-    expect(mockResetChatState).toHaveBeenCalledTimes(1);
-    expect(mockClearHydratedResources).toHaveBeenCalledTimes(1);
+    expect(mockResetClientState).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(ROUTES.AUTH.LOGIN.path);
   });
 });
