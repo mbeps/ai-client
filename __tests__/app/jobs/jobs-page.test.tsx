@@ -1,11 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import JobsPage, { metadata } from "@/app/(main)/jobs/page";
 import { JobsView } from "@/components/jobs/jobs-view";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { JobItem } from "@/types/jobs";
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(<TooltipProvider>{ui}</TooltipProvider>);
 
 // Mock nuqs with reactive state
 let mockQueryParams: Record<string, string> = { tab: "running" };

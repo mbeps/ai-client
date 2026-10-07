@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkflowSidebar } from "@/components/sidebar/workflow-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
 
 const mockUsePathname = vi.fn();
@@ -54,9 +55,11 @@ describe("WorkflowSidebar", () => {
 
   it("renders all workflow navigation items including Running Jobs", () => {
     render(
-      <SidebarProvider>
-        <WorkflowSidebar />
-      </SidebarProvider>,
+      <TooltipProvider>
+        <SidebarProvider>
+          <WorkflowSidebar />
+        </SidebarProvider>
+      </TooltipProvider>,
     );
 
     // Back to home button
@@ -86,9 +89,11 @@ describe("WorkflowSidebar", () => {
     mockUsePathname.mockReturnValue(ROUTES.WORKFLOWS.path);
 
     render(
-      <SidebarProvider>
-        <WorkflowSidebar />
-      </SidebarProvider>,
+      <TooltipProvider>
+        <SidebarProvider>
+          <WorkflowSidebar />
+        </SidebarProvider>
+      </TooltipProvider>,
     );
 
     const allWorkflowsLink = screen.getByRole("link", { name: /all workflows/i });
@@ -102,9 +107,11 @@ describe("WorkflowSidebar", () => {
     mockUsePathname.mockReturnValue(ROUTES.WORKFLOWS.TRANSLATION.path);
 
     render(
-      <SidebarProvider>
-        <WorkflowSidebar />
-      </SidebarProvider>,
+      <TooltipProvider>
+        <SidebarProvider>
+          <WorkflowSidebar />
+        </SidebarProvider>
+      </TooltipProvider>,
     );
 
     const translationLink = screen.getByRole("link", { name: /translation/i });
@@ -116,9 +123,11 @@ describe("WorkflowSidebar", () => {
 
   it("renders user footer within workflow sidebar", () => {
     render(
-      <SidebarProvider>
-        <WorkflowSidebar />
-      </SidebarProvider>,
+      <TooltipProvider>
+        <SidebarProvider>
+          <WorkflowSidebar />
+        </SidebarProvider>
+      </TooltipProvider>,
     );
 
     expect(screen.getByText("Test User")).toBeInTheDocument();

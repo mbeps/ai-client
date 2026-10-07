@@ -14,6 +14,7 @@ import { eq, sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
+import { InvalidArtifactFormatError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
 import { uploadObject } from "@/lib/storage/upload-object";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
@@ -106,8 +107,9 @@ export async function persistTransformArtifact(
       }
 
       if (workbook.SheetNames.length === 0) {
-        const ws = XLSX.utils.aoa_to_sheet([]);
-        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
+        throw new InvalidArtifactFormatError(
+          "Spreadsheet artifact contains no valid sheets or recognizable data structure",
+        );
       }
 
       xlsxBuffer = Buffer.from(
@@ -183,6 +185,9 @@ export async function persistTransformArtifact(
       attachmentRow,
     };
   } catch (err) {
+    if (err instanceof InvalidArtifactFormatError) {
+      throw err;
+    }
     log.warn("Failed to persist {kind} output for run {runId}: {error}", {
       kind: input.kind,
       runId,

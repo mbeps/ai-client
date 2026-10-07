@@ -70,8 +70,9 @@ export default function TranslationWorkflowPage() {
   const [targetLangValue, setTargetLangValue] = useState(
     DEFAULT_TARGET_LANGUAGE,
   );
-  const { models: chatModels } = useUserModels("chat");
-  const hasNoModels = chatModels.length === 0;
+  const { models: chatModels, isLoading: isModelsLoading } =
+    useUserModels("chat");
+  const hasNoModels = !isModelsLoading && chatModels.length === 0;
   const [modelId, setModelId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -595,6 +596,7 @@ export default function TranslationWorkflowPage() {
           disabled={
             isLoading ||
             isExtracting ||
+            isModelsLoading ||
             hasNoModels ||
             (!sourceText.trim() && attachment?.type !== "image")
           }

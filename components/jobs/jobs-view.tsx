@@ -45,7 +45,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -450,386 +449,383 @@ export function JobsView() {
   });
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header Block */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-bold text-3xl tracking-tight">Running Jobs</h1>
-            <p className="text-muted-foreground">
-              Monitor, track, and manage active background tasks and workflow
-              runs.
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header Block */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-bold text-3xl tracking-tight">Running Jobs</h1>
+          <p className="text-muted-foreground">
+            Monitor, track, and manage active background tasks and workflow
+            runs.
+          </p>
         </div>
+      </div>
 
-        {/* Offline Warning Banner */}
-        {offline && (
-          <Alert
-            variant="warning"
-            className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40"
-          >
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
-            <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <AlertTitle className="text-amber-800 dark:text-amber-200">
-                  Inngest Engine Offline
-                </AlertTitle>
-                <AlertDescription className="text-amber-700 dark:text-amber-300">
-                  Cannot connect to Inngest background engine. Active runs may
-                  not update in real-time until connection is restored.
-                </AlertDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadJobs(true)}
-                disabled={loading}
-                className="mt-2 shrink-0 bg-white sm:mt-0 dark:bg-zinc-900"
-              >
-                <RefreshCw
-                  className={cn("mr-1.5 size-3.5", loading && "animate-spin")}
-                />
-                Retry
-              </Button>
-            </div>
-          </Alert>
-        )}
-
-        {/* Compact Summary Stat Cards & Tab Triggers */}
-        <div
-          role="tablist"
-          aria-label="Filter jobs by status"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      {/* Offline Warning Banner */}
+      {offline && (
+        <Alert
+          variant="warning"
+          className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40"
         >
-          {statCards.map((card) => {
-            const isActive = activeTab === card.id;
-            const Icon = card.icon;
-            return (
-              <button
-                key={card.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-label={`${card.label} jobs, ${card.count} total`}
-                onClick={() => handleTabChange(card.id)}
-                className={cn(
-                  "flex h-11 cursor-pointer select-none items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150",
-                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  isActive
-                    ? card.colorClasses.active
-                    : card.colorClasses.inactive,
-                )}
-              >
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <Icon
-                    className={cn("size-4 shrink-0", card.colorClasses.icon)}
-                  />
-                  <span
-                    className={cn(
-                      "truncate font-medium text-sm",
-                      card.colorClasses.text,
-                    )}
-                  >
-                    {card.label}
-                  </span>
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 font-bold text-base tabular-nums",
-                    card.colorClasses.count,
-                  )}
-                >
-                  {card.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search, Filter Context & Auto-Refresh Controls */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-md">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search jobs by title, type, or function..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            {activeTab !== "all" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleTabChange("all")}
-                className="h-8 text-muted-foreground text-xs hover:text-foreground"
-              >
-                Show all ({jobs.length})
-              </Button>
-            )}
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="auto-refresh-toggle"
-                checked={autoRefresh}
-                onCheckedChange={setAutoRefresh}
-              />
-              <Label
-                htmlFor="auto-refresh-toggle"
-                className="cursor-pointer text-xs"
-              >
-                Auto-refresh
-              </Label>
+          <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <AlertTitle className="text-amber-800 dark:text-amber-200">
+                Inngest Engine Offline
+              </AlertTitle>
+              <AlertDescription className="text-amber-700 dark:text-amber-300">
+                Cannot connect to Inngest background engine. Active runs may not
+                update in real-time until connection is restored.
+              </AlertDescription>
             </div>
-
             <Button
               variant="outline"
               size="sm"
               onClick={() => loadJobs(true)}
               disabled={loading}
+              className="mt-2 shrink-0 bg-white sm:mt-0 dark:bg-zinc-900"
             >
               <RefreshCw
                 className={cn("mr-1.5 size-3.5", loading && "animate-spin")}
               />
-              Refresh
+              Retry
             </Button>
           </div>
+        </Alert>
+      )}
+
+      {/* Compact Summary Stat Cards & Tab Triggers */}
+      <div
+        role="tablist"
+        aria-label="Filter jobs by status"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        {statCards.map((card) => {
+          const isActive = activeTab === card.id;
+          const Icon = card.icon;
+          return (
+            <button
+              key={card.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-label={`${card.label} jobs, ${card.count} total`}
+              onClick={() => handleTabChange(card.id)}
+              className={cn(
+                "flex h-11 cursor-pointer select-none items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150",
+                "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                isActive
+                  ? card.colorClasses.active
+                  : card.colorClasses.inactive,
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Icon
+                  className={cn("size-4 shrink-0", card.colorClasses.icon)}
+                />
+                <span
+                  className={cn(
+                    "truncate font-medium text-sm",
+                    card.colorClasses.text,
+                  )}
+                >
+                  {card.label}
+                </span>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 font-bold text-base tabular-nums",
+                  card.colorClasses.count,
+                )}
+              >
+                {card.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search, Filter Context & Auto-Refresh Controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-md">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search jobs by title, type, or function..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
-        {/* Loading Spinner on Initial Empty Load */}
-        {loading && jobs.length === 0 && (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          {activeTab !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange("all")}
+              className="h-8 text-muted-foreground text-xs hover:text-foreground"
+            >
+              Show all ({jobs.length})
+            </Button>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="auto-refresh-toggle"
+              checked={autoRefresh}
+              onCheckedChange={setAutoRefresh}
+            />
+            <Label
+              htmlFor="auto-refresh-toggle"
+              className="cursor-pointer text-xs"
+            >
+              Auto-refresh
+            </Label>
           </div>
-        )}
 
-        {/* Jobs List */}
-        {filteredJobs.length > 0 && (
-          <div className="grid grid-cols-1 gap-3">
-            {filteredJobs.map((job) => {
-              const typeMeta = getJobTypeMeta(job.type);
-              const TypeIcon = typeMeta.icon;
-              const formattedDuration = formatJobDuration(job.durationMs);
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadJobs(true)}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={cn("mr-1.5 size-3.5", loading && "animate-spin")}
+            />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-              let timingText = "";
-              if (job.startedAt) {
-                try {
-                  timingText = `started ${formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}`;
-                } catch {
-                  timingText = `started ${job.startedAt}`;
-                }
-              } else if (job.queuedAt) {
-                try {
-                  timingText = `queued ${formatDistanceToNow(new Date(job.queuedAt), { addSuffix: true })}`;
-                } catch {
-                  timingText = `queued ${job.queuedAt}`;
-                }
+      {/* Loading Spinner on Initial Empty Load */}
+      {loading && jobs.length === 0 && (
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Jobs List */}
+      {filteredJobs.length > 0 && (
+        <div className="grid grid-cols-1 gap-3">
+          {filteredJobs.map((job) => {
+            const typeMeta = getJobTypeMeta(job.type);
+            const TypeIcon = typeMeta.icon;
+            const formattedDuration = formatJobDuration(job.durationMs);
+
+            let timingText = "";
+            if (job.startedAt) {
+              try {
+                timingText = `started ${formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}`;
+              } catch {
+                timingText = `started ${job.startedAt}`;
               }
+            } else if (job.queuedAt) {
+              try {
+                timingText = `queued ${formatDistanceToNow(new Date(job.queuedAt), { addSuffix: true })}`;
+              } catch {
+                timingText = `queued ${job.queuedAt}`;
+              }
+            }
 
-              return (
-                <Card
-                  key={job.id}
-                  className="py-0 transition-all hover:border-primary/30"
-                >
-                  <CardContent className="flex items-center gap-2.5 p-2.5">
-                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <div className="shrink-0 rounded-md bg-secondary/50 p-1.5 text-secondary-foreground">
-                        <TypeIcon className="size-3.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge
-                            variant="secondary"
-                            className="px-1.5 text-[11px]"
-                          >
-                            {typeMeta.label}
-                          </Badge>
-                          <JobStatusBadge status={job.status} />
-                          {job.entityDeleted && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-help border-dashed text-muted-foreground text-xs"
-                                >
-                                  Deleted
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  The underlying entity was deleted or is no
-                                  longer available.
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-
-                        <div className="mt-0.5 flex items-center gap-1.5">
-                          {job.url && !job.entityDeleted ? (
-                            <Link
-                              href={job.url}
-                              className="truncate font-medium text-foreground text-sm transition-colors hover:text-primary hover:underline"
-                            >
-                              {job.title}
-                            </Link>
-                          ) : (
-                            <span className="truncate font-medium text-foreground text-sm">
-                              {job.title}
-                            </span>
-                          )}
-                          {job.subtitle && (
-                            <span className="truncate text-muted-foreground text-xs">
-                              {job.subtitle}
-                            </span>
-                          )}
-                        </div>
-
-                        {job.errorMessage ? (
-                          <p className="mt-0.5 line-clamp-1 font-mono text-destructive text-xs">
-                            {job.errorMessage}
-                          </p>
-                        ) : (
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
-                            {timingText && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="size-3 shrink-0" />
-                                <span>{timingText}</span>
-                              </span>
-                            )}
-                            {formattedDuration && (
-                              <span>• duration: {formattedDuration}</span>
-                            )}
-                            {job.functionName && (
-                              <span className="font-mono text-[11px] opacity-70">
-                                ({job.functionName})
-                              </span>
-                            )}
-                          </div>
+            return (
+              <Card
+                key={job.id}
+                className="py-0 transition-all hover:border-primary/30"
+              >
+                <CardContent className="flex items-center gap-2.5 p-2.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <div className="shrink-0 rounded-md bg-secondary/50 p-1.5 text-secondary-foreground">
+                      <TypeIcon className="size-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="secondary"
+                          className="px-1.5 text-[11px]"
+                        >
+                          {typeMeta.label}
+                        </Badge>
+                        <JobStatusBadge status={job.status} />
+                        {job.entityDeleted && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="outline"
+                                className="cursor-help border-dashed text-muted-foreground text-xs"
+                              >
+                                Deleted
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                The underlying entity was deleted or is no
+                                longer available.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
-                    </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {job.url && !job.entityDeleted ? (
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={job.url}>
-                            Open
-                            <ExternalLink className="ml-1.5 size-3.5" />
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        {job.url && !job.entityDeleted ? (
+                          <Link
+                            href={job.url}
+                            className="truncate font-medium text-foreground text-sm transition-colors hover:text-primary hover:underline"
+                          >
+                            {job.title}
                           </Link>
-                        </Button>
+                        ) : (
+                          <span className="truncate font-medium text-foreground text-sm">
+                            {job.title}
+                          </span>
+                        )}
+                        {job.subtitle && (
+                          <span className="truncate text-muted-foreground text-xs">
+                            {job.subtitle}
+                          </span>
+                        )}
+                      </div>
+
+                      {job.errorMessage ? (
+                        <p className="mt-0.5 line-clamp-1 font-mono text-destructive text-xs">
+                          {job.errorMessage}
+                        </p>
                       ) : (
-                        <Button variant="outline" size="sm" disabled>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
+                          {timingText && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3 shrink-0" />
+                              <span>{timingText}</span>
+                            </span>
+                          )}
+                          {formattedDuration && (
+                            <span>• duration: {formattedDuration}</span>
+                          )}
+                          {job.functionName && (
+                            <span className="font-mono text-[11px] opacity-70">
+                              ({job.functionName})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {job.url && !job.entityDeleted ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={job.url}>
                           Open
                           <ExternalLink className="ml-1.5 size-3.5" />
-                        </Button>
-                      )}
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        Open
+                        <ExternalLink className="ml-1.5 size-3.5" />
+                      </Button>
+                    )}
 
-                      {(job.status === "RUNNING" ||
-                        job.status === "QUEUED") && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="px-2.5"
-                          onClick={() => setCancelTarget(job)}
-                        >
-                          <Ban className="mr-1.5 size-3.5" />
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    {(job.status === "RUNNING" || job.status === "QUEUED") && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="px-2.5"
+                        onClick={() => setCancelTarget(job)}
+                      >
+                        <Ban className="mr-1.5 size-3.5" />
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty States */}
+      {filteredJobs.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+          <div className="rounded-full bg-muted p-4">
+            <Activity className="size-8 text-muted-foreground" />
           </div>
-        )}
+          <h3 className="mt-4 font-semibold text-lg">
+            {searchQuery
+              ? "No matching jobs found"
+              : activeTab === "running"
+                ? "No running jobs"
+                : activeTab === "queued"
+                  ? "No queued jobs"
+                  : activeTab === "completed"
+                    ? "No completed jobs"
+                    : activeTab === "failed"
+                      ? "No failed jobs"
+                      : "No background jobs found"}
+          </h3>
+          <p className="mt-1 max-w-sm text-muted-foreground text-sm">
+            {searchQuery
+              ? `No jobs matched "${searchQuery}". Try a different search keyword.`
+              : activeTab === "running"
+                ? "There are currently no background jobs running."
+                : activeTab === "queued"
+                  ? "There are currently no background jobs in queue."
+                  : activeTab === "completed"
+                    ? "There are no completed background jobs."
+                    : activeTab === "failed"
+                      ? "There are no failed or cancelled background jobs."
+                      : "There are no background jobs tracked by Inngest."}
+          </p>
+        </div>
+      )}
 
-        {/* Empty States */}
-        {filteredJobs.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-            <div className="rounded-full bg-muted p-4">
-              <Activity className="size-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-4 font-semibold text-lg">
-              {searchQuery
-                ? "No matching jobs found"
-                : activeTab === "running"
-                  ? "No running jobs"
-                  : activeTab === "queued"
-                    ? "No queued jobs"
-                    : activeTab === "completed"
-                      ? "No completed jobs"
-                      : activeTab === "failed"
-                        ? "No failed jobs"
-                        : "No background jobs found"}
-            </h3>
-            <p className="mt-1 max-w-sm text-muted-foreground text-sm">
-              {searchQuery
-                ? `No jobs matched "${searchQuery}". Try a different search keyword.`
-                : activeTab === "running"
-                  ? "There are currently no background jobs running."
-                  : activeTab === "queued"
-                    ? "There are currently no background jobs in queue."
-                    : activeTab === "completed"
-                      ? "There are no completed background jobs."
-                      : activeTab === "failed"
-                        ? "There are no failed or cancelled background jobs."
-                        : "There are no background jobs tracked by Inngest."}
-            </p>
-          </div>
-        )}
-
-        {/* Cancel Confirmation Dialog */}
-        <AlertDialog
-          open={cancelTarget !== null}
-          onOpenChange={(open) => {
-            if (!open && !isPending) {
-              setCancelTarget(null);
-            }
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel Job Run</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to cancel the job &quot;
-                {cancelTarget?.title}&quot;? Any in-progress processing will be
-                aborted immediately.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>
-                <CirclePlay className="mr-1.5 size-4" />
-                Keep Running
-              </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={isPending}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleConfirmCancel();
-                }}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-1.5 size-4 animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  <>
-                    <Ban className="mr-1.5 size-4" />
-                    Cancel Job
-                  </>
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </TooltipProvider>
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isPending) {
+            setCancelTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Job Run</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel the job &quot;
+              {cancelTarget?.title}&quot;? Any in-progress processing will be
+              aborted immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              <CirclePlay className="mr-1.5 size-4" />
+              Keep Running
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmCancel();
+              }}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <Ban className="mr-1.5 size-4" />
+                  Cancel Job
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

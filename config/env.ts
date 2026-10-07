@@ -122,6 +122,7 @@ export const serverEnvSchema = clientEnvSchema.extend({
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
   INNGEST_DEV: z.string().optional(),
+  INNGEST_SERVE_ORIGIN: z.string().optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -182,6 +183,7 @@ export function validateEnv(
         INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
         INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
         INNGEST_DEV: process.env.INNGEST_DEV,
+        INNGEST_SERVE_ORIGIN: process.env.INNGEST_SERVE_ORIGIN,
       }
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:

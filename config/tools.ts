@@ -8,6 +8,7 @@
 export const INTERNAL_TOOL_IDS = {
   MANAGE_ARTIFACT: "internal:tool:manage_artifact",
   MANAGE_SKILL: "internal:tool:manage_skill",
+  SEARCH_KNOWLEDGE_BASE: "internal:tool:search_knowledge_base",
 } as const;
 
 /**
@@ -27,6 +28,7 @@ export const INTERNAL_TOOL_IDS = {
 export const DEFAULT_ENABLED_TOOLS: readonly string[] = [
   INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
   INTERNAL_TOOL_IDS.MANAGE_SKILL,
+  INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,
 ];
 
 /**
@@ -52,7 +54,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     availability: "Registered when the tool is selected for the chat.",
   },
   {
-    id: "search_knowledge_base",
+    id: INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,
     name: "search_knowledge_base",
     category: "Knowledge",
     description:

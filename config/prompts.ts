@@ -42,7 +42,7 @@ export const PROMPTS = {
         "The type of artifact. Must be one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'. Any other value will be rejected.",
       TITLE_DESCRIPTION: "The title of the artifact",
       CONTENT_DESCRIPTION:
-        'The content of the artifact. For spreadsheet, provide a multi-sheet JSON object like { "sheets": [{ "name": "Sheet1", "data": [["A1", "B1"], ["A2", "B2"]] }] }. Values in data can be simple types or objects { "v": value, "s": { "bold": true } }. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code.',
+        "The content of the artifact. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code. For spreadsheet, pass structured data via the top-level 'sheets' argument or JSON string here.",
     },
   },
   COMPOSITION: {

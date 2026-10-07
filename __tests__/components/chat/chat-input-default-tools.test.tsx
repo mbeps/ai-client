@@ -81,10 +81,13 @@ describe("Default Active Tools", () => {
       "internal:tool:manage_artifact",
     );
     expect(INTERNAL_TOOL_IDS.MANAGE_SKILL).toBe("internal:tool:manage_skill");
-    // Both internal tools are on by default, artifact and skill authoring.
+    expect(INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE).toBe(
+      "internal:tool:search_knowledge_base",
+    );
     expect(DEFAULT_ENABLED_TOOLS).toEqual([
       "internal:tool:manage_artifact",
       "internal:tool:manage_skill",
+      "internal:tool:search_knowledge_base",
     ]);
   });
 

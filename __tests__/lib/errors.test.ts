@@ -33,7 +33,6 @@ import {
   RagExtractionEmptyError,
   RateLimitError,
   ReasoningNotSupportedError,
-  StructuredOutputNotSupportedError,
   ToolsNotSupportedError,
   VisionNotSupportedError,
   isApiKeyError,
@@ -143,12 +142,6 @@ describe("lib/errors", () => {
     expect(reasoningDefault.code).toBe(REASONING_NOT_SUPPORTED_ERROR_CODE);
     const reasoningCustom = new ReasoningNotSupportedError("Reasoning disabled");
     expect(reasoningCustom.message).toBe("Reasoning disabled");
-
-    const structuredDefault = new StructuredOutputNotSupportedError();
-    expect(structuredDefault.name).toBe("StructuredOutputNotSupportedError");
-    expect(structuredDefault.code).toBe(STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE);
-    const structuredCustom = new StructuredOutputNotSupportedError("Schema unsupported");
-    expect(structuredCustom.message).toBe("Schema unsupported");
   });
 
   it("AttachmentVisionUnsupportedError with default and custom message", () => {

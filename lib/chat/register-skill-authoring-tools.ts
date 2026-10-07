@@ -66,39 +66,57 @@ export function registerSkillAuthoringTools(userId: string) {
       inputSchema: z.object({
         name: z
           .string()
+          .max(64)
           .describe(
             "Skill slug, lowercase letters, numbers and hyphens, at most 64 characters (e.g. 'clean-code').",
           ),
-        displayName: z.string().describe("Human readable title for the user."),
+        displayName: z
+          .string()
+          .min(1)
+          .max(100)
+          .describe("Human readable title for the user."),
         description: z
           .string()
+          .min(1)
+          .max(500)
           .describe(
             "What the skill does and when to use it. This is the only text the model sees " +
               "before loading the skill, so it must be specific.",
           ),
-        content: z.string().describe("The full SKILL.md instruction body."),
+        content: z
+          .string()
+          .max(100_000)
+          .describe("The full SKILL.md instruction body."),
       }),
       execute: async ({ name, displayName, description, content }) => {
         const slug = resolveSlug(name);
         if ("error" in slug) return slug;
 
-        const row = await createSkillForUser(userId, {
-          name: slug.name,
-          displayName,
-          description,
-          content,
-          // Reference files are added afterwards by write_skill_file, so a
-          // rejected reference path cannot lose the skill.
-          files: [],
-          enabled: true,
-        });
+        try {
+          const row = await createSkillForUser(userId, {
+            name: slug.name,
+            displayName,
+            description,
+            content,
+            // Reference files are added afterwards by write_skill_file, so a
+            // rejected reference path cannot lose the skill.
+            files: [],
+            enabled: true,
+          });
 
-        return {
-          success: true as const,
-          skillId: row.id,
-          skillName: row.name,
-          displayName: row.displayName,
-        };
+          return {
+            success: true as const,
+            skillId: row.id,
+            skillName: row.name,
+            displayName: row.displayName,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            success: false as const,
+            error: message,
+          };
+        }
       },
     }),
 

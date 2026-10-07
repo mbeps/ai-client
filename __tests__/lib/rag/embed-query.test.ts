@@ -5,7 +5,7 @@ const embedMock = vi.hoisted(() => vi.fn());
 vi.mock("ai", () => ({ embed: embedMock }));
 
 const resolveEmbeddingProviderMock = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/chat/resolve-embedding-provider", () => ({
+vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
   resolveEmbeddingProvider: resolveEmbeddingProviderMock,
 }));
 

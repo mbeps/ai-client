@@ -107,6 +107,10 @@ function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
           ],
         };
       }
+
+      // If parsed was an object or primitive without sheets or array,
+      // it is invalid JSON spreadsheet data and should not fall through to CSV.
+      return { sheets: [] };
     } catch {
       // Ignore JSON parse errors, fallback to CSV
     }
@@ -138,10 +142,7 @@ function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
  * @see useSpreadsheetData for content parsing logic
  * @author Maruf Bepary
  */
-export default function SpreadsheetView({
-  title,
-  content,
-}: SpreadsheetViewProps) {
+export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
   const spreadsheetData = useSpreadsheetData(content);
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -259,11 +260,20 @@ export default function SpreadsheetView({
     }
   };
 
-  if (spreadsheetData.sheets.length === 0) {
+  const hasAnyData = spreadsheetData.sheets.some(
+    (sheet) => Array.isArray(sheet.data) && sheet.data.length > 0,
+  );
+
+  if (!hasAnyData) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
-        <AlertCircle className="h-8 w-8" />
-        <p>No valid spreadsheet data found.</p>
+        <AlertCircle className="h-8 w-8 text-amber-500" />
+        <h3 className="font-semibold text-foreground text-sm">
+          Empty Spreadsheet
+        </h3>
+        <p className="text-xs">
+          No rows or valid sheet data found in this spreadsheet artifact.
+        </p>
       </div>
     );
   }
@@ -293,65 +303,72 @@ export default function SpreadsheetView({
       </div>
 
       {/* Grid Content */}
-      <ScrollArea className="relative w-full flex-1">
-        <div className="min-w-max p-4">
-          <Table className="border bg-card">
-            <TableHeader className="sticky top-0 z-10 bg-muted/50 shadow-sm">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header, i) => (
-                    <TableHead
-                      key={header.id}
-                      className={cn(
-                        "whitespace-nowrap border-r px-4 py-2 font-semibold",
-                        i === 0 && "w-[50px] bg-muted/50 text-center",
-                      )}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No matching results.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell, i) => (
-                      <TableCell
-                        key={cell.id}
+      {activeSheet.data.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+          <AlertCircle className="h-6 w-6 text-amber-500" />
+          <p className="font-medium text-sm">This sheet contains no data.</p>
+        </div>
+      ) : (
+        <ScrollArea className="relative w-full flex-1">
+          <div className="min-w-max p-4">
+            <Table className="border bg-card">
+              <TableHeader className="sticky top-0 z-10 bg-muted/50 shadow-sm">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header, i) => (
+                      <TableHead
+                        key={header.id}
                         className={cn(
-                          "whitespace-nowrap border-r px-4 py-2",
-                          i === 0 &&
-                            "bg-muted/10 text-center font-medium text-muted-foreground text-xs",
+                          "whitespace-nowrap border-r px-4 py-2 font-semibold",
+                          i === 0 && "w-[50px] bg-muted/50 text-center",
                         )}
                       >
                         {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
+                          header.column.columnDef.header,
+                          header.getContext(),
                         )}
-                      </TableCell>
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      No matching results.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell, i) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            "whitespace-nowrap border-r px-4 py-2",
+                            i === 0 &&
+                              "bg-muted/10 text-center font-medium text-muted-foreground text-xs",
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      )}
 
       {/* Footer Sheet Navigation */}
       {spreadsheetData.sheets.length > 1 && (
@@ -411,3 +428,5 @@ export default function SpreadsheetView({
     </div>
   );
 }
+
+export default SpreadsheetView;

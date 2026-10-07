@@ -37,7 +37,7 @@ describe("Chat Realtime Token & Trigger Actions", () => {
       chainable.where.mockResolvedValueOnce([]);
 
       await expect(getChatRealtimeToken("chat-123")).rejects.toThrow(
-        "Unauthorized",
+        "Chat not found or access denied",
       );
     });
 

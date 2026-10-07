@@ -6,6 +6,7 @@ import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
@@ -50,6 +51,11 @@ export async function deleteDocument(
     );
 
   if (!doc) throw new Error("Not Found");
+
+  await inngest.send({
+    name: "knowledgebase/document.cancel",
+    data: { documentId: validated.documentId },
+  });
 
   await s3Client.send(
     new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),

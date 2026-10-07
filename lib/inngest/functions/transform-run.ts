@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { transformAgent, transformRun } from "@/drizzle/schema";
 import { transformRunChannel } from "@/lib/inngest/channels";
@@ -8,6 +9,7 @@ import { buildFileContext } from "@/lib/transform/build-file-context";
 import { validateStepOrders } from "@/lib/transform/lifecycle-service";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 import { runTransformSteps } from "@/lib/transform/run-steps";
+import { transformStepSchema } from "@/schemas/workflows/transform-agent";
 import type { TransformStep } from "@/types/transform/transform-step";
 
 const log = getLogger(["inngest", "transform", "run"]);
@@ -24,6 +26,12 @@ export const executeTransformRun = inngest.createFunction(
     id: "run-transform-workflow",
     retries: 0,
     triggers: [{ event: "workflows/transform.execute" }],
+    cancelOn: [
+      {
+        event: "workflows/transform.cancel",
+        if: "async.data.runId == event.data.runId",
+      },
+    ],
   },
   async ({ event, step }) => {
     const { runId, userId } = event.data;
@@ -63,13 +71,64 @@ export const executeTransformRun = inngest.createFunction(
 
       await emit({ type: "transform-start", runId });
 
-      let steps: TransformStep[] = [];
+      let parsedRaw: unknown;
       try {
-        steps = JSON.parse(agentRow.steps);
+        parsedRaw = JSON.parse(agentRow.steps);
       } catch {
-        steps = [];
+        const errorMsg = `Invalid JSON in steps for agent ${agentRow.id}`;
+        await db
+          .update(transformRun)
+          .set({
+            status: "failed",
+            errorMessage: errorMsg,
+            updatedAt: new Date(),
+          })
+          .where(eq(transformRun.id, runId));
+        await emit({
+          type: "error",
+          message: errorMsg,
+          code: "INVALID_AGENT_STEPS",
+        });
+        throw new Error(errorMsg);
       }
-      steps = [...steps].sort((a, b) => a.order - b.order);
+
+      const normalizedRaw = Array.isArray(parsedRaw)
+        ? parsedRaw.map((s) =>
+            typeof s === "object" && s !== null
+              ? {
+                  mcpServerIds: [],
+                  toolIds: [],
+                  order: 0,
+                  requiresReview: false,
+                  prompt: "",
+                  ...s,
+                }
+              : s,
+          )
+        : parsedRaw;
+
+      const parsedSteps = transformStepSchema.array().safeParse(normalizedRaw);
+      if (!parsedSteps.success) {
+        const errorMsg = `Invalid transform steps for agent ${agentRow.id}: ${parsedSteps.error.message}`;
+        await db
+          .update(transformRun)
+          .set({
+            status: "failed",
+            errorMessage: errorMsg,
+            updatedAt: new Date(),
+          })
+          .where(eq(transformRun.id, runId));
+        await emit({
+          type: "error",
+          message: errorMsg,
+          code: "INVALID_AGENT_STEPS",
+        });
+        throw new Error(errorMsg);
+      }
+
+      const steps: TransformStep[] = [...parsedSteps.data].sort(
+        (a, b) => a.order - b.order,
+      );
       validateStepOrders(steps.map((s) => s.order));
 
       return {
@@ -110,10 +169,26 @@ export const executeTransformRun = inngest.createFunction(
             .from(transformRun)
             .where(eq(transformRun.id, runId));
 
+          if (!currentRun || currentRun.status === "failed") {
+            log.info(
+              "Transform run or agent deleted; terminating step execution",
+              { runId },
+            );
+            return { success: false, cancelled: true };
+          }
+
           const [currentAgent] = await db
             .select()
             .from(transformAgent)
             .where(eq(transformAgent.id, currentRun.agentId));
+
+          if (!currentAgent) {
+            log.info(
+              "Transform run or agent deleted; terminating step execution",
+              { runId },
+            );
+            return { success: false, cancelled: true };
+          }
 
           let initialAttachmentRows: any[] = [];
           if (currentAgent.requiresFileUpload) {
@@ -133,7 +208,7 @@ export const executeTransformRun = inngest.createFunction(
           try {
             const parsedSteps: TransformStep[] = JSON.parse(currentAgent.steps);
             anyArtifactToolSelected = parsedSteps.some((s) =>
-              s.toolIds?.includes("internal:tool:manage_artifact"),
+              s.toolIds?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT),
             );
           } catch {}
 
@@ -178,6 +253,9 @@ export const executeTransformRun = inngest.createFunction(
       );
 
       if (!stepExecutionResult?.success) {
+        if ((stepExecutionResult as any)?.cancelled) {
+          return { success: false, cancelled: true };
+        }
         log.error("Step execution failed (runId: {runId}, step: {stepIdx})", {
           runId,
           stepIdx,

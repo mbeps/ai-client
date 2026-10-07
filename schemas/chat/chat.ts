@@ -153,13 +153,7 @@ const manageArtifactBaseFields = {
   content: z
     .string()
     .optional()
-    .describe(
-      "The content of the artifact. " +
-        "For spreadsheet type, you may EITHER pass a JSON string in this field OR pass a top-level 'sheets' argument. " +
-        'Format: { "sheets": [{ "name": "Sheet1", "data": [["A1", "B1"], ["A2", "B2"]] }] }. ' +
-        'Values in data can be simple types or objects { "v": value, "s": { "bold": true, "italic": true, "textAlign": "center", "backgroundColor": "#...", "color": "#..." } }. ' +
-        "For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code.",
-    ),
+    .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.CONTENT_DESCRIPTION),
   sheets: z
     .array(
       z.object({
@@ -177,65 +171,96 @@ const manageArtifactBaseFields = {
 };
 
 /**
- * Validates parameters for the internal manage_artifact tool.
- * Accepts both flat and nested 'artifact' key structures to support various AI models.
- * Normalizes to flat structure via transform.
+ * Normalises input for manage_artifact tool.
+ * Tolerates JSON strings and nested { artifact: ... } wrappers from various AI models,
+ * allowing the advertised JSON Schema to remain a clean, single-object schema.
  */
-export const manageArtifactSchema = z.union([
-  z.object(manageArtifactBaseFields),
-  z
-    .object({
-      artifact: z.object(manageArtifactBaseFields),
-    })
-    .transform((val) => val.artifact),
-  // Some models pass the entire artifact spec as a JSON string; parse and validate it.
-  z
-    .string()
-    .transform((str) => {
-      try {
-        return JSON.parse(str);
-      } catch {
-        return null;
-      }
-    })
-    .pipe(z.object(manageArtifactBaseFields)),
-]);
+function normaliseManageArtifactInput(val: unknown): unknown {
+  let target = val;
+  if (typeof target === "string") {
+    try {
+      target = JSON.parse(target);
+    } catch {
+      return val;
+    }
+  }
+  if (
+    typeof target === "object" &&
+    target !== null &&
+    !Array.isArray(target) &&
+    "artifact" in target &&
+    typeof (target as { artifact?: unknown }).artifact === "object" &&
+    (target as { artifact?: unknown }).artifact !== null
+  ) {
+    return (target as { artifact: unknown }).artifact;
+  }
+  return target;
+}
 
-export const searchKnowledgeBaseSchema = z.union([
-  z.object({
-    query: z
-      .string()
-      .trim()
-      .min(1)
-      .max(500)
-      .describe(
-        "Search query to find relevant information in the knowledge base. Be specific and focused.",
-      ),
-  }),
-  // Some models might wrap it in a search_knowledge_base object
-  z
-    .object({
-      search_knowledge_base: z.object({
-        query: z.string().trim().min(1).max(500),
-      }),
-    })
-    .transform((val) => val.search_knowledge_base),
-  // Handle JSON string input
-  z
+export const manageArtifactBaseSchema = z.object(manageArtifactBaseFields);
+
+/**
+ * Validates parameters for the internal manage_artifact tool.
+ * Uses preprocess to tolerate JSON strings and nested 'artifact' wrappers,
+ * while advertising a clean single-object schema to AI models without anyOf.
+ */
+export const manageArtifactSchema = Object.assign(
+  z.preprocess(normaliseManageArtifactInput, manageArtifactBaseSchema),
+  { shape: manageArtifactBaseSchema.shape },
+);
+
+const searchKnowledgeBaseBaseSchema = z.object({
+  query: z
     .string()
-    .transform((str) => {
-      try {
-        return JSON.parse(str);
-      } catch {
-        return null;
-      }
-    })
-    .pipe(
-      z.object({
-        query: z.string().trim().min(1).max(500),
-      }),
+    .trim()
+    .min(1)
+    .max(500)
+    .describe(
+      "Search query to find relevant information in the knowledge base. Be specific and focused.",
     ),
-]);
+});
+
+/**
+ * Normalises input for search_knowledge_base tool.
+ * Tolerates JSON strings and nested { search_knowledge_base: ... } wrappers,
+ * allowing the advertised JSON Schema to remain a clean, single-object schema.
+ */
+function normaliseSearchKnowledgeBaseInput(val: unknown): unknown {
+  let target = val;
+  if (typeof target === "string") {
+    try {
+      target = JSON.parse(target);
+    } catch {
+      return val;
+    }
+  }
+  if (
+    typeof target === "object" &&
+    target !== null &&
+    !Array.isArray(target) &&
+    "search_knowledge_base" in target &&
+    typeof (target as { search_knowledge_base?: unknown })
+      .search_knowledge_base === "object" &&
+    (target as { search_knowledge_base?: unknown }).search_knowledge_base !==
+      null
+  ) {
+    return (target as { search_knowledge_base: unknown }).search_knowledge_base;
+  }
+  return target;
+}
+
+/**
+ * Validates parameters for the internal search_knowledge_base tool.
+ * Uses preprocess to tolerate JSON strings and nested wrappers,
+ * advertising a clean single-object schema to AI models without anyOf.
+ */
+export const searchKnowledgeBaseSchema = Object.assign(
+  z.preprocess(
+    normaliseSearchKnowledgeBaseInput,
+    searchKnowledgeBaseBaseSchema,
+  ),
+  { shape: searchKnowledgeBaseBaseSchema.shape },
+);
 
 /**
  * Validates chat knowledge base update requests.

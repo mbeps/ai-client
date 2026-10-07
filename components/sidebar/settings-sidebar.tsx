@@ -26,9 +26,8 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/config/routes";
-import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
-import { useAppStore } from "@/lib/store";
+import { resetClientState } from "@/lib/store";
 
 /**
  * Sidebar for the /settings section.
@@ -139,9 +138,7 @@ export function SettingsSidebar({
             <SidebarMenuButton
               onClick={async () => {
                 await authClient.signOut();
-                useAppStore.getState().resetEntityState();
-                useAppStore.getState().resetChatState();
-                hydratedResources.clear();
+                resetClientState();
                 router.push(ROUTES.AUTH.LOGIN.path);
               }}
               className="text-destructive hover:text-destructive focus:text-destructive"

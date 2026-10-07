@@ -1,5 +1,5 @@
 import { embed } from "ai";
-import { resolveEmbeddingProvider } from "@/lib/chat/resolve-embedding-provider";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
 
 /**

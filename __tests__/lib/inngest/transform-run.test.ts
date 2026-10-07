@@ -401,14 +401,14 @@ describe("executeTransformRun Inngest Workflow", () => {
     };
 
     const fn = (executeTransformRun as any).fn;
-    const result = await fn({
-      event: {
-        data: { runId: "run-malformed", userId: "user-1" },
-      },
-      step: mockStep,
-    });
-
-    expect(result).toEqual({ success: true, completed: true });
+    await expect(
+      fn({
+        event: {
+          data: { runId: "run-malformed", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid JSON in steps for agent agent-malformed");
     expect(mockRunSteps).not.toHaveBeenCalled();
   });
 
@@ -477,18 +477,51 @@ describe("executeTransformRun Inngest Workflow", () => {
     };
 
     const fn = (executeTransformRun as any).fn;
-    const result = await fn({
-      event: {
-        data: {
-          runId: "run-corrupted",
-          userId: "user-1",
-          startFromStep: 0,
+    await expect(
+      fn({
+        event: {
+          data: {
+            runId: "run-corrupted",
+            userId: "user-1",
+            startFromStep: 0,
+          },
         },
-      },
-      step: mockStep,
-    });
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid JSON in steps for agent agent-corrupted");
+  });
 
-    expect(result).toEqual({ success: true, completed: true });
+  it("fails run when agentRow.steps fails transformStepSchema validation", async () => {
+    const runRow = {
+      id: "run-invalid-schema",
+      agentId: "agent-invalid-schema",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-invalid-schema",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "", name: "" }]),
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([runRow])
+      .mockResolvedValueOnce([agentRow]);
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await expect(
+      fn({
+        event: {
+          data: { runId: "run-invalid-schema", userId: "user-1" },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow("Invalid transform steps for agent agent-invalid-schema");
   });
 
   it("handles requiresFileUpload at step 0 with nullish inputs and invalid agent steps JSON in execute-step", async () => {
@@ -766,6 +799,154 @@ describe("executeTransformRun Inngest Workflow", () => {
 
     expect(mockUpdateSet).toHaveBeenCalledWith(
       expect.objectContaining({ outputAttachmentIds: [] }),
+    );
+  });
+
+  it("configures cancelOn triggers for workflows/transform.cancel", () => {
+    expect((executeTransformRun as any).opts.cancelOn).toEqual([
+      {
+        event: "workflows/transform.cancel",
+        if: "async.data.runId == event.data.runId",
+      },
+    ]);
+  });
+
+  it("terminates step execution gracefully when currentRun is deleted concurrently", async () => {
+    const runRow = {
+      id: "run-del",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s1", name: "Step 1", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      return Promise.resolve([]);
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-del",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: false, cancelled: true });
+    expect(mockRunSteps).not.toHaveBeenCalled();
+    expect(mockLog.info).toHaveBeenCalledWith(
+      "Transform run or agent deleted; terminating step execution",
+      { runId: "run-del" },
+    );
+  });
+
+  it("terminates step execution gracefully when currentRun is marked failed", async () => {
+    const runRow = {
+      id: "run-failed-status",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s1", name: "Step 1", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      return Promise.resolve([{ ...runRow, status: "failed" }]);
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-failed-status",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: false, cancelled: true });
+    expect(mockRunSteps).not.toHaveBeenCalled();
+    expect(mockLog.info).toHaveBeenCalledWith(
+      "Transform run or agent deleted; terminating step execution",
+      { runId: "run-failed-status" },
+    );
+  });
+
+  it("terminates step execution gracefully when currentAgent is deleted concurrently", async () => {
+    const runRow = {
+      id: "run-agent-del",
+      agentId: "agent-deleted",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-deleted",
+      requiresFileUpload: false,
+      steps: JSON.stringify([{ id: "s1", name: "Step 1", order: 0 }]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 3) return Promise.resolve([runRow]);
+      return Promise.resolve([]);
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-agent-del",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: false, cancelled: true });
+    expect(mockRunSteps).not.toHaveBeenCalled();
+    expect(mockLog.info).toHaveBeenCalledWith(
+      "Transform run or agent deleted; terminating step execution",
+      { runId: "run-agent-del" },
     );
   });
 });

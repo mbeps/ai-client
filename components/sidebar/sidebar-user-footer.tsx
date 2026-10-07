@@ -22,9 +22,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/config/routes";
-import { hydratedResources } from "@/hooks/use-resource-hydration";
 import { authClient } from "@/lib/auth/auth-client";
-import { useAppStore } from "@/lib/store";
+import { resetClientState } from "@/lib/store";
 
 /**
  * User footer component rendered at the bottom of application sidebars.
@@ -48,9 +47,7 @@ export function SidebarUserFooter(
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    useAppStore.getState().resetEntityState();
-    useAppStore.getState().resetChatState();
-    hydratedResources.clear();
+    resetClientState();
     router.push(ROUTES.AUTH.LOGIN.path);
   };
 

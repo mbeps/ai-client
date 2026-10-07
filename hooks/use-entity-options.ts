@@ -78,7 +78,7 @@ export function useEntityOptions({
       }
       onAfterMutation?.();
       if (redirectPath) {
-        router.push(redirectPath);
+        router.replace(redirectPath);
       }
     } catch (_error) {
       toast.error(`Failed to delete ${type.toLowerCase()}`);

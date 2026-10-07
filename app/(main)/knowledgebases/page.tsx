@@ -25,8 +25,8 @@ import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-di
  * @author Maruf Bepary
  */
 export default function KnowledgebasesPage() {
-  const { models } = useUserModels("embedding");
-  const hasNoModels = models.length === 0;
+  const { models, isLoading: isModelsLoading } = useUserModels("embedding");
+  const hasNoModels = !isModelsLoading && models.length === 0;
 
   const [knowledgebases, setKnowledgebases] = useState<
     KnowledgebaseWithCount[]
@@ -95,7 +95,7 @@ export default function KnowledgebasesPage() {
           <Button
             className="w-full md:w-auto"
             onClick={() => setDialogOpen(true)}
-            disabled={hasNoModels}
+            disabled={isModelsLoading || hasNoModels}
           >
             <Plus className="mr-2 h-4 w-4" />
             New Knowledgebase

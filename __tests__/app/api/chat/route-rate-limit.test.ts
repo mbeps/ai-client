@@ -20,6 +20,20 @@ vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }));
 
+const mockDbSelect = vi.hoisted(() => {
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockResolvedValue([{ id: "11111111-1111-4111-8111-111111111111" }]),
+  };
+  return {
+    select: vi.fn(() => chain),
+    chain,
+  };
+});
+
+vi.mock("@/drizzle/db", () => ({ db: mockDbSelect }));
+vi.mock("@/drizzle/schema", () => ({ chat: { id: "id", userId: "userId" } }));
+
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
 }));
@@ -40,6 +54,31 @@ describe("POST /api/chat — rate limiting (T9.1)", () => {
       allowed: false,
       retryAfterSeconds: 42,
     });
+    mockDbSelect.chain.where.mockResolvedValue([
+      { id: "11111111-1111-4111-8111-111111111111" },
+    ]);
+  });
+
+  it("returns 404 when chat does not exist or user does not own it", async () => {
+    vi.mocked(checkRateLimit).mockReturnValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
+    mockDbSelect.chain.where.mockResolvedValueOnce([]);
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: "11111111-1111-4111-8111-111111111111",
+        userMessageId: "22222222-2222-4222-8222-222222222222",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Chat not found or access denied");
+    expect(inngest.send).not.toHaveBeenCalled();
   });
 
   it("returns 429 with Retry-After header when the limiter blocks", async () => {

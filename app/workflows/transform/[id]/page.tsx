@@ -71,8 +71,9 @@ export default function AgentEditorPage() {
 
   const { mcpServers, loadMcpServers, skills, loadSkills } = useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
-  const { models: chatModels } = useUserModels("chat");
-  const hasNoModels = chatModels.length === 0;
+  const { models: chatModels, isLoading: isModelsLoading } =
+    useUserModels("chat");
+  const hasNoModels = !isModelsLoading && chatModels.length === 0;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -372,10 +373,13 @@ export default function AgentEditorPage() {
               onDryRunChange={setDryRun}
               onStartRun={handleStartRun}
               isStartingRun={isStartingRun}
-              disabled={hasNoModels}
+              disabled={isModelsLoading || hasNoModels}
             />
           )}
-          <Button onClick={handleSave} disabled={isSaving || hasNoModels}>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || isModelsLoading || hasNoModels}
+          >
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

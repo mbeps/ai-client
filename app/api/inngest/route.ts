@@ -1,8 +1,9 @@
 import { serve } from "inngest/next";
+import { env } from "@/config/env";
 import { inngest } from "@/lib/inngest/client";
 import { inngestFunctions } from "@/lib/inngest/functions";
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = env.NODE_ENV !== "production";
 
 /**
  * Inngest HTTP serve handler for Next.js App Router.
@@ -17,6 +18,6 @@ export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: inngestFunctions,
   serveOrigin:
-    process.env.INNGEST_SERVE_ORIGIN ||
+    env.INNGEST_SERVE_ORIGIN ||
     (isDev ? "http://host.docker.internal:3000" : undefined),
 });

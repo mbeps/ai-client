@@ -55,8 +55,8 @@ export function CreateKnowledgebaseDialog({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { models } = useUserModels("embedding");
-  const hasNoModels = models.length === 0;
+  const { models, isLoading: isModelsLoading } = useUserModels("embedding");
+  const hasNoModels = !isModelsLoading && models.length === 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createKnowledgebaseSchema),
@@ -145,7 +145,10 @@ export function CreateKnowledgebaseDialog({
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting || hasNoModels}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || isModelsLoading || hasNoModels}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

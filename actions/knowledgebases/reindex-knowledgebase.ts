@@ -35,32 +35,45 @@ export async function reindexKnowledgebase(kbId: string) {
     throw new Error("Not Found");
   }
 
-  // 2. Mark as indexing
-  await db
-    .update(knowledgebase)
-    .set({
-      indexStatus: "indexing",
-      lastIndexedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(knowledgebase.id, kbId));
+  // 2. Mark as indexing and fetch docs atomically
+  const docs = await db.transaction(async (tx) => {
+    await tx
+      .update(knowledgebase)
+      .set({
+        indexStatus: "indexing",
+        lastIndexedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgebase.id, kbId));
 
-  // Reset status message for all documents being re-indexed
-  await db
-    .update(kbDocument)
-    .set({ statusMessage: null })
-    .where(eq(kbDocument.kbId, kbId));
+    // Reset status message for all documents being re-indexed
+    await tx
+      .update(kbDocument)
+      .set({ statusMessage: null })
+      .where(eq(kbDocument.kbId, kbId));
 
-  const docs = await db
-    .select({ id: kbDocument.id })
-    .from(kbDocument)
-    .where(eq(kbDocument.kbId, kbId));
+    return tx
+      .select({ id: kbDocument.id })
+      .from(kbDocument)
+      .where(eq(kbDocument.kbId, kbId));
+  });
 
   // 3. Dispatch durable re-index background job to Inngest
-  await inngest.send({
-    name: "knowledgebase/reindex",
-    data: { kbId, userId: session.user.id },
-  });
+  try {
+    await inngest.send({
+      name: "knowledgebase/reindex",
+      data: { kbId, userId: session.user.id },
+    });
+  } catch (error) {
+    await db
+      .update(knowledgebase)
+      .set({
+        indexStatus: "ready",
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgebase.id, kbId));
+    throw error;
+  }
 
   return { processedCount: docs.length, failedCount: 0 };
 }

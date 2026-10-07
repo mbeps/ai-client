@@ -76,6 +76,7 @@ vi.mock("xlsx", async (importOriginal) => {
 
 import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { InvalidArtifactFormatError } from "@/lib/errors";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 
 describe("persistTransformArtifact (T2.5/T2.6)", () => {
@@ -225,22 +226,21 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
     expect(uploadObjectMock).toHaveBeenCalled();
   });
 
-  it("persists spreadsheet artifact with empty sheet when parsed object has no sheets", async () => {
-    const result = await persistTransformArtifact(
-      {
-        kind: "artifact",
-        artifact: {
-          type: "spreadsheet",
-          content: JSON.stringify({ otherField: true }),
+  it("throws InvalidArtifactFormatError when parsed object has no sheets or recognized structure", async () => {
+    await expect(
+      persistTransformArtifact(
+        {
+          kind: "artifact",
+          artifact: {
+            type: "spreadsheet",
+            content: JSON.stringify({ otherField: true }),
+          },
+          stepIndex: 2,
         },
-        stepIndex: 2,
-      },
-      "user-1",
-      "run-1",
-    );
-
-    expect(result).not.toBeNull();
-    expect(result?.attachmentRow.name).toBe("step-3-output.xlsx");
+        "user-1",
+        "run-1",
+      ),
+    ).rejects.toThrow(InvalidArtifactFormatError);
   });
 
   it("returns null when spreadsheet artifact content is empty string", async () => {

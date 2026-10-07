@@ -1,6 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schema";
+import { getLogger } from "@/lib/logger";
+
+const log = getLogger(["chat", "persist"]);
 
 type PersistAssistantResponseParams = {
   chatId: string;
@@ -22,15 +25,32 @@ type PersistAssistantResponseParams = {
  * Both insert and update share the same `chatId` and `assistantMessageId` —
  * they are intentionally sequential to avoid a race where the leaf points to
  * a message that hasn't been inserted yet.
+ *
+ * @returns true if the message was inserted and chat updated, false if skipped
+ *          due to existing partial response, conflict, or concurrent chat deletion.
  */
 export async function persistAssistantResponse(
   params: PersistAssistantResponseParams,
-): Promise<void> {
+): Promise<boolean> {
   const { chatId, assistantMessageId, content, parentId, metadata } = params;
 
-  // If the client already persisted a partial message (user pressed Stop),
-  // skip insertion to avoid overwriting the saved partial content.
   if (parentId) {
+    const [parentExists] = await db
+      .select({ id: message.id })
+      .from(message)
+      .where(and(eq(message.id, parentId), eq(message.chatId, chatId)))
+      .limit(1);
+
+    if (!parentExists) {
+      log.info(
+        "Parent message deleted concurrently; skipping assistant persistence (chatId: {chatId}, parentId: {parentId})",
+        { chatId, parentId },
+      );
+      return false;
+    }
+
+    // If the client already persisted a partial message (user pressed Stop),
+    // skip insertion to avoid overwriting the saved partial content.
     const [existing] = await db
       .select({ id: message.id })
       .from(message)
@@ -43,28 +63,53 @@ export async function persistAssistantResponse(
       )
       .limit(1);
 
-    if (existing) return;
+    if (existing) return false;
   }
 
-  const [inserted] = await db
-    .insert(message)
-    .values({
-      id: assistantMessageId,
-      chatId,
-      role: "assistant",
-      content,
-      parentId: parentId ?? null,
-      metadata,
-    })
-    .onConflictDoNothing()
-    .returning({ id: message.id });
+  try {
+    const [inserted] = await db
+      .insert(message)
+      .values({
+        id: assistantMessageId,
+        chatId,
+        role: "assistant",
+        content,
+        parentId: parentId ?? null,
+        metadata,
+      })
+      .onConflictDoNothing()
+      .returning({ id: message.id });
 
-  if (!inserted) {
-    return;
+    if (!inserted) {
+      return false;
+    }
+
+    await db
+      .update(chat)
+      .set({ currentLeafId: assistantMessageId, updatedAt: new Date() })
+      .where(eq(chat.id, chatId));
+
+    return true;
+  } catch (error: unknown) {
+    const err = error as Record<string, unknown> | null;
+    const cause = err?.cause as Record<string, unknown> | undefined;
+    const code = err?.code ?? cause?.code;
+    const messageText =
+      String(err?.message ?? "") + String(cause?.message ?? "");
+
+    const isFkViolation =
+      code === "23503" ||
+      messageText.includes("foreign key constraint") ||
+      messageText.includes("message_chat_id_chat_id_fk") ||
+      messageText.includes("message_parent_id_message_id_fk");
+
+    if (isFkViolation) {
+      log.info(
+        "Chat or parent message was deleted concurrently; skipping assistant message persistence (chatId: {chatId})",
+        { chatId, assistantMessageId, parentId },
+      );
+      return false;
+    }
+    throw error;
   }
-
-  await db
-    .update(chat)
-    .set({ currentLeafId: assistantMessageId, updatedAt: new Date() })
-    .where(eq(chat.id, chatId));
 }

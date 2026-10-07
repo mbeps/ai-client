@@ -51,6 +51,7 @@ import { getTransformAgent } from "@/actions/transform-agents/get-transform-agen
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { renameTransformAgent } from "@/actions/transform-agents/rename-transform-agent";
 import { updateTransformAgent } from "@/actions/transform-agents/update-transform-agent";
+import { inngest } from "@/lib/inngest/client";
 
 describe("transform agents actions", () => {
   const userId = "user-123";
@@ -179,8 +180,26 @@ describe("transform agents actions", () => {
   });
 
   describe("deleteTransformAgent", () => {
-    it("deletes transform agent owned by user", async () => {
+    it("deletes transform agent owned by user when no active runs exist", async () => {
+      chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
+
       await deleteTransformAgent(agentId);
+
+      expect(chainable.delete).toHaveBeenCalled();
+      expect(inngest.send).not.toHaveBeenCalled();
+    });
+
+    it("cancels active transform runs before deleting agent", async () => {
+      const activeRuns = [{ id: "run-1" }, { id: "run-2" }];
+      chainable.then = (onFulfilled: any) =>
+        Promise.resolve(activeRuns).then(onFulfilled);
+
+      await deleteTransformAgent(agentId);
+
+      expect(inngest.send).toHaveBeenCalledWith([
+        { name: "workflows/transform.cancel", data: { runId: "run-1" } },
+        { name: "workflows/transform.cancel", data: { runId: "run-2" } },
+      ]);
       expect(chainable.delete).toHaveBeenCalled();
     });
   });

@@ -84,8 +84,24 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
+vi.mock("@/lib/chat/abort-chat-stream", () => ({
+  abortChatStream: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock("@/lib/chat/chat-abort-registry", () => ({
+  chatAbortRegistry: {
+    has: vi.fn().mockReturnValue(false),
+    abort: vi.fn().mockReturnValue(true),
+    register: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
 import { createChat } from "@/actions/chats/create-chat";
 import { deleteChat } from "@/actions/chats/delete-chat";
+import { deleteMessage } from "@/actions/chats/delete-message";
+import { abortChatStream } from "@/lib/chat/abort-chat-stream";
+import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { getChat } from "@/actions/chats/get-chat";
 import { listChats } from "@/actions/chats/list-chats";
 import { moveChat } from "@/actions/chats/move-chat";
@@ -253,6 +269,7 @@ describe("deleteChat", () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deleteChat(VALID_UUID)).resolves.toBeUndefined();
     expect(chainable.delete).toHaveBeenCalledOnce();
+    expect(abortChatStream).toHaveBeenCalledWith(VALID_UUID, "user-1");
   });
 
   it("throws 'Not Found' when chat does not exist or is not owned", async () => {
@@ -262,6 +279,7 @@ describe("deleteChat", () => {
     }));
     chainable.returning.mockResolvedValueOnce([]);
     await expect(deleteChat(VALID_UUID)).rejects.toThrow("Not Found");
+    expect(abortChatStream).not.toHaveBeenCalled();
   });
 
   it("throws ZodError when chatId is not a UUID", async () => {
@@ -535,5 +553,44 @@ describe("updateChatKnowledgebase", () => {
     await expect(
       updateChatKnowledgebase({ chatId: CHAT_UUID, knowledgebaseId: null }),
     ).resolves.toBeUndefined();
+  });
+});
+
+// ── deleteMessage ─────────────────────────────────────────────────────────────
+describe("deleteMessage", () => {
+  const CHAT_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+  const MSG_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d481";
+  const LEAF_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d482";
+
+  it("aborts active streams via abortChatStream when a stream is active", async () => {
+    vi.mocked(chatAbortRegistry.has).mockReturnValueOnce(true);
+    // 1. chat ownership check
+    chainable.where.mockResolvedValueOnce([
+      { id: CHAT_UUID, currentLeafId: MSG_UUID },
+    ]);
+    // 2. all messages in chat
+    chainable.where.mockResolvedValueOnce([{ id: MSG_UUID, parentId: null }]);
+    // 3. attachment keys
+    chainable.where.mockResolvedValueOnce([]);
+    // 4. delete message & update chat
+    chainable.where.mockResolvedValue([]);
+
+    await deleteMessage(CHAT_UUID, MSG_UUID, LEAF_UUID);
+
+    expect(abortChatStream).toHaveBeenCalledWith(CHAT_UUID, "user-1");
+  });
+
+  it("does not abort stream when no stream is active", async () => {
+    vi.mocked(chatAbortRegistry.has).mockReturnValueOnce(false);
+    chainable.where.mockResolvedValueOnce([
+      { id: CHAT_UUID, currentLeafId: null },
+    ]);
+    chainable.where.mockResolvedValueOnce([{ id: MSG_UUID, parentId: null }]);
+    chainable.where.mockResolvedValueOnce([]);
+    chainable.where.mockResolvedValue([]);
+
+    await deleteMessage(CHAT_UUID, MSG_UUID, null);
+
+    expect(abortChatStream).not.toHaveBeenCalled();
   });
 });

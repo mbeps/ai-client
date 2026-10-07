@@ -27,9 +27,14 @@ vi.mock("@/lib/chat/resolve-default-chat-provider", () => ({
   resolveDefaultChatProvider: mockResolveProvider,
 }));
 
-vi.mock("@/lib/chat/load-chat-context", () => ({
-  loadChatContext: mockLoadChatContext,
-}));
+vi.mock("@/lib/chat/load-chat-context", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/chat/load-chat-context")>();
+  return {
+    ...actual,
+    loadChatContext: mockLoadChatContext,
+  };
+});
 
 vi.mock("@/lib/chat/load-thread-from-db", () => ({
   loadThreadFromDb: mockLoadThread,
@@ -50,13 +55,17 @@ const mockRegisterMcpTools = vi.hoisted(() => vi.fn());
 const mockIsStepCount = vi.hoisted(() => vi.fn(() => ({ isStepCount: true })));
 const abortState = vi.hoisted(() => ({
   controller: undefined as AbortController | undefined,
+  release: vi.fn(),
 }));
 
 // The real registry hides its AbortController, so abort paths are untestable
 // without this seam. Tests assign `abortState.controller` per scenario.
 vi.mock("@/lib/chat/chat-abort-registry", () => ({
   chatAbortRegistry: {
-    register: vi.fn(() => abortState.controller),
+    register: vi.fn(() => ({
+      controller: abortState.controller!,
+      release: abortState.release,
+    })),
     delete: vi.fn(),
   },
 }));
@@ -83,25 +92,25 @@ vi.mock("@/lib/logger", () => ({
 
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
 import { inngest } from "@/lib/inngest/client";
 
 describe("generateChatResponse Inngest Function", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPersistResponse.mockResolvedValue(true);
     mockGetUserSettings.mockResolvedValue(null);
     abortState.controller = new AbortController();
     mockRegisterMcpTools.mockImplementation(
-      async (
-        _servers: unknown,
-        _selectedTools: unknown,
-        isArtifactToolSelected: boolean,
-      ) => ({
-        mcpTools: isArtifactToolSelected
-          ? { manage_artifact: { description: "artifact" } }
-          : {},
-        toolSourceMap: isArtifactToolSelected
-          ? { manage_artifact: "Internal" }
-          : {},
+      async (servers: unknown) => ({
+        mcpTools:
+          Array.isArray(servers) && servers.length > 0
+            ? { external_mcp_tool: { description: "external tool" } }
+            : {},
+        toolSourceMap:
+          Array.isArray(servers) && servers.length > 0
+            ? { external_mcp_tool: "MCP" }
+            : {},
         mcpCleanup: mockMcpCleanup,
       }),
     );
@@ -138,6 +147,13 @@ describe("generateChatResponse Inngest Function", () => {
       })(),
       finishReason: Promise.resolve("stop"),
       usage: Promise.resolve({ promptTokens: 5, completionTokens: 4 }),
+    });
+  });
+
+  it("is configured with concurrency limit 1 keyed on event.data.chatId", () => {
+    expect((generateChatResponse as any).opts.concurrency).toEqual({
+      key: "event.data.chatId",
+      limit: 1,
     });
   });
 
@@ -413,6 +429,57 @@ describe("generateChatResponse Inngest Function", () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it("does not throw ToolsNotSupportedError when model lacks tools support but knowledge base is attached", async () => {
+    mockResolveProvider.mockResolvedValueOnce({
+      modelId: "no-tools",
+      modelRow: { capVision: true, capTools: false },
+      sdkProvider: { chat: () => () => {} },
+    });
+
+    mockLoadChatContext.mockResolvedValueOnce({
+      servers: [],
+      activeKbId: "kb-1",
+      kbIsReady: true,
+      availableSkills: [],
+      selectedSkills: [],
+      projectRow: null,
+      assistantRow: null,
+    });
+
+    mockLoadThread.mockResolvedValueOnce([
+      { id: "msg-1", role: "user", content: "Tell me something" },
+    ]);
+
+    mockStreamText.mockReturnValueOnce({
+      fullStream: (async function* () {
+        yield { type: "text-delta", text: "Answer without tools." };
+      })(),
+      finishReason: Promise.resolve("stop"),
+      usage: Promise.resolve({ promptTokens: 5, completionTokens: 10 }),
+    });
+
+    const fn = (generateChatResponse as any).fn;
+
+    await expect(
+      fn({
+        event: {
+          data: {
+            chatId: "chat-123",
+            userId: "user-123",
+            userMessageId: "msg-1",
+            model: "no-tools",
+          },
+        },
+      }),
+    ).resolves.not.toThrow();
+
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: undefined,
+      }),
+    );
   });
 
   it("registers file url tool and skill tool when thread has files and skills are present", async () => {
@@ -774,6 +841,83 @@ describe("generateChatResponse Inngest Function", () => {
         expect.objectContaining({ type: "error" }),
       );
     });
+
+    it("skips finish emission and exits cleanly when persistAssistantResponse returns false", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-concurrent-delete",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+    });
+
+    it("exits cleanly without error event or rethrow when ChatNotFoundError is raised", async () => {
+      mockLoadChatContext.mockRejectedValueOnce(new ChatNotFoundError("chat-deleted"));
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-deleted",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "error" }),
+      );
+    });
+
+    it("exits cleanly and skips persistence if stream was aborted before persistAssistantResponse", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      mockStreamText.mockReturnValue({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Text" };
+        })(),
+        finishReason: Promise.resolve("stop").then((res) => {
+          controller.abort();
+          return res;
+        }),
+        usage: Promise.resolve(undefined),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+    });
   });
 
   describe("tool chunk normalisation", () => {
@@ -1029,7 +1173,10 @@ describe("generateChatResponse Inngest Function", () => {
             userId: "user-1",
             userMessageId: "msg-1",
             model: "gpt-4o",
-            selectedTools: ["internal:tool:manage_artifact"],
+            selectedTools: [
+              "internal:tool:manage_artifact",
+              "internal:tool:manage_skill",
+            ],
           },
         },
       });

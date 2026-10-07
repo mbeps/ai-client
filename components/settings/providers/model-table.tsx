@@ -30,7 +30,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { logger } from "@/lib/logger";
@@ -348,160 +347,155 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         </div>
       </div>
 
-      <TooltipProvider>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40px]">
-                  <Checkbox
-                    checked={
-                      filteredModels.length > 0 &&
-                      selectedIds.size === filteredModels.length
-                    }
-                    onCheckedChange={toggleSelectAll}
-                    aria-label="Select all"
-                  />
-                </TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Capabilities</TableHead>
-                <TableHead>Context</TableHead>
-                <TableHead>Enabled</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredModels.map((model) => {
-                const isBusy = busyModelId === model.id;
-                const isSelected = selectedIds.has(model.id);
-                return (
-                  <TableRow
-                    key={model.id}
-                    data-state={isSelected && "selected"}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelectOne(model.id)}
-                        aria-label={`Select ${model.label}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-0.5">
-                        <div className="font-medium">{model.label}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {model.modelId}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={
+                    filteredModels.length > 0 &&
+                    selectedIds.size === filteredModels.length
+                  }
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Provider</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Capabilities</TableHead>
+              <TableHead>Context</TableHead>
+              <TableHead>Enabled</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredModels.map((model) => {
+              const isBusy = busyModelId === model.id;
+              const isSelected = selectedIds.has(model.id);
+              return (
+                <TableRow key={model.id} data-state={isSelected && "selected"}>
+                  <TableCell>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelectOne(model.id)}
+                      aria-label={`Select ${model.label}`}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-0.5">
+                      <div className="font-medium">{model.label}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {model.modelId}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {providerNameById[model.providerId] ?? "Unknown"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{model.modelType}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {model.capTools && (
+                        <Badge variant="secondary">tools</Badge>
+                      )}
+                      {model.capVision && (
+                        <Badge variant="secondary">vision</Badge>
+                      )}
+                      {model.capReasoning && (
+                        <Badge variant="secondary">reasoning</Badge>
+                      )}
+                      {model.capStructuredOutput && (
+                        <Badge variant="secondary">structured</Badge>
+                      )}
+                      {!model.capTools &&
+                        !model.capVision &&
+                        !model.capReasoning &&
+                        !model.capStructuredOutput && (
+                          <span className="text-muted-foreground text-xs">
+                            none
+                          </span>
+                        )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs">
+                      <div>{model.contextWindow.toLocaleString()} tokens</div>
+                      {(model.modelType === "embedding" ||
+                        model.modelType === "both") && (
+                        <div className="text-muted-foreground">
+                          {model.embeddingDimensions ?? "-"} dims
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {providerNameById[model.providerId] ?? "Unknown"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{model.modelType}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {model.capTools && (
-                          <Badge variant="secondary">tools</Badge>
-                        )}
-                        {model.capVision && (
-                          <Badge variant="secondary">vision</Badge>
-                        )}
-                        {model.capReasoning && (
-                          <Badge variant="secondary">reasoning</Badge>
-                        )}
-                        {model.capStructuredOutput && (
-                          <Badge variant="secondary">structured</Badge>
-                        )}
-                        {!model.capTools &&
-                          !model.capVision &&
-                          !model.capReasoning &&
-                          !model.capStructuredOutput && (
-                            <span className="text-muted-foreground text-xs">
-                              none
-                            </span>
-                          )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        <div>{model.contextWindow.toLocaleString()} tokens</div>
-                        {(model.modelType === "embedding" ||
-                          model.modelType === "both") && (
-                          <div className="text-muted-foreground">
-                            {model.embeddingDimensions ?? "-"} dims
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={model.isEnabled}
-                        disabled={isBusy}
-                        onCheckedChange={(checked) =>
-                          void runModelAction(model.id, async () => {
-                            await updateModels(model.id, {
-                              isEnabled: checked,
-                            });
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={isBusy}
-                              onClick={() => {
-                                setEditingModel(model);
-                                setDialogOpen(true);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit Model</TooltipContent>
-                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={model.isEnabled}
+                      disabled={isBusy}
+                      onCheckedChange={(checked) =>
+                        void runModelAction(model.id, async () => {
+                          await updateModels(model.id, {
+                            isEnabled: checked,
+                          });
+                        })
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => {
+                              setEditingModel(model);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit Model</TooltipContent>
+                      </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={isBusy}
-                              onClick={() => setModelToDelete(model)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete Model</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {filteredModels.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="py-8 text-center text-muted-foreground text-sm"
-                  >
-                    No models found.
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={isBusy}
+                            onClick={() => setModelToDelete(model)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete Model</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </TooltipProvider>
+              );
+            })}
+
+            {filteredModels.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="py-8 text-center text-muted-foreground text-sm"
+                >
+                  No models found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <ModelFormDialog
         open={dialogOpen}

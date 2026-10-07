@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
 
 // Mutable store state — mutate per test in beforeEach
@@ -58,9 +59,11 @@ describe("AppSidebar", () => {
   it("renders Workflows and Running Jobs navigation buttons in order", async () => {
     await act(async () => {
       render(
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>,
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
       );
     });
 
@@ -100,9 +103,11 @@ describe("AppSidebar", () => {
 
     await act(async () => {
       render(
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>,
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
       );
     });
 
@@ -128,9 +133,11 @@ describe("AppSidebar", () => {
 
     await act(async () => {
       render(
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>,
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
       );
     });
 

@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { abortChatStream } from "@/lib/chat/abort-chat-stream";
+import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { getLogger } from "@/lib/logger";
 import { sweepOrphanedAttachmentKeys } from "@/lib/storage/sweep-orphaned-attachment-keys";
 
@@ -37,7 +39,7 @@ export async function deleteMessage(
 
   // Verify chat ownership
   const [chatRow] = await db
-    .select({ id: chat.id })
+    .select({ id: chat.id, currentLeafId: chat.currentLeafId })
     .from(chat)
     .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)));
 
@@ -68,6 +70,23 @@ export async function deleteMessage(
     }
   };
   collect(validatedMessageId);
+
+  // Inspect whether the deleted message or any of its subtree descendants matches the current generating stream or leaf.
+  // If an active stream exists for this chat, abort immediately to cancel in-memory streaming and notify Inngest/clients.
+  const affectsCurrentLeaf =
+    chatRow.currentLeafId != null && toDelete.includes(chatRow.currentLeafId);
+
+  if (chatAbortRegistry.has(validatedChatId)) {
+    log.info(
+      "Aborting active stream due to message deletion (chatId: {chatId}, messageId: {messageId}, affectsLeaf: {affectsLeaf})",
+      {
+        chatId: validatedChatId,
+        messageId: validatedMessageId,
+        affectsLeaf: affectsCurrentLeaf,
+      },
+    );
+    await abortChatStream(validatedChatId, session.user.id);
+  }
 
   // Collect attachment keys before rows cascade away (keys may be shared with
   // cloned messages, so deletion is refcounted afterwards)

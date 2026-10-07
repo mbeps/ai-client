@@ -4,14 +4,18 @@ import { useEntityOptions } from "@/hooks/use-entity-options";
 
 // ─── Hoisted mock variables (must run before vi.mock factories) ────────────
 const mockPush = vi.hoisted(() => vi.fn());
+const mockReplace = vi.hoisted(() => vi.fn());
 const mockRefresh = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const mockToastError = vi.hoisted(() => vi.fn());
 
 // ─── Mocks ─────────────────────────────────────────────────────────────────
 vi.mock("next/navigation", () => ({
-  useRouter: vi.fn().mockReturnValue({ push: mockPush }),
-  useRouter: vi.fn().mockReturnValue({ push: mockPush, refresh: mockRefresh }),
+  useRouter: vi.fn().mockReturnValue({
+    push: mockPush,
+    replace: mockReplace,
+    refresh: mockRefresh,
+  }),
 }));
 
 vi.mock("sonner", () => ({
@@ -156,7 +160,7 @@ describe("useEntityOptions", () => {
       expect(mockToastSuccess).toHaveBeenCalledWith("Assistant deleted");
     });
 
-    it("navigates to redirectPath after successful deletion", async () => {
+    it("replaces route with redirectPath after successful deletion", async () => {
       const onDelete = vi.fn().mockResolvedValue(undefined);
       const { result } = renderHook(() =>
         useEntityOptions({
@@ -171,7 +175,8 @@ describe("useEntityOptions", () => {
         await result.current.handleDelete();
       });
 
-      expect(mockPush).toHaveBeenCalledWith("/assistants");
+      expect(mockReplace).toHaveBeenCalledWith("/assistants");
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it("does not navigate when redirectPath is not provided", async () => {

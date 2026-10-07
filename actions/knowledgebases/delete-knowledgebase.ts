@@ -6,6 +6,7 @@ import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
@@ -46,6 +47,14 @@ export async function deleteKnowledgebase(
         eq(kbDocument.userId, session.user.id),
       ),
     );
+
+  const cancelEvents = ids.map((kbId) => ({
+    name: "knowledgebase/reindex.cancel" as const,
+    data: { kbId },
+  }));
+  await inngest.send(
+    cancelEvents.length === 1 ? cancelEvents[0] : cancelEvents,
+  );
 
   const result = await deleteKbRow(idOrIds);
 

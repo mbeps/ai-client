@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { mcpServer, skill } from "@/drizzle/schema";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
@@ -124,9 +125,9 @@ export async function loadTransformContext({
 
   const effectiveArtifactToolSelected =
     anyArtifactToolSelected ||
-    (agentRow.tools || []).includes("internal:tool:manage_artifact") ||
+    (agentRow.tools || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) ||
     steps.some((s) =>
-      (s.toolIds || []).includes("internal:tool:manage_artifact"),
+      (s.toolIds || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT),
     );
 
   /* 3. Register MCP tools */

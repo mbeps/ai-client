@@ -33,6 +33,7 @@ const chainable = vi.hoisted(() => {
   }
   c.where = vi.fn();
   c.limit = vi.fn();
+  c.transaction = vi.fn().mockImplementation(async (cb: (tx: any) => any) => cb(c));
   return c;
 });
 

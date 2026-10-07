@@ -31,6 +31,26 @@ describe("KB Inngest Functions", () => {
   });
 
   describe("ingestKbDocumentFunction", () => {
+    it("is configured with a documentId singleton skip policy", () => {
+      expect((ingestKbDocumentFunction as any).opts.singleton).toEqual({
+        key: "event.data.documentId",
+        mode: "skip",
+      });
+    });
+
+    it("is configured with cancelOn triggers for document and reindex cancellation", () => {
+      expect((ingestKbDocumentFunction as any).opts.cancelOn).toEqual([
+        {
+          event: "knowledgebase/document.cancel",
+          if: "async.data.documentId == event.data.documentId",
+        },
+        {
+          event: "knowledgebase/reindex.cancel",
+          if: "async.data.kbId == event.data.kbId",
+        },
+      ]);
+    });
+
     it("calls ingestDocument inside step.run pipeline", async () => {
       mockIngestDocument.mockResolvedValueOnce({
         chunkCount: 3,
@@ -58,12 +78,19 @@ describe("KB Inngest Functions", () => {
   });
 
   describe("reindexKbFunction", () => {
-    it("marks indexing, sets status, and fans out ingestion events for all documents", async () => {
+    it("is configured with a kbId singleton skip policy", () => {
+      expect((reindexKbFunction as any).opts.singleton).toEqual({
+        key: "event.data.kbId",
+        mode: "skip",
+      });
+    });
+
+    it("marks indexing, sets status, and fans out ingestion events for all documents with deterministic event IDs", async () => {
       // 1: select kb; 2: select docs
       let whereCall = 0;
       chainable.where.mockImplementation(() => {
         whereCall++;
-        if (whereCall === 1) return Promise.resolve([{ id: "kb-1" }]);
+        if (whereCall === 1 || whereCall === 5) return Promise.resolve([{ id: "kb-1" }]);
         if (whereCall === 4)
           return Promise.resolve([{ id: "doc-1" }, { id: "doc-2" }]);
         return Promise.resolve([]);
@@ -72,6 +99,7 @@ describe("KB Inngest Functions", () => {
       const fn = (reindexKbFunction as any).fn;
       const result = await fn({
         event: {
+          id: "reindex-evt-1",
           data: {
             kbId: "kb-1",
             userId: "user-1",
@@ -90,15 +118,44 @@ describe("KB Inngest Functions", () => {
       );
       expect(inngest.send).toHaveBeenCalledWith([
         {
+          id: "reindex-evt-1:doc-1",
           name: "knowledgebase/document.ingest",
-          data: { documentId: "doc-1", userId: "user-1" },
+          data: { documentId: "doc-1", userId: "user-1", kbId: "kb-1" },
         },
         {
+          id: "reindex-evt-1:doc-2",
           name: "knowledgebase/document.ingest",
-          data: { documentId: "doc-2", userId: "user-1" },
+          data: { documentId: "doc-2", userId: "user-1", kbId: "kb-1" },
         },
       ]);
       expect(result).toEqual({ dispatched: 2 });
+    });
+
+    it("skips fan-out when knowledgebase is deleted before fan-out step", async () => {
+      let whereCall = 0;
+      chainable.where.mockImplementation(() => {
+        whereCall++;
+        if (whereCall === 1) return Promise.resolve([{ id: "kb-1" }]);
+        if (whereCall === 4)
+          return Promise.resolve([{ id: "doc-1" }, { id: "doc-2" }]);
+        // whereCall 5: kb deleted before fan-out
+        return Promise.resolve([]);
+      });
+
+      const fn = (reindexKbFunction as any).fn;
+      const result = await fn({
+        event: {
+          id: "reindex-evt-1",
+          data: {
+            kbId: "kb-1",
+            userId: "user-1",
+          },
+        },
+        step: mockStep,
+      });
+
+      expect(inngest.send).not.toHaveBeenCalled();
+      expect(result).toEqual({ dispatched: 0 });
     });
 
     it("marks KB ready immediately if there are no documents", async () => {

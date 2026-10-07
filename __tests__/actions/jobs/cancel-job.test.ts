@@ -112,7 +112,7 @@ describe("cancelJob Server Action", () => {
   });
 
   describe("Dual-Layer Abort for Transform Workflows", () => {
-    it("updates transformRun status in DB and dispatches workflows/transform.cancel event", async () => {
+    it("updates transformRun status in DB to failed", async () => {
       const result = await cancelJob("run-123", {
         transformRunId: "run-tf-999",
       });
@@ -124,13 +124,7 @@ describe("cancelJob Server Action", () => {
         errorMessage: "Cancelled by user",
       });
       expect(mockUpdateWhere).toHaveBeenCalled();
-      expect(mockInngest.send).toHaveBeenCalledWith({
-        name: "workflows/transform.cancel",
-        data: {
-          runId: "run-tf-999",
-          userId: mockUser.id,
-        },
-      });
+      expect(mockInngest.send).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
   });
@@ -151,13 +145,6 @@ describe("cancelJob Server Action", () => {
         },
       });
       expect(mockUpdate).toHaveBeenCalledWith(transformRun);
-      expect(mockInngest.send).toHaveBeenCalledWith({
-        name: "workflows/transform.cancel",
-        data: {
-          runId: "run-tf-999",
-          userId: mockUser.id,
-        },
-      });
       expect(result).toEqual({ success: true });
     });
   });
@@ -192,10 +179,7 @@ describe("cancelJobAction alias", () => {
       status: "failed",
       errorMessage: "Cancelled by user",
     });
-    expect(mockInngest.send).toHaveBeenCalledWith({
-      name: "workflows/transform.cancel",
-      data: { runId: "run-tf-777", userId: mockUser.id },
-    });
+    expect(mockInngest.send).not.toHaveBeenCalled();
     expect(result).toEqual({ success: true });
   });
 

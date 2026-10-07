@@ -55,8 +55,8 @@ export default function KnowledgebasePage() {
   const router = useRouter();
   const kbId = params.id as string;
 
-  const { models } = useUserModels("embedding");
-  const hasNoModels = models.length === 0;
+  const { models, isLoading: isModelsLoading } = useUserModels("embedding");
+  const hasNoModels = !isModelsLoading && models.length === 0;
 
   const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
   const [embeddingModelLabel, setEmbeddingModelLabel] =
@@ -251,7 +251,7 @@ export default function KnowledgebasePage() {
                 size="sm"
                 onClick={() => setShowUpload(true)}
                 className="h-8 px-3 text-xs"
-                disabled={hasNoModels}
+                disabled={isModelsLoading || hasNoModels}
               >
                 <Upload className="mr-2 h-3.5 w-3.5" />
                 Upload

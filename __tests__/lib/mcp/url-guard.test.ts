@@ -198,20 +198,42 @@ describe("isBlockedUrl", () => {
   });
 
   describe("IPv4-mapped IPv6", () => {
-    // NOTE: The WHATWG URL parser normalises ::ffff:d.d.d.d to hex groups
-    // (e.g. ::ffff:192.168.1.1 → ::ffff:c0a8:101) before isBlockedIPv6() sees it.
-    // The current dotted-decimal extraction in isBlockedIPv6 therefore does NOT
-    // catch these addresses – the tests below document actual behaviour.
-    it("does NOT block [::ffff:192.168.1.1] (URL parser normalises to hex form)", async () => {
-      expect(await isBlockedUrl("http://[::ffff:192.168.1.1]")).toBe(false);
+    it("blocks [::ffff:192.168.1.1] (normalized to hex by URL parser)", async () => {
+      expect(await isBlockedUrl("http://[::ffff:192.168.1.1]")).toBe(true);
     });
 
-    it("does NOT block [::ffff:10.0.0.1] (URL parser normalises to hex form)", async () => {
-      expect(await isBlockedUrl("http://[::ffff:10.0.0.1]")).toBe(false);
+    it("blocks [::ffff:10.0.0.1] (normalized to hex by URL parser)", async () => {
+      expect(await isBlockedUrl("http://[::ffff:10.0.0.1]")).toBe(true);
     });
 
-    it("does NOT block [::ffff:127.0.0.1] (URL parser normalises to hex form)", async () => {
-      expect(await isBlockedUrl("http://[::ffff:127.0.0.1]")).toBe(false);
+    it("blocks [::ffff:127.0.0.1] loopback (normalized to hex by URL parser)", async () => {
+      expect(await isBlockedUrl("http://[::ffff:127.0.0.1]")).toBe(true);
+    });
+
+    it("blocks [::ffff:169.254.169.254] link-local / cloud metadata", async () => {
+      expect(await isBlockedUrl("http://[::ffff:169.254.169.254]")).toBe(true);
+    });
+
+    it("allows public IPv4-mapped IPv6 [::ffff:8.8.8.8]", async () => {
+      expect(await isBlockedUrl("http://[::ffff:8.8.8.8]")).toBe(false);
+    });
+
+    it("blocks fully expanded [0:0:0:0:0:ffff:127.0.0.1]", async () => {
+      expect(await isBlockedUrl("http://[0:0:0:0:0:ffff:127.0.0.1]")).toBe(true);
+    });
+
+    it("handles non-hex or out-of-range hex groups in IPv4-mapped IPv6", () => {
+      expect(isBlockedIPv6("::ffff:zzzz:1234")).toBe(false);
+    });
+  });
+
+  describe("IPv6 unspecified address", () => {
+    it("blocks [::]", async () => {
+      expect(await isBlockedUrl("http://[::]")).toBe(true);
+    });
+
+    it("blocks [0:0:0:0:0:0:0:0]", async () => {
+      expect(await isBlockedUrl("http://[0:0:0:0:0:0:0:0]")).toBe(true);
     });
   });
 
@@ -408,7 +430,7 @@ describe("isBlockedIPv6 direct checks", () => {
   });
 
   it("handles empty or invalid first group", () => {
-    expect(isBlockedIPv6("::")).toBe(false);
+    expect(isBlockedIPv6("::")).toBe(true);
     expect(isBlockedIPv6("zzzz::1")).toBe(false);
   });
 

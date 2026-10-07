@@ -33,7 +33,7 @@ export async function getChatRealtimeToken(chatId: string) {
     .from(chat)
     .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)));
 
-  if (!chatRow) throw new Error("Unauthorized");
+  if (!chatRow) throw new Error("Chat not found or access denied");
 
   const ch = chatChannel({ chatId });
 
