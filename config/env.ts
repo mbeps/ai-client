@@ -123,6 +123,10 @@ export const serverEnvSchema = clientEnvSchema.extend({
   INNGEST_SIGNING_KEY: z.string().optional(),
   INNGEST_DEV: z.string().optional(),
   INNGEST_SERVE_ORIGIN: z.string().optional(),
+
+  // Qdrant
+  QDRANT_URL: z.string().url().default("http://localhost:6333"),
+  QDRANT_API_KEY: z.string().optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -184,6 +188,8 @@ export function validateEnv(
         INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
         INNGEST_DEV: process.env.INNGEST_DEV,
         INNGEST_SERVE_ORIGIN: process.env.INNGEST_SERVE_ORIGIN,
+        QDRANT_URL: process.env.QDRANT_URL,
+        QDRANT_API_KEY: process.env.QDRANT_API_KEY,
       }
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:

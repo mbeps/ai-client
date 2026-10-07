@@ -50,6 +50,14 @@ vi.mock("@/lib/rag/embed-documents", () => ({
   embedDocuments: vi.fn(),
 }));
 
+const deletePointsByDocumentIdMock = vi.hoisted(() => vi.fn());
+const upsertChunkPointsMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/rag/qdrant-client", () => ({
+  deletePointsByDocumentId: deletePointsByDocumentIdMock,
+  upsertChunkPoints: upsertChunkPointsMock,
+}));
+
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
@@ -81,21 +89,13 @@ describe("ingestDocumentPipeline concurrency resilience", () => {
     chainable.where.mockResolvedValue([]);
   });
 
-  it("gracefully catches PostgreSQL error 23503 and returns zero counts without throwing", async () => {
+  it("gracefully catches concurrent document deletion and returns zero counts without throwing", async () => {
     vi.mocked(extractTextFromBuffer).mockResolvedValue("concurrent document text");
     vi.mocked(chunkText).mockReturnValue(["chunk-1"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2]]);
 
-    const fkError = Object.assign(
-      new Error(
-        'insert or update on table "kb_chunk" violates foreign key constraint "kb_chunk_document_id_kb_document_id_fk"',
-      ),
-      { code: "23503" },
-    );
-
-    (chainable as any).transaction = vi.fn(async () => {
-      throw fkError;
-    });
+    // Document check returns empty array because it was deleted concurrently
+    chainable.where.mockResolvedValueOnce([]);
 
     const result = await ingestDocumentPipeline(
       makeDoc(),
@@ -106,5 +106,6 @@ describe("ingestDocumentPipeline concurrency resilience", () => {
     expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
     // Verify document was not marked ready since it was deleted concurrently
     expect(chainable.update).not.toHaveBeenCalled();
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-concurrency-1");
   });
 });

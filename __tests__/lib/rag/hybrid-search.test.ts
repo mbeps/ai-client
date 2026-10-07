@@ -4,13 +4,12 @@ vi.mock("@/config/env", () => ({
   },
 }));
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
-  execute: vi.fn(),
 }));
 
 vi.mock("@/drizzle/db", () => ({ db: dbMock }));
@@ -35,7 +34,19 @@ vi.mock("@/lib/rag/apply-rrf", () => ({
   applyRRF: applyRRFMock,
 }));
 
+const searchSemanticVectorsMock = vi.hoisted(() => vi.fn());
+const searchKeywordChunksMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/rag/qdrant-client", () => ({
+  searchSemanticVectors: searchSemanticVectorsMock,
+  searchKeywordChunks: searchKeywordChunksMock,
+}));
+
 describe("hybridSearch", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const setupKbMock = (rows: Array<{ id: string; indexStatus: string }>) => {
     const mockSelect = {
       from: vi.fn().mockReturnThis(),
@@ -60,7 +71,6 @@ describe("hybridSearch", () => {
 
     expect(result).toEqual([]);
     expect(dbMock.select).not.toHaveBeenCalled();
-    expect(dbMock.execute).not.toHaveBeenCalled();
     expect(embedQueryMock).not.toHaveBeenCalled();
   });
 
@@ -69,15 +79,13 @@ describe("hybridSearch", () => {
 
     expect(result).toEqual([]);
     expect(dbMock.select).not.toHaveBeenCalled();
-    expect(dbMock.execute).not.toHaveBeenCalled();
   });
 
   it("drops falsy kb ids but still searches when at least one id survives", async () => {
     setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1]);
-    dbMock.execute
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
+    searchSemanticVectorsMock.mockResolvedValue([]);
+    searchKeywordChunksMock.mockResolvedValue([]);
     applyRRFMock.mockReturnValue([]);
 
     const result = await hybridSearch(["", "kb-1", ""], "test query", "user-1");
@@ -85,6 +93,8 @@ describe("hybridSearch", () => {
     expect(result).toEqual([]);
     expect(dbMock.select).toHaveBeenCalledTimes(1);
     expect(embedQueryMock).toHaveBeenCalledWith("test query", "user-1");
+    expect(searchSemanticVectorsMock).toHaveBeenCalledWith(1, [0.1], ["kb-1"], 20);
+    expect(searchKeywordChunksMock).toHaveBeenCalledWith(1, "test query", ["kb-1"], 20);
   });
 
   it("throws Error when knowledge base is not found", async () => {
@@ -114,18 +124,18 @@ describe("hybridSearch", () => {
     );
   });
 
-  it("executes hybrid search and applies RRF when ready", async () => {
+  it("executes hybrid search in Qdrant and applies RRF when ready", async () => {
     setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
-    dbMock.execute
-      .mockResolvedValueOnce({ rows: [{ id: "chunk-1" }] }) // vectorRows
-      .mockResolvedValueOnce({ rows: [{ id: "chunk-2" }] }); // ftsRows
-
+    searchSemanticVectorsMock.mockResolvedValueOnce([{ id: "chunk-1" }]);
+    searchKeywordChunksMock.mockResolvedValueOnce([{ id: "chunk-2" }]);
     applyRRFMock.mockReturnValue([{ id: "chunk-1" }]);
 
     const result = await hybridSearch("kb-1", "test query", "user-1", 5);
     expect(result).toEqual([{ id: "chunk-1" }]);
+    expect(searchSemanticVectorsMock).toHaveBeenCalledWith(2, [0.1, 0.2], ["kb-1"], 20);
+    expect(searchKeywordChunksMock).toHaveBeenCalledWith(2, "test query", ["kb-1"], 20);
     expect(applyRRFMock).toHaveBeenCalledWith(
       [{ id: "chunk-1" }],
       [{ id: "chunk-2" }],
@@ -140,13 +150,12 @@ describe("hybridSearch", () => {
     ]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
-    dbMock.execute
-      .mockResolvedValueOnce({
-        rows: [{ id: "chunk-1", kb_id: "kb-1", kb_name: "Docs" }],
-      })
-      .mockResolvedValueOnce({
-        rows: [{ id: "chunk-2", kb_id: "kb-2", kb_name: "Manuals" }],
-      });
+    searchSemanticVectorsMock.mockResolvedValueOnce([
+      { id: "chunk-1", kb_id: "kb-1", kb_name: "Docs" },
+    ]);
+    searchKeywordChunksMock.mockResolvedValueOnce([
+      { id: "chunk-2", kb_id: "kb-2", kb_name: "Manuals" },
+    ]);
 
     applyRRFMock.mockReturnValue([
       { id: "chunk-1", kbId: "kb-1", kbName: "Docs" },
@@ -159,6 +168,18 @@ describe("hybridSearch", () => {
       5,
     );
     expect(result).toEqual([{ id: "chunk-1", kbId: "kb-1", kbName: "Docs" }]);
+    expect(searchSemanticVectorsMock).toHaveBeenCalledWith(
+      2,
+      [0.1, 0.2],
+      ["kb-1", "kb-2"],
+      20,
+    );
+    expect(searchKeywordChunksMock).toHaveBeenCalledWith(
+      2,
+      "multi kb query",
+      ["kb-1", "kb-2"],
+      20,
+    );
     expect(applyRRFMock).toHaveBeenCalledWith(
       [{ id: "chunk-1", kb_id: "kb-1", kb_name: "Docs" }],
       [{ id: "chunk-2", kb_id: "kb-2", kb_name: "Manuals" }],
@@ -176,29 +197,25 @@ describe("hybridSearch", () => {
     ).rejects.toThrow("Database connection lost");
   });
 
-  it("catches FTS Error and falls back to empty ftsRows", async () => {
+  it("catches semantic search error and falls back to empty vectorRows", async () => {
     setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
-    dbMock.execute
-      .mockResolvedValueOnce({ rows: [{ id: "chunk-1" }] }) // vectorRows
-      .mockRejectedValueOnce(new Error("FTS syntax error")); // ftsRows failure
-
-    applyRRFMock.mockReturnValue([{ id: "chunk-1" }]);
+    searchSemanticVectorsMock.mockRejectedValueOnce(new Error("Qdrant connection lost"));
+    searchKeywordChunksMock.mockResolvedValueOnce([{ id: "chunk-2" }]);
+    applyRRFMock.mockReturnValue([{ id: "chunk-2" }]);
 
     const result = await hybridSearch("kb-1", "test query", "user-1", 5);
-    expect(result).toEqual([{ id: "chunk-1" }]);
-    expect(applyRRFMock).toHaveBeenCalledWith([{ id: "chunk-1" }], [], 5);
+    expect(result).toEqual([{ id: "chunk-2" }]);
+    expect(applyRRFMock).toHaveBeenCalledWith([], [{ id: "chunk-2" }], 5);
   });
 
-  it("catches non-Error thrown during FTS and falls back to empty ftsRows", async () => {
+  it("catches keyword search error and falls back to empty ftsRows", async () => {
     setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
     embedQueryMock.mockResolvedValue([0.1, 0.2]);
 
-    dbMock.execute
-      .mockResolvedValueOnce({ rows: [{ id: "chunk-1" }] })
-      .mockRejectedValueOnce("non-error-rejection");
-
+    searchSemanticVectorsMock.mockResolvedValueOnce([{ id: "chunk-1" }]);
+    searchKeywordChunksMock.mockRejectedValueOnce(new Error("Keyword search failed"));
     applyRRFMock.mockReturnValue([{ id: "chunk-1" }]);
 
     const result = await hybridSearch("kb-1", "test query", "user-1", 5);

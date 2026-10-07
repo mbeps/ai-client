@@ -8,6 +8,7 @@ import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { deletePointsByKbIds } from "@/lib/rag/qdrant-client";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 const log = getLogger(["app", "actions", "knowledgebase"]);
@@ -57,6 +58,18 @@ export async function deleteKnowledgebase(
   );
 
   const result = await deleteKbRow(idOrIds);
+
+  try {
+    await deletePointsByKbIds(ids);
+  } catch (err) {
+    log.warn(
+      "Failed to delete Qdrant points for deleted knowledgebase(s) (ids: {ids})",
+      {
+        ids,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    );
+  }
 
   // ponytail: sequential best-effort S3 cleanup; ceiling is slow deletes for
   // huge KBs — upgrade path is batch DeleteObjectsCommand if that matters.

@@ -316,6 +316,13 @@
       "when": 1790615661322,
       "tag": "0044_hesitant_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791399492919,
+      "tag": "0045_talented_giant_man",
+      "breakpoints": true
     }
   ]
 }

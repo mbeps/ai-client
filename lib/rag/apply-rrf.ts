@@ -1,54 +1,46 @@
 import { CHUNK_CONSTANTS } from "@/config/chunk";
-import type { ChunkResult } from "@/types/rag/chunk-result";
-import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
+import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
 
 /**
- * Combines vector and full-text search results using Reciprocal Rank Fusion.
+ * Combines semantic vector and keyword search results using Reciprocal Rank Fusion.
  * Gives equal weight to both search modalities, then ranks by combined score.
  * Handles duplicate results by summing their scores across modalities.
  *
- * @param vectorRows - Results from pgvector semantic search (ordered by similarity)
- * @param ftsRows - Results from PostgreSQL full-text search (ordered by relevance)
+ * @param vectorRows - Results from Qdrant semantic vector search (ordered by similarity)
+ * @param ftsRows - Results from Qdrant keyword full-text search (ordered by relevance)
  * @param topK - Number of results to return (e.g., 5)
  * @returns Top K results ordered by combined RRF score
  * @author Maruf Bepary
  */
 export function applyRRF(
-  vectorRows: RawChunkRow[],
-  ftsRows: RawChunkRow[],
+  vectorRows: ScoredChunk[],
+  ftsRows: ScoredChunk[],
   topK: number,
 ): ChunkResult[] {
-  const scoreMap = new Map<string, { row: RawChunkRow; score: number }>();
+  const scoreMap = new Map<string, { chunk: ScoredChunk; score: number }>();
 
-  vectorRows.forEach((row, idx) => {
-    scoreMap.set(row.id, {
-      row,
+  vectorRows.forEach((chunk, idx) => {
+    scoreMap.set(chunk.id, {
+      chunk,
       score: 1 / (CHUNK_CONSTANTS.RRF_K + idx + 1),
     });
   });
 
-  ftsRows.forEach((row, idx) => {
+  ftsRows.forEach((chunk, idx) => {
     const rrfScore = 1 / (CHUNK_CONSTANTS.RRF_K + idx + 1);
-    const existing = scoreMap.get(row.id);
+    const existing = scoreMap.get(chunk.id);
     if (existing) {
       existing.score += rrfScore;
     } else {
-      scoreMap.set(row.id, { row, score: rrfScore });
+      scoreMap.set(chunk.id, { chunk, score: rrfScore });
     }
   });
 
   return Array.from(scoreMap.values())
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
-    .map(({ row, score }) => ({
-      id: row.id,
-      content: row.content,
-      documentId: row.document_id,
-      documentName: row.document_name,
-      s3Key: row.s3_key,
-      chunkIndex: row.chunk_index,
+    .map(({ chunk, score }) => ({
+      ...chunk,
       score,
-      ...(row.kb_id ? { kbId: row.kb_id } : {}),
-      ...(row.kb_name ? { kbName: row.kb_name } : {}),
     }));
 }
