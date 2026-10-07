@@ -37,20 +37,6 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-// Transaction: db.transaction(cb) must invoke cb with a tx that supports
-// delete/insert chains; a tx failure propagates (rollback semantics).
-chainable.transaction = vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
-  const tx = {
-    delete: vi.fn().mockReturnValue({
-      where: vi.fn().mockResolvedValue([]),
-    }),
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockResolvedValue([]),
-    }),
-  };
-  return cb(tx);
-});
-
 vi.mock("@/lib/rag/extract-text-server", () => ({
   MAX_DOCUMENT_CHARS_LIMIT: 100,
   extractTextFromBuffer: vi.fn(),
@@ -64,9 +50,16 @@ vi.mock("@/lib/rag/embed-documents", () => ({
   embedDocuments: vi.fn(),
 }));
 
+const deletePointsByDocumentIdMock = vi.hoisted(() => vi.fn());
+const upsertChunkPointsMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/rag/qdrant-client", () => ({
+  deletePointsByDocumentId: deletePointsByDocumentIdMock,
+  upsertChunkPoints: upsertChunkPointsMock,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RagExtractionEmptyError } from "@/lib/errors";
-import { kbChunk } from "@/drizzle/schema";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
@@ -89,19 +82,25 @@ function makeDoc(_overrides: Partial<KbDocumentRow> = {}): KbDocumentRow {
     truncated: false,
     createdAt: new Date(),
     updatedAt: new Date(),
+    ..._overrides,
   } as KbDocumentRow;
 }
 
-describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
+describe("ingestDocumentPipeline (Qdrant)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    chainable.where.mockResolvedValue([]);
+    chainable.where.mockResolvedValue([{ id: "doc-1" }]);
   });
 
-  it("deletes old chunks and inserts one row per chunk with expected fields", async () => {
+  it("deletes old points in Qdrant and upserts new points with expected fields", async () => {
     vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
     vi.mocked(chunkText).mockReturnValue(["chunk-a", "chunk-b"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1], [0.2]]);
+
+    // doc check returns doc; kb check returns kb
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
 
     const result = await ingestDocumentPipeline(
       makeDoc(),
@@ -109,8 +108,25 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
       "user-1",
     );
 
-    // delete+insert ran inside a transaction
-    expect(chainable.transaction).toHaveBeenCalledTimes(1);
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
+    expect(upsertChunkPointsMock).toHaveBeenCalledTimes(1);
+    expect(upsertChunkPointsMock).toHaveBeenCalledWith(
+      1,
+      expect.arrayContaining([
+        expect.objectContaining({
+          vector: [0.1],
+          payload: expect.objectContaining({
+            content: "chunk-a",
+            kbId: "kb-1",
+            documentId: "doc-1",
+            chunkIndex: 0,
+            documentName: "test.pdf",
+            kbName: "My KB",
+            s3Key: "kb/kb-1/doc-1/test.pdf",
+          }),
+        }),
+      ]),
+    );
 
     expect(result).toEqual({
       chunkCount: 2,
@@ -118,43 +134,30 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
     });
   });
 
-  it("runs delete before insert inside the transaction and rolls back on insert failure", async () => {
+  it("propagates error when upsertChunkPoints fails", async () => {
     vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
     vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
 
-    // Capture the tx passed to the callback and force insert failure
-    let capturedTx: any;
-    (chainable.transaction as any).mockImplementationOnce(
-      async (cb: (tx: any) => Promise<unknown>) => {
-        capturedTx = {
-          delete: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-          insert: vi.fn().mockReturnValue({
-            values: vi.fn().mockRejectedValue(new Error("insert failed")),
-          }),
-        };
-        return cb(capturedTx);
-      },
-    );
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
+
+    upsertChunkPointsMock.mockRejectedValueOnce(new Error("Qdrant upsert failed"));
 
     await expect(
       ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1"),
-    ).rejects.toThrow("insert failed");
-
-    // Both statements were issued against the same tx, delete first
-    expect(capturedTx.delete).toHaveBeenCalledWith(kbChunk);
-    expect(capturedTx.insert).toHaveBeenCalledWith(kbChunk);
-    expect(capturedTx.delete.mock.invocationCallOrder[0]).toBeLessThan(
-      capturedTx.insert.mock.invocationCallOrder[0],
-    );
+    ).rejects.toThrow("Qdrant upsert failed");
   });
 
   it("marks the document ready with counts on final update", async () => {
     vi.mocked(extractTextFromBuffer).mockResolvedValue("hello world");
     vi.mocked(chunkText).mockReturnValue(["hello"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.5]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
 
     await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
 
@@ -176,10 +179,14 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
   });
 
   it("sets truncated=true when extracted text reaches the limit", async () => {
-    const longText = "a".repeat(100); // === MAX_DOCUMENT_CHARS_LIMIT (100)
+    const longText = "a".repeat(100);
     vi.mocked(extractTextFromBuffer).mockResolvedValue(longText);
     vi.mocked(chunkText).mockReturnValue([longText]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
 
     await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
 
@@ -193,6 +200,10 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
     vi.mocked(chunkText).mockReturnValue(["short"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
 
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
+
     await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
 
     const setArg = chainable.set.mock.calls.at(-1)![0];
@@ -200,19 +211,13 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
     expect(setArg.statusMessage).toBeNull();
   });
 
-  it("handles foreign key violation 23503 gracefully during chunk persistence", async () => {
+  it("handles document deleted concurrently before chunk persistence gracefully", async () => {
     vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
     vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
     vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
 
-    const fkError = Object.assign(
-      new Error("violates foreign key constraint \"kb_chunk_document_id_kb_document_id_fk\""),
-      { code: "23503" },
-    );
-
-    (chainable.transaction as any).mockImplementationOnce(async () => {
-      throw fkError;
-    });
+    // doc check returns empty array (doc was deleted)
+    chainable.where.mockResolvedValueOnce([]);
 
     const result = await ingestDocumentPipeline(
       makeDoc(),
@@ -221,27 +226,7 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
     );
 
     expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
-  });
-
-  it("handles foreign key violation by constraint name gracefully", async () => {
-    vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
-    vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
-    vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
-
-    const fkError = new Error(
-      "insert or update on table \"kb_chunk\" violates foreign key constraint \"kb_chunk_document_id_kb_document_id_fk\"",
-    );
-
-    (chainable.transaction as any).mockImplementationOnce(async () => {
-      throw fkError;
-    });
-
-    const result = await ingestDocumentPipeline(
-      makeDoc(),
-      Buffer.from("x"),
-      "user-1",
-    );
-
-    expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
+    expect(upsertChunkPointsMock).not.toHaveBeenCalled();
   });
 });

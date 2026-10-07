@@ -8,6 +8,7 @@ import { kbDocument } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { deletePointsByDocumentId } from "@/lib/rag/qdrant-client";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
 
@@ -62,6 +63,18 @@ export async function deleteDocument(
   );
 
   await db.delete(kbDocument).where(eq(kbDocument.id, validated.documentId));
+
+  try {
+    await deletePointsByDocumentId(validated.documentId);
+  } catch (err) {
+    log.warn(
+      "Failed to delete Qdrant points for deleted document (documentId: {documentId})",
+      {
+        documentId: validated.documentId,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    );
+  }
 
   log.info(
     "Deleted knowledge base document (documentId: {documentId}, kbId: {kbId})",

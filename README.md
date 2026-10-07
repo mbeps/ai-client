@@ -21,7 +21,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 ## Knowledge Bases (RAG)
 - **Agentic RAG implementation** — LLM-driven knowledge retrieval where the AI uses specialised tools to query context based on intent.
 - **Flexible Embedding Models** — Select any embedding model from registered providers for knowledge base indexing. Dimensionless vector storage supports arbitrary embedding dimensions.
-- **Hybrid Semantic Search** — Combines vector embeddings (pgvector) with Postgres Full-Text Search using Reciprocal Rank Fusion (RRF) for precise semantic retrieval.
+- **Hybrid Semantic Search** — Combines vector embeddings with full-text search in Qdrant using Reciprocal Rank Fusion (RRF) for precise semantic retrieval.
 - **Multi-format Ingestion** — Automated pipeline for extracting and indexing content from PDFs, Excel spreadsheets, and Markdown/Plain text files.
 - **Document Management** — Full lifecycle tracking for indexed documents including token counting and status monitoring.
 
@@ -58,6 +58,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - Node.js 22 or higher
 - npm 9 or higher
 - PostgreSQL 17
+- Qdrant (via Docker or Podman)
 - MinIO or AWS S3
 - Inngest dev server (via Docker or Podman) or Inngest Cloud
 - OpenAI-compatible AI provider (such as OpenRouter, Ollama, Groq, Azure, or local models)
@@ -86,7 +87,8 @@ AI Client is a full-featured conversational workspace with branching message tre
 - [MinIO](https://docs.min.io): S3-compatible object storage service.
 
 ## Database
-- [PostgreSQL](https://www.postgresql.org/docs): Relational database with vector search extension.
+- [PostgreSQL](https://www.postgresql.org/docs): Primary relational database.
+- [Qdrant](https://qdrant.tech): Vector database for semantic chunk embeddings and keyword retrieval.
 - [Drizzle ORM](https://orm.drizzle.team): Type-safe SQL query builder and migrations.
 
 ## AI & Tooling

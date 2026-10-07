@@ -1,6 +1,6 @@
 services:
   db:
-    image: pgvector/pgvector:pg17
+    image: postgres:17
     hostname: ${DB_HOST}
     ports:
       - "5432:${DB_PORT}"
@@ -10,6 +10,15 @@ services:
       - POSTGRES_DB=${DB_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
 
   minio:
     image: minio/minio
@@ -45,5 +54,6 @@ services:
 
 volumes:
   pgdata:
+  qdrant_data:
   minio_data:
   inngest_data:

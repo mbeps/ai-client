@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { kbChunk, kbDocument } from "@/drizzle/schema";
+import { kbDocument, knowledgebase } from "@/drizzle/schema";
 import { RagExtractionEmptyError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
+import {
+  deletePointsByDocumentId,
+  upsertChunkPoints,
+} from "@/lib/rag/qdrant-client";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import { chunkText } from "./chunk-text";
 import { embedDocuments } from "./embed-documents";
@@ -14,7 +18,7 @@ import {
 const log = getLogger(["app", "rag", "pipeline"]);
 
 /**
- * Shared ingestion pipeline: extract → chunk → embed → replace chunks → mark doc ready.
+ * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready.
  * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
  *
  * @async
@@ -29,6 +33,7 @@ export async function ingestDocumentPipeline(
   doc: KbDocumentRow,
   buffer: Buffer,
   userId: string,
+  providedKbName?: string,
 ): Promise<{ chunkCount: number; tokenCount: number }> {
   log.debug("Ingesting document (id: {docId}, name: {name})", {
     docId: doc.id,
@@ -51,40 +56,55 @@ export async function ingestDocumentPipeline(
   const chunks = chunkText(text);
   const embeddings = await embedDocuments(chunks, userId);
 
-  // Replace chunks atomically: delete old + insert new in one transaction so a
-  // failed insert cannot leave the document with no (or duplicated) chunks.
-  // searchVector is a GENERATED ALWAYS column — do NOT include it in INSERT
-  try {
-    await db.transaction(async (tx) => {
-      await tx.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
-      await tx.insert(kbChunk).values(
-        chunks.map((content, i) => ({
-          id: crypto.randomUUID(),
-          documentId: doc.id,
-          kbId: doc.kbId,
+  // Check if document or knowledgebase was deleted concurrently before storing chunks
+  const [currentDoc] = await db
+    .select({ id: kbDocument.id })
+    .from(kbDocument)
+    .where(eq(kbDocument.id, doc.id));
+
+  if (!currentDoc) {
+    log.info(
+      "Document or Knowledge Base deleted concurrently; skipping point persistence",
+      {
+        documentId: doc.id,
+        kbId: doc.kbId,
+      },
+    );
+    await deletePointsByDocumentId(doc.id);
+    return { chunkCount: 0, tokenCount: 0 };
+  }
+
+  let kbName = providedKbName;
+  if (kbName === undefined) {
+    const [kb] = await db
+      .select({ name: knowledgebase.name })
+      .from(knowledgebase)
+      .where(eq(knowledgebase.id, doc.kbId));
+    kbName = kb?.name ?? "";
+  }
+  const dimensions = embeddings[0]?.length ?? 0;
+
+  // Replace points in Qdrant: delete old points for document, then upsert new points
+  await deletePointsByDocumentId(doc.id);
+
+  if (dimensions > 0 && chunks.length > 0) {
+    await upsertChunkPoints(
+      dimensions,
+      chunks.map((content, i) => ({
+        id: crypto.randomUUID(),
+        vector: embeddings[i],
+        payload: {
           content,
-          embedding: embeddings[i],
+          kbId: doc.kbId,
+          documentId: doc.id,
           chunkIndex: i,
           tokenCount: Math.round(content.length / 4),
-        })),
-      );
-    });
-  } catch (error: any) {
-    const isFkViolation =
-      error?.code === "23503" ||
-      String(error?.message).includes("kb_chunk_document_id_kb_document_id_fk");
-
-    if (isFkViolation) {
-      log.info(
-        "Document or Knowledge Base deleted concurrently; skipping chunk persistence",
-        {
-          documentId: doc.id,
-          kbId: doc.kbId,
+          documentName: doc.name,
+          kbName,
+          s3Key: doc.s3Key,
         },
-      );
-      return { chunkCount: 0, tokenCount: 0 };
-    }
-    throw error;
+      })),
+    );
   }
 
   const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
@@ -103,7 +123,7 @@ export async function ingestDocumentPipeline(
     .where(eq(kbDocument.id, doc.id));
 
   log.info(
-    "Document ingested successfully (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",
+    "Document ingested successfully into Qdrant (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",
     {
       docId: doc.id,
       chunkCount: chunks.length,

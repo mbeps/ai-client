@@ -2,7 +2,6 @@ import { getTableColumns, getTableName } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
-import { kbChunk } from "@/drizzle/schemas/kb-chunk-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
 import {
   transformAgent,
@@ -53,13 +52,6 @@ describe("attachment.transformRunId FK (A-H5)", () => {
         ),
       ),
     ).toBe(true);
-  });
-});
-
-describe("kb-chunk-schema", () => {
-  it("embedding dataType is unconstrained vector", () => {
-    const col = getTableColumns(kbChunk).embedding;
-    expect(col.getSQLType()).toBe("vector");
   });
 });
 

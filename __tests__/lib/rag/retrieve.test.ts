@@ -18,17 +18,16 @@ vi.mock("@/lib/rag/embed-query", () => ({ embedQuery: vi.fn() }));
 import { CHUNK_CONSTANTS } from "@/config/chunk";
 import { applyRRF } from "../../../lib/rag/apply-rrf";
 import { hybridSearch } from "../../../lib/rag/hybrid-search";
-import type { ChunkResult } from "../../../types/rag/chunk-result";
-import type { RawChunkRow } from "../../../types/rag/raw-chunk-row";
+import type { ChunkResult, ScoredChunk } from "../../../types/rag/chunk-result";
 
 describe("applyRRF", () => {
-  const makeRow = (id: string): RawChunkRow => ({
+  const makeChunk = (id: string): ScoredChunk => ({
     id,
     content: `Content of ${id}`,
-    document_id: "doc-1",
-    chunk_index: 0,
-    document_name: "test.md",
-    s3_key: "test-key",
+    documentId: "doc-1",
+    chunkIndex: 0,
+    documentName: "test.md",
+    s3Key: "test-key",
   });
 
   it("returns empty array for empty inputs", () => {
@@ -36,8 +35,8 @@ describe("applyRRF", () => {
   });
 
   it("gives higher score to chunks appearing in both lists", () => {
-    const vectorRows = [makeRow("a"), makeRow("b"), makeRow("c")];
-    const ftsRows = [makeRow("b"), makeRow("d")];
+    const vectorRows = [makeChunk("a"), makeChunk("b"), makeChunk("c")];
+    const ftsRows = [makeChunk("b"), makeChunk("d")];
     const results: ChunkResult[] = applyRRF(vectorRows, ftsRows, 5);
     const bResult = results.find((r) => r.id === "b");
     const aResult = results.find((r) => r.id === "a");
@@ -55,13 +54,13 @@ describe("applyRRF", () => {
   });
 
   it("limits results to topK", () => {
-    const rows = Array.from({ length: 10 }, (_, i) => makeRow(`chunk-${i}`));
+    const rows = Array.from({ length: 10 }, (_, i) => makeChunk(`chunk-${i}`));
     const results = applyRRF(rows, [], 3);
     expect(results).toHaveLength(3);
   });
 
-  it("maps document_id snake_case to documentId camelCase", () => {
-    const rows = [makeRow("x")];
+  it("preserves documentId on ChunkResult", () => {
+    const rows = [makeChunk("x")];
     const results = applyRRF(rows, [], 5);
     expect(results[0].documentId).toBe("doc-1");
   });

@@ -1,0 +1,1 @@
+DROP TABLE "kb_chunk" CASCADE;

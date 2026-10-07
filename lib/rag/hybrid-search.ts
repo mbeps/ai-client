@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { env } from "@/config/env";
 import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
@@ -7,17 +7,20 @@ import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
 import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
 import { getLogger } from "@/lib/logger";
+import {
+  searchKeywordChunks,
+  searchSemanticVectors,
+} from "@/lib/rag/qdrant-client";
 
 const log = getLogger(["app", "rag", "search"]);
 
-import type { ChunkResult } from "@/types/rag/chunk-result";
-import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
+import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
 import { applyRRF } from "./apply-rrf";
 import { embedQuery } from "./embed-query";
 
 /**
- * Performs hybrid retrieval over one or more knowledge bases using vector + full-text search.
- * Validates all knowledge bases are ready, embeds the query once, runs parallel vector and FTS queries,
+ * Performs hybrid retrieval over one or more knowledge bases using vector + full-text search in Qdrant.
+ * Validates all knowledge bases are ready, embeds the query once, runs parallel semantic and keyword queries,
  * combines results using Reciprocal Rank Fusion, and returns top K chunks.
  * Normalizes rate limit errors to user-friendly messages.
  *
@@ -77,66 +80,33 @@ export async function hybridSearch(
     }
     throw err;
   }
-  const embeddingLiteral = `[${embedding.join(",")}]`;
 
-  const kbInCondition =
-    kbIds.length === 1
-      ? sql`c.kb_id = ${kbIds[0]}`
-      : sql`c.kb_id IN (${sql.join(
-          kbIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})`;
-
-  const vectorRows = (
-    await db.execute(sql`
-      SELECT 
-        c.id, 
-        c.content, 
-        c.document_id, 
-        c.chunk_index,
-        c.kb_id,
-        k.name as kb_name,
-        d.name as document_name,
-        d.s3_key
-      FROM kb_chunk c
-      JOIN kb_document d ON c.document_id = d.id
-      JOIN knowledgebase k ON c.kb_id = k.id
-      WHERE ${kbInCondition}
-        AND c.embedding IS NOT NULL
-      ORDER BY c.embedding <=> ${embeddingLiteral}::vector
-      LIMIT ${RAG_CONFIG.SEARCH_CANDIDATE_LIMIT}
-    `)
-  ).rows as unknown as RawChunkRow[];
-
-  let ftsRows: RawChunkRow[] = [];
-  try {
-    ftsRows = (
-      await db.execute(sql`
-        SELECT 
-          c.id, 
-          c.content, 
-          c.document_id, 
-          c.chunk_index,
-          c.kb_id,
-          k.name as kb_name,
-          d.name as document_name,
-          d.s3_key
-        FROM kb_chunk c
-        JOIN kb_document d ON c.document_id = d.id
-        JOIN knowledgebase k ON c.kb_id = k.id
-        WHERE ${kbInCondition}
-          AND c.search_vector @@ plainto_tsquery('english', ${normalizedQuery})
-        ORDER BY ts_rank_cd(c.search_vector, plainto_tsquery('english', ${normalizedQuery})) DESC
-        LIMIT ${RAG_CONFIG.SEARCH_CANDIDATE_LIMIT}
-      `)
-    ).rows as unknown as RawChunkRow[];
-  } catch (err) {
-    log.error("FTS query failed: {error}", {
-      error: err instanceof Error ? err.message : String(err),
+  const [vectorRows, ftsRows] = await Promise.all([
+    searchSemanticVectors(
+      embedding.length,
+      embedding,
       kbIds,
-    });
-    ftsRows = [];
-  }
+      RAG_CONFIG.SEARCH_CANDIDATE_LIMIT,
+    ).catch((err) => {
+      log.error("Semantic vector query failed: {error}", {
+        error: err instanceof Error ? err.message : String(err),
+        kbIds,
+      });
+      return [] as ScoredChunk[];
+    }),
+    searchKeywordChunks(
+      embedding.length,
+      normalizedQuery,
+      kbIds,
+      RAG_CONFIG.SEARCH_CANDIDATE_LIMIT,
+    ).catch((err) => {
+      log.error("Keyword query failed: {error}", {
+        error: err instanceof Error ? err.message : String(err),
+        kbIds,
+      });
+      return [] as ScoredChunk[];
+    }),
+  ]);
 
   return applyRRF(vectorRows, ftsRows, topK);
 }

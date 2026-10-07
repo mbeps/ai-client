@@ -1,35 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { applyRRF } from "@/lib/rag/apply-rrf";
-import type { RawChunkRow } from "@/types/rag/raw-chunk-row";
+import type { ScoredChunk } from "@/types/rag/chunk-result";
 
 /**
- * Minimal valid RawChunkRow factory. `kb_id`/`kb_name` are left undefined
- * unless the caller supplies them, so the conditional spreads in applyRRF
- * get exercised in both directions.
+ * Minimal valid ScoredChunk factory. `kbId`/`kbName` are left undefined
+ * unless the caller supplies them.
  * @author Maruf Bepary
  */
-function rawRow(
+function makeChunk(
   id: string,
-  overrides: Partial<RawChunkRow> = {},
-): RawChunkRow {
+  overrides: Partial<ScoredChunk> = {},
+): ScoredChunk {
   return {
     id,
     content: `content of ${id}`,
-    document_id: "doc-1",
-    chunk_index: 0,
-    document_name: "Doc One",
-    s3_key: "docs/doc-1.pdf",
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    documentId: "doc-1",
+    chunkIndex: 0,
+    documentName: "Doc One",
+    s3Key: "docs/doc-1.pdf",
     ...overrides,
   };
 }
 
 describe("applyRRF", () => {
-  it("includes kbId and kbName when the rows carry kb_id and kb_name", () => {
+  it("includes kbId and kbName when the chunks carry kbId and kbName", () => {
     const rows = [
-      rawRow("chunk-1", { kb_id: "kb-1", kb_name: "Handbook" }),
-      rawRow("chunk-2", { kb_id: "kb-2", kb_name: "Runbook" }),
+      makeChunk("chunk-1", { kbId: "kb-1", kbName: "Handbook" }),
+      makeChunk("chunk-2", { kbId: "kb-2", kbName: "Runbook" }),
     ];
 
     const results = applyRRF(rows, [], 5);
@@ -39,8 +36,8 @@ describe("applyRRF", () => {
     expect(results[1]).toMatchObject({ id: "chunk-2", kbId: "kb-2", kbName: "Runbook" });
   });
 
-  it("omits kbId and kbName entirely when the rows carry neither", () => {
-    const results = applyRRF([rawRow("chunk-1")], [], 5);
+  it("omits kbId and kbName entirely when the chunks carry neither", () => {
+    const results = applyRRF([makeChunk("chunk-1")], [], 5);
 
     expect(results).toHaveLength(1);
     expect(results[0]).not.toHaveProperty("kbId");
@@ -49,12 +46,12 @@ describe("applyRRF", () => {
     expect(Object.keys(results[0])).not.toContain("kbName");
   });
 
-  it("omits only the fields the row is missing when kb_id and kb_name diverge", () => {
+  it("omits only the fields the chunk is missing when kbId and kbName diverge", () => {
     const results = applyRRF(
       [
-        rawRow("only-kb-id", { kb_id: "kb-1" }),
-        rawRow("only-kb-name", { kb_name: "Handbook" }),
-        rawRow("neither"),
+        makeChunk("only-kb-id", { kbId: "kb-1" }),
+        makeChunk("only-kb-name", { kbName: "Handbook" }),
+        makeChunk("neither"),
       ],
       [],
       5,
@@ -72,9 +69,9 @@ describe("applyRRF", () => {
     expect(byId.get("neither")).not.toHaveProperty("kbName");
   });
 
-  it("sums RRF scores for a row present in both vector and fts results", () => {
-    const shared = rawRow("shared", { kb_id: "kb-1", kb_name: "Handbook" });
-    const vectorOnly = rawRow("vector-only");
+  it("sums RRF scores for a chunk present in both vector and fts results", () => {
+    const shared = makeChunk("shared", { kbId: "kb-1", kbName: "Handbook" });
+    const vectorOnly = makeChunk("vector-only");
 
     const results = applyRRF([shared, vectorOnly], [shared], 5);
 
@@ -84,9 +81,9 @@ describe("applyRRF", () => {
     expect(sharedResult.kbId).toBe("kb-1");
   });
 
-  it("returns rows ordered by descending score and slices to topK", () => {
+  it("returns chunks ordered by descending score and slices to topK", () => {
     const results = applyRRF(
-      [rawRow("a"), rawRow("b"), rawRow("c")],
+      [makeChunk("a"), makeChunk("b"), makeChunk("c")],
       [],
       2,
     );
@@ -95,9 +92,9 @@ describe("applyRRF", () => {
     expect(results[0].score).toBeGreaterThan(results[1].score);
   });
 
-  it("maps the snake_case row columns onto camelCase result fields", () => {
+  it("preserves chunk metadata fields on result", () => {
     const results = applyRRF(
-      [rawRow("chunk-1", { document_id: "doc-9", s3_key: "k/9.pdf", chunk_index: 3 })],
+      [makeChunk("chunk-1", { documentId: "doc-9", s3Key: "k/9.pdf", chunkIndex: 3 })],
       [],
       5,
     );

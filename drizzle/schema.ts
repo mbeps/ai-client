@@ -11,7 +11,6 @@ export * from "./schemas/ai-provider-schema";
 export * from "./schemas/assistant-schema";
 export * from "./schemas/auth-schema";
 export * from "./schemas/chat-schema";
-export * from "./schemas/kb-chunk-schema";
 export * from "./schemas/kb-document-schema";
 export * from "./schemas/knowledgebase-schema";
 export * from "./schemas/mcp-server-schema";
