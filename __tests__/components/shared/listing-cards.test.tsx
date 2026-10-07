@@ -101,6 +101,34 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       expect(screen.getByText("Standalone Chat")).toBeInTheDocument();
     });
 
+    it("renders formatted creation date when createdAt is provided", () => {
+      render(
+        <ChatCard
+          chat={{
+            ...baseChat,
+            createdAt: new Date("2026-03-15T10:00:00Z"),
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Mar 15, 2026")).toBeInTheDocument();
+      expect(screen.getByText("•")).toBeInTheDocument();
+    });
+
+    it("omits date and separator when createdAt is undefined", () => {
+      render(
+        <ChatCard
+          chat={{
+            ...baseChat,
+            createdAt: undefined,
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Standalone Chat")).toBeInTheDocument();
+      expect(screen.queryByText("•")).not.toBeInTheDocument();
+    });
+
     it("renders Link to project chat when projectId is present", () => {
       render(
         <ChatCard

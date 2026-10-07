@@ -28,6 +28,7 @@ export default async function SearchPage() {
     projectId: row.projectId ?? undefined,
     assistantId: row.assistantId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? null,
+    createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
     messages: {},
     currentLeafId: row.currentLeafId ?? null,

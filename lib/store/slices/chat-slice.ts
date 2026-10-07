@@ -254,6 +254,9 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
         projectId: row.projectId ?? undefined,
         assistantId: row.assistantId ?? undefined,
         knowledgebaseId: row.knowledgebaseId ?? null,
+        createdAt: row.createdAt
+          ? new Date(row.createdAt)
+          : (existing?.createdAt ?? undefined),
         updatedAt: new Date(row.updatedAt),
         messages: hasIncomingMsgs ? {} : (existing?.messages ?? {}),
         currentLeafId: hasIncomingMsgs
@@ -393,6 +396,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       projectId: row.projectId ?? undefined,
       assistantId: row.assistantId ?? undefined,
       knowledgebaseId: row.knowledgebaseId ?? null,
+      createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
       messages: {},
       currentLeafId: row.currentLeafId ?? null,
