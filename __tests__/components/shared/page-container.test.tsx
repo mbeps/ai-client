@@ -15,8 +15,16 @@ describe("PageContainer", () => {
     const container = screen.getByText("Content Inside").closest("[data-slot='page-container']");
     const content = screen.getByText("Content Inside").closest("[data-slot='page-container-content']");
 
-    expect(container).toHaveClass("w-full", "h-full", "overflow-y-auto");
-    expect(content).toHaveClass("max-w-7xl", "mx-auto", "p-4", "md:p-8");
+    expect(container).toHaveClass(
+      "relative",
+      "isolate",
+      "min-h-0",
+      "min-w-0",
+      "w-full",
+      "h-full",
+      "overflow-y-auto",
+    );
+    expect(content).toHaveClass("relative", "max-w-7xl", "mx-auto", "p-4", "md:p-8");
   });
 
   it("applies narrow variant", () => {

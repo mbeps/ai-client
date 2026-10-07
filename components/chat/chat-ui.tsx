@@ -16,6 +16,14 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import { PanelRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
 import { ChatInput } from "./chat-input";
@@ -613,7 +621,7 @@ export function ChatUI({
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden">
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <AssistantBar assistantName={currentAssistant?.name} />
 
@@ -668,6 +676,30 @@ export function ChatUI({
           </div>
         </div>
       </div>
+
+      {!isArtifactOpen && allArtifacts.length > 0 && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute top-3 right-3 z-30 size-7 cursor-pointer rounded-md bg-background/80 shadow-xs backdrop-blur-xs transition-colors hover:bg-accent"
+                onClick={() => {
+                  if (artifactIndex < 0 && allArtifacts.length > 0) {
+                    setArtifactIndex(allArtifacts.length - 1);
+                  }
+                  setIsArtifactOpen(true);
+                }}
+                aria-label="Open canvas"
+              >
+                <PanelRight className="size-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Open canvas</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       <ArtifactPanel
         isOpen={isArtifactOpen}
