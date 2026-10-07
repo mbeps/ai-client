@@ -577,4 +577,64 @@ describe("ChatUI - Canvas Page Auto-Navigation", () => {
       expect.stringContaining("Restored Page 1 updated"),
     );
   });
+
+  it("does not show edge canvas button when there are no canvasses", () => {
+    const initialChat: Chat = {
+      id: "chat-1",
+      userId: "user-1",
+      title: "Test Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: null,
+      messages: {},
+    };
+    mockStoreState.chats["chat-1"] = initialChat;
+
+    render(<ChatUI chatId="chat-1" initialChat={initialChat} />);
+
+    expect(
+      screen.queryByRole("button", { name: /open canvas/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows edge canvas button when canvasses exist and side panel is closed, clicking opens panel", () => {
+    const msg1 = createMessageWithArtifact("msg-1", "art-1", "Canvas Title", null);
+    const initialChat: Chat = {
+      id: "chat-1",
+      userId: "user-1",
+      title: "Test Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: "msg-1",
+      messages: { "msg-1": msg1 },
+    };
+    mockStoreState.chats["chat-1"] = initialChat;
+
+    render(<ChatUI chatId="chat-1" initialChat={initialChat} />);
+
+    // Initially opens automatically on new artifact, so button is hidden while open
+    expect(
+      screen.queryByRole("button", { name: /open canvas/i }),
+    ).not.toBeInTheDocument();
+
+    // Close panel
+    act(() => {
+      lastArtifactPanelProps?.onClose?.();
+    });
+
+    // Now edge button should be visible
+    const edgeBtn = screen.getByRole("button", { name: /open canvas/i });
+    expect(edgeBtn).toBeInTheDocument();
+
+    // Click edge button to reopen
+    act(() => {
+      edgeBtn.click();
+    });
+
+    expect(lastArtifactPanelProps?.isOpen).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: /open canvas/i }),
+    ).not.toBeInTheDocument();
+  });
 });
+
