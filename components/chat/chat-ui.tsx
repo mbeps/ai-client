@@ -613,7 +613,7 @@ export function ChatUI({
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden">
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <AssistantBar assistantName={currentAssistant?.name} />
 

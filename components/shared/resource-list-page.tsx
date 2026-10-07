@@ -36,6 +36,8 @@ interface ResourceListPageProps<T extends SortableResource> {
   customFilterFn?: (item: T) => boolean;
   /** Optional custom list renderer to override the default grid. */
   renderList?: (items: T[]) => React.ReactNode;
+  /** Optional banner displayed at the top of the container. */
+  banner?: React.ReactNode;
 }
 
 /**
@@ -57,6 +59,7 @@ export function ResourceListPage<T extends SortableResource>({
   extraFilters,
   customFilterFn,
   renderList,
+  banner,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
   const loadError = useAppStore((state) => state.loadError);
@@ -75,6 +78,7 @@ export function ResourceListPage<T extends SortableResource>({
 
   return (
     <PageContainer className="space-y-6">
+      {banner}
       <PageHeader
         icon={icon}
         title={title}

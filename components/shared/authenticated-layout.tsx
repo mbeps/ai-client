@@ -44,29 +44,31 @@ export function AuthenticatedLayout({
 
   if (isPending || !session) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex h-dvh w-full items-center justify-center bg-background">
         <Spinner size="xl" />
       </div>
     );
   }
 
   return (
-    <SidebarProvider>
-      {sidebar}
-      <main className="flex h-screen flex-1 flex-col overflow-hidden bg-background">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
-          <SidebarTrigger />
-          <div className="w-full flex-1">
-            {showBreadcrumbs && <DynamicBreadcrumbs />}
+    <div className="h-dvh w-full overflow-hidden">
+      <SidebarProvider className="h-full min-h-0">
+        {sidebar}
+        <main className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
+            <SidebarTrigger />
+            <div className="w-full flex-1">
+              {showBreadcrumbs && <DynamicBreadcrumbs />}
+            </div>
+            {headerExtra}
+          </header>
+          <div
+            className={`relative flex min-h-0 flex-1 flex-col ${contentClassName || "overflow-hidden"}`}
+          >
+            {children}
           </div>
-          {headerExtra}
-        </header>
-        <div
-          className={`flex min-h-0 flex-1 flex-col ${contentClassName || "overflow-hidden"}`}
-        >
-          {children}
-        </div>
-      </main>
-    </SidebarProvider>
+        </main>
+      </SidebarProvider>
+    </div>
   );
 }

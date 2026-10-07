@@ -77,7 +77,7 @@ export function PageContainer({
     <div
       data-slot="page-container"
       className={cn(
-        "w-full",
+        "relative isolate min-h-0 w-full min-w-0",
         scrollable
           ? "h-full overflow-y-auto"
           : "flex h-full flex-col overflow-hidden",
@@ -88,7 +88,7 @@ export function PageContainer({
       <div
         data-slot="page-container-content"
         className={cn(
-          "w-full",
+          "relative w-full",
           !scrollable && "flex min-h-0 flex-1 flex-col",
           VARIANT_CLASSES[variant],
           PADDING_CLASSES[padding],
