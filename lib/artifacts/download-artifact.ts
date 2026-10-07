@@ -82,4 +82,3 @@ export function downloadArtifact(artifact: ArtifactData): void {
   document.body.removeChild(anchor);
   window.URL.revokeObjectURL(objectUrl);
 }
-

@@ -92,4 +92,3 @@ function triggerAnchorDownload(
   anchor.click();
   document.body.removeChild(anchor);
 }
-

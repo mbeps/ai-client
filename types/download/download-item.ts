@@ -41,4 +41,3 @@ export interface DownloadItem {
   /** Message id this download belongs to. */
   messageId?: string;
 }
-
