@@ -339,14 +339,24 @@ export function MarkdownRenderer({
               {...props}
             />
           ),
-          a: ({ node: _node, ...props }) => (
-            <a
-              className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
-              target="_blank"
-              rel="noopener noreferrer"
-              {...props}
-            />
-          ),
+          a: ({ node: _node, href, ...props }: any) => {
+            const isDownloadable = Boolean(
+              href &&
+                /\.(xlsx|xls|xlsm|csv|tsv|pdf|docx|zip|tar\.gz|gz|parquet|json)$/i.test(
+                  String(href).split("?")[0],
+                ),
+            );
+            return (
+              <a
+                className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={href}
+                download={isDownloadable ? true : undefined}
+                {...props}
+              />
+            );
+          },
         }}
       >
         {content}

@@ -2,6 +2,7 @@
 
 import {
   Code2,
+  Download,
   FileSpreadsheet,
   FileText,
   PanelRightClose,
@@ -24,6 +25,8 @@ interface CanvasCardProps {
   isOpen?: boolean;
   /** Callback invoked when the user toggles the canvas. */
   onToggle: () => void;
+  /** Optional callback invoked when the user clicks the download button. */
+  onDownload?: () => void;
   /** Optional message creation timestamp for date display. */
   createdAt?: Date | string;
   /** Optional extra classes. */
@@ -52,6 +55,7 @@ export function CanvasCard({
   artifact,
   isOpen = false,
   onToggle,
+  onDownload,
   createdAt,
   className,
 }: CanvasCardProps) {
@@ -146,28 +150,47 @@ export function CanvasCard({
         </div>
       </div>
 
-      <Button
-        type="button"
-        size="sm"
-        variant={isOpen ? "secondary" : "default"}
-        onClick={handleButtonClick}
-        className={cn(
-          "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 font-medium text-xs shadow-xs transition-all",
-          !isOpen && "bg-primary text-primary-foreground hover:bg-primary/90",
+      <div className="flex shrink-0 items-center gap-2">
+        {onDownload && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label={`Download ${artifact.title || "artifact"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload();
+            }}
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-medium text-xs shadow-xs transition-all hover:bg-accent"
+          >
+            <Download className="size-3.5" />
+            <span className="hidden sm:inline">Download</span>
+          </Button>
         )}
-      >
-        {isOpen ? (
-          <>
-            <PanelRightClose className="size-3.5" />
-            <span>Close</span>
-          </>
-        ) : (
-          <>
-            <PanelRightOpen className="size-3.5" />
-            <span>Open</span>
-          </>
-        )}
-      </Button>
+
+        <Button
+          type="button"
+          size="sm"
+          variant={isOpen ? "secondary" : "default"}
+          onClick={handleButtonClick}
+          className={cn(
+            "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 font-medium text-xs shadow-xs transition-all",
+            !isOpen && "bg-primary text-primary-foreground hover:bg-primary/90",
+          )}
+        >
+          {isOpen ? (
+            <>
+              <PanelRightClose className="size-3.5" />
+              <span>Close</span>
+            </>
+          ) : (
+            <>
+              <PanelRightOpen className="size-3.5" />
+              <span>Open</span>
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

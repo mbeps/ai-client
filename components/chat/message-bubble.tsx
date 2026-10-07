@@ -17,9 +17,11 @@ import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { downloadArtifact } from "@/lib/artifacts/download-artifact";
 import { authClient } from "@/lib/auth/auth-client";
 import { extractCitations } from "@/lib/chat/extract-citations";
 import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
+import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
@@ -31,6 +33,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
 import { CanvasCard } from "./message/canvas-card";
 import { CitationsList } from "./message/citations-list";
+import { DownloadCard } from "./message/download-card";
 import { MessageActions } from "./message/message-actions";
 import { ResponseTimeline } from "./message/response-timeline";
 
@@ -155,6 +158,11 @@ export function MessageBubble({
 
   const messageArtifacts = useMemo(
     () => extractMessageArtifacts(message, activeToolCalls),
+    [message, activeToolCalls],
+  );
+
+  const messageDownloads = useMemo(
+    () => extractMessageDownloads(message, activeToolCalls),
     [message, activeToolCalls],
   );
 
@@ -345,6 +353,14 @@ export function MessageBubble({
                   artifact={art}
                   isOpen={isCanvasOpen && activeArtifactId === art.id}
                   onToggle={() => onToggleArtifact?.(art)}
+                  onDownload={() => downloadArtifact(art)}
+                  createdAt={message.createdAt}
+                />
+              ))}
+              {messageDownloads.map((dl) => (
+                <DownloadCard
+                  key={dl.id}
+                  item={dl}
                   createdAt={message.createdAt}
                 />
               ))}
