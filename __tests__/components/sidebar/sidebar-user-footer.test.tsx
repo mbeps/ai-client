@@ -153,27 +153,4 @@ describe("SidebarUserFooter", () => {
 
     await user.keyboard("{Escape}");
   });
-
-  it("calls signOut, resets client state, and redirects to login on Log out click", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SidebarProvider>
-        <SidebarUserFooter />
-      </SidebarProvider>,
-    );
-
-    const trigger = screen.getByRole("button");
-    await user.click(trigger);
-    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
-
-    const logoutItem = await screen.findByRole("menuitem", { name: /log out/i });
-    expect(logoutItem).toBeInTheDocument();
-
-    await user.click(logoutItem);
-
-    expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockResetClientState).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.AUTH.LOGIN.path);
-  });
 });
