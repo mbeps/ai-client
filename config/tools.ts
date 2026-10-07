@@ -50,7 +50,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "manage_artifact",
     category: "Artifacts",
     description:
-      "Displays an interactive artifact in a side panel: a markdown document, a multi-sheet spreadsheet, an HTML interface, or a Mermaid diagram.",
+      "Displays an interactive artifact in a side panel: a markdown document, a multi-sheet spreadsheet, an HTML interface, or a Mermaid diagram. Use this when you want to render structured visual content, code side-by-side with the chat, or write large text. You have 4 modes: 'markdown', 'spreadsheet', 'html', and 'mermaid'.",
     availability: "Registered when the tool is selected for the chat.",
   },
   {
@@ -58,7 +58,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "search_knowledge_base",
     category: "Knowledge",
     description:
-      "Searches the knowledge bases attached to the chat using hybrid semantic and keyword search, and returns the most relevant passages.",
+      "Searches the knowledge bases attached to the chat using hybrid semantic and keyword search, and returns the most relevant passages. Use this to retrieve grounded context and factual excerpts from attached documents.",
     availability:
       "Registered when a knowledge base is attached and indexing has finished.",
   },
@@ -67,7 +67,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "load_skill",
     category: "Skills",
     description:
-      "Loads the full instructions and bundled reference files for one skill from the catalogue, so the model can follow it.",
+      "Loads the full instructions and bundled reference files for one skill from the catalogue. Use this when you need detailed guidelines or reference materials to perform a specific task correctly.",
     availability: "Registered when the chat has at least one skill available.",
   },
   {
@@ -75,7 +75,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "create_skill",
     category: "Skills",
     description:
-      "Creates a new skill owned by the user, with its name, description, and SKILL.md instruction body.",
+      "Creates a new skill owned by the user, with its name, description, and SKILL.md instruction body. Use this to define and persist a new reusable capability or workflow.",
     availability: "Always registered for tool-calling models.",
   },
   {
@@ -83,7 +83,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "update_skill",
     category: "Skills",
     description:
-      "Updates a skill's display name, description, or enabled flag. It cannot change the instruction body.",
+      "Updates a skill's display name, description, or enabled flag. Use this when you need to modify skill metadata or toggle its active state.",
     availability: "Always registered for tool-calling models.",
   },
   {
@@ -91,7 +91,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "write_skill_file",
     category: "Skills",
     description:
-      "Writes one file inside an existing skill, creating it or replacing its content. Use the path SKILL.md for the instruction body.",
+      "Writes one file inside an existing skill, creating it or replacing its content. Use this to add or update reference files and instruction bodies within a skill.",
     availability: "Always registered for tool-calling models.",
   },
   {
@@ -99,7 +99,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "read_skill_file",
     category: "Skills",
     description:
-      "Lists every file in a skill, or reads the full content of one file. Call it before rewriting a file.",
+      "Lists every file in a skill, or reads the full content of one file. Use this to inspect skill contents before modifying or referencing them.",
     availability: "Always registered for tool-calling models.",
   },
   {
@@ -107,7 +107,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "delete_skill_file",
     category: "Skills",
     description:
-      "Removes a bundled reference file from a skill. The instruction body cannot be deleted.",
+      "Removes a bundled reference file from a skill. Use this to clean up outdated or unused files within a skill package.",
     availability: "Always registered for tool-calling models.",
   },
   {
@@ -115,7 +115,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "get_file_url",
     category: "Files",
     description:
-      "Returns a temporary download URL for a file the user uploaded to the chat, so the model can pass it to another tool.",
+      "Returns a temporary download URL for a file the user uploaded to the chat. Use this when you need to provide an accessible file URL to another tool or API.",
     availability: "Registered when the chat has at least one file attachment.",
   },
 ] as const;
