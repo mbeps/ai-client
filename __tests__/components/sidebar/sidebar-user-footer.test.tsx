@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer";
@@ -58,7 +58,13 @@ beforeAll(() => {
   }
 });
 
+// Vitest runs afterEach hooks in reverse registration order ("stack"), so this
+// hook fires BEFORE RTL's auto-cleanup (registered at import). Call cleanup()
+// first ourselves: it is idempotent, so RTL's later auto-cleanup is a no-op,
+// and the setTimeout(0) tick below then flushes timers queued by the unmount
+// inside this finished test instead of leaking into the next one.
 afterEach(async () => {
+  cleanup();
   document.body.style.pointerEvents = "auto";
   vi.clearAllMocks();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -135,6 +141,7 @@ describe("SidebarUserFooter", () => {
 
     const trigger = screen.getByRole("button");
     await user.click(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
 
     const profileLink = await screen.findByRole("menuitem", { name: /profile/i });
     expect(profileLink).toBeInTheDocument();
@@ -158,6 +165,7 @@ describe("SidebarUserFooter", () => {
 
     const trigger = screen.getByRole("button");
     await user.click(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
 
     const logoutItem = await screen.findByRole("menuitem", { name: /log out/i });
     expect(logoutItem).toBeInTheDocument();
