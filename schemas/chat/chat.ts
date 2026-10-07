@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PROMPTS } from "@/config/prompts";
-import { idField } from "@/schemas/shared-fields";
+import { dateField, idField } from "@/schemas/shared-fields";
 
 /**
  * Validates a message object for persistence to the database.
@@ -79,6 +79,7 @@ export const chatSchema = z.object({
   knowledgebaseId: idField.nullable().optional(),
   projectName: z.string().optional(),
   assistantName: z.string().optional(),
+  createdAt: dateField.optional(),
   updatedAt: z.date(),
   currentLeafId: idField.nullable(),
 });

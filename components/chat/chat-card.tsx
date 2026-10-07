@@ -1,7 +1,9 @@
 "use client";
 
+import { format } from "date-fns";
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
 import type { Chat } from "@/types/chat/chat";
@@ -30,6 +32,20 @@ export function ChatCard({ chat }: ChatCardProps) {
       ? ROUTES.ASSISTANTS.chat(chat.assistantId, chat.id)
       : ROUTES.CHATS.detail(chat.id);
 
+  const formattedDate = useMemo(() => {
+    if (!chat.createdAt) return null;
+    try {
+      const date =
+        typeof chat.createdAt === "string"
+          ? new Date(chat.createdAt)
+          : chat.createdAt;
+      if (Number.isNaN(date.getTime())) return null;
+      return format(date, "MMM d, yyyy");
+    } catch {
+      return null;
+    }
+  }, [chat.createdAt]);
+
   return (
     <Link
       href={targetHref}
@@ -45,12 +61,20 @@ export function ChatCard({ chat }: ChatCardProps) {
               <h3 className="truncate font-semibold leading-none">
                 {chat.title}
               </h3>
-              <p className="line-clamp-1 text-muted-foreground text-xs">
-                {chat.projectId
-                  ? "Project Chat"
-                  : chat.assistantId
-                    ? "Assistant Chat"
-                    : "Standalone Chat"}
+              <p className="truncate text-muted-foreground text-xs">
+                <span>
+                  {chat.projectId
+                    ? "Project Chat"
+                    : chat.assistantId
+                      ? "Assistant Chat"
+                      : "Standalone Chat"}
+                </span>
+                {formattedDate && (
+                  <>
+                    <span className="mx-1 text-muted-foreground/40">•</span>
+                    <span>{formattedDate}</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
