@@ -12,7 +12,6 @@ import {
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
-import * as xlsx from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -20,7 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { logger } from "@/lib/logger";
+import { downloadArtifact } from "@/lib/artifacts/download-artifact";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { MarkdownRenderer } from "./markdown-renderer";
 
@@ -104,60 +103,7 @@ export function ArtifactPanel({
   };
 
   const handleDownload = () => {
-    const title = artifact.title || "artifact";
-    const safeTitle = title.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-
-    if (artifact.type === "spreadsheet") {
-      try {
-        const parsed = JSON.parse(artifact.content);
-        const workbook = xlsx.utils.book_new();
-
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          Array.isArray(parsed.sheets)
-        ) {
-          // Multi-sheet format
-          parsed.sheets.forEach((sheet: any) => {
-            const flatData = sheet.data.map((row: any) =>
-              row.map((cell: any) =>
-                cell && typeof cell === "object" && "v" in cell ? cell.v : cell,
-              ),
-            );
-            const worksheet = xlsx.utils.aoa_to_sheet(flatData);
-            xlsx.utils.book_append_sheet(workbook, worksheet, sheet.name);
-          });
-        } else if (Array.isArray(parsed)) {
-          // Legacy array format
-          const worksheet = xlsx.utils.json_to_sheet(parsed);
-          xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-        }
-
-        xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
-        return;
-      } catch (err) {
-        logger.error("Failed to export spreadsheet", err);
-      }
-    }
-
-    const blob = new Blob([artifact.content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const extension =
-      artifact.type === "markdown"
-        ? "md"
-        : artifact.type === "html"
-          ? "html"
-          : artifact.type === "mermaid"
-            ? "mmd"
-            : "txt";
-
-    a.href = url;
-    a.download = `${safeTitle}.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadArtifact(artifact);
   };
 
   return (

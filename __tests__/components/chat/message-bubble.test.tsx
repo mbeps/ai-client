@@ -285,5 +285,40 @@ describe("MessageBubble message editing", () => {
       screen.queryByRole("button", { name: /^open$/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders DownloadCard when assistant message metadata contains downloadable file URL", () => {
+    const assistantMsgWithDownload: Message = {
+      id: "msg-dl-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "I have generated the revenue projections spreadsheet for you.",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolCallId: "tc-excel-1",
+            toolName: "generate_workbook",
+            result: {
+              url: "https://minio.local/bucket/q3_revenue.xlsx",
+              filename: "q3_revenue.xlsx",
+              size: 51200,
+            },
+          },
+        ],
+      }),
+    };
+
+    renderMessageBubble({
+      message: assistantMsgWithDownload,
+    });
+
+    expect(screen.getByText("q3_revenue.xlsx")).toBeInTheDocument();
+    expect(screen.getByText("Spreadsheet")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^download$/i }),
+    ).toBeInTheDocument();
+  });
 });
 

@@ -108,4 +108,25 @@ describe("CanvasCard", () => {
     expect(screen.getByText("Q3 Revenue Projections")).toBeInTheDocument();
     expect(screen.getByText(/Spreadsheet/i)).toBeInTheDocument();
   });
+
+  it("renders Download button and invokes onDownload when clicked", async () => {
+    const user = userEvent.setup();
+    const onDownload = vi.fn();
+    render(
+      <CanvasCard
+        artifact={mockArtifact}
+        isOpen={false}
+        onToggle={vi.fn()}
+        onDownload={onDownload}
+      />,
+    );
+
+    const downloadBtn = screen.getByRole("button", {
+      name: /download canvas absence notification/i,
+    });
+    expect(downloadBtn).toBeInTheDocument();
+
+    await user.click(downloadBtn);
+    expect(onDownload).toHaveBeenCalledTimes(1);
+  });
 });
