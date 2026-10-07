@@ -58,9 +58,10 @@ beforeAll(() => {
   }
 });
 
-afterEach(() => {
+afterEach(async () => {
   document.body.style.pointerEvents = "auto";
   vi.clearAllMocks();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
 describe("SidebarUserFooter", () => {
@@ -135,13 +136,15 @@ describe("SidebarUserFooter", () => {
     const trigger = screen.getByRole("button");
     await user.click(trigger);
 
-    const profileLink = screen.getByRole("menuitem", { name: /profile/i });
+    const profileLink = await screen.findByRole("menuitem", { name: /profile/i });
     expect(profileLink).toBeInTheDocument();
     expect(profileLink).toHaveAttribute("href", ROUTES.PROFILE.path);
 
-    const settingsLink = screen.getByRole("menuitem", { name: /settings/i });
+    const settingsLink = await screen.findByRole("menuitem", { name: /settings/i });
     expect(settingsLink).toBeInTheDocument();
     expect(settingsLink).toHaveAttribute("href", ROUTES.SETTINGS.path);
+
+    await user.keyboard("{Escape}");
   });
 
   it("calls signOut, resets client state, and redirects to login on Log out click", async () => {
@@ -156,7 +159,7 @@ describe("SidebarUserFooter", () => {
     const trigger = screen.getByRole("button");
     await user.click(trigger);
 
-    const logoutItem = screen.getByRole("menuitem", { name: /log out/i });
+    const logoutItem = await screen.findByRole("menuitem", { name: /log out/i });
     expect(logoutItem).toBeInTheDocument();
 
     await user.click(logoutItem);

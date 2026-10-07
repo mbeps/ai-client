@@ -45,7 +45,7 @@ import { cn, sortByUpdatedAt } from "@/lib/utils";
 /**
  * Main application sidebar for authenticated routes.
  * Renders the "New Chat" button, navigation sections (Projects, Assistants, Knowledgebases),
- * up to 20 recent chats (sorted by `updatedAt` from Zustand store), and user footer with avatar dropdown.
+ * up to 9 recent chats (sorted by `updatedAt` from Zustand store), and user footer with avatar dropdown.
  * Fetches chat history on mount via `listChats()` and handles optimistic UI with Zustand.
  *
  * @see ChatActionMenu for per-chat action menu (rename, move, delete)
@@ -62,7 +62,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const recentChats = sortByUpdatedAt(
     Object.values(chats).filter((chat) => !chat.projectId),
-  ).slice(0, 20);
+  ).slice(0, 9);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats once on sidebar mount
   React.useEffect(() => {
@@ -209,6 +209,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="See all"
+                  isActive={pathname === ROUTES.CHATS.path}
+                >
+                  <Link href={ROUTES.CHATS.path}>
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span>See all</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           )}
         </SidebarGroup>
