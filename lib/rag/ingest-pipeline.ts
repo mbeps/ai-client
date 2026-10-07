@@ -54,20 +54,38 @@ export async function ingestDocumentPipeline(
   // Replace chunks atomically: delete old + insert new in one transaction so a
   // failed insert cannot leave the document with no (or duplicated) chunks.
   // searchVector is a GENERATED ALWAYS column — do NOT include it in INSERT
-  await db.transaction(async (tx) => {
-    await tx.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
-    await tx.insert(kbChunk).values(
-      chunks.map((content, i) => ({
-        id: crypto.randomUUID(),
-        documentId: doc.id,
-        kbId: doc.kbId,
-        content,
-        embedding: embeddings[i],
-        chunkIndex: i,
-        tokenCount: Math.round(content.length / 4),
-      })),
-    );
-  });
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(kbChunk).where(eq(kbChunk.documentId, doc.id));
+      await tx.insert(kbChunk).values(
+        chunks.map((content, i) => ({
+          id: crypto.randomUUID(),
+          documentId: doc.id,
+          kbId: doc.kbId,
+          content,
+          embedding: embeddings[i],
+          chunkIndex: i,
+          tokenCount: Math.round(content.length / 4),
+        })),
+      );
+    });
+  } catch (error: any) {
+    const isFkViolation =
+      error?.code === "23503" ||
+      String(error?.message).includes("kb_chunk_document_id_kb_document_id_fk");
+
+    if (isFkViolation) {
+      log.info(
+        "Document or Knowledge Base deleted concurrently; skipping chunk persistence",
+        {
+          documentId: doc.id,
+          kbId: doc.kbId,
+        },
+      );
+      return { chunkCount: 0, tokenCount: 0 };
+    }
+    throw error;
+  }
 
   const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
 

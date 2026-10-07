@@ -71,6 +71,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { kbDocument } from "@/drizzle/schema";
 import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
+import { inngest } from "@/lib/inngest/client";
 import { requireSession } from "@/lib/auth/require-session";
 
 describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
@@ -165,5 +166,25 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
       deletedCount: 1,
     });
+  });
+
+  it("sends Inngest reindex.cancel event before DB delete", async () => {
+    selectResult = [];
+    await deleteKnowledgebase("kb-1");
+
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "knowledgebase/reindex.cancel",
+      data: { kbId: "kb-1" },
+    });
+  });
+
+  it("sends Inngest reindex.cancel events for multiple knowledgebases", async () => {
+    selectResult = [];
+    await deleteKnowledgebase(["kb-1", "kb-2"]);
+
+    expect(inngest.send).toHaveBeenCalledWith([
+      { name: "knowledgebase/reindex.cancel", data: { kbId: "kb-1" } },
+      { name: "knowledgebase/reindex.cancel", data: { kbId: "kb-2" } },
+    ]);
   });
 });

@@ -1,13 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { buildChatFromRows } from "@/actions/chats/build-chat";
 import { getChat } from "@/actions/chats/get-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
+import { ROUTES } from "@/config/routes";
 import type { Chat } from "@/types/chat/chat";
 
 /**
  * Chat detail page within an assistant context — server component with validation.
  * Route parameters: `[id]` — assistant ID, `[chatId]` — chat ID to load.
- * Verifies chat belongs to assistant; returns 404 if mismatch or chat not found.
+ * Verifies chat belongs to assistant; redirects to standalone chat if unlinked/mismatched, returns 404 if chat not found.
  * Renders full chat interface with message tree, streaming, artifacts, and MCP tools.
  *
  * @author Maruf Bepary
@@ -30,7 +31,7 @@ export default async function AssistantChatPage({
   }
 
   if (chat.assistantId !== id) {
-    notFound();
+    redirect(ROUTES.CHATS.detail(chatId));
   }
 
   return <ChatPageClient initialChat={chat} />;

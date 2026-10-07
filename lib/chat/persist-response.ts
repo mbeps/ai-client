@@ -34,9 +34,23 @@ export async function persistAssistantResponse(
 ): Promise<boolean> {
   const { chatId, assistantMessageId, content, parentId, metadata } = params;
 
-  // If the client already persisted a partial message (user pressed Stop),
-  // skip insertion to avoid overwriting the saved partial content.
   if (parentId) {
+    const [parentExists] = await db
+      .select({ id: message.id })
+      .from(message)
+      .where(and(eq(message.id, parentId), eq(message.chatId, chatId)))
+      .limit(1);
+
+    if (!parentExists) {
+      log.info(
+        "Parent message deleted concurrently; skipping assistant persistence (chatId: {chatId}, parentId: {parentId})",
+        { chatId, parentId },
+      );
+      return false;
+    }
+
+    // If the client already persisted a partial message (user pressed Stop),
+    // skip insertion to avoid overwriting the saved partial content.
     const [existing] = await db
       .select({ id: message.id })
       .from(message)
@@ -86,12 +100,13 @@ export async function persistAssistantResponse(
     const isFkViolation =
       code === "23503" ||
       messageText.includes("foreign key constraint") ||
-      messageText.includes("message_chat_id_chat_id_fk");
+      messageText.includes("message_chat_id_chat_id_fk") ||
+      messageText.includes("message_parent_id_message_id_fk");
 
     if (isFkViolation) {
       log.info(
-        "Chat was deleted concurrently; skipping assistant message persistence (chatId: {chatId})",
-        { chatId, assistantMessageId },
+        "Chat or parent message was deleted concurrently; skipping assistant message persistence (chatId: {chatId})",
+        { chatId, assistantMessageId, parentId },
       );
       return false;
     }

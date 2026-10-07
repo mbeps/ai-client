@@ -26,6 +26,12 @@ export const executeTransformRun = inngest.createFunction(
     id: "run-transform-workflow",
     retries: 0,
     triggers: [{ event: "workflows/transform.execute" }],
+    cancelOn: [
+      {
+        event: "workflows/transform.cancel",
+        if: "async.data.runId == event.data.runId",
+      },
+    ],
   },
   async ({ event, step }) => {
     const { runId, userId } = event.data;
@@ -163,10 +169,26 @@ export const executeTransformRun = inngest.createFunction(
             .from(transformRun)
             .where(eq(transformRun.id, runId));
 
+          if (!currentRun || currentRun.status === "failed") {
+            log.info(
+              "Transform run or agent deleted; terminating step execution",
+              { runId },
+            );
+            return { success: false, cancelled: true };
+          }
+
           const [currentAgent] = await db
             .select()
             .from(transformAgent)
             .where(eq(transformAgent.id, currentRun.agentId));
+
+          if (!currentAgent) {
+            log.info(
+              "Transform run or agent deleted; terminating step execution",
+              { runId },
+            );
+            return { success: false, cancelled: true };
+          }
 
           let initialAttachmentRows: any[] = [];
           if (currentAgent.requiresFileUpload) {
@@ -231,6 +253,9 @@ export const executeTransformRun = inngest.createFunction(
       );
 
       if (!stepExecutionResult?.success) {
+        if ((stepExecutionResult as any)?.cancelled) {
+          return { success: false, cancelled: true };
+        }
         log.error("Step execution failed (runId: {runId}, step: {stepIdx})", {
           runId,
           stepIdx,

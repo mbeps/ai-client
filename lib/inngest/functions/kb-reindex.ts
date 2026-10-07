@@ -66,15 +66,36 @@ export const reindexKbFunction = inngest.createFunction(
     }
 
     // 2. Fan-out ingestion events for all documents
-    await step.run("fan-out-doc-ingest", async () => {
+    const fanOutResult = await step.run("fan-out-doc-ingest", async () => {
+      const [kb] = await db
+        .select({ id: knowledgebase.id })
+        .from(knowledgebase)
+        .where(eq(knowledgebase.id, kbId));
+
+      if (!kb) {
+        log.info(
+          "Knowledge base {kbId} deleted concurrently; skipping reindex fan-out",
+          {
+            kbId,
+            userId,
+          },
+        );
+        return { dispatched: 0, cancelled: true };
+      }
+
       const events = docs.map((doc) => ({
         id: `${event.id}:${doc.id}`,
         name: "knowledgebase/document.ingest" as const,
-        data: { documentId: doc.id, userId },
+        data: { documentId: doc.id, userId, kbId },
       }));
 
       await inngest.send(events);
+      return { dispatched: docs.length, cancelled: false };
     });
+
+    if (fanOutResult?.cancelled) {
+      return { dispatched: 0 };
+    }
 
     log.info("Dispatched {count} document ingestion jobs for KB {kbId}", {
       count: docs.length,

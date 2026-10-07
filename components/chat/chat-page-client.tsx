@@ -6,6 +6,12 @@ import { useAppStore } from "@/lib/store";
 import type { Chat } from "@/types/chat/chat";
 
 /**
+ * Module-level cache tracking chat IDs whose initial messages have been dispatched.
+ * Prevents duplicate dispatch when users navigate back/forward in browser history.
+ */
+const handledInitialChatIds = new Set<string>();
+
+/**
  * Props for the ChatPageClient component.
  * Bridges server-rendered chat data with client-side Zustand store hydration.
  */
@@ -33,12 +39,15 @@ export function ChatPageClient({
   initialMessage,
 }: ChatPageClientProps) {
   const upsertChat = useAppStore((state) => state.upsertChat);
-  const hasExistingMessages = Object.keys(initialChat.messages).length > 0;
-  const [hasSentInitial, setHasSentInitial] = useState(hasExistingMessages);
+  const [hasSentInitial, setHasSentInitial] = useState(
+    () =>
+      Object.keys(initialChat.messages).length > 0 ||
+      handledInitialChatIds.has(initialChat.id),
+  );
 
   useEffect(() => {
     upsertChat(initialChat);
-    if (initialMessage && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       if (url.searchParams.has("msg")) {
         url.searchParams.delete("msg");
@@ -49,14 +58,19 @@ export function ChatPageClient({
         );
       }
     }
-  }, [initialChat, upsertChat, initialMessage]);
+  }, [initialChat, upsertChat]);
 
   return (
     <ChatUI
       chatId={initialChat.id}
       initialChat={initialChat}
-      initialMessage={!hasSentInitial ? initialMessage : undefined}
+      initialMessage={
+        !hasSentInitial && !handledInitialChatIds.has(initialChat.id)
+          ? initialMessage
+          : undefined
+      }
       onInitialMessageSent={() => {
+        handledInitialChatIds.add(initialChat.id);
         setHasSentInitial(true);
       }}
     />

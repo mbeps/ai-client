@@ -63,6 +63,7 @@ import { deleteDocument } from "@/actions/knowledgebases/delete-document";
 import { listDocuments } from "@/actions/knowledgebases/list-documents";
 import { listKnowledgebases } from "@/actions/knowledgebases/list-knowledgebases";
 import { updateKnowledgebase } from "@/actions/knowledgebases/update-knowledgebase";
+import { inngest } from "@/lib/inngest/client";
 
 const KB_ID = "44444444-4444-4444-8444-444444444444";
 const DOC_ID = "33333333-3333-4333-8333-333333333333";
@@ -95,6 +96,10 @@ describe("knowledgebase documents and CRUD actions", () => {
         deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
       ).resolves.toBeUndefined();
 
+      expect(inngest.send).toHaveBeenCalledWith({
+        name: "knowledgebase/document.cancel",
+        data: { documentId: DOC_ID },
+      });
       expect(s3SendMock).toHaveBeenCalled();
       expect(chainable.delete).toHaveBeenCalled();
     });

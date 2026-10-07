@@ -212,6 +212,7 @@ describe("deleteProject", () => {
     });
     expect(chainable.transaction).toHaveBeenCalledOnce();
     expect(chainable.update).toHaveBeenCalledOnce(); // unlink chats
+    expect(chainable.set).toHaveBeenCalledWith({ projectId: null });
     expect(chainable.delete).toHaveBeenCalledOnce(); // delete project
   });
 

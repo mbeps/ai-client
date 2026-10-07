@@ -60,6 +60,13 @@ class ChatAbortRegistry {
   }
 
   /**
+   * Checks whether an active controller exists for a chat.
+   */
+  has(chatId: string): boolean {
+    return this.controllers.has(chatId);
+  }
+
+  /**
    * Removes the controller for a chat upon normal completion.
    */
   delete(chatId: string): void {

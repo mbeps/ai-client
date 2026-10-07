@@ -1,5 +1,8 @@
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { env } from "@/config/env";
+import { db } from "@/drizzle/db";
+import { chat } from "@/drizzle/schema";
 import { auth } from "@/lib/auth/auth";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
@@ -65,6 +68,22 @@ export async function POST(req: Request) {
         status: 429,
         headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
       },
+    );
+  }
+
+  const [chatRow] = await db
+    .select({ id: chat.id })
+    .from(chat)
+    .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+
+  if (!chatRow) {
+    log.warn(
+      "Chat not found or access denied (chatId: {chatId}, userId: {userId})",
+      { chatId, userId },
+    );
+    return Response.json(
+      { error: "Chat not found or access denied" },
+      { status: 404 },
     );
   }
 

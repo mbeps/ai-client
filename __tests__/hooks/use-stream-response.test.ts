@@ -768,8 +768,11 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     vi.useRealTimers();
   });
 
-  it("catches error if persistMessage fails and shows toast error", async () => {
-    mockPersist.mockRejectedValueOnce(new Error("Persist error"));
+  it("halts execution and does not call /api/chat if persistMessage fails", async () => {
+    mockPersist.mockRejectedValueOnce(new Error("Not Found"));
+    const mockFetch = vi.fn();
+    global.fetch = mockFetch;
+
     const { result } = renderHook(() => useStreamResponse("chat-1"));
 
     await act(async () => {
@@ -777,8 +780,46 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     expect(mockToastError).toHaveBeenCalledWith(
-      "Message may not have been saved. Please check your connection.",
+      "Chat not found or has been deleted.",
     );
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("halts execution and shows connection error toast if persistMessage fails with generic error", async () => {
+    mockPersist.mockRejectedValueOnce(new Error("Persist error"));
+    const mockFetch = vi.fn();
+    global.fetch = mockFetch;
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to save message. Please check your connection.",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("disables useRealtime when token fetch fails with chat not found", async () => {
+    mockGetChatRealtimeToken.mockRejectedValueOnce(
+      new Error("Chat not found or access denied"),
+    );
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    // Invoke token function through config
+    await act(async () => {
+      try {
+        await realtimeState.config?.token();
+      } catch {}
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(realtimeState.config?.enabled).toBe(false);
   });
 
   it("handles !res.ok when handleApiError handles the error", async () => {

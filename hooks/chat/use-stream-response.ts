@@ -143,6 +143,7 @@ export function useStreamResponse(
     null,
   );
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
+  const [chatNotFound, setChatNotFound] = useState(false);
 
   const pendingRef = useRef<{
     userMessageId: string | null;
@@ -378,13 +379,26 @@ export function useStreamResponse(
     [chatId, addMessage, upsertChat, handleApiError, options],
   );
 
-  const fetchChatToken = useCallback(
-    () =>
-      chatId
-        ? getChatRealtimeToken(chatId)
-        : Promise.reject(new Error("No chatId")),
-    [chatId],
-  );
+  const fetchChatToken = useCallback(async () => {
+    if (!chatId) throw new Error("No chatId");
+    try {
+      return await getChatRealtimeToken(chatId);
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (
+        msg.includes("Unauthorized") ||
+        msg.includes("Not Found") ||
+        msg.includes("access denied")
+      ) {
+        setChatNotFound(true);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+      }
+      throw err;
+    }
+  }, [chatId]);
 
   const apiBaseUrl = useMemo(() => {
     if (typeof window === "undefined") return undefined;
@@ -402,7 +416,7 @@ export function useStreamResponse(
     channel: chatId ? chatChannel({ chatId }) : undefined,
     topics: ["stream"] as const,
     token: fetchChatToken,
-    enabled: !!chatId,
+    enabled: Boolean(chatId) && !chatNotFound,
     historyLimit: null,
     apiBaseUrl,
   });
@@ -436,7 +450,17 @@ export function useStreamResponse(
         return true;
       }
     } catch (err) {
-      if (err instanceof Error && err.message.includes("Not Found")) {
+      if (
+        err instanceof Error &&
+        (err.message.includes("Not Found") ||
+          err.message.includes("Unauthorized") ||
+          err.message.includes("access denied"))
+      ) {
+        setChatNotFound(true);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
         return false;
       }
       logger.error("Failed to sync chat from DB", err);
@@ -470,6 +494,7 @@ export function useStreamResponse(
     setStreamingContent(null);
     setStreamingReasoning(null);
     setActiveToolCalls([]);
+    setChatNotFound(false);
   }, [chatId]);
 
   useEffect(() => {
@@ -516,7 +541,7 @@ export function useStreamResponse(
 
   // Watchdog & connection error recovery: prevent permanent "Thinking..." state
   useEffect(() => {
-    if (!isStreaming) return;
+    if (!isStreaming || chatNotFound) return;
 
     let attempts = 0;
     const interval = setInterval(async () => {
@@ -551,7 +576,7 @@ export function useStreamResponse(
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isStreaming, realtimeError, syncFromDb]);
+  }, [isStreaming, chatNotFound, realtimeError, syncFromDb]);
 
   const isLoading = isStreaming;
   const isStreamingReasoning =
@@ -686,9 +711,29 @@ export function useStreamResponse(
       });
     } catch (err) {
       logger.error("Failed to persist message", err);
-      toast.error(
-        "Message may not have been saved. Please check your connection.",
-      );
+      setIsStreaming(false);
+      setStreamingContent(null);
+      setStreamingReasoning(null);
+      setActiveToolCalls([]);
+      lastChunkTimeRef.current = 0;
+      pendingRef.current = { userMessageId: null, model: "", startTime: 0 };
+      assistantMessageIdRef.current = null;
+      accumulatedTextRef.current = "";
+      accumulatedReasoningRef.current = "";
+
+      const isNotFound =
+        err instanceof Error &&
+        (err.message.includes("Not Found") ||
+          err.message.includes("Unauthorized") ||
+          err.message.includes("access denied"));
+
+      if (isNotFound) {
+        setChatNotFound(true);
+        toast.error("Chat not found or has been deleted.");
+      } else {
+        toast.error("Failed to save message. Please check your connection.");
+      }
+      return "";
     }
 
     // 5. Upload attachments

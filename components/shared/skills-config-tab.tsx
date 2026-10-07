@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Ban,
-  BrainCircuit,
-  Loader2,
-  Save,
-  SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
+import { Ban, Loader2, Save, SlidersHorizontal, Sparkles } from "lucide-react";
 import { SkillsPicker } from "@/components/chat/skills-picker";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

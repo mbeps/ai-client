@@ -199,4 +199,49 @@ describe("ingestDocumentPipeline (T3.5/T3.6)", () => {
     expect(setArg.truncated).toBe(false);
     expect(setArg.statusMessage).toBeNull();
   });
+
+  it("handles foreign key violation 23503 gracefully during chunk persistence", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
+
+    const fkError = Object.assign(
+      new Error("violates foreign key constraint \"kb_chunk_document_id_kb_document_id_fk\""),
+      { code: "23503" },
+    );
+
+    (chainable.transaction as any).mockImplementationOnce(async () => {
+      throw fkError;
+    });
+
+    const result = await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+    );
+
+    expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
+  });
+
+  it("handles foreign key violation by constraint name gracefully", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1]]);
+
+    const fkError = new Error(
+      "insert or update on table \"kb_chunk\" violates foreign key constraint \"kb_chunk_document_id_kb_document_id_fk\"",
+    );
+
+    (chainable.transaction as any).mockImplementationOnce(async () => {
+      throw fkError;
+    });
+
+    const result = await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+    );
+
+    expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
+  });
 });

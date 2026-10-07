@@ -135,4 +135,22 @@ describe("chatAbortRegistry", () => {
       expect(controller.signal.aborted).toBe(true);
     });
   });
+
+  describe("has", () => {
+    it("returns true when a controller is registered and active", () => {
+      expect(chatAbortRegistry.has("chat-a")).toBe(false);
+      chatAbortRegistry.register("chat-a");
+      expect(chatAbortRegistry.has("chat-a")).toBe(true);
+    });
+
+    it("returns false after controller is aborted or deleted", () => {
+      chatAbortRegistry.register("chat-a");
+      chatAbortRegistry.abort("chat-a");
+      expect(chatAbortRegistry.has("chat-a")).toBe(false);
+
+      chatAbortRegistry.register("chat-b");
+      chatAbortRegistry.delete("chat-b");
+      expect(chatAbortRegistry.has("chat-b")).toBe(false);
+    });
+  });
 });

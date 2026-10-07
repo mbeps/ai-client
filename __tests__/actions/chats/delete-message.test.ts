@@ -46,6 +46,21 @@ vi.mock("@/lib/storage/sweep-orphaned-attachment-keys", () => ({
   sweepOrphanedAttachmentKeys: sweepMock,
 }));
 
+const abortStreamMock = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+vi.mock("@/lib/chat/abort-chat-stream", () => ({
+  abortChatStream: abortStreamMock,
+}));
+
+const hasAbortMock = vi.hoisted(() => vi.fn().mockReturnValue(false));
+vi.mock("@/lib/chat/chat-abort-registry", () => ({
+  chatAbortRegistry: {
+    has: hasAbortMock,
+    abort: vi.fn().mockReturnValue(true),
+    register: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteMessage } from "@/actions/chats/delete-message";
 
@@ -100,5 +115,43 @@ describe("deleteMessage action", () => {
 
   it("throws ZodError if IDs are invalid UUIDs", async () => {
     await expect(deleteMessage("not-uuid", MSG_ID_1, null)).rejects.toThrow();
+  });
+
+  it("aborts active streams via abortChatStream when a stream is active", async () => {
+    hasAbortMock.mockReturnValueOnce(true);
+    // 1. Chat ownership check
+    chainable.where.mockResolvedValueOnce([
+      { id: CHAT_ID, currentLeafId: MSG_ID_3 },
+    ]);
+    // 2. Fetch all messages in chat
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_ID_1, parentId: null },
+      { id: MSG_ID_2, parentId: MSG_ID_1 },
+      { id: MSG_ID_3, parentId: MSG_ID_2 },
+    ]);
+    // 3. Fetch attachment keys
+    chainable.where.mockResolvedValueOnce([]);
+    // 4. Delete & update
+    chainable.where.mockResolvedValue(undefined);
+
+    await deleteMessage(CHAT_ID, MSG_ID_1, NEW_LEAF_ID);
+
+    expect(abortStreamMock).toHaveBeenCalledWith(CHAT_ID, "user-1");
+  });
+
+  it("does not abort stream when no stream is active", async () => {
+    hasAbortMock.mockReturnValueOnce(false);
+    chainable.where.mockResolvedValueOnce([
+      { id: CHAT_ID, currentLeafId: null },
+    ]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_ID_1, parentId: null },
+    ]);
+    chainable.where.mockResolvedValueOnce([]);
+    chainable.where.mockResolvedValue(undefined);
+
+    await deleteMessage(CHAT_ID, MSG_ID_1, null);
+
+    expect(abortStreamMock).not.toHaveBeenCalled();
   });
 });
