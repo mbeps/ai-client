@@ -144,4 +144,65 @@ describe("AppSidebar", () => {
     const chatLink = screen.getByRole("link", { name: /inactive chat/i });
     expect(chatLink).toHaveAttribute("data-active", "false");
   });
+
+  it("limits recent chats to 9 and renders 'See all' button linking to /chats", async () => {
+    // Populate store with 15 chats
+    const chats: Record<string, any> = {};
+    for (let i = 1; i <= 15; i++) {
+      const id = `chat-${i}`;
+      chats[id] = {
+        id,
+        title: `Chat ${i}`,
+        projectId: null,
+        assistantId: null,
+        updatedAt: new Date(2026, 0, i),
+        messages: {},
+        currentLeafId: null,
+      };
+    }
+    mockStoreState.chats = chats;
+    mockUsePathname.mockReturnValue("/");
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    // Expect 'See all' link to be rendered pointing to ROUTES.CHATS.path
+    const seeAllLink = screen.getByRole("link", { name: /see all/i });
+    expect(seeAllLink).toBeInTheDocument();
+    expect(seeAllLink).toHaveAttribute("href", ROUTES.CHATS.path);
+
+    // Only chats 15 down to 7 (9 items) should be rendered
+    for (let i = 7; i <= 15; i++) {
+      expect(screen.getByRole("link", { name: new RegExp(`^Chat ${i}$`, "i") })).toBeInTheDocument();
+    }
+    // Older chats (1 to 6) should not be rendered
+    for (let i = 1; i <= 6; i++) {
+      expect(screen.queryByRole("link", { name: new RegExp(`^Chat ${i}$`, "i") })).not.toBeInTheDocument();
+    }
+  });
+
+  it("marks 'See all' active when on /chats path", async () => {
+    mockStoreState.chats = {};
+    mockUsePathname.mockReturnValue(ROUTES.CHATS.path);
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    const seeAllLink = screen.getByRole("link", { name: /see all/i });
+    expect(seeAllLink).toHaveAttribute("data-active", "true");
+  });
 });
