@@ -3,12 +3,14 @@ import { listAssistants } from "@/actions/assistants/list-assistants";
 import { discoverAllPrompts } from "@/actions/mcp/discover-all-prompts";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listMemories } from "@/actions/memories/list-memories";
 import { listProjects } from "@/actions/projects/list-projects";
 import { listPrompts } from "@/actions/prompts/list-prompts";
 import { listSkills } from "@/actions/skills/list-skills";
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).
@@ -37,6 +39,7 @@ type EntitySlice = Pick<
   | "assistants"
   | "prompts"
   | "skills"
+  | "memories"
   | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
@@ -48,7 +51,13 @@ type EntitySlice = Pick<
   | "loadAssistants"
   | "loadPrompts"
   | "loadSkills"
+  | "loadMemories"
+  | "addMemory"
+  | "updateMemory"
+  | "removeMemory"
+  | "removeMemories"
   | "loadUserSettings"
+  | "updateUserSettingsState"
   | "loadMcpServers"
   | "loadPublicMcpServers"
   | "loadMcpPrompts"
@@ -62,6 +71,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   assistants: [],
   prompts: [],
   skills: [],
+  memories: [],
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
@@ -77,6 +87,14 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   loadUserSettings: async () => {
     const settings = await getUserSettings();
     set({ userSettings: settings });
+  },
+
+  updateUserSettingsState: (settings) => {
+    set((state) => ({
+      userSettings: state.userSettings
+        ? ({ ...state.userSettings, ...settings } as UserSettingsRow)
+        : ({ ...settings } as UserSettingsRow),
+    }));
   },
 
   loadProjects: createEntityLoader(set, "projects", listProjects, (row) => ({
@@ -195,12 +213,41 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       }) as any,
   ),
 
+  loadMemories: createEntityLoader(set, "memories", listMemories, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    content: row.content,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
+
+  addMemory: (memory) =>
+    set((state) => ({
+      memories: [memory, ...state.memories],
+    })),
+
+  updateMemory: (memory) =>
+    set((state) => ({
+      memories: state.memories.map((m) => (m.id === memory.id ? memory : m)),
+    })),
+
+  removeMemory: (id) =>
+    set((state) => ({
+      memories: state.memories.filter((m) => m.id !== id),
+    })),
+
+  removeMemories: (ids) =>
+    set((state) => ({
+      memories: state.memories.filter((m) => !ids.includes(m.id)),
+    })),
+
   resetEntityState: () => {
     set({
       projects: [],
       assistants: [],
       prompts: [],
       skills: [],
+      memories: [],
       mcpServers: [],
       publicMcpServers: [],
       transformAgents: [],

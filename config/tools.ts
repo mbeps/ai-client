@@ -7,6 +7,7 @@
  */
 export const INTERNAL_TOOL_IDS = {
   MANAGE_ARTIFACT: "internal:tool:manage_artifact",
+  MANAGE_MEMORY: "internal:tool:manage_memory",
   MANAGE_SKILL: "internal:tool:manage_skill",
   SEARCH_KNOWLEDGE_BASE: "internal:tool:search_knowledge_base",
 } as const;
@@ -27,6 +28,7 @@ export const INTERNAL_TOOL_IDS = {
  */
 export const DEFAULT_ENABLED_TOOLS: readonly string[] = [
   INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
+  INTERNAL_TOOL_IDS.MANAGE_MEMORY,
   INTERNAL_TOOL_IDS.MANAGE_SKILL,
   INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,
 ];
@@ -51,6 +53,14 @@ export const INTERNAL_TOOL_CATALOGUE = [
     category: "Artifacts",
     description:
       "Displays an interactive artifact in a side panel: a markdown document, a multi-sheet spreadsheet, an HTML interface, or a Mermaid diagram. Use this when you want to render structured visual content, code side-by-side with the chat, or write large text. You have 4 modes: 'markdown', 'spreadsheet', 'html', and 'mermaid'.",
+    availability: "Registered when the tool is selected for the chat.",
+  },
+  {
+    id: INTERNAL_TOOL_IDS.MANAGE_MEMORY,
+    name: "save_memory",
+    category: "Memory",
+    description:
+      "Saves a user preference, background detail, or enduring convention to long-term memory. Use this to remember important details across chat sessions.",
     availability: "Registered when the tool is selected for the chat.",
   },
   {

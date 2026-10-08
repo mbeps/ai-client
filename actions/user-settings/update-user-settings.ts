@@ -38,6 +38,9 @@ export async function updateUserSettings(
 
   const filteredData = {
     globalSystemPrompt: validated.globalSystemPrompt ?? null,
+    ...(validated.memoryEnabled !== undefined
+      ? { memoryEnabled: validated.memoryEnabled }
+      : {}),
   };
 
   const [row] = await db

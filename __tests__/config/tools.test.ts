@@ -26,6 +26,7 @@ describe("INTERNAL_TOOL_CATALOGUE", () => {
     expect(names).toEqual(
       expect.arrayContaining([
         "manage_artifact",
+        "save_memory",
         "search_knowledge_base",
         "load_skill",
         "create_skill",

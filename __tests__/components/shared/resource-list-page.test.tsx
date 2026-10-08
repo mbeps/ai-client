@@ -64,4 +64,21 @@ describe("ResourceListPage", () => {
     expect(screen.queryByTestId("test-banner")).not.toBeInTheDocument();
     expect(screen.getByText("Test Resources")).toBeInTheDocument();
   });
+
+  it("renders 2 columns grid when columns prop is 2", () => {
+    const { container } = render(
+      <ResourceListPage
+        icon={<span>Icon</span>}
+        title="Test Resources"
+        description="Manage test resources"
+        items={mockItems}
+        columns={2}
+        emptyStateMessage="No resources found"
+        renderCard={(item) => <div key={item.id}>{item.name}</div>}
+      />,
+    );
+
+    const grid = container.querySelector(".md\\:grid-cols-2");
+    expect(grid).toBeInTheDocument();
+  });
 });

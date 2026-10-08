@@ -26,6 +26,14 @@ export const PROMPTS = {
         "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
       DEFAULT_TITLE: "Generated Artifact",
     },
+    SAVE_MEMORY: {
+      DESCRIPTION:
+        "Saves an important fact, user preference, workflow rule, or enduring detail about the user to long-term memory. " +
+        "Call this tool when the user explicitly asks to remember something (e.g. 'remember that I prefer Bun', 'my name is Alex'), " +
+        "or when the user shares personal background, key workflow preferences, or project conventions that will be useful across future sessions. " +
+        "Do NOT save temporary, transient conversation details.",
+      SUCCESS_MESSAGE: "Memory saved successfully.",
+    },
     SEARCH_KNOWLEDGE_BASE: {
       DESCRIPTION:
         "Search the knowledge base for relevant information using semantic search. " +

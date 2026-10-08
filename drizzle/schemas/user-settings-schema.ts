@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { user } from "@/drizzle/schemas/auth-schema";
 
@@ -27,6 +27,7 @@ export const userSettings = pgTable(
       () => aiModel.id,
       { onDelete: "set null" },
     ),
+    memoryEnabled: boolean("memory_enabled").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

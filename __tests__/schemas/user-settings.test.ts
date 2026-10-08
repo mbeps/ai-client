@@ -27,4 +27,22 @@ describe("userSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts memoryEnabled boolean", () => {
+    const resTrue = userSettingsSchema.safeParse({ memoryEnabled: true });
+    expect(resTrue.success).toBe(true);
+    expect(resTrue.data?.memoryEnabled).toBe(true);
+
+    const resFalse = userSettingsSchema.safeParse({ memoryEnabled: false });
+    expect(resFalse.success).toBe(true);
+    expect(resFalse.data?.memoryEnabled).toBe(false);
+  });
+
+  it("has memoryEnabled column in Drizzle userSettings schema", async () => {
+    const { userSettings } = await import(
+      "@/drizzle/schemas/user-settings-schema"
+    );
+    expect(userSettings.memoryEnabled).toBeDefined();
+    expect(userSettings.memoryEnabled.default).toBe(true);
+  });
 });

@@ -38,6 +38,8 @@ interface ResourceListPageProps<T extends SortableResource> {
   renderList?: (items: T[]) => React.ReactNode;
   /** Optional banner displayed at the top of the container. */
   banner?: React.ReactNode;
+  /** Number of grid columns on desktop/tablet screens (defaults to 3). */
+  columns?: 2 | 3;
 }
 
 /**
@@ -60,6 +62,7 @@ export function ResourceListPage<T extends SortableResource>({
   customFilterFn,
   renderList,
   banner,
+  columns = 3,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
   const loadError = useAppStore((state) => state.loadError);
@@ -75,6 +78,10 @@ export function ResourceListPage<T extends SortableResource>({
   });
 
   const sorted = sortByUpdatedAt(filtered);
+  const gridColsClass =
+    columns === 2
+      ? "grid grid-cols-1 gap-4 md:grid-cols-2"
+      : "grid grid-cols-1 gap-4 md:grid-cols-3";
 
   return (
     <PageContainer className="space-y-6">
@@ -106,13 +113,13 @@ export function ResourceListPage<T extends SortableResource>({
       )}
 
       {sorted.length === 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className={gridColsClass}>
           <EmptyState message={emptyStateMessage} />
         </div>
       ) : renderList ? (
         renderList(sorted)
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className={gridColsClass}>
           {sorted.map((item) => (
             <div key={item.id}>{renderCard?.(item)}</div>
           ))}
