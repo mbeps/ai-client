@@ -113,6 +113,7 @@ describe("downloadArtifact", () => {
   });
 
   it("handles malformed JSON in spreadsheet artifact gracefully without throwing", () => {
+    const createObjectUrlSpy = vi.spyOn(window.URL, "createObjectURL");
     const brokenArtifact: ArtifactData = {
       id: "art-broken",
       title: "Broken Sheet",
@@ -122,6 +123,7 @@ describe("downloadArtifact", () => {
 
     expect(() => downloadArtifact(brokenArtifact)).not.toThrow();
     expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(createObjectUrlSpy).not.toHaveBeenCalled();
   });
 
   it("exports markdown artifact as .md file", () => {
