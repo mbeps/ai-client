@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { userMemory } from "@/drizzle/schemas/user-memory-schema";
 import {
   createMemorySchema,
-  deleteMemorySchema,
+  deleteMemoriesSchema,
   saveMemoryToolSchema,
   updateMemorySchema,
 } from "@/schemas/memory/memory";
@@ -60,15 +60,28 @@ describe("userMemory Schema & Validation", () => {
     });
   });
 
-  describe("deleteMemorySchema", () => {
-    it("accepts valid UUID", () => {
-      const id = crypto.randomUUID();
-      const parsed = deleteMemorySchema.parse({ id });
-      expect(parsed.id).toBe(id);
+  describe("deleteMemoriesSchema", () => {
+    it("accepts valid array of UUIDs", () => {
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      const parsed = deleteMemoriesSchema.parse({ ids: [id1, id2] });
+      expect(parsed.ids).toEqual([id1, id2]);
     });
 
-    it("rejects non-UUID", () => {
-      expect(() => deleteMemorySchema.parse({ id: "not-a-uuid" })).toThrow();
+    it("accepts a single UUID in array", () => {
+      const id = crypto.randomUUID();
+      const parsed = deleteMemoriesSchema.parse({ ids: [id] });
+      expect(parsed.ids).toEqual([id]);
+    });
+
+    it("rejects empty array", () => {
+      expect(() => deleteMemoriesSchema.parse({ ids: [] })).toThrow();
+    });
+
+    it("rejects non-UUID items in array", () => {
+      expect(() =>
+        deleteMemoriesSchema.parse({ ids: ["not-a-uuid"] }),
+      ).toThrow();
     });
   });
 

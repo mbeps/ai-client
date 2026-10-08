@@ -60,6 +60,17 @@ describe("EntitySlice Memory State", () => {
     expect(
       useAppStore.getState().memories.find((m) => m.id === "mem-test"),
     ).toBeUndefined();
+
+    // Test removeMemories with multiple items
+    const mem1 = { ...mem, id: "m-1" };
+    const mem2 = { ...mem, id: "m-2" };
+    useAppStore.getState().addMemory(mem1);
+    useAppStore.getState().addMemory(mem2);
+    expect(useAppStore.getState().memories.length).toBeGreaterThanOrEqual(2);
+
+    useAppStore.getState().removeMemories(["m-1", "m-2"]);
+    expect(useAppStore.getState().memories.find((m) => m.id === "m-1")).toBeUndefined();
+    expect(useAppStore.getState().memories.find((m) => m.id === "m-2")).toBeUndefined();
   });
 
   it("updates userSettings state using updateUserSettingsState", () => {

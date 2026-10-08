@@ -9,7 +9,7 @@ const {
   mockResolveEmbeddingProvider,
   mockEmbedQuery,
   mockUpsertMemoryPoint,
-  mockDeleteMemoryPoint,
+  mockDeleteMemoryPoints,
   mockSearchSemanticMemories,
   mockSearchKeywordMemories,
   mockGetUserSettingsByUserId,
@@ -29,7 +29,7 @@ const {
     mockResolveEmbeddingProvider: vi.fn(),
     mockEmbedQuery: vi.fn(),
     mockUpsertMemoryPoint: vi.fn(),
-    mockDeleteMemoryPoint: vi.fn(),
+    mockDeleteMemoryPoints: vi.fn(),
     mockSearchSemanticMemories: vi.fn(),
     mockSearchKeywordMemories: vi.fn(),
     mockGetUserSettingsByUserId: vi.fn(),
@@ -66,7 +66,7 @@ vi.mock("@/lib/rag/embed-query", () => ({
 
 vi.mock("@/lib/memory/qdrant-memory-client", () => ({
   upsertMemoryPoint: (...args: any[]) => mockUpsertMemoryPoint(...args),
-  deleteMemoryPoint: (...args: any[]) => mockDeleteMemoryPoint(...args),
+  deleteMemoryPoints: (...args: any[]) => mockDeleteMemoryPoints(...args),
   searchSemanticMemories: (...args: any[]) =>
     mockSearchSemanticMemories(...args),
   searchKeywordMemories: (...args: any[]) =>
@@ -74,7 +74,7 @@ vi.mock("@/lib/memory/qdrant-memory-client", () => ({
 }));
 
 import {
-  deleteMemoryForUser,
+  deleteMemoriesForUser,
   retrieveRelevantMemories,
   saveMemoryForUser,
   updateMemoryForUser,
@@ -204,16 +204,23 @@ describe("memory-service", () => {
     });
   });
 
-  describe("deleteMemoryForUser", () => {
-    it("deletes from postgres and deletes point in Qdrant", async () => {
+  describe("deleteMemoriesForUser", () => {
+    it("deletes multiple memories from postgres and deletes points in Qdrant", async () => {
       mockDelete.mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
 
-      await deleteMemoryForUser("user-1", "mem-1");
+      await deleteMemoriesForUser("user-1", ["mem-1", "mem-2"]);
 
       expect(mockDelete).toHaveBeenCalled();
-      expect(mockDeleteMemoryPoint).toHaveBeenCalledWith("mem-1");
+      expect(mockDeleteMemoryPoints).toHaveBeenCalledWith(["mem-1", "mem-2"]);
+    });
+
+    it("returns early if ids array is empty", async () => {
+      await deleteMemoriesForUser("user-1", []);
+
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockDeleteMemoryPoints).not.toHaveBeenCalled();
     });
   });
 

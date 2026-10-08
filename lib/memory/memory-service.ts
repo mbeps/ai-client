@@ -1,9 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { userMemory } from "@/drizzle/schemas/user-memory-schema";
 import { getLogger } from "@/lib/logger";
 import {
-  deleteMemoryPoint,
+  deleteMemoryPoints,
   searchKeywordMemories,
   searchSemanticMemories,
   upsertMemoryPoint,
@@ -123,27 +123,29 @@ export async function updateMemoryForUser(
 }
 
 /**
- * Deletes a user memory from PostgreSQL and removes its point from Qdrant.
+ * Deletes user memories from PostgreSQL and removes their points from Qdrant.
  *
  * @param userId - ID of the owning user
- * @param id - Memory UUID
+ * @param ids - Array of memory UUIDs
  * @author Maruf Bepary
  */
-export async function deleteMemoryForUser(
+export async function deleteMemoriesForUser(
   userId: string,
-  id: string,
+  ids: string[],
 ): Promise<void> {
+  if (ids.length === 0) return;
+
   await db
     .delete(userMemory)
-    .where(and(eq(userMemory.id, id), eq(userMemory.userId, userId)));
+    .where(and(eq(userMemory.userId, userId), inArray(userMemory.id, ids)));
 
   try {
-    await deleteMemoryPoint(id);
+    await deleteMemoryPoints(ids);
   } catch (err) {
-    log.warn("Failed to delete memory point from Qdrant: {error}", {
+    log.warn("Failed to delete memory points from Qdrant: {error}", {
       error: err instanceof Error ? err.message : String(err),
       userId,
-      id,
+      ids,
     });
   }
 }

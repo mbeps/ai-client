@@ -55,6 +55,7 @@ type EntitySlice = Pick<
   | "addMemory"
   | "updateMemory"
   | "removeMemory"
+  | "removeMemories"
   | "loadUserSettings"
   | "updateUserSettingsState"
   | "loadMcpServers"
@@ -233,6 +234,11 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   removeMemory: (id) =>
     set((state) => ({
       memories: state.memories.filter((m) => m.id !== id),
+    })),
+
+  removeMemories: (ids) =>
+    set((state) => ({
+      memories: state.memories.filter((m) => !ids.includes(m.id)),
     })),
 
   resetEntityState: () => {

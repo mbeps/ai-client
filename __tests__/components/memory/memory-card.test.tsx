@@ -62,5 +62,25 @@ describe("MemoryCard", () => {
 
     expect(handleDelete).toHaveBeenCalledWith(mockMemory);
   });
+
+  it("triggers onToggleSelect when checkbox is clicked", async () => {
+    const user = userEvent.setup();
+    const handleToggleSelect = vi.fn();
+
+    render(
+      <MemoryCard
+        memory={mockMemory}
+        isSelected={false}
+        onToggleSelect={handleToggleSelect}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox", { name: /select memory/i });
+    await user.click(checkbox);
+
+    expect(handleToggleSelect).toHaveBeenCalledWith(mockMemory);
+  });
 });
 

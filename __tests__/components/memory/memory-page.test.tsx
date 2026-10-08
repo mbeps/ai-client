@@ -7,6 +7,8 @@ const {
   mockLoadUserSettings,
   mockUpdateUserSettingsState,
   mockToggleMemoryEnabled,
+  mockDeleteMemories,
+  mockRemoveMemories,
   mockMemories,
   mockUserSettings,
 } = vi.hoisted(() => ({
@@ -14,6 +16,8 @@ const {
   mockLoadUserSettings: vi.fn(),
   mockUpdateUserSettingsState: vi.fn(),
   mockToggleMemoryEnabled: vi.fn(),
+  mockDeleteMemories: vi.fn(),
+  mockRemoveMemories: vi.fn(),
   mockUserSettings: { memoryEnabled: true } as { memoryEnabled: boolean },
   mockMemories: [
     {
@@ -37,12 +41,16 @@ vi.mock("@/actions/user-settings/toggle-memory-enabled", () => ({
   toggleMemoryEnabled: (enabled: boolean) => mockToggleMemoryEnabled(enabled),
 }));
 
+vi.mock("@/actions/memories/delete-memories", () => ({
+  deleteMemories: (input: any) => mockDeleteMemories(input),
+}));
+
 vi.mock("@/lib/store", () => ({
   useAppStore: (selector: any) =>
     selector({
       memories: mockMemories,
       loadMemories: mockLoadMemories,
-      removeMemory: vi.fn(),
+      removeMemories: mockRemoveMemories,
       userSettings: mockUserSettings,
       loadUserSettings: mockLoadUserSettings,
       updateUserSettingsState: mockUpdateUserSettingsState,
@@ -57,6 +65,7 @@ describe("MemoryPage", () => {
     vi.clearAllMocks();
     mockUserSettings.memoryEnabled = true;
     mockToggleMemoryEnabled.mockResolvedValue({ memoryEnabled: false });
+    mockDeleteMemories.mockResolvedValue({ success: true, count: 2 });
   });
 
   it("calls loadMemories and loadUserSettings on mount and renders list of memories", () => {
@@ -93,5 +102,57 @@ describe("MemoryPage", () => {
       memoryEnabled: false,
     });
     expect(mockToggleMemoryEnabled).toHaveBeenCalledWith(false);
+  });
+
+  it("handles multi-selection and bulk deletion", async () => {
+    const user = userEvent.setup();
+    render(<MemoryPage />);
+
+    // Click select all
+    const selectAllBtn = screen.getByRole("button", { name: /select all/i });
+    await user.click(selectAllBtn);
+
+    // Verify selected count badge and delete button
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    const deleteSelectedBtn = screen.getByRole("button", {
+      name: /delete selected/i,
+    });
+    await user.click(deleteSelectedBtn);
+
+    // Dialog should show confirmation
+    expect(
+      screen.getByText(/Are you sure you want to delete 2 memories\?/i),
+    ).toBeInTheDocument();
+
+    // Confirm deletion
+    const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
+    await user.click(confirmBtn);
+
+    expect(mockDeleteMemories).toHaveBeenCalledWith({
+      ids: ["mem-1", "mem-2"],
+    });
+    expect(mockRemoveMemories).toHaveBeenCalledWith(["mem-1", "mem-2"]);
+  });
+
+  it("handles single item deletion via unified deleteMemories", async () => {
+    const user = userEvent.setup();
+    render(<MemoryPage />);
+
+    // Click single item delete (first card is mem-2 because sortByUpdatedAt orders mem-2 2026-01-02 ahead of mem-1 2026-01-01)
+    const deleteBtns = screen.getAllByRole("button", { name: /delete/i });
+    await user.click(deleteBtns[0]);
+
+    // Confirm dialog
+    expect(
+      screen.getByText(/Are you sure you want to delete this memory\?/i),
+    ).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
+    await user.click(confirmBtn);
+
+    expect(mockDeleteMemories).toHaveBeenCalledWith({
+      ids: ["mem-2"],
+    });
+    expect(mockRemoveMemories).toHaveBeenCalledWith(["mem-2"]);
   });
 });

@@ -4,6 +4,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import type { Memory } from "@/types/memory/memory";
 
 /**
@@ -12,6 +14,10 @@ import type { Memory } from "@/types/memory/memory";
 interface MemoryCardProps {
   /** Memory object containing content and timestamps. */
   memory: Memory;
+  /** Whether this memory item is currently selected. */
+  isSelected?: boolean;
+  /** Callback invoked when the user toggles selection for this memory. */
+  onToggleSelect?: (memory: Memory) => void;
   /** Callback invoked when the user clicks the edit button. */
   onEdit: (memory: Memory) => void;
   /** Callback invoked when the user clicks the delete button. */
@@ -22,21 +28,44 @@ interface MemoryCardProps {
  * Displays a single remembered fact or preference with its creation date and action buttons.
  *
  * @param props.memory - The memory item to display.
+ * @param props.isSelected - Whether this item is selected for batch operations.
+ * @param props.onToggleSelect - Handler for toggling selection.
  * @param props.onEdit - Function triggered when edit action is chosen.
  * @param props.onDelete - Function triggered when delete action is chosen.
  * @author Maruf Bepary
  */
-export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
+export function MemoryCard({
+  memory,
+  isSelected = false,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+}: MemoryCardProps) {
   const timeAgo = formatDistanceToNow(new Date(memory.createdAt), {
     addSuffix: true,
   });
 
   return (
-    <Card className="flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors hover:bg-muted/30">
+    <Card
+      className={cn(
+        "flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors hover:bg-muted/30",
+        isSelected && "border-primary/60 bg-primary/5 dark:bg-primary/10",
+      )}
+    >
       <div className="space-y-2">
-        <p className="whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">
-          {memory.content}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="flex-1 whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">
+            {memory.content}
+          </p>
+          {onToggleSelect && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(memory)}
+              aria-label="Select memory"
+              className="mt-0.5 shrink-0"
+            />
+          )}
+        </div>
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-2 border-t pt-2">

@@ -1,9 +1,9 @@
 "use client";
 
-import { Brain, Plus } from "lucide-react";
+import { Brain, CheckSquare, Plus, Square, Trash2 } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { deleteMemory } from "@/actions/memories/delete-memory";
+import { deleteMemories } from "@/actions/memories/delete-memories";
 import { toggleMemoryEnabled } from "@/actions/user-settings/toggle-memory-enabled";
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryDialog } from "@/components/memory/memory-dialog";
@@ -33,7 +33,7 @@ import type { Memory } from "@/types/memory/memory";
 export default function MemoryPage() {
   const memories = useAppStore((state) => state.memories);
   const loadMemories = useAppStore((state) => state.loadMemories);
-  const removeMemoryFromStore = useAppStore((state) => state.removeMemory);
+  const removeMemoriesFromStore = useAppStore((state) => state.removeMemories);
   const userSettings = useAppStore((state) => state.userSettings);
   const loadUserSettings = useAppStore((state) => state.loadUserSettings);
   const updateUserSettingsState = useAppStore(
@@ -43,7 +43,8 @@ export default function MemoryPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
 
-  const [deletingMemory, setDeletingMemory] = useState<Memory | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [targetDeleteIds, setTargetDeleteIds] = useState<string[] | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
   const [isToggling, startToggleTransition] = useTransition();
 
@@ -64,6 +65,35 @@ export default function MemoryPage() {
     setDialogOpen(true);
   };
 
+  const handleToggleSelect = (memory: Memory) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(memory.id)) {
+        next.delete(memory.id);
+      } else {
+        next.add(memory.id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.size === memories.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(memories.map((m) => m.id)));
+    }
+  };
+
+  const handleSingleDelete = (memory: Memory) => {
+    setTargetDeleteIds([memory.id]);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    setTargetDeleteIds(Array.from(selectedIds));
+  };
+
   const handleToggleMemory = (checked: boolean) => {
     startToggleTransition(async () => {
       try {
@@ -82,21 +112,36 @@ export default function MemoryPage() {
   };
 
   const handleConfirmDelete = () => {
-    if (!deletingMemory) return;
+    if (!targetDeleteIds || targetDeleteIds.length === 0) return;
 
+    const idsToDelete = [...targetDeleteIds];
     startDeleteTransition(async () => {
       try {
-        await deleteMemory({ id: deletingMemory.id });
-        removeMemoryFromStore(deletingMemory.id);
-        toast.success("Memory deleted");
-        setDeletingMemory(null);
+        await deleteMemories({ ids: idsToDelete });
+        removeMemoriesFromStore(idsToDelete);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of idsToDelete) {
+            next.delete(id);
+          }
+          return next;
+        });
+        toast.success(
+          idsToDelete.length === 1
+            ? "Memory deleted"
+            : `${idsToDelete.length} memories deleted`,
+        );
+        setTargetDeleteIds(null);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to delete memory",
+          err instanceof Error ? err.message : "Failed to delete memories",
         );
       }
     });
   };
+
+  const isAllSelected =
+    memories.length > 0 && selectedIds.size === memories.length;
 
   return (
     <>
@@ -143,10 +188,48 @@ export default function MemoryPage() {
           <MemoryCard
             key={memory.id}
             memory={memory}
+            isSelected={selectedIds.has(memory.id)}
+            onToggleSelect={handleToggleSelect}
             onEdit={handleOpenEdit}
-            onDelete={setDeletingMemory}
+            onDelete={handleSingleDelete}
           />
         )}
+        extraFilters={
+          memories.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleSelectAll}
+                className="h-9 gap-1.5"
+              >
+                {isAllSelected ? (
+                  <CheckSquare className="h-4 w-4" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
+              </Button>
+
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="px-2 py-1 text-xs">
+                    {selectedIds.size} selected
+                  </Badge>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    className="h-9 gap-1.5"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete Selected</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : null
+        }
         emptyStateMessage="No memories yet. The AI can remember facts as you chat, or you can add them manually."
         searchPlaceholder="Search memories..."
         onMount={handleMount}
@@ -173,15 +256,20 @@ export default function MemoryPage() {
       />
 
       <AlertDialog
-        open={Boolean(deletingMemory)}
-        onOpenChange={(open) => !open && setDeletingMemory(null)}
+        open={Boolean(targetDeleteIds && targetDeleteIds.length > 0)}
+        onOpenChange={(open) => !open && setTargetDeleteIds(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Memory</AlertDialogTitle>
+            <AlertDialogTitle>
+              {targetDeleteIds && targetDeleteIds.length > 1
+                ? `Delete ${targetDeleteIds.length} Memories`
+                : "Delete Memory"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this memory? The AI will no longer
-              remember this detail.
+              {targetDeleteIds && targetDeleteIds.length > 1
+                ? `Are you sure you want to delete ${targetDeleteIds.length} memories? The AI will no longer remember these details.`
+                : "Are you sure you want to delete this memory? The AI will no longer remember this detail."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

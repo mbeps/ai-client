@@ -112,15 +112,16 @@ export async function upsertMemoryPoint(
 }
 
 /**
- * Deletes a memory point by its UUID across all memory collections.
+ * Deletes memory points by their UUIDs across all memory collections.
  */
-export async function deleteMemoryPoint(memoryId: string): Promise<void> {
+export async function deleteMemoryPoints(memoryIds: string[]): Promise<void> {
+  if (memoryIds.length === 0) return;
   const collectionsRes = await qdrantClient.getCollections();
   for (const col of collectionsRes.collections) {
     if (col.name.startsWith("user_memories_")) {
       await qdrantClient.delete(col.name, {
         wait: true,
-        points: [memoryId],
+        points: memoryIds,
       });
     }
   }

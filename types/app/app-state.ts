@@ -370,6 +370,11 @@ export type AppState = {
    */
   removeMemory: (id: string) => void;
 
+  /**
+   * Optimistically removes multiple memories from the local store.
+   */
+  removeMemories: (ids: string[]) => void;
+
   resetEntityState: () => void;
   resetChatState: () => void;
 };

@@ -24,10 +24,12 @@ export const updateMemorySchema = z.object({
 });
 
 /**
- * Validates memory deletion payload.
+ * Validates memory deletion payload for one or multiple memory IDs.
  */
-export const deleteMemorySchema = z.object({
-  id: z.string().uuid("Invalid memory ID"),
+export const deleteMemoriesSchema = z.object({
+  ids: z
+    .array(z.string().uuid("Invalid memory ID"))
+    .min(1, "At least one memory ID is required"),
 });
 
 /**
@@ -46,5 +48,5 @@ export const saveMemoryToolSchema = z.object({
 
 export type CreateMemoryInput = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryInput = z.infer<typeof updateMemorySchema>;
-export type DeleteMemoryInput = z.infer<typeof deleteMemorySchema>;
+export type DeleteMemoriesInput = z.infer<typeof deleteMemoriesSchema>;
 export type SaveMemoryToolInput = z.infer<typeof saveMemoryToolSchema>;

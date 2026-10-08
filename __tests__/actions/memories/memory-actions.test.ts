@@ -18,10 +18,15 @@ vi.mock("@/lib/auth/require-session", () => ({
   requireSession: () => mockRequireSession(),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 vi.mock("@/lib/memory/memory-service", () => ({
   saveMemoryForUser: (...args: any[]) => mockSaveMemoryForUser(...args),
   updateMemoryForUser: (...args: any[]) => mockUpdateMemoryForUser(...args),
   deleteMemoryForUser: (...args: any[]) => mockDeleteMemoryForUser(...args),
+  deleteMemoriesForUser: (...args: any[]) => mockDeleteMemoryForUser(...args),
 }));
 
 vi.mock("@/drizzle/db", () => ({
@@ -31,7 +36,7 @@ vi.mock("@/drizzle/db", () => ({
 }));
 
 import { createMemory } from "@/actions/memories/create-memory";
-import { deleteMemory } from "@/actions/memories/delete-memory";
+import { deleteMemories } from "@/actions/memories/delete-memories";
 import { listMemories } from "@/actions/memories/list-memories";
 import { updateMemory } from "@/actions/memories/update-memory";
 
@@ -115,13 +120,25 @@ describe("Memory Server Actions", () => {
     });
   });
 
-  describe("deleteMemory", () => {
-    it("validates id and deletes memory for session user", async () => {
+  describe("deleteMemories", () => {
+    it("validates array of IDs and deletes memories for session user", async () => {
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      mockDeleteMemoryForUser.mockResolvedValue(undefined);
+
+      await deleteMemories({ ids: [id1, id2] });
+      expect(mockDeleteMemoryForUser).toHaveBeenCalledWith("user-123", [
+        id1,
+        id2,
+      ]);
+    });
+
+    it("supports single memory ID in array", async () => {
       const id = crypto.randomUUID();
       mockDeleteMemoryForUser.mockResolvedValue(undefined);
 
-      await deleteMemory({ id });
-      expect(mockDeleteMemoryForUser).toHaveBeenCalledWith("user-123", id);
+      await deleteMemories({ ids: [id] });
+      expect(mockDeleteMemoryForUser).toHaveBeenCalledWith("user-123", [id]);
     });
   });
 });
