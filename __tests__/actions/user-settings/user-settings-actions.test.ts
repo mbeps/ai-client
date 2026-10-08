@@ -129,6 +129,54 @@ describe("user settings actions", () => {
         }),
       );
     });
+
+    it("upserts settings with memoryEnabled when provided", async () => {
+      const updatedRow = {
+        id: "settings-1",
+        userId,
+        globalSystemPrompt: null,
+        memoryEnabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      chainable.returning.mockResolvedValueOnce([updatedRow]);
+
+      const result = await updateUserSettings({
+        memoryEnabled: true,
+      });
+
+      expect(result).toEqual(updatedRow);
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          memoryEnabled: true,
+        }),
+      );
+    });
+
+    it("upserts settings with memoryEnabled false when provided as false", async () => {
+      const updatedRow = {
+        id: "settings-1",
+        userId,
+        globalSystemPrompt: null,
+        memoryEnabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      chainable.returning.mockResolvedValueOnce([updatedRow]);
+
+      const result = await updateUserSettings({
+        memoryEnabled: false,
+      });
+
+      expect(result).toEqual(updatedRow);
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          memoryEnabled: false,
+        }),
+      );
+    });
   });
 });
 

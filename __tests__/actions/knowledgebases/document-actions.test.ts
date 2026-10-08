@@ -57,6 +57,11 @@ vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
   resolveEmbeddingProvider: resolveEmbeddingMock,
 }));
 
+const deletePointsByDocMock = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+vi.mock("@/lib/rag/qdrant-client", () => ({
+  deletePointsByDocumentId: deletePointsByDocMock,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createKnowledgebase } from "@/actions/knowledgebases/create-knowledgebase";
 import { deleteDocument } from "@/actions/knowledgebases/delete-document";
@@ -110,6 +115,30 @@ describe("knowledgebase documents and CRUD actions", () => {
       await expect(
         deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
       ).rejects.toThrow("Not Found");
+    });
+
+    it("logs warning and still resolves when deletePointsByDocumentId fails with Error", async () => {
+      chainable.where.mockResolvedValueOnce([
+        { id: DOC_ID, kbId: KB_ID, s3Key: `kb/${KB_ID}/${DOC_ID}/test.pdf` },
+      ]);
+      chainable.where.mockResolvedValueOnce(undefined);
+      deletePointsByDocMock.mockRejectedValueOnce(new Error("Qdrant failure"));
+
+      await expect(
+        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
+      ).resolves.toBeUndefined();
+    });
+
+    it("handles non-Error thrown by deletePointsByDocumentId gracefully", async () => {
+      chainable.where.mockResolvedValueOnce([
+        { id: DOC_ID, kbId: KB_ID, s3Key: `kb/${KB_ID}/${DOC_ID}/test.pdf` },
+      ]);
+      chainable.where.mockResolvedValueOnce(undefined);
+      deletePointsByDocMock.mockRejectedValueOnce("String error");
+
+      await expect(
+        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
+      ).resolves.toBeUndefined();
     });
   });
 

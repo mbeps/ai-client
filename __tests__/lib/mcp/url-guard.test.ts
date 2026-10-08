@@ -224,6 +224,13 @@ describe("isBlockedUrl", () => {
 
     it("handles non-hex or out-of-range hex groups in IPv4-mapped IPv6", () => {
       expect(isBlockedIPv6("::ffff:zzzz:1234")).toBe(false);
+      expect(isBlockedIPv6("::ffff:1234:zzzz")).toBe(false);
+      expect(isBlockedIPv6("::ffff:10000:1")).toBe(false);
+      expect(isBlockedIPv6("::ffff:1:10000")).toBe(false);
+      expect(isBlockedIPv6("::ffff:-1:1")).toBe(false);
+      expect(isBlockedIPv6("::ffff:1:-1")).toBe(false);
+      expect(isBlockedIPv6("0:0:0:0:0:ffff:7f00:1")).toBe(true);
+      expect(isBlockedIPv6("0:0:0:0:0:ffff:808:808")).toBe(false);
     });
   });
 

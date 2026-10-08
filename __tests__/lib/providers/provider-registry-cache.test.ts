@@ -118,5 +118,25 @@ describe("provider-registry-cache lib", () => {
     invalidateProviderRegistryCache(["models"]);
     expect(getProviderRegistryCachedData("models")).toBeNull();
   });
+
+  it("discards result when cache is invalidated while request is in flight", async () => {
+    let resolvePromise!: (val: unknown[]) => void;
+    const pendingPromise = new Promise<unknown[]>((resolve) => {
+      resolvePromise = resolve;
+    });
+    const fetcher = vi.fn().mockImplementation(() => pendingPromise);
+
+    const inFlight = fetchProviderRegistryWithCache("providers", fetcher);
+
+    // Invalidate while fetcher is pending -> bumps generation
+    invalidateProviderRegistryCache(["providers"]);
+
+    resolvePromise([{ id: "p-stale" }]);
+    const result = await inFlight;
+
+    expect(result).toEqual([{ id: "p-stale" }]);
+    // Cache data was not populated because generation mismatched
+    expect(getProviderRegistryCachedData("providers")).toBeNull();
+  });
 });
 
