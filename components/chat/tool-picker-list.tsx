@@ -141,7 +141,11 @@ export function ToolPickerList({
         name: t.name,
       })),
     );
-    return [{ serverId: "internal", name: "manage_artifact" }, ...mcpTools];
+    return [
+      { serverId: "internal", name: "manage_artifact" },
+      { serverId: "internal", name: "manage_memory" },
+      ...mcpTools,
+    ];
   }, [servers, serverContent]);
 
   const isAllSelected = useMemo(() => {
@@ -153,7 +157,11 @@ export function ToolPickerList({
 
   const toggleAll = () => {
     const shouldSelect = !isAllSelected;
-    onBulkSelect("internal", ["manage_artifact"], shouldSelect);
+    onBulkSelect(
+      "internal",
+      ["manage_artifact", "manage_memory"],
+      shouldSelect,
+    );
     servers.forEach((s) => {
       const content = serverContent[s.id];
       if (content?.tools) {
@@ -213,7 +221,7 @@ export function ToolPickerList({
       >
         <div className="space-y-4">
           {(!search ||
-            "artifacts canvas manage_artifact".includes(
+            "artifacts canvas manage_artifact memory save_memory".includes(
               search.toLowerCase(),
             )) && (
             <div className="flex flex-col overflow-hidden rounded-lg border border-primary/20">
@@ -230,31 +238,44 @@ export function ToolPickerList({
                   <span className="font-medium text-primary">
                     Internal Tools
                   </span>
-                  {selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) && (
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                      1 selected
-                    </Badge>
-                  )}
+                  {(() => {
+                    const count =
+                      (selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT)
+                        ? 1
+                        : 0) +
+                      (selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_MEMORY)
+                        ? 1
+                        : 0);
+                    return count > 0 ? (
+                      <Badge
+                        variant="secondary"
+                        className="h-4 px-1 text-[10px]"
+                      >
+                        {count} selected
+                      </Badge>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-2">
                   <div
                     className="flex items-center"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const isAllSelected = selectedTools.has(
-                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
-                      );
+                      const isAllInternalSelected =
+                        selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) &&
+                        selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_MEMORY);
                       onBulkSelect(
                         "internal",
-                        ["manage_artifact"],
-                        !isAllSelected,
+                        ["manage_artifact", "manage_memory"],
+                        !isAllInternalSelected,
                       );
                     }}
                   >
                     <Checkbox
-                      checked={selectedTools.has(
-                        INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
-                      )}
+                      checked={
+                        selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) &&
+                        selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_MEMORY)
+                      }
                       aria-label="Select all internal tools"
                       className="h-4 w-4"
                     />
@@ -288,6 +309,27 @@ export function ToolPickerList({
                             </span>
                           </div>
                         </label>
+
+                        <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
+                          <Checkbox
+                            checked={selectedTools.has(
+                              INTERNAL_TOOL_IDS.MANAGE_MEMORY,
+                            )}
+                            onCheckedChange={() =>
+                              onToggleTool("internal", "manage_memory")
+                            }
+                            className="mt-0.5"
+                          />
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium text-xs">
+                              Memory
+                            </span>
+                            <span className="line-clamp-2 text-[10px] text-muted-foreground">
+                              Allows the AI to remember your preferences and
+                              facts across conversations.
+                            </span>
+                          </div>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -298,7 +340,7 @@ export function ToolPickerList({
 
           {filteredServers.length === 0 &&
             search.length > 0 &&
-            !"artifacts canvas manage_artifact".includes(
+            !"artifacts canvas manage_artifact memory save_memory".includes(
               search.toLowerCase(),
             ) && (
               <div className="py-8 text-center text-muted-foreground">

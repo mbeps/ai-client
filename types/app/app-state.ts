@@ -6,6 +6,7 @@ import type { ChatRow } from "@/types/chat/chat-row";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Memory } from "@/types/memory/memory";
 import type { MessageRow } from "@/types/message/message-row";
 import type { Project } from "@/types/project/project";
 import type { Prompt } from "@/types/prompt/prompt";
@@ -53,6 +54,11 @@ export type AppState = {
    * Modular packages of procedural knowledge and instructions adhering to Open Agent Skills format.
    */
   skills: Skill[];
+
+  /**
+   * All saved memories for the authenticated user.
+   */
+  memories: Memory[];
 
   /**
    * Application-wide user settings.
@@ -338,6 +344,26 @@ export type AppState = {
    * @returns Promise resolving when change completes on server
    */
   setKnowledgebaseDb: (chatId: string, kbId: string | null) => Promise<void>;
+
+  /**
+   * Loads all memories for the current user.
+   */
+  loadMemories: () => Promise<void>;
+
+  /**
+   * Optimistically adds a memory to the local store.
+   */
+  addMemory: (memory: Memory) => void;
+
+  /**
+   * Optimistically updates a memory in the local store.
+   */
+  updateMemory: (memory: Memory) => void;
+
+  /**
+   * Optimistically removes a memory from the local store.
+   */
+  removeMemory: (id: string) => void;
 
   resetEntityState: () => void;
   resetChatState: () => void;

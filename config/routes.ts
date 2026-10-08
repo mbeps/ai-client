@@ -114,6 +114,7 @@ export const ROUTES = {
       detail: (id: string) => `${SETTINGS_BASE}/skills/${id}` as const,
     },
     TOOLS: { path: `${SETTINGS_BASE}/tools` as const, name: "Tools" },
+    MEMORY: { path: `${SETTINGS_BASE}/memory` as const, name: "Memory" },
   },
   CONNECTORS: {
     path: `${SETTINGS_BASE}/connectors` as const,

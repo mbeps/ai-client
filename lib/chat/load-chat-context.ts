@@ -9,6 +9,7 @@ import {
   skill,
   userMcpServerInstall,
 } from "@/drizzle/schema";
+import { retrieveRelevantMemories } from "@/lib/memory/memory-service";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { SkillSummary } from "@/types/skill/skill";
@@ -56,6 +57,8 @@ type ChatContext = {
   availableSkills: SkillSummary[];
   /** Pre-selected skills to inject directly */
   selectedSkills: SkillRow[];
+  /** Ambient user memories to inject into system prompt */
+  userMemories: string[];
 };
 
 /**
@@ -80,6 +83,7 @@ export async function loadChatContext(
   selectedKbIds?: string[],
   selectedAssistantId?: string,
   selectedSkillIds?: string[],
+  latestQuery?: string,
 ): Promise<ChatContext> {
   // 1. Chat and Project lookup (joined to resolve project context and KB in one query)
   const [row] = await db
@@ -128,64 +132,81 @@ export async function loadChatContext(
         );
 
   // 2. Parallel queries that depend on chatRow and candidateKbIds
-  const [assistantRow, servers, kbRows, userSkills] = await Promise.all([
-    // Assistant lookup (if applicable)
-    (() => {
-      const effectiveAssistantId =
-        chatRow.assistantId || selectedAssistantId || null;
-      return effectiveAssistantId
-        ? db
+  const [assistantRow, servers, kbRows, userSkills, userMemories] =
+    await Promise.all([
+      // Assistant lookup (if applicable)
+      (() => {
+        const effectiveAssistantId =
+          chatRow.assistantId || selectedAssistantId || null;
+        return effectiveAssistantId
+          ? db
+              .select({
+                prompt: assistant.prompt,
+                skillMode: assistant.skillMode,
+                skillIds: assistant.skillIds,
+              })
+              .from(assistant)
+              .where(
+                and(
+                  eq(assistant.id, effectiveAssistantId),
+                  eq(assistant.userId, userId),
+                ),
+              )
+              .limit(1)
+              .then((rows) => rows[0] ?? null)
+          : Promise.resolve(null);
+      })(),
+
+      // Enabled MCP servers for this user (owned personal servers + installed public servers)
+      Promise.all([
+        db
+          .select({
+            id: mcpServer.id,
+            name: mcpServer.name,
+            url: mcpServer.url,
+            headers: mcpServer.headers,
+          })
+          .from(mcpServer)
+          .where(
+            and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true)),
+          ),
+        db
+          .select({
+            id: mcpServer.id,
+            name: mcpServer.name,
+            url: mcpServer.url,
+            headers: userMcpServerInstall.headers,
+          })
+          .from(userMcpServerInstall)
+          .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
+          .where(
+            and(
+              eq(userMcpServerInstall.userId, userId),
+              eq(userMcpServerInstall.enabled, true),
+              eq(mcpServer.isPublic, true),
+              eq(mcpServer.enabled, true),
+            ),
+          ),
+      ]).then(([personal, installed]) => [...personal, ...installed]),
+
+      // KB readiness check (if applicable)
+      (() => {
+        if (candidateKbIds.length === 0) return Promise.resolve([]);
+        if (candidateKbIds.length === 1) {
+          return db
             .select({
-              prompt: assistant.prompt,
-              skillMode: assistant.skillMode,
-              skillIds: assistant.skillIds,
+              id: knowledgebase.id,
+              indexStatus: knowledgebase.indexStatus,
             })
-            .from(assistant)
+            .from(knowledgebase)
             .where(
               and(
-                eq(assistant.id, effectiveAssistantId),
-                eq(assistant.userId, userId),
+                eq(knowledgebase.id, candidateKbIds[0]),
+                eq(knowledgebase.userId, userId),
               ),
             )
-            .limit(1)
-            .then((rows) => rows[0] ?? null)
-        : Promise.resolve(null);
-    })(),
-
-    // Enabled MCP servers for this user (owned personal servers + installed public servers)
-    Promise.all([
-      db
-        .select({
-          id: mcpServer.id,
-          name: mcpServer.name,
-          url: mcpServer.url,
-          headers: mcpServer.headers,
-        })
-        .from(mcpServer)
-        .where(and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true))),
-      db
-        .select({
-          id: mcpServer.id,
-          name: mcpServer.name,
-          url: mcpServer.url,
-          headers: userMcpServerInstall.headers,
-        })
-        .from(userMcpServerInstall)
-        .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
-        .where(
-          and(
-            eq(userMcpServerInstall.userId, userId),
-            eq(userMcpServerInstall.enabled, true),
-            eq(mcpServer.isPublic, true),
-            eq(mcpServer.enabled, true),
-          ),
-        ),
-    ]).then(([personal, installed]) => [...personal, ...installed]),
-
-    // KB readiness check (if applicable)
-    (() => {
-      if (candidateKbIds.length === 0) return Promise.resolve([]);
-      if (candidateKbIds.length === 1) {
+            .limit(1);
+        }
         return db
           .select({
             id: knowledgebase.id,
@@ -194,34 +215,23 @@ export async function loadChatContext(
           .from(knowledgebase)
           .where(
             and(
-              eq(knowledgebase.id, candidateKbIds[0]),
+              inArray(knowledgebase.id, candidateKbIds),
               eq(knowledgebase.userId, userId),
             ),
-          )
-          .limit(1);
-      }
-      return db
-        .select({
-          id: knowledgebase.id,
-          indexStatus: knowledgebase.indexStatus,
-        })
-        .from(knowledgebase)
-        .where(
-          and(
-            inArray(knowledgebase.id, candidateKbIds),
-            eq(knowledgebase.userId, userId),
-          ),
-        );
-    })(),
+          );
+      })(),
 
-    // Enabled user skills
-    db
-      .select()
-      .from(skill)
-      .where(and(eq(skill.userId, userId), eq(skill.enabled, true))) as Promise<
-      SkillRow[]
-    >,
-  ]);
+      // Enabled user skills
+      db
+        .select()
+        .from(skill)
+        .where(
+          and(eq(skill.userId, userId), eq(skill.enabled, true)),
+        ) as Promise<SkillRow[]>,
+
+      // Ambient user memories
+      retrieveRelevantMemories(userId, latestQuery).catch(() => [] as string[]),
+    ]);
 
   // 3. Derive composite values
   const skillMode: SkillMode =
@@ -265,6 +275,7 @@ export async function loadChatContext(
     servers: filteredServers,
     availableSkills,
     selectedSkills,
+    userMemories,
   };
 }
 

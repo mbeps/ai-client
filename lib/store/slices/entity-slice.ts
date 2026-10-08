@@ -3,6 +3,7 @@ import { listAssistants } from "@/actions/assistants/list-assistants";
 import { discoverAllPrompts } from "@/actions/mcp/discover-all-prompts";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
+import { listMemories } from "@/actions/memories/list-memories";
 import { listProjects } from "@/actions/projects/list-projects";
 import { listPrompts } from "@/actions/prompts/list-prompts";
 import { listSkills } from "@/actions/skills/list-skills";
@@ -37,6 +38,7 @@ type EntitySlice = Pick<
   | "assistants"
   | "prompts"
   | "skills"
+  | "memories"
   | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
@@ -48,6 +50,10 @@ type EntitySlice = Pick<
   | "loadAssistants"
   | "loadPrompts"
   | "loadSkills"
+  | "loadMemories"
+  | "addMemory"
+  | "updateMemory"
+  | "removeMemory"
   | "loadUserSettings"
   | "loadMcpServers"
   | "loadPublicMcpServers"
@@ -62,6 +68,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   assistants: [],
   prompts: [],
   skills: [],
+  memories: [],
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
@@ -195,12 +202,36 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       }) as any,
   ),
 
+  loadMemories: createEntityLoader(set, "memories", listMemories, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    content: row.content,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
+
+  addMemory: (memory) =>
+    set((state) => ({
+      memories: [memory, ...state.memories],
+    })),
+
+  updateMemory: (memory) =>
+    set((state) => ({
+      memories: state.memories.map((m) => (m.id === memory.id ? memory : m)),
+    })),
+
+  removeMemory: (id) =>
+    set((state) => ({
+      memories: state.memories.filter((m) => m.id !== id),
+    })),
+
   resetEntityState: () => {
     set({
       projects: [],
       assistants: [],
       prompts: [],
       skills: [],
+      memories: [],
       mcpServers: [],
       publicMcpServers: [],
       transformAgents: [],

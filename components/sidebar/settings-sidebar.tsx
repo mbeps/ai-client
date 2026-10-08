@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Brain,
   BrainCircuit,
   ChevronLeft,
   Command,
@@ -73,6 +74,11 @@ export function SettingsSidebar({
       href: ROUTES.SETTINGS.TOOLS.path,
       icon: Wrench,
     },
+    {
+      name: "Memory",
+      href: ROUTES.SETTINGS.MEMORY.path,
+      icon: Brain,
+    },
   ];
 
   return (
@@ -117,7 +123,9 @@ export function SettingsSidebar({
                     (item.name === "Skills" &&
                       pathname.startsWith(ROUTES.SETTINGS.SKILLS.path)) ||
                     (item.name === "Tools" &&
-                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path))
+                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path)) ||
+                    (item.name === "Memory" &&
+                      pathname.startsWith(ROUTES.SETTINGS.MEMORY.path))
                   }
                   tooltip={item.name}
                 >

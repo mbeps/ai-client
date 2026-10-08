@@ -15,6 +15,7 @@ export interface SystemPromptOptions {
   selectedSkills?: Skill[] | any[];
   supportsTools?: boolean;
   userContext?: { name?: string | null; email?: string | null };
+  userMemories?: string[];
 }
 
 /**
@@ -44,6 +45,7 @@ export function buildSystemPrompt(
     selectedSkills,
     supportsTools,
     userContext,
+    userMemories,
   } = options;
 
   const systemParts: string[] = [];
@@ -56,6 +58,13 @@ export function buildSystemPrompt(
       userContext.email?.trim() && `- Email: ${userContext.email.trim()}`,
     ].filter(Boolean);
     systemParts.push(`## About the User\n${identity.join("\n")}`);
+  }
+
+  if (userMemories && userMemories.length > 0) {
+    const memoryList = userMemories.map((m) => `- ${m}`).join("\n");
+    systemParts.push(
+      `## User Memory\nThe following preferences and facts are remembered from previous conversations:\n${memoryList}\n\nApply these memories when answering and tailor your responses accordingly. When the user shares new enduring preferences or facts, use the save_memory tool to record them.`,
+    );
   }
 
   if (globalPrompt?.trim()) {

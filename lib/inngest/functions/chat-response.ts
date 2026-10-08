@@ -14,6 +14,7 @@ import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { registerMemoryTool } from "@/lib/chat/register-memory-tool";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
@@ -178,6 +179,11 @@ export const generateChatResponse = inngest.createFunction(
           : {};
       const hasArtifactTool = Object.keys(artifactTools).length > 0;
 
+      const memoryTools = isToolCallingModel
+        ? registerMemoryTool(userId, selectedTools)
+        : {};
+      const hasMemoryTool = Object.keys(memoryTools).length > 0;
+
       const hasSkills = isToolCallingModel && ctx.availableSkills.length > 0;
 
       // Skill authoring is gated on model tool support AND tool selection (item 5)
@@ -190,6 +196,7 @@ export const generateChatResponse = inngest.createFunction(
         isToolCallingModel &&
         (hasExternalMcpTools ||
           hasArtifactTool ||
+          hasMemoryTool ||
           hasKbTool ||
           hasFileAttachments ||
           hasSkills ||
@@ -209,6 +216,7 @@ export const generateChatResponse = inngest.createFunction(
             selectedSkills: ctx.selectedSkills,
             supportsTools: isToolCallingModel,
             userContext: { name: userName, email: userEmail },
+            userMemories: ctx.userMemories,
           },
         ),
         messages: finalMessages,
@@ -217,6 +225,7 @@ export const generateChatResponse = inngest.createFunction(
               // External MCP tools spread FIRST so internal tools cannot be shadowed
               ...(hasExternalMcpTools ? mcpTools : {}),
               ...(hasArtifactTool ? artifactTools : {}),
+              ...(hasMemoryTool ? memoryTools : {}),
               ...(hasKbTool ? kbTools : {}),
               ...(hasSkills ? registerSkillTool(userId) : {}),
               ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
