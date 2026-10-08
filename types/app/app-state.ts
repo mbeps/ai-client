@@ -270,6 +270,11 @@ export type AppState = {
   loadUserSettings: () => Promise<void>;
 
   /**
+   * Partially updates the in-memory user settings state.
+   */
+  updateUserSettingsState: (settings: Partial<UserSettingsRow>) => void;
+
+  /**
    * Loads all MCP servers configured by the current user.
    * Populates mcpServers array with user's tool provider integrations.
    *

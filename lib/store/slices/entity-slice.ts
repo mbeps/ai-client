@@ -10,6 +10,7 @@ import { listSkills } from "@/actions/skills/list-skills";
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set).
@@ -55,6 +56,7 @@ type EntitySlice = Pick<
   | "updateMemory"
   | "removeMemory"
   | "loadUserSettings"
+  | "updateUserSettingsState"
   | "loadMcpServers"
   | "loadPublicMcpServers"
   | "loadMcpPrompts"
@@ -84,6 +86,14 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   loadUserSettings: async () => {
     const settings = await getUserSettings();
     set({ userSettings: settings });
+  },
+
+  updateUserSettingsState: (settings) => {
+    set((state) => ({
+      userSettings: state.userSettings
+        ? ({ ...state.userSettings, ...settings } as UserSettingsRow)
+        : ({ ...settings } as UserSettingsRow),
+    }));
   },
 
   loadProjects: createEntityLoader(set, "projects", listProjects, (row) => ({

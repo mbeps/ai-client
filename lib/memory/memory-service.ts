@@ -9,6 +9,7 @@ import {
   upsertMemoryPoint,
 } from "@/lib/memory/qdrant-memory-client";
 import { embedQuery } from "@/lib/rag/embed-query";
+import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 import type { Memory } from "@/types/memory/memory";
 
 const log = getLogger(["app", "memory", "service"]);
@@ -27,6 +28,11 @@ export async function saveMemoryForUser(
   userId: string,
   content: string,
 ): Promise<Memory> {
+  const settings = await getUserSettingsByUserId(userId).catch(() => null);
+  if (settings && settings.memoryEnabled === false) {
+    throw new Error("Memory is disabled for this user");
+  }
+
   const [inserted] = await db
     .insert(userMemory)
     .values({
@@ -159,6 +165,11 @@ export async function retrieveRelevantMemories(
   query?: string,
   limit = 10,
 ): Promise<string[]> {
+  const settings = await getUserSettingsByUserId(userId).catch(() => null);
+  if (settings && settings.memoryEnabled === false) {
+    return [];
+  }
+
   const allRows = await db
     .select({ content: userMemory.content })
     .from(userMemory)

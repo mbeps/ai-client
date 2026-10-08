@@ -61,5 +61,13 @@ describe("EntitySlice Memory State", () => {
       useAppStore.getState().memories.find((m) => m.id === "mem-test"),
     ).toBeUndefined();
   });
+
+  it("updates userSettings state using updateUserSettingsState", () => {
+    useAppStore.getState().updateUserSettingsState({ memoryEnabled: false });
+    expect(useAppStore.getState().userSettings?.memoryEnabled).toBe(false);
+
+    useAppStore.getState().updateUserSettingsState({ memoryEnabled: true });
+    expect(useAppStore.getState().userSettings?.memoryEnabled).toBe(true);
+  });
 });
 

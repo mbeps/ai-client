@@ -221,6 +221,31 @@ describe("generateChatResponse Inngest Function", () => {
     );
   });
 
+  it("omits save_memory tool when memoryEnabled is false in userSettings", async () => {
+    mockGetUserSettings.mockResolvedValueOnce({
+      id: "settings-1",
+      userId: "user-123",
+      memoryEnabled: false,
+    });
+
+    const fn = (generateChatResponse as any).fn;
+
+    await fn({
+      event: {
+        data: {
+          chatId: "chat-123",
+          userId: "user-123",
+          userMessageId: "msg-1",
+          model: "gpt-4o",
+        },
+      },
+    });
+
+    const streamArgs = mockStreamText.mock.calls[0][0];
+    const tools = streamArgs.tools ?? {};
+    expect(tools.save_memory).toBeUndefined();
+  });
+
   it("publishes error event when an error occurs during execution", async () => {
     mockLoadChatContext.mockRejectedValueOnce(new Error("Context load failed"));
 

@@ -14,6 +14,7 @@ export const userSettingsSchema = z.object({
     .max(5000, "Prompt must be under 5000 characters")
     .optional()
     .nullable(),
+  memoryEnabled: z.boolean().optional(),
 });
 
 /**

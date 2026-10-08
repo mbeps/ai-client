@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "memory_enabled" boolean DEFAULT true NOT NULL;

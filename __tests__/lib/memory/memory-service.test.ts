@@ -12,6 +12,7 @@ const {
   mockDeleteMemoryPoint,
   mockSearchSemanticMemories,
   mockSearchKeywordMemories,
+  mockGetUserSettingsByUserId,
 } = vi.hoisted(() => {
   return {
     mockLog: {
@@ -31,8 +32,14 @@ const {
     mockDeleteMemoryPoint: vi.fn(),
     mockSearchSemanticMemories: vi.fn(),
     mockSearchKeywordMemories: vi.fn(),
+    mockGetUserSettingsByUserId: vi.fn(),
   };
 });
+
+vi.mock("@/lib/user/get-user-settings-by-id", () => ({
+  getUserSettingsByUserId: (userId: string) =>
+    mockGetUserSettingsByUserId(userId),
+}));
 
 vi.mock("@/lib/logger", () => ({
   getLogger: vi.fn(() => mockLog),
@@ -76,9 +83,23 @@ import {
 describe("memory-service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUserSettingsByUserId.mockResolvedValue(null);
   });
 
   describe("saveMemoryForUser", () => {
+    it("throws an error when memoryEnabled is false in user settings", async () => {
+      mockGetUserSettingsByUserId.mockResolvedValue({
+        id: "settings-1",
+        userId: "user-1",
+        memoryEnabled: false,
+      });
+
+      await expect(
+        saveMemoryForUser("user-1", "Prefers TypeScript"),
+      ).rejects.toThrow("Memory is disabled");
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
     it("inserts into postgres and indexes point into Qdrant when embedding available", async () => {
       const mockInserted = {
         id: "mem-1",
@@ -197,6 +218,19 @@ describe("memory-service", () => {
   });
 
   describe("retrieveRelevantMemories", () => {
+    it("returns empty array immediately without querying when memoryEnabled is false", async () => {
+      mockGetUserSettingsByUserId.mockResolvedValue({
+        id: "settings-1",
+        userId: "user-1",
+        memoryEnabled: false,
+      });
+
+      const memories = await retrieveRelevantMemories("user-1", "TypeScript");
+      expect(memories).toEqual([]);
+      expect(mockSelect).not.toHaveBeenCalled();
+      expect(mockSearchSemanticMemories).not.toHaveBeenCalled();
+    });
+
     it("returns all memories from Postgres when total count is <= 20", async () => {
       const rows = [{ content: "Memory 1" }, { content: "Memory 2" }];
 

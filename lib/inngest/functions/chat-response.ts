@@ -108,6 +108,7 @@ export const generateChatResponse = inngest.createFunction(
       ]);
 
       const globalSystemPrompt = userSettings?.globalSystemPrompt;
+      const isMemoryEnabled = userSettings?.memoryEnabled ?? true;
       const resolvedModelRow = {
         capVision: resolved.modelRow.capVision,
         capTools: resolved.modelRow.capTools,
@@ -179,9 +180,10 @@ export const generateChatResponse = inngest.createFunction(
           : {};
       const hasArtifactTool = Object.keys(artifactTools).length > 0;
 
-      const memoryTools = isToolCallingModel
-        ? registerMemoryTool(userId, selectedTools)
-        : {};
+      const memoryTools =
+        isToolCallingModel && isMemoryEnabled
+          ? registerMemoryTool(userId, selectedTools)
+          : {};
       const hasMemoryTool = Object.keys(memoryTools).length > 0;
 
       const hasSkills = isToolCallingModel && ctx.availableSkills.length > 0;
