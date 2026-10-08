@@ -222,4 +222,28 @@ describe("hybridSearch", () => {
     expect(result).toEqual([{ id: "chunk-1" }]);
     expect(applyRRFMock).toHaveBeenCalledWith([{ id: "chunk-1" }], [], 5);
   });
+
+  it("handles non-Error thrown in semantic search catch block gracefully", async () => {
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
+    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+
+    searchSemanticVectorsMock.mockRejectedValueOnce("Non-error string failure");
+    searchKeywordChunksMock.mockResolvedValueOnce([{ id: "chunk-2" }]);
+    applyRRFMock.mockReturnValue([{ id: "chunk-2" }]);
+
+    const result = await hybridSearch("kb-1", "test query", "user-1", 5);
+    expect(result).toEqual([{ id: "chunk-2" }]);
+  });
+
+  it("handles non-Error thrown in keyword search catch block gracefully", async () => {
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
+    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+
+    searchSemanticVectorsMock.mockResolvedValueOnce([{ id: "chunk-1" }]);
+    searchKeywordChunksMock.mockRejectedValueOnce("Non-error string failure");
+    applyRRFMock.mockReturnValue([{ id: "chunk-1" }]);
+
+    const result = await hybridSearch("kb-1", "test query", "user-1", 5);
+    expect(result).toEqual([{ id: "chunk-1" }]);
+  });
 });

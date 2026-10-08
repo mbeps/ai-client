@@ -229,4 +229,64 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
     expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
     expect(upsertChunkPointsMock).not.toHaveBeenCalled();
   });
+
+  it("uses providedKbName directly without DB lookup when provided", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("sample text");
+    vi.mocked(chunkText).mockReturnValue(["sample text"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2]]);
+
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+
+    await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+      "Explicit KB Name",
+    );
+
+    expect(upsertChunkPointsMock).toHaveBeenCalledWith(
+      2,
+      expect.arrayContaining([
+        expect.objectContaining({
+          payload: expect.objectContaining({ kbName: "Explicit KB Name" }),
+        }),
+      ]),
+    );
+  });
+
+  it("falls back to empty string when kb row is not found in db", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("sample text");
+    vi.mocked(chunkText).mockReturnValue(["sample text"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([]); // kb row not found
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    expect(upsertChunkPointsMock).toHaveBeenCalledWith(
+      2,
+      expect.arrayContaining([
+        expect.objectContaining({
+          payload: expect.objectContaining({ kbName: "" }),
+        }),
+      ]),
+    );
+  });
+
+  it("skips upsertChunkPoints if dimensions is 0 or embeddings empty", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("sample text");
+    vi.mocked(chunkText).mockReturnValue(["sample text"]);
+    vi.mocked(embedDocuments).mockResolvedValue([]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
+    expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+  });
 });

@@ -48,6 +48,7 @@ vi.mock("@/lib/logger", () => ({
   logger: logMock,
 }));
 
+import { InvalidArtifactFormatError } from "@/lib/errors";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 
 const MOCK_PROVIDER = {
@@ -1091,6 +1092,118 @@ describe("runTransformSteps — execution flows", () => {
         arg !== null && typeof arg === "object" && arg.status === "failed",
     );
     expect(failedCall![0].errorMessage).toBe("Step failed");
+  });
+
+  it("handles InvalidArtifactFormatError during artifact persistence by failing run cleanly", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [
+        {
+          toolCalls: [
+            { toolCallId: "tc-art", toolName: "manage_artifact", args: {} },
+          ],
+          toolResults: [
+            {
+              toolCallId: "tc-art",
+              toolName: "manage_artifact",
+              result: { type: "spreadsheet", content: "{corrupt" },
+            },
+          ],
+        },
+      ],
+    });
+
+    persistTransformArtifactMock.mockRejectedValueOnce(
+      new InvalidArtifactFormatError("Sheet payload is unparseable"),
+    );
+
+    const emitted: any[] = [];
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Format Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-art-err" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: { manage_artifact: {} },
+      runToolSourceMap: { manage_artifact: "Internal" },
+      initialAttachmentRows: [],
+      emit: (e) => emitted.push(e),
+    });
+
+    expect(result.success).toBe(false);
+    const errorEvent = emitted.find((e) => e.type === "error");
+    expect(errorEvent.message).toContain('Step "Format Step" produced invalid spreadsheet artifact: Sheet payload is unparseable');
+    expect(errorEvent.code).toBe("INVALID_ARTIFACT_FORMAT");
+
+    const failedCall = chainable.set.mock.calls.find(
+      ([arg]) =>
+        arg !== null && typeof arg === "object" && arg.status === "failed",
+    );
+    expect(failedCall![0].errorMessage).toContain('produced invalid spreadsheet artifact');
+  });
+
+  it("rethrows unexpected non-InvalidArtifactFormatError during artifact persistence", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [
+        {
+          toolCalls: [
+            { toolCallId: "tc-art", toolName: "manage_artifact", args: {} },
+          ],
+          toolResults: [
+            {
+              toolCallId: "tc-art",
+              toolName: "manage_artifact",
+              result: { type: "spreadsheet", content: "{}" },
+            },
+          ],
+        },
+      ],
+    });
+
+    persistTransformArtifactMock.mockRejectedValueOnce(
+      new Error("Unexpected S3 upload outage"),
+    );
+
+    await expect(
+      runTransformSteps({
+        steps: [
+          {
+            id: "s0",
+            name: "S3 Error Step",
+            prompt: "p",
+            order: 0,
+            mcpServerIds: [],
+            toolIds: [],
+            requiresReview: false,
+          },
+        ],
+        startFromStep: 0,
+        runRow: { id: "run-s3-err" },
+        agentRow: NO_MUTATION_AGENT,
+        userId: "user-1",
+        allServers: [],
+        resolvedProvider: MOCK_PROVIDER as any,
+        kbContext: "",
+        runMcpTools: { manage_artifact: {} },
+        runToolSourceMap: { manage_artifact: "Internal" },
+        initialAttachmentRows: [],
+        emit: vi.fn(),
+      }),
+    ).rejects.toThrow("Unexpected S3 upload outage");
   });
 });
 

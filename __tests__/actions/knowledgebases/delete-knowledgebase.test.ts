@@ -60,10 +60,15 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 const sendMock = vi.hoisted(() => vi.fn());
+const deletePointsByKbIdsMock = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 
 vi.mock("@/lib/storage/s3-instance", () => ({
   s3Client: { send: sendMock },
   S3_BUCKET: "test-bucket",
+}));
+
+vi.mock("@/lib/rag/qdrant-client", () => ({
+  deletePointsByKbIds: deletePointsByKbIdsMock,
 }));
 
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -186,5 +191,23 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
       { name: "knowledgebase/reindex.cancel", data: { kbId: "kb-1" } },
       { name: "knowledgebase/reindex.cancel", data: { kbId: "kb-2" } },
     ]);
+  });
+
+  it("logs warning and still resolves when deletePointsByKbIds fails with Error", async () => {
+    selectResult = [];
+    deletePointsByKbIdsMock.mockRejectedValueOnce(new Error("Qdrant failure"));
+
+    await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
+      deletedCount: 1,
+    });
+  });
+
+  it("handles non-Error thrown by deletePointsByKbIds gracefully", async () => {
+    selectResult = [];
+    deletePointsByKbIdsMock.mockRejectedValueOnce("String error");
+
+    await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
+      deletedCount: 1,
+    });
   });
 });

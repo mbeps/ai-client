@@ -11,6 +11,21 @@ const chainable = vi.hoisted(() => {
   return c;
 });
 
+const mockGetTableColumns = vi.hoisted(() => vi.fn());
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...mod,
+    getTableColumns: (table: any) => {
+      if (mockGetTableColumns.getMockImplementation()) {
+        return mockGetTableColumns(table);
+      }
+      return mod.getTableColumns(table);
+    },
+  };
+});
+
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
 import {
@@ -27,6 +42,7 @@ describe("deleteResourceWithUnbind", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetTableColumns.mockReset();
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
     chainable.where.mockReturnValue(chainable);
@@ -54,9 +70,66 @@ describe("deleteResourceWithUnbind", () => {
       expect(resolveFieldKey(mockTable, mockTable.projectId)).toBe("projectId");
     });
 
+    it("resolves property key via getTableColumns when not in Object.entries(table)", () => {
+      const fieldObj = { name: "hidden_col" };
+      mockGetTableColumns.mockImplementation((tbl: any) => {
+        if (tbl.isCustom) {
+          return { hiddenKey: fieldObj };
+        }
+        return {};
+      });
+
+      const customTable = { isCustom: true };
+      expect(resolveFieldKey(customTable, fieldObj)).toBe("hiddenKey");
+    });
+
+    it("resolves property key from field.table when table does not contain it", () => {
+      const targetCol = { name: "owner_col" };
+      const fieldWithTable = {
+        name: "owner_col",
+        table: { ownerProp: targetCol },
+      };
+
+      expect(resolveFieldKey(null, fieldWithTable)).toBe("ownerProp");
+    });
+
+    it("resolves property key from field.table via getTableColumns", () => {
+      const targetCol = { name: "table_col" };
+      const fieldWithTable = {
+        name: "table_col",
+        table: { isFieldTable: true },
+      };
+
+      mockGetTableColumns.mockImplementation((tbl: any) => {
+        if (tbl.isFieldTable) {
+          return { tableColProp: targetCol };
+        }
+        return {};
+      });
+
+      expect(resolveFieldKey(null, fieldWithTable)).toBe("tableColProp");
+    });
+
+    it("handles getTableColumns throwing error on field.table", () => {
+      const fieldWithBrokenTable = {
+        name: "fallback_name",
+        table: {},
+      };
+      mockGetTableColumns.mockImplementation(() => {
+        throw new Error("Invalid table");
+      });
+
+      expect(resolveFieldKey(null, fieldWithBrokenTable)).toBe("fallback_name");
+    });
+
     it("falls back to field.name if key cannot be matched on table", () => {
       const col = { name: "fallback_col" };
       expect(resolveFieldKey({}, col)).toBe("fallback_col");
+    });
+
+    it("falls back to String(field) for primitives or objects without name", () => {
+      expect(resolveFieldKey(null, 42)).toBe("42");
+      expect(resolveFieldKey(null, false)).toBe("false");
     });
   });
 
@@ -109,6 +182,24 @@ describe("deleteResourceWithUnbind", () => {
         "res-1",
         "user-1",
         { table: unbindTable, field: "projectId" },
+      );
+
+      expect(result).toEqual([{ id: "res-1" }]);
+      expect(chainable.set).toHaveBeenCalledWith({ projectId: null });
+    });
+
+    it("unbinds correctly when table has no userId column", async () => {
+      chainable.returning.mockResolvedValueOnce([{ id: "res-1" }]);
+
+      const unbindTableWithoutUser = {
+        projectId: "project_id_col",
+      };
+
+      const result = await deleteResourceWithUnbind(
+        mockResourceTable,
+        "res-1",
+        "user-1",
+        { table: unbindTableWithoutUser, field: "projectId" },
       );
 
       expect(result).toEqual([{ id: "res-1" }]);

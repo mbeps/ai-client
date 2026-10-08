@@ -32,6 +32,7 @@ describe("buildChatFromRows", () => {
       knowledgebaseId: "kb-1",
       projectName: "Project 1",
       assistantName: "Assistant 1",
+      createdAt: "2024-01-01T00:00:00.000Z",
       updatedAt: new Date().toISOString(),
       currentLeafId: "msg-2",
       messages: [
@@ -114,5 +115,6 @@ describe("buildChatFromRows", () => {
     expect(chat.projectId).toBe("proj-1");
     expect(chat.assistantId).toBe("asst-1");
     expect(chat.knowledgebaseId).toBe("kb-1");
+    expect(chat.createdAt).toEqual(new Date("2024-01-01T00:00:00.000Z"));
   });
 });

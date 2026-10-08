@@ -21,7 +21,7 @@ describe("registerMemoryTool", () => {
     expect(tools).toEqual({});
   });
 
-  it("registers save_memory tool when selectedTools is undefined or includes MANAGE_MEMORY", () => {
+  it("registers save_memory tool when selectedTools is undefined or includes MANAGE_MEMORY or save_memory", () => {
     const toolsDefault = registerMemoryTool("user-1");
     expect(toolsDefault.save_memory).toBeDefined();
 
@@ -29,6 +29,9 @@ describe("registerMemoryTool", () => {
       INTERNAL_TOOL_IDS.MANAGE_MEMORY,
     ]);
     expect(toolsSelected.save_memory).toBeDefined();
+
+    const toolsByName = registerMemoryTool("user-1", ["save_memory"]);
+    expect(toolsByName.save_memory).toBeDefined();
   });
 
   it("executes save_memory and calls saveMemoryForUser with trimmed content", async () => {
@@ -59,5 +62,28 @@ describe("registerMemoryTool", () => {
     expect(result.success).toBe(false);
     expect(mockSaveMemoryForUser).not.toHaveBeenCalled();
   });
-});
 
+  it("catches Error thrown by saveMemoryForUser and returns error message", async () => {
+    mockSaveMemoryForUser.mockRejectedValue(new Error("Database disconnected"));
+
+    const tools = registerMemoryTool("user-1");
+    const result = await tools.save_memory.execute({
+      content: "Valid preference",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Database disconnected");
+  });
+
+  it("catches non-Error thrown by saveMemoryForUser and returns fallback error message", async () => {
+    mockSaveMemoryForUser.mockRejectedValue("String exception");
+
+    const tools = registerMemoryTool("user-1");
+    const result = await tools.save_memory.execute({
+      content: "Valid preference",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Failed to save memory.");
+  });
+});

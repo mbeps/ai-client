@@ -919,18 +919,20 @@ describe("generateChatResponse Inngest Function", () => {
         fullStream: (async function* () {
           yield { type: "text-delta", text: "Text" };
         })(),
-        finishReason: Promise.resolve("stop").then((res) => {
-          controller.abort();
-          return res;
+        finishReason: Promise.resolve("stop"),
+        usage: new Promise((resolve) => {
+          setTimeout(() => {
+            controller.abort();
+            resolve(undefined);
+          }, 10);
         }),
-        usage: Promise.resolve(undefined),
       });
 
       const fn = (generateChatResponse as any).fn;
       await fn({
         event: {
           data: {
-            chatId: "chat-abort",
+            chatId: "chat-abort-pre-persist",
             userId: "user-1",
             userMessageId: "msg-1",
           },
@@ -938,6 +940,10 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Chat generation cleanly aborted before persistence (chatId: {chatId})",
+        { chatId: "chat-abort-pre-persist" },
+      );
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ type: "finish" }),

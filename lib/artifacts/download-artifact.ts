@@ -51,10 +51,10 @@ export function downloadArtifact(artifact: ArtifactData): void {
       }
 
       xlsx.writeFile(workbook, `${safeTitle}.xlsx`);
-      return;
     } catch (err) {
       log.error("Failed to export spreadsheet artifact as XLSX", { err });
     }
+    return;
   }
 
   // Text-based artifact exports (markdown, html, mermaid, plain text)
