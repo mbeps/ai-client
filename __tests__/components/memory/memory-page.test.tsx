@@ -75,7 +75,9 @@ describe("MemoryPage", () => {
     expect(mockLoadUserSettings).toHaveBeenCalled();
     expect(screen.getByText("Uses Arch Linux")).toBeInTheDocument();
     expect(screen.getByText("Prefers concise code")).toBeInTheDocument();
-    expect(screen.getByText("Enabled")).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: /toggle memory/i }),
+    ).toBeInTheDocument();
   });
 
   it("filters memories by content query", async () => {
@@ -112,8 +114,8 @@ describe("MemoryPage", () => {
     const selectAllBtn = screen.getByRole("button", { name: /select all/i });
     await user.click(selectAllBtn);
 
-    // Verify selected count badge and delete button
-    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    // Verify selected count tag inside button and delete button
+    expect(screen.getByText("2")).toBeInTheDocument();
     const deleteSelectedBtn = screen.getByRole("button", {
       name: /delete selected/i,
     });

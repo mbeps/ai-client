@@ -1,19 +1,20 @@
 "use client";
 
+import { Save, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createMemory } from "@/actions/memories/create-memory";
 import { updateMemory } from "@/actions/memories/update-memory";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
@@ -34,9 +35,9 @@ interface MemoryDialogProps {
 }
 
 /**
- * Modal dialog for manually creating or editing a user memory entry.
+ * Responsive modal (dialog on desktop, drawer on mobile) for creating or editing a memory entry.
  *
- * @param props.open - Whether the dialog is open.
+ * @param props.open - Whether the dialog/drawer is open.
  * @param props.onOpenChange - Handler for toggling open state.
  * @param props.memory - Memory being edited, or null/undefined if creating.
  * @param props.onSaved - Callback invoked after successful save.
@@ -93,19 +94,19 @@ export function MemoryDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-[480px]">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <DialogHeader>
-            <DialogTitle>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>
               {isEditing ? "Edit Memory" : "Add Memory"}
-            </DialogTitle>
-            <DialogDescription>
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               {isEditing
                 ? "Update this remembered detail about your preferences or workflow."
                 : "Add a fact or preference that the AI should remember across conversations."}
-            </DialogDescription>
-          </DialogHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="space-y-2">
             <Label htmlFor="memory-content">Memory details</Label>
@@ -125,13 +126,14 @@ export function MemoryDialog({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <ResponsiveDialogFooter className="gap-2 sm:gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !content.trim()}>
@@ -141,12 +143,15 @@ export function MemoryDialog({
                   Saving...
                 </>
               ) : (
-                "Save"
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </>
               )}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

@@ -25,4 +25,3 @@ export async function deleteMemories(
 
   revalidatePath(ROUTES.SETTINGS.MEMORY.path);
 }
-

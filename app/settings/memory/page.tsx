@@ -20,8 +20,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAppStore } from "@/lib/store";
 import type { Memory } from "@/types/memory/memory";
 
@@ -146,44 +150,11 @@ export default function MemoryPage() {
   return (
     <>
       <ResourceListPage
-        banner={
-          <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Label
-                  htmlFor="memory-toggle"
-                  className="cursor-pointer font-semibold text-sm"
-                >
-                  Memory Storage & Retrieval
-                </Label>
-                <Badge
-                  variant={isMemoryEnabled ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {isMemoryEnabled ? "Enabled" : "Disabled"}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-xs leading-normal">
-                {isMemoryEnabled
-                  ? "The AI automatically saves important details during conversations and retrieves them when relevant."
-                  : "Memory is turned off. The AI will not save new details or retrieve existing memories."}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              <Switch
-                id="memory-toggle"
-                checked={isMemoryEnabled}
-                onCheckedChange={handleToggleMemory}
-                disabled={isToggling}
-                aria-label="Toggle memory"
-              />
-            </div>
-          </div>
-        }
         icon={<Brain className="h-8 w-8 text-primary" />}
         title="Memory"
         description="Facts, preferences, and details remembered across your chats."
         items={memories}
+        columns={2}
         renderCard={(memory) => (
           <MemoryCard
             key={memory.id}
@@ -201,7 +172,7 @@ export default function MemoryPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleToggleSelectAll}
-                className="h-9 gap-1.5"
+                className="h-9 gap-2"
               >
                 {isAllSelected ? (
                   <CheckSquare className="h-4 w-4" />
@@ -209,23 +180,26 @@ export default function MemoryPage() {
                   <Square className="h-4 w-4" />
                 )}
                 <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
+                {selectedIds.size > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-0.5 rounded-full px-1.5 py-0 text-[11px] leading-tight"
+                  >
+                    {selectedIds.size}
+                  </Badge>
+                )}
               </Button>
 
               {selectedIds.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="px-2 py-1 text-xs">
-                    {selectedIds.size} selected
-                  </Badge>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    className="h-9 gap-1.5"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete Selected</span>
-                  </Button>
-                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="h-9 gap-1.5"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete Selected</span>
+                </Button>
               )}
             </div>
           ) : null
@@ -234,17 +208,38 @@ export default function MemoryPage() {
         searchPlaceholder="Search memories..."
         onMount={handleMount}
         action={
-          <Button
-            onClick={handleOpenAdd}
-            disabled={!isMemoryEnabled}
-            className="w-full md:w-auto"
-            title={
-              !isMemoryEnabled ? "Enable memory to add new memories" : undefined
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Memory
-          </Button>
+          <div className="flex items-center gap-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <Switch
+                    id="memory-toggle"
+                    checked={isMemoryEnabled}
+                    onCheckedChange={handleToggleMemory}
+                    disabled={isToggling}
+                    aria-label="Toggle memory"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isMemoryEnabled ? "Disable memory" : "Enable memory"}
+              </TooltipContent>
+            </Tooltip>
+
+            <Button
+              onClick={handleOpenAdd}
+              disabled={!isMemoryEnabled}
+              className="w-full sm:w-auto"
+              title={
+                !isMemoryEnabled
+                  ? "Enable memory to add new memories"
+                  : undefined
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Memory
+            </Button>
+          </div>
         }
         filterFn={(m, q) => m.content.toLowerCase().includes(q.toLowerCase())}
       />
@@ -272,14 +267,21 @@ export default function MemoryPage() {
                 : "Are you sure you want to delete this memory? The AI will no longer remember this detail."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? (
+                "Deleting..."
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
