@@ -91,7 +91,7 @@ describe("ToolPickerList", () => {
 
     expect(handleBulkSelect).toHaveBeenCalledWith(
       "internal",
-      ["manage_artifact"],
+      ["manage_artifact", "manage_memory"],
       true,
     );
   });
@@ -114,7 +114,7 @@ describe("ToolPickerList", () => {
 
     expect(handleBulkSelect).toHaveBeenCalledWith(
       "internal",
-      ["manage_artifact"],
+      ["manage_artifact", "manage_memory"],
       true,
     );
   });
@@ -137,7 +137,7 @@ describe("ToolPickerDialog", () => {
     expect(screen.getByText("Manage Tools")).toBeDefined();
     expect(
       screen.getByText((_content, element) => {
-        return element?.textContent === "1/1 selected tool";
+        return element?.textContent === "1/2 selected tools";
       }),
     ).toBeDefined();
   });
