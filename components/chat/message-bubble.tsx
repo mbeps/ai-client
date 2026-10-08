@@ -90,6 +90,8 @@ interface MessageBubbleProps {
   activeToolCalls?: ToolCallState[];
   /** Knowledge bases available for display in KB chips. */
   knowledgebases?: KnowledgebaseWithCount[];
+  /** Optional chat ID for scratchpad authorization. */
+  chatId?: string;
 }
 
 export function MessageBubble({
@@ -111,6 +113,7 @@ export function MessageBubble({
   streamingCitations,
   activeToolCalls,
   knowledgebases = [],
+  chatId,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -239,6 +242,8 @@ export function MessageBubble({
               toolResults={toolData?.toolResults}
               activeToolCalls={activeToolCalls}
               isLatest={isLatest}
+              messageId={message.id}
+              chatId={chatId}
             />
           )}
 

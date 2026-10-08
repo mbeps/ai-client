@@ -7,12 +7,15 @@ import {
   Terminal,
   XCircle,
 } from "lucide-react";
+import { Accordion } from "@/components/ui/accordion";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { cn } from "@/lib/utils";
+import { SubagentActivityCard } from "./subagent-activity-card";
 
 type ToolCall = {
   toolCallId: string;
@@ -32,36 +35,114 @@ interface ToolCallDisplayProps {
   toolCalls: ToolCall[];
   toolResults: ToolResult[];
   initialOpen?: boolean;
+  messageId?: string;
+  chatId?: string;
 }
 
 /**
  * Displays a collapsible sequence of MCP tool calls and their results.
- * Shows tool name, arguments, and result status (pending or completed with result).
+ * Groups subagent delegations into a unified single-collapsible Accordion.
  * Used in ResponseTimeline to visualize tool usage during AI processing.
  *
  * @param props.toolCalls - Array of tool calls initiated by the model.
  * @param props.toolResults - Array of tool execution results.
  * @param props.initialOpen - Whether to show tool details expanded on first render.
+ * @param props.messageId - Optional assistant message ID for scratchpad inspection.
+ * @param props.chatId - Optional chat ID for scratchpad authorization.
  * @author Maruf Bepary
  */
 export function ToolCallDisplay({
   toolCalls,
   toolResults,
   initialOpen = false,
+  messageId,
+  chatId,
 }: ToolCallDisplayProps) {
   if (!toolCalls || toolCalls.length === 0) return null;
 
+  const isSubagentCall = (tc: ToolCall) =>
+    tc.toolName === "delegate_task" ||
+    tc.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
+
+  type RenderChunk =
+    | { type: "subagents"; items: ToolCall[] }
+    | { type: "standard"; item: ToolCall };
+
+  const chunks: RenderChunk[] = [];
+  for (const tc of toolCalls) {
+    if (isSubagentCall(tc)) {
+      const last = chunks[chunks.length - 1];
+      if (last && last.type === "subagents") {
+        last.items.push(tc);
+      } else {
+        chunks.push({ type: "subagents", items: [tc] });
+      }
+    } else {
+      chunks.push({ type: "standard", item: tc });
+    }
+  }
+
   return (
     <div className="mb-3 space-y-2">
-      {toolCalls.map((tc) => {
+      {chunks.map((chunk, chunkIdx) => {
+        if (chunk.type === "subagents") {
+          const defaultOpenId =
+            chunk.items.find(
+              (tc) =>
+                !toolResults.some((tr) => tr.toolCallId === tc.toolCallId),
+            )?.toolCallId ??
+            (initialOpen ? chunk.items[0]?.toolCallId : undefined);
+
+          return (
+            <Accordion
+              key={`subagents-group-${chunk.items[0].toolCallId || chunkIdx}`}
+              type="single"
+              collapsible
+              defaultValue={defaultOpenId}
+              className="w-full space-y-2"
+            >
+              {chunk.items.map((tc) => {
+                const result = toolResults.find(
+                  (tr) => tr.toolCallId === tc.toolCallId,
+                );
+                const isCompleted = !!result;
+                const isError = isCompleted && (result.result as any)?.error;
+                const args = (tc.args ?? {}) as {
+                  role?: string;
+                  taskBrief?: string;
+                  inputData?: string;
+                };
+
+                return (
+                  <SubagentActivityCard
+                    key={tc.toolCallId}
+                    accordionValue={tc.toolCallId}
+                    role={args.role}
+                    taskBrief={args.taskBrief}
+                    inputData={args.inputData}
+                    status={
+                      isCompleted ? (isError ? "error" : "complete") : "pending"
+                    }
+                    result={result?.result}
+                    messageId={messageId}
+                    chatId={chatId}
+                    initialOpen={initialOpen}
+                  />
+                );
+              })}
+            </Accordion>
+          );
+        }
+
+        const tc = chunk.item;
         const result = toolResults.find(
           (tr) => tr.toolCallId === tc.toolCallId,
         );
         const isCompleted = !!result;
-        const isError = isCompleted && (result.result as any)?.error;
+        const isError = isCompleted && (result?.result as any)?.error;
 
         return (
-          <div key={tc.toolCallId} className="group/tool">
+          <div key={tc.toolCallId || chunkIdx}>
             <Collapsible
               defaultOpen={initialOpen}
               className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"

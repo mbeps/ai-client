@@ -211,6 +211,7 @@ export function ChatUI({
     streamingReasoning,
     isStreamingReasoning,
     activeToolCalls,
+    assistantMessageId,
     streamResponse,
     stopStream,
   } = useStreamResponse(chatId);
@@ -420,6 +421,9 @@ export function ChatUI({
       selectedAssistantId?: string,
       selectedKbIds: string[] = [],
       selectedSkillIds: string[] = [],
+      subagentsEnabled?: boolean,
+      subagentModelId?: string,
+      subagentExcludedTools?: string[],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -433,6 +437,9 @@ export function ChatUI({
         selectedAssistantId,
         selectedKbIds,
         selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+        subagentExcludedTools,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -524,6 +531,9 @@ export function ChatUI({
     assistantId?: string,
     selectedKbIds?: string[],
     selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ) => {
     const msg = chat?.messages[id];
     if (!msg) return;
@@ -539,6 +549,9 @@ export function ChatUI({
       assistantId,
       selectedKbIds,
       selectedSkillIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     );
   };
 
@@ -556,6 +569,9 @@ export function ChatUI({
     let toolIds: string[] = [];
     let selectedKbIds: string[] = [];
     let selectedSkillIds: string[] = [];
+    let subagentsEnabled: boolean | undefined;
+    let subagentModelId: string | undefined;
+    let subagentExcludedTools: string[] | undefined;
     let userContent = parentMsg.content;
 
     if (parentMsg.metadata) {
@@ -586,6 +602,15 @@ export function ChatUI({
         if (Array.isArray(meta.selectedSkillIds)) {
           selectedSkillIds = meta.selectedSkillIds;
         }
+        if (typeof meta.subagentsEnabled === "boolean") {
+          subagentsEnabled = meta.subagentsEnabled;
+        }
+        if (typeof meta.subagentModelId === "string") {
+          subagentModelId = meta.subagentModelId;
+        }
+        if (Array.isArray(meta.subagentExcludedTools)) {
+          subagentExcludedTools = meta.subagentExcludedTools;
+        }
       } catch {}
     }
 
@@ -601,6 +626,9 @@ export function ChatUI({
       assistantId,
       selectedKbIds,
       selectedSkillIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     );
   };
 
@@ -650,6 +678,8 @@ export function ChatUI({
                 onToggleArtifact={handleToggleArtifact}
                 activeArtifactId={activeArtifact?.id}
                 isCanvasOpen={isArtifactOpen}
+                chatId={chatId}
+                assistantMessageId={assistantMessageId}
               />
             </div>
           </div>

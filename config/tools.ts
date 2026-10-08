@@ -10,6 +10,7 @@ export const INTERNAL_TOOL_IDS = {
   MANAGE_MEMORY: "internal:tool:manage_memory",
   MANAGE_SKILL: "internal:tool:manage_skill",
   SEARCH_KNOWLEDGE_BASE: "internal:tool:search_knowledge_base",
+  DELEGATE_TASK: "internal:tool:delegate_task",
 } as const;
 
 /**
@@ -62,6 +63,15 @@ export const INTERNAL_TOOL_CATALOGUE = [
     description:
       "Saves a user preference, background detail, or enduring convention to long-term memory. Use this to remember important details across chat sessions.",
     availability: "Registered when the tool is selected for the chat.",
+  },
+  {
+    id: INTERNAL_TOOL_IDS.DELEGATE_TASK,
+    name: "delegate_task",
+    category: "Agents",
+    description:
+      "Delegates context-heavy research, planning, or exploration tasks to an isolated worker subagent. Operates with fresh context and shared scratchpad memory.",
+    availability:
+      "Registered when Subagent Delegation is enabled in the chat tool picker.",
   },
   {
     id: INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,

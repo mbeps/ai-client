@@ -112,6 +112,7 @@ export function MessageThread({
             activeArtifactId={activeArtifactId}
             isCanvasOpen={isCanvasOpen}
             knowledgebases={knowledgebases}
+            chatId={chat.id}
           />
         );
       })}

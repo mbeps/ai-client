@@ -30,6 +30,9 @@ function buildMetadata(
   selectedAssistantId?: string,
   selectedKbIds?: string[],
   selectedSkillIds?: string[],
+  subagentsEnabled?: boolean,
+  subagentModelId?: string,
+  subagentExcludedTools?: string[],
 ): Record<string, unknown> {
   const metadataObj: Record<string, unknown> = {
     model,
@@ -42,6 +45,15 @@ function buildMetadata(
   }
   if (selectedSkillIds && selectedSkillIds.length > 0) {
     metadataObj.selectedSkillIds = selectedSkillIds;
+  }
+  if (subagentsEnabled !== undefined) {
+    metadataObj.subagentsEnabled = subagentsEnabled;
+  }
+  if (subagentModelId) {
+    metadataObj.subagentModelId = subagentModelId;
+  }
+  if (subagentExcludedTools && subagentExcludedTools.length > 0) {
+    metadataObj.subagentExcludedTools = subagentExcludedTools;
   }
   return metadataObj;
 }
@@ -109,6 +121,9 @@ interface StreamRequestOptions {
   selectedPromptId?: string;
   selectedSkillIds?: string[];
   selectedKbIds?: string[];
+  subagentsEnabled?: boolean;
+  subagentModelId?: string;
+  subagentExcludedTools?: string[];
 }
 
 /**
@@ -143,6 +158,9 @@ export function useStreamResponse(
     null,
   );
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
+  const [assistantMessageId, setAssistantMessageId] = useState<string | null>(
+    null,
+  );
   const [chatNotFound, setChatNotFound] = useState(false);
 
   const pendingRef = useRef<{
@@ -212,6 +230,7 @@ export function useStreamResponse(
         case "start":
           lastChunkTimeRef.current = Date.now();
           assistantMessageIdRef.current = event.messageId;
+          setAssistantMessageId(event.messageId);
           setIsStreaming(true);
           break;
 
@@ -250,9 +269,14 @@ export function useStreamResponse(
 
         case "tool-result": {
           lastChunkTimeRef.current = Date.now();
+          const isPreliminary = Boolean(event.preliminary);
           activeToolCallsRef.current = activeToolCallsRef.current.map((t) =>
             t.toolCallId === event.toolCallId
-              ? { ...t, status: "complete", result: event.result }
+              ? {
+                  ...t,
+                  status: isPreliminary ? "calling" : "complete",
+                  result: event.result,
+                }
               : t,
           );
           setActiveToolCalls([...activeToolCallsRef.current]);
@@ -299,6 +323,7 @@ export function useStreamResponse(
             setStreamingContent(null);
             setStreamingReasoning(null);
             setActiveToolCalls([]);
+            setAssistantMessageId(null);
             break;
           }
 
@@ -360,6 +385,7 @@ export function useStreamResponse(
           setStreamingContent(null);
           setStreamingReasoning(null);
           setActiveToolCalls([]);
+          setAssistantMessageId(null);
           break;
         }
 
@@ -549,9 +575,16 @@ export function useStreamResponse(
       const timeSinceLastChunk = Date.now() - lastChunkTimeRef.current;
       const timeSinceStart = Date.now() - pendingRef.current.startTime;
 
+      const hasActiveCallingTools = activeToolCallsRef.current.some(
+        (t) => t.status === "calling",
+      );
+
       const isConnectionError =
         connectionStatusRef.current === "error" || Boolean(realtimeError);
-      const isStalled = timeSinceStart > 5000 && timeSinceLastChunk > 5000;
+      const isStalled =
+        !hasActiveCallingTools &&
+        timeSinceStart > 5000 &&
+        timeSinceLastChunk > 5000;
 
       if (isConnectionError || isStalled) {
         const synced = await syncFromDb();
@@ -560,12 +593,12 @@ export function useStreamResponse(
           return;
         }
 
-        if ((isConnectionError && attempts >= 10) || attempts >= 30) {
+        if (
+          (isConnectionError && attempts >= 10) ||
+          (!hasActiveCallingTools && attempts >= 30)
+        ) {
           clearInterval(interval);
           setIsStreaming(false);
-          setStreamingContent(null);
-          setStreamingReasoning(null);
-          setActiveToolCalls([]);
           if (isConnectionError) {
             toast.error(
               "Connection lost to generation stream. Please refresh if response is ready.",
@@ -646,6 +679,9 @@ export function useStreamResponse(
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
     selectedSkillIds: string[] = [],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ): Promise<string> => {
     const promptIds = Array.isArray(selectedPromptId)
       ? selectedPromptId
@@ -679,6 +715,9 @@ export function useStreamResponse(
       selectedAssistantId,
       selectedKbIds,
       selectedSkillIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     );
 
     // 2. Resolve prompt content (MCP / slash-command)
@@ -761,6 +800,9 @@ export function useStreamResponse(
           selectedPromptId: promptIds[0],
           selectedSkillIds,
           selectedKbIds,
+          subagentsEnabled,
+          subagentModelId,
+          subagentExcludedTools,
         } satisfies StreamRequestOptions),
       });
 
@@ -787,6 +829,7 @@ export function useStreamResponse(
     streamingReasoning,
     isStreamingReasoning,
     activeToolCalls,
+    assistantMessageId,
     streamResponse,
     stopStream,
   };

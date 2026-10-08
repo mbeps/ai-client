@@ -25,6 +25,8 @@ import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
+import { createSubagentDispatchTool } from "@/lib/subagents/subagent-dispatch-tool";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
 const log = getLogger(["inngest", "chat", "response"]);
@@ -66,6 +68,9 @@ export const generateChatResponse = inngest.createFunction(
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     } = event.data;
 
     const { controller: abortController, release: releaseAbortController } =
@@ -91,21 +96,25 @@ export const generateChatResponse = inngest.createFunction(
     try {
       await emit({ type: "start", messageId: assistantMessageId });
 
-      const [userSettings, resolved, ctx, thread] = await Promise.all([
-        getUserSettingsByUserId(userId).catch(() => null),
-        model
-          ? resolveProvider(userId, model)
-          : resolveDefaultChatProvider(userId),
-        loadChatContext(
-          chatId,
-          userId,
-          selectedServerIds,
-          selectedKbIds,
-          selectedAssistantId,
-          selectedSkillIds,
-        ),
-        loadThreadFromDb(chatId, userMessageId, userId),
-      ]);
+      const [userSettings, resolved, workerResolved, ctx, thread] =
+        await Promise.all([
+          getUserSettingsByUserId(userId).catch(() => null),
+          model
+            ? resolveProvider(userId, model)
+            : resolveDefaultChatProvider(userId),
+          subagentModelId
+            ? resolveProvider(userId, subagentModelId).catch(() => null)
+            : Promise.resolve(null),
+          loadChatContext(
+            chatId,
+            userId,
+            selectedServerIds,
+            selectedKbIds,
+            selectedAssistantId,
+            selectedSkillIds,
+          ),
+          loadThreadFromDb(chatId, userMessageId, userId),
+        ]);
 
       const globalSystemPrompt = userSettings?.globalSystemPrompt;
       const isMemoryEnabled = userSettings?.memoryEnabled ?? true;
@@ -194,6 +203,47 @@ export const generateChatResponse = inngest.createFunction(
         (selectedTools === undefined ||
           selectedTools.includes(INTERNAL_TOOL_IDS.MANAGE_SKILL));
 
+      const isSubagentDelegationEnabled =
+        isToolCallingModel &&
+        (subagentsEnabled === true ||
+          selectedTools?.includes(INTERNAL_TOOL_IDS.DELEGATE_TASK));
+
+      // Scratchpad tools for shared blackboard file persistence (only active when subagent delegation is enabled)
+      const scratchpadTools: Record<string, any> = isSubagentDelegationEnabled
+        ? registerScratchpadTools({
+            chatId,
+            messageId: assistantMessageId,
+            workerRole: "orchestrator",
+          })
+        : {};
+
+      // Active orchestrator tools that the main agent is using and subagents inherit
+      const orchestratorActiveTools: Record<string, any> = {
+        ...(hasExternalMcpTools ? mcpTools : {}),
+        ...(hasArtifactTool ? artifactTools : {}),
+        ...(hasMemoryTool ? memoryTools : {}),
+        ...(hasKbTool ? kbTools : {}),
+        ...(hasSkills ? registerSkillTool(userId) : {}),
+        ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
+        ...(hasFileAttachments ? registerFileUrlTool(fileAttachments) : {}),
+        ...scratchpadTools,
+      };
+
+      const subagentDispatchTools: Record<string, any> =
+        isSubagentDelegationEnabled
+          ? {
+              delegate_task: createSubagentDispatchTool({
+                defaultModel: resolved.sdkProvider.chat(resolvedModelId),
+                customWorkerModel: workerResolved
+                  ? workerResolved.sdkProvider.chat(workerResolved.modelId)
+                  : undefined,
+                availableTools: orchestratorActiveTools,
+                excludedTools: subagentExcludedTools,
+                maxSteps: env.CHAT_MAX_STEPS,
+              }),
+            }
+          : {};
+
       const hasAnyTools =
         isToolCallingModel &&
         (hasExternalMcpTools ||
@@ -202,7 +252,8 @@ export const generateChatResponse = inngest.createFunction(
           hasKbTool ||
           hasFileAttachments ||
           hasSkills ||
-          hasSkillAuthoring);
+          hasSkillAuthoring ||
+          isSubagentDelegationEnabled);
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
@@ -224,16 +275,8 @@ export const generateChatResponse = inngest.createFunction(
         messages: finalMessages,
         tools: hasAnyTools
           ? {
-              // External MCP tools spread FIRST so internal tools cannot be shadowed
-              ...(hasExternalMcpTools ? mcpTools : {}),
-              ...(hasArtifactTool ? artifactTools : {}),
-              ...(hasMemoryTool ? memoryTools : {}),
-              ...(hasKbTool ? kbTools : {}),
-              ...(hasSkills ? registerSkillTool(userId) : {}),
-              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
-              ...(hasFileAttachments
-                ? registerFileUrlTool(fileAttachments)
-                : {}),
+              ...orchestratorActiveTools,
+              ...subagentDispatchTools,
             }
           : undefined,
         stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
@@ -279,17 +322,20 @@ export const generateChatResponse = inngest.createFunction(
             args: (chunk as any).args ?? (chunk as any).input,
           });
         } else if (chunk.type === "tool-result") {
+          const isPreliminary = Boolean((chunk as any).preliminary);
+          const rawResult = (chunk as any).result ?? (chunk as any).output;
           const tc = completedTools.find(
             (t) => t.toolCallId === chunk.toolCallId,
           );
-          if (tc) {
-            tc.result = (chunk as any).result ?? (chunk as any).output;
+          if (tc && !isPreliminary) {
+            tc.result = rawResult;
           }
           await emit({
             type: "tool-result",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
-            result: (chunk as any).result ?? (chunk as any).output,
+            result: rawResult,
+            preliminary: isPreliminary,
           });
         } else if (chunk.type === "tool-error") {
           const tc = completedTools.find(

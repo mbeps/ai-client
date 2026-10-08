@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bot,
   BrainCircuit,
   Database,
   Paperclip,
@@ -45,6 +46,8 @@ interface AttachmentsMenuProps {
   onClearPrompts?: () => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
+  subagentsEnabled?: boolean;
+  onOpenSubagents?: () => void;
 }
 
 /**
@@ -73,6 +76,8 @@ export const AttachmentsMenu = ({
   onClearPrompts,
   supportsVision: _supportsVision = true,
   supportsTools = true,
+  subagentsEnabled = false,
+  onOpenSubagents,
 }: AttachmentsMenuProps) => {
   const promptCount =
     selectedPromptIds !== undefined
@@ -158,6 +163,23 @@ export const AttachmentsMenu = ({
           </Button>
         }
       />
+
+      {onOpenSubagents && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start"
+          onClick={onOpenSubagents}
+        >
+          <Bot className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" />
+          Subagents
+          {subagentsEnabled && (
+            <span className="ml-auto rounded-full bg-purple-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
+              Active
+            </span>
+          )}
+        </Button>
+      )}
     </div>
   );
 };
