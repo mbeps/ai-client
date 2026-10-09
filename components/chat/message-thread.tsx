@@ -28,6 +28,9 @@ interface MessageThreadProps {
     assistantId?: string,
     kbs?: string[],
     selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ) => void;
   /** Callback to delete a message. */
   onDelete: (id: string) => void;
@@ -112,6 +115,7 @@ export function MessageThread({
             activeArtifactId={activeArtifactId}
             isCanvasOpen={isCanvasOpen}
             knowledgebases={knowledgebases}
+            chatId={chat.id}
           />
         );
       })}

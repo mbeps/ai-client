@@ -64,6 +64,9 @@ interface MessageBubbleProps {
     assistantId?: string,
     kbs?: string[],
     selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -90,6 +93,8 @@ interface MessageBubbleProps {
   activeToolCalls?: ToolCallState[];
   /** Knowledge bases available for display in KB chips. */
   knowledgebases?: KnowledgebaseWithCount[];
+  /** Optional chat ID for scratchpad authorization. */
+  chatId?: string;
 }
 
 export function MessageBubble({
@@ -111,6 +116,7 @@ export function MessageBubble({
   streamingCitations,
   activeToolCalls,
   knowledgebases = [],
+  chatId,
 }: MessageBubbleProps) {
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -127,6 +133,9 @@ export function MessageBubble({
     selectedTools: parsedToolIds,
     selectedKbIds: parsedKbIds,
     selectedSkillIds: parsedSkillIds,
+    subagentsEnabled: parsedSubagentsEnabled,
+    subagentModelId: parsedSubagentModelId,
+    subagentExcludedTools: parsedSubagentExcludedTools,
   } = parsedMetadata;
 
   const citations = useMemo(() => {
@@ -193,6 +202,9 @@ export function MessageBubble({
       assistantId || undefined,
       selectedKbIds,
       selectedSkillIds,
+      parsedSubagentsEnabled,
+      parsedSubagentModelId,
+      parsedSubagentExcludedTools,
     );
     setIsEditing(false);
   };
@@ -239,6 +251,8 @@ export function MessageBubble({
               toolResults={toolData?.toolResults}
               activeToolCalls={activeToolCalls}
               isLatest={isLatest}
+              messageId={message.id}
+              chatId={chatId}
             />
           )}
 

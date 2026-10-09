@@ -3,7 +3,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { attachment, chat, message } from "@/drizzle/schema";
+import {
+  attachment,
+  chat,
+  message,
+  subagentScratchpad,
+} from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
@@ -95,8 +100,12 @@ export async function deleteMessage(
     .from(attachment)
     .where(inArray(attachment.messageId, toDelete));
 
-  // Bulk delete — attachment rows cascade-delete automatically via FK
+  // Bulk delete — attachment rows cascade-delete automatically via FK;
+  // scratchpad entries deleted explicitly to handle in-flight decoupled rows
   if (toDelete.length > 0) {
+    await db
+      .delete(subagentScratchpad)
+      .where(inArray(subagentScratchpad.messageId, toDelete));
     await db.delete(message).where(inArray(message.id, toDelete));
   }
 

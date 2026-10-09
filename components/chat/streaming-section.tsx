@@ -28,6 +28,10 @@ interface StreamingSectionProps {
   activeArtifactId?: string | null;
   /** Whether canvas panel is currently open. */
   isCanvasOpen?: boolean;
+  /** Optional chat ID for scratchpad authorization. */
+  chatId?: string;
+  /** Optional assistant message ID generated during streaming. */
+  assistantMessageId?: string | null;
 }
 
 /**
@@ -49,6 +53,8 @@ export function StreamingSection({
   onToggleArtifact,
   activeArtifactId,
   isCanvasOpen,
+  chatId,
+  assistantMessageId,
 }: StreamingSectionProps) {
   const hasStreamingContent =
     streamingContent !== null ||
@@ -75,7 +81,7 @@ export function StreamingSection({
       {hasStreamingContent && (
         <MessageBubble
           message={{
-            id: "streaming",
+            id: assistantMessageId || "streaming",
             role: "assistant",
             content: streamingContent ?? "",
             createdAt: new Date(),
@@ -96,6 +102,7 @@ export function StreamingSection({
           onToggleArtifact={onToggleArtifact}
           activeArtifactId={activeArtifactId}
           isCanvasOpen={isCanvasOpen}
+          chatId={chatId}
         />
       )}
     </>

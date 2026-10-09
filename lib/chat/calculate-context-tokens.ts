@@ -1,4 +1,5 @@
 import type { UserModelOption } from "@/hooks/use-user-models";
+import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
 import { parseMessageMetadata } from "./parse-message-metadata";
@@ -164,11 +165,26 @@ export function calculateContextUsage(
       }
       if (parsed.toolData?.toolResults) {
         for (const tr of parsed.toolData.toolResults) {
-          toolResultsTokens += estimateTokens(
-            typeof tr.result === "string"
-              ? tr.result
-              : JSON.stringify(tr.result),
-          );
+          if (
+            tr.toolName === "delegate_task" ||
+            tr.toolName === "subagent_dispatch"
+          ) {
+            toolResultsTokens += estimateTokens(
+              sanitizeSubagentOutput(tr.result, 8000),
+            );
+          } else if (tr.toolName === "manage_artifact") {
+            const artTitle = (tr.result as any)?.artifact?.title || "Artifact";
+            toolResultsTokens += estimateTokens(
+              `Artifact "${artTitle}" created successfully.`,
+            );
+          } else {
+            const rawStr =
+              typeof tr.result === "string"
+                ? tr.result
+                : JSON.stringify(tr.result);
+            // Cap estimate to bounded representation (max 8000 chars)
+            toolResultsTokens += estimateTokens(rawStr.slice(0, 8000));
+          }
         }
       }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Mic, Plus, Save, Square, X } from "lucide-react";
+import { ArrowRight, Bot, Mic, Plus, Save, Square, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
@@ -41,6 +41,7 @@ import type { Message } from "@/types/message/message";
 import { AttachmentsMenu } from "./attachments-menu";
 import { ContextUsagePill } from "./context-usage-pill";
 import { MentionCommands } from "./mention-commands";
+import { SubagentConfigDialog } from "./subagent-config-dialog";
 
 /**
  * Props for the ChatInput component.
@@ -61,6 +62,9 @@ interface ChatInputProps {
     selectedAssistantId?: string,
     selectedKnowledgebases?: string[],
     selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -122,6 +126,15 @@ interface ChatInputProps {
 
   /** Active thread messages for live context token usage calculation. */
   thread?: Message[];
+
+  /** Initial subagents enabled state. */
+  initialSubagentsEnabled?: boolean;
+
+  /** Initial worker subagent model ID. */
+  initialSubagentModelId?: string;
+
+  /** Initial worker subagent excluded tools. */
+  initialSubagentExcludedTools?: string[];
 }
 
 /**
@@ -150,6 +163,9 @@ export function ChatInput({
   canMentionAssistant = true,
   submitLabel,
   thread = [],
+  initialSubagentsEnabled = false,
+  initialSubagentModelId,
+  initialSubagentExcludedTools = [],
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -344,7 +360,7 @@ export function ChatInput({
   // The seed comes from store-backed entities, which hydrate AFTER this
   // component mounts, so `useState` alone never picks them up. Re-sync when the
   // seed changes; a no-op once hydrated, and it never clobbers user toggles.
-  const skillSeedKey = initialSelectedSkillIds.join(" ");
+  const skillSeedKey = initialSelectedSkillIds.join("::");
   const lastSkillSeedKey = useRef(skillSeedKey);
   useEffect(() => {
     if (lastSkillSeedKey.current === skillSeedKey) return;
@@ -362,6 +378,34 @@ export function ChatInput({
       next.delete(id);
       return next;
     });
+  }, []);
+
+  // -- Subagents Configuration Logic --
+  const [subagentsEnabled, setSubagentsEnabled] = useState(
+    initialSubagentsEnabled,
+  );
+  const [subagentModelId, setSubagentModelId] = useState<string | undefined>(
+    initialSubagentModelId,
+  );
+  const [subagentExcludedTools, setSubagentExcludedTools] = useState<string[]>(
+    initialSubagentExcludedTools,
+  );
+  const [isSubagentDialogOpen, setIsSubagentDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setSubagentsEnabled(initialSubagentsEnabled);
+  }, [initialSubagentsEnabled]);
+
+  useEffect(() => {
+    setSubagentModelId(initialSubagentModelId);
+  }, [initialSubagentModelId]);
+
+  const handleToggleExcludedTool = useCallback((toolId: string) => {
+    setSubagentExcludedTools((prev) =>
+      prev.includes(toolId)
+        ? prev.filter((id) => id !== toolId)
+        : [...prev, toolId],
+    );
   }, []);
 
   // Estimate tokens consumed by skills in the system prompt.
@@ -513,6 +557,9 @@ export function ChatInput({
         selectedAssistant?.id,
         Array.from(selectedKbs),
         Array.from(selectedSkills),
+        subagentsEnabled,
+        subagentModelId,
+        subagentExcludedTools,
       );
       setInput("");
       clearAttachments();
@@ -652,6 +699,8 @@ export function ChatInput({
                   onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
+                  subagentsEnabled={subagentsEnabled}
+                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
                 />
               </DrawerContent>
             </Drawer>
@@ -695,6 +744,8 @@ export function ChatInput({
                   onClearPrompts={() => setSelectedPrompts([])}
                   supportsVision={supportsVision}
                   supportsTools={supportsTools}
+                  subagentsEnabled={subagentsEnabled}
+                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
                 />
               </PopoverContent>
             </Popover>
@@ -704,6 +755,24 @@ export function ChatInput({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {subagentsEnabled && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setIsSubagentDialogOpen(true)}
+                  className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 text-xs font-medium text-purple-700 transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
+                  aria-label="Manage subagents"
+                >
+                  <Bot className="h-3.5 w-3.5 shrink-0" />
+                  <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-in-out group-hover:max-w-24 group-hover:opacity-100">
+                    Subagents
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Manage subagents</TooltipContent>
+            </Tooltip>
+          )}
           <ContextUsagePill
             thread={thread}
             selectedModel={selectedModelObj ?? undefined}
@@ -768,6 +837,15 @@ export function ChatInput({
           )}
         </div>
       </div>
+
+      <SubagentConfigDialog
+        open={isSubagentDialogOpen}
+        onOpenChange={setIsSubagentDialogOpen}
+        subagentsEnabled={subagentsEnabled}
+        onToggleSubagents={setSubagentsEnabled}
+        subagentModelId={subagentModelId}
+        onSubagentModelChange={setSubagentModelId}
+      />
     </div>
   );
 }

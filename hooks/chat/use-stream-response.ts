@@ -30,6 +30,9 @@ function buildMetadata(
   selectedAssistantId?: string,
   selectedKbIds?: string[],
   selectedSkillIds?: string[],
+  subagentsEnabled?: boolean,
+  subagentModelId?: string,
+  subagentExcludedTools?: string[],
 ): Record<string, unknown> {
   const metadataObj: Record<string, unknown> = {
     model,
@@ -43,7 +46,48 @@ function buildMetadata(
   if (selectedSkillIds && selectedSkillIds.length > 0) {
     metadataObj.selectedSkillIds = selectedSkillIds;
   }
+  if (subagentsEnabled !== undefined) {
+    metadataObj.subagentsEnabled = subagentsEnabled;
+  }
+  if (subagentModelId) {
+    metadataObj.subagentModelId = subagentModelId;
+  }
+  if (subagentExcludedTools && subagentExcludedTools.length > 0) {
+    metadataObj.subagentExcludedTools = subagentExcludedTools;
+  }
   return metadataObj;
+}
+
+function saveInflightState(
+  chatId: string,
+  state: {
+    text: string;
+    reasoning: string;
+    toolCalls: ToolCallState[];
+    assistantMessageId: string | null;
+  },
+) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(`chat_inflight_${chatId}`, JSON.stringify(state));
+  } catch {}
+}
+
+function loadInflightState(chatId: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(`chat_inflight_${chatId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearInflightState(chatId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(`chat_inflight_${chatId}`);
+  } catch {}
 }
 
 /**
@@ -109,6 +153,9 @@ interface StreamRequestOptions {
   selectedPromptId?: string;
   selectedSkillIds?: string[];
   selectedKbIds?: string[];
+  subagentsEnabled?: boolean;
+  subagentModelId?: string;
+  subagentExcludedTools?: string[];
 }
 
 /**
@@ -143,6 +190,9 @@ export function useStreamResponse(
     null,
   );
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallState[]>([]);
+  const [assistantMessageId, setAssistantMessageId] = useState<string | null>(
+    null,
+  );
   const [chatNotFound, setChatNotFound] = useState(false);
 
   const pendingRef = useRef<{
@@ -169,6 +219,59 @@ export function useStreamResponse(
     return currentChat.messages?.[currentChat.currentLeafId];
   }, [currentChat]);
 
+  const syncFromDb = useCallback(async () => {
+    if (!chatId) return false;
+    if (!useAppStore.getState().chats?.[chatId]) return false;
+    try {
+      const data = await getChat(chatId);
+      const userMsgId = pendingRef.current.userMessageId;
+      const assistantId = assistantMessageIdRef.current;
+      const targetParentId = userMsgId || activeLeaf?.id;
+
+      if (!assistantId && !targetParentId) {
+        return false;
+      }
+
+      const assistantMsg = data.messages.find(
+        (m) =>
+          m.role === "assistant" &&
+          (assistantId
+            ? m.id === assistantId
+            : targetParentId
+              ? m.parentId === targetParentId
+              : true),
+      );
+
+      if (assistantMsg) {
+        clearInflightState(chatId);
+        const fullChat = buildChatFromRows(data);
+        upsertChat(fullChat);
+        options?.onDone?.(assistantMsg.content);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return true;
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.message.includes("Not Found") ||
+          err.message.includes("Unauthorized") ||
+          err.message.includes("access denied"))
+      ) {
+        setChatNotFound(true);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return false;
+      }
+      logger.error("Failed to sync chat from DB", err);
+    }
+    return false;
+  }, [chatId, upsertChat, options, activeLeaf]);
+
   // Mount effect: detect in-flight generation after page refresh
   useEffect(() => {
     if (!chatId) return;
@@ -185,7 +288,7 @@ export function useStreamResponse(
     const leafId = activeLeaf.id;
 
     void isChatGenerating(chatId)
-      .then((generating) => {
+      .then(async (generating) => {
         if (generating && pendingRef.current.userMessageId === null) {
           rejoinedRef.current = true;
           pendingRef.current = {
@@ -194,13 +297,41 @@ export function useStreamResponse(
             startTime: Date.now(),
           };
           lastChunkTimeRef.current = Date.now();
+
+          // Restore in-flight state from sessionStorage if available
+          const cached = loadInflightState(chatId);
+          if (cached) {
+            if (cached.text) {
+              accumulatedTextRef.current = cached.text;
+              setStreamingContent(cached.text);
+            }
+            if (cached.reasoning) {
+              accumulatedReasoningRef.current = cached.reasoning;
+              setStreamingReasoning(cached.reasoning);
+            }
+            if (
+              Array.isArray(cached.toolCalls) &&
+              cached.toolCalls.length > 0
+            ) {
+              activeToolCallsRef.current = cached.toolCalls;
+              setActiveToolCalls(cached.toolCalls);
+            }
+            if (cached.assistantMessageId) {
+              assistantMessageIdRef.current = cached.assistantMessageId;
+              setAssistantMessageId(cached.assistantMessageId);
+            }
+          }
+
           setIsStreaming(true);
+        } else if (!generating) {
+          clearInflightState(chatId);
+          await syncFromDb();
         }
       })
       .catch(() => {
         // Swallow rejections
       });
-  }, [chatId, currentChat, activeLeaf, isStreaming]);
+  }, [chatId, currentChat, activeLeaf, isStreaming, syncFromDb]);
 
   const handleStreamEvent = useCallback(
     async (event: ChatStreamEvent) => {
@@ -212,6 +343,7 @@ export function useStreamResponse(
         case "start":
           lastChunkTimeRef.current = Date.now();
           assistantMessageIdRef.current = event.messageId;
+          setAssistantMessageId(event.messageId);
           setIsStreaming(true);
           break;
 
@@ -250,9 +382,14 @@ export function useStreamResponse(
 
         case "tool-result": {
           lastChunkTimeRef.current = Date.now();
+          const isPreliminary = Boolean(event.preliminary);
           activeToolCallsRef.current = activeToolCallsRef.current.map((t) =>
             t.toolCallId === event.toolCallId
-              ? { ...t, status: "complete", result: event.result }
+              ? {
+                  ...t,
+                  status: isPreliminary ? "calling" : "complete",
+                  result: event.result,
+                }
               : t,
           );
           setActiveToolCalls([...activeToolCallsRef.current]);
@@ -295,10 +432,12 @@ export function useStreamResponse(
               }
             }
 
+            clearInflightState(chatId);
             setIsStreaming(false);
             setStreamingContent(null);
             setStreamingReasoning(null);
             setActiveToolCalls([]);
+            setAssistantMessageId(null);
             break;
           }
 
@@ -356,15 +495,18 @@ export function useStreamResponse(
             options?.onDone?.(text);
           }
 
+          clearInflightState(chatId);
           setIsStreaming(false);
           setStreamingContent(null);
           setStreamingReasoning(null);
           setActiveToolCalls([]);
+          setAssistantMessageId(null);
           break;
         }
 
         case "error": {
           lastChunkTimeRef.current = 0;
+          clearInflightState(chatId);
           if (!handleApiError(event)) {
             toast.error(event.message || "Failed to generate response");
           }
@@ -374,6 +516,15 @@ export function useStreamResponse(
           setActiveToolCalls([]);
           break;
         }
+      }
+
+      if (event.type !== "finish" && event.type !== "error") {
+        saveInflightState(chatId, {
+          text: accumulatedTextRef.current,
+          reasoning: accumulatedReasoningRef.current,
+          toolCalls: activeToolCallsRef.current,
+          assistantMessageId: assistantMessageIdRef.current,
+        });
       }
     },
     [chatId, addMessage, upsertChat, handleApiError, options],
@@ -420,53 +571,6 @@ export function useStreamResponse(
     historyLimit: null,
     apiBaseUrl,
   });
-
-  const syncFromDb = useCallback(async () => {
-    if (!chatId) return false;
-    if (!useAppStore.getState().chats?.[chatId]) return false;
-    try {
-      const data = await getChat(chatId);
-      const userMsgId = pendingRef.current.userMessageId;
-      const assistantId = assistantMessageIdRef.current;
-
-      if (!assistantId && !userMsgId) {
-        return false;
-      }
-
-      const assistantMsg = data.messages.find(
-        (m) =>
-          m.role === "assistant" &&
-          (assistantId ? m.id === assistantId : m.parentId === userMsgId),
-      );
-
-      if (assistantMsg) {
-        const fullChat = buildChatFromRows(data);
-        upsertChat(fullChat);
-        options?.onDone?.(assistantMsg.content);
-        setIsStreaming(false);
-        setStreamingContent(null);
-        setStreamingReasoning(null);
-        setActiveToolCalls([]);
-        return true;
-      }
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        (err.message.includes("Not Found") ||
-          err.message.includes("Unauthorized") ||
-          err.message.includes("access denied"))
-      ) {
-        setChatNotFound(true);
-        setIsStreaming(false);
-        setStreamingContent(null);
-        setStreamingReasoning(null);
-        setActiveToolCalls([]);
-        return false;
-      }
-      logger.error("Failed to sync chat from DB", err);
-    }
-    return false;
-  }, [chatId, upsertChat, options]);
 
   const connectionStatusRef = useRef(connectionStatus);
   useEffect(() => {
@@ -549,23 +653,34 @@ export function useStreamResponse(
       const timeSinceLastChunk = Date.now() - lastChunkTimeRef.current;
       const timeSinceStart = Date.now() - pendingRef.current.startTime;
 
+      const hasActiveCallingTools = activeToolCallsRef.current.some(
+        (t) => t.status === "calling",
+      );
+
       const isConnectionError =
         connectionStatusRef.current === "error" || Boolean(realtimeError);
-      const isStalled = timeSinceStart > 5000 && timeSinceLastChunk > 5000;
+      const isRejoinedCheck =
+        rejoinedRef.current && (attempts === 1 || timeSinceLastChunk > 2000);
+      const isStalled =
+        !hasActiveCallingTools &&
+        timeSinceStart > 5000 &&
+        timeSinceLastChunk > 5000;
 
-      if (isConnectionError || isStalled) {
+      if (isConnectionError || isStalled || isRejoinedCheck) {
         const synced = await syncFromDb();
         if (synced) {
+          clearInflightState(chatId);
           clearInterval(interval);
           return;
         }
 
-        if ((isConnectionError && attempts >= 10) || attempts >= 30) {
+        if (
+          (isConnectionError && attempts >= 10) ||
+          (!hasActiveCallingTools && attempts >= 30)
+        ) {
+          clearInflightState(chatId);
           clearInterval(interval);
           setIsStreaming(false);
-          setStreamingContent(null);
-          setStreamingReasoning(null);
-          setActiveToolCalls([]);
           if (isConnectionError) {
             toast.error(
               "Connection lost to generation stream. Please refresh if response is ready.",
@@ -576,7 +691,7 @@ export function useStreamResponse(
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isStreaming, chatNotFound, realtimeError, syncFromDb]);
+  }, [isStreaming, chatNotFound, realtimeError, syncFromDb, chatId]);
 
   const isLoading = isStreaming;
   const isStreamingReasoning =
@@ -584,6 +699,7 @@ export function useStreamResponse(
 
   const stopStream = useCallback(() => {
     stoppedRef.current = true;
+    clearInflightState(chatId);
 
     const partialText = accumulatedTextRef.current;
     const messageId = assistantMessageIdRef.current || crypto.randomUUID();
@@ -646,6 +762,9 @@ export function useStreamResponse(
     selectedAssistantId?: string,
     selectedKbIds: string[] = [],
     selectedSkillIds: string[] = [],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ): Promise<string> => {
     const promptIds = Array.isArray(selectedPromptId)
       ? selectedPromptId
@@ -679,6 +798,9 @@ export function useStreamResponse(
       selectedAssistantId,
       selectedKbIds,
       selectedSkillIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     );
 
     // 2. Resolve prompt content (MCP / slash-command)
@@ -761,6 +883,9 @@ export function useStreamResponse(
           selectedPromptId: promptIds[0],
           selectedSkillIds,
           selectedKbIds,
+          subagentsEnabled,
+          subagentModelId,
+          subagentExcludedTools,
         } satisfies StreamRequestOptions),
       });
 
@@ -787,6 +912,7 @@ export function useStreamResponse(
     streamingReasoning,
     isStreamingReasoning,
     activeToolCalls,
+    assistantMessageId,
     streamResponse,
     stopStream,
   };

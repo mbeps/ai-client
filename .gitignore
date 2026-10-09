@@ -48,8 +48,8 @@ next-env.d.ts
 scripts/hash-password.js
 reports/**
 **.xlsx
-graphify-out/**
-wiki/**
+graphify-out/
+wiki/
 AGENTS.md
 .agents/**
 evaluations/**

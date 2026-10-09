@@ -14,6 +14,8 @@ interface ResponseTimelineProps {
   toolResults?: ToolResult[];
   activeToolCalls?: ToolCallState[];
   isLatest?: boolean;
+  messageId?: string;
+  chatId?: string;
 }
 
 /**
@@ -27,6 +29,8 @@ interface ResponseTimelineProps {
  * @param props.toolResults - Results returned from tool executions.
  * @param props.activeToolCalls - Real-time tool execution state during streaming.
  * @param props.isLatest - Whether this is the latest message (affects auto-expand behavior).
+ * @param props.messageId - Optional assistant message ID for scratchpad inspection.
+ * @param props.chatId - Optional chat ID for scratchpad authorization.
  * @author Maruf Bepary
  */
 export function ResponseTimeline({
@@ -36,6 +40,8 @@ export function ResponseTimeline({
   toolResults,
   activeToolCalls,
   isLatest,
+  messageId,
+  chatId,
 }: ResponseTimelineProps) {
   // Currently, we don't have true interleaving from the backend yet,
   // so we'll group them: Thinking first, then Tool Calls.
@@ -81,6 +87,8 @@ export function ResponseTimeline({
                 result: tc.result,
               }))}
             initialOpen={false}
+            messageId={messageId}
+            chatId={chatId}
           />,
         );
       } else if (hasStaticTools) {
@@ -90,6 +98,8 @@ export function ResponseTimeline({
             toolCalls={toolCalls!}
             toolResults={toolResults ?? []}
             initialOpen={false}
+            messageId={messageId}
+            chatId={chatId}
           />,
         );
       }
@@ -103,6 +113,8 @@ export function ResponseTimeline({
     toolResults,
     activeToolCalls,
     isLatest,
+    messageId,
+    chatId,
   ]);
 
   if (steps.length === 0) return null;

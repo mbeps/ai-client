@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest";
+import { vi } from "vitest";
+
+// KaTeX's CSS import breaks the Vitest PostCSS pipeline in jsdom; mock globally for test runs
+vi.mock("katex/dist/katex.min.css", () => ({}));
 
 // Fallback test environment defaults to prevent missing secret crashes in unmocked test runs
 process.env.DATABASE_URL =
@@ -50,7 +54,7 @@ if (typeof window !== "undefined") {
   }
 }
 
-import { beforeEach, vi } from "vitest";
+import { beforeEach } from "vitest";
 
 beforeEach(async () => {
   const { inngest } = await import("@/lib/inngest/client");

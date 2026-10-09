@@ -17,6 +17,7 @@ export type ChatStreamEvent =
       toolName: string;
       result: unknown;
       serverName?: string;
+      preliminary?: boolean;
     }
   | { type: "finish"; finishReason?: string; usage?: unknown }
   | { type: "error"; message: string; code?: string };

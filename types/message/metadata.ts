@@ -49,4 +49,7 @@ export type ParsedMessageMetadata = {
   usage: MessageUsage | null;
   finishReason: string | null;
   durationMs: number | null;
+  subagentsEnabled?: boolean;
+  subagentModelId?: string;
+  subagentExcludedTools?: string[];
 };

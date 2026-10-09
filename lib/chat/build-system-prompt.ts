@@ -16,6 +16,7 @@ export interface SystemPromptOptions {
   supportsTools?: boolean;
   userContext?: { name?: string | null; email?: string | null };
   userMemories?: string[];
+  isSubagentDelegationEnabled?: boolean;
 }
 
 /**
@@ -98,6 +99,11 @@ export function buildSystemPrompt(
   // Available skills catalog for progressive disclosure via load_skill tool
   if (supportsTools && availableSkills && availableSkills.length > 0) {
     systemParts.push(formatSkillCatalog(availableSkills));
+  }
+
+  // Orchestrator directives when subagent delegation is active
+  if (options.isSubagentDelegationEnabled) {
+    systemParts.push(PROMPTS.SYSTEM.ORCHESTRATOR_DIRECTIVES);
   }
 
   if (systemParts.length === 0) {

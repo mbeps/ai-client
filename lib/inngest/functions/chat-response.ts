@@ -1,4 +1,4 @@
-import { isStepCount, streamText } from "ai";
+import { isStepCount, type ModelMessage, streamText } from "ai";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
@@ -25,6 +25,11 @@ import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
+import {
+  createSubagentDispatchTool,
+  sanitizeSubagentOutput,
+} from "@/lib/subagents/subagent-dispatch-tool";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
 const log = getLogger(["inngest", "chat", "response"]);
@@ -66,6 +71,9 @@ export const generateChatResponse = inngest.createFunction(
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     } = event.data;
 
     const { controller: abortController, release: releaseAbortController } =
@@ -91,21 +99,25 @@ export const generateChatResponse = inngest.createFunction(
     try {
       await emit({ type: "start", messageId: assistantMessageId });
 
-      const [userSettings, resolved, ctx, thread] = await Promise.all([
-        getUserSettingsByUserId(userId).catch(() => null),
-        model
-          ? resolveProvider(userId, model)
-          : resolveDefaultChatProvider(userId),
-        loadChatContext(
-          chatId,
-          userId,
-          selectedServerIds,
-          selectedKbIds,
-          selectedAssistantId,
-          selectedSkillIds,
-        ),
-        loadThreadFromDb(chatId, userMessageId, userId),
-      ]);
+      const [userSettings, resolved, workerResolved, ctx, thread] =
+        await Promise.all([
+          getUserSettingsByUserId(userId).catch(() => null),
+          model
+            ? resolveProvider(userId, model)
+            : resolveDefaultChatProvider(userId),
+          subagentModelId
+            ? resolveProvider(userId, subagentModelId).catch(() => null)
+            : Promise.resolve(null),
+          loadChatContext(
+            chatId,
+            userId,
+            selectedServerIds,
+            selectedKbIds,
+            selectedAssistantId,
+            selectedSkillIds,
+          ),
+          loadThreadFromDb(chatId, userMessageId, userId),
+        ]);
 
       const globalSystemPrompt = userSettings?.globalSystemPrompt;
       const isMemoryEnabled = userSettings?.memoryEnabled ?? true;
@@ -194,6 +206,47 @@ export const generateChatResponse = inngest.createFunction(
         (selectedTools === undefined ||
           selectedTools.includes(INTERNAL_TOOL_IDS.MANAGE_SKILL));
 
+      const isSubagentDelegationEnabled =
+        isToolCallingModel &&
+        (subagentsEnabled === true ||
+          selectedTools?.includes(INTERNAL_TOOL_IDS.DELEGATE_TASK));
+
+      // Scratchpad tools for shared blackboard file persistence (only active when subagent delegation is enabled)
+      const scratchpadTools: Record<string, any> = isSubagentDelegationEnabled
+        ? registerScratchpadTools({
+            chatId,
+            messageId: assistantMessageId,
+            workerRole: "orchestrator",
+          })
+        : {};
+
+      // Active orchestrator tools that the main agent is using and subagents inherit
+      const orchestratorActiveTools: Record<string, any> = {
+        ...(hasExternalMcpTools ? mcpTools : {}),
+        ...(hasArtifactTool ? artifactTools : {}),
+        ...(hasMemoryTool ? memoryTools : {}),
+        ...(hasKbTool ? kbTools : {}),
+        ...(hasSkills ? registerSkillTool(userId) : {}),
+        ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
+        ...(hasFileAttachments ? registerFileUrlTool(fileAttachments) : {}),
+        ...scratchpadTools,
+      };
+
+      const subagentDispatchTools: Record<string, any> =
+        isSubagentDelegationEnabled
+          ? {
+              delegate_task: createSubagentDispatchTool({
+                defaultModel: resolved.sdkProvider.chat(resolvedModelId),
+                customWorkerModel: workerResolved
+                  ? workerResolved.sdkProvider.chat(workerResolved.modelId)
+                  : undefined,
+                availableTools: orchestratorActiveTools,
+                excludedTools: subagentExcludedTools,
+                maxSteps: env.CHAT_MAX_STEPS,
+              }),
+            }
+          : {};
+
       const hasAnyTools =
         isToolCallingModel &&
         (hasExternalMcpTools ||
@@ -202,41 +255,41 @@ export const generateChatResponse = inngest.createFunction(
           hasKbTool ||
           hasFileAttachments ||
           hasSkills ||
-          hasSkillAuthoring);
+          hasSkillAuthoring ||
+          isSubagentDelegationEnabled);
+
+      const orchestratorMaxSteps = isSubagentDelegationEnabled
+        ? Math.max(env.CHAT_MAX_STEPS * 2, 20)
+        : env.CHAT_MAX_STEPS;
+
+      const systemPrompt = buildSystemPrompt(
+        globalSystemPrompt,
+        ctx.projectRow?.globalPrompt,
+        ctx.assistantRow?.prompt,
+        isToolCallingModel && hasKbTool,
+        {
+          attachmentNames: fileAttachments.map((a) => a.name),
+          availableSkills: ctx.availableSkills,
+          selectedSkills: ctx.selectedSkills,
+          supportsTools: isToolCallingModel,
+          userContext: { name: userName, email: userEmail },
+          userMemories: ctx.userMemories,
+          isSubagentDelegationEnabled,
+        },
+      );
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
         abortSignal: abortController.signal,
-        instructions: buildSystemPrompt(
-          globalSystemPrompt,
-          ctx.projectRow?.globalPrompt,
-          ctx.assistantRow?.prompt,
-          isToolCallingModel && hasKbTool,
-          {
-            attachmentNames: fileAttachments.map((a) => a.name),
-            availableSkills: ctx.availableSkills,
-            selectedSkills: ctx.selectedSkills,
-            supportsTools: isToolCallingModel,
-            userContext: { name: userName, email: userEmail },
-            userMemories: ctx.userMemories,
-          },
-        ),
+        instructions: systemPrompt,
         messages: finalMessages,
         tools: hasAnyTools
           ? {
-              // External MCP tools spread FIRST so internal tools cannot be shadowed
-              ...(hasExternalMcpTools ? mcpTools : {}),
-              ...(hasArtifactTool ? artifactTools : {}),
-              ...(hasMemoryTool ? memoryTools : {}),
-              ...(hasKbTool ? kbTools : {}),
-              ...(hasSkills ? registerSkillTool(userId) : {}),
-              ...(hasSkillAuthoring ? registerSkillAuthoringTools(userId) : {}),
-              ...(hasFileAttachments
-                ? registerFileUrlTool(fileAttachments)
-                : {}),
+              ...orchestratorActiveTools,
+              ...subagentDispatchTools,
             }
           : undefined,
-        stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
+        stopWhen: hasAnyTools ? isStepCount(orchestratorMaxSteps) : undefined,
       });
 
       const safeFinishReason = Promise.resolve(result.finishReason).catch(
@@ -279,17 +332,27 @@ export const generateChatResponse = inngest.createFunction(
             args: (chunk as any).args ?? (chunk as any).input,
           });
         } else if (chunk.type === "tool-result") {
+          const isPreliminary = Boolean((chunk as any).preliminary);
+          const rawResult = (chunk as any).result ?? (chunk as any).output;
           const tc = completedTools.find(
             (t) => t.toolCallId === chunk.toolCallId,
           );
-          if (tc) {
-            tc.result = (chunk as any).result ?? (chunk as any).output;
+          const isSubagent =
+            chunk.toolName === "delegate_task" ||
+            chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
+          const finalResult = isSubagent
+            ? sanitizeSubagentOutput(rawResult)
+            : rawResult;
+
+          if (tc && !isPreliminary) {
+            tc.result = finalResult;
           }
           await emit({
             type: "tool-result",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
-            result: (chunk as any).result ?? (chunk as any).output,
+            result: isPreliminary ? rawResult : finalResult,
+            preliminary: isPreliminary,
           });
         } else if (chunk.type === "tool-error") {
           const tc = completedTools.find(
@@ -311,6 +374,109 @@ export const generateChatResponse = inngest.createFunction(
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             result: errorResult,
+          });
+        }
+      }
+
+      // Synthesis fallback: if tools completed but no text was produced
+      // (e.g., hit step limit or model stopped on tool-calls turn), synthesize a final response
+      if (
+        !abortController.signal.aborted &&
+        accumulatedText.trim().length === 0 &&
+        completedTools.length > 0
+      ) {
+        log.info(
+          "Triggering fallback synthesis pass after tool execution (chatId: {chatId})",
+          { chatId },
+        );
+
+        const synthesisMessages: ModelMessage[] = [
+          ...finalMessages,
+          {
+            role: "assistant",
+            content: completedTools.map((tc) => ({
+              type: "tool-call" as const,
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              input: tc.args,
+            })),
+          },
+          {
+            role: "tool",
+            content: completedTools.map((tc) => ({
+              type: "tool-result" as const,
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              output: {
+                type: "text" as const,
+                value:
+                  typeof tc.result === "string"
+                    ? tc.result
+                    : JSON.stringify(tc.result ?? "Task completed"),
+              },
+            })),
+          },
+          {
+            role: "user",
+            content:
+              "Synthesize all the research and findings above into a comprehensive, high-quality final response for the user. " +
+              (hasArtifactTool
+                ? "If the user requested a document, report, table, code, or canvas artifact, you MUST call manage_artifact now to create it."
+                : ""),
+          },
+        ];
+
+        try {
+          const synthResult = streamText({
+            model: resolved.sdkProvider.chat(resolvedModelId),
+            abortSignal: abortController.signal,
+            instructions: systemPrompt,
+            messages: synthesisMessages,
+            tools: hasArtifactTool ? artifactTools : undefined,
+            stopWhen: isStepCount(3),
+          });
+
+          for await (const chunk of synthResult.fullStream) {
+            if (abortController.signal.aborted) break;
+            if (chunk.type === "text-delta") {
+              accumulatedText += chunk.text;
+              await emit({ type: "text-delta", text: chunk.text });
+            } else if (chunk.type === "reasoning-delta") {
+              accumulatedReasoning += chunk.text;
+              await emit({ type: "reasoning-delta", reasoning: chunk.text });
+            } else if (chunk.type === "tool-call") {
+              completedTools.push({
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                args: (chunk as any).args ?? (chunk as any).input,
+              });
+              await emit({
+                type: "tool-call",
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                args: (chunk as any).args ?? (chunk as any).input,
+              });
+            } else if (chunk.type === "tool-result") {
+              const rawResult = (chunk as any).result ?? (chunk as any).output;
+              const tc = completedTools.find(
+                (t) => t.toolCallId === chunk.toolCallId,
+              );
+              if (tc) {
+                tc.result = rawResult;
+              }
+              await emit({
+                type: "tool-result",
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                result: rawResult,
+                preliminary: false,
+              });
+            }
+          }
+        } catch (synthErr) {
+          log.warn("Synthesis fallback pass encountered error: {error}", {
+            error:
+              synthErr instanceof Error ? synthErr.message : String(synthErr),
           });
         }
       }
