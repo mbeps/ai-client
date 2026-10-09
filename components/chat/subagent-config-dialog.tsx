@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ShieldCheck, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,8 +43,14 @@ export function SubagentConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">
-            Subagents
+          <DialogTitle className="flex items-center gap-2 font-semibold text-base">
+            <span>Subagents</span>
+            <Badge
+              variant="outline"
+              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] uppercase text-purple-700 tracking-wider dark:text-purple-300"
+            >
+              BETA
+            </Badge>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Delegate complex tasks to isolated worker subagents with shared

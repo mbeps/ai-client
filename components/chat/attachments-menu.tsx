@@ -8,6 +8,7 @@ import {
   SquareTerminal,
   Wrench,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -173,11 +174,12 @@ export const AttachmentsMenu = ({
         >
           <Bot className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" />
           Subagents
-          {subagentsEnabled && (
-            <span className="ml-auto rounded-full bg-purple-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
-              Active
-            </span>
-          )}
+          <Badge
+            variant="outline"
+            className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] uppercase text-purple-700 tracking-wider dark:text-purple-300"
+          >
+            BETA
+          </Badge>
         </Button>
       )}
     </div>
