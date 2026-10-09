@@ -77,7 +77,6 @@ export const AttachmentsMenu = ({
   onClearPrompts,
   supportsVision: _supportsVision = true,
   supportsTools = true,
-  subagentsEnabled = false,
   onOpenSubagents,
 }: AttachmentsMenuProps) => {
   const promptCount =
@@ -176,7 +175,7 @@ export const AttachmentsMenu = ({
           Subagents
           <Badge
             variant="outline"
-            className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] uppercase text-purple-700 tracking-wider dark:text-purple-300"
+            className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
           >
             BETA
           </Badge>

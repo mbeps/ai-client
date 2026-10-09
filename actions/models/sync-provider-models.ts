@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { deleteModel } from "@/actions/models/delete-model";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -13,14 +14,14 @@ const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Synchronises models from an external AI provider's /models endpoint.
- * Fetches model listings via OpenAI-compatible API, inserts new models, skips existing ones.
+ * Fetches model listings via OpenAI-compatible API, inserts new models as disabled, updates existing without overwriting user configs, and removes deleted models.
  * Enforces SSRF URL guard checks to prevent server-side request forgery attacks.
- * Returns sync results with count of added/unchanged models and optional discovery limits.
+ * Returns sync results with count of added/unchanged/deleted models and optional discovery limits.
  * Logs sync operations for audit and troubleshooting purposes.
  * Runs on server only — typically called when user adds or configures a new provider.
  *
  * @param providerId - UUID of the provider to sync models from; must be owned by the authenticated user.
- * @returns Object with added (count of new models inserted), unchanged (count of skipped duplicates), limitExceeded (boolean if discovery capped), totalDiscovered (optional count).
+ * @returns Object with added (count of new models inserted), unchanged (count of existing models), deleted (count of removed models), limitExceeded (boolean if discovery capped), totalDiscovered (optional count).
  * @throws Error if session is not authenticated.
  * @throws Error if provider is not found or user does not own it (returns "Not Found").
  * @throws Error if provider URL is blocked by SSRF guard (returns "Provider URL is blocked by SSRF guard").
@@ -31,6 +32,7 @@ const log = getLogger(["app", "actions", "model"]);
 export type SyncProviderModelsResult = {
   added: number;
   unchanged: number;
+  deleted: number;
   limitExceeded?: boolean;
   totalDiscovered?: number;
 };
@@ -192,6 +194,7 @@ export async function syncProviderModels(
 
   let added = 0;
   let unchanged = 0;
+  let deleted = 0;
 
   // Check if model count exceeds 1000-model limit
   const totalDiscovered = modelsMap.size;
@@ -199,9 +202,11 @@ export async function syncProviderModels(
 
   // Process discovered models (limit to 1000 to prevent OOM)
   const allModels = Array.from(modelsMap.values()).slice(0, 1000);
+  const discoveredModelIds = new Set<string>();
 
   for (const discovered of allModels) {
     const modelId = discovered.id;
+    discoveredModelIds.add(modelId);
 
     // Resolve final model type
     let modelType: "chat" | "embedding" | "both" = "chat";
@@ -227,12 +232,12 @@ export async function syncProviderModels(
     }
 
     if (existing) {
+      // Preserve existing user configs (label, contextWindow, capabilities, isEnabled).
+      // Only refresh modelType and touch updatedAt.
       await db
         .update(aiModel)
         .set({
-          label: modelId,
           modelType,
-          isEnabled: true,
           updatedAt: new Date(),
         })
         .where(eq(aiModel.id, existing.id));
@@ -252,23 +257,48 @@ export async function syncProviderModels(
       capReasoning: false,
       capStructuredOutput: false,
       isManuallyAdded: false,
-      isEnabled: true,
+      isEnabled: false,
     });
 
     added += 1;
   }
 
+  // Handle models that were removed from the provider API (excluding manually added models)
+  const existingSyncedModels = await db
+    .select({ id: aiModel.id, modelId: aiModel.modelId })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, provider.id),
+        eq(aiModel.userId, session.user.id),
+        eq(aiModel.isManuallyAdded, false),
+      ),
+    );
+
+  const staleModelIdsToDelete: string[] = [];
+  for (const model of existingSyncedModels) {
+    if (!discoveredModelIds.has(model.modelId)) {
+      staleModelIdsToDelete.push(model.id);
+    }
+  }
+
+  if (staleModelIdsToDelete.length > 0) {
+    const deleteRes = await deleteModel(staleModelIdsToDelete);
+    deleted = deleteRes.deletedCount;
+  }
+
   log.info(
-    "Provider model sync complete (added: {added}, unchanged: {unchanged})",
+    "Provider model sync complete (added: {added}, unchanged: {unchanged}, deleted: {deleted})",
     {
       providerId,
       added,
       unchanged,
+      deleted,
       totalDiscovered,
       limitExceeded,
       userId: session.user.id,
     },
   );
 
-  return { added, unchanged, limitExceeded, totalDiscovered };
+  return { added, unchanged, deleted, limitExceeded, totalDiscovered };
 }

@@ -6,6 +6,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronDown,
+  Database,
   FileCode,
   Loader2,
   Workflow,
@@ -19,6 +20,10 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  estimateToolContextTokens,
+  formatTokens,
+} from "@/lib/chat/calculate-context-tokens";
 import { cn } from "@/lib/utils";
 import { ScratchpadViewerModal } from "./scratchpad-viewer-modal";
 
@@ -203,6 +208,20 @@ export function SubagentActivityCard({
 
       <AccordionContent className="pb-0">
         <div className="space-y-3 border-purple-500/20 border-t bg-card/60 p-3 text-xs">
+          <div className="flex items-center justify-between rounded-md border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Database className="size-3.5 text-purple-600 dark:text-purple-400" />
+              <span className="font-medium">Context Usage</span>
+            </div>
+            <span className="font-mono text-[11px] text-foreground/80">
+              ~
+              {formatTokens(
+                estimateToolContextTokens({ taskBrief, inputData }, result),
+              )}{" "}
+              tokens
+            </span>
+          </div>
+
           {/* Delegated Prompt from Orchestrator */}
           <div>
             <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">

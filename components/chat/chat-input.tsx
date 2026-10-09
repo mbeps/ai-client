@@ -400,7 +400,7 @@ export function ChatInput({
     setSubagentModelId(initialSubagentModelId);
   }, [initialSubagentModelId]);
 
-  const handleToggleExcludedTool = useCallback((toolId: string) => {
+  const _handleToggleExcludedTool = useCallback((toolId: string) => {
     setSubagentExcludedTools((prev) =>
       prev.includes(toolId)
         ? prev.filter((id) => id !== toolId)
@@ -761,7 +761,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={() => setIsSubagentDialogOpen(true)}
-                  className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 text-xs font-medium text-purple-700 transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
+                  className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 font-medium text-purple-700 text-xs transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
                   aria-label="Manage subagents"
                 >
                   <Bot className="h-3.5 w-3.5 shrink-0" />

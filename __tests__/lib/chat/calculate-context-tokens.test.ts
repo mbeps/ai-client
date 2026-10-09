@@ -4,6 +4,7 @@ import {
   calculateContextUsage,
   estimateAttachmentTokens,
   estimateTokens,
+  estimateToolContextTokens,
   formatTokens,
 } from "@/lib/chat/calculate-context-tokens";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -67,6 +68,19 @@ describe("calculate-context-tokens utility", () => {
     });
   });
 
+  describe("estimateToolContextTokens", () => {
+    it("estimates tokens correctly for arguments and results", () => {
+      expect(estimateToolContextTokens(undefined, undefined)).toBe(0);
+      expect(estimateToolContextTokens({ query: "weather in Paris" })).toBeGreaterThan(0);
+      expect(
+        estimateToolContextTokens(
+          { file: "test.txt" },
+          { content: "Hello world this is test content" },
+        ),
+      ).toBeGreaterThan(0);
+    });
+  });
+
   describe("formatTokens", () => {
     it("formats small numbers directly", () => {
       expect(formatTokens(850)).toBe("850");
@@ -76,13 +90,22 @@ describe("calculate-context-tokens utility", () => {
     it("formats thousands as K", () => {
       expect(formatTokens(1200)).toBe("1.2K");
       expect(formatTokens(12400)).toBe("12.4K");
-      expect(formatTokens(371500)).toBe("372K");
+      expect(formatTokens(371500)).toBe("371.5K");
+      expect(formatTokens(372000)).toBe("372K");
     });
 
     it("formats millions as M", () => {
       expect(formatTokens(1000000)).toBe("1M");
       expect(formatTokens(1500000)).toBe("1.5M");
       expect(formatTokens(20000000)).toBe("20M");
+      expect(formatTokens(100000000)).toBe("100M");
+    });
+
+    it("formats billions as B", () => {
+      expect(formatTokens(1000000000)).toBe("1B");
+      expect(formatTokens(1500000000)).toBe("1.5B");
+      expect(formatTokens(25000000000)).toBe("25B");
+      expect(formatTokens(120000000000)).toBe("120B");
     });
   });
 

@@ -25,6 +25,7 @@ export default function PromptsPage() {
       title="Prompts"
       description="Custom shortcuts for your frequently used instructions."
       items={prompts}
+      columns={2}
       renderCard={(prompt) => <PromptCard prompt={prompt} />}
       emptyStateMessage="No prompts yet. Create one to define a custom prompt shortcut."
       searchPlaceholder="Search prompts..."

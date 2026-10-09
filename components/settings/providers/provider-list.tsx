@@ -144,9 +144,11 @@ export function ProviderList({
                       description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
                     });
                   } else {
-                    toast.success(
-                      `Sync complete: +${result.added}, ${result.unchanged} unchanged`,
-                    );
+                    const message =
+                      result.deleted > 0
+                        ? `Sync complete: +${result.added}, ${result.unchanged} unchanged, -${result.deleted} removed`
+                        : `Sync complete: +${result.added}, ${result.unchanged} unchanged`;
+                    toast.success(message);
                   }
                 })
               }

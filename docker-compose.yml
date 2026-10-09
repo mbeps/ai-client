@@ -34,8 +34,7 @@ services:
 
   inngest:
     image: inngest/inngest:latest
-    ports:
-      - "8288:8288"
+    network_mode: host
     environment:
       - INNGEST_DEV=1
     command:
@@ -44,10 +43,7 @@ services:
       - --host
       - 0.0.0.0
       - -u
-      - http://host.docker.internal:3000/api/inngest
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "host.containers.internal:host-gateway"
+      - http://127.0.0.1:3000/api/inngest
     volumes:
       - inngest_data:/var/lib/inngest
     restart: unless-stopped

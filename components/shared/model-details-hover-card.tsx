@@ -8,6 +8,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import type { UserModelOption } from "@/hooks/use-user-models";
+import { formatTokens } from "@/lib/chat/calculate-context-tokens";
 
 /**
  * Props for the ModelDetailsHoverCard component.
@@ -51,10 +52,7 @@ export function ModelDetailsHoverCard({
             </span>
             <span className="text-xs">
               {model.contextWindow.toLocaleString() ?? "Unknown"} tokens (
-              {model.contextWindow
-                ? `${Math.round(model.contextWindow / 1000)}k`
-                : "?"}
-              )
+              {model.contextWindow ? formatTokens(model.contextWindow) : "?"})
             </span>
           </div>
 

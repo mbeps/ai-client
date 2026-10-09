@@ -3,6 +3,8 @@
 import {
   CheckCircle2,
   ChevronDown,
+  Circle,
+  Database,
   Loader2,
   Terminal,
   XCircle,
@@ -14,6 +16,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import {
+  estimateToolContextTokens,
+  formatTokens,
+} from "@/lib/chat/calculate-context-tokens";
 import { cn } from "@/lib/utils";
 import { SubagentActivityCard } from "./subagent-activity-card";
 
@@ -141,6 +147,14 @@ export function ToolCallDisplay({
         );
         const isCompleted = !!result;
         const isError = isCompleted && (result?.result as any)?.error;
+        const serverName = tc.serverName || result?.serverName;
+        const isMcpCall = Boolean(
+          serverName && serverName !== "Internal" && serverName !== "System",
+        );
+        const estimatedTokens = estimateToolContextTokens(
+          tc.args,
+          result?.result,
+        );
 
         return (
           <div key={tc.toolCallId || chunkIdx}>
@@ -158,11 +172,17 @@ export function ToolCallDisplay({
                       </div>
                     )}
                   </div>
-                  <span className="font-mono text-xs">
-                    {tc.serverName
-                      ? `${tc.serverName} > ${tc.toolName}`
-                      : tc.toolName}
-                  </span>
+                  {isMcpCall ? (
+                    <span className="flex items-center gap-1.5 font-mono text-xs">
+                      <span className="font-semibold text-foreground/90">
+                        {serverName}
+                      </span>
+                      <Circle className="size-1.5 fill-muted-foreground/50 text-muted-foreground/50" />
+                      <span>{tc.toolName}</span>
+                    </span>
+                  ) : (
+                    <span className="font-mono text-xs">{tc.toolName}</span>
+                  )}
                   {isCompleted && (
                     <div className="ml-2 flex items-center gap-1.5">
                       {isError ? (
@@ -186,6 +206,16 @@ export function ToolCallDisplay({
               <CollapsibleContent>
                 <div className="border-muted border-t bg-muted/5 p-3 pt-0">
                   <div className="mt-2 space-y-3">
+                    <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Database className="size-3.5 text-muted-foreground" />
+                        <span className="font-medium">Context Usage</span>
+                      </div>
+                      <span className="font-mono text-[11px] text-foreground/80">
+                        ~{formatTokens(estimatedTokens)} tokens
+                      </span>
+                    </div>
+
                     <div>
                       <div className="mb-1.5 flex items-center gap-2">
                         <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">

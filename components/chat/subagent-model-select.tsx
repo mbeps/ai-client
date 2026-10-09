@@ -106,14 +106,14 @@ export function SubagentModelSelect({
       <SelectContent>
         <SelectItem
           value={INHERIT_VALUE}
-          className="text-xs font-medium text-purple-600 dark:text-purple-400"
+          className="font-medium text-purple-600 text-xs dark:text-purple-400"
         >
           {INHERIT_OPTION.label}
         </SelectItem>
 
         {groupedModels.map((group) => (
           <SelectGroup key={group.provider}>
-            <SelectLabel className="capitalize font-semibold text-[10px] text-muted-foreground/70 tracking-wider">
+            <SelectLabel className="font-semibold text-[10px] text-muted-foreground/70 capitalize tracking-wider">
               {group.provider}
             </SelectLabel>
             {group.items.map((model) => (

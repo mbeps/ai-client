@@ -94,7 +94,7 @@ export function ModelSelector({
       <ComboboxTrigger
         aria-label="Select model"
         className={cn(
-          "flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-md border border-border/60 px-2 text-left text-xs transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed",
+          "flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border border-border/60 px-2 text-left text-xs transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed",
           className,
         )}
       >

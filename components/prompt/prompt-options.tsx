@@ -11,7 +11,13 @@ import type { Prompt } from "@/types/prompt/prompt";
 /**
  * Dropdown/Drawer menu with Edit Content, Rename, and Delete options for prompts.
  */
-export function PromptOptions({ prompt }: { prompt: Prompt }) {
+export function PromptOptions({
+  prompt,
+  trigger,
+}: {
+  prompt: Prompt;
+  trigger?: React.ReactNode;
+}) {
   const loadPrompts = useAppStore((state) => state.loadPrompts);
 
   const {
@@ -66,6 +72,7 @@ export function PromptOptions({ prompt }: { prompt: Prompt }) {
       handleDelete={handleDelete}
       renameTitle="Rename Prompt"
       deleteTitle="Delete Prompt"
+      trigger={trigger}
     />
   );
 }
