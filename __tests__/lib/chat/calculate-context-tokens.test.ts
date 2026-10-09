@@ -90,13 +90,22 @@ describe("calculate-context-tokens utility", () => {
     it("formats thousands as K", () => {
       expect(formatTokens(1200)).toBe("1.2K");
       expect(formatTokens(12400)).toBe("12.4K");
-      expect(formatTokens(371500)).toBe("372K");
+      expect(formatTokens(371500)).toBe("371.5K");
+      expect(formatTokens(372000)).toBe("372K");
     });
 
     it("formats millions as M", () => {
       expect(formatTokens(1000000)).toBe("1M");
       expect(formatTokens(1500000)).toBe("1.5M");
       expect(formatTokens(20000000)).toBe("20M");
+      expect(formatTokens(100000000)).toBe("100M");
+    });
+
+    it("formats billions as B", () => {
+      expect(formatTokens(1000000000)).toBe("1B");
+      expect(formatTokens(1500000000)).toBe("1.5B");
+      expect(formatTokens(25000000000)).toBe("25B");
+      expect(formatTokens(120000000000)).toBe("120B");
     });
   });
 

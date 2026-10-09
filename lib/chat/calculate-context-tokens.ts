@@ -1,3 +1,4 @@
+import { millify } from "millify";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -96,7 +97,8 @@ export function estimateToolContextTokens(
 }
 
 /**
- * Formats a token count into a human-friendly string (e.g. 850, 12.4K, 371.5K, 1M).
+ * Formats a token count into a human-friendly string (e.g. 850, 12.4K, 371.5K, 1M, 2B).
+ * Uses `millify` for consistent unit abbreviations and precision.
  *
  * @param tokens - The raw token number
  * @returns Formatted token string
@@ -105,16 +107,7 @@ export function formatTokens(tokens: number): string {
   if (tokens < 1000) {
     return tokens.toLocaleString();
   }
-  if (tokens < 1_000_000) {
-    const k = tokens / 1000;
-    const formatted =
-      k >= 100 ? Math.round(k).toString() : k.toFixed(1).replace(/\.0$/, "");
-    return `${formatted}K`;
-  }
-  const m = tokens / 1_000_000;
-  const formatted =
-    m >= 10 ? Math.round(m).toString() : m.toFixed(1).replace(/\.0$/, "");
-  return `${formatted}M`;
+  return millify(tokens, { precision: 1 });
 }
 
 /**
