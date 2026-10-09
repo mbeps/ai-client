@@ -150,6 +150,33 @@ describe("registerScratchpadTools", () => {
       });
     });
 
+    it("truncates content exceeding 15,000 characters without pagination", async () => {
+      const largeContent = "line\n".repeat(4000); // ~20,000 chars
+      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+        id: "file-large",
+        chatId: "chat-123",
+        messageId: "msg-456",
+        filePath: "large.md",
+        content: largeContent,
+        writtenByRole: "worker",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const tools = registerScratchpadTools(context);
+      const result = await tools.scratchpad_read.execute(
+        { filePath: "large.md" },
+        { messages: [], toolCallId: "call-large" } as any,
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.content).toContain("[... File truncated at 15,000 characters.");
+        expect(result.totalLines).toBe(4001);
+      }
+    });
+
     it("returns not found when file does not exist", async () => {
       vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce(null);
 

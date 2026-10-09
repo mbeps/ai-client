@@ -32,16 +32,10 @@ describe("scratchpad-service", () => {
   });
 
   describe("upsertScratchpadFile", () => {
-    it("inserts new file when none exists", async () => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([]),
-      };
-      mockDb.select.mockReturnValue(selectChain);
-
+    it("inserts or updates file atomically using onConflictDoUpdate", async () => {
       const insertChain = {
         values: vi.fn().mockReturnThis(),
+        onConflictDoUpdate: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([
           { id: "sp-1", filePath: "notes/analysis.md", version: 1 },
         ]),
@@ -62,21 +56,18 @@ describe("scratchpad-service", () => {
         version: 1,
       });
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(insertChain.onConflictDoUpdate).toHaveBeenCalled();
     });
 
-    it("updates existing file and increments version", async () => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ id: "sp-1", version: 1 }]),
+    it("returns updated version on subsequent atomic upsert", async () => {
+      const insertChain = {
+        values: vi.fn().mockReturnThis(),
+        onConflictDoUpdate: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([
+          { id: "sp-1", filePath: "notes/analysis.md", version: 2 },
+        ]),
       };
-      mockDb.select.mockReturnValue(selectChain);
-
-      const updateChain = {
-        set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([{ id: "sp-1" }]),
-      };
-      mockDb.update.mockReturnValue(updateChain);
+      mockDb.insert.mockReturnValue(insertChain);
 
       const result = await upsertScratchpadFile({
         chatId: "chat-1",
@@ -91,7 +82,8 @@ describe("scratchpad-service", () => {
         filePath: "notes/analysis.md",
         version: 2,
       });
-      expect(mockDb.update).toHaveBeenCalled();
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(insertChain.onConflictDoUpdate).toHaveBeenCalled();
     });
   });
 

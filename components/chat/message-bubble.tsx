@@ -64,6 +64,9 @@ interface MessageBubbleProps {
     assistantId?: string,
     kbs?: string[],
     selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    subagentExcludedTools?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -130,6 +133,9 @@ export function MessageBubble({
     selectedTools: parsedToolIds,
     selectedKbIds: parsedKbIds,
     selectedSkillIds: parsedSkillIds,
+    subagentsEnabled: parsedSubagentsEnabled,
+    subagentModelId: parsedSubagentModelId,
+    subagentExcludedTools: parsedSubagentExcludedTools,
   } = parsedMetadata;
 
   const citations = useMemo(() => {
@@ -196,6 +202,9 @@ export function MessageBubble({
       assistantId || undefined,
       selectedKbIds,
       selectedSkillIds,
+      parsedSubagentsEnabled,
+      parsedSubagentModelId,
+      parsedSubagentExcludedTools,
     );
     setIsEditing(false);
   };

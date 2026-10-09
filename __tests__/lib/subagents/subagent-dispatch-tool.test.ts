@@ -269,6 +269,62 @@ describe("subagent-dispatch-tool", () => {
           value: "Subagent finished with no text output.",
         });
       });
+
+      it("extracts summary from object with summary property", () => {
+        const result = dispatchTool.toModelOutput({
+          output: { summary: "Executive summary of findings." },
+        } as any);
+        expect(result).toEqual({
+          type: "text",
+          value: "Executive summary of findings.",
+        });
+      });
+
+      it("extracts value from object with value property", () => {
+        const result = dispatchTool.toModelOutput({
+          output: { value: "Direct worker value output." },
+        } as any);
+        expect(result).toEqual({
+          type: "text",
+          value: "Direct worker value output.",
+        });
+      });
+
+      it("extracts text from object with text property", () => {
+        const result = dispatchTool.toModelOutput({
+          output: { text: "Direct worker text output." },
+        } as any);
+        expect(result).toEqual({
+          type: "text",
+          value: "Direct worker text output.",
+        });
+      });
+
+      it("joins multiple text parts when last part has no status prefix", () => {
+        const result = dispatchTool.toModelOutput({
+          output: {
+            parts: [
+              { type: "text", text: "Part 1 initial thoughts." },
+              { type: "text", text: "Part 2 detailed observations." },
+            ],
+          },
+        } as any);
+        expect(result).toEqual({
+          type: "text",
+          value: "Part 1 initial thoughts.\n\nPart 2 detailed observations.",
+        });
+      });
+
+      it("truncates output exceeding 8,000 characters with warning banner", () => {
+        const longText = "A".repeat(8500);
+        const result = dispatchTool.toModelOutput({
+          output: longText,
+        } as any);
+        expect(result.value).toContain(
+          "[... Output truncated to 8,000 characters for context efficiency. Full details are stored in the scratchpad.]",
+        );
+        expect(result.value.startsWith("A".repeat(8000))).toBe(true);
+      });
     });
   });
 });

@@ -112,6 +112,20 @@ export function parseMessageMetadata(
     const durationMs =
       typeof parsed.durationMs === "number" ? parsed.durationMs : null;
 
+    const subagentsEnabled =
+      typeof parsed.subagentsEnabled === "boolean"
+        ? parsed.subagentsEnabled
+        : undefined;
+
+    const subagentModelId =
+      typeof parsed.subagentModelId === "string"
+        ? parsed.subagentModelId
+        : undefined;
+
+    const subagentExcludedTools = Array.isArray(parsed.subagentExcludedTools)
+      ? (parsed.subagentExcludedTools as string[])
+      : undefined;
+
     return {
       promptMeta,
       toolData,
@@ -124,6 +138,9 @@ export function parseMessageMetadata(
       usage,
       finishReason,
       durationMs,
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

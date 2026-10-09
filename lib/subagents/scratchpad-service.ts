@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { subagentScratchpad } from "@/drizzle/schema";
 import { getLogger } from "@/lib/logger";
@@ -37,7 +37,7 @@ export function normaliseScratchpadPath(rawPath: string): string {
 }
 
 /**
- * Inserts or updates an intermediate file in the subagent scratchpad.
+ * Inserts or updates an intermediate file in the subagent scratchpad atomically.
  * Automatically increments version if the file already exists for this message.
  *
  * @author Maruf Bepary
@@ -47,45 +47,7 @@ export async function upsertScratchpadFile(
 ): Promise<{ id: string; filePath: string; version: number }> {
   const filePath = normaliseScratchpadPath(params.filePath);
 
-  const existing = await db
-    .select({
-      id: subagentScratchpad.id,
-      version: subagentScratchpad.version,
-    })
-    .from(subagentScratchpad)
-    .where(
-      and(
-        eq(subagentScratchpad.messageId, params.messageId),
-        eq(subagentScratchpad.filePath, filePath),
-      ),
-    )
-    .limit(1);
-
-  if (existing.length > 0 && existing[0]) {
-    const nextVersion = existing[0].version + 1;
-    await db
-      .update(subagentScratchpad)
-      .set({
-        content: params.content,
-        writtenByRole: params.writtenByRole,
-        version: nextVersion,
-        updatedAt: new Date(),
-      })
-      .where(eq(subagentScratchpad.id, existing[0].id));
-
-    log.debug(
-      "Updated scratchpad file (messageId: {msgId}, path: {path}, v: {v})",
-      {
-        msgId: params.messageId,
-        path: filePath,
-        v: nextVersion,
-      },
-    );
-
-    return { id: existing[0].id, filePath, version: nextVersion };
-  }
-
-  const [inserted] = await db
+  const [row] = await db
     .insert(subagentScratchpad)
     .values({
       chatId: params.chatId,
@@ -95,18 +57,31 @@ export async function upsertScratchpadFile(
       writtenByRole: params.writtenByRole,
       version: 1,
     })
+    .onConflictDoUpdate({
+      target: [subagentScratchpad.messageId, subagentScratchpad.filePath],
+      set: {
+        content: params.content,
+        writtenByRole: params.writtenByRole,
+        version: sql`${subagentScratchpad.version} + 1`,
+        updatedAt: new Date(),
+      },
+    })
     .returning({
       id: subagentScratchpad.id,
       filePath: subagentScratchpad.filePath,
       version: subagentScratchpad.version,
     });
 
-  log.debug("Created scratchpad file (messageId: {msgId}, path: {path})", {
-    msgId: params.messageId,
-    path: filePath,
-  });
+  log.debug(
+    "Upserted scratchpad file (messageId: {msgId}, path: {path}, v: {v})",
+    {
+      msgId: params.messageId,
+      path: filePath,
+      v: row.version,
+    },
+  );
 
-  return inserted;
+  return row;
 }
 
 /**

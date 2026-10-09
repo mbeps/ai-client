@@ -167,6 +167,9 @@ describe("MessageBubble message editing", () => {
       undefined,
       ["kb-1"],
       [],
+      undefined,
+      undefined,
+      undefined,
     );
 
     // Exits edit mode

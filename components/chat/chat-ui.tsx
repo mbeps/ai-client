@@ -135,6 +135,26 @@ export function ChatUI({
     return userSettings?.defaultChatModelId || undefined;
   }, [thread, currentProject, currentAssistant, userSettings]);
 
+  // -- Initial Subagents Resolution --
+  const { initialSubagentsEnabled, initialSubagentModelId } = useMemo(() => {
+    const lastUserMessage = [...thread]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (lastUserMessage?.metadata) {
+      const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
+        lastUserMessage.metadata,
+      );
+      return {
+        initialSubagentsEnabled: subagentsEnabled ?? false,
+        initialSubagentModelId: subagentModelId,
+      };
+    }
+    return {
+      initialSubagentsEnabled: false,
+      initialSubagentModelId: undefined,
+    };
+  }, [thread]);
+
   // -- Initial Tools Resolution (Inlined) --
   /**
    * Resolves initial tools and MCP servers for the chat input.
@@ -700,6 +720,8 @@ export function ChatUI({
               initialSelectedKbs={initialKbIds}
               initialSelectedSkillIds={initialSkillIds}
               initialModelId={initialModelId}
+              initialSubagentsEnabled={initialSubagentsEnabled}
+              initialSubagentModelId={initialSubagentModelId}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
             />

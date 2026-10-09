@@ -126,6 +126,15 @@ interface ChatInputProps {
 
   /** Active thread messages for live context token usage calculation. */
   thread?: Message[];
+
+  /** Initial subagents enabled state. */
+  initialSubagentsEnabled?: boolean;
+
+  /** Initial worker subagent model ID. */
+  initialSubagentModelId?: string;
+
+  /** Initial worker subagent excluded tools. */
+  initialSubagentExcludedTools?: string[];
 }
 
 /**
@@ -154,6 +163,9 @@ export function ChatInput({
   canMentionAssistant = true,
   submitLabel,
   thread = [],
+  initialSubagentsEnabled = false,
+  initialSubagentModelId,
+  initialSubagentExcludedTools = [],
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -348,7 +360,7 @@ export function ChatInput({
   // The seed comes from store-backed entities, which hydrate AFTER this
   // component mounts, so `useState` alone never picks them up. Re-sync when the
   // seed changes; a no-op once hydrated, and it never clobbers user toggles.
-  const skillSeedKey = initialSelectedSkillIds.join(" ");
+  const skillSeedKey = initialSelectedSkillIds.join("::");
   const lastSkillSeedKey = useRef(skillSeedKey);
   useEffect(() => {
     if (lastSkillSeedKey.current === skillSeedKey) return;
@@ -369,14 +381,24 @@ export function ChatInput({
   }, []);
 
   // -- Subagents Configuration Logic --
-  const [subagentsEnabled, setSubagentsEnabled] = useState(false);
+  const [subagentsEnabled, setSubagentsEnabled] = useState(
+    initialSubagentsEnabled,
+  );
   const [subagentModelId, setSubagentModelId] = useState<string | undefined>(
-    undefined,
+    initialSubagentModelId,
   );
   const [subagentExcludedTools, setSubagentExcludedTools] = useState<string[]>(
-    [],
+    initialSubagentExcludedTools,
   );
   const [isSubagentDialogOpen, setIsSubagentDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setSubagentsEnabled(initialSubagentsEnabled);
+  }, [initialSubagentsEnabled]);
+
+  useEffect(() => {
+    setSubagentModelId(initialSubagentModelId);
+  }, [initialSubagentModelId]);
 
   const handleToggleExcludedTool = useCallback((toolId: string) => {
     setSubagentExcludedTools((prev) =>
