@@ -123,7 +123,7 @@ export function SubagentActivityCard({
   const cardContent = (
     <AccordionItem
       value={itemValue}
-      className="w-full overflow-hidden rounded-xl border border-purple-500/30 border-b-0 bg-purple-500/5 shadow-xs transition-colors"
+      className="w-full overflow-hidden rounded-xl border border-purple-500/30 bg-purple-500/5 shadow-xs transition-colors last:border-b"
     >
       <div className="flex items-center justify-between gap-2 p-3">
         <AccordionPrimitive.Header className="flex min-w-0 flex-1">
@@ -144,10 +144,6 @@ export function SubagentActivityCard({
                 {roleStyle.label}
               </Badge>
             </div>
-            {/* <span className="truncate font-medium text-foreground text-xs"> */}
-            {/* {taskBrief.slice(0, 80)} */}
-            {/* {taskBrief.length > 80 ? "..." : ""} */}
-            {/* </span> */}
           </AccordionPrimitive.Trigger>
         </AccordionPrimitive.Header>
 

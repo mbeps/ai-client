@@ -41,7 +41,7 @@ interface ToolCallDisplayProps {
 
 /**
  * Displays a collapsible sequence of MCP tool calls and their results.
- * Groups subagent delegations into a unified single-collapsible Accordion.
+ * Groups subagent delegations into an independent, multi-expandable Accordion group.
  * Used in ResponseTimeline to visualize tool usage during AI processing.
  *
  * @param props.toolCalls - Array of tool calls initiated by the model.
@@ -93,12 +93,13 @@ export function ToolCallDisplay({
             )?.toolCallId ??
             (initialOpen ? chunk.items[0]?.toolCallId : undefined);
 
+          const defaultOpenValues = defaultOpenId ? [defaultOpenId] : [];
+
           return (
             <Accordion
               key={`subagents-group-${chunk.items[0].toolCallId || chunkIdx}`}
-              type="single"
-              collapsible
-              defaultValue={defaultOpenId}
+              type="multiple"
+              defaultValue={defaultOpenValues}
               className="w-full space-y-2"
             >
               {chunk.items.map((tc) => {

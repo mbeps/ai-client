@@ -23,6 +23,7 @@ describe("SubagentActivityCard", () => {
         role="researcher"
         taskBrief="Analyze market trends for Q3"
         status="pending"
+        initialOpen={true}
       />,
     );
 
