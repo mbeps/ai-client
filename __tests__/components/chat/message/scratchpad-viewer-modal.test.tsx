@@ -45,7 +45,7 @@ describe("ScratchpadViewerModal", () => {
     await waitFor(() => {
       expect(screen.getAllByText("notes/findings.md").length).toBeGreaterThan(0);
       expect(screen.getByText("specs/architecture.json")).toBeDefined();
-      expect(screen.getByText(/# Research Findings/)).toBeDefined();
+      expect(screen.getByText("Research Findings")).toBeDefined();
     });
   });
 

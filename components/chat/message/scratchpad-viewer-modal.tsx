@@ -22,6 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { MarkdownRenderer } from "../markdown-renderer";
 
 interface ScratchpadFile {
   id: string;
@@ -128,7 +129,7 @@ export function ScratchpadViewerModal({
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
       <SheetContent
         side="right"
-        className="flex h-full w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl flex-col gap-0 p-0 overflow-hidden"
+        className="flex h-full w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl flex-col gap-0 p-0 overflow-hidden"
       >
         <SheetHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between pr-8">
@@ -250,10 +251,8 @@ export function ScratchpadViewerModal({
                     {copied ? "Copied" : "Copy"}
                   </Button>
                 </div>
-                <div className="flex-1 overflow-auto bg-zinc-950 p-4 text-zinc-100 font-mono text-xs leading-relaxed">
-                  <pre className="whitespace-pre-wrap break-words">
-                    {activeFile.content}
-                  </pre>
+                <div className="flex-1 overflow-auto bg-background p-6">
+                  <MarkdownRenderer content={activeFile.content} />
                 </div>
               </>
             ) : (
