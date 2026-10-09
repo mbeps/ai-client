@@ -47,12 +47,12 @@ export function SubagentConfigDialog({
             <span>Subagents</span>
             <Badge
               variant="outline"
-              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] uppercase text-purple-700 tracking-wider dark:text-purple-300"
+              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
             >
               BETA
             </Badge>
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <DialogDescription className="text-muted-foreground text-xs">
             Delegate complex tasks to isolated worker subagents with shared
             scratchpad memory.
           </DialogDescription>
@@ -61,7 +61,7 @@ export function SubagentConfigDialog({
         <div className="space-y-4 p-4">
           {/* Main Toggle */}
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
-            <span className="text-sm font-medium text-foreground">
+            <span className="font-medium text-foreground text-sm">
               Enable Subagents
             </span>
             <Switch
@@ -73,10 +73,10 @@ export function SubagentConfigDialog({
 
           {/* Worker Model Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-foreground">
+            <label className="font-medium text-foreground text-xs">
               Worker Subagent Model
             </label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Select a dedicated model for worker subagents, or inherit the
               orchestrator&apos;s model.
             </p>

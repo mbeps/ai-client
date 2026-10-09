@@ -4,7 +4,6 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat, message, subagentScratchpad } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { listScratchpadFiles } from "@/lib/subagents/scratchpad-service";
 
 /**
  * Server action to fetch all scratchpad files for a specific assistant message.

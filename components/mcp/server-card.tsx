@@ -26,8 +26,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
-import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
@@ -81,7 +81,9 @@ export function ServerCard({ server }: ServerCardProps) {
       toast.success(server.isInstalled ? "Tool uninstalled" : "Server deleted");
     } catch {
       toast.error(
-        server.isInstalled ? "Failed to uninstall tool" : "Failed to delete server",
+        server.isInstalled
+          ? "Failed to uninstall tool"
+          : "Failed to delete server",
       );
     } finally {
       setIsDeleting(false);
@@ -99,10 +101,7 @@ export function ServerCard({ server }: ServerCardProps) {
             {server.name}
           </h3>
           {server.isInstalled && (
-            <Badge
-              variant="outline"
-              className="h-4 px-1 text-[10px] uppercase"
-            >
+            <Badge variant="outline" className="h-4 px-1 text-[10px] uppercase">
               Community
             </Badge>
           )}
@@ -128,7 +127,7 @@ export function ServerCard({ server }: ServerCardProps) {
         </div>
 
         <div
-          className="flex items-center gap-1.5 shrink-0"
+          className="flex shrink-0 items-center gap-1.5"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -156,10 +155,7 @@ export function ServerCard({ server }: ServerCardProps) {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
-                <Link
-                  href={detailUrl}
-                  aria-label="Open connector"
-                >
+                <Link href={detailUrl} aria-label="Open connector">
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </Button>
@@ -175,7 +171,9 @@ export function ServerCard({ server }: ServerCardProps) {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 onClick={() => setShowDeleteDialog(true)}
-                aria-label={server.isInstalled ? "Uninstall tool" : "Delete server"}
+                aria-label={
+                  server.isInstalled ? "Uninstall tool" : "Delete server"
+                }
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>

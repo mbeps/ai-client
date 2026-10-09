@@ -52,8 +52,7 @@ export function ModelDetailsHoverCard({
             </span>
             <span className="text-xs">
               {model.contextWindow.toLocaleString() ?? "Unknown"} tokens (
-              {model.contextWindow ? formatTokens(model.contextWindow) : "?"}
-              )
+              {model.contextWindow ? formatTokens(model.contextWindow) : "?"})
             </span>
           </div>
 

@@ -66,8 +66,6 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
 
   return (
     <div className="space-y-6">
-
-
       {/* Delete / Uninstall Server Section */}
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">

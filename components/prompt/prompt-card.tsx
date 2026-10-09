@@ -105,10 +105,7 @@ export function PromptCard({ prompt }: PromptCardProps) {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
-                <Link
-                  href={detailUrl}
-                  aria-label="Open prompt"
-                >
+                <Link href={detailUrl} aria-label="Open prompt">
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </Button>

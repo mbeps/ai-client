@@ -93,12 +93,11 @@ export function ServerSharingTab({ serverId }: ServerSharingTabProps) {
           <p className="font-medium text-foreground">Important Note</p>
           <p>
             Public servers are accessible to all users on the platform. Ensure
-            that your server does not expose sensitive data or internal functions
-            that should remain private.
+            that your server does not expose sensitive data or internal
+            functions that should remain private.
           </p>
         </div>
       </div>
     </div>
   );
 }
-

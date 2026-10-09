@@ -105,8 +105,7 @@ export function SkillCard({ skill }: SkillCardProps) {
               className="flex items-center gap-1 py-0 text-[10px]"
             >
               <Files className="h-3 w-3" />
-              {skill.files.length}{" "}
-              {skill.files.length === 1 ? "file" : "files"}
+              {skill.files.length} {skill.files.length === 1 ? "file" : "files"}
             </Badge>
           )}
         </div>
@@ -140,10 +139,7 @@ export function SkillCard({ skill }: SkillCardProps) {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
-                <Link
-                  href={detailUrl}
-                  aria-label="Open skill"
-                >
+                <Link href={detailUrl} aria-label="Open skill">
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </Button>
@@ -176,8 +172,8 @@ export function SkillCard({ skill }: SkillCardProps) {
                 <AlertDialogTitle>Delete Skill</AlertDialogTitle>
                 <AlertDialogDescription>
                   Are you sure you want to delete &quot;
-                  {skill.displayName || skill.name}&quot;? This action cannot
-                  be undone.
+                  {skill.displayName || skill.name}&quot;? This action cannot be
+                  undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -129,13 +129,13 @@ export function ScratchpadViewerModal({
       {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
       <SheetContent
         side="right"
-        className="flex h-full w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl flex-col gap-0 p-0 overflow-hidden"
+        className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl"
       >
         <SheetHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between pr-8">
             <div className="flex items-center gap-2">
               <FileCode className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              <SheetTitle className="text-base font-semibold">
+              <SheetTitle className="font-semibold text-base">
                 Subagent Scratchpad Files
               </SheetTitle>
               {files.length > 0 && (
@@ -149,7 +149,7 @@ export function ScratchpadViewerModal({
               size="sm"
               onClick={fetchFiles}
               disabled={loading}
-              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              className="h-8 gap-1.5 text-muted-foreground text-xs"
             >
               <RefreshCw
                 className={cn("h-3.5 w-3.5", loading && "animate-spin")}
@@ -157,34 +157,34 @@ export function ScratchpadViewerModal({
               Refresh
             </Button>
           </div>
-          <SheetDescription className="text-xs text-muted-foreground">
+          <SheetDescription className="text-muted-foreground text-xs">
             Intermediate research notes, outlines, and structured documents
             stored during this response turn.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-1 min-h-0 divide-x overflow-hidden">
+        <div className="flex min-h-0 flex-1 divide-x overflow-hidden">
           {/* File sidebar */}
-          <div className="w-1/3 min-w-[200px] max-w-[260px] bg-muted/20 flex flex-col">
-            <div className="border-b px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="flex w-1/3 min-w-[200px] max-w-[260px] flex-col bg-muted/20">
+            <div className="border-b px-3 py-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
               Files ({files.length})
             </div>
             <div className="flex-1 overflow-y-auto">
               {loading && files.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground text-xs gap-2">
+                <div className="flex flex-col items-center justify-center gap-2 p-8 text-muted-foreground text-xs">
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   <span>Loading files...</span>
                 </div>
               ) : error ? (
-                <div className="p-4 text-xs text-destructive text-center">
+                <div className="p-4 text-center text-destructive text-xs">
                   {error}
                 </div>
               ) : files.length === 0 ? (
-                <div className="p-6 text-center text-xs text-muted-foreground">
+                <div className="p-6 text-center text-muted-foreground text-xs">
                   No scratchpad files recorded for this turn.
                 </div>
               ) : (
-                <div className="p-1 space-y-0.5">
+                <div className="space-y-0.5 p-1">
                   {files.map((file) => {
                     const isSelected = file.id === activeFile?.id;
                     return (
@@ -193,10 +193,10 @@ export function ScratchpadViewerModal({
                         type="button"
                         onClick={() => setSelectedFileId(file.id)}
                         className={cn(
-                          "w-full text-left rounded-md px-2.5 py-2 transition-colors flex flex-col gap-1 text-xs",
+                          "flex w-full flex-col gap-1 rounded-md px-2.5 py-2 text-left text-xs transition-colors",
                           isSelected
-                            ? "bg-accent text-accent-foreground font-medium"
-                            : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                            ? "bg-accent font-medium text-accent-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                       >
                         <div className="flex items-center gap-1.5 truncate">
@@ -225,12 +225,12 @@ export function ScratchpadViewerModal({
           </div>
 
           {/* File content viewer */}
-          <div className="flex flex-1 flex-col min-w-0 bg-background">
+          <div className="flex min-w-0 flex-1 flex-col bg-background">
             {activeFile ? (
               <>
-                <div className="flex items-center justify-between border-b px-4 py-2 bg-muted/10">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono text-xs font-semibold truncate">
+                <div className="flex items-center justify-between border-b bg-muted/10 px-4 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-mono font-semibold text-xs">
                       {activeFile.filePath}
                     </span>
                     <Badge variant="secondary" className="text-[10px]">
@@ -241,7 +241,7 @@ export function ScratchpadViewerModal({
                     variant="outline"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-7 text-xs gap-1.5"
+                    className="h-7 gap-1.5 text-xs"
                   >
                     {copied ? (
                       <Check className="h-3.5 w-3.5 text-success" />
@@ -256,7 +256,7 @@ export function ScratchpadViewerModal({
                 </div>
               </>
             ) : (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground p-6 text-center">
+              <div className="flex h-full items-center justify-center p-6 text-center text-muted-foreground text-xs">
                 Select a file from the list to preview its contents.
               </div>
             )}
