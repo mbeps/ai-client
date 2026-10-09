@@ -107,10 +107,10 @@ export function SubagentActivityCard({
     }
     if (!outputText) {
       outputText =
-        (r.value as string) ||
         (r.summary as string) ||
+        (r.value as string) ||
         (r.text as string) ||
-        JSON.stringify(result, null, 2);
+        "Task completed.";
     }
   }
 

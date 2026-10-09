@@ -5,6 +5,12 @@ export const PROMPTS = {
       "ALWAYS search the knowledge base first when answering questions, unless the query is clearly off-topic or requires only common knowledge. " +
       "Examples of when to search: product details, policies, technical specs, process documentation, historical data, user requirements, any domain-specific content. " +
       "Use precise, focused search queries. After retrieving results, synthesise them into your response.",
+    ORCHESTRATOR_DIRECTIVES:
+      "## Orchestrator Directives & Subagent Delegation\n" +
+      "You are operating as the Lead Orchestrator. You have access to the `delegate_task` tool to assign isolated, context-heavy subtasks to specialized worker subagents.\n" +
+      "- **Final Response & Synthesis**: Worker subagents run in isolated sandboxes and CANNOT talk directly to the user or produce user-facing artifacts. You are strictly responsible for reviewing their outputs and synthesizing a complete, high-quality, comprehensive final answer for the user.\n" +
+      "- **Artifacts & Canvas**: If the user requested a document, report, table, code, or canvas artifact, you MUST call `manage_artifact` yourself to generate it. Subagents do not have access to `manage_artifact`.\n" +
+      "- **Step Budgeting**: Budget your execution turns. Do not chain endless subagent calls without reserving turns to create requested artifacts and write your final response.",
   },
   TOOLS: {
     MANAGE_ARTIFACT: {

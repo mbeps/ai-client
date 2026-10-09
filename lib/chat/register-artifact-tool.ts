@@ -65,6 +65,17 @@ export function registerArtifactTool() {
           };
         }
       },
+      toModelOutput: ({ output }: { output: any }) => {
+        const title = output?.artifact?.title || "Artifact";
+        const type = output?.artifact?.type || "document";
+        const success = output?.success ?? true;
+        return {
+          type: "text",
+          value: success
+            ? `Artifact "${title}" (${type}) created successfully and presented to the user on canvas.`
+            : `Failed to create artifact: ${output?.message || "Unknown error"}`,
+        };
+      },
     }),
   };
 }

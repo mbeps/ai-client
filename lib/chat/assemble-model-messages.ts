@@ -1,5 +1,6 @@
 import type { ModelMessage } from "ai";
 import { getLogger } from "@/lib/logger";
+import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 
 const log = getLogger(["app", "chat", "messages"]);
 
@@ -149,6 +150,37 @@ export function assembleModelMessages(
               tr && (tr.result !== undefined || tr.output !== undefined)
                 ? (tr.result ?? tr.output)
                 : { error: "Tool execution did not return a result" };
+
+            // 1. Subagent delegation: strictly pass condensed summary
+            if (
+              tc.toolName === "delegate_task" ||
+              tc.toolName === "subagent_dispatch"
+            ) {
+              const summary = sanitizeSubagentOutput(raw, 8000);
+              return {
+                type: "tool-result",
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                output: { type: "text", value: summary },
+              };
+            }
+
+            // 2. Manage artifact: do not re-inject massive artifact bodies into context
+            if (tc.toolName === "manage_artifact") {
+              const art = (raw as any)?.artifact;
+              const title = art?.title || "Artifact";
+              const type = art?.type || "document";
+              return {
+                type: "tool-result",
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                output: {
+                  type: "text",
+                  value: `Artifact "${title}" (${type}) created successfully and presented on canvas.`,
+                },
+              };
+            }
+
             let outputValue = raw;
             let isJson = typeof raw === "object" && raw !== null;
             if (typeof raw === "string") {
@@ -159,6 +191,37 @@ export function assembleModelMessages(
                 isJson = false;
               }
             }
+
+            // Bounded payload protection against context window bloat
+            if (isJson) {
+              const strVal = JSON.stringify(outputValue);
+              if (strVal.length > 12000) {
+                return {
+                  type: "tool-result",
+                  toolCallId: tc.toolCallId,
+                  toolName: tc.toolName,
+                  output: {
+                    type: "text",
+                    value:
+                      strVal.slice(0, 8000) +
+                      "\n\n[... Large tool output truncated for context window limits ...]",
+                  },
+                };
+              }
+            } else if (typeof raw === "string" && raw.length > 8000) {
+              return {
+                type: "tool-result",
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                output: {
+                  type: "text",
+                  value:
+                    raw.slice(0, 8000) +
+                    "\n\n[... Large tool output truncated for context window limits ...]",
+                },
+              };
+            }
+
             return {
               type: "tool-result",
               toolCallId: tc.toolCallId,

@@ -79,8 +79,21 @@ export function registerScratchpadTools(context: ScratchpadToolContext) {
         "Use this to access notes, specifications, or outputs written by earlier steps or peer subagents.",
       inputSchema: z.object({
         filePath: z.string().describe("Path of the file to read."),
+        startLine: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Optional 1-indexed starting line to read from."),
+        lineCount: z
+          .number()
+          .int()
+          .min(1)
+          .max(500)
+          .optional()
+          .describe("Optional maximum number of lines to read."),
       }),
-      execute: async ({ filePath }) => {
+      execute: async ({ filePath, startLine, lineCount }) => {
         try {
           const file = await readScratchpadFile(messageId, filePath);
           if (!file) {
@@ -90,10 +103,27 @@ export function registerScratchpadTools(context: ScratchpadToolContext) {
             };
           }
 
+          let content = file.content;
+          const allLines = content.split("\n");
+          const totalLines = allLines.length;
+
+          if (startLine !== undefined) {
+            const startIdx = Math.max(0, startLine - 1);
+            const count = lineCount ?? 200;
+            const slice = allLines.slice(startIdx, startIdx + count);
+            content = slice.join("\n");
+          } else if (content.length > 15000) {
+            // Guardrail against massive context dumps without pagination
+            content =
+              content.slice(0, 15000) +
+              `\n\n[... File truncated at 15,000 characters. Total lines: ${totalLines}. Specify startLine and lineCount to read specific sections.]`;
+          }
+
           return {
             success: true,
             filePath: file.filePath,
-            content: file.content,
+            content,
+            totalLines,
             writtenByRole: file.writtenByRole,
             version: file.version,
           };

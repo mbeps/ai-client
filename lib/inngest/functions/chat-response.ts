@@ -1,4 +1,4 @@
-import { isStepCount, streamText } from "ai";
+import { isStepCount, type ModelMessage, streamText } from "ai";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
@@ -26,7 +26,10 @@ import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
-import { createSubagentDispatchTool } from "@/lib/subagents/subagent-dispatch-tool";
+import {
+  createSubagentDispatchTool,
+  sanitizeSubagentOutput,
+} from "@/lib/subagents/subagent-dispatch-tool";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
 const log = getLogger(["inngest", "chat", "response"]);
@@ -255,23 +258,30 @@ export const generateChatResponse = inngest.createFunction(
           hasSkillAuthoring ||
           isSubagentDelegationEnabled);
 
+      const orchestratorMaxSteps = isSubagentDelegationEnabled
+        ? Math.max(env.CHAT_MAX_STEPS * 2, 20)
+        : env.CHAT_MAX_STEPS;
+
+      const systemPrompt = buildSystemPrompt(
+        globalSystemPrompt,
+        ctx.projectRow?.globalPrompt,
+        ctx.assistantRow?.prompt,
+        isToolCallingModel && hasKbTool,
+        {
+          attachmentNames: fileAttachments.map((a) => a.name),
+          availableSkills: ctx.availableSkills,
+          selectedSkills: ctx.selectedSkills,
+          supportsTools: isToolCallingModel,
+          userContext: { name: userName, email: userEmail },
+          userMemories: ctx.userMemories,
+          isSubagentDelegationEnabled,
+        },
+      );
+
       const result = streamText({
         model: resolved.sdkProvider.chat(resolvedModelId),
         abortSignal: abortController.signal,
-        instructions: buildSystemPrompt(
-          globalSystemPrompt,
-          ctx.projectRow?.globalPrompt,
-          ctx.assistantRow?.prompt,
-          isToolCallingModel && hasKbTool,
-          {
-            attachmentNames: fileAttachments.map((a) => a.name),
-            availableSkills: ctx.availableSkills,
-            selectedSkills: ctx.selectedSkills,
-            supportsTools: isToolCallingModel,
-            userContext: { name: userName, email: userEmail },
-            userMemories: ctx.userMemories,
-          },
-        ),
+        instructions: systemPrompt,
         messages: finalMessages,
         tools: hasAnyTools
           ? {
@@ -279,7 +289,7 @@ export const generateChatResponse = inngest.createFunction(
               ...subagentDispatchTools,
             }
           : undefined,
-        stopWhen: hasAnyTools ? isStepCount(env.CHAT_MAX_STEPS) : undefined,
+        stopWhen: hasAnyTools ? isStepCount(orchestratorMaxSteps) : undefined,
       });
 
       const safeFinishReason = Promise.resolve(result.finishReason).catch(
@@ -327,14 +337,21 @@ export const generateChatResponse = inngest.createFunction(
           const tc = completedTools.find(
             (t) => t.toolCallId === chunk.toolCallId,
           );
+          const isSubagent =
+            chunk.toolName === "delegate_task" ||
+            chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
+          const finalResult = isSubagent
+            ? sanitizeSubagentOutput(rawResult)
+            : rawResult;
+
           if (tc && !isPreliminary) {
-            tc.result = rawResult;
+            tc.result = finalResult;
           }
           await emit({
             type: "tool-result",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
-            result: rawResult,
+            result: isPreliminary ? rawResult : finalResult,
             preliminary: isPreliminary,
           });
         } else if (chunk.type === "tool-error") {
@@ -357,6 +374,109 @@ export const generateChatResponse = inngest.createFunction(
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             result: errorResult,
+          });
+        }
+      }
+
+      // Synthesis fallback: if tools completed but no text was produced
+      // (e.g., hit step limit or model stopped on tool-calls turn), synthesize a final response
+      if (
+        !abortController.signal.aborted &&
+        accumulatedText.trim().length === 0 &&
+        completedTools.length > 0
+      ) {
+        log.info(
+          "Triggering fallback synthesis pass after tool execution (chatId: {chatId})",
+          { chatId },
+        );
+
+        const synthesisMessages: ModelMessage[] = [
+          ...finalMessages,
+          {
+            role: "assistant",
+            content: completedTools.map((tc) => ({
+              type: "tool-call" as const,
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              input: tc.args,
+            })),
+          },
+          {
+            role: "tool",
+            content: completedTools.map((tc) => ({
+              type: "tool-result" as const,
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              output: {
+                type: "text" as const,
+                value:
+                  typeof tc.result === "string"
+                    ? tc.result
+                    : JSON.stringify(tc.result ?? "Task completed"),
+              },
+            })),
+          },
+          {
+            role: "user",
+            content:
+              "Synthesize all the research and findings above into a comprehensive, high-quality final response for the user. " +
+              (hasArtifactTool
+                ? "If the user requested a document, report, table, code, or canvas artifact, you MUST call manage_artifact now to create it."
+                : ""),
+          },
+        ];
+
+        try {
+          const synthResult = streamText({
+            model: resolved.sdkProvider.chat(resolvedModelId),
+            abortSignal: abortController.signal,
+            instructions: systemPrompt,
+            messages: synthesisMessages,
+            tools: hasArtifactTool ? artifactTools : undefined,
+            stopWhen: isStepCount(3),
+          });
+
+          for await (const chunk of synthResult.fullStream) {
+            if (abortController.signal.aborted) break;
+            if (chunk.type === "text-delta") {
+              accumulatedText += chunk.text;
+              await emit({ type: "text-delta", text: chunk.text });
+            } else if (chunk.type === "reasoning-delta") {
+              accumulatedReasoning += chunk.text;
+              await emit({ type: "reasoning-delta", reasoning: chunk.text });
+            } else if (chunk.type === "tool-call") {
+              completedTools.push({
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                args: (chunk as any).args ?? (chunk as any).input,
+              });
+              await emit({
+                type: "tool-call",
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                args: (chunk as any).args ?? (chunk as any).input,
+              });
+            } else if (chunk.type === "tool-result") {
+              const rawResult = (chunk as any).result ?? (chunk as any).output;
+              const tc = completedTools.find(
+                (t) => t.toolCallId === chunk.toolCallId,
+              );
+              if (tc) {
+                tc.result = rawResult;
+              }
+              await emit({
+                type: "tool-result",
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                result: rawResult,
+                preliminary: false,
+              });
+            }
+          }
+        } catch (synthErr) {
+          log.warn("Synthesis fallback pass encountered error: {error}", {
+            error:
+              synthErr instanceof Error ? synthErr.message : String(synthErr),
           });
         }
       }

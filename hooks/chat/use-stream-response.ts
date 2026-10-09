@@ -58,6 +58,38 @@ function buildMetadata(
   return metadataObj;
 }
 
+function saveInflightState(
+  chatId: string,
+  state: {
+    text: string;
+    reasoning: string;
+    toolCalls: ToolCallState[];
+    assistantMessageId: string | null;
+  },
+) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(`chat_inflight_${chatId}`, JSON.stringify(state));
+  } catch {}
+}
+
+function loadInflightState(chatId: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(`chat_inflight_${chatId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearInflightState(chatId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(`chat_inflight_${chatId}`);
+  } catch {}
+}
+
 /**
  * Resolves the final message content by handling MCP prompts and slash-command prompts.
  * @author Maruf Bepary
@@ -187,6 +219,59 @@ export function useStreamResponse(
     return currentChat.messages?.[currentChat.currentLeafId];
   }, [currentChat]);
 
+  const syncFromDb = useCallback(async () => {
+    if (!chatId) return false;
+    if (!useAppStore.getState().chats?.[chatId]) return false;
+    try {
+      const data = await getChat(chatId);
+      const userMsgId = pendingRef.current.userMessageId;
+      const assistantId = assistantMessageIdRef.current;
+      const targetParentId = userMsgId || activeLeaf?.id;
+
+      if (!assistantId && !targetParentId) {
+        return false;
+      }
+
+      const assistantMsg = data.messages.find(
+        (m) =>
+          m.role === "assistant" &&
+          (assistantId
+            ? m.id === assistantId
+            : targetParentId
+              ? m.parentId === targetParentId
+              : true),
+      );
+
+      if (assistantMsg) {
+        clearInflightState(chatId);
+        const fullChat = buildChatFromRows(data);
+        upsertChat(fullChat);
+        options?.onDone?.(assistantMsg.content);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return true;
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.message.includes("Not Found") ||
+          err.message.includes("Unauthorized") ||
+          err.message.includes("access denied"))
+      ) {
+        setChatNotFound(true);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        return false;
+      }
+      logger.error("Failed to sync chat from DB", err);
+    }
+    return false;
+  }, [chatId, upsertChat, options, activeLeaf]);
+
   // Mount effect: detect in-flight generation after page refresh
   useEffect(() => {
     if (!chatId) return;
@@ -203,7 +288,7 @@ export function useStreamResponse(
     const leafId = activeLeaf.id;
 
     void isChatGenerating(chatId)
-      .then((generating) => {
+      .then(async (generating) => {
         if (generating && pendingRef.current.userMessageId === null) {
           rejoinedRef.current = true;
           pendingRef.current = {
@@ -212,13 +297,41 @@ export function useStreamResponse(
             startTime: Date.now(),
           };
           lastChunkTimeRef.current = Date.now();
+
+          // Restore in-flight state from sessionStorage if available
+          const cached = loadInflightState(chatId);
+          if (cached) {
+            if (cached.text) {
+              accumulatedTextRef.current = cached.text;
+              setStreamingContent(cached.text);
+            }
+            if (cached.reasoning) {
+              accumulatedReasoningRef.current = cached.reasoning;
+              setStreamingReasoning(cached.reasoning);
+            }
+            if (
+              Array.isArray(cached.toolCalls) &&
+              cached.toolCalls.length > 0
+            ) {
+              activeToolCallsRef.current = cached.toolCalls;
+              setActiveToolCalls(cached.toolCalls);
+            }
+            if (cached.assistantMessageId) {
+              assistantMessageIdRef.current = cached.assistantMessageId;
+              setAssistantMessageId(cached.assistantMessageId);
+            }
+          }
+
           setIsStreaming(true);
+        } else if (!generating) {
+          clearInflightState(chatId);
+          await syncFromDb();
         }
       })
       .catch(() => {
         // Swallow rejections
       });
-  }, [chatId, currentChat, activeLeaf, isStreaming]);
+  }, [chatId, currentChat, activeLeaf, isStreaming, syncFromDb]);
 
   const handleStreamEvent = useCallback(
     async (event: ChatStreamEvent) => {
@@ -319,6 +432,7 @@ export function useStreamResponse(
               }
             }
 
+            clearInflightState(chatId);
             setIsStreaming(false);
             setStreamingContent(null);
             setStreamingReasoning(null);
@@ -381,6 +495,7 @@ export function useStreamResponse(
             options?.onDone?.(text);
           }
 
+          clearInflightState(chatId);
           setIsStreaming(false);
           setStreamingContent(null);
           setStreamingReasoning(null);
@@ -391,6 +506,7 @@ export function useStreamResponse(
 
         case "error": {
           lastChunkTimeRef.current = 0;
+          clearInflightState(chatId);
           if (!handleApiError(event)) {
             toast.error(event.message || "Failed to generate response");
           }
@@ -400,6 +516,15 @@ export function useStreamResponse(
           setActiveToolCalls([]);
           break;
         }
+      }
+
+      if (event.type !== "finish" && event.type !== "error") {
+        saveInflightState(chatId, {
+          text: accumulatedTextRef.current,
+          reasoning: accumulatedReasoningRef.current,
+          toolCalls: activeToolCallsRef.current,
+          assistantMessageId: assistantMessageIdRef.current,
+        });
       }
     },
     [chatId, addMessage, upsertChat, handleApiError, options],
@@ -446,53 +571,6 @@ export function useStreamResponse(
     historyLimit: null,
     apiBaseUrl,
   });
-
-  const syncFromDb = useCallback(async () => {
-    if (!chatId) return false;
-    if (!useAppStore.getState().chats?.[chatId]) return false;
-    try {
-      const data = await getChat(chatId);
-      const userMsgId = pendingRef.current.userMessageId;
-      const assistantId = assistantMessageIdRef.current;
-
-      if (!assistantId && !userMsgId) {
-        return false;
-      }
-
-      const assistantMsg = data.messages.find(
-        (m) =>
-          m.role === "assistant" &&
-          (assistantId ? m.id === assistantId : m.parentId === userMsgId),
-      );
-
-      if (assistantMsg) {
-        const fullChat = buildChatFromRows(data);
-        upsertChat(fullChat);
-        options?.onDone?.(assistantMsg.content);
-        setIsStreaming(false);
-        setStreamingContent(null);
-        setStreamingReasoning(null);
-        setActiveToolCalls([]);
-        return true;
-      }
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        (err.message.includes("Not Found") ||
-          err.message.includes("Unauthorized") ||
-          err.message.includes("access denied"))
-      ) {
-        setChatNotFound(true);
-        setIsStreaming(false);
-        setStreamingContent(null);
-        setStreamingReasoning(null);
-        setActiveToolCalls([]);
-        return false;
-      }
-      logger.error("Failed to sync chat from DB", err);
-    }
-    return false;
-  }, [chatId, upsertChat, options]);
 
   const connectionStatusRef = useRef(connectionStatus);
   useEffect(() => {
@@ -581,14 +659,17 @@ export function useStreamResponse(
 
       const isConnectionError =
         connectionStatusRef.current === "error" || Boolean(realtimeError);
+      const isRejoinedCheck =
+        rejoinedRef.current && (attempts === 1 || timeSinceLastChunk > 2000);
       const isStalled =
         !hasActiveCallingTools &&
         timeSinceStart > 5000 &&
         timeSinceLastChunk > 5000;
 
-      if (isConnectionError || isStalled) {
+      if (isConnectionError || isStalled || isRejoinedCheck) {
         const synced = await syncFromDb();
         if (synced) {
+          clearInflightState(chatId);
           clearInterval(interval);
           return;
         }
@@ -597,6 +678,7 @@ export function useStreamResponse(
           (isConnectionError && attempts >= 10) ||
           (!hasActiveCallingTools && attempts >= 30)
         ) {
+          clearInflightState(chatId);
           clearInterval(interval);
           setIsStreaming(false);
           if (isConnectionError) {
@@ -609,7 +691,7 @@ export function useStreamResponse(
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isStreaming, chatNotFound, realtimeError, syncFromDb]);
+  }, [isStreaming, chatNotFound, realtimeError, syncFromDb, chatId]);
 
   const isLoading = isStreaming;
   const isStreamingReasoning =
@@ -617,6 +699,7 @@ export function useStreamResponse(
 
   const stopStream = useCallback(() => {
     stoppedRef.current = true;
+    clearInflightState(chatId);
 
     const partialText = accumulatedTextRef.current;
     const messageId = assistantMessageIdRef.current || crypto.randomUUID();

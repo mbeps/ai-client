@@ -115,8 +115,38 @@ describe("registerScratchpadTools", () => {
         success: true,
         filePath: "spec.json",
         content: "{}",
+        totalLines: 1,
         writtenByRole: "planner",
         version: 2,
+      });
+    });
+
+    it("returns paginated content when startLine and lineCount are provided", async () => {
+      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+        id: "file-123",
+        chatId: "chat-123",
+        messageId: "msg-456",
+        filePath: "multi.txt",
+        content: "line1\nline2\nline3\nline4\nline5",
+        writtenByRole: "worker",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const tools = registerScratchpadTools(context);
+      const result = await tools.scratchpad_read.execute(
+        { filePath: "multi.txt", startLine: 2, lineCount: 2 },
+        { messages: [], toolCallId: "call-4b" } as any,
+      );
+
+      expect(result).toEqual({
+        success: true,
+        filePath: "multi.txt",
+        content: "line2\nline3",
+        totalLines: 5,
+        writtenByRole: "worker",
+        version: 1,
       });
     });
 
