@@ -24,6 +24,7 @@ export default function SkillsPage() {
       title="Agent Skills"
       description="Modular instructions and workflows that give AI models specialized domain capabilities."
       items={skills}
+      columns={2}
       renderCard={(skill) => <SkillCard skill={skill} />}
       emptyStateMessage="No skills configured yet. Create a skill or upload an Open Agent Skills package (.md or .zip)."
       searchPlaceholder="Search skills by name, slug, description..."

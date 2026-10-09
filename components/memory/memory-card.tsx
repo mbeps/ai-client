@@ -5,6 +5,11 @@ import { Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Memory } from "@/types/memory/memory";
 
@@ -77,27 +82,37 @@ export function MemoryCard({
         </span>
 
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={() => onEdit(memory)}
-            aria-label="Edit memory"
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => onEdit(memory)}
+                aria-label="Edit memory"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit memory</TooltipContent>
+          </Tooltip>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(memory)}
-            aria-label="Delete memory"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => onDelete(memory)}
+                aria-label="Delete memory"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete memory</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </Card>

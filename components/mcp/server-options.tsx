@@ -18,6 +18,8 @@ import type { McpServer } from "@/types/mcp/mcp-server";
 export interface ServerOptionsProps {
   /** The MCP server to manage options for. */
   server: McpServer;
+  /** Optional custom trigger button element. */
+  trigger?: React.ReactNode;
 }
 
 /**
@@ -33,7 +35,7 @@ export interface ServerOptionsProps {
  * @see {@link BaseEntityOptions} for base menu implementation
  * @author Maruf Bepary
  */
-export function ServerOptions({ server }: ServerOptionsProps) {
+export function ServerOptions({ server, trigger }: ServerOptionsProps) {
   const router = useRouter();
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
@@ -107,6 +109,7 @@ export function ServerOptions({ server }: ServerOptionsProps) {
       handleDelete={handleDelete}
       renameTitle="Rename Server"
       deleteTitle={server.isInstalled ? "Uninstall Tool" : "Delete Server"}
+      trigger={trigger}
     />
   );
 }

@@ -25,6 +25,7 @@ export default function ConnectorsPage() {
       title="Connectors"
       description="Manage MCP servers and the tools they expose."
       items={mcpServers}
+      columns={2}
       renderCard={(server) => <ServerCard server={server} />}
       emptyStateMessage="No MCP servers yet. Add one to connect external tools to your chats."
       searchPlaceholder="Search servers..."

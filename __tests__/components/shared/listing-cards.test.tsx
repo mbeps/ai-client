@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+const pushMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock, refresh: vi.fn() }),
+}));
+
 vi.mock("@/components/project/project-options", () => ({
   ProjectOptions: () => <button type="button" aria-label="Project options">Project Options</button>,
 }));
@@ -183,16 +189,27 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       updatedAt: new Date(),
     };
 
-    it("renders Link with ROUTES.SETTINGS.PROMPTS.detail", () => {
+    it("renders top section inside Link with ROUTES.SETTINGS.PROMPTS.detail", () => {
       render(<PromptCard prompt={mockPrompt} />);
 
-      const link = screen.getByRole("link", { name: /refactor code/i });
-      expect(link).toHaveAttribute("href", ROUTES.SETTINGS.PROMPTS.detail("prompt-123"));
+      const titleLink = screen.getByRole("link", { name: /refactor code/i });
+      expect(titleLink).toHaveAttribute("href", ROUTES.SETTINGS.PROMPTS.detail("prompt-123"));
       expect(screen.getByText("Refactor Code")).toBeInTheDocument();
-      expect(screen.getByText("/refactor")).toBeInTheDocument();
+      expect(screen.getByText("Please refactor the following code")).toBeInTheDocument();
+      expect(screen.getByText("Please refactor the following code").closest("a")).toBe(titleLink);
     });
 
-    it("stops propagation on options menu click and keydown", async () => {
+    it("renders dedicated redirect button with ROUTES.SETTINGS.PROMPTS.detail", () => {
+      render(<PromptCard prompt={mockPrompt} />);
+
+      const redirectBtn = screen.getByRole("link", { name: /open prompt/i });
+      expect(redirectBtn).toHaveAttribute(
+        "href",
+        ROUTES.SETTINGS.PROMPTS.detail("prompt-123"),
+      );
+    });
+
+    it("keeps action buttons outside the top link and stops propagation", async () => {
       const user = userEvent.setup();
       const parentClick = vi.fn();
 
@@ -202,11 +219,13 @@ describe("Listing Cards Next.js Link Refactoring", () => {
         </div>,
       );
 
-      const optionsBtn = screen.getByRole("button", { name: /options/i });
-      await user.click(optionsBtn);
+      const deleteBtn = screen.getByRole("button", { name: /delete prompt/i });
+      expect(deleteBtn.closest("a")).toBeNull();
+
+      await user.click(deleteBtn);
       expect(parentClick).not.toHaveBeenCalled();
 
-      fireEvent.keyDown(optionsBtn, { key: "Enter" });
+      fireEvent.keyDown(deleteBtn, { key: "Enter" });
       expect(parentClick).not.toHaveBeenCalled();
     });
   });
@@ -222,19 +241,30 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       updatedAt: new Date(),
     };
 
-    it("renders Link with ROUTES.CONNECTORS.detail", () => {
+    it("renders top section inside Link with ROUTES.CONNECTORS.detail", () => {
       render(<ServerCard server={mockServer} />);
 
-      const link = screen.getByRole("link", { name: /github tools/i });
-      expect(link).toHaveAttribute(
+      const titleLink = screen.getByRole("link", { name: /github tools/i });
+      expect(titleLink).toHaveAttribute(
         "href",
         ROUTES.CONNECTORS.detail("server-123"),
       );
       expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
       expect(screen.getByText("https://api.github.com")).toBeInTheDocument();
+      expect(screen.getByText("https://api.github.com").closest("a")).toBe(titleLink);
     });
 
-    it("stops propagation on options menu click and keydown", async () => {
+    it("renders dedicated redirect button with ROUTES.CONNECTORS.detail", () => {
+      render(<ServerCard server={mockServer} />);
+
+      const redirectBtn = screen.getByRole("link", { name: /open connector/i });
+      expect(redirectBtn).toHaveAttribute(
+        "href",
+        ROUTES.CONNECTORS.detail("server-123"),
+      );
+    });
+
+    it("keeps action buttons outside the top link and stops propagation", async () => {
       const user = userEvent.setup();
       const parentClick = vi.fn();
 
@@ -244,11 +274,17 @@ describe("Listing Cards Next.js Link Refactoring", () => {
         </div>,
       );
 
-      const optionsBtn = screen.getByRole("button", { name: /options/i });
-      await user.click(optionsBtn);
+      const switchBtn = screen.getByRole("switch", { name: /toggle server/i });
+      expect(switchBtn.closest("a")).toBeNull();
+      await user.click(switchBtn);
       expect(parentClick).not.toHaveBeenCalled();
 
-      fireEvent.keyDown(optionsBtn, { key: "Enter" });
+      const deleteBtn = screen.getByRole("button", { name: /uninstall tool|delete server/i });
+      expect(deleteBtn.closest("a")).toBeNull();
+      await user.click(deleteBtn);
+      expect(parentClick).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(deleteBtn, { key: "Enter" });
       expect(parentClick).not.toHaveBeenCalled();
     });
   });
@@ -305,16 +341,27 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       updatedAt: new Date(),
     };
 
-    it("renders Link with ROUTES.SETTINGS.SKILLS.detail", () => {
+    it("renders top section inside Link with ROUTES.SETTINGS.SKILLS.detail", () => {
       render(<SkillCard skill={mockSkill} />);
 
-      const link = screen.getByRole("link", { name: /commit helper/i });
-      expect(link).toHaveAttribute("href", ROUTES.SETTINGS.SKILLS.detail("skill-123"));
+      const titleLink = screen.getByRole("link", { name: /commit helper/i });
+      expect(titleLink).toHaveAttribute("href", ROUTES.SETTINGS.SKILLS.detail("skill-123"));
       expect(screen.getByText("Commit Helper")).toBeInTheDocument();
-      expect(screen.getByText("/commit-helper")).toBeInTheDocument();
+      expect(screen.getByText("Generates git commit messages")).toBeInTheDocument();
+      expect(screen.getByText("Generates git commit messages").closest("a")).toBe(titleLink);
     });
 
-    it("stops propagation on toggle switch and delete button click and keydown", async () => {
+    it("renders dedicated redirect button with ROUTES.SETTINGS.SKILLS.detail", () => {
+      render(<SkillCard skill={mockSkill} />);
+
+      const redirectBtn = screen.getByRole("link", { name: /open skill/i });
+      expect(redirectBtn).toHaveAttribute(
+        "href",
+        ROUTES.SETTINGS.SKILLS.detail("skill-123"),
+      );
+    });
+
+    it("keeps action buttons outside the top link and stops propagation", async () => {
       const user = userEvent.setup();
       const parentClick = vi.fn();
 
@@ -325,10 +372,12 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       );
 
       const switchBtn = screen.getByRole("switch", { name: "Toggle skill" });
+      expect(switchBtn.closest("a")).toBeNull();
       await user.click(switchBtn);
       expect(parentClick).not.toHaveBeenCalled();
 
-      const deleteBtn = screen.getByRole("button");
+      const deleteBtn = screen.getByRole("button", { name: /delete skill/i });
+      expect(deleteBtn.closest("a")).toBeNull();
       await user.click(deleteBtn);
       expect(parentClick).not.toHaveBeenCalled();
 
