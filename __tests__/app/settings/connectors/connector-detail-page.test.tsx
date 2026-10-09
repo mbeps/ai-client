@@ -80,6 +80,11 @@ vi.mock("@/components/mcp/edit-server-form", () => ({
 vi.mock("@/components/mcp/server-settings", () => ({
   ServerSettings: () => <div data-testid="server-settings">ServerSettings</div>,
 }));
+vi.mock("@/components/mcp/server-sharing-tab", () => ({
+  ServerSharingTab: () => (
+    <div data-testid="server-sharing-tab">ServerSharingTab</div>
+  ),
+}));
 
 import React from "react";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
@@ -157,6 +162,18 @@ describe("McpServerPage (Connector Detail Page)", () => {
     expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
     expect(screen.getByText("Back to Connectors")).toBeInTheDocument();
     expect(screen.getByTestId("tool-list")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /sharing/i })).toBeInTheDocument();
+  });
+
+  it("does not render sharing tab for installed community servers", () => {
+    useAppStore.setState({
+      mcpServers: [{ ...mockServer, isInstalled: true }],
+    });
+
+    render(<McpServerPage />);
+
+    expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /sharing/i })).not.toBeInTheDocument();
   });
 
   it("triggers notFound() when server is not found in non-empty mcpServers", () => {

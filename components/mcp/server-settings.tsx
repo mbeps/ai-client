@@ -1,23 +1,13 @@
 "use client";
 
-import { Globe, Info, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
-import { toggleMcpServerPublic } from "@/actions/mcp-servers/toggle-mcp-server-public";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store";
 
@@ -35,14 +25,15 @@ export interface ServerSettingsProps {
 }
 
 /**
- * Settings panel for managing an MCP server configuration.
- * Displays public sharing toggle and permanent deletion option with confirmation.
+ * Danger zone settings panel for managing an MCP server.
+ * Displays permanent deletion or uninstall option with confirmation.
  * Shows warning about deletion impact on assistants and chats.
  * Redirects to the connectors list after successful deletion.
  *
  * @param props - Component props
- * @param props.serverId - ID of the server to manage settings for; used in delete and toggle operations
+ * @param props.serverId - ID of the server to manage settings for; used in delete operation
  * @see {@link EditServerForm} for editing server configuration
+ * @see {@link ServerSharingTab} for public sharing settings
  * @see {@link ServerOptions} for quick actions menu
  * @see {@link DeleteConfirmDialog} for deletion confirmation UX
  * @author Maruf Bepary
@@ -51,12 +42,10 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [togglingPublic, setTogglingPublic] = useState(false);
 
-  const { server, loadMcpServers } = useAppStore(
+  const { server } = useAppStore(
     useShallow((state) => ({
       server: state.mcpServers.find((s) => s.id === serverId),
-      loadMcpServers: state.loadMcpServers,
     })),
   );
 
@@ -75,69 +64,9 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
     }
   }
 
-  async function handleTogglePublic() {
-    if (!server) return;
-    setTogglingPublic(true);
-    try {
-      await toggleMcpServerPublic(serverId);
-      toast.success(`Server is now ${!server.isPublic ? "public" : "private"}`);
-      await loadMcpServers();
-      router.refresh();
-    } catch {
-      toast.error("Failed to toggle public status");
-    } finally {
-      setTogglingPublic(false);
-    }
-  }
-
   return (
     <div className="space-y-6">
-      {/* Public Sharing Section - only for owned servers */}
-      {!server.isInstalled && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-primary" />
-              <CardTitle>Public Sharing</CardTitle>
-            </div>
-            <CardDescription>
-              Share this MCP server with the community to allow other users to
-              discover and use its tools.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="public-toggle" className="text-base">
-                  Make this server public
-                </Label>
-                <p className="text-muted-foreground text-sm">
-                  When enabled, anyone can find and use this server in their
-                  chats.
-                </p>
-              </div>
-              <Switch
-                id="public-toggle"
-                checked={server.isPublic}
-                onCheckedChange={handleTogglePublic}
-                disabled={togglingPublic}
-              />
-            </div>
 
-            <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="text-muted-foreground">
-                <p className="font-medium text-foreground">Important Note</p>
-                <p>
-                  Public servers are accessible to all users on the platform.
-                  Ensure that your server does not expose sensitive data or
-                  internal functions that should remain private.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Delete / Uninstall Server Section */}
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6">

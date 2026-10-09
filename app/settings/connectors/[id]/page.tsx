@@ -3,6 +3,7 @@
 import {
   ChevronLeft,
   FileText,
+  Globe,
   Loader2,
   Server,
   Settings,
@@ -18,6 +19,7 @@ import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import { EditServerForm } from "@/components/mcp/edit-server-form";
 import { ResourceList } from "@/components/mcp/resource-list";
 import { ServerSettings } from "@/components/mcp/server-settings";
+import { ServerSharingTab } from "@/components/mcp/server-sharing-tab";
 import { ToolList } from "@/components/mcp/tool-list";
 import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/shared/page-container";
@@ -143,6 +145,12 @@ export default function McpServerPage() {
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuration</span>
           </SidebarTabsTrigger>
+          {!server.isInstalled && (
+            <SidebarTabsTrigger value="sharing">
+              <Globe className="mr-2 h-4 w-4" />
+              <span>Sharing</span>
+            </SidebarTabsTrigger>
+          )}
           <SidebarTabsTrigger value="settings">
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
@@ -160,6 +168,12 @@ export default function McpServerPage() {
         <SidebarTabsContent value="config">
           <EditServerForm server={server} />
         </SidebarTabsContent>
+
+        {!server.isInstalled && (
+          <SidebarTabsContent value="sharing">
+            <ServerSharingTab serverId={server.id} />
+          </SidebarTabsContent>
+        )}
 
         <SidebarTabsContent value="settings">
           <ServerSettings serverId={server.id} />
