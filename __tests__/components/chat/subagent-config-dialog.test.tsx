@@ -40,7 +40,7 @@ describe("SubagentConfigDialog", () => {
     expect(handleToggle).toHaveBeenCalledWith(true);
   });
 
-  it("renders active badge when enabled is true", () => {
+  it("renders worker model and sandboxing details when opened", () => {
     render(
       <SubagentConfigDialog
         open={true}
@@ -51,7 +51,7 @@ describe("SubagentConfigDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Active")).toBeDefined();
+    expect(screen.queryByText("Active")).toBeNull();
     expect(screen.getByText("Worker Subagent Model")).toBeDefined();
     expect(screen.getByText(/Tool Inheritance & Sandboxing/)).toBeDefined();
   });
@@ -70,6 +70,23 @@ describe("SubagentConfigDialog", () => {
 
     const doneButton = screen.getByRole("button", { name: /Done/i });
     fireEvent.click(doneButton);
+    expect(handleOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("calls onOpenChange(false) when Cancel button is clicked", () => {
+    const handleOpenChange = vi.fn();
+    render(
+      <SubagentConfigDialog
+        open={true}
+        onOpenChange={handleOpenChange}
+        subagentsEnabled={true}
+        onToggleSubagents={vi.fn()}
+        onSubagentModelChange={vi.fn()}
+      />,
+    );
+
+    const cancelButton = screen.getByRole("button", { name: /Cancel/i });
+    fireEvent.click(cancelButton);
     expect(handleOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -1,16 +1,16 @@
 "use client";
 
-import { Bot, Check, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  ResponsiveDialog,
-  ResponsiveDialogContent,
-  ResponsiveDialogDescription,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-} from "@/components/ui/responsive-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { SubagentModelCombobox } from "./subagent-model-combobox";
+import { SubagentModelSelect } from "./subagent-model-select";
 
 export interface SubagentConfigDialogProps {
   open: boolean;
@@ -24,8 +24,9 @@ export interface SubagentConfigDialogProps {
 /**
  * Dedicated dialog for configuring worker subagents.
  *
- * Provides deterministic controls for enabling subagents, choosing
- * worker models via Shadcn combobox, and displaying topological tool sandboxing.
+ * Provides a clean modal styled consistently with the other resource pickers
+ * (PickerDialog), including header border, Cancel and Done buttons with icons,
+ * and simplified typography.
  *
  * @author Maruf Bepary
  */
@@ -38,43 +39,24 @@ export function SubagentConfigDialog({
   onSubagentModelChange,
 }: SubagentConfigDialogProps) {
   return (
-    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-md p-6">
-        <ResponsiveDialogHeader>
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            <ResponsiveDialogTitle className="text-base font-semibold">
-              Subagents
-            </ResponsiveDialogTitle>
-          </div>
-          <ResponsiveDialogDescription className="text-xs text-muted-foreground">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex flex-col overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b px-4 py-3.5 pr-12">
+          <DialogTitle className="font-semibold text-base">
+            Subagents
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
             Delegate complex tasks to isolated worker subagents with shared
             scratchpad memory.
-          </ResponsiveDialogDescription>
-        </ResponsiveDialogHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-4 p-4">
           {/* Main Toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-purple-500/20 bg-purple-500/5 p-3.5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400">
-                <Bot className="h-5 w-5" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  Enable Subagents
-                  {subagentsEnabled && (
-                    <span className="rounded-full bg-purple-500/15 px-2 py-0.2 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
-                      Active
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Allow the main orchestrator to spawn specialized subagents for
-                  deep research and analysis.
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+            <span className="text-sm font-medium text-foreground">
+              Enable Subagents
+            </span>
             <Switch
               checked={subagentsEnabled}
               onCheckedChange={onToggleSubagents}
@@ -84,15 +66,14 @@ export function SubagentConfigDialog({
 
           {/* Worker Model Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+            <label className="text-xs font-medium text-foreground">
               Worker Subagent Model
             </label>
             <p className="text-xs text-muted-foreground">
               Select a dedicated model for worker subagents, or inherit the
               orchestrator&apos;s model.
             </p>
-            <SubagentModelCombobox
+            <SubagentModelSelect
               value={subagentModelId}
               onValueChange={onSubagentModelChange}
               disabled={!subagentsEnabled}
@@ -100,12 +81,12 @@ export function SubagentConfigDialog({
           </div>
 
           {/* Topological Sandboxing Notice */}
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed space-y-1.5">
+          <div className="space-y-1 rounded-lg border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               Tool Inheritance &amp; Sandboxing
             </div>
-            <p className="text-muted-foreground text-[11px] leading-relaxed">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
               Worker subagents dynamically inherit all tools enabled on the main
               chat (MCP servers, knowledge bases, skills, memory). Canvas
               artifacts (
@@ -119,21 +100,31 @@ export function SubagentConfigDialog({
               ) are permanently locked out.
             </p>
           </div>
-
-          {/* Footer Actions */}
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="gap-1.5"
-            >
-              <Check className="h-3.5 w-3.5" />
-              Done
-            </Button>
-          </div>
         </div>
-      </ResponsiveDialogContent>
-    </ResponsiveDialog>
+
+        {/* Dialog Footer with Cancel and Done */}
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-muted/20 px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="gap-2"
+          >
+            <X className="h-4 w-4" />
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="gap-2 px-6"
+          >
+            <Check className="h-4 w-4" />
+            Done
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
