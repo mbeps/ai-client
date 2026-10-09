@@ -18,6 +18,9 @@ export interface ToolCallState {
   /** Result returned by the tool after execution (populated when status is "complete"). */
   result?: unknown;
 
+  /** Optional name of the MCP server providing this tool. */
+  serverName?: string;
+
   /** Current execution status: "calling" while streaming, "complete" when done. */
   status: "calling" | "complete";
 }

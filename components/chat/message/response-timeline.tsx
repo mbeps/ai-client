@@ -78,6 +78,7 @@ export function ResponseTimeline({
               toolCallId: tc.toolCallId,
               toolName: tc.toolName,
               args: tc.args as any,
+              serverName: tc.serverName,
             }))}
             toolResults={activeToolCalls!
               .filter((tc) => tc.status === "complete")
@@ -85,6 +86,7 @@ export function ResponseTimeline({
                 toolCallId: tc.toolCallId,
                 toolName: tc.toolName,
                 result: tc.result,
+                serverName: tc.serverName,
               }))}
             initialOpen={false}
             messageId={messageId}

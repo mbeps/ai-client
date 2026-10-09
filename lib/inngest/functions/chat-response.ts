@@ -131,8 +131,11 @@ export const generateChatResponse = inngest.createFunction(
         selectedTools === undefined ||
         selectedTools.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
 
-      const { mcpTools, mcpCleanup: registeredCleanup } =
-        await registerMcpTools(ctx.servers as any, selectedTools);
+      const {
+        mcpTools,
+        toolSourceMap,
+        mcpCleanup: registeredCleanup,
+      } = await registerMcpTools(ctx.servers as any, selectedTools);
       mcpCleanup = registeredCleanup;
 
       const hasExternalMcpTools = Object.keys(mcpTools).length > 0;
@@ -304,6 +307,7 @@ export const generateChatResponse = inngest.createFunction(
         toolName: string;
         args: any;
         result?: any;
+        serverName?: string;
       }> = [];
 
       for await (const chunk of result.fullStream) {
@@ -320,16 +324,19 @@ export const generateChatResponse = inngest.createFunction(
           accumulatedReasoning += chunk.text;
           await emit({ type: "reasoning-delta", reasoning: chunk.text });
         } else if (chunk.type === "tool-call") {
+          const serverName = toolSourceMap[chunk.toolName];
           completedTools.push({
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             args: (chunk as any).args ?? (chunk as any).input,
+            serverName,
           });
           await emit({
             type: "tool-call",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             args: (chunk as any).args ?? (chunk as any).input,
+            serverName,
           });
         } else if (chunk.type === "tool-result") {
           const isPreliminary = Boolean((chunk as any).preliminary);
@@ -347,11 +354,13 @@ export const generateChatResponse = inngest.createFunction(
           if (tc && !isPreliminary) {
             tc.result = finalResult;
           }
+          const serverName = tc?.serverName ?? toolSourceMap[chunk.toolName];
           await emit({
             type: "tool-result",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             result: isPreliminary ? rawResult : finalResult,
+            serverName,
             preliminary: isPreliminary,
           });
         } else if (chunk.type === "tool-error") {
@@ -369,11 +378,13 @@ export const generateChatResponse = inngest.createFunction(
           if (tc) {
             tc.result = errorResult;
           }
+          const serverName = tc?.serverName ?? toolSourceMap[chunk.toolName];
           await emit({
             type: "tool-result",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
             result: errorResult,
+            serverName,
           });
         }
       }
@@ -445,16 +456,19 @@ export const generateChatResponse = inngest.createFunction(
               accumulatedReasoning += chunk.text;
               await emit({ type: "reasoning-delta", reasoning: chunk.text });
             } else if (chunk.type === "tool-call") {
+              const serverName = toolSourceMap[chunk.toolName];
               completedTools.push({
                 toolCallId: chunk.toolCallId,
                 toolName: chunk.toolName,
                 args: (chunk as any).args ?? (chunk as any).input,
+                serverName,
               });
               await emit({
                 type: "tool-call",
                 toolCallId: chunk.toolCallId,
                 toolName: chunk.toolName,
                 args: (chunk as any).args ?? (chunk as any).input,
+                serverName,
               });
             } else if (chunk.type === "tool-result") {
               const rawResult = (chunk as any).result ?? (chunk as any).output;
@@ -464,11 +478,14 @@ export const generateChatResponse = inngest.createFunction(
               if (tc) {
                 tc.result = rawResult;
               }
+              const serverName =
+                tc?.serverName ?? toolSourceMap[chunk.toolName];
               await emit({
                 type: "tool-result",
                 toolCallId: chunk.toolCallId,
                 toolName: chunk.toolName,
                 result: rawResult,
+                serverName,
                 preliminary: false,
               });
             }
@@ -498,6 +515,7 @@ export const generateChatResponse = inngest.createFunction(
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
           args: tc.args,
+          ...(tc.serverName ? { serverName: tc.serverName } : {}),
         })),
         toolResults: completedTools.map((tc) => ({
           toolCallId: tc.toolCallId,
@@ -506,6 +524,7 @@ export const generateChatResponse = inngest.createFunction(
             tc.result !== undefined
               ? tc.result
               : { error: "Tool execution was interrupted" },
+          ...(tc.serverName ? { serverName: tc.serverName } : {}),
         })),
         usage,
         finishReason,

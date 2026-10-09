@@ -367,6 +367,7 @@ export function useStreamResponse(
             toolCallId: event.toolCallId,
             toolName: event.toolName,
             args: event.args,
+            serverName: event.serverName,
             status: "calling",
           };
           activeToolCallsRef.current = [
@@ -389,6 +390,7 @@ export function useStreamResponse(
                   ...t,
                   status: isPreliminary ? "calling" : "complete",
                   result: event.result,
+                  serverName: event.serverName ?? t.serverName,
                 }
               : t,
           );

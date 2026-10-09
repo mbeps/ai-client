@@ -4,6 +4,7 @@ import {
   calculateContextUsage,
   estimateAttachmentTokens,
   estimateTokens,
+  estimateToolContextTokens,
   formatTokens,
 } from "@/lib/chat/calculate-context-tokens";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -64,6 +65,19 @@ describe("calculate-context-tokens utility", () => {
         sizeBytes: 4000,
       };
       expect(estimateAttachmentTokens(docAttachment)).toBe(1000); // 4000 / 4 = 1000
+    });
+  });
+
+  describe("estimateToolContextTokens", () => {
+    it("estimates tokens correctly for arguments and results", () => {
+      expect(estimateToolContextTokens(undefined, undefined)).toBe(0);
+      expect(estimateToolContextTokens({ query: "weather in Paris" })).toBeGreaterThan(0);
+      expect(
+        estimateToolContextTokens(
+          { file: "test.txt" },
+          { content: "Hello world this is test content" },
+        ),
+      ).toBeGreaterThan(0);
     });
   });
 
