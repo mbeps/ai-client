@@ -50,11 +50,6 @@ export function SettingsSidebar({
       icon: Settings,
     },
     {
-      name: "Connectors",
-      href: ROUTES.SETTINGS.CONNECTORS.path,
-      icon: Plug,
-    },
-    {
       name: "Providers",
       href: ROUTES.SETTINGS.PROVIDERS.path,
       icon: Database,
@@ -70,14 +65,19 @@ export function SettingsSidebar({
       icon: BrainCircuit,
     },
     {
-      name: "Tools",
-      href: ROUTES.SETTINGS.TOOLS.path,
-      icon: Wrench,
-    },
-    {
       name: "Memory",
       href: ROUTES.SETTINGS.MEMORY.path,
       icon: Brain,
+    },
+    {
+      name: "Connectors",
+      href: ROUTES.SETTINGS.CONNECTORS.path,
+      icon: Plug,
+    },
+    {
+      name: "Tools",
+      href: ROUTES.SETTINGS.TOOLS.path,
+      icon: Wrench,
     },
   ];
 
