@@ -45,7 +45,7 @@ next-env.d.ts
 
 
 .subagents/**
-scripts/hash-password.js
+scripts/**
 reports/**
 **.xlsx
 graphify-out/
@@ -57,4 +57,4 @@ evaluations/**
 .plans/**
 .superpowers/**
 checklist.md
-mcp.json
+.mcp.json

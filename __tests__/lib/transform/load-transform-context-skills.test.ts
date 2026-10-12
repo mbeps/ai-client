@@ -25,6 +25,7 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: hybridSearchMock,
 }));
 
+import { skill } from "@/drizzle/schema";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
 const SKILL_ONE = {
@@ -51,6 +52,26 @@ const SKILL_THREE = {
   content: "Three body",
 };
 
+function mockSkills(skills: any[] = []) {
+  dbMock.select.mockImplementation(() => {
+    let currentTable: any = null;
+    const queryObj: any = {
+      from: vi.fn().mockImplementation((table) => {
+        currentTable = table;
+        return queryObj;
+      }),
+      innerJoin: vi.fn().mockImplementation(() => queryObj),
+      where: vi.fn().mockImplementation(async () => {
+        if (currentTable === skill) {
+          return skills;
+        }
+        return [];
+      }),
+    };
+    return queryObj;
+  });
+}
+
 function setupBaselineMocks() {
   resolveProviderMock.mockResolvedValue({ modelId: "gpt-4" });
   resolveDefaultChatProviderMock.mockResolvedValue({ modelId: "gpt-4" });
@@ -60,6 +81,7 @@ function setupBaselineMocks() {
     mcpCleanup: vi.fn(),
   });
   hybridSearchMock.mockResolvedValue([]);
+  mockSkills([]);
 }
 
 beforeEach(() => {
@@ -69,11 +91,7 @@ beforeEach(() => {
 
 describe("loadTransformContext skill configuration", () => {
   it("returns empty skills in none mode", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    mockSkills([]);
 
     const ctx = await loadTransformContext({
       userId: "user-1",
@@ -93,17 +111,7 @@ describe("loadTransformContext skill configuration", () => {
   });
 
   it("preloads configured skills and offers the rest in specific mode", async () => {
-    const skillChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([SKILL_ONE, SKILL_TWO, SKILL_THREE]),
-    };
-    const serverChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select
-      .mockImplementationOnce(() => serverChain)
-      .mockImplementationOnce(() => skillChain);
+    mockSkills([SKILL_ONE, SKILL_TWO, SKILL_THREE]);
 
     const ctx = await loadTransformContext({
       userId: "user-1",
@@ -134,17 +142,7 @@ describe("loadTransformContext skill configuration", () => {
   });
 
   it("catalogs every enabled skill in dynamic mode with nothing preloaded", async () => {
-    const skillChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([SKILL_ONE, SKILL_TWO]),
-    };
-    const serverChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select
-      .mockImplementationOnce(() => serverChain)
-      .mockImplementationOnce(() => skillChain);
+    mockSkills([SKILL_ONE, SKILL_TWO]);
 
     const ctx = await loadTransformContext({
       userId: "user-1",
@@ -167,17 +165,7 @@ describe("loadTransformContext skill configuration", () => {
   });
 
   it("matches configured skill ids by name in specific mode", async () => {
-    const skillChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([SKILL_ONE, SKILL_TWO]),
-    };
-    const serverChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select
-      .mockImplementationOnce(() => serverChain)
-      .mockImplementationOnce(() => skillChain);
+    mockSkills([SKILL_ONE, SKILL_TWO]);
 
     const ctx = await loadTransformContext({
       userId: "user-1",
@@ -197,11 +185,7 @@ describe("loadTransformContext skill configuration", () => {
   });
 
   it("returns empty skills when the agent has no skill config and no enabled skills", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    mockSkills([]);
 
     const ctx = await loadTransformContext({
       userId: "user-1",

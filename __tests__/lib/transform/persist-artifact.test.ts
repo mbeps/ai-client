@@ -428,12 +428,91 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
         stepIndex: 0,
       },
       "user-1",
-      "run-1",
     );
 
     expect(result).toBeNull();
     expect(logMock.warn).toHaveBeenCalled();
     const loggedPayload = logMock.warn.mock.calls.at(-1)?.[1];
     expect(loggedPayload.error).toBe("raw-string-boom");
+  });
+
+  it("persists markdown artifact with .md extension and text/markdown MIME type", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "markdown",
+          title: "Summary Report",
+          content: "# Summary\nGenerated content",
+        },
+        stepIndex: 1,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-2-output.md");
+    expect(result?.attachmentRow.mimeType).toBe("text/markdown");
+    expect(uploadObjectMock).toHaveBeenCalledWith(
+      expect.stringContaining("step-2-output.md"),
+      expect.any(Buffer),
+      "text/markdown",
+    );
+  });
+
+  it("persists HTML artifact with .html extension and text/html MIME type", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "html",
+          content: "<div class='widget'>Chart</div>",
+        },
+        stepIndex: 2,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-3-output.html");
+    expect(result?.attachmentRow.mimeType).toBe("text/html");
+  });
+
+  it("persists Mermaid diagram artifact with .mmd extension", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "artifact",
+        artifact: {
+          type: "mermaid",
+          content: "graph LR\nA-->B",
+        },
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("step-1-output.mmd");
+    expect(result?.attachmentRow.mimeType).toBe("text/plain");
+  });
+
+  it("infers PDF MIME type for download payload with pdf filename", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "download",
+        fileContent: Buffer.from("pdf-data").toString("base64"),
+        filename: "statement.pdf",
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.name).toBe("statement.pdf");
+    expect(result?.attachmentRow.mimeType).toBe("application/pdf");
   });
 });

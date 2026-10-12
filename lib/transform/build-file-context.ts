@@ -70,8 +70,8 @@ export async function buildFileContext(
       row.key.includes("transform-outputs/"),
     );
     fileContext = hasOutputWorkbook
-      ? `The current workbook is the [Current workbook] file below. Use the upload_file tool with that URL before processing. Do not treat the original input as an equal candidate now that a current workbook exists:\n${fileLines.join("\n")}`
-      : `The user has attached spreadsheet files. Use the upload_file tool with the provided URL to load a file before processing:\n${fileLines.join("\n")}`;
+      ? `The current workbook is the [Current workbook] file below. Use the upload_file tool (passing file_content=<URL> and filename=<name>) before processing. Do not treat the original input as an equal candidate now that a current workbook exists:\n${fileLines.join("\n")}`
+      : `The user has attached spreadsheet files. Use the upload_file tool (passing file_content=<URL> and filename=<name>) to load a file before processing:\n${fileLines.join("\n")}`;
   }
 
   return { fileContext, attachmentRows };
