@@ -30,6 +30,10 @@ vi.mock("inngest/next", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/inngest/functions", () => ({
+  inngestFunctions: [],
+}));
+
 describe("/api/inngest route handler", () => {
   beforeEach(() => {
     vi.resetModules();
