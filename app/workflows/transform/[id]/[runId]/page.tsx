@@ -14,7 +14,7 @@ import {
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getAttachmentSpreadsheet } from "@/actions/attachments/get-attachment-spreadsheet";
+import { getAttachmentArtifact } from "@/actions/attachments/get-attachment-artifact";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
 import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
@@ -493,12 +493,12 @@ export default function TransformRunDetailPage() {
     }
   };
 
-  const [workbookCache, setWorkbookCache] = useState<
+  const [artifactCache, setArtifactCache] = useState<
     Record<string, ArtifactData>
   >({});
-  const [isLoadingWorkbook, setIsLoadingWorkbook] = useState(false);
+  const [isLoadingArtifact, setIsLoadingArtifact] = useState(false);
 
-  // Resolve which attachment represents the workbook at selectedStepIndex
+  // Resolve which attachment represents the preview at selectedStepIndex
   const targetAttachmentId = useMemo(() => {
     if (selectedStepIndex === null) return null;
     const stepState = stepStates[selectedStepIndex];
@@ -522,28 +522,27 @@ export default function TransformRunDetailPage() {
     if (selectedStepIndex !== null && stepStates[selectedStepIndex]?.artifact) {
       return;
     }
-    if (workbookCache[targetAttachmentId]) return;
+    if (artifactCache[targetAttachmentId]) return;
 
     let cancelled = false;
-    setIsLoadingWorkbook(true);
+    setIsLoadingArtifact(true);
 
-    getAttachmentSpreadsheet(targetAttachmentId)
+    getAttachmentArtifact(targetAttachmentId)
       .then((res) => {
         if (cancelled) return;
         const stepName =
           selectedStepIndex !== null && agent?.steps[selectedStepIndex]?.name
             ? agent.steps[selectedStepIndex].name
-            : "Workbook";
+            : "Preview";
 
         const artifact: ArtifactData = {
-          id: `wb-${res.id}`,
-          type: "spreadsheet",
-          title: `${stepName} - ${res.name}`,
-          content: JSON.stringify({ sheets: res.sheets }),
+          ...res,
+          id: `att-${res.id}`,
+          title: `${stepName} - ${res.title}`,
           messageId: `step-${selectedStepIndex ?? 0}`,
         };
 
-        setWorkbookCache((prev) => ({
+        setArtifactCache((prev) => ({
           ...prev,
           [targetAttachmentId]: artifact,
         }));
@@ -551,21 +550,21 @@ export default function TransformRunDetailPage() {
       .catch((err) => {
         if (!cancelled) {
           logger.warn?.(
-            "Failed to load spreadsheet preview via server action",
+            "Failed to load preview artifact via server action",
             err,
           );
         }
       })
       .finally(() => {
         if (!cancelled) {
-          setIsLoadingWorkbook(false);
+          setIsLoadingArtifact(false);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [targetAttachmentId, workbookCache, selectedStepIndex, stepStates, agent]);
+  }, [targetAttachmentId, artifactCache, selectedStepIndex, stepStates, agent]);
 
   const currentArtifact = useMemo(() => {
     if (selectedStepIndex === null) return null;
@@ -592,17 +591,17 @@ export default function TransformRunDetailPage() {
       }
     }
 
-    // Cached workbook artifact loaded from attachment via server action
-    if (targetAttachmentId && workbookCache[targetAttachmentId]) {
-      return workbookCache[targetAttachmentId];
+    // Cached preview artifact loaded from attachment via server action
+    if (targetAttachmentId && artifactCache[targetAttachmentId]) {
+      return artifactCache[targetAttachmentId];
     }
 
     return null;
-  }, [selectedStepIndex, stepStates, agent, targetAttachmentId, workbookCache]);
+  }, [selectedStepIndex, stepStates, agent, targetAttachmentId, artifactCache]);
 
   const hasAnyArtifact = useMemo(() => {
     return (
-      Object.keys(workbookCache).length > 0 ||
+      Object.keys(artifactCache).length > 0 ||
       targetAttachmentId !== null ||
       Object.values(stepStates).some(
         (state) =>
@@ -610,7 +609,7 @@ export default function TransformRunDetailPage() {
           (state.stepData && Object.keys(state.stepData).length > 0),
       )
     );
-  }, [stepStates, workbookCache, targetAttachmentId]);
+  }, [stepStates, artifactCache, targetAttachmentId]);
 
   if (isLoading) {
     return (
@@ -997,12 +996,10 @@ export default function TransformRunDetailPage() {
                 className="hidden bg-card lg:block"
               >
                 <div className="relative h-full overflow-hidden">
-                  {isLoadingWorkbook ? (
+                  {isLoadingArtifact ? (
                     <div className="flex h-full flex-col items-center justify-center gap-4 bg-muted/5 p-12 text-center text-muted-foreground">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      <p className="font-medium text-sm">
-                        Loading spreadsheet preview...
-                      </p>
+                      <p className="font-medium text-sm">Loading preview...</p>
                     </div>
                   ) : currentArtifact ? (
                     <ArtifactPanel

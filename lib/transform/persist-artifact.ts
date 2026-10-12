@@ -47,8 +47,47 @@ export type PersistArtifactResult = {
   attachmentRow: AttachmentRow;
 };
 
+/** Maps a file extension to its corresponding standard MIME type. */
+function inferMimeTypeFromFilename(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "xlsx":
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    case "xlsm":
+      return "application/vnd.ms-excel.sheet.macroEnabled.12";
+    case "xls":
+      return "application/vnd.ms-excel";
+    case "csv":
+      return "text/csv";
+    case "pdf":
+      return "application/pdf";
+    case "md":
+    case "markdown":
+      return "text/markdown";
+    case "html":
+    case "htm":
+      return "text/html";
+    case "json":
+      return "application/json";
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "zip":
+      return "application/zip";
+    case "txt":
+    case "mmd":
+      return "text/plain";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 /**
  * Persists a transform step output to S3 and creates an attachment record.
+ * Supports all four canvas artifact types (spreadsheet, markdown, html, mermaid)
+ * and generic tool file downloads (xlsx, pdf, csv, etc.).
  *
  * @param input  - Discriminated persistence input.
  * @param userId - Owning user ID.
@@ -63,72 +102,92 @@ export async function persistTransformArtifact(
 ): Promise<PersistArtifactResult | null> {
   const outputAttachmentId = randomUUID();
   let outputName: string;
-  let xlsxBuffer: Buffer;
+  let fileBuffer: Buffer;
+  let mimeType: string;
 
   try {
     if (input.kind === "artifact") {
-      const artifactType = (input.artifact.type as string | undefined) ?? "";
+      const artifactType =
+        (input.artifact.type as string | undefined)?.toLowerCase() ?? "";
       const artifactContent =
         (input.artifact.content as string | undefined) ?? "";
 
-      if (artifactType.toLowerCase() !== "spreadsheet" || !artifactContent) {
+      if (!artifactContent) {
         return null;
       }
 
-      const parsed = JSON.parse(artifactContent);
-      const workbook = XLSX.utils.book_new();
+      if (artifactType === "spreadsheet") {
+        const parsed = JSON.parse(artifactContent);
+        const workbook = XLSX.utils.book_new();
 
-      if (Array.isArray(parsed)) {
-        const ws = XLSX.utils.aoa_to_sheet(parsed);
-        XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
-      } else if (
-        parsed &&
-        typeof parsed === "object" &&
-        Array.isArray((parsed as any).data)
-      ) {
-        const ws = XLSX.utils.aoa_to_sheet((parsed as any).data);
-        XLSX.utils.book_append_sheet(
-          workbook,
-          ws,
-          (parsed as any).name ?? "Sheet1",
-        );
-      } else if (
-        parsed &&
-        typeof parsed === "object" &&
-        Array.isArray((parsed as any).sheets)
-      ) {
-        for (const sheet of (parsed as any).sheets as Array<{
-          name?: string;
-          data?: unknown[][];
-        }>) {
-          const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
-          XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+        if (Array.isArray(parsed)) {
+          const ws = XLSX.utils.aoa_to_sheet(parsed);
+          XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
+        } else if (
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray((parsed as any).data)
+        ) {
+          const ws = XLSX.utils.aoa_to_sheet((parsed as any).data);
+          XLSX.utils.book_append_sheet(
+            workbook,
+            ws,
+            (parsed as any).name ?? "Sheet1",
+          );
+        } else if (
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray((parsed as any).sheets)
+        ) {
+          for (const sheet of (parsed as any).sheets as Array<{
+            name?: string;
+            data?: unknown[][];
+          }>) {
+            const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
+            XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
+          }
         }
-      }
 
-      if (workbook.SheetNames.length === 0) {
-        throw new InvalidArtifactFormatError(
-          "Spreadsheet artifact contains no valid sheets or recognizable data structure",
+        if (workbook.SheetNames.length === 0) {
+          throw new InvalidArtifactFormatError(
+            "Spreadsheet artifact contains no valid sheets or recognizable data structure",
+          );
+        }
+
+        fileBuffer = Buffer.from(
+          XLSX.write(workbook, {
+            type: "array",
+            bookType: "xlsx",
+          }) as ArrayBuffer,
         );
+        outputName = `step-${input.stepIndex + 1}-output.xlsx`;
+        mimeType =
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      } else if (artifactType === "markdown") {
+        fileBuffer = Buffer.from(artifactContent, "utf-8");
+        outputName = `step-${input.stepIndex + 1}-output.md`;
+        mimeType = "text/markdown";
+      } else if (artifactType === "html") {
+        fileBuffer = Buffer.from(artifactContent, "utf-8");
+        outputName = `step-${input.stepIndex + 1}-output.html`;
+        mimeType = "text/html";
+      } else if (artifactType === "mermaid") {
+        fileBuffer = Buffer.from(artifactContent, "utf-8");
+        outputName = `step-${input.stepIndex + 1}-output.mmd`;
+        mimeType = "text/plain";
+      } else {
+        // Unknown / unsupported artifact type
+        return null;
       }
-
-      xlsxBuffer = Buffer.from(
-        XLSX.write(workbook, {
-          type: "array",
-          bookType: "xlsx",
-        }) as ArrayBuffer,
-      );
-      outputName = `step-${input.stepIndex + 1}-output.xlsx`;
     } else {
-      xlsxBuffer = Buffer.from(input.fileContent, "base64");
+      fileBuffer = Buffer.from(input.fileContent, "base64");
       outputName = input.filename
         ? sanitiseFilename(input.filename)
         : `step-${input.stepIndex + 1}-output.xlsx`;
+      mimeType = inferMimeTypeFromFilename(outputName);
     }
 
     const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
-    const mimeType =
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     // 1. DB record first, then upload; compensate by deleting the row if S3
     // fails so a failed upload never leaves a dangling attachment record.
@@ -138,12 +197,12 @@ export async function persistTransformArtifact(
       transformRunId: runId,
       name: outputName,
       mimeType,
-      size: xlsxBuffer.length,
+      size: fileBuffer.length,
       key: s3Key,
     });
 
     try {
-      await uploadObject(s3Key, xlsxBuffer, mimeType);
+      await uploadObject(s3Key, fileBuffer, mimeType);
     } catch (err) {
       await db.delete(attachment).where(eq(attachment.id, outputAttachmentId));
       throw err;
@@ -166,7 +225,7 @@ export async function persistTransformArtifact(
       userId,
       name: outputName,
       mimeType,
-      size: xlsxBuffer.length,
+      size: fileBuffer.length,
       key: s3Key,
       extractedText: null,
       createdAt: new Date(),

@@ -210,7 +210,7 @@ export async function runTransformSteps({
     // Build per-step file context
     let fileContext = "";
     if (activeWorkbookFilePath) {
-      fileContext = `A workbook is already loaded in the MCP session for this run. Reuse this exact file path for spreadsheet tools: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
+      fileContext = `A staged file is already loaded in the MCP session for this run. Reuse this exact file path for subsequent tool operations: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
     } else if (currentAttachmentRows.length > 0) {
       const { fileContext: builtContext } = await buildFileContext(
         currentAttachmentRows.map((r) => r.id),
@@ -234,7 +234,12 @@ export async function runTransformSteps({
       `Instructions for this step:\n${step.prompt}`,
       `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
       hasManageArtifact
-        ? "- Canvas & Artifact Tool (manage_artifact): The canvas preview tool is enabled. If you create or output new tabular data directly (rather than via Excel MCP tools), call manage_artifact with type='spreadsheet', title, and sheets to update the side canvas preview."
+        ? "- Canvas & Artifact Tool (manage_artifact): The canvas preview tool is enabled. Use manage_artifact to present interactive content on the side canvas:\n" +
+          "  - 'markdown': Use for text reports, summaries, code, emails, or structured documents.\n" +
+          "  - 'spreadsheet': Use for tabular data. Pass { sheets: [{ name: 'SheetName', data: [[...]] }] }.\n" +
+          "  - 'html': Use for interactive designs, UI mockups, or standalone HTML snippets.\n" +
+          "  - 'mermaid': Use for diagrams, workflows, and charts.\n" +
+          "Whenever you create or update major output content for a step, call manage_artifact so the user can inspect it in the side canvas."
         : null,
       fileContext || null,
     ]
@@ -386,7 +391,6 @@ export async function runTransformSteps({
     if (
       stepArtifact &&
       typeof (stepArtifact as any).type === "string" &&
-      (stepArtifact as any).type.toLowerCase() === "spreadsheet" &&
       typeof (stepArtifact as any).content === "string"
     ) {
       try {
@@ -409,11 +413,12 @@ export async function runTransformSteps({
           activeWorkbookFilePath = null;
 
           log.info(
-            "Active workbook replaced with step output (runId: {runId}, stepIndex: {stepIndex})",
+            "Active step output persisted and replaced in session (runId: {runId}, stepIndex: {stepIndex}, artifactType: {artifactType})",
             {
               runId: runRow.id,
               stepIndex: i,
-              activeWorkbookAttachmentId: persisted.attachmentRow.id,
+              artifactType: (stepArtifact as any).type,
+              activeAttachmentId: persisted.attachmentRow.id,
               userId,
             },
           );
