@@ -1,5 +1,6 @@
 import { generateText, isStepCount } from "ai";
 import { eq } from "drizzle-orm";
+import * as xlsx from "xlsx";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
@@ -21,10 +22,10 @@ import {
   formatSkillCatalog,
 } from "@/lib/skills/build-skill-prompt";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
+import { buildFileContext } from "@/lib/transform/build-file-context";
 
 const log = getLogger(["app", "transform", "steps"]);
 
-import { buildFileContext } from "@/lib/transform/build-file-context";
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";
 import { extractDownloadFilePayload } from "@/lib/transform/extract-download-file-payload";
 import { extractUploadedFilePath } from "@/lib/transform/extract-uploaded-file-path";
@@ -42,7 +43,7 @@ import type { TransformStep } from "@/types/transform/transform-step";
 interface RunTransformStepsOptions {
   steps: TransformStep[];
   startFromStep: number;
-  runRow: { id: string };
+  runRow: { id: string; outputAttachmentIds?: string[] | null };
   agentRow: {
     id: string;
     name: string;
@@ -102,7 +103,9 @@ export async function runTransformSteps({
   const preloadedSkills = selectedSkills ?? [];
   let currentAttachmentRows = initialAttachmentRows;
   let activeWorkbookFilePath: string | null = null;
-  let currentOutputAttachmentIds: string[] = [];
+  let currentOutputAttachmentIds: string[] = [
+    ...(runRow.outputAttachmentIds ?? []),
+  ];
 
   for (let i = startFromStep; i < steps.length; i++) {
     const step = steps[i];
@@ -216,6 +219,11 @@ export async function runTransformSteps({
       fileContext = builtContext;
     }
 
+    const hasManageArtifact =
+      "manage_artifact" in filteredTools ||
+      (agentRow.tools || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) ||
+      (step.toolIds || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
+
     // Build system prompt
     const systemPrompt = [
       agentRow.globalContext ? `Context:\n${agentRow.globalContext}` : null,
@@ -225,6 +233,9 @@ export async function runTransformSteps({
       "You are a helpful AI assistant performing a task.",
       `Instructions for this step:\n${step.prompt}`,
       `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
+      hasManageArtifact
+        ? "- Canvas & Artifact Tool (manage_artifact): The canvas preview tool is enabled. If you create or output new tabular data directly (rather than via Excel MCP tools), call manage_artifact with type='spreadsheet', title, and sheets to update the side canvas preview."
+        : null,
       fileContext || null,
     ]
       .filter(Boolean)
@@ -232,6 +243,7 @@ export async function runTransformSteps({
 
     let stepSummary = "Step completed.";
     let stepArtifact: Record<string, unknown> | null = null;
+    let stepOutputAttachmentId: string | undefined;
 
     try {
       // Capability & Vision guards (item 4)
@@ -385,8 +397,14 @@ export async function runTransformSteps({
         );
 
         if (persisted) {
-          currentOutputAttachmentIds = persisted.outputAttachmentIds;
+          currentOutputAttachmentIds = Array.from(
+            new Set([
+              ...currentOutputAttachmentIds,
+              ...persisted.outputAttachmentIds,
+            ]),
+          );
           stepPersistedSpreadsheetOutput = true;
+          stepOutputAttachmentId = persisted.attachmentRow.id;
           currentAttachmentRows = [persisted.attachmentRow];
           activeWorkbookFilePath = null;
 
@@ -458,9 +476,53 @@ export async function runTransformSteps({
               );
 
               if (persisted) {
-                currentOutputAttachmentIds = persisted.outputAttachmentIds;
+                currentOutputAttachmentIds = Array.from(
+                  new Set([
+                    ...currentOutputAttachmentIds,
+                    ...persisted.outputAttachmentIds,
+                  ]),
+                );
                 stepPersistedSpreadsheetOutput = true;
+                stepOutputAttachmentId = persisted.attachmentRow.id;
                 currentAttachmentRows = [persisted.attachmentRow];
+
+                if (!stepArtifact) {
+                  try {
+                    const buf = Buffer.from(
+                      downloadPayload.fileContent,
+                      "base64",
+                    );
+                    const wb = xlsx.read(buf, { type: "buffer" });
+                    const sheets = wb.SheetNames.map((name) => {
+                      const rawData = xlsx.utils.sheet_to_json(
+                        wb.Sheets[name],
+                        {
+                          header: 1,
+                        },
+                      ) as any[][];
+                      return { name, data: rawData.slice(0, 500) };
+                    });
+                    stepArtifact = {
+                      id: `step-${i}-wb`,
+                      type: "spreadsheet",
+                      title: `${step.name} - ${persisted.attachmentRow.name}`,
+                      content: JSON.stringify({ sheets }),
+                      messageId: `step-${i}`,
+                    };
+                  } catch (parseErr) {
+                    log.warn(
+                      "Failed to build spreadsheet artifact from downloaded workbook (runId: {runId}, stepIndex: {stepIndex}): {error}",
+                      {
+                        runId: runRow.id,
+                        stepIndex: i,
+                        error:
+                          parseErr instanceof Error
+                            ? parseErr.message
+                            : String(parseErr),
+                      },
+                    );
+                  }
+                }
 
                 log.info(
                   "Persisted step output from download_file fallback (runId: {runId}, stepIndex: {stepIndex})",
@@ -506,6 +568,8 @@ export async function runTransformSteps({
       summary: stepSummary,
       stepData: {},
       artifact: stepArtifact,
+      outputAttachmentId: stepOutputAttachmentId,
+      outputAttachmentIds: currentOutputAttachmentIds,
     });
 
     log.info("Step completed (runId: {runId}, stepIndex: {stepIndex})", {

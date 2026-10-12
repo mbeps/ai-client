@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
-import { mcpServer, skill } from "@/drizzle/schema";
+import { mcpServer, skill, userMcpServerInstall } from "@/drizzle/schema";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -45,10 +45,34 @@ export async function loadTransformContext({
   anyArtifactToolSelected = false,
 }: LoadTransformContextArgs) {
   /* 1. Parallel loading of servers and KB results */
-  const serversPromise = db
-    .select()
-    .from(mcpServer)
-    .where(and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true)));
+  const serversPromise = Promise.all([
+    db
+      .select({
+        id: mcpServer.id,
+        name: mcpServer.name,
+        url: mcpServer.url,
+        headers: mcpServer.headers,
+      })
+      .from(mcpServer)
+      .where(and(eq(mcpServer.userId, userId), eq(mcpServer.enabled, true))),
+    db
+      .select({
+        id: mcpServer.id,
+        name: mcpServer.name,
+        url: mcpServer.url,
+        headers: userMcpServerInstall.headers,
+      })
+      .from(userMcpServerInstall)
+      .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
+      .where(
+        and(
+          eq(userMcpServerInstall.userId, userId),
+          eq(userMcpServerInstall.enabled, true),
+          eq(mcpServer.isPublic, true),
+          eq(mcpServer.enabled, true),
+        ),
+      ),
+  ]).then(([personal, installed]) => [...personal, ...installed]);
 
   // Resolve model ID
   const model = modelOverride ?? agentRow.modelId ?? null;

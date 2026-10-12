@@ -52,6 +52,8 @@ export type TransformRunStreamEvent =
       summary?: string;
       stepData?: Record<string, unknown[]>;
       artifact?: unknown;
+      outputAttachmentId?: string;
+      outputAttachmentIds?: string[];
     }
   | {
       type: "transform-review-required";

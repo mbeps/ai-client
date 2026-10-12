@@ -27,12 +27,29 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
 }));
 
 describe("loadTransformContext", () => {
-  it("loads servers, provider, and mcp tools successfully", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([{ id: "srv-1", name: "MCP", enabled: true }]),
+  const createMockQuery = (resolvedValue: any = []) => {
+    const q: any = {
+      from: vi.fn().mockImplementation(() => q),
+      innerJoin: vi.fn().mockImplementation(() => q),
+      where: vi.fn().mockResolvedValue(resolvedValue),
     };
-    dbMock.select.mockReturnValue(mockSelect);
+    return q;
+  };
+
+  it("loads servers, provider, and mcp tools successfully (combining personal and installed servers)", async () => {
+    let callCount = 0;
+    dbMock.select.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // Personal servers
+        return createMockQuery([{ id: "srv-1", name: "Personal MCP", enabled: true }]);
+      }
+      if (callCount === 2) {
+        // Installed public servers
+        return createMockQuery([{ id: "srv-pub-1", name: "Installed Public MCP", enabled: true }]);
+      }
+      return createMockQuery([]);
+    });
 
     resolveProviderMock.mockResolvedValue({ modelId: "gpt-4" });
     registerMcpToolsMock.mockResolvedValue({
@@ -56,15 +73,13 @@ describe("loadTransformContext", () => {
 
     expect(ctx.resolvedProvider).toEqual({ modelId: "gpt-4" });
     expect(ctx.mcpTools).toHaveProperty("toolA");
-    expect(ctx.allServers).toHaveLength(1);
+    expect(ctx.allServers).toHaveLength(2);
+    expect(ctx.allServers[0].name).toBe("Personal MCP");
+    expect(ctx.allServers[1].name).toBe("Installed Public MCP");
   });
 
   it("retrieves KB context when knowledgeBaseIds are present", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    dbMock.select.mockImplementation(() => createMockQuery([]));
 
     resolveProviderMock.mockResolvedValue({ modelId: "gpt-4" });
     hybridSearchMock.mockResolvedValue([{ content: "KB Content 1" }]);
@@ -102,11 +117,7 @@ describe("loadTransformContext", () => {
   });
 
   it("handles empty KB results and KB retrieval failure gracefully", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    dbMock.select.mockImplementation(() => createMockQuery([]));
 
     resolveDefaultChatProviderMock.mockResolvedValue({ modelId: "default-model" });
     registerMcpToolsMock.mockResolvedValue({
@@ -148,11 +159,7 @@ describe("loadTransformContext", () => {
   });
 
   it("handles non-Error rejection in KB search and steps with missing toolIds", async () => {
-    const mockSelect = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([]),
-    };
-    dbMock.select.mockReturnValue(mockSelect);
+    dbMock.select.mockImplementation(() => createMockQuery([]));
 
     resolveDefaultChatProviderMock.mockResolvedValue({ modelId: "default-model" });
     registerMcpToolsMock.mockResolvedValue({

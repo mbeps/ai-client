@@ -520,6 +520,12 @@ describe("runTransformSteps — execution flows", () => {
       "user-1",
       "run-dl-success",
     );
+    const stepComplete = emitted.find(
+      (e) => e.type === "transform-step-complete" && e.stepIndex === 1,
+    );
+    expect(stepComplete).toBeDefined();
+    expect(stepComplete.outputAttachmentId).toBe("att-saved-1");
+    expect(stepComplete.outputAttachmentIds).toEqual(["att-saved-1"]);
   });
 
   // ── Negative / fallback arm coverage ────────────────────────────────────

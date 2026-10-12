@@ -14,6 +14,7 @@ import {
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getAttachmentSpreadsheet } from "@/actions/attachments/get-attachment-spreadsheet";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
 import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
@@ -36,8 +37,10 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Separator } from "@/components/ui/separator";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { useApiError } from "@/hooks/use-api-error";
 import { transformRunChannel } from "@/lib/inngest/channels";
+import { logger } from "@/lib/logger";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
@@ -65,6 +68,7 @@ type StepState = {
   artifact?: ArtifactData | null;
   toolCalls?: ToolCall[];
   toolResults?: ToolResult[];
+  outputAttachmentId?: string;
 };
 
 function mapRunRowToRun(row: TransformRunRow): TransformRun {
@@ -105,7 +109,7 @@ export default function TransformRunDetailPage() {
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(
     null,
   );
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
+  const [isArtifactOpen, setIsArtifactOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -161,24 +165,47 @@ export default function TransformRunDetailPage() {
       // Initialize step states from DB
       const initial: Record<number, StepState> = {};
       const steps = agentRow ? JSON.parse(agentRow.steps || "[]") : [];
+      const outputIds = mapped.outputAttachmentIds;
       steps.forEach((_: unknown, i: number) => {
+        const stepOutputId = outputIds[i] ?? undefined;
         if (mapped.status === "completed") {
-          initial[i] = { status: "completed" };
+          initial[i] = {
+            status: "completed",
+            outputAttachmentId: stepOutputId,
+          };
         } else if (
           mapped.currentStepIndex !== null &&
           i < mapped.currentStepIndex
         ) {
-          initial[i] = { status: "completed" };
+          initial[i] = {
+            status: "completed",
+            outputAttachmentId: stepOutputId,
+          };
         } else if (
           mapped.status === "awaiting_review" &&
           i === mapped.currentStepIndex
         ) {
-          initial[i] = { status: "awaiting_review" };
+          initial[i] = {
+            status: "awaiting_review",
+            outputAttachmentId: stepOutputId,
+          };
         } else {
           initial[i] = { status: "pending" };
         }
       });
       setStepStates(initial);
+
+      // Auto-select step on initial load so preview displays immediately
+      if (mapped.status === "completed" && steps.length > 0) {
+        setSelectedStepIndex(steps.length - 1);
+        setIsArtifactOpen(true);
+      } else if (mapped.currentStepIndex !== null) {
+        setSelectedStepIndex(mapped.currentStepIndex);
+        setIsArtifactOpen(true);
+      } else if (steps.length > 0) {
+        setSelectedStepIndex(0);
+        setIsArtifactOpen(true);
+      }
 
       // Fetch presigned URLs for all attachment IDs
       const allIds = [
@@ -281,20 +308,43 @@ export default function TransformRunDetailPage() {
           }
           break;
 
-        case "transform-step-complete":
+        case "transform-step-complete": {
+          const stepIdx = event.stepIndex as number;
+          const outAttId = event.outputAttachmentId as string | undefined;
+          const outAttIds = event.outputAttachmentIds as string[] | undefined;
+
           setStepStates((prev: Record<number, StepState>) => ({
             ...prev,
-            [event.stepIndex as number]: {
-              ...prev[event.stepIndex as number],
+            [stepIdx]: {
+              ...prev[stepIdx],
               status: "completed",
               summary: event.summary as string,
               stepData: event.stepData as Record<string, any[]>,
               artifact: (event.artifact as ArtifactData | null) ?? null,
+              outputAttachmentId: outAttId,
             },
           }));
-          setSelectedStepIndex(event.stepIndex as number);
-          if (event.artifact) setIsArtifactOpen(true);
+          setSelectedStepIndex(stepIdx);
+          setIsArtifactOpen(true);
+
+          if (outAttId) {
+            getAttachmentUrl(outAttId).then((res) => {
+              if (res) {
+                setAttachmentMeta((prev) => ({
+                  ...prev,
+                  [outAttId]: { url: res.url, name: res.name },
+                }));
+              }
+            });
+          }
+
+          if (outAttIds && outAttIds.length > 0) {
+            setRun((prev: TransformRun | null) =>
+              prev ? { ...prev, outputAttachmentIds: outAttIds } : prev,
+            );
+          }
           break;
+        }
 
         case "transform-review-required":
           setStepStates((prev: Record<number, StepState>) => ({
@@ -443,41 +493,124 @@ export default function TransformRunDetailPage() {
     }
   };
 
+  const [workbookCache, setWorkbookCache] = useState<
+    Record<string, ArtifactData>
+  >({});
+  const [isLoadingWorkbook, setIsLoadingWorkbook] = useState(false);
+
+  // Resolve which attachment represents the workbook at selectedStepIndex
+  const targetAttachmentId = useMemo(() => {
+    if (selectedStepIndex === null) return null;
+    const stepState = stepStates[selectedStepIndex];
+    if (stepState?.outputAttachmentId) {
+      return stepState.outputAttachmentId;
+    }
+    // Check backwards for latest completed step output
+    for (let i = selectedStepIndex - 1; i >= 0; i--) {
+      const prev = stepStates[i];
+      if (prev?.outputAttachmentId) {
+        return prev.outputAttachmentId;
+      }
+    }
+    // Fall back to first input file
+    return run?.inputAttachmentIds?.[0] ?? null;
+  }, [selectedStepIndex, stepStates, run]);
+
+  useEffect(() => {
+    if (!targetAttachmentId) return;
+    // If current step already has in-memory live artifact, no need to fetch
+    if (selectedStepIndex !== null && stepStates[selectedStepIndex]?.artifact) {
+      return;
+    }
+    if (workbookCache[targetAttachmentId]) return;
+
+    let cancelled = false;
+    setIsLoadingWorkbook(true);
+
+    getAttachmentSpreadsheet(targetAttachmentId)
+      .then((res) => {
+        if (cancelled) return;
+        const stepName =
+          selectedStepIndex !== null && agent?.steps[selectedStepIndex]?.name
+            ? agent.steps[selectedStepIndex].name
+            : "Workbook";
+
+        const artifact: ArtifactData = {
+          id: `wb-${res.id}`,
+          type: "spreadsheet",
+          title: `${stepName} - ${res.name}`,
+          content: JSON.stringify({ sheets: res.sheets }),
+          messageId: `step-${selectedStepIndex ?? 0}`,
+        };
+
+        setWorkbookCache((prev) => ({
+          ...prev,
+          [targetAttachmentId]: artifact,
+        }));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          logger.warn?.(
+            "Failed to load spreadsheet preview via server action",
+            err,
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingWorkbook(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [targetAttachmentId, workbookCache, selectedStepIndex, stepStates, agent]);
+
   const currentArtifact = useMemo(() => {
     if (selectedStepIndex === null) return null;
     const stepState = stepStates[selectedStepIndex];
     if (!stepState) return null;
 
-    // Direct artifact from manage_artifact tool call
+    // Direct artifact from manage_artifact tool call or step event
     if (stepState.artifact) return stepState.artifact;
 
     // Legacy: spreadsheet built from stepData
-    if (!stepState.stepData || Object.keys(stepState.stepData).length === 0) {
-      return null;
+    if (stepState.stepData && Object.keys(stepState.stepData).length > 0) {
+      const step = agent?.steps[selectedStepIndex];
+      const dataMap = stepState.stepData;
+      const filenames = Object.keys(dataMap);
+      if (filenames.length > 0) {
+        const firstFile = filenames[0];
+        const data = dataMap[firstFile];
+        return {
+          type: "spreadsheet" as const,
+          title: `${step?.name || "Step"} - ${firstFile}`,
+          content: JSON.stringify(data),
+          messageId: `step-${selectedStepIndex}`,
+        };
+      }
     }
-    const step = agent?.steps[selectedStepIndex];
-    const dataMap = stepState.stepData;
-    const filenames = Object.keys(dataMap);
-    if (filenames.length === 0) return null;
 
-    const firstFile = filenames[0];
-    const data = dataMap[firstFile];
+    // Cached workbook artifact loaded from attachment via server action
+    if (targetAttachmentId && workbookCache[targetAttachmentId]) {
+      return workbookCache[targetAttachmentId];
+    }
 
-    return {
-      type: "spreadsheet" as const,
-      title: `${step?.name || "Step"} - ${firstFile}`,
-      content: JSON.stringify(data),
-      messageId: `step-${selectedStepIndex}`,
-    };
-  }, [selectedStepIndex, stepStates, agent]);
+    return null;
+  }, [selectedStepIndex, stepStates, agent, targetAttachmentId, workbookCache]);
 
   const hasAnyArtifact = useMemo(() => {
-    return Object.values(stepStates).some(
-      (state) =>
-        state.artifact != null ||
-        (state.stepData && Object.keys(state.stepData).length > 0),
+    return (
+      Object.keys(workbookCache).length > 0 ||
+      targetAttachmentId !== null ||
+      Object.values(stepStates).some(
+        (state) =>
+          state.artifact != null ||
+          (state.stepData && Object.keys(state.stepData).length > 0),
+      )
     );
-  }, [stepStates]);
+  }, [stepStates, workbookCache, targetAttachmentId]);
 
   if (isLoading) {
     return (
@@ -559,6 +692,34 @@ export default function TransformRunDetailPage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {run.status === "completed" &&
+              run.outputAttachmentIds &&
+              run.outputAttachmentIds.length > 0 &&
+              (() => {
+                const finalId =
+                  run.outputAttachmentIds[run.outputAttachmentIds.length - 1];
+                const finalMeta = attachmentMeta[finalId];
+                if (!finalMeta) return null;
+                return (
+                  <>
+                    <Separator
+                      orientation="vertical"
+                      className="mr-2 hidden h-8 lg:block"
+                    />
+                    <Button
+                      size="sm"
+                      className="bg-primary text-xs shadow-md hover:bg-primary/90"
+                      asChild
+                    >
+                      <a href={finalMeta.url} download={finalMeta.name}>
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                        Download Final Result
+                      </a>
+                    </Button>
+                  </>
+                );
+              })()}
+
             {run.status === "awaiting_review" && (
               <>
                 <Separator
@@ -685,7 +846,7 @@ export default function TransformRunDetailPage() {
                             </div>
                           )}
 
-                          <p className="line-clamp-2 text-muted-foreground text-xs">
+                          <p className="mt-2 line-clamp-2 text-muted-foreground text-xs">
                             {isCompleted && state.summary
                               ? state.summary
                               : isCompleted
@@ -703,57 +864,107 @@ export default function TransformRunDetailPage() {
                 </div>
               </div>
 
-              {/* Output Download Section */}
-              {run?.status === "completed" &&
-                run.outputAttachmentIds.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="flex items-center gap-2 font-bold text-muted-foreground/70 text-xs uppercase tracking-widest">
-                      <Download className="h-3 w-3" />
-                      Final Results
-                    </h4>
-                    <div className="grid gap-2">
-                      {run.outputAttachmentIds.map((id: string) => {
-                        const meta = attachmentMeta[id];
-                        if (!meta) return null;
-                        return (
-                          <Card
-                            key={id}
-                            className="group overflow-hidden border-primary/10 bg-primary/5 py-0.5 transition-colors hover:border-primary/30"
-                          >
-                            <CardContent className="p-0">
-                              <a
-                                href={meta.url}
-                                download={meta.name}
-                                className="flex items-center justify-between p-3 transition-colors hover:bg-primary/5"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="rounded-lg border border-primary/10 bg-background p-2 shadow-sm">
-                                    <Download className="h-4 w-4 text-primary" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <p className="max-w-[200px] truncate font-bold text-sm">
-                                      {meta.name}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">
-                                      Ready for download
-                                    </p>
-                                  </div>
+              {/* Files & Workbooks Section */}
+              {((run?.outputAttachmentIds &&
+                run.outputAttachmentIds.length > 0) ||
+                (run?.inputAttachmentIds &&
+                  run.inputAttachmentIds.length > 0)) && (
+                <div className="space-y-3">
+                  <h4 className="flex items-center gap-2 font-bold text-muted-foreground/70 text-xs uppercase tracking-widest">
+                    <Download className="h-3 w-3" />
+                    Files & Workbooks
+                  </h4>
+                  <div className="grid gap-2">
+                    {/* Output attachments */}
+                    {run?.outputAttachmentIds?.map((id: string) => {
+                      const meta = attachmentMeta[id];
+                      if (!meta) return null;
+                      return (
+                        <Card
+                          key={`out-${id}`}
+                          className="group overflow-hidden border-primary/10 bg-primary/5 py-0.5 transition-colors hover:border-primary/30"
+                        >
+                          <CardContent className="p-0">
+                            <a
+                              href={meta.url}
+                              download={meta.name}
+                              className="flex items-center justify-between p-3 transition-colors hover:bg-primary/5"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="rounded-lg border border-primary/10 bg-background p-2 shadow-sm">
+                                  <Download className="h-4 w-4 text-primary" />
                                 </div>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </a>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
+                                <div className="space-y-0.5">
+                                  <p className="max-w-[200px] truncate font-bold text-sm">
+                                    {meta.name}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {run.status === "completed" &&
+                                    id ===
+                                      run.outputAttachmentIds[
+                                        run.outputAttachmentIds.length - 1
+                                      ]
+                                      ? "Final Result"
+                                      : "Step Output"}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </a>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+
+                    {/* Input attachments */}
+                    {run?.inputAttachmentIds?.map((id: string) => {
+                      const meta = attachmentMeta[id];
+                      if (!meta) return null;
+                      return (
+                        <Card
+                          key={`in-${id}`}
+                          className="group overflow-hidden border-muted bg-muted/20 py-0.5 transition-colors hover:border-primary/20"
+                        >
+                          <CardContent className="p-0">
+                            <a
+                              href={meta.url}
+                              download={meta.name}
+                              className="flex items-center justify-between p-3 transition-colors hover:bg-muted/30"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                  <Download className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="max-w-[200px] truncate font-medium text-sm">
+                                    {meta.name}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    Input File
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </a>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              )}
               {/* Storage Notice */}
               <div className="rounded-xl border border-blue-100/50 bg-blue-50/50 p-4 backdrop-blur-sm">
                 <div className="flex gap-3">
@@ -773,7 +984,8 @@ export default function TransformRunDetailPage() {
             </div>
           </ResizablePanel>
 
-          {(agent.tools?.includes("manage_artifact") ||
+          {(agent.tools?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) ||
+            agent.tools?.includes("manage_artifact") ||
             hasAnyArtifact ||
             selectedStepIndex !== null) && (
             <>
@@ -785,7 +997,14 @@ export default function TransformRunDetailPage() {
                 className="hidden bg-card lg:block"
               >
                 <div className="relative h-full overflow-hidden">
-                  {currentArtifact ? (
+                  {isLoadingWorkbook ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-4 bg-muted/5 p-12 text-center text-muted-foreground">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="font-medium text-sm">
+                        Loading spreadsheet preview...
+                      </p>
+                    </div>
+                  ) : currentArtifact ? (
                     <ArtifactPanel
                       artifact={currentArtifact}
                       isOpen={isArtifactOpen}
