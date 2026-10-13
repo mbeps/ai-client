@@ -1,12 +1,8 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import * as xlsx from "xlsx";
-import { z } from "zod";
-import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
+import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
 import { getExtension } from "@/lib/attachments/get-extension";
-import { requireSession } from "@/lib/auth/require-session";
 import { downloadObject } from "@/lib/storage/download-object";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
@@ -28,22 +24,7 @@ import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
  * @author Maruf Bepary
  */
 export async function getAttachmentArtifact(id: string): Promise<ArtifactData> {
-  const session = await requireSession();
-  const validatedId = z.string().uuid().parse(id);
-
-  const [row] = await db
-    .select()
-    .from(attachment)
-    .where(
-      and(
-        eq(attachment.id, validatedId),
-        eq(attachment.userId, session.user.id),
-      ),
-    );
-
-  if (!row) {
-    throw new Error("Not Found");
-  }
+  const { attachment: row } = await requireUserAttachment(id);
 
   const buffer = await downloadObject(row.key);
   const ext = getExtension(row.name);

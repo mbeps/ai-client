@@ -1,23 +1,16 @@
 import { sql } from "drizzle-orm";
+import { boolean, index, integer, pgTable, text } from "drizzle-orm/pg-core";
 import {
-  boolean,
-  index,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+  entityIdColumn,
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 
 export const transformAgent = pgTable(
   "transform_agent",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     description: text("description"),
     globalContext: text("global_context"),
@@ -33,11 +26,7 @@ export const transformAgent = pgTable(
       .default(sql`'{}'::text[]`),
     requiresFileUpload: boolean("requires_file_upload").notNull().default(true),
     steps: text("steps").notNull().default("[]"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [index("transform_agent_user_id_idx").on(table.userId)],
 );
@@ -45,15 +34,11 @@ export const transformAgent = pgTable(
 export const transformRun = pgTable(
   "transform_run",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: entityIdColumn(),
     agentId: text("agent_id")
       .notNull()
       .references(() => transformAgent.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: userForeignKeyColumn(),
     status: text("status", {
       enum: ["pending", "running", "awaiting_review", "completed", "failed"],
     })
@@ -70,11 +55,7 @@ export const transformRun = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     errorMessage: text("error_message"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [
     index("transform_run_agent_id_idx").on(table.agentId),

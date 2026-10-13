@@ -3,10 +3,13 @@ import {
   index,
   pgTable,
   text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+import {
+  entityIdColumn,
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 
 /**
  * Stores Model Context Protocol (MCP) server configurations for HTTP transports.
@@ -17,22 +20,14 @@ import { user } from "@/drizzle/schemas/auth-schema";
 export const mcpServer = pgTable(
   "mcp_server",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     url: text("url").notNull(),
     headers: text("headers"), // JSON object string for http headers
     enabled: boolean("enabled").notNull().default(true),
     isPublic: boolean("is_public").notNull().default(false),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [index("mcp_server_user_id_idx").on(table.userId)],
 );
@@ -46,22 +41,14 @@ export const mcpServer = pgTable(
 export const userMcpServerInstall = pgTable(
   "user_mcp_server_install",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     serverId: text("server_id")
       .notNull()
       .references(() => mcpServer.id, { onDelete: "cascade" }),
     headers: text("headers"), // Optional user-specific custom headers (JSON string)
     enabled: boolean("enabled").notNull().default(true),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [
     index("user_mcp_server_install_user_id_idx").on(table.userId),

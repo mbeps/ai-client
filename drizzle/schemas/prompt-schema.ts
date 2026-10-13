@@ -1,5 +1,9 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+import { index, pgTable, text } from "drizzle-orm/pg-core";
+import {
+  entityIdColumn,
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 
 /**
  * Stores user-created reusable prompts triggered via slash commands (/shortcut) in chat UI.
@@ -11,20 +15,12 @@ import { user } from "@/drizzle/schemas/auth-schema";
 export const prompt = pgTable(
   "prompt",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     title: text("title").notNull(),
     shortcut: text("shortcut").notNull(),
     content: text("content").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    ...timestampColumns(),
   },
   (table) => [index("prompt_user_id_idx").on(table.userId)],
 );
