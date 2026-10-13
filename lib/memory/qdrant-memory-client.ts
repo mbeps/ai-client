@@ -11,7 +11,7 @@ const verifiedMemoryCollections = new Set<string>();
 /**
  * Payload stored alongside vectors for user memories.
  */
-export interface QdrantMemoryPayload {
+interface QdrantMemoryPayload {
   id: string;
   userId: string;
   content: string;

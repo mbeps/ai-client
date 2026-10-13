@@ -131,6 +131,3 @@ export function SubagentModelSelect({
     </Select>
   );
 }
-
-// Backward compatibility alias
-export { SubagentModelSelect as SubagentModelCombobox };

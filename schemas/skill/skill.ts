@@ -12,7 +12,7 @@ export const skillSlugSchema = z
     "Skill name must contain only lowercase alphanumeric characters and hyphens",
   );
 
-export const skillDescriptionSchema = z
+const skillDescriptionSchema = z
   .string()
   .min(1, "Description is required")
   .max(

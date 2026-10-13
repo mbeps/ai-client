@@ -4,10 +4,13 @@ import {
   jsonb,
   pgTable,
   text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+import {
+  entityIdColumn,
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 
 export interface SkillBundledFile {
   path: string;
@@ -24,23 +27,15 @@ export interface SkillBundledFile {
 export const skill = pgTable(
   "skill",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     displayName: text("display_name").notNull(),
     description: text("description").notNull(),
     content: text("content").notNull(),
     files: jsonb("files").$type<SkillBundledFile[]>().default([]).notNull(),
     enabled: boolean("enabled").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    ...timestampColumns(),
   },
   (table) => [
     index("skill_user_id_idx").on(table.userId),

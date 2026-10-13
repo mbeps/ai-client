@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PROMPTS } from "@/config/prompts";
 
-export const promptFormSchema = z.object({
+const promptFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   shortcut: z
     .string()
@@ -169,4 +169,3 @@ export function PromptForm({
     </Form>
   );
 }
-export default PromptForm;

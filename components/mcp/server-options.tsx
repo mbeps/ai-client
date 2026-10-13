@@ -15,6 +15,7 @@ import type { McpServer } from "@/types/mcp/mcp-server";
  *
  * @interface ServerOptionsProps
  */
+// fallow-ignore-next-line unused-type
 export interface ServerOptionsProps {
   /** The MCP server to manage options for. */
   server: McpServer;
@@ -35,6 +36,7 @@ export interface ServerOptionsProps {
  * @see {@link BaseEntityOptions} for base menu implementation
  * @author Maruf Bepary
  */
+// fallow-ignore-next-line unused-export
 export function ServerOptions({ server, trigger }: ServerOptionsProps) {
   const router = useRouter();
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);

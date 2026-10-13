@@ -22,7 +22,7 @@ export type ChatStreamEvent =
   | { type: "finish"; finishReason?: string; usage?: unknown }
   | { type: "error"; message: string; code?: string };
 
-export type TransformRunStreamEvent =
+type TransformRunStreamEvent =
   | { type: "transform-start"; runId: string }
   | {
       type: "transform-step-start";

@@ -1,10 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
-import { requireSession } from "@/lib/auth/require-session";
+import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /**
@@ -21,24 +17,7 @@ import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
  * @author Maruf Bepary
  */
 export async function getAttachmentUrl(id: string) {
-  const session = await requireSession();
-
-  // Validate ID
-  const validatedId = z.string().uuid().parse(id);
-
-  const [row] = await db
-    .select()
-    .from(attachment)
-    .where(
-      and(
-        eq(attachment.id, validatedId),
-        eq(attachment.userId, session.user.id),
-      ),
-    );
-
-  if (!row) {
-    throw new Error("Not Found");
-  }
+  const { attachment: row } = await requireUserAttachment(id);
 
   const url = await getPresignedUrl(row.key);
   return { url, name: row.name, mimeType: row.mimeType };

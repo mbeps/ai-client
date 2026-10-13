@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import * as extractDoc from "@/lib/attachments/extract-document";
 
-vi.mock("@/lib/storage/s3-client", () => ({
-  uploadObject: vi.fn().mockResolvedValue(undefined),
+vi.mock("@/lib/storage/s3-instance", () => ({
+  s3Client: {},
+  S3_BUCKET: "test-bucket",
 }));
 
 describe("processAttachment lib", () => {

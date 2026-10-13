@@ -280,6 +280,7 @@ export async function loadChatContext(
 }
 
 export class ChatNotFoundError extends Error {
+  // fallow-ignore-next-line unused-class-member
   readonly code = "CHAT_NOT_FOUND" as const;
   readonly chatId: string;
 

@@ -38,7 +38,7 @@ function isDevMode(): boolean {
  * @param eventName Name of triggering Inngest event.
  * @returns Categorised JobType identifier.
  */
-export function resolveJobType(eventName?: string | null): JobType {
+function resolveJobType(eventName?: string | null): JobType {
   switch (eventName) {
     case "chat/response.generate":
       return "chat";

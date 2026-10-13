@@ -2,20 +2,23 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ContextUsagePill } from "@/components/chat/context-usage-pill";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { ModelRegistryItem } from "@/types/models";
+import type { UserModelOption } from "@/hooks/use-user-models";
 
-const mockModel: ModelRegistryItem = {
+const mockModel: UserModelOption = {
   id: "openai/gpt-4o",
-  name: "GPT-4o",
-  provider: "openai",
+  modelId: "gpt-4o",
+  label: "GPT-4o",
+  providerName: "OpenAI",
+  providerId: "openai",
+  modelType: "chat",
   contextWindow: 128000,
-  maxOutputTokens: 4096,
-  inputPricePerMillion: 2.5,
-  outputPricePerMillion: 10,
-  supportsVision: true,
-  supportsTools: true,
-  supportsStructuredOutputs: true,
-  supportsJsonMode: true,
+  embeddingDimensions: null,
+  capTools: true,
+  capVision: true,
+  capReasoning: false,
+  capStructuredOutput: true,
+  isEnabled: true,
+  providerIsEnabled: true,
 };
 
 describe("ContextUsagePill", () => {

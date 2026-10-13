@@ -49,4 +49,3 @@ export const saveMemoryToolSchema = z.object({
 export type CreateMemoryInput = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryInput = z.infer<typeof updateMemorySchema>;
 export type DeleteMemoriesInput = z.infer<typeof deleteMemoriesSchema>;
-export type SaveMemoryToolInput = z.infer<typeof saveMemoryToolSchema>;
