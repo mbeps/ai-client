@@ -13,6 +13,16 @@ import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { extractSkillChangesFromToolResults } from "@/lib/chat/extract-skill-changes-from-tool-results";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
+import {
+  accumulateReasoningDelta,
+  accumulateTextDelta,
+} from "@/lib/chat/stream/accumulate-stream-chunks";
+import {
+  applyToolCallEvent,
+  applyToolResultEvent,
+  buildAssistantFinishMetadata,
+  extractCompletedToolResults,
+} from "@/lib/chat/stream/handle-stream-tool-calls";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
@@ -333,6 +343,93 @@ export function useStreamResponse(
       });
   }, [chatId, currentChat, activeLeaf, isStreaming, syncFromDb]);
 
+  const resetStreamingState = useCallback(() => {
+    setIsStreaming(false);
+    setStreamingContent(null);
+    setStreamingReasoning(null);
+    setActiveToolCalls([]);
+    setAssistantMessageId(null);
+  }, []);
+
+  const handleRejoinFinish = useCallback(async () => {
+    const chatExists = Boolean(useAppStore.getState().chats?.[chatId]);
+    if (!chatId || !chatExists) return;
+
+    try {
+      const data = await getChat(chatId);
+      const fullChat = buildChatFromRows(data);
+      upsertChat(fullChat);
+
+      const userMsgId = pendingRef.current.userMessageId;
+      const assistantId = assistantMessageIdRef.current;
+      const assistantMsg = data.messages.find(
+        (m) =>
+          m.role === "assistant" &&
+          (assistantId
+            ? m.id === assistantId
+            : userMsgId
+              ? m.parentId === userMsgId
+              : true),
+      );
+
+      if (assistantMsg) {
+        options?.onDone?.(assistantMsg.content);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Not Found")) {
+        // Chat was deleted concurrently; gracefully ignore
+      } else {
+        logger.error("Failed to refetch chat on rejoin finish", err);
+      }
+    }
+  }, [chatId, upsertChat, options]);
+
+  const handleStandardFinish = useCallback(
+    (event: Extract<ChatStreamEvent, { type: "finish" }>) => {
+      const text = accumulatedTextRef.current;
+      const reasoning = accumulatedReasoningRef.current;
+      const completedTools = activeToolCallsRef.current.filter(
+        (tc) => tc.status === "complete",
+      );
+
+      if (!text && !reasoning && completedTools.length === 0) return;
+
+      const assistantId = assistantMessageIdRef.current || crypto.randomUUID();
+      const durationMs =
+        pendingRef.current.startTime > 0
+          ? Date.now() - pendingRef.current.startTime
+          : undefined;
+
+      const toolResults = extractCompletedToolResults(completedTools);
+
+      if (extractSkillChangesFromToolResults(toolResults).length > 0) {
+        void useAppStore.getState().loadSkills();
+      }
+
+      const metadata = buildAssistantFinishMetadata({
+        model: pendingRef.current.model,
+        reasoning,
+        completedTools,
+        toolResults,
+        usage: event.usage,
+        finishReason: event.finishReason,
+        durationMs,
+      });
+
+      addMessage(chatId, {
+        role: "assistant",
+        content: text,
+        parentId: pendingRef.current.userMessageId,
+        id: assistantId,
+        metadata,
+        reasoning: reasoning || undefined,
+      });
+
+      options?.onDone?.(text);
+    },
+    [chatId, addMessage, options],
+  );
+
   const handleStreamEvent = useCallback(
     async (event: ChatStreamEvent) => {
       if (stoppedRef.current) return;
@@ -349,33 +446,30 @@ export function useStreamResponse(
 
         case "text-delta":
           lastChunkTimeRef.current = Date.now();
-          accumulatedTextRef.current += event.text;
+          accumulatedTextRef.current = accumulateTextDelta(
+            accumulatedTextRef.current,
+            event.text,
+          );
           setStreamingContent(accumulatedTextRef.current);
           setIsStreaming(true);
           break;
 
         case "reasoning-delta":
           lastChunkTimeRef.current = Date.now();
-          accumulatedReasoningRef.current += event.reasoning;
+          accumulatedReasoningRef.current = accumulateReasoningDelta(
+            accumulatedReasoningRef.current,
+            event.reasoning,
+          );
           setStreamingReasoning(accumulatedReasoningRef.current);
           setIsStreaming(true);
           break;
 
         case "tool-call": {
           lastChunkTimeRef.current = Date.now();
-          const toolCall: ToolCallState = {
-            toolCallId: event.toolCallId,
-            toolName: event.toolName,
-            args: event.args,
-            serverName: event.serverName,
-            status: "calling",
-          };
-          activeToolCallsRef.current = [
-            ...activeToolCallsRef.current.filter(
-              (t) => t.toolCallId !== event.toolCallId,
-            ),
-            toolCall,
-          ];
+          activeToolCallsRef.current = applyToolCallEvent(
+            activeToolCallsRef.current,
+            event,
+          );
           setActiveToolCalls([...activeToolCallsRef.current]);
           setIsStreaming(true);
           break;
@@ -383,16 +477,9 @@ export function useStreamResponse(
 
         case "tool-result": {
           lastChunkTimeRef.current = Date.now();
-          const isPreliminary = Boolean(event.preliminary);
-          activeToolCallsRef.current = activeToolCallsRef.current.map((t) =>
-            t.toolCallId === event.toolCallId
-              ? {
-                  ...t,
-                  status: isPreliminary ? "calling" : "complete",
-                  result: event.result,
-                  serverName: event.serverName ?? t.serverName,
-                }
-              : t,
+          activeToolCallsRef.current = applyToolResultEvent(
+            activeToolCallsRef.current,
+            event,
           );
           setActiveToolCalls([...activeToolCallsRef.current]);
           setIsStreaming(true);
@@ -401,108 +488,13 @@ export function useStreamResponse(
 
         case "finish": {
           lastChunkTimeRef.current = 0;
-          const chatExists = Boolean(useAppStore.getState().chats?.[chatId]);
-
           if (rejoinedRef.current) {
-            if (chatId && chatExists) {
-              try {
-                const data = await getChat(chatId);
-                const fullChat = buildChatFromRows(data);
-                upsertChat(fullChat);
-
-                const userMsgId = pendingRef.current.userMessageId;
-                const assistantId = assistantMessageIdRef.current;
-                const assistantMsg = data.messages.find(
-                  (m) =>
-                    m.role === "assistant" &&
-                    (assistantId
-                      ? m.id === assistantId
-                      : userMsgId
-                        ? m.parentId === userMsgId
-                        : true),
-                );
-
-                if (assistantMsg) {
-                  options?.onDone?.(assistantMsg.content);
-                }
-              } catch (err) {
-                if (err instanceof Error && err.message.includes("Not Found")) {
-                  // Chat was deleted concurrently; gracefully ignore
-                } else {
-                  logger.error("Failed to refetch chat on rejoin finish", err);
-                }
-              }
-            }
-
-            clearInflightState(chatId);
-            setIsStreaming(false);
-            setStreamingContent(null);
-            setStreamingReasoning(null);
-            setActiveToolCalls([]);
-            setAssistantMessageId(null);
-            break;
+            await handleRejoinFinish();
+          } else {
+            handleStandardFinish(event);
           }
-
-          const text = accumulatedTextRef.current;
-          const reasoning = accumulatedReasoningRef.current;
-          const completedTools = activeToolCallsRef.current.filter(
-            (tc) => tc.status === "complete",
-          );
-
-          if (text || reasoning || completedTools.length > 0) {
-            const assistantId =
-              assistantMessageIdRef.current || crypto.randomUUID();
-            const durationMs =
-              pendingRef.current.startTime > 0
-                ? Date.now() - pendingRef.current.startTime
-                : undefined;
-
-            const toolResults = completedTools
-              .filter((tc) => tc.result !== undefined)
-              .map((tc) => ({
-                toolCallId: tc.toolCallId,
-                toolName: tc.toolName,
-                result: tc.result,
-              }));
-
-            // A skill the model just wrote is not in the store, so the skills
-            // screens would show a stale list until the next full hydration.
-            if (extractSkillChangesFromToolResults(toolResults).length > 0) {
-              void useAppStore.getState().loadSkills();
-            }
-
-            const metadata = JSON.stringify({
-              model: pendingRef.current.model,
-              reasoning,
-              toolCalls: completedTools.map((tc) => ({
-                toolCallId: tc.toolCallId,
-                toolName: tc.toolName,
-                args: tc.args,
-              })),
-              toolResults,
-              usage: event.usage,
-              finishReason: event.finishReason,
-              durationMs,
-            });
-
-            addMessage(chatId, {
-              role: "assistant",
-              content: text,
-              parentId: pendingRef.current.userMessageId,
-              id: assistantId,
-              metadata,
-              reasoning: reasoning || undefined,
-            });
-
-            options?.onDone?.(text);
-          }
-
           clearInflightState(chatId);
-          setIsStreaming(false);
-          setStreamingContent(null);
-          setStreamingReasoning(null);
-          setActiveToolCalls([]);
-          setAssistantMessageId(null);
+          resetStreamingState();
           break;
         }
 
@@ -512,10 +504,7 @@ export function useStreamResponse(
           if (!handleApiError(event)) {
             toast.error(event.message || "Failed to generate response");
           }
-          setIsStreaming(false);
-          setStreamingContent(null);
-          setStreamingReasoning(null);
-          setActiveToolCalls([]);
+          resetStreamingState();
           break;
         }
       }
@@ -529,7 +518,13 @@ export function useStreamResponse(
         });
       }
     },
-    [chatId, addMessage, upsertChat, handleApiError, options],
+    [
+      chatId,
+      handleRejoinFinish,
+      handleStandardFinish,
+      handleApiError,
+      resetStreamingState,
+    ],
   );
 
   const fetchChatToken = useCallback(async () => {
