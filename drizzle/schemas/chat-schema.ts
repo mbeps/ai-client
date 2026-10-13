@@ -1,5 +1,8 @@
 import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+import {
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 
 /**
@@ -13,18 +16,12 @@ export const chat = pgTable(
   {
     id: text("id").primaryKey(),
     title: text("title").notNull(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: userForeignKeyColumn(),
     projectId: text("project_id"),
     assistantId: text("assistant_id"),
     knowledgebaseId: text("knowledgebase_id"),
     currentLeafId: text("current_leaf_id"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [index("chat_user_id_idx").on(table.userId)],
 );
@@ -49,11 +46,7 @@ export const message = pgTable(
     // Tree traversal (parentId/childrenIds) is handled at the application layer.
     parentId: text("parent_id"),
     metadata: text("metadata"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [index("message_chat_id_idx").on(table.chatId)],
 );
@@ -74,9 +67,7 @@ export const attachment = pgTable(
     transformRunId: text("transform_run_id").references(() => transformRun.id, {
       onDelete: "set null",
     }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     mimeType: text("mime_type").notNull(),
     size: integer("size").notNull(),
@@ -91,3 +82,6 @@ export const attachment = pgTable(
     index("attachment_key_idx").on(table.key),
   ],
 );
+
+export type Attachment = typeof attachment.$inferSelect;
+export type NewAttachment = typeof attachment.$inferInsert;

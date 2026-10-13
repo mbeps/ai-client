@@ -1,11 +1,7 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import * as xlsx from "xlsx";
-import { z } from "zod";
-import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
-import { requireSession } from "@/lib/auth/require-session";
+import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
 import { downloadObject } from "@/lib/storage/download-object";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
 
@@ -28,23 +24,7 @@ export interface AttachmentSpreadsheetResult {
 export async function getAttachmentSpreadsheet(
   id: string,
 ): Promise<AttachmentSpreadsheetResult> {
-  const session = await requireSession();
-
-  const validatedId = z.string().uuid().parse(id);
-
-  const [row] = await db
-    .select()
-    .from(attachment)
-    .where(
-      and(
-        eq(attachment.id, validatedId),
-        eq(attachment.userId, session.user.id),
-      ),
-    );
-
-  if (!row) {
-    throw new Error("Not Found");
-  }
+  const { attachment: row } = await requireUserAttachment(id);
 
   const buffer = await downloadObject(row.key);
   const wb = xlsx.read(buffer, { type: "buffer" });

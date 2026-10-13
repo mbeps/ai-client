@@ -24,6 +24,7 @@ import { AssistantSettingsTab } from "@/components/assistant/assistant-settings-
 import { AssistantToolsTab } from "@/components/assistant/assistant-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { EntityDetailHeader } from "@/components/shared/entity-detail-header";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -32,7 +33,6 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
-import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
@@ -220,21 +220,14 @@ export default function AssistantPage() {
 
   return (
     <PageContainer className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Bot className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <h1 className="font-bold text-3xl">{assistant.name}</h1>
-            <p className="text-muted-foreground">{assistant.description}</p>
-          </div>
-        </div>
-        <Button onClick={handleNewChat} size="lg" className="w-full md:w-auto">
-          <MessageSquarePlus className="mr-2 h-4 w-4" />
-          Chat with Assistant
-        </Button>
-      </div>
+      <EntityDetailHeader
+        icon={<Bot className="h-8 w-8 text-primary" />}
+        title={assistant.name}
+        description={assistant.description}
+        actionLabel="Chat with Assistant"
+        actionIcon={<MessageSquarePlus className="h-4 w-4" />}
+        onAction={handleNewChat}
+      />
 
       <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>

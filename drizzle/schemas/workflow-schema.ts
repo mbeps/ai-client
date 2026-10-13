@@ -1,5 +1,9 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "@/drizzle/schemas/auth-schema";
+import { index, pgTable, text } from "drizzle-orm/pg-core";
+import {
+  entityIdColumn,
+  timestampColumns,
+  userForeignKeyColumn,
+} from "@/drizzle/schemas/schema-helpers";
 
 /**
  * Workflow translation table for persisting translation runs.
@@ -10,12 +14,8 @@ import { user } from "@/drizzle/schemas/auth-schema";
 export const workflowTranslation = pgTable(
   "workflow_translation",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
     status: text("status", {
       enum: ["pending", "translating", "completed", "failed"],
     })
@@ -29,11 +29,7 @@ export const workflowTranslation = pgTable(
     attachmentName: text("attachment_name"),
     attachmentType: text("attachment_type"),
     errorMessage: text("error_message"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    ...timestampColumns(),
   },
   (table) => [index("workflow_translation_user_id_idx").on(table.userId)],
 );
