@@ -85,18 +85,3 @@ export const createTransformRunSchema = z.object({
   dryRun: z.boolean().optional().default(false),
   model: z.string().max(100).optional(),
 });
-
-export const resumeTransformRunSchema = z.object({
-  runId: z.string().uuid(),
-});
-
-/**
- * Validates resumption of an interrupted transform run.
- * runId specifies which execution to resume from its current step.
- * Used when paused workflow execution needs to continue after review.
- *
- * @author Maruf Bepary
- */
-export const startTransformRunSchema = z.object({
-  runId: z.string().uuid(),
-});

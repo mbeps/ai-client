@@ -201,7 +201,7 @@ function normaliseManageArtifactInput(val: unknown): unknown {
   return target;
 }
 
-export const manageArtifactBaseSchema = z.object(manageArtifactBaseFields);
+const manageArtifactBaseSchema = z.object(manageArtifactBaseFields);
 
 /**
  * Validates parameters for the internal manage_artifact tool.

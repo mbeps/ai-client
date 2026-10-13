@@ -266,5 +266,3 @@ export function ScratchpadViewerModal({
     </Sheet>
   );
 }
-
-export const ScratchpadViewerSheet = ScratchpadViewerModal;

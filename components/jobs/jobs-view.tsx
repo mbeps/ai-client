@@ -53,12 +53,7 @@ import type { JobItem, JobStatus, JobType } from "@/types/jobs";
 /**
  * Filter tab categories for active, queued, completed, failed, and all jobs.
  */
-export type JobFilterTab =
-  | "running"
-  | "queued"
-  | "completed"
-  | "failed"
-  | "all";
+type JobFilterTab = "running" | "queued" | "completed" | "failed" | "all";
 
 /**
  * Formats duration in milliseconds into a concise readable string.

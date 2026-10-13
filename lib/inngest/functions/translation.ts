@@ -15,7 +15,7 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["inngest", "workflow", "translation"]);
 
-export interface TranslationWorkflowEventData {
+interface TranslationWorkflowEventData {
   translationId: string;
   userId: string;
   sourceLanguage: string;

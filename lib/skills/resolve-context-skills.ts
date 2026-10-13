@@ -11,7 +11,7 @@ export interface ResolvedContextSkills {
 }
 
 /** Skill configuration attached to a project, assistant, or transform agent. */
-export interface SkillConfig {
+interface SkillConfig {
   skillMode: SkillMode;
   skillIds: string[];
 }

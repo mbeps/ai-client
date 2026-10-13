@@ -11,12 +11,7 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["subagents", "dispatch"]);
 
-export const SUBAGENT_ROLES = [
-  "researcher",
-  "planner",
-  "reviewer",
-  "worker",
-] as const;
+const SUBAGENT_ROLES = ["researcher", "planner", "reviewer", "worker"] as const;
 export type SubagentRole = (typeof SUBAGENT_ROLES)[number];
 
 export interface SubagentExecutionMetadata {
@@ -91,7 +86,7 @@ export interface CreateSubagentDispatchToolParams {
  * Extracts a concise text summary from a subagent's execution output.
  * Handles strings, UIMessage objects, structured results, and text parts.
  */
-export function extractSubagentSummary(output: unknown): string {
+function extractSubagentSummary(output: unknown): string {
   if (typeof output === "string") {
     return output;
   }
