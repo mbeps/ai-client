@@ -128,8 +128,6 @@ export const serverEnvSchema = clientEnvSchema.extend({
   QDRANT_URL: z.string().url().default("http://localhost:6333"),
   QDRANT_API_KEY: z.string().optional(),
 });
-
-export type ClientEnv = z.infer<typeof clientEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type Env = ServerEnv;
 

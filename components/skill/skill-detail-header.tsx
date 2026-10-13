@@ -15,8 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 
-export { SKILL_DESCRIPTION_MAX_LENGTH };
-
 export interface SkillDetailHeaderProps {
   displayName: string;
   onDisplayNameChange: (value: string) => void;

@@ -29,7 +29,7 @@ const createSkillFormSchema = createSkillSchema.pick({
 });
 
 export type CreateSkillFormValues = z.infer<typeof createSkillFormSchema>;
-export type CreateSkillFormInputValues = z.input<typeof createSkillFormSchema>;
+type CreateSkillFormInputValues = z.input<typeof createSkillFormSchema>;
 
 export interface CreateSkillFormProps {
   /** Callback fired when the valid form is submitted */
@@ -204,4 +204,3 @@ export function CreateSkillForm({
     </div>
   );
 }
-export default CreateSkillForm;

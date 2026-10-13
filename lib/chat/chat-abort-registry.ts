@@ -2,7 +2,7 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "abort-registry"]);
 
-export interface RegisteredChatAbortHandle {
+interface RegisteredChatAbortHandle {
   controller: AbortController;
   release: () => void;
 }

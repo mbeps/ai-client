@@ -390,7 +390,7 @@ export function isApiKeyError(message: string): boolean {
   );
 }
 
-export const INVALID_ARTIFACT_FORMAT_ERROR_CODE = "INVALID_ARTIFACT_FORMAT";
+const INVALID_ARTIFACT_FORMAT_ERROR_CODE = "INVALID_ARTIFACT_FORMAT";
 
 /**
  * Thrown when an artifact cannot be parsed or transformed into a valid format (e.g. empty spreadsheet).
