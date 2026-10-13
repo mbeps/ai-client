@@ -43,4 +43,3 @@ export async function requireUserAttachment(
     attachment: row,
   };
 }
-

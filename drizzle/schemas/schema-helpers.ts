@@ -29,4 +29,3 @@ export const timestampColumns = () => ({
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
-
