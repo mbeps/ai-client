@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { resetClientState } from "@/lib/store";
+import { resetClientState } from "@/lib/store/reset-client-state";
 
 /**
  * Sidebar for the /profile section.

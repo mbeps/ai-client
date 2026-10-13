@@ -31,6 +31,8 @@ vi.mock("@/lib/store", () => ({
       resetChatState: mockResetChatState,
     }),
   },
+}));
+vi.mock("@/lib/store/reset-client-state", () => ({
   resetClientState: () => mockResetClientState(),
 }));
 

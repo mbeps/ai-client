@@ -47,5 +47,3 @@ export const useAppStore = create<AppState>((...a) => ({
   ...createChatSlice(...a),
   ...createEntitySlice(...a),
 }));
-
-export { resetClientState } from "@/lib/store/reset-client-state";
