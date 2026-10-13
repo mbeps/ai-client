@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CloneAttachmentResult } from "@/actions/attachments/clone-attachment";
+import type { CloneAttachmentResult } from "@/actions/attachments/clone-attachments-batch";
 
 describe("CloneAttachmentResult type shape", () => {
   it("has the expected properties at runtime", () => {

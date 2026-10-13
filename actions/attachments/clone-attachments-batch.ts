@@ -8,7 +8,7 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "actions", "attachments"]);
 
-type CloneAttachmentResult = {
+export type CloneAttachmentResult = {
   id: string;
   key: string;
   name: string;
