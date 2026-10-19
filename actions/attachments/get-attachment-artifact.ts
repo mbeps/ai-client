@@ -7,6 +7,115 @@ import { downloadObject } from "@/lib/storage/download-object";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
 
+const SPREADSHEET_EXTS = new Set([
+  ".xlsx",
+  ".xlsm",
+  ".xls",
+  ".csv",
+  ".tsv",
+  ".ods",
+]);
+
+const HTML_EXTS = new Set([".html", ".htm"]);
+
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]);
+
+const BINARY_EXTS = new Set([".pdf", ".zip", ".tar", ".gz", ".bin", ".exe"]);
+
+const CODE_OR_JSON_EXTS = new Set([
+  ".json",
+  ".jsonl",
+  ".js",
+  ".ts",
+  ".py",
+  ".sql",
+]);
+
+function isSpreadsheetFile(ext: string, mime: string): boolean {
+  if (SPREADSHEET_EXTS.has(ext)) {
+    return true;
+  }
+  return (
+    mime.includes("spreadsheet") ||
+    mime.includes("excel") ||
+    mime.includes("csv")
+  );
+}
+
+function parseSpreadsheetContent(buffer: Buffer): string {
+  const wb = xlsx.read(buffer, { type: "buffer" });
+  const sheets: ArtifactSheet[] = wb.SheetNames.map((name) => {
+    const rawData = xlsx.utils.sheet_to_json(wb.Sheets[name], {
+      header: 1,
+    }) as any[][];
+    return { name, data: rawData.slice(0, 500) };
+  });
+
+  return JSON.stringify({ sheets });
+}
+
+function isHtmlFile(ext: string, mime: string): boolean {
+  return HTML_EXTS.has(ext) || mime.includes("html");
+}
+
+function isMermaidFile(ext: string, mime: string): boolean {
+  return ext === ".mmd" || mime.includes("mermaid");
+}
+
+function isImageFile(ext: string, mime: string): boolean {
+  return mime.startsWith("image/") || IMAGE_EXTS.has(ext);
+}
+
+function resolveImageMime(ext: string, mime: string): string {
+  if (mime.startsWith("image/")) {
+    return mime;
+  }
+  if (ext === ".svg") {
+    return "image/svg+xml";
+  }
+  return `image/${ext.replace(".", "")}`;
+}
+
+function formatImageArtifactContent(
+  name: string,
+  ext: string,
+  mime: string,
+  buffer: Buffer,
+): string {
+  const effectiveMime = resolveImageMime(ext, mime);
+  return `![${name}](data:${effectiveMime};base64,${buffer.toString("base64")})`;
+}
+
+function isBinaryFile(ext: string, mime: string): boolean {
+  if (BINARY_EXTS.has(ext) || mime === "application/pdf") {
+    return true;
+  }
+  if (mime.startsWith("audio/") || mime.startsWith("video/")) {
+    return true;
+  }
+  return mime.includes("archive") || mime.includes("zip");
+}
+
+function formatBinaryArtifactContent(name: string, ext: string): string {
+  const fileType = ext.replace(".", "").toUpperCase() || "binary";
+  return `### ${name}\n\n*Binary preview is not supported for this file type (${fileType}). Please use the download link in the Files section below.*`;
+}
+
+function formatTextArtifactContent(
+  ext: string,
+  mime: string,
+  buffer: Buffer,
+): string {
+  const textContent = buffer.toString("utf-8");
+  const isCodeOrJson = CODE_OR_JSON_EXTS.has(ext) || mime.includes("json");
+
+  if (isCodeOrJson) {
+    return `\`\`\`${ext.replace(".", "")}\n${textContent}\n\`\`\``;
+  }
+
+  return textContent;
+}
+
 /**
  * Downloads an attachment from storage on the server and builds a normalised
  * ArtifactData object according to file format and MIME type:
@@ -30,35 +139,16 @@ export async function getAttachmentArtifact(id: string): Promise<ArtifactData> {
   const ext = getExtension(row.name);
   const mime = (row.mimeType || "").toLowerCase();
 
-  const isSpreadsheet =
-    ext === ".xlsx" ||
-    ext === ".xlsm" ||
-    ext === ".xls" ||
-    ext === ".csv" ||
-    ext === ".tsv" ||
-    ext === ".ods" ||
-    mime.includes("spreadsheet") ||
-    mime.includes("excel") ||
-    mime.includes("csv");
-
-  if (isSpreadsheet) {
-    const wb = xlsx.read(buffer, { type: "buffer" });
-    const sheets: ArtifactSheet[] = wb.SheetNames.map((name) => {
-      const rawData = xlsx.utils.sheet_to_json(wb.Sheets[name], {
-        header: 1,
-      }) as any[][];
-      return { name, data: rawData.slice(0, 500) };
-    });
-
+  if (isSpreadsheetFile(ext, mime)) {
     return {
       id: row.id,
       type: "spreadsheet",
       title: row.name,
-      content: JSON.stringify({ sheets }),
+      content: parseSpreadsheetContent(buffer),
     };
   }
 
-  if (ext === ".html" || ext === ".htm" || mime.includes("html")) {
+  if (isHtmlFile(ext, mime)) {
     return {
       id: row.id,
       type: "html",
@@ -67,7 +157,7 @@ export async function getAttachmentArtifact(id: string): Promise<ArtifactData> {
     };
   }
 
-  if (ext === ".mmd" || mime.includes("mermaid")) {
+  if (isMermaidFile(ext, mime)) {
     return {
       id: row.id,
       type: "mermaid",
@@ -76,67 +166,28 @@ export async function getAttachmentArtifact(id: string): Promise<ArtifactData> {
     };
   }
 
-  const isImage =
-    mime.startsWith("image/") ||
-    ext === ".png" ||
-    ext === ".jpg" ||
-    ext === ".jpeg" ||
-    ext === ".gif" ||
-    ext === ".webp" ||
-    ext === ".svg";
-
-  if (isImage) {
-    const effectiveMime = mime.startsWith("image/")
-      ? mime
-      : ext === ".svg"
-        ? "image/svg+xml"
-        : `image/${ext.replace(".", "")}`;
+  if (isImageFile(ext, mime)) {
     return {
       id: row.id,
       type: "markdown",
       title: row.name,
-      content: `![${row.name}](data:${effectiveMime};base64,${buffer.toString("base64")})`,
+      content: formatImageArtifactContent(row.name, ext, mime, buffer),
     };
   }
 
-  const isBinary =
-    ext === ".pdf" ||
-    ext === ".zip" ||
-    ext === ".tar" ||
-    ext === ".gz" ||
-    ext === ".bin" ||
-    ext === ".exe" ||
-    mime === "application/pdf" ||
-    mime.includes("archive") ||
-    mime.includes("zip") ||
-    mime.startsWith("audio/") ||
-    mime.startsWith("video/");
-
-  if (isBinary) {
+  if (isBinaryFile(ext, mime)) {
     return {
       id: row.id,
       type: "markdown",
       title: row.name,
-      content: `### ${row.name}\n\n*Binary preview is not supported for this file type (${ext.replace(".", "").toUpperCase() || "binary"}). Please use the download link in the Files section below.*`,
+      content: formatBinaryArtifactContent(row.name, ext),
     };
   }
-
-  const textContent = buffer.toString("utf-8");
-  const isCodeOrJson =
-    ext === ".json" ||
-    ext === ".jsonl" ||
-    ext === ".js" ||
-    ext === ".ts" ||
-    ext === ".py" ||
-    ext === ".sql" ||
-    mime.includes("json");
 
   return {
     id: row.id,
     type: "markdown",
     title: row.name,
-    content: isCodeOrJson
-      ? `\`\`\`${ext.replace(".", "")}\n${textContent}\n\`\`\``
-      : textContent,
+    content: formatTextArtifactContent(ext, mime, buffer),
   };
 }
