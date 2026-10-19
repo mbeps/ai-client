@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SubagentModelCombobox } from "@/components/chat/subagent-model-combobox";
+import { SubagentModelSelect } from "@/components/chat/subagent-model-select";
 
 vi.mock("@/hooks/use-user-models", () => ({
   useUserModels: vi.fn(() => ({
@@ -22,10 +22,10 @@ vi.mock("@/hooks/use-user-models", () => ({
   })),
 }));
 
-describe("SubagentModelCombobox", () => {
+describe("SubagentModelSelect", () => {
   it("renders trigger with default inherit label when value is undefined", () => {
     render(
-      <SubagentModelCombobox
+      <SubagentModelSelect
         value={undefined}
         onValueChange={vi.fn()}
       />,
@@ -39,7 +39,7 @@ describe("SubagentModelCombobox", () => {
 
   it("renders selected model label when value matches an existing model", () => {
     render(
-      <SubagentModelCombobox
+      <SubagentModelSelect
         value="gpt-4o"
         onValueChange={vi.fn()}
       />,
@@ -50,7 +50,7 @@ describe("SubagentModelCombobox", () => {
 
   it("disables trigger when disabled prop is true", () => {
     render(
-      <SubagentModelCombobox
+      <SubagentModelSelect
         value="gpt-4o"
         onValueChange={vi.fn()}
         disabled={true}

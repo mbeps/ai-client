@@ -202,11 +202,14 @@ function resolveWorkerChatProvider(userId: string, subagentModelId?: string) {
 }
 
 /** Creates a bound emitter function publishing events to Inngest Realtime */
-function createStreamEmitter(abortSignal: AbortSignal, streamName: string) {
+function createStreamEmitter(
+  abortSignal: AbortSignal,
+  stream: ReturnType<typeof chatChannel>["stream"],
+) {
   return async (data: ChatStreamEvent) => {
     if (abortSignal.aborted) return;
     try {
-      await inngest.realtime.publish(streamName, data);
+      await inngest.realtime.publish(stream, data);
     } catch (err) {
       log.warn("Failed to publish chat stream event to Inngest Realtime", {
         error: err instanceof Error ? err.message : String(err),
@@ -383,7 +386,7 @@ function buildOrchestratorToolSet(
   const targetKbIds = resolveTargetKbIds(ctx);
   const kbTools = registerKnowledgebaseTool(
     targetKbIds,
-    ctx.kbIsReady,
+    ctx.kbIsReady ?? false,
     userId,
     selectedTools,
   );

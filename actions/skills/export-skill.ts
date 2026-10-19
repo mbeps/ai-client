@@ -1,6 +1,6 @@
 "use server";
 
-import { createSkillZip } from "@/lib/skills/parser";
+import { createSkillZip } from "@/lib/skills/create-skill-zip";
 import type { SkillBundledFile } from "@/types/skill/skill";
 import { getSkill } from "./get-skill";
 

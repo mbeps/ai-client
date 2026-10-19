@@ -148,7 +148,7 @@ function restoreCachedStreamState(
  */
 function processIncomingRealtimeBatch(
   batch: Array<{ data?: unknown } | unknown> | undefined,
-  processedSet: Set<unknown>,
+  processedSet: WeakSet<object>,
   onEvent: (event: ChatStreamEvent) => void,
 ) {
   if (!batch || batch.length === 0) return;
