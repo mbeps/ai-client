@@ -100,6 +100,69 @@ function clearInflightState(chatId: string) {
   } catch {}
 }
 
+interface CachedStreamStateRefs {
+  accumulatedTextRef: { current: string };
+  accumulatedReasoningRef: { current: string };
+  activeToolCallsRef: { current: ToolCallState[] };
+  assistantMessageIdRef: { current: string | null };
+}
+
+interface CachedStreamStateSetters {
+  setStreamingContent: (text: string | null) => void;
+  setStreamingReasoning: (reasoning: string | null) => void;
+  setActiveToolCalls: (calls: ToolCallState[]) => void;
+  setAssistantMessageId: (id: string | null) => void;
+}
+
+/**
+ * Restores in-flight state from sessionStorage when rejoining an active chat stream.
+ */
+function restoreCachedStreamState(
+  chatId: string,
+  refs: CachedStreamStateRefs,
+  setters: CachedStreamStateSetters,
+) {
+  const cached = loadInflightState(chatId);
+  if (!cached) return;
+
+  if (cached.text) {
+    refs.accumulatedTextRef.current = cached.text;
+    setters.setStreamingContent(cached.text);
+  }
+  if (cached.reasoning) {
+    refs.accumulatedReasoningRef.current = cached.reasoning;
+    setters.setStreamingReasoning(cached.reasoning);
+  }
+  if (Array.isArray(cached.toolCalls) && cached.toolCalls.length > 0) {
+    refs.activeToolCallsRef.current = cached.toolCalls;
+    setters.setActiveToolCalls(cached.toolCalls);
+  }
+  if (cached.assistantMessageId) {
+    refs.assistantMessageIdRef.current = cached.assistantMessageId;
+    setters.setAssistantMessageId(cached.assistantMessageId);
+  }
+}
+
+/**
+ * Processes a batch of incoming realtime messages, deduplicating against the processed set.
+ */
+function processIncomingRealtimeBatch(
+  batch: Array<{ data?: unknown } | unknown> | undefined,
+  processedSet: Set<unknown>,
+  onEvent: (event: ChatStreamEvent) => void,
+) {
+  if (!batch || batch.length === 0) return;
+  for (const msg of batch) {
+    if (msg && typeof msg === "object" && !processedSet.has(msg)) {
+      processedSet.add(msg);
+      const data = (msg as { data?: unknown }).data;
+      if (data) {
+        onEvent(data as ChatStreamEvent);
+      }
+    }
+  }
+}
+
 /**
  * Resolves the final message content by handling MCP prompts and slash-command prompts.
  * @author Maruf Bepary
@@ -309,28 +372,21 @@ export function useStreamResponse(
           lastChunkTimeRef.current = Date.now();
 
           // Restore in-flight state from sessionStorage if available
-          const cached = loadInflightState(chatId);
-          if (cached) {
-            if (cached.text) {
-              accumulatedTextRef.current = cached.text;
-              setStreamingContent(cached.text);
-            }
-            if (cached.reasoning) {
-              accumulatedReasoningRef.current = cached.reasoning;
-              setStreamingReasoning(cached.reasoning);
-            }
-            if (
-              Array.isArray(cached.toolCalls) &&
-              cached.toolCalls.length > 0
-            ) {
-              activeToolCallsRef.current = cached.toolCalls;
-              setActiveToolCalls(cached.toolCalls);
-            }
-            if (cached.assistantMessageId) {
-              assistantMessageIdRef.current = cached.assistantMessageId;
-              setAssistantMessageId(cached.assistantMessageId);
-            }
-          }
+          restoreCachedStreamState(
+            chatId,
+            {
+              accumulatedTextRef,
+              accumulatedReasoningRef,
+              activeToolCallsRef,
+              assistantMessageIdRef,
+            },
+            {
+              setStreamingContent,
+              setStreamingReasoning,
+              setActiveToolCalls,
+              setAssistantMessageId,
+            },
+          );
 
           setIsStreaming(true);
         } else if (!generating) {
@@ -605,19 +661,11 @@ export function useStreamResponse(
         lastProcessedIndexRef.current = 0;
       }
       if (all.length > lastProcessedIndexRef.current) {
-        for (let i = lastProcessedIndexRef.current; i < all.length; i++) {
-          const msg = all[i];
-          if (
-            msg &&
-            typeof msg === "object" &&
-            !processedMessagesRef.current.has(msg)
-          ) {
-            processedMessagesRef.current.add(msg);
-            if (msg.data) {
-              handleStreamEvent(msg.data as ChatStreamEvent);
-            }
-          }
-        }
+        processIncomingRealtimeBatch(
+          all.slice(lastProcessedIndexRef.current),
+          processedMessagesRef.current,
+          handleStreamEvent,
+        );
         lastProcessedIndexRef.current = all.length;
       }
       return;
@@ -625,18 +673,11 @@ export function useStreamResponse(
 
     // Fallback if environment only provides delta (e.g. legacy test mocks)
     if (messages.delta && messages.delta.length > 0) {
-      for (const msg of messages.delta) {
-        if (
-          msg &&
-          typeof msg === "object" &&
-          !processedMessagesRef.current.has(msg)
-        ) {
-          processedMessagesRef.current.add(msg);
-          if (msg.data) {
-            handleStreamEvent(msg.data as ChatStreamEvent);
-          }
-        }
-      }
+      processIncomingRealtimeBatch(
+        messages.delta,
+        processedMessagesRef.current,
+        handleStreamEvent,
+      );
     }
   }, [messages.all, messages.delta, handleStreamEvent]);
 
@@ -747,161 +788,164 @@ export function useStreamResponse(
     }).catch(() => {});
   }, [chatId, addMessage]);
 
-  const streamResponse = async (
-    userMsgId: string,
-    content: string,
-    parentId: string | null,
-    attachments: Attachment[] = [],
-    model = "",
-    selectedServerIds: string[] = [],
-    selectedTools: string[] = [],
-    selectedPromptId?: string | string[],
-    selectedAssistantId?: string,
-    selectedKbIds: string[] = [],
-    selectedSkillIds: string[] = [],
-    subagentsEnabled?: boolean,
-    subagentModelId?: string,
-    subagentExcludedTools?: string[],
-  ): Promise<string> => {
-    const promptIds = Array.isArray(selectedPromptId)
-      ? selectedPromptId
-      : selectedPromptId
-        ? [selectedPromptId]
-        : [];
+  const streamResponse = useCallback(
+    async (
+      userMsgId: string,
+      content: string,
+      parentId: string | null,
+      attachments: Attachment[] = [],
+      model = "",
+      selectedServerIds: string[] = [],
+      selectedTools: string[] = [],
+      selectedPromptId?: string | string[],
+      selectedAssistantId?: string,
+      selectedKbIds: string[] = [],
+      selectedSkillIds: string[] = [],
+      subagentsEnabled?: boolean,
+      subagentModelId?: string,
+      subagentExcludedTools?: string[],
+    ): Promise<string> => {
+      const promptIds = Array.isArray(selectedPromptId)
+        ? selectedPromptId
+        : selectedPromptId
+          ? [selectedPromptId]
+          : [];
 
-    rejoinedRef.current = false;
-    pendingRef.current = {
-      userMessageId: userMsgId,
-      model,
-      startTime: Date.now(),
-    };
-    lastChunkTimeRef.current = Date.now();
+      rejoinedRef.current = false;
+      pendingRef.current = {
+        userMessageId: userMsgId,
+        model,
+        startTime: Date.now(),
+      };
+      lastChunkTimeRef.current = Date.now();
 
-    stoppedRef.current = false;
-    accumulatedTextRef.current = "";
-    accumulatedReasoningRef.current = "";
-    assistantMessageIdRef.current = null;
-    activeToolCallsRef.current = [];
-    setStreamingContent(null);
-    setStreamingReasoning(null);
-    setActiveToolCalls([]);
-    setIsStreaming(true);
-
-    // 1. Build metadata object
-    const metadataObj = buildMetadata(
-      model,
-      selectedServerIds,
-      selectedTools,
-      selectedAssistantId,
-      selectedKbIds,
-      selectedSkillIds,
-      subagentsEnabled,
-      subagentModelId,
-      subagentExcludedTools,
-    );
-
-    // 2. Resolve prompt content (MCP / slash-command)
-    const { fullContent } = await resolveContent(
-      content,
-      promptIds,
-      metadataObj,
-    );
-    const userMsgMetadata = JSON.stringify(metadataObj);
-
-    // 3. Optimistic store insert
-    addMessage(chatId, {
-      role: "user",
-      content: fullContent,
-      parentId,
-      id: userMsgId,
-      metadata: userMsgMetadata,
-      attachments,
-    });
-
-    // 4. Persist BEFORE the API call — the server reads this row to rebuild
-    //    the thread; a missing row would silently truncate context.
-    try {
-      await persistMessage(chatId, {
-        id: userMsgId,
-        role: "user",
-        content: fullContent,
-        parentId,
-        metadata: userMsgMetadata ?? undefined,
-      });
-    } catch (err) {
-      logger.error("Failed to persist message", err);
-      setIsStreaming(false);
+      stoppedRef.current = false;
+      accumulatedTextRef.current = "";
+      accumulatedReasoningRef.current = "";
+      assistantMessageIdRef.current = null;
+      activeToolCallsRef.current = [];
       setStreamingContent(null);
       setStreamingReasoning(null);
       setActiveToolCalls([]);
-      lastChunkTimeRef.current = 0;
-      pendingRef.current = { userMessageId: null, model: "", startTime: 0 };
-      assistantMessageIdRef.current = null;
-      accumulatedTextRef.current = "";
-      accumulatedReasoningRef.current = "";
+      setIsStreaming(true);
 
-      const isNotFound =
-        err instanceof Error &&
-        (err.message.includes("Not Found") ||
-          err.message.includes("Unauthorized") ||
-          err.message.includes("access denied"));
+      // 1. Build metadata object
+      const metadataObj = buildMetadata(
+        model,
+        selectedServerIds,
+        selectedTools,
+        selectedAssistantId,
+        selectedKbIds,
+        selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+        subagentExcludedTools,
+      );
 
-      if (isNotFound) {
-        setChatNotFound(true);
-        toast.error("Chat not found or has been deleted.");
-      } else {
-        toast.error("Failed to save message. Please check your connection.");
-      }
-      return "";
-    }
+      // 2. Resolve prompt content (MCP / slash-command)
+      const { fullContent } = await resolveContent(
+        content,
+        promptIds,
+        metadataObj,
+      );
+      const userMsgMetadata = JSON.stringify(metadataObj);
 
-    // 5. Upload attachments
-    const uploadedAttachments = await processAttachments(
-      attachments,
-      userMsgId,
-    );
-    if (uploadedAttachments.length > 0) {
-      updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
-    }
-
-    // 6. Dispatch background job to Inngest via /api/chat
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          userMessageId: userMsgId,
-          model,
-          selectedServerIds,
-          selectedTools,
-          selectedAssistantId,
-          selectedPromptIds: promptIds,
-          selectedPromptId: promptIds[0],
-          selectedSkillIds,
-          selectedKbIds,
-          subagentsEnabled,
-          subagentModelId,
-          subagentExcludedTools,
-        } satisfies StreamRequestOptions),
+      // 3. Optimistic store insert
+      addMessage(chatId, {
+        role: "user",
+        content: fullContent,
+        parentId,
+        id: userMsgId,
+        metadata: userMsgMetadata,
+        attachments,
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        if (!handleApiError(errorData)) {
-          toast.error(errorData.error || "Failed to generate response");
+      // 4. Persist BEFORE the API call — the server reads this row to rebuild
+      //    the thread; a missing row would silently truncate context.
+      try {
+        await persistMessage(chatId, {
+          id: userMsgId,
+          role: "user",
+          content: fullContent,
+          parentId,
+          metadata: userMsgMetadata,
+        });
+      } catch (err) {
+        logger.error("Failed to persist message", err);
+        setIsStreaming(false);
+        setStreamingContent(null);
+        setStreamingReasoning(null);
+        setActiveToolCalls([]);
+        lastChunkTimeRef.current = 0;
+        pendingRef.current = { userMessageId: null, model: "", startTime: 0 };
+        assistantMessageIdRef.current = null;
+        accumulatedTextRef.current = "";
+        accumulatedReasoningRef.current = "";
+
+        const isNotFound =
+          err instanceof Error &&
+          (err.message.includes("Not Found") ||
+            err.message.includes("Unauthorized") ||
+            err.message.includes("access denied"));
+
+        if (isNotFound) {
+          setChatNotFound(true);
+          toast.error("Chat not found or has been deleted.");
+        } else {
+          toast.error("Failed to save message. Please check your connection.");
+        }
+        return "";
+      }
+
+      // 5. Upload attachments
+      const uploadedAttachments = await processAttachments(
+        attachments,
+        userMsgId,
+      );
+      if (uploadedAttachments.length > 0) {
+        updateMessageAttachments(chatId, userMsgId, uploadedAttachments);
+      }
+
+      // 6. Dispatch background job to Inngest via /api/chat
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId,
+            userMessageId: userMsgId,
+            model,
+            selectedServerIds,
+            selectedTools,
+            selectedAssistantId,
+            selectedPromptIds: promptIds,
+            selectedPromptId: promptIds[0],
+            selectedSkillIds,
+            selectedKbIds,
+            subagentsEnabled,
+            subagentModelId,
+            subagentExcludedTools,
+          } satisfies StreamRequestOptions),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          if (!handleApiError(errorData)) {
+            toast.error(errorData.error || "Failed to generate response");
+          }
+          setIsStreaming(false);
+        }
+      } catch (err: any) {
+        if (!handleApiError(err)) {
+          toast.error(err.message || "Failed to generate response");
         }
         setIsStreaming(false);
       }
-    } catch (err: any) {
-      if (!handleApiError(err)) {
-        toast.error(err.message || "Failed to generate response");
-      }
-      setIsStreaming(false);
-    }
 
-    return "";
-  };
+      return "";
+    },
+    [chatId, addMessage, updateMessageAttachments, handleApiError],
+  );
 
   return {
     isLoading,
