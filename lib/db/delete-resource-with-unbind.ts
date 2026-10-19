@@ -3,6 +3,54 @@ import { db } from "@/drizzle/db";
 import { whereOwner } from "./where-owner";
 
 /**
+ * Searches an object's properties for a property matching the given field.
+ */
+function findMatchingColumnKey(
+  source: Record<string, unknown>,
+  field: unknown,
+): string | null {
+  const fieldName = (field as { name?: unknown } | null | undefined)?.name;
+  for (const [key, val] of Object.entries(source)) {
+    if (val === field) {
+      return key;
+    }
+    const valName = (val as { name?: unknown } | null | undefined)?.name;
+    if (valName && valName === fieldName) {
+      return key;
+    }
+  }
+  return null;
+}
+
+/**
+ * Searches a table object or its Drizzle columns for a property matching the field.
+ */
+function searchTableForField(tableObj: unknown, field: unknown): string | null {
+  if (!tableObj || typeof tableObj !== "object") {
+    return null;
+  }
+
+  const directMatch = findMatchingColumnKey(
+    tableObj as Record<string, unknown>,
+    field,
+  );
+  if (directMatch) {
+    return directMatch;
+  }
+
+  try {
+    const cols = getTableColumns(tableObj as any);
+    if (cols && typeof cols === "object") {
+      return findMatchingColumnKey(cols as Record<string, unknown>, field);
+    }
+  } catch {
+    // Table may not be a Drizzle table instance (e.g. in unit tests)
+  }
+
+  return null;
+}
+
+/**
  * Resolves the schema property key name for a given table and column/field.
  * Handles both string property names and Drizzle Column instances (e.g., PgColumn).
  *
@@ -15,53 +63,15 @@ export function resolveFieldKey(table: any, field: any): string {
     return field;
   }
 
-  if (table && typeof table === "object") {
-    for (const [key, val] of Object.entries(table)) {
-      if (
-        val === field ||
-        (val &&
-          typeof val === "object" &&
-          (val as any).name &&
-          (val as any).name === (field as any)?.name)
-      ) {
-        return key;
-      }
-    }
-
-    try {
-      const cols = getTableColumns(table);
-      for (const [key, val] of Object.entries(cols)) {
-        if (val === field || (val as any)?.name === (field as any)?.name) {
-          return key;
-        }
-      }
-    } catch {
-      // Table may not be a Drizzle table instance (e.g. in unit tests)
-    }
+  const tableMatch = searchTableForField(table, field);
+  if (tableMatch) {
+    return tableMatch;
   }
 
   if (field && typeof field === "object" && field.table) {
-    for (const [key, val] of Object.entries(field.table)) {
-      if (
-        val === field ||
-        (val &&
-          typeof val === "object" &&
-          (val as any).name &&
-          (val as any).name === (field as any)?.name)
-      ) {
-        return key;
-      }
-    }
-
-    try {
-      const cols = getTableColumns(field.table);
-      for (const [key, val] of Object.entries(cols)) {
-        if (val === field || (val as any)?.name === (field as any)?.name) {
-          return key;
-        }
-      }
-    } catch {
-      // Ignore
+    const fieldTableMatch = searchTableForField(field.table, field);
+    if (fieldTableMatch) {
+      return fieldTableMatch;
     }
   }
 
