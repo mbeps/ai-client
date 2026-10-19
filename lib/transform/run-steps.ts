@@ -710,11 +710,11 @@ async function handleStepArtifactOutput({
   let stepPersistedSpreadsheetOutput = false;
 
   const hasValidArtifact =
-    artifact &&
+    artifact !== null &&
     typeof (artifact as any).type === "string" &&
     typeof (artifact as any).content === "string";
 
-  if (hasValidArtifact) {
+  if (artifact && hasValidArtifact) {
     const persistResult = await persistExplicitStepArtifact(
       artifact,
       stepIndex,
