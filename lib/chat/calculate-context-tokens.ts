@@ -117,6 +117,99 @@ export function formatTokens(tokens: number): string {
  * @returns Aggregated context usage statistics and category breakdowns
  * @author Maruf Bepary
  */
+function estimateSingleToolResultTokens(tr: {
+  toolName?: string;
+  result?: unknown;
+}): number {
+  if (tr.toolName === "delegate_task" || tr.toolName === "subagent_dispatch") {
+    return estimateTokens(sanitizeSubagentOutput(tr.result, 8000));
+  }
+  if (tr.toolName === "manage_artifact") {
+    const artTitle =
+      (tr.result as { artifact?: { title?: string } } | undefined)?.artifact
+        ?.title || "Artifact";
+    return estimateTokens(`Artifact "${artTitle}" created successfully.`);
+  }
+  const rawStr =
+    typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result);
+  // Cap estimate to bounded representation (max 8000 chars)
+  return estimateTokens(rawStr.slice(0, 8000));
+}
+
+function estimateToolCallsTokens(toolCalls?: Array<{ args: unknown }>): number {
+  if (!toolCalls) return 0;
+  let tokens = 0;
+  for (const tc of toolCalls) {
+    tokens += estimateTokens(
+      typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args),
+    );
+  }
+  return tokens;
+}
+
+function estimateToolResultsTokens(
+  toolResults?: Array<{ toolName?: string; result?: unknown }>,
+): number {
+  if (!toolResults) return 0;
+  let tokens = 0;
+  for (const tr of toolResults) {
+    tokens += estimateSingleToolResultTokens(tr);
+  }
+  return tokens;
+}
+
+function estimateMessageMetadataTokens(metadata: string | null | undefined): {
+  reasoningTokens: number;
+  toolResultsTokens: number;
+} {
+  if (!metadata) {
+    return { reasoningTokens: 0, toolResultsTokens: 0 };
+  }
+
+  const parsed = parseMessageMetadata(metadata);
+  const reasoningTokens = parsed.reasoning
+    ? estimateTokens(parsed.reasoning)
+    : 0;
+  const toolResultsTokens =
+    estimateToolCallsTokens(parsed.toolData?.toolCalls) +
+    estimateToolResultsTokens(parsed.toolData?.toolResults);
+
+  return { reasoningTokens, toolResultsTokens };
+}
+
+function estimateMessageThreadTokens(thread: Message[]): {
+  messagesTokens: number;
+  filesTokens: number;
+  toolResultsTokens: number;
+} {
+  let messagesTokens = 0;
+  let filesTokens = 0;
+  let toolResultsTokens = 0;
+
+  for (const msg of thread) {
+    messagesTokens += estimateTokens(msg.content);
+
+    if (Array.isArray(msg.attachments)) {
+      for (const att of msg.attachments) {
+        filesTokens += estimateAttachmentTokens(att);
+      }
+    }
+
+    const metaTokens = estimateMessageMetadataTokens(msg.metadata);
+    messagesTokens += metaTokens.reasoningTokens;
+    toolResultsTokens += metaTokens.toolResultsTokens;
+  }
+
+  return { messagesTokens, filesTokens, toolResultsTokens };
+}
+
+/**
+ * Calculates the total context window usage and category breakdown for the active chat session.
+ *
+ * @param params - Input parameters including thread, model, draft input, and attachments
+ * @returns Aggregated context usage statistics and category breakdowns
+ * @author Maruf Bepary
+ */
 export function calculateContextUsage(
   params: CalculateContextParams,
 ): ContextUsageResult {
@@ -153,68 +246,16 @@ export function calculateContextUsage(
   const skillsTokens = selectedSkillTokens + catalogTokens;
 
   // 5. Thread Messages
-  let messagesTokens = 0;
-  let filesTokens = 0;
-  let toolResultsTokens = 0;
+  const { messagesTokens, filesTokens, toolResultsTokens } =
+    estimateMessageThreadTokens(thread);
 
-  for (const msg of thread) {
-    // Message text
-    messagesTokens += estimateTokens(msg.content);
-
-    // Attachments on message
-    if (Array.isArray(msg.attachments)) {
-      for (const att of msg.attachments) {
-        filesTokens += estimateAttachmentTokens(att);
-      }
-    }
-
-    // Tool results and reasoning from metadata
-    if (msg.metadata) {
-      const parsed = parseMessageMetadata(msg.metadata);
-      if (parsed.reasoning) {
-        messagesTokens += estimateTokens(parsed.reasoning);
-      }
-      if (parsed.toolData?.toolCalls) {
-        for (const tc of parsed.toolData.toolCalls) {
-          toolResultsTokens += estimateTokens(
-            typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args),
-          );
-        }
-      }
-      if (parsed.toolData?.toolResults) {
-        for (const tr of parsed.toolData.toolResults) {
-          if (
-            tr.toolName === "delegate_task" ||
-            tr.toolName === "subagent_dispatch"
-          ) {
-            toolResultsTokens += estimateTokens(
-              sanitizeSubagentOutput(tr.result, 8000),
-            );
-          } else if (tr.toolName === "manage_artifact") {
-            const artTitle = (tr.result as any)?.artifact?.title || "Artifact";
-            toolResultsTokens += estimateTokens(
-              `Artifact "${artTitle}" created successfully.`,
-            );
-          } else {
-            const rawStr =
-              typeof tr.result === "string"
-                ? tr.result
-                : JSON.stringify(tr.result);
-            // Cap estimate to bounded representation (max 8000 chars)
-            toolResultsTokens += estimateTokens(rawStr.slice(0, 8000));
-          }
-        }
-      }
-    }
-  }
-
-  // 5. Draft Input & Attachments
+  // 6. Draft Input & Attachments
   let draftTokens = estimateTokens(input);
   for (const att of draftAttachments) {
     draftTokens += estimateAttachmentTokens(att);
   }
 
-  // 6. Totals & Percentages
+  // 7. Totals & Percentages
   const totalTokens =
     systemInstructions +
     toolDefinitions +
