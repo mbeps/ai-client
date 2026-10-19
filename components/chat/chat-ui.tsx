@@ -21,19 +21,377 @@ import { reconstructThread } from "@/lib/chat/reconstruct-thread";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { Project } from "@/types/project/project";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
 import { ChatInput } from "./chat-input";
 import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
 
+function getThreadLastModelId(thread: Message[]): string | undefined {
+  for (let i = thread.length - 1; i >= 0; i--) {
+    const msg = thread[i];
+    if (msg.role === "user" && msg.metadata) {
+      const { modelId } = parseMessageMetadata(msg.metadata);
+      if (modelId) return modelId;
+    }
+  }
+  return undefined;
+}
+
+function resolveInitialModelId(
+  thread: Message[],
+  currentProject: Project | undefined,
+  currentAssistant: Assistant | undefined,
+  userSettings: UserSettingsRow | null,
+): string | undefined {
+  const fromThread = getThreadLastModelId(thread);
+  if (fromThread) return fromThread;
+
+  const projectModel = (currentProject as any)?.defaultChatModelId;
+  if (projectModel) return projectModel;
+
+  const assistantModel = (currentAssistant as any)?.defaultChatModelId;
+  if (assistantModel) return assistantModel;
+
+  return userSettings?.defaultChatModelId || undefined;
+}
+
+function resolveInitialSubagents(thread: Message[]): {
+  initialSubagentsEnabled: boolean;
+  initialSubagentModelId: string | undefined;
+} {
+  const lastUserMessage = [...thread].reverse().find((m) => m.role === "user");
+  if (lastUserMessage?.metadata) {
+    const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
+      lastUserMessage.metadata,
+    );
+    return {
+      initialSubagentsEnabled: subagentsEnabled ?? false,
+      initialSubagentModelId: subagentModelId,
+    };
+  }
+  return {
+    initialSubagentsEnabled: false,
+    initialSubagentModelId: undefined,
+  };
+}
+
+function resolveInitialTools(
+  currentProject?: Project,
+  currentAssistant?: Assistant,
+): {
+  initialServerIds: string[];
+  initialSelectedTools: string[];
+} {
+  const projectTools = currentProject?.tools ?? [];
+  const assistantTools = currentAssistant?.tools ?? [];
+  const hasCustomTools = projectTools.length > 0 || assistantTools.length > 0;
+
+  const combined = Array.from(new Set([...projectTools, ...assistantTools]));
+  const serverIds = Array.from(
+    new Set(
+      combined
+        .map((t) => t.split(":")[0])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const customTools = combined.filter((t) => t.includes(":tool:"));
+  const selectedTools = hasCustomTools
+    ? customTools
+    : [...DEFAULT_ENABLED_TOOLS];
+
+  return {
+    initialServerIds: serverIds,
+    initialSelectedTools: selectedTools,
+  };
+}
+
+function resolveInitialKbIds(chat?: Chat, currentProject?: Project): string[] {
+  const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
+  return kbId ? [kbId] : [];
+}
+
+function resolveInitialSkillIds(
+  currentAssistant?: Assistant,
+  currentProject?: Project,
+): string[] {
+  const source = currentAssistant ?? currentProject;
+  return source?.skillMode === "specific" ? (source.skillIds ?? []) : [];
+}
+
+interface InitialChatConfig {
+  initialModelId: string | undefined;
+  initialSubagentsEnabled: boolean;
+  initialSubagentModelId: string | undefined;
+  initialServerIds: string[];
+  initialSelectedTools: string[];
+  initialKbIds: string[];
+  initialSkillIds: string[];
+}
+
+function resolveInitialChatConfig(
+  thread: Message[],
+  currentProject: Project | undefined,
+  currentAssistant: Assistant | undefined,
+  userSettings: UserSettingsRow | null,
+  chat: Chat | undefined,
+): InitialChatConfig {
+  const { initialSubagentsEnabled, initialSubagentModelId } =
+    resolveInitialSubagents(thread);
+  const { initialServerIds, initialSelectedTools } = resolveInitialTools(
+    currentProject,
+    currentAssistant,
+  );
+
+  return {
+    initialModelId: resolveInitialModelId(
+      thread,
+      currentProject,
+      currentAssistant,
+      userSettings,
+    ),
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds: resolveInitialKbIds(chat, currentProject),
+    initialSkillIds: resolveInitialSkillIds(currentAssistant, currentProject),
+  };
+}
+
+function parseArtifactResultPayload(raw: unknown): {
+  parsed: any;
+  isString: boolean;
+} {
+  if (typeof raw === "string") {
+    try {
+      return { parsed: JSON.parse(raw), isString: true };
+    } catch {
+      return { parsed: null, isString: true };
+    }
+  }
+  return { parsed: raw, isString: false };
+}
+
+function applyArtifactContent(tr: any, parsed: any, isString: boolean): void {
+  if (isString) {
+    tr.result = JSON.stringify(parsed);
+  } else if (tr.result !== undefined) {
+    tr.result = parsed;
+  } else {
+    tr.output = parsed;
+  }
+}
+
+function updateToolResultArtifact(
+  tr: any,
+  artifactId: string,
+  newContent: string,
+): boolean {
+  if (tr?.toolName !== "manage_artifact") return false;
+
+  const raw = tr.result ?? tr.output;
+  const { parsed, isString } = parseArtifactResultPayload(raw);
+  if (!parsed || typeof parsed !== "object") return false;
+
+  const target = parsed.artifact || parsed;
+  if (!target || target.id !== artifactId) return false;
+
+  target.content = newContent;
+  applyArtifactContent(tr, parsed, isString);
+  return true;
+}
+
+function mutateArtifactContentInMetadata(
+  rawMetadata: string,
+  artifactId: string,
+  newContent: string,
+): string | null {
+  try {
+    const meta = JSON.parse(rawMetadata);
+    if (!meta || !Array.isArray(meta.toolResults)) return null;
+
+    let updated = false;
+    for (const tr of meta.toolResults) {
+      if (updateToolResultArtifact(tr, artifactId, newContent)) {
+        updated = true;
+      }
+    }
+    return updated ? JSON.stringify(meta) : null;
+  } catch (e) {
+    logger.error("Failed to update artifact metadata", e);
+    return null;
+  }
+}
+
+function checkCanUpdateArtifact(
+  allArtifactsLength: number,
+  artifactIndex: number,
+  activeArtifact: ArtifactData | null,
+): activeArtifact is ArtifactData & { messageId: string; id: string } {
+  if (allArtifactsLength > 1 && artifactIndex !== allArtifactsLength - 1) {
+    return false;
+  }
+  return Boolean(activeArtifact?.messageId && activeArtifact?.id);
+}
+
+function extractAssistantId(
+  metadata: string | null | undefined,
+): string | undefined {
+  if (!metadata) return undefined;
+  try {
+    const raw = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    return typeof raw?.assistantId === "string" ? raw.assistantId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractLegacyPromptIds(
+  metadata: string | null | undefined,
+): string[] | undefined {
+  if (!metadata) return undefined;
+  try {
+    const raw = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    if (Array.isArray(raw?.promptIds) && raw.promptIds.length > 0) {
+      return raw.promptIds;
+    }
+    if (typeof raw?.promptId === "string") {
+      return [raw.promptId];
+    }
+  } catch {}
+  return undefined;
+}
+
+function extractPromptInfo(parentMsg: Message) {
+  const meta = parseMessageMetadata(parentMsg.metadata);
+  const promptMeta = meta.promptMeta;
+  const promptIds =
+    promptMeta?.promptIds ?? extractLegacyPromptIds(parentMsg.metadata);
+  return {
+    userContent: promptMeta?.userContent || parentMsg.content,
+    promptIds,
+    assistantId: extractAssistantId(parentMsg.metadata),
+    meta,
+  };
+}
+
+function extractRegeneratePayload(parentMsg: Message) {
+  const { userContent, promptIds, assistantId, meta } =
+    extractPromptInfo(parentMsg);
+
+  return {
+    userContent,
+    model: meta.modelId || "",
+    serverIds: meta.selectedServerIds || [],
+    toolIds: meta.selectedTools || [],
+    promptIds,
+    assistantId,
+    selectedKbIds: meta.selectedKbIds || [],
+    selectedSkillIds: meta.selectedSkillIds || [],
+    subagentsEnabled: meta.subagentsEnabled,
+    subagentModelId: meta.subagentModelId,
+    subagentExcludedTools: meta.subagentExcludedTools,
+  };
+}
+
+function collectMessageArtifacts(thread: Message[]): {
+  artifacts: ArtifactData[];
+  seenIds: Set<string>;
+} {
+  const artifacts: ArtifactData[] = [];
+  const seenIds = new Set<string>();
+
+  for (const msg of thread) {
+    for (const art of extractMessageArtifacts(msg)) {
+      const id = art.id || `${msg.id}-art-${artifacts.length}`;
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        artifacts.push({ ...art, id });
+      }
+    }
+  }
+  return { artifacts, seenIds };
+}
+
+function collectStreamingArtifacts(
+  activeToolCalls: any[] | undefined,
+  streamingContent: string | null,
+  artifacts: ArtifactData[],
+  seenIds: Set<string>,
+) {
+  if (!activeToolCalls || activeToolCalls.length === 0) return;
+
+  const streamingMsg: Message = {
+    id: "streaming",
+    role: "assistant",
+    content: streamingContent ?? "",
+    createdAt: new Date(),
+    parentId: null,
+    childrenIds: [],
+    metadata: null,
+  };
+  for (const art of extractMessageArtifacts(streamingMsg, activeToolCalls)) {
+    const id = art.id || `streaming-art-${artifacts.length}`;
+    if (!seenIds.has(id)) {
+      seenIds.add(id);
+      artifacts.push({ ...art, id });
+    }
+  }
+}
+
+function extractThreadArtifacts(
+  thread: Message[],
+  activeToolCalls: any[],
+  streamingContent: string | null,
+): ArtifactData[] {
+  const { artifacts, seenIds } = collectMessageArtifacts(thread);
+  collectStreamingArtifacts(
+    activeToolCalls,
+    streamingContent,
+    artifacts,
+    seenIds,
+  );
+  return artifacts;
+}
+
+function extractActiveStreamingCitations(activeToolCalls: any[]) {
+  if (activeToolCalls.length === 0) return [];
+  const completedSearchToolResults = activeToolCalls
+    .filter(
+      (tc) =>
+        tc.status === "complete" &&
+        tc.toolName === "search_knowledge_base" &&
+        tc.result,
+    )
+    .map((tc) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      result: tc.result,
+    }));
+
+  return extractCitations(completedSearchToolResults);
+}
+
 /**
  * Props for the ChatUI component.
  * Controls the chat session display and interaction with optional initial messaging.
  */
+function clearMsgQueryParamFromUrl(): void {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("msg")) return;
+  url.searchParams.delete("msg");
+  window.history.replaceState({}, "", url.pathname + (url.search || ""));
+}
+
 interface ChatUIProps {
   /** Unique identifier for the active chat session. */
   chatId: string;
@@ -112,113 +470,25 @@ export function ChatUI({
     [chat?.currentLeafId, chat?.messages],
   );
 
-  // -- Initial Model Resolution (Inlined) --
-  const initialModelId = useMemo(() => {
-    // 1. Existing chat: get model from the last user message
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage?.metadata) {
-      const { modelId } = parseMessageMetadata(lastUserMessage.metadata);
-      if (modelId) return modelId;
-    }
-
-    // 2. New chat: prioritize Project > Assistant > User Settings
-    if ((currentProject as any)?.defaultChatModelId) {
-      return (currentProject as any).defaultChatModelId;
-    }
-    if ((currentAssistant as any)?.defaultChatModelId) {
-      return (currentAssistant as any).defaultChatModelId;
-    }
-
-    // 3. Application-wide default
-    return userSettings?.defaultChatModelId || undefined;
-  }, [thread, currentProject, currentAssistant, userSettings]);
-
-  // -- Initial Subagents Resolution --
-  const { initialSubagentsEnabled, initialSubagentModelId } = useMemo(() => {
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage?.metadata) {
-      const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
-        lastUserMessage.metadata,
-      );
-      return {
-        initialSubagentsEnabled: subagentsEnabled ?? false,
-        initialSubagentModelId: subagentModelId,
-      };
-    }
-    return {
-      initialSubagentsEnabled: false,
-      initialSubagentModelId: undefined,
-    };
-  }, [thread]);
-
-  // -- Initial Tools Resolution (Inlined) --
-  /**
-   * Resolves initial tools and MCP servers for the chat input.
-   *
-   * @decision Architecture Approach 1 - Active by default tools: If an assistant or project
-   * explicitly defines tools, respect their custom selection. When no custom tools are configured,
-   * activate default internal tools (Canvas) so features like artifacts are enabled out-of-the-box
-   * while remaining toggleable.
-   */
-  const { initialServerIds, initialSelectedTools } = useMemo(() => {
-    const projectTools = currentProject?.tools;
-    const assistantTools = currentAssistant?.tools;
-
-    const hasCustomTools =
-      (projectTools !== undefined &&
-        projectTools !== null &&
-        projectTools.length > 0) ||
-      (assistantTools !== undefined &&
-        assistantTools !== null &&
-        assistantTools.length > 0);
-
-    const combined = new Set<string>();
-    if (projectTools) {
-      projectTools.forEach((t) => {
-        combined.add(t);
-      });
-    }
-    if (assistantTools) {
-      assistantTools.forEach((t) => {
-        combined.add(t);
-      });
-    }
-    const combinedArray = Array.from(combined);
-
-    const serverIds = new Set<string>();
-    combinedArray.forEach((t) => {
-      const serverId = t.split(":")[0];
-      if (serverId) serverIds.add(serverId);
-    });
-
-    const customTools = combinedArray.filter((t) => t.includes(":tool:"));
-    const selectedTools = hasCustomTools
-      ? customTools
-      : [...DEFAULT_ENABLED_TOOLS];
-
-    return {
-      initialServerIds: Array.from(serverIds),
-      initialSelectedTools: selectedTools,
-    };
-  }, [currentProject?.tools, currentAssistant?.tools]);
-
-  const initialKbIds = useMemo(() => {
-    const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
-    return kbId ? [kbId] : [];
-  }, [chat?.knowledgebaseId, currentProject?.knowledgebaseId]);
-
-  // Entity skill config, mirrored from the server-side resolution in
-  // `loadChatContext` (assistant wins over project). Surfaced here so the
-  // composer shows inherited skills as pills instead of silently pre-loading
-  // them. Only `specific` mode pre-loads; `dynamic` leaves selection to the user.
-  const initialSkillIds = useMemo(() => {
-    const source = currentAssistant ?? currentProject;
-    return source?.skillMode === "specific" ? (source.skillIds ?? []) : [];
-  }, [currentAssistant, currentProject]);
+  const {
+    initialModelId,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds,
+    initialSkillIds,
+  } = useMemo(
+    () =>
+      resolveInitialChatConfig(
+        thread,
+        currentProject,
+        currentAssistant,
+        userSettings,
+        chat,
+      ),
+    [thread, currentProject, currentAssistant, userSettings, chat],
+  );
 
   const allEnabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
@@ -236,24 +506,10 @@ export function ChatUI({
     stopStream,
   } = useStreamResponse(chatId);
 
-  const streamingCitations = useMemo(() => {
-    if (activeToolCalls.length === 0) return [];
-
-    const completedSearchToolResults = activeToolCalls
-      .filter(
-        (tc) =>
-          tc.status === "complete" &&
-          tc.toolName === "search_knowledge_base" &&
-          tc.result,
-      )
-      .map((tc) => ({
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        result: tc.result,
-      }));
-
-    return extractCitations(completedSearchToolResults);
-  }, [activeToolCalls]);
+  const streamingCitations = useMemo(
+    () => extractActiveStreamingCitations(activeToolCalls),
+    [activeToolCalls],
+  );
 
   // -- Artifact Panel Logic (Inlined) --
   const updateMessageMetadataDb = useAppStore(
@@ -273,46 +529,10 @@ export function ChatUI({
     setIsArtifactOpen(false);
   }
 
-  const allArtifacts = useMemo(() => {
-    const artifacts: ArtifactData[] = [];
-    const seenIds = new Set<string>();
-
-    for (const msg of thread) {
-      const msgArtifacts = extractMessageArtifacts(msg);
-      for (const art of msgArtifacts) {
-        const id = art.id || `${msg.id}-art-${artifacts.length}`;
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          artifacts.push({ ...art, id });
-        }
-      }
-    }
-
-    if (activeToolCalls && activeToolCalls.length > 0) {
-      const streamingMsg: Message = {
-        id: "streaming",
-        role: "assistant",
-        content: streamingContent ?? "",
-        createdAt: new Date(),
-        parentId: null,
-        childrenIds: [],
-        metadata: null,
-      };
-      const streamingArtifacts = extractMessageArtifacts(
-        streamingMsg,
-        activeToolCalls,
-      );
-      for (const art of streamingArtifacts) {
-        const id = art.id || `streaming-art-${artifacts.length}`;
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          artifacts.push({ ...art, id });
-        }
-      }
-    }
-
-    return artifacts;
-  }, [thread, activeToolCalls, streamingContent]);
+  const allArtifacts = useMemo(
+    () => extractThreadArtifacts(thread, activeToolCalls, streamingContent),
+    [thread, activeToolCalls, streamingContent],
+  );
 
   const activeArtifact =
     artifactIndex >= 0 && artifactIndex < allArtifacts.length
@@ -361,55 +581,26 @@ export function ChatUI({
 
   const handleUpdateArtifact = useCallback(
     (newContent: string) => {
-      const isLatest =
-        allArtifacts.length <= 1 || artifactIndex === allArtifacts.length - 1;
-      if (!isLatest) return;
-
-      if (!activeArtifact?.messageId) return;
+      if (
+        !checkCanUpdateArtifact(
+          allArtifacts.length,
+          artifactIndex,
+          activeArtifact,
+        )
+      ) {
+        return;
+      }
 
       const msg = chat?.messages[activeArtifact.messageId];
       if (!msg?.metadata) return;
 
-      try {
-        const meta = JSON.parse(msg.metadata);
-        let updated = false;
-
-        if (Array.isArray(meta.toolResults)) {
-          meta.toolResults.forEach((tr: any) => {
-            if (tr.toolName === "manage_artifact") {
-              const raw = tr.result ?? tr.output;
-              const isString = typeof raw === "string";
-              let parsed = raw;
-              if (isString) {
-                try {
-                  parsed = JSON.parse(raw);
-                } catch {
-                  parsed = null;
-                }
-              }
-              if (parsed && typeof parsed === "object") {
-                const target = parsed.artifact ?? parsed;
-                if (target?.id === activeArtifact.id) {
-                  target.content = newContent;
-                  if (isString) {
-                    tr.result = JSON.stringify(parsed);
-                  } else if (tr.result !== undefined) {
-                    tr.result = parsed;
-                  } else {
-                    tr.output = parsed;
-                  }
-                  updated = true;
-                }
-              }
-            }
-          });
-        }
-
-        if (updated) {
-          updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
-        }
-      } catch (e) {
-        logger.error("Failed to update artifact metadata", e);
+      const updatedMeta = mutateArtifactContentInMetadata(
+        msg.metadata,
+        activeArtifact.id,
+        newContent,
+      );
+      if (updatedMeta) {
+        updateMessageMetadataDb(chatId, msg.id, updatedMeta);
       }
     },
     [
@@ -480,17 +671,7 @@ export function ChatUI({
       sentInitial.current = true;
       onInitialMessageSent?.();
 
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        if (url.searchParams.has("msg")) {
-          url.searchParams.delete("msg");
-          window.history.replaceState(
-            {},
-            "",
-            url.pathname + (url.search ? url.search : ""),
-          );
-        }
-      }
+      clearMsgQueryParamFromUrl();
 
       if (Object.keys(chat.messages).length > 0) {
         return;
@@ -582,73 +763,23 @@ export function ChatUI({
     const parentMsg = chat?.messages[msg.parentId];
     if (!parentMsg) return;
 
-    let promptIds: string[] | undefined;
-    let assistantId: string | undefined;
-    let model: string = "";
-    let serverIds: string[] = [];
-    let toolIds: string[] = [];
-    let selectedKbIds: string[] = [];
-    let selectedSkillIds: string[] = [];
-    let subagentsEnabled: boolean | undefined;
-    let subagentModelId: string | undefined;
-    let subagentExcludedTools: string[] | undefined;
-    let userContent = parentMsg.content;
-
-    if (parentMsg.metadata) {
-      try {
-        const meta = JSON.parse(parentMsg.metadata);
-        if (Array.isArray(meta.promptIds) && meta.promptIds.length > 0) {
-          promptIds = meta.promptIds;
-          userContent = meta.userContent || parentMsg.content;
-        } else if (meta.promptId) {
-          promptIds = [meta.promptId];
-          userContent = meta.userContent || parentMsg.content;
-        }
-        if (meta.assistantId) {
-          assistantId = meta.assistantId;
-        }
-        if (meta.model) {
-          model = meta.model;
-        }
-        if (Array.isArray(meta.selectedServerIds)) {
-          serverIds = meta.selectedServerIds;
-        }
-        if (Array.isArray(meta.selectedTools)) {
-          toolIds = meta.selectedTools;
-        }
-        if (Array.isArray(meta.selectedKbIds)) {
-          selectedKbIds = meta.selectedKbIds;
-        }
-        if (Array.isArray(meta.selectedSkillIds)) {
-          selectedSkillIds = meta.selectedSkillIds;
-        }
-        if (typeof meta.subagentsEnabled === "boolean") {
-          subagentsEnabled = meta.subagentsEnabled;
-        }
-        if (typeof meta.subagentModelId === "string") {
-          subagentModelId = meta.subagentModelId;
-        }
-        if (Array.isArray(meta.subagentExcludedTools)) {
-          subagentExcludedTools = meta.subagentExcludedTools;
-        }
-      } catch {}
-    }
+    const payload = extractRegeneratePayload(parentMsg);
 
     await streamResponse(
       crypto.randomUUID(),
-      userContent,
+      payload.userContent,
       parentMsg.parentId,
       parentMsg.attachments,
-      model,
-      serverIds,
-      toolIds,
-      promptIds,
-      assistantId,
-      selectedKbIds,
-      selectedSkillIds,
-      subagentsEnabled,
-      subagentModelId,
-      subagentExcludedTools,
+      payload.model,
+      payload.serverIds,
+      payload.toolIds,
+      payload.promptIds,
+      payload.assistantId,
+      payload.selectedKbIds,
+      payload.selectedSkillIds,
+      payload.subagentsEnabled,
+      payload.subagentModelId,
+      payload.subagentExcludedTools,
     );
   };
 

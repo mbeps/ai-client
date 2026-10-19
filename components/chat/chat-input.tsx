@@ -137,6 +137,322 @@ interface ChatInputProps {
   initialSubagentExcludedTools?: string[];
 }
 
+interface ChatInputAttachmentsTriggerProps {
+  isMobile: boolean;
+  hasNoModels: boolean;
+  children: React.ReactNode;
+}
+
+function ChatInputAttachmentsTrigger({
+  isMobile,
+  hasNoModels,
+  children,
+}: ChatInputAttachmentsTriggerProps) {
+  if (isMobile) {
+    return (
+      <Drawer>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DrawerTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                disabled={hasNoModels}
+                aria-label="Attach files, tools & more"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </DrawerTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Attach files, tools & more</TooltipContent>
+        </Tooltip>
+        <DrawerContent>{children}</DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full"
+              disabled={hasNoModels}
+              aria-label="Attach files, tools & more"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Attach files, tools & more</TooltipContent>
+      </Tooltip>
+      <PopoverContent side="top" align="start" className="w-56 p-1">
+        {children}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SubagentsBadgeButton({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 font-medium text-purple-700 text-xs transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
+          aria-label="Manage subagents"
+        >
+          <Bot className="h-3.5 w-3.5 shrink-0" />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-in-out group-hover:max-w-24 group-hover:opacity-100">
+            Subagents
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">Manage subagents</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function SendStopButton({
+  isLoading,
+  onStop,
+  onSend,
+  submitLabel,
+  isSendDisabled,
+}: {
+  isLoading?: boolean;
+  onStop?: () => void;
+  onSend: () => void;
+  submitLabel?: string;
+  isSendDisabled: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <Button
+        size="icon"
+        variant="destructive"
+        className="h-7 w-7 rounded-full"
+        onClick={onStop}
+      >
+        <Square className="h-3 w-3 fill-current" />
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      size="icon"
+      className="h-7 w-7 rounded-full"
+      onClick={onSend}
+      aria-label={submitLabel || "Send message"}
+      disabled={isSendDisabled}
+    >
+      {submitLabel === "Save" ? (
+        <Save className="h-3.5 w-3.5" />
+      ) : (
+        <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
+      )}
+    </Button>
+  );
+}
+
+function CancelButton({ onCancel }: { onCancel: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onCancel}
+      className="h-7 w-7 rounded-full"
+    >
+      <X className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
+function VoiceInputButton({ disabled }: { disabled: boolean }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => {}} // TODO: Implement voice
+      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+      disabled={disabled}
+    >
+      <Mic className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
+interface ChatInputActionButtonsProps {
+  subagentsEnabled: boolean;
+  onOpenSubagents: () => void;
+  thread: Message[];
+  selectedModelObj: any;
+  input: string;
+  attachments: Attachment[];
+  activeToolNames: string[];
+  selectedServerCount: number;
+  selectedSkillTokens: number;
+  availableSkillCount: number;
+  onCancel?: () => void;
+  hasNoModels: boolean;
+  isLoading?: boolean;
+  onStop?: () => void;
+  onSend: () => void;
+  submitLabel?: string;
+  isSendDisabled: boolean;
+}
+
+function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {props.subagentsEnabled && (
+        <SubagentsBadgeButton onOpen={props.onOpenSubagents} />
+      )}
+      <ContextUsagePill
+        thread={props.thread}
+        selectedModel={props.selectedModelObj ?? undefined}
+        input={props.input}
+        draftAttachments={props.attachments}
+        toolNames={props.activeToolNames}
+        mcpServerCount={props.selectedServerCount}
+        selectedSkillTokens={props.selectedSkillTokens}
+        availableSkillCount={props.availableSkillCount}
+      />
+      {props.onCancel && <CancelButton onCancel={props.onCancel} />}
+      <VoiceInputButton disabled={props.hasNoModels} />
+      <SendStopButton
+        isLoading={props.isLoading}
+        onStop={props.onStop}
+        onSend={props.onSend}
+        submitLabel={props.submitLabel}
+        isSendDisabled={props.isSendDisabled}
+      />
+    </div>
+  );
+}
+
+function calculateSkillTokens(
+  skills: Array<{
+    id: string;
+    enabled?: boolean;
+    content: string;
+    files?: Array<{ content: string }>;
+  }>,
+  selectedSkills: Set<string>,
+  supportsTools: boolean,
+): { selectedSkillTokens: number; availableSkillCount: number } {
+  const enabledSkills = skills.filter((s) => s.enabled);
+  let injected = 0;
+  for (const skill of enabledSkills) {
+    if (!selectedSkills.has(skill.id)) continue;
+    injected += estimateTokens(skill.content);
+    if (skill.files) {
+      for (const f of skill.files) {
+        injected += estimateTokens(f.content);
+      }
+    }
+  }
+  const catalog = supportsTools ? enabledSkills.length : 0;
+  return { selectedSkillTokens: injected, availableSkillCount: catalog };
+}
+
+function checkIsSendDisabled(
+  hasNoModels: boolean,
+  input: string,
+  attachmentsCount: number,
+  hasPrompts: boolean,
+  hasAssistant: boolean,
+  skillsCount: number,
+  kbsCount: number,
+): boolean {
+  if (hasNoModels) return true;
+  return (
+    !input.trim() &&
+    attachmentsCount === 0 &&
+    !hasPrompts &&
+    !hasAssistant &&
+    skillsCount === 0 &&
+    kbsCount === 0
+  );
+}
+
+async function processFilesToAdd(
+  files: File[],
+  existingAttachments: Attachment[],
+  supportsVision: boolean,
+  onVisionUnsupported: () => void,
+): Promise<Attachment[]> {
+  const localNew: Attachment[] = [];
+  for (const file of files) {
+    if (file.type.startsWith("image/") && !supportsVision) {
+      onVisionUnsupported();
+      continue;
+    }
+
+    try {
+      const att = await processAttachment(file, [
+        ...existingAttachments,
+        ...localNew,
+      ]);
+      localNew.push(att);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to process file",
+      );
+    }
+  }
+  return localNew;
+}
+
+function updateBulkToolSelection(
+  prevTools: Set<string>,
+  serverId: string,
+  toolNames: string[],
+  select: boolean,
+): Set<string> {
+  const next = new Set(prevTools);
+  for (const name of toolNames) {
+    const id = `${serverId}:tool:${name}`;
+    if (select) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+  }
+  return next;
+}
+
+function resolveInitialModelSelection(
+  chatModels: Array<{ id?: string; modelId: string }>,
+  currentModelId: string,
+  initialModelId?: string,
+): string {
+  if (currentModelId && chatModels.some((m) => m.modelId === currentModelId)) {
+    return currentModelId;
+  }
+  if (initialModelId) {
+    const match = chatModels.find(
+      (m) => m.modelId === initialModelId || m.id === initialModelId,
+    );
+    if (match) return match.modelId;
+  }
+  return chatModels[0]?.modelId ?? "";
+}
+
+function resolvePromptPayload(
+  promptIds: string[],
+  selectedPromptId?: string,
+): string[] | undefined {
+  if (promptIds.length > 0) return promptIds;
+  return selectedPromptId ? [selectedPromptId] : undefined;
+}
+
 /**
  * Comprehensive message input component with file upload, model selection,
  * MCP tools, knowledgebases, and agent skills.
@@ -207,28 +523,14 @@ export function ChatInput({
 
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
-      const localNew: Attachment[] = [];
-      for (const file of Array.from(files)) {
-        if (file.type.startsWith("image/") && !supportsVision) {
-          const error = new AttachmentVisionUnsupportedError();
-          handleApiError(error);
-          continue;
-        }
-
-        try {
-          const att = await processAttachment(file, [
-            ...attachments,
-            ...localNew,
-          ]);
-          localNew.push(att);
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : "Failed to process file",
-          );
-        }
-      }
-      if (localNew.length > 0) {
-        setAttachments((prev) => [...prev, ...localNew]);
+      const newAttachments = await processFilesToAdd(
+        Array.from(files),
+        attachments,
+        supportsVision,
+        () => handleApiError(new AttachmentVisionUnsupportedError()),
+      );
+      if (newAttachments.length > 0) {
+        setAttachments((prev) => [...prev, ...newAttachments]);
       }
     },
     [attachments, supportsVision, handleApiError],
@@ -303,22 +605,10 @@ export function ChatInput({
     (serverId: string, toolNames: string[], select: boolean) => {
       if (select) {
         setSelectedServerIds((prev) => new Set(prev).add(serverId));
-        setSelectedTools((prev) => {
-          const next = new Set(prev);
-          toolNames.forEach((name) => {
-            next.add(`${serverId}:tool:${name}`);
-          });
-          return next;
-        });
-      } else {
-        setSelectedTools((prev) => {
-          const next = new Set(prev);
-          toolNames.forEach((name) => {
-            next.delete(`${serverId}:tool:${name}`);
-          });
-          return next;
-        });
       }
+      setSelectedTools((prev) =>
+        updateBulkToolSelection(prev, serverId, toolNames, select),
+      );
     },
     [],
   );
@@ -413,21 +703,10 @@ export function ChatInput({
   // The catalog (available skills) includes ALL enabled skills when the model
   // supports tools — matching buildSystemPrompt which always lists all skills
   // in the catalog regardless of which are pre-selected.
-  const { selectedSkillTokens, availableSkillCount } = useMemo(() => {
-    const enabledSkills = skills.filter((s) => s.enabled);
-    let injected = 0;
-    for (const skill of enabledSkills) {
-      if (selectedSkills.has(skill.id)) {
-        injected += estimateTokens(skill.content);
-        for (const f of skill.files ?? []) {
-          injected += estimateTokens(f.content);
-        }
-      }
-    }
-    // Catalog only appears when the model supports tool calling
-    const catalog = supportsTools ? enabledSkills.length : 0;
-    return { selectedSkillTokens: injected, availableSkillCount: catalog };
-  }, [skills, selectedSkills, supportsTools]);
+  const { selectedSkillTokens, availableSkillCount } = useMemo(
+    () => calculateSkillTokens(skills, selectedSkills, supportsTools),
+    [skills, selectedSkills, supportsTools],
+  );
 
   const {
     openTrigger,
@@ -498,79 +777,62 @@ export function ChatInput({
     if (chatModels.length === 0 || isModelsLoading) return;
 
     Promise.resolve().then(() => {
-      setModelId((current) => {
-        if (current && chatModels.some((model) => model.modelId === current)) {
-          return current;
-        }
-
-        const initialMatch = initialModelId
-          ? chatModels.find(
-              (model) =>
-                model.modelId === initialModelId || model.id === initialModelId,
-            )
-          : null;
-
-        if (initialMatch) {
-          return initialMatch.modelId;
-        }
-
-        return chatModels[0].modelId;
-      });
+      setModelId((current) =>
+        resolveInitialModelSelection(chatModels, current, initialModelId),
+      );
     });
   }, [chatModels, initialModelId, isModelsLoading]);
 
+  const isSendDisabled = checkIsSendDisabled(
+    hasNoModels,
+    input,
+    attachments.length,
+    promptList.length > 0 || Boolean(selectedPrompt),
+    Boolean(selectedAssistant),
+    selectedSkills.size,
+    selectedKbs.size,
+  );
+
   // -- Action handlers --
   const handleSend = () => {
-    const hasPrompts = promptList.length > 0 || Boolean(selectedPrompt);
-    if (
-      (input.trim() ||
-        attachments.length > 0 ||
-        hasPrompts ||
-        selectedAssistant ||
-        selectedSkills.size > 0 ||
-        selectedKbs.size > 0) &&
-      !isLoading
-    ) {
-      // Auto-suppress tools when the current model does not support tool calling (capTools: false).
-      // This prevents ToolsNotSupportedError on the backend while preserving the user's tool toggle
-      // preferences in the UI if they switch back to a tool-capable model.
-      const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
-      const effectiveServerIds = supportsTools
-        ? Array.from(selectedServerIds)
-        : [];
+    if (isLoading || isSendDisabled) return;
 
-      const promptIds = promptList.map((p) => p.id);
-      const promptPayload =
-        promptIds.length > 0
-          ? promptIds
-          : selectedPrompt?.id
-            ? [selectedPrompt.id]
-            : undefined;
+    // Auto-suppress tools when the current model does not support tool calling (capTools: false).
+    // This prevents ToolsNotSupportedError on the backend while preserving the user's tool toggle
+    // preferences in the UI if they switch back to a tool-capable model.
+    const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
+    const effectiveServerIds = supportsTools
+      ? Array.from(selectedServerIds)
+      : [];
 
-      onSend(
-        input,
-        attachments,
-        modelId,
-        effectiveServerIds,
-        effectiveTools,
-        promptPayload,
-        selectedAssistant?.id,
-        Array.from(selectedKbs),
-        Array.from(selectedSkills),
-        subagentsEnabled,
-        subagentModelId,
-        subagentExcludedTools,
-      );
-      setInput("");
-      clearAttachments();
-      if (setSelectedPrompts) {
-        setSelectedPrompts([]);
-      } else {
-        setSelectedPrompt(null);
-      }
-      setSelectedAssistant(null);
-      setSelectedSkills(new Set());
+    const promptPayload = resolvePromptPayload(
+      promptList.map((p) => p.id),
+      selectedPrompt?.id,
+    );
+
+    onSend(
+      input,
+      attachments,
+      modelId,
+      effectiveServerIds,
+      effectiveTools,
+      promptPayload,
+      selectedAssistant?.id,
+      Array.from(selectedKbs),
+      Array.from(selectedSkills),
+      subagentsEnabled,
+      subagentModelId,
+      subagentExcludedTools,
+    );
+    setInput("");
+    clearAttachments();
+    if (setSelectedPrompts) {
+      setSelectedPrompts([]);
+    } else {
+      setSelectedPrompt(null);
     }
+    setSelectedAssistant(null);
+    setSelectedSkills(new Set());
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -659,183 +921,58 @@ export function ChatInput({
 
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-1.5">
-          {isMobile ? (
-            <Drawer>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DrawerTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      disabled={hasNoModels}
-                      aria-label="Attach files, tools & more"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </DrawerTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Attach files, tools & more</TooltipContent>
-              </Tooltip>
-              <DrawerContent>
-                <AttachmentsMenu
-                  servers={servers}
-                  fileInputRef={fileInputRef}
-                  selectedTools={selectedTools}
-                  onToggleTool={toggleTool}
-                  onBulkSelect={handleBulkSelect}
-                  knowledgebases={knowledgebases}
-                  selectedKbs={selectedKbs}
-                  onToggleKb={handleToggleKb}
-                  skills={skills}
-                  selectedSkills={selectedSkills}
-                  onToggleSkill={handleToggleSkill}
-                  prompts={prompts}
-                  mcpPrompts={mcpPrompts}
-                  selectedPrompt={selectedPrompt}
-                  onSelectPrompt={setSelectedPrompt}
-                  selectedPromptIds={selectedPromptIds}
-                  onTogglePrompt={handleTogglePrompt}
-                  onClearPrompts={() => setSelectedPrompts([])}
-                  supportsVision={supportsVision}
-                  supportsTools={supportsTools}
-                  subagentsEnabled={subagentsEnabled}
-                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
-                />
-              </DrawerContent>
-            </Drawer>
-          ) : (
-            <Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      disabled={hasNoModels}
-                      aria-label="Attach files, tools & more"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Attach files, tools & more</TooltipContent>
-              </Tooltip>
-              <PopoverContent side="top" align="start" className="w-56 p-1">
-                <AttachmentsMenu
-                  servers={servers}
-                  fileInputRef={fileInputRef}
-                  selectedTools={selectedTools}
-                  onToggleTool={toggleTool}
-                  onBulkSelect={handleBulkSelect}
-                  knowledgebases={knowledgebases}
-                  selectedKbs={selectedKbs}
-                  onToggleKb={handleToggleKb}
-                  skills={skills}
-                  selectedSkills={selectedSkills}
-                  onToggleSkill={handleToggleSkill}
-                  prompts={prompts}
-                  mcpPrompts={mcpPrompts}
-                  selectedPrompt={selectedPrompt}
-                  onSelectPrompt={setSelectedPrompt}
-                  selectedPromptIds={selectedPromptIds}
-                  onTogglePrompt={handleTogglePrompt}
-                  onClearPrompts={() => setSelectedPrompts([])}
-                  supportsVision={supportsVision}
-                  supportsTools={supportsTools}
-                  subagentsEnabled={subagentsEnabled}
-                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
-                />
-              </PopoverContent>
-            </Popover>
-          )}
+          <ChatInputAttachmentsTrigger
+            isMobile={isMobile}
+            hasNoModels={hasNoModels}
+          >
+            <AttachmentsMenu
+              servers={servers}
+              fileInputRef={fileInputRef}
+              selectedTools={selectedTools}
+              onToggleTool={toggleTool}
+              onBulkSelect={handleBulkSelect}
+              knowledgebases={knowledgebases}
+              selectedKbs={selectedKbs}
+              onToggleKb={handleToggleKb}
+              skills={skills}
+              selectedSkills={selectedSkills}
+              onToggleSkill={handleToggleSkill}
+              prompts={prompts}
+              mcpPrompts={mcpPrompts}
+              selectedPrompt={selectedPrompt}
+              onSelectPrompt={setSelectedPrompt}
+              selectedPromptIds={selectedPromptIds}
+              onTogglePrompt={handleTogglePrompt}
+              onClearPrompts={() => setSelectedPrompts([])}
+              supportsVision={supportsVision}
+              supportsTools={supportsTools}
+              subagentsEnabled={subagentsEnabled}
+              onOpenSubagents={() => setIsSubagentDialogOpen(true)}
+            />
+          </ChatInputAttachmentsTrigger>
 
           <ModelSelector value={modelId} onValueChange={setModelId} />
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {subagentsEnabled && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setIsSubagentDialogOpen(true)}
-                  className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 font-medium text-purple-700 text-xs transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
-                  aria-label="Manage subagents"
-                >
-                  <Bot className="h-3.5 w-3.5 shrink-0" />
-                  <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-in-out group-hover:max-w-24 group-hover:opacity-100">
-                    Subagents
-                  </span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Manage subagents</TooltipContent>
-            </Tooltip>
-          )}
-          <ContextUsagePill
-            thread={thread}
-            selectedModel={selectedModelObj ?? undefined}
-            input={input}
-            draftAttachments={attachments}
-            toolNames={supportsTools ? Array.from(selectedTools) : []}
-            mcpServerCount={supportsTools ? selectedServerIds.size : 0}
-            selectedSkillTokens={selectedSkillTokens}
-            availableSkillCount={availableSkillCount}
-          />
-          {onCancel && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCancel}
-              className="h-7 w-7 rounded-full"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {}} // TODO: Implement voice
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            disabled={hasNoModels}
-          >
-            <Mic className="h-3.5 w-3.5" />
-          </Button>
-          {isLoading ? (
-            <Button
-              size="icon"
-              variant="destructive"
-              className="h-7 w-7 rounded-full"
-              onClick={onStop}
-            >
-              <Square className="h-3 w-3 fill-current" />
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              className="h-7 w-7 rounded-full"
-              onClick={handleSend}
-              aria-label={submitLabel || "Send message"}
-              disabled={
-                hasNoModels ||
-                (!input.trim() &&
-                  attachments.length === 0 &&
-                  promptList.length === 0 &&
-                  !selectedPrompt &&
-                  !selectedAssistant &&
-                  selectedSkills.size === 0 &&
-                  selectedKbs.size === 0)
-              }
-            >
-              {submitLabel === "Save" ? (
-                <Save className="h-3.5 w-3.5" />
-              ) : (
-                <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
-              )}
-            </Button>
-          )}
-        </div>
+        <ChatInputActionButtons
+          subagentsEnabled={subagentsEnabled}
+          onOpenSubagents={() => setIsSubagentDialogOpen(true)}
+          thread={thread}
+          selectedModelObj={selectedModelObj}
+          input={input}
+          attachments={attachments}
+          activeToolNames={supportsTools ? Array.from(selectedTools) : []}
+          selectedServerCount={supportsTools ? selectedServerIds.size : 0}
+          selectedSkillTokens={selectedSkillTokens}
+          availableSkillCount={availableSkillCount}
+          onCancel={onCancel}
+          hasNoModels={hasNoModels}
+          isLoading={isLoading}
+          onStop={onStop}
+          onSend={handleSend}
+          submitLabel={submitLabel}
+          isSendDisabled={isSendDisabled}
+        />
       </div>
 
       <SubagentConfigDialog
