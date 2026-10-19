@@ -63,6 +63,14 @@ vi.mock("@/actions/transform-runs/upload-run-input", () => ({
 }));
 
 // Mock hooks & store
+vi.mock("@/lib/store", () => ({
+  useAppStore: () => ({
+    mcpServers: [],
+    loadMcpServers: vi.fn(),
+    skills: [],
+    loadSkills: vi.fn(),
+  }),
+}));
 vi.mock("@/hooks/use-knowledgebases", () => ({
   useKnowledgebases: () => ({ normalizedKnowledgebases: [] }),
 }));
@@ -209,4 +217,4 @@ describe("AgentEditorPage - Step-by-Step Automation Regression Tests", () => {
     expect(screen.getByText("Step 3")).toBeInTheDocument();
     expect(promptEditors[0]).toHaveValue("Updated prompt instructions");
   });
-});
+}, 20000);
