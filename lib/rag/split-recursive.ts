@@ -1,3 +1,73 @@
+interface ChunkAccumulator {
+  chunks: string[];
+  current: string;
+}
+
+/**
+ * Force-splits an indivisible piece into chunk-sized slices at character level.
+ */
+function forceSplitByLength(
+  piece: string,
+  chunkSize: number,
+  overlap: number,
+): string[] {
+  const chunks: string[] = [];
+  const step = Math.max(1, chunkSize - overlap);
+  for (let i = 0; i < piece.length; i += step) {
+    const slice = piece.slice(i, i + chunkSize);
+    if (slice) chunks.push(slice);
+  }
+  return chunks;
+}
+
+/**
+ * Splits a piece that exceeds chunkSize either via remaining separators or forced length splitting.
+ */
+function splitOversizedPiece(
+  piece: string,
+  remainingSeps: readonly string[],
+  chunkSize: number,
+  overlap: number,
+): string[] {
+  if (remainingSeps.length > 0) {
+    return splitRecursive(piece, remainingSeps, chunkSize, overlap);
+  }
+  return forceSplitByLength(piece, chunkSize, overlap);
+}
+
+/**
+ * Appends a split piece into accumulator, handling overflow and overlap preservation.
+ */
+function appendPieceToChunks(
+  piece: string,
+  acc: ChunkAccumulator,
+  sep: string,
+  nextSeps: readonly string[],
+  chunkSize: number,
+  overlap: number,
+): void {
+  const candidate = acc.current ? acc.current + sep + piece : piece;
+  if (candidate.length <= chunkSize) {
+    acc.current = candidate;
+    return;
+  }
+
+  if (acc.current) {
+    acc.chunks.push(acc.current);
+    acc.current = acc.current.slice(-overlap) + sep + piece;
+    if (piece.length > chunkSize || acc.current.length >= chunkSize) {
+      acc.chunks.push(
+        ...splitOversizedPiece(piece, nextSeps, chunkSize, overlap),
+      );
+      acc.current = "";
+    }
+    return;
+  }
+
+  acc.chunks.push(...splitOversizedPiece(piece, nextSeps, chunkSize, overlap));
+  acc.current = "";
+}
+
 /**
  * Recursively splits text using progressively simpler separators.
  * Core algorithm for semantic chunking: tries to preserve meaningful
@@ -20,53 +90,15 @@ export function splitRecursive(
 
   const sep = separators.find((s) => text.includes(s)) ?? "";
   const splits = sep ? text.split(sep) : [text];
+  const sepIdx = sep ? separators.indexOf(sep) : -1;
+  const nextSeps = sepIdx >= 0 ? separators.slice(sepIdx + 1) : [];
 
-  const chunks: string[] = [];
-  let current = "";
+  const acc: ChunkAccumulator = { chunks: [], current: "" };
 
   for (const piece of splits) {
-    const candidate = current ? current + sep + piece : piece;
-
-    if (candidate.length <= chunkSize) {
-      current = candidate;
-    } else {
-      if (current) {
-        chunks.push(current);
-        // Carry overlap from end of current into next chunk
-        const overlapText = current.slice(-overlap);
-        current = overlapText + sep + piece;
-        // Guard against overlap accumulation: if the carried chunk already
-        // exceeds the target, flush it instead of letting it compound.
-        if (piece.length > chunkSize || current.length >= chunkSize) {
-          chunks.push(
-            ...splitRecursive(
-              piece,
-              separators.slice(separators.indexOf(sep) + 1),
-              chunkSize,
-              overlap,
-            ),
-          );
-          current = "";
-        }
-      } else {
-        // piece alone exceeds chunkSize — recurse with next separator
-        const sepIdx = separators.indexOf(sep);
-        const nextSeps = separators.slice(sepIdx + 1);
-        if (nextSeps.length > 0) {
-          chunks.push(...splitRecursive(piece, nextSeps, chunkSize, overlap));
-        } else {
-          // Force-split at character level
-          const step = Math.max(1, chunkSize - overlap);
-          for (let i = 0; i < piece.length; i += step) {
-            const slice = piece.slice(i, i + chunkSize);
-            if (slice) chunks.push(slice);
-          }
-        }
-        current = "";
-      }
-    }
+    appendPieceToChunks(piece, acc, sep, nextSeps, chunkSize, overlap);
   }
 
-  if (current) chunks.push(current);
-  return chunks.filter((c) => c.trim().length > 0);
+  if (acc.current) acc.chunks.push(acc.current);
+  return acc.chunks.filter((c) => c.trim().length > 0);
 }

@@ -196,48 +196,109 @@ function assertStepModelCapabilities(
 }
 
 /**
- * Filters MCP tools, assembles skill authoring tools, and constructs the step system prompt.
- * @param params - Configuration including step definition, servers, tools, and attachments
- * @returns Filtered tools map, tool sources, server names, and compiled system prompt
- * @author Maruf Bepary
+ * Resolves allowed MCP server names for the current step.
  */
-async function prepareStepExecution({
-  step,
-  agentRow,
-  allServers,
-  runMcpTools,
-  runToolSourceMap,
-  userId,
-  skillCatalog,
-  preloadedSkills,
-  kbContext,
-  activeWorkbookFilePath,
-  currentAttachmentRows,
-}: PrepareStepExecutionParams): Promise<StepExecutionPreparation> {
+function resolveStepServerNames(
+  step: TransformStep,
+  allServers: any[],
+): Set<string> {
   const stepServers =
     step.mcpServerIds.length > 0
       ? allServers.filter((s) => step.mcpServerIds.includes(s.id))
       : allServers;
-  const stepServerNames = new Set(stepServers.map((s) => s.name));
+  return new Set(stepServers.map((s) => s.name));
+}
+
+interface FilterStepToolsParams {
+  step: TransformStep;
+  agentRow: RunTransformStepsOptions["agentRow"];
+  allServers: any[];
+  runMcpTools: Record<string, any>;
+  runToolSourceMap: Record<string, string>;
+  userId: string;
+  skillCatalog: SkillSummary[];
+  activeWorkbookFilePath: string | null;
+  currentAttachmentRows: AttachmentRow[];
+}
+
+/**
+ * Checks whether a tool is permitted by allowed IDs and server origins.
+ */
+function isToolAllowed(
+  toolName: string,
+  source: string,
+  stepServerNames: Set<string>,
+  allowedToolIds: Set<string>,
+): boolean {
+  const isInternal = source === "Internal" || source === "System";
+  const fromAllowedServer = isInternal || stepServerNames.has(source);
+
+  if (!fromAllowedServer) return false;
+  if (allowedToolIds.size === 0) return true;
+
+  return Array.from(allowedToolIds).some((id) => {
+    const [, type, name] = id.split(":");
+    return type === "tool" && name === toolName;
+  });
+}
+
+/**
+ * Removes upload_file MCP tool when single-workbook flow already has staged file.
+ */
+function pruneUploadFileToolIfLoaded(
+  filteredTools: Record<string, any>,
+  toolSourceMap: Record<string, string>,
+  requiresFileUpload: boolean,
+  activeWorkbookFilePath: string | null,
+  attachmentCount: number,
+): void {
+  const isSingleWorkbookFlow = attachmentCount <= 1;
+  if (
+    requiresFileUpload &&
+    activeWorkbookFilePath &&
+    isSingleWorkbookFlow &&
+    "upload_file" in filteredTools
+  ) {
+    delete filteredTools.upload_file;
+    delete toolSourceMap.upload_file;
+  }
+}
+
+/**
+ * Filters MCP tools by step allowed IDs and attaches internal skill tools.
+ */
+function filterStepTools(params: FilterStepToolsParams): {
+  filteredTools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  stepServerNames: Set<string>;
+} {
+  const {
+    step,
+    agentRow,
+    allServers,
+    runMcpTools,
+    runToolSourceMap,
+    userId,
+    skillCatalog,
+    activeWorkbookFilePath,
+    currentAttachmentRows,
+  } = params;
+
+  const stepServerNames = resolveStepServerNames(step, allServers);
 
   const allowedToolIds = new Set([
     ...(agentRow.tools || []),
     ...(step.toolIds || []),
   ]);
 
-  const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) => {
-    const source = runToolSourceMap[toolName];
-    const isInternal = source === "Internal" || source === "System";
-    const fromAllowedServer = isInternal || stepServerNames.has(source);
-
-    if (!fromAllowedServer) return false;
-    if (allowedToolIds.size === 0) return true;
-
-    return Array.from(allowedToolIds).some((id) => {
-      const [, type, name] = id.split(":");
-      return type === "tool" && name === toolName;
-    });
-  });
+  const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) =>
+    isToolAllowed(
+      toolName,
+      runToolSourceMap[toolName],
+      stepServerNames,
+      allowedToolIds,
+    ),
+  );
 
   const filteredTools = Object.fromEntries(filteredEntries);
   if (skillCatalog.length > 0) {
@@ -255,53 +316,131 @@ async function prepareStepExecution({
     filteredEntries.map(([toolName]) => [toolName, runToolSourceMap[toolName]]),
   ) as Record<string, string>;
 
-  const isSingleWorkbookFlow = currentAttachmentRows.length <= 1;
-  if (
-    agentRow.requiresFileUpload &&
-    activeWorkbookFilePath &&
-    isSingleWorkbookFlow &&
-    "upload_file" in filteredTools
-  ) {
-    delete filteredTools.upload_file;
-    delete toolSourceMap.upload_file;
-  }
+  pruneUploadFileToolIfLoaded(
+    filteredTools,
+    toolSourceMap,
+    agentRow.requiresFileUpload,
+    activeWorkbookFilePath,
+    currentAttachmentRows.length,
+  );
 
-  let fileContext = "";
+  return { filteredTools, toolSourceMap, stepServerNames };
+}
+
+/**
+ * Resolves file context from active workbook path or current attachment rows.
+ */
+async function resolveStepFileContext(
+  activeWorkbookFilePath: string | null,
+  currentAttachmentRows: AttachmentRow[],
+  userId: string,
+): Promise<string> {
   if (activeWorkbookFilePath) {
-    fileContext = `A staged file is already loaded in the MCP session for this run. Reuse this exact file path for subsequent tool operations: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
-  } else if (currentAttachmentRows.length > 0) {
-    const { fileContext: builtContext } = await buildFileContext(
+    return `A staged file is already loaded in the MCP session for this run. Reuse this exact file path for subsequent tool operations: ${activeWorkbookFilePath}. Do not call upload_file again unless explicitly instructed to switch source files.`;
+  }
+  if (currentAttachmentRows.length > 0) {
+    const { fileContext } = await buildFileContext(
       currentAttachmentRows.map((r) => r.id),
       userId,
     );
-    fileContext = builtContext;
+    return fileContext;
   }
+  return "";
+}
 
-  const hasManageArtifact =
-    "manage_artifact" in filteredTools ||
-    (agentRow.tools || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT) ||
-    (step.toolIds || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
+interface BuildStepSystemPromptParams {
+  step: TransformStep;
+  agentRow: RunTransformStepsOptions["agentRow"];
+  filteredTools: Record<string, any>;
+  skillCatalog: SkillSummary[];
+  preloadedSkills: SkillRow[];
+  kbContext: string;
+  fileContext: string;
+}
 
-  const systemPrompt = [
+const MANAGE_ARTIFACT_SYSTEM_INSTRUCTIONS =
+  "- Canvas & Artifact Tool (manage_artifact): The canvas preview tool is enabled. Use manage_artifact to present interactive content on the side canvas:\n" +
+  "  - 'markdown': Use for text reports, summaries, code, emails, or structured documents.\n" +
+  "  - 'spreadsheet': Use for tabular data. Pass { sheets: [{ name: 'SheetName', data: [[...]] }] }.\n" +
+  "  - 'html': Use for interactive designs, UI mockups, or standalone HTML snippets.\n" +
+  "  - 'mermaid': Use for diagrams, workflows, and charts.\n" +
+  "Whenever you create or update major output content for a step, call manage_artifact so the user can inspect it in the side canvas.";
+
+/**
+ * Checks whether manage_artifact tool should be advertised in the system prompt.
+ */
+function checkManageArtifactEnabled(
+  filteredTools: Record<string, any>,
+  agentTools: string[] | null,
+  stepTools: string[] | null,
+): boolean {
+  if ("manage_artifact" in filteredTools) return true;
+  if (agentTools?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT)) return true;
+  return Boolean(stepTools?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT));
+}
+
+/**
+ * Constructs system prompt for step execution.
+ */
+function buildStepSystemPrompt(params: BuildStepSystemPromptParams): string {
+  const {
+    step,
+    agentRow,
+    filteredTools,
+    skillCatalog,
+    preloadedSkills,
+    kbContext,
+    fileContext,
+  } = params;
+
+  const hasManageArtifact = checkManageArtifactEnabled(
+    filteredTools,
+    agentRow.tools,
+    step.toolIds,
+  );
+
+  const sections: Array<string | null | undefined> = [
     agentRow.globalContext ? `Context:\n${agentRow.globalContext}` : null,
     kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
     ...preloadedSkills.map((s) => formatActiveSkill(s)),
-    ...(skillCatalog.length > 0 ? [formatSkillCatalog(skillCatalog)] : []),
+    skillCatalog.length > 0 ? formatSkillCatalog(skillCatalog) : null,
     "You are a helpful AI assistant performing a task.",
     `Instructions for this step:\n${step.prompt}`,
-    `Use only the provided MCP tools. After completing the task, briefly summarise what you did.`,
-    hasManageArtifact
-      ? "- Canvas & Artifact Tool (manage_artifact): The canvas preview tool is enabled. Use manage_artifact to present interactive content on the side canvas:\n" +
-        "  - 'markdown': Use for text reports, summaries, code, emails, or structured documents.\n" +
-        "  - 'spreadsheet': Use for tabular data. Pass { sheets: [{ name: 'SheetName', data: [[...]] }] }.\n" +
-        "  - 'html': Use for interactive designs, UI mockups, or standalone HTML snippets.\n" +
-        "  - 'mermaid': Use for diagrams, workflows, and charts.\n" +
-        "Whenever you create or update major output content for a step, call manage_artifact so the user can inspect it in the side canvas."
-      : null,
+    "Use only the provided MCP tools. After completing the task, briefly summarise what you did.",
+    hasManageArtifact ? MANAGE_ARTIFACT_SYSTEM_INSTRUCTIONS : null,
     fileContext || null,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  ];
+
+  return sections.filter(Boolean).join("\n\n");
+}
+
+/**
+ * Filters MCP tools, assembles skill authoring tools, and constructs the step system prompt.
+ * @param params - Configuration including step definition, servers, tools, and attachments
+ * @returns Filtered tools map, tool sources, server names, and compiled system prompt
+ * @author Maruf Bepary
+ */
+async function prepareStepExecution(
+  params: PrepareStepExecutionParams,
+): Promise<StepExecutionPreparation> {
+  const { filteredTools, toolSourceMap, stepServerNames } =
+    filterStepTools(params);
+
+  const fileContext = await resolveStepFileContext(
+    params.activeWorkbookFilePath,
+    params.currentAttachmentRows,
+    params.userId,
+  );
+
+  const systemPrompt = buildStepSystemPrompt({
+    step: params.step,
+    agentRow: params.agentRow,
+    filteredTools,
+    skillCatalog: params.skillCatalog,
+    preloadedSkills: params.preloadedSkills,
+    kbContext: params.kbContext,
+    fileContext,
+  });
 
   return {
     filteredTools,
@@ -380,6 +519,26 @@ function handleSingleToolResult(
 }
 
 /**
+ * Emits tool-call events for step execution.
+ */
+function emitStepToolCalls(
+  toolCalls: any[],
+  toolSourceMap: Record<string, string>,
+  emit: (data: any) => void,
+): void {
+  for (const tc of toolCalls) {
+    const serverName = toolSourceMap[tc.toolName];
+    emit({
+      type: "tool-call",
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      args: (tc as any).args || (tc as any).input,
+      serverName,
+    });
+  }
+}
+
+/**
  * Processes tool calls and results emitted across AI SDK execution steps.
  * @param steps - Step records returned by AI SDK generateText
  * @param toolSourceMap - Tool name to MCP server name map
@@ -409,16 +568,7 @@ function processStepExecutionTurn(
   let stepArtifact: Record<string, unknown> | null = null;
 
   for (const stepInfo of steps) {
-    for (const tc of stepInfo.toolCalls ?? []) {
-      const serverName = toolSourceMap[tc.toolName];
-      emit({
-        type: "tool-call",
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        args: (tc as any).args || (tc as any).input,
-        serverName,
-      });
-    }
+    emitStepToolCalls(stepInfo.toolCalls ?? [], toolSourceMap, emit);
 
     for (const tr of stepInfo.toolResults ?? []) {
       const { isMutation, uploadedWorkbookPath, artifact } =
@@ -582,6 +732,66 @@ async function persistExplicitStepArtifact(
 }
 
 /**
+ * Builds spreadsheet artifact representation from downloaded workbook buffer.
+ */
+function buildWorkbookFallbackArtifact(
+  fileContent: string,
+  stepIndex: number,
+  stepName: string,
+  attachmentName: string,
+  runId: string,
+): Record<string, unknown> | null {
+  try {
+    const buf = Buffer.from(fileContent, "base64");
+    const wb = xlsx.read(buf, { type: "buffer" });
+    const sheets = wb.SheetNames.map((name) => {
+      const rawData = xlsx.utils.sheet_to_json(wb.Sheets[name], {
+        header: 1,
+      }) as any[][];
+      return { name, data: rawData.slice(0, 500) };
+    });
+    return {
+      id: `step-${stepIndex}-wb`,
+      type: "spreadsheet",
+      title: `${stepName} - ${attachmentName}`,
+      content: JSON.stringify({ sheets }),
+      messageId: `step-${stepIndex}`,
+    };
+  } catch (parseErr) {
+    log.warn(
+      "Failed to build spreadsheet artifact from downloaded workbook (runId: {runId}, stepIndex: {stepIndex}): {error}",
+      {
+        runId,
+        stepIndex,
+        error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+      },
+    );
+    return null;
+  }
+}
+
+/**
+ * Checks whether the download_file MCP tool is enabled and ready to execute.
+ */
+function isDownloadToolAvailable(
+  runToolSourceMap: Record<string, string>,
+  stepServerNames: Set<string>,
+  runMcpTools: Record<string, any>,
+): boolean {
+  const downloadToolSource = runToolSourceMap.download_file;
+  const canUseDownloadTool =
+    typeof downloadToolSource === "string" &&
+    stepServerNames.has(downloadToolSource);
+
+  if (!canUseDownloadTool) return false;
+
+  const downloadTool = runMcpTools.download_file as {
+    execute?: (args: { file_path: string }) => Promise<unknown>;
+  };
+  return typeof downloadTool?.execute === "function";
+}
+
+/**
  * Downloads mutated workbook via download_file MCP tool when model omitted manage_artifact.
  * @author Maruf Bepary
  */
@@ -596,17 +806,15 @@ async function executeWorkbookDownloadFallback(
   runToolSourceMap: Record<string, string>,
   stepServerNames: Set<string>,
 ) {
-  const downloadToolSource = runToolSourceMap.download_file;
-  const canUseDownloadTool =
-    typeof downloadToolSource === "string" &&
-    stepServerNames.has(downloadToolSource);
-
-  if (!canUseDownloadTool) return null;
+  if (
+    !isDownloadToolAvailable(runToolSourceMap, stepServerNames, runMcpTools)
+  ) {
+    return null;
+  }
 
   const downloadTool = runMcpTools.download_file as {
-    execute?: (args: { file_path: string }) => Promise<unknown>;
+    execute: (args: { file_path: string }) => Promise<unknown>;
   };
-  if (typeof downloadTool?.execute !== "function") return null;
 
   try {
     const downloaded = await downloadTool.execute({
@@ -628,34 +836,13 @@ async function executeWorkbookDownloadFallback(
 
     if (!persisted) return null;
 
-    let fallbackArtifact: Record<string, unknown> | null = null;
-    try {
-      const buf = Buffer.from(downloadPayload.fileContent, "base64");
-      const wb = xlsx.read(buf, { type: "buffer" });
-      const sheets = wb.SheetNames.map((name) => {
-        const rawData = xlsx.utils.sheet_to_json(wb.Sheets[name], {
-          header: 1,
-        }) as any[][];
-        return { name, data: rawData.slice(0, 500) };
-      });
-      fallbackArtifact = {
-        id: `step-${stepIndex}-wb`,
-        type: "spreadsheet",
-        title: `${stepName} - ${persisted.attachmentRow.name}`,
-        content: JSON.stringify({ sheets }),
-        messageId: `step-${stepIndex}`,
-      };
-    } catch (parseErr) {
-      log.warn(
-        "Failed to build spreadsheet artifact from downloaded workbook (runId: {runId}, stepIndex: {stepIndex}): {error}",
-        {
-          runId,
-          stepIndex,
-          error:
-            parseErr instanceof Error ? parseErr.message : String(parseErr),
-        },
-      );
-    }
+    const fallbackArtifact = buildWorkbookFallbackArtifact(
+      downloadPayload.fileContent,
+      stepIndex,
+      stepName,
+      persisted.attachmentRow.name,
+      runId,
+    );
 
     log.info(
       "Persisted step output from download_file fallback (runId: {runId}, stepIndex: {stepIndex})",
@@ -681,27 +868,188 @@ async function executeWorkbookDownloadFallback(
 }
 
 /**
+ * Attempts to persist explicit step artifact if valid artifact structure is provided.
+ */
+async function tryPersistExplicitArtifact(
+  artifact: Record<string, unknown> | null,
+  stepIndex: number,
+  userId: string,
+  runId: string,
+  stepName: string,
+  emit: (data: any) => void,
+) {
+  const hasValidArtifact =
+    artifact !== null &&
+    typeof (artifact as any).type === "string" &&
+    typeof (artifact as any).content === "string";
+
+  if (!artifact || !hasValidArtifact) {
+    return { success: true as const, persisted: null };
+  }
+
+  return persistExplicitStepArtifact(
+    artifact,
+    stepIndex,
+    userId,
+    runId,
+    stepName,
+    emit,
+  );
+}
+
+/**
+ * Attempts download fallback for mutated workbook.
+ */
+async function tryDownloadFallback(
+  currentWorkbookPath: string | null,
+  stepIndex: number,
+  stepName: string,
+  userId: string,
+  runId: string,
+  defaultFilename: string,
+  runMcpTools: Record<string, any>,
+  runToolSourceMap: Record<string, string>,
+  stepServerNames: Set<string>,
+) {
+  if (!currentWorkbookPath || !("download_file" in runMcpTools)) {
+    return null;
+  }
+
+  return executeWorkbookDownloadFallback(
+    currentWorkbookPath,
+    stepIndex,
+    stepName,
+    userId,
+    runId,
+    defaultFilename,
+    runMcpTools,
+    runToolSourceMap,
+    stepServerNames,
+  );
+}
+
+/**
+ * Updates output attachment IDs, current rows, and output attachment ID after persistence.
+ */
+function applyPersistedOutput(
+  persisted: { attachmentRow: AttachmentRow; outputAttachmentIds: string[] },
+  currentOutputIds: string[],
+): {
+  currentOutputIds: string[];
+  currentRows: AttachmentRow[];
+  stepOutputAttachmentId: string;
+} {
+  return {
+    currentOutputIds: Array.from(
+      new Set([...currentOutputIds, ...persisted.outputAttachmentIds]),
+    ),
+    currentRows: [persisted.attachmentRow],
+    stepOutputAttachmentId: persisted.attachmentRow.id,
+  };
+}
+
+interface ApplyDownloadFallbackParams {
+  shouldTry: boolean;
+  currentWorkbookPath: string | null;
+  stepIndex: number;
+  stepName: string;
+  userId: string;
+  runId: string;
+  defaultFilename: string;
+  runMcpTools: Record<string, any>;
+  runToolSourceMap: Record<string, string>;
+  stepServerNames: Set<string>;
+  currentOutputIds: string[];
+  artifact: Record<string, unknown> | null;
+}
+
+/**
+ * Executes fallback download when mutations occurred without explicit manage_artifact persistence.
+ */
+async function applyDownloadFallbackIfMutated(
+  params: ApplyDownloadFallbackParams,
+): Promise<{
+  currentOutputIds: string[];
+  currentRows: AttachmentRow[];
+  stepOutputAttachmentId: string;
+  artifact: Record<string, unknown> | null;
+} | null> {
+  if (!params.shouldTry) {
+    return null;
+  }
+
+  const fallback = await tryDownloadFallback(
+    params.currentWorkbookPath,
+    params.stepIndex,
+    params.stepName,
+    params.userId,
+    params.runId,
+    params.defaultFilename,
+    params.runMcpTools,
+    params.runToolSourceMap,
+    params.stepServerNames,
+  );
+
+  if (!fallback) return null;
+
+  const applied = applyPersistedOutput(
+    fallback.persisted,
+    params.currentOutputIds,
+  );
+
+  return {
+    ...applied,
+    artifact:
+      !params.artifact && fallback.fallbackArtifact
+        ? fallback.fallbackArtifact
+        : params.artifact,
+  };
+}
+
+/**
+ * Marks run as failed and emits error when mutated workbook data cannot be persisted.
+ */
+async function failOnUnpersistedMutations(
+  stepName: string,
+  runId: string,
+  emit: (data: any) => void,
+): Promise<void> {
+  const errorMessage = `Step "${stepName}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
+
+  await db
+    .update(transformRun)
+    .set({ status: "failed", errorMessage })
+    .where(eq(transformRun.id, runId));
+
+  emit({ type: "error", message: errorMessage });
+}
+
+/**
  * Persists artifacts produced during a step, triggers fallback file downloads if mutations occurred,
  * and enforces the fail-safe guard against unpersisted workbook mutations.
  * @param params - Artifact, mutations flag, active file path, and persistence context
  * @returns Result with updated output attachments, rows, and active workbook path
  * @author Maruf Bepary
  */
-async function handleStepArtifactOutput({
-  step,
-  stepIndex,
-  userId,
-  runId,
-  stepArtifact,
-  stepHasSpreadsheetMutations,
-  activeWorkbookFilePath,
-  currentOutputAttachmentIds,
-  currentAttachmentRows,
-  runMcpTools,
-  runToolSourceMap,
-  stepServerNames,
-  emit,
-}: HandleStepArtifactOutputParams): Promise<HandleStepArtifactOutputResult> {
+async function handleStepArtifactOutput(
+  params: HandleStepArtifactOutputParams,
+): Promise<HandleStepArtifactOutputResult> {
+  const {
+    step,
+    stepIndex,
+    userId,
+    runId,
+    stepArtifact,
+    stepHasSpreadsheetMutations,
+    activeWorkbookFilePath,
+    currentOutputAttachmentIds,
+    currentAttachmentRows,
+    runMcpTools,
+    runToolSourceMap,
+    stepServerNames,
+    emit,
+  } = params;
+
   let currentOutputIds = [...currentOutputAttachmentIds];
   let currentRows = [...currentAttachmentRows];
   let currentWorkbookPath = activeWorkbookFilePath;
@@ -709,91 +1057,63 @@ async function handleStepArtifactOutput({
   let stepOutputAttachmentId: string | undefined;
   let stepPersistedSpreadsheetOutput = false;
 
-  const hasValidArtifact =
-    artifact !== null &&
-    typeof (artifact as any).type === "string" &&
-    typeof (artifact as any).content === "string";
+  const persistResult = await tryPersistExplicitArtifact(
+    artifact,
+    stepIndex,
+    userId,
+    runId,
+    step.name,
+    emit,
+  );
 
-  if (artifact && hasValidArtifact) {
-    const persistResult = await persistExplicitStepArtifact(
-      artifact,
-      stepIndex,
-      userId,
-      runId,
-      step.name,
-      emit,
-    );
-
-    if (!persistResult.success) {
-      return {
-        success: false,
-        stepArtifact: artifact,
-        currentOutputAttachmentIds: currentOutputIds,
-        currentAttachmentRows: currentRows,
-        activeWorkbookFilePath: currentWorkbookPath,
-      };
-    }
-
-    if (persistResult.persisted) {
-      currentOutputIds = Array.from(
-        new Set([
-          ...currentOutputIds,
-          ...persistResult.persisted.outputAttachmentIds,
-        ]),
-      );
-      stepPersistedSpreadsheetOutput = true;
-      stepOutputAttachmentId = persistResult.persisted.attachmentRow.id;
-      currentRows = [persistResult.persisted.attachmentRow];
-      currentWorkbookPath = null;
-    }
+  if (!persistResult.success) {
+    return {
+      success: false,
+      stepArtifact: artifact,
+      currentOutputAttachmentIds: currentOutputIds,
+      currentAttachmentRows: currentRows,
+      activeWorkbookFilePath: currentWorkbookPath,
+    };
   }
 
-  const shouldTryDownloadFallback =
-    stepHasSpreadsheetMutations &&
-    Boolean(currentWorkbookPath) &&
-    !stepPersistedSpreadsheetOutput &&
-    "download_file" in runMcpTools;
-
-  if (shouldTryDownloadFallback && currentWorkbookPath) {
-    const defaultFilename =
-      currentRows[0]?.name || `step-${stepIndex + 1}-output.xlsx`;
-    const fallback = await executeWorkbookDownloadFallback(
-      currentWorkbookPath,
-      stepIndex,
-      step.name,
-      userId,
-      runId,
-      defaultFilename,
-      runMcpTools,
-      runToolSourceMap,
-      stepServerNames,
+  if (persistResult.persisted) {
+    const applied = applyPersistedOutput(
+      persistResult.persisted,
+      currentOutputIds,
     );
+    currentOutputIds = applied.currentOutputIds;
+    currentRows = applied.currentRows;
+    stepOutputAttachmentId = applied.stepOutputAttachmentId;
+    stepPersistedSpreadsheetOutput = true;
+    currentWorkbookPath = null;
+  }
 
-    if (fallback) {
-      currentOutputIds = Array.from(
-        new Set([
-          ...currentOutputIds,
-          ...fallback.persisted.outputAttachmentIds,
-        ]),
-      );
-      stepPersistedSpreadsheetOutput = true;
-      stepOutputAttachmentId = fallback.persisted.attachmentRow.id;
-      currentRows = [fallback.persisted.attachmentRow];
-      if (!artifact && fallback.fallbackArtifact) {
-        artifact = fallback.fallbackArtifact;
-      }
-    }
+  const fallbackResult = await applyDownloadFallbackIfMutated({
+    shouldTry: stepHasSpreadsheetMutations && !stepPersistedSpreadsheetOutput,
+    currentWorkbookPath,
+    stepIndex,
+    stepName: step.name,
+    userId,
+    runId,
+    defaultFilename:
+      currentRows[0]?.name || `step-${stepIndex + 1}-output.xlsx`,
+    runMcpTools,
+    runToolSourceMap,
+    stepServerNames,
+    currentOutputIds,
+    artifact,
+  });
+
+  if (fallbackResult) {
+    currentOutputIds = fallbackResult.currentOutputIds;
+    currentRows = fallbackResult.currentRows;
+    stepOutputAttachmentId = fallbackResult.stepOutputAttachmentId;
+    artifact = fallbackResult.artifact;
+    stepPersistedSpreadsheetOutput = true;
   }
 
   if (stepHasSpreadsheetMutations && !stepPersistedSpreadsheetOutput) {
-    const errorMessage = `Step "${step.name}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
-
-    await db
-      .update(transformRun)
-      .set({ status: "failed", errorMessage })
-      .where(eq(transformRun.id, runId));
-
-    emit({ type: "error", message: errorMessage });
+    await failOnUnpersistedMutations(step.name, runId, emit);
     return {
       success: false,
       stepArtifact: artifact,
