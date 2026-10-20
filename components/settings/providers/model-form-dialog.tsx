@@ -1,7 +1,7 @@
 "use client";
 
 import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createModel } from "@/actions/models/create-model";
 import { updateModels } from "@/actions/models/update-model";
@@ -39,6 +39,113 @@ function toModelType(value: string | null | undefined): ModelType {
   return "chat";
 }
 
+type ModelFormInitialState = {
+  providerId: string;
+  modelId: string;
+  label: string;
+  modelType: ModelType;
+  contextWindow: string;
+  embeddingDimensions: string;
+  capTools: boolean;
+  capVision: boolean;
+  capReasoning: boolean;
+  capStructuredOutput: boolean;
+  isEnabled: boolean;
+};
+
+function buildInitialModelFormState(
+  model: AiModelRow | null | undefined,
+  providers: AiProviderRow[],
+): ModelFormInitialState {
+  if (!model) {
+    const firstProvider = providers[0];
+    return {
+      providerId: firstProvider ? firstProvider.id : "",
+      modelId: "",
+      label: "",
+      modelType: "chat",
+      contextWindow: "4096",
+      embeddingDimensions: "",
+      capTools: false,
+      capVision: false,
+      capReasoning: false,
+      capStructuredOutput: false,
+      isEnabled: true,
+    };
+  }
+
+  return {
+    providerId: model.providerId,
+    modelId: model.modelId,
+    label: model.label,
+    modelType: toModelType(model.modelType),
+    contextWindow: String(model.contextWindow),
+    embeddingDimensions: model.embeddingDimensions
+      ? String(model.embeddingDimensions)
+      : "",
+    capTools: Boolean(model.capTools),
+    capVision: Boolean(model.capVision),
+    capReasoning: Boolean(model.capReasoning),
+    capStructuredOutput: Boolean(model.capStructuredOutput),
+    isEnabled: Boolean(model.isEnabled),
+  };
+}
+
+type ModelCapabilitySwitchesProps = {
+  capTools: boolean;
+  onCapToolsChange: (val: boolean) => void;
+  capVision: boolean;
+  onCapVisionChange: (val: boolean) => void;
+  capReasoning: boolean;
+  onCapReasoningChange: (val: boolean) => void;
+  capStructuredOutput: boolean;
+  onCapStructuredOutputChange: (val: boolean) => void;
+  isEnabled: boolean;
+  onIsEnabledChange: (val: boolean) => void;
+};
+
+function ModelCapabilitySwitches(props: ModelCapabilitySwitchesProps) {
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between">
+        <Label>Tool Calling</Label>
+        <Switch
+          checked={props.capTools}
+          onCheckedChange={props.onCapToolsChange}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Vision</Label>
+        <Switch
+          checked={props.capVision}
+          onCheckedChange={props.onCapVisionChange}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Reasoning</Label>
+        <Switch
+          checked={props.capReasoning}
+          onCheckedChange={props.onCapReasoningChange}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Structured Output</Label>
+        <Switch
+          checked={props.capStructuredOutput}
+          onCheckedChange={props.onCapStructuredOutputChange}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Enabled</Label>
+        <Switch
+          checked={props.isEnabled}
+          onCheckedChange={props.onIsEnabledChange}
+        />
+      </div>
+    </div>
+  );
+}
+
 type ModelFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,6 +153,124 @@ type ModelFormDialogProps = {
   model?: AiModelRow | null;
   onSaved?: () => void;
 };
+
+type ModelSavePayload = {
+  providerId: string;
+  modelId: string;
+  label: string;
+  modelType: ModelType;
+  contextWindow: number;
+  embeddingDimensions: number | null;
+  capTools: boolean;
+  capVision: boolean;
+  capReasoning: boolean;
+  capStructuredOutput: boolean;
+  isEnabled: boolean;
+};
+
+async function saveModelRecord(
+  isEdit: boolean,
+  model: AiModelRow | null | undefined,
+  payload: ModelSavePayload,
+): Promise<void> {
+  if (isEdit && model) {
+    await updateModels(model.id, {
+      label: payload.label,
+      modelType: payload.modelType,
+      contextWindow: payload.contextWindow,
+      embeddingDimensions: payload.embeddingDimensions,
+      capTools: payload.capTools,
+      capVision: payload.capVision,
+      capReasoning: payload.capReasoning,
+      capStructuredOutput: payload.capStructuredOutput,
+      isEnabled: payload.isEnabled,
+    });
+    toast.success("Model updated");
+    return;
+  }
+  await createModel(payload);
+  toast.success("Model created");
+}
+
+function useModelForm(
+  open: boolean,
+  model: AiModelRow | null | undefined,
+  providers: AiProviderRow[],
+  onOpenChange: (open: boolean) => void,
+  onSaved?: () => void,
+) {
+  const isEdit = Boolean(model);
+  const [form, setForm] = useState<ModelFormInitialState>(() =>
+    buildInitialModelFormState(model, providers),
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(buildInitialModelFormState(model, providers));
+  }, [open, model, providers]);
+
+  const requiresEmbeddingDimension =
+    form.modelType === "embedding" || form.modelType === "both";
+
+  const canSave =
+    form.providerId.length > 0 &&
+    form.modelId.trim().length > 0 &&
+    form.label.trim().length > 0 &&
+    !isSaving;
+
+  const handleSave = async (): Promise<void> => {
+    if (!canSave) return;
+    setIsSaving(true);
+    try {
+      const payload: ModelSavePayload = {
+        providerId: form.providerId,
+        modelId: form.modelId.trim(),
+        label: form.label.trim(),
+        modelType: form.modelType,
+        contextWindow: Number(form.contextWindow),
+        embeddingDimensions:
+          requiresEmbeddingDimension &&
+          form.embeddingDimensions.trim().length > 0
+            ? Number(form.embeddingDimensions)
+            : null,
+        capTools: form.capTools,
+        capVision: form.capVision,
+        capReasoning: form.capReasoning,
+        capStructuredOutput: form.capStructuredOutput,
+        isEnabled: form.isEnabled,
+      };
+
+      await saveModelRecord(isEdit, model, payload);
+      invalidateProviderRegistryCache();
+      onSaved?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save model",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateField = <K extends keyof ModelFormInitialState>(
+    field: K,
+    val: ModelFormInitialState[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: val }));
+  };
+
+  return {
+    isEdit,
+    form,
+    updateField,
+    isSaving,
+    canSave,
+    handleSave,
+    requiresEmbeddingDimension,
+  };
+}
 
 /**
  * Modal dialog for creating or editing AI models within a provider.
@@ -65,100 +290,15 @@ export function ModelFormDialog({
   model,
   onSaved,
 }: ModelFormDialogProps) {
-  const isEdit = !!model;
-  const [providerId, setProviderId] = useState("");
-  const [modelId, setModelId] = useState("");
-  const [label, setLabel] = useState("");
-  const [modelType, setModelType] = useState<ModelType>("chat");
-  const [contextWindow, setContextWindow] = useState("4096");
-  const [embeddingDimensions, setEmbeddingDimensions] = useState("");
-  const [capTools, setCapTools] = useState(false);
-  const [capVision, setCapVision] = useState(false);
-  const [capReasoning, setCapReasoning] = useState(false);
-  const [capStructuredOutput, setCapStructuredOutput] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    setProviderId(model?.providerId ?? providers[0]?.id ?? "");
-    setModelId(model?.modelId ?? "");
-    setLabel(model?.label ?? "");
-    setModelType(toModelType(model?.modelType));
-    setContextWindow(String(model?.contextWindow ?? 4096));
-    setEmbeddingDimensions(
-      model?.embeddingDimensions ? String(model.embeddingDimensions) : "",
-    );
-    setCapTools(model?.capTools ?? false);
-    setCapVision(model?.capVision ?? false);
-    setCapReasoning(model?.capReasoning ?? false);
-    setCapStructuredOutput(model?.capStructuredOutput ?? false);
-    setIsEnabled(model?.isEnabled ?? true);
-  }, [open, model, providers]);
-
-  const requiresEmbeddingDimension = useMemo(
-    () => modelType === "embedding" || modelType === "both",
-    [modelType],
-  );
-
-  const canSave =
-    providerId.length > 0 &&
-    modelId.trim().length > 0 &&
-    label.trim().length > 0 &&
-    !isSaving;
-
-  const handleSave = async (): Promise<void> => {
-    if (!canSave) return;
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        providerId,
-        modelId: modelId.trim(),
-        label: label.trim(),
-        modelType,
-        contextWindow: Number(contextWindow),
-        embeddingDimensions:
-          requiresEmbeddingDimension && embeddingDimensions.trim().length > 0
-            ? Number(embeddingDimensions)
-            : null,
-        capTools,
-        capVision,
-        capReasoning,
-        capStructuredOutput,
-        isEnabled,
-      };
-
-      if (isEdit && model) {
-        await updateModels(model.id, {
-          label: payload.label,
-          modelType: payload.modelType,
-          contextWindow: payload.contextWindow,
-          embeddingDimensions: payload.embeddingDimensions,
-          capTools: payload.capTools,
-          capVision: payload.capVision,
-          capReasoning: payload.capReasoning,
-          capStructuredOutput: payload.capStructuredOutput,
-          isEnabled: payload.isEnabled,
-        });
-        toast.success("Model updated");
-      } else {
-        await createModel(payload);
-        toast.success("Model created");
-      }
-
-      invalidateProviderRegistryCache();
-      onSaved?.();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save model",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const {
+    isEdit,
+    form,
+    updateField,
+    isSaving,
+    canSave,
+    handleSave,
+    requiresEmbeddingDimension,
+  } = useModelForm(open, model, providers, onOpenChange, onSaved);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,8 +327,8 @@ export function ModelFormDialog({
           <div className="space-y-2">
             <Label>Provider</Label>
             <Select
-              value={providerId}
-              onValueChange={setProviderId}
+              value={form.providerId}
+              onValueChange={(val) => updateField("providerId", val)}
               disabled={isEdit}
             >
               <SelectTrigger>
@@ -208,8 +348,8 @@ export function ModelFormDialog({
             <Label htmlFor="model-id">Model ID</Label>
             <Input
               id="model-id"
-              value={modelId}
-              onChange={(event) => setModelId(event.target.value)}
+              value={form.modelId}
+              onChange={(event) => updateField("modelId", event.target.value)}
               placeholder="e.g. gpt-4o-mini"
               disabled={isEdit}
             />
@@ -219,8 +359,8 @@ export function ModelFormDialog({
             <Label htmlFor="model-label">Label</Label>
             <Input
               id="model-label"
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
+              value={form.label}
+              onChange={(event) => updateField("label", event.target.value)}
               placeholder="Human-friendly label"
             />
           </div>
@@ -228,8 +368,10 @@ export function ModelFormDialog({
           <div className="space-y-2">
             <Label>Model Type</Label>
             <Select
-              value={modelType}
-              onValueChange={(value) => setModelType(toModelType(value))}
+              value={form.modelType}
+              onValueChange={(value) =>
+                updateField("modelType", toModelType(value))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -246,8 +388,10 @@ export function ModelFormDialog({
             <Label htmlFor="context-window">Context Window</Label>
             <Input
               id="context-window"
-              value={contextWindow}
-              onChange={(event) => setContextWindow(event.target.value)}
+              value={form.contextWindow}
+              onChange={(event) =>
+                updateField("contextWindow", event.target.value)
+              }
               type="number"
               min={1}
             />
@@ -258,8 +402,10 @@ export function ModelFormDialog({
               <Label htmlFor="embedding-dimensions">Embedding Dimensions</Label>
               <Input
                 id="embedding-dimensions"
-                value={embeddingDimensions}
-                onChange={(event) => setEmbeddingDimensions(event.target.value)}
+                value={form.embeddingDimensions}
+                onChange={(event) =>
+                  updateField("embeddingDimensions", event.target.value)
+                }
                 placeholder="e.g. 1536"
                 type="number"
                 min={1}
@@ -267,34 +413,20 @@ export function ModelFormDialog({
             </div>
           )}
 
-          <div className="space-y-2 rounded-md border p-3">
-            <div className="flex items-center justify-between">
-              <Label>Tool Calling</Label>
-              <Switch checked={capTools} onCheckedChange={setCapTools} />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Vision</Label>
-              <Switch checked={capVision} onCheckedChange={setCapVision} />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Reasoning</Label>
-              <Switch
-                checked={capReasoning}
-                onCheckedChange={setCapReasoning}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Structured Output</Label>
-              <Switch
-                checked={capStructuredOutput}
-                onCheckedChange={setCapStructuredOutput}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Enabled</Label>
-              <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
-            </div>
-          </div>
+          <ModelCapabilitySwitches
+            capTools={form.capTools}
+            onCapToolsChange={(val) => updateField("capTools", val)}
+            capVision={form.capVision}
+            onCapVisionChange={(val) => updateField("capVision", val)}
+            capReasoning={form.capReasoning}
+            onCapReasoningChange={(val) => updateField("capReasoning", val)}
+            capStructuredOutput={form.capStructuredOutput}
+            onCapStructuredOutputChange={(val) =>
+              updateField("capStructuredOutput", val)
+            }
+            isEnabled={form.isEnabled}
+            onIsEnabledChange={(val) => updateField("isEnabled", val)}
+          />
         </div>
 
         <DialogFooter>

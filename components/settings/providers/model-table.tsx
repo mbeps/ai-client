@@ -55,17 +55,433 @@ type ModelTableProps = {
  * @author Maruf Bepary
  */
 
-export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
+type ModelFilters = {
+  search: string;
+  providerFilter: string;
+  statusFilter: string;
+  typeFilter: "all" | "chat" | "embedding" | "both";
+};
+
+function matchesModelType(
+  modelType: string,
+  typeFilter: "all" | "chat" | "embedding" | "both",
+): boolean {
+  if (typeFilter === "all") return true;
+  if (typeFilter === "both") return modelType === "both";
+  return modelType === typeFilter || modelType === "both";
+}
+
+function matchesStatusFilter(
+  isEnabled: boolean,
+  statusFilter: string,
+): boolean {
+  if (statusFilter === "all") return true;
+  return statusFilter === "enabled" ? isEnabled : !isEnabled;
+}
+
+function matchesSearchQuery(
+  model: AiModelRow,
+  query: string,
+  providerName: string,
+): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    model.label.toLowerCase().includes(q) ||
+    model.modelId.toLowerCase().includes(q) ||
+    providerName.toLowerCase().includes(q)
+  );
+}
+
+function matchesModelFilters(
+  model: AiModelRow,
+  filters: ModelFilters,
+  providerName: string,
+): boolean {
+  if (
+    filters.providerFilter !== "all" &&
+    model.providerId !== filters.providerFilter
+  ) {
+    return false;
+  }
+  if (!matchesModelType(model.modelType, filters.typeFilter)) {
+    return false;
+  }
+  if (!matchesStatusFilter(model.isEnabled, filters.statusFilter)) {
+    return false;
+  }
+  return matchesSearchQuery(model, filters.search.trim(), providerName);
+}
+
+const CAPABILITY_CONFIGS = [
+  { key: "capTools", label: "tools" },
+  { key: "capVision", label: "vision" },
+  { key: "capReasoning", label: "reasoning" },
+  { key: "capStructuredOutput", label: "structured" },
+] as const;
+
+function ModelCapabilityBadges({ model }: { model: AiModelRow }) {
+  const activeCaps = CAPABILITY_CONFIGS.filter((c) => Boolean(model[c.key]));
+
+  if (activeCaps.length === 0) {
+    return <span className="text-muted-foreground text-xs">none</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {activeCaps.map((c) => (
+        <Badge key={c.key} variant="secondary">
+          {c.label}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function ModelContextCell({ model }: { model: AiModelRow }) {
+  const showDims =
+    model.modelType === "embedding" || model.modelType === "both";
+  return (
+    <div className="text-xs">
+      <div>{model.contextWindow.toLocaleString()} tokens</div>
+      {showDims && (
+        <div className="text-muted-foreground">
+          {model.embeddingDimensions ?? "-"} dims
+        </div>
+      )}
+    </div>
+  );
+}
+
+type ModelTableRowProps = {
+  model: AiModelRow;
+  providerName: string;
+  isSelected: boolean;
+  isBusy: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleEnabled: (model: AiModelRow, checked: boolean) => void;
+  onEdit: (model: AiModelRow) => void;
+  onDelete: (model: AiModelRow) => void;
+};
+
+function ModelTableRow({
+  model,
+  providerName,
+  isSelected,
+  isBusy,
+  onToggleSelect,
+  onToggleEnabled,
+  onEdit,
+  onDelete,
+}: ModelTableRowProps) {
+  return (
+    <TableRow data-state={isSelected && "selected"}>
+      <TableCell>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onToggleSelect(model.id)}
+          aria-label={`Select ${model.label}`}
+        />
+      </TableCell>
+      <TableCell>
+        <div className="space-y-0.5">
+          <div className="font-medium">{model.label}</div>
+          <div className="text-muted-foreground text-xs">{model.modelId}</div>
+        </div>
+      </TableCell>
+      <TableCell>{providerName}</TableCell>
+      <TableCell>
+        <Badge variant="outline">{model.modelType}</Badge>
+      </TableCell>
+      <TableCell>
+        <ModelCapabilityBadges model={model} />
+      </TableCell>
+      <TableCell>
+        <ModelContextCell model={model} />
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={model.isEnabled}
+          disabled={isBusy}
+          onCheckedChange={(checked) => onToggleEnabled(model, checked)}
+        />
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => onEdit(model)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit Model</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={isBusy}
+                onClick={() => onDelete(model)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete Model</TooltipContent>
+          </Tooltip>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+type ModelTableFilterToolbarProps = {
+  search: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
+  providerFilter: string;
+  onProviderFilterChange: (val: string) => void;
+  typeFilter: "all" | "chat" | "embedding" | "both";
+  onTypeFilterChange: (val: "all" | "chat" | "embedding" | "both") => void;
+  providers: AiProviderRow[];
+};
+
+function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input
+        value={props.search}
+        onChange={(event) => props.onSearchChange(event.target.value)}
+        placeholder="Search models..."
+        className="h-9 w-full sm:w-[200px] lg:w-[280px]"
+      />
+
+      <Select
+        value={props.statusFilter}
+        onValueChange={props.onStatusFilterChange}
+      >
+        <SelectTrigger className="h-9 w-full sm:w-[130px]">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Everything</SelectItem>
+          <SelectItem value="enabled">Enabled</SelectItem>
+          <SelectItem value="disabled">Disabled</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={props.providerFilter}
+        onValueChange={props.onProviderFilterChange}
+      >
+        <SelectTrigger className="h-9 w-full sm:w-[180px]">
+          <SelectValue placeholder="Provider" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All providers</SelectItem>
+          {props.providers.map((provider) => (
+            <SelectItem key={provider.id} value={provider.id}>
+              {provider.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={props.typeFilter}
+        onValueChange={(value) =>
+          props.onTypeFilterChange(
+            value as "all" | "chat" | "embedding" | "both",
+          )
+        }
+      >
+        <SelectTrigger className="h-9 w-full sm:w-[140px]">
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All types</SelectItem>
+          <SelectItem value="chat">chat</SelectItem>
+          <SelectItem value="embedding">embedding</SelectItem>
+          <SelectItem value="both">both</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function ModelTableBulkActions({
+  isBusy,
+  onBulkAction,
+}: {
+  isBusy: boolean;
+  onBulkAction: (action: "enable" | "disable" | "delete") => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 p-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs"
+        disabled={isBusy}
+        onClick={() => onBulkAction("enable")}
+      >
+        {isBusy ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Play className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        Enable
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs"
+        disabled={isBusy}
+        onClick={() => onBulkAction("disable")}
+      >
+        {isBusy ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <CircleSlash className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        Disable
+      </Button>
+      <div className="mx-1 h-4 w-[1px] bg-border" />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-destructive text-xs hover:bg-destructive/10"
+        disabled={isBusy}
+        onClick={() => onBulkAction("delete")}
+      >
+        {isBusy ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        Delete
+      </Button>
+    </div>
+  );
+}
+
+function useModelTableFilters() {
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<
     "all" | "chat" | "embedding" | "both"
   >("all");
+
+  return {
+    search,
+    setSearch,
+    providerFilter,
+    setProviderFilter,
+    statusFilter,
+    setStatusFilter,
+    typeFilter,
+    setTypeFilter,
+  };
+}
+
+type ModelTableModalsProps = {
+  dialogOpen: boolean;
+  onDialogOpenChange: (open: boolean) => void;
+  providers: AiProviderRow[];
+  editingModel: AiModelRow | null;
+  onRefresh: () => Promise<void> | void;
+  modelToDelete: AiModelRow | null;
+  onCloseDeleteModel: () => void;
+  isModelDeleteLoading: boolean;
+  onConfirmDeleteModel: () => Promise<void>;
+  isBulkDeleteConfirmOpen: boolean;
+  onCloseBulkDelete: () => void;
+  selectedCount: number;
+  isBulkDeleteLoading: boolean;
+  onConfirmBulkDelete: () => Promise<void>;
+};
+
+function ModelTableModals(props: ModelTableModalsProps) {
+  return (
+    <>
+      <ModelFormDialog
+        open={props.dialogOpen}
+        onOpenChange={props.onDialogOpenChange}
+        providers={props.providers}
+        model={props.editingModel}
+        onSaved={() => {
+          void props.onRefresh();
+        }}
+      />
+
+      <DeleteConfirmDialog
+        isOpen={Boolean(props.modelToDelete)}
+        onClose={props.onCloseDeleteModel}
+        title="Delete Model"
+        description={`Are you sure you want to delete "${props.modelToDelete?.label ?? props.modelToDelete?.modelId ?? props.modelToDelete?.id}"? This action cannot be undone.`}
+        loading={props.isModelDeleteLoading}
+        onConfirm={props.onConfirmDeleteModel}
+      />
+
+      <DeleteConfirmDialog
+        isOpen={props.isBulkDeleteConfirmOpen}
+        onClose={props.onCloseBulkDelete}
+        title="Delete Models"
+        description={`Are you sure you want to delete ${props.selectedCount} selected models? This action cannot be undone.`}
+        loading={props.isBulkDeleteLoading}
+        onConfirm={props.onConfirmBulkDelete}
+      />
+    </>
+  );
+}
+
+function useModelTableModals() {
   const [editingModel, setEditingModel] = useState<AiModelRow | null>(null);
   const [modelToDelete, setModelToDelete] = useState<AiModelRow | null>(null);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  return {
+    editingModel,
+    setEditingModel,
+    modelToDelete,
+    setModelToDelete,
+    isBulkDeleteConfirmOpen,
+    setIsBulkDeleteConfirmOpen,
+    dialogOpen,
+    setDialogOpen,
+  };
+}
+
+export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
+  const {
+    search,
+    setSearch,
+    providerFilter,
+    setProviderFilter,
+    statusFilter,
+    setStatusFilter,
+    typeFilter,
+    setTypeFilter,
+  } = useModelTableFilters();
+  const {
+    editingModel,
+    setEditingModel,
+    modelToDelete,
+    setModelToDelete,
+    isBulkDeleteConfirmOpen,
+    setIsBulkDeleteConfirmOpen,
+    dialogOpen,
+    setDialogOpen,
+  } = useModelTableModals();
   const [busyModelId, setBusyModelId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -78,34 +494,16 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
   );
 
   const filteredModels = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const filters: ModelFilters = {
+      search,
+      providerFilter,
+      statusFilter,
+      typeFilter,
+    };
 
     const filtered = models.filter((model) => {
-      if (providerFilter !== "all" && model.providerId !== providerFilter)
-        return false;
-
-      // Type filtering: handle both/chat/embedding overlaps
-      if (typeFilter === "chat") {
-        if (model.modelType !== "chat" && model.modelType !== "both")
-          return false;
-      } else if (typeFilter === "embedding") {
-        if (model.modelType !== "embedding" && model.modelType !== "both")
-          return false;
-      } else if (typeFilter === "both") {
-        if (model.modelType !== "both") return false;
-      }
-
-      if (statusFilter === "enabled" && !model.isEnabled) return false;
-      if (statusFilter === "disabled" && model.isEnabled) return false;
-
-      if (!q) return true;
-
       const providerName = providerNameById[model.providerId] ?? "";
-      return (
-        model.label.toLowerCase().includes(q) ||
-        model.modelId.toLowerCase().includes(q) ||
-        providerName.toLowerCase().includes(q)
-      );
+      return matchesModelFilters(model, filters, providerName);
     });
 
     return [...filtered].sort((a, b) => {
@@ -223,56 +621,17 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
   return (
     <div className="space-y-4">
       {/* Filter Row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search models..."
-          className="h-9 w-full sm:w-[200px] lg:w-[280px]"
-        />
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-full sm:w-[130px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Everything</SelectItem>
-            <SelectItem value="enabled">Enabled</SelectItem>
-            <SelectItem value="disabled">Disabled</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={providerFilter} onValueChange={setProviderFilter}>
-          <SelectTrigger className="h-9 w-full sm:w-[180px]">
-            <SelectValue placeholder="Provider" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All providers</SelectItem>
-            {providers.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id}>
-                {provider.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={typeFilter}
-          onValueChange={(value) =>
-            setTypeFilter(value as "all" | "chat" | "embedding" | "both")
-          }
-        >
-          <SelectTrigger className="h-9 w-full sm:w-[140px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="chat">chat</SelectItem>
-            <SelectItem value="embedding">embedding</SelectItem>
-            <SelectItem value="both">both</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ModelTableFilterToolbar
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        providerFilter={providerFilter}
+        onProviderFilterChange={setProviderFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        providers={providers}
+      />
 
       {/* Actions Row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -284,51 +643,10 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
           </div>
 
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 p-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={busyModelId === "bulk"}
-                onClick={() => void handleBulkAction("enable")}
-              >
-                {busyModelId === "bulk" ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Play className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                Enable
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={busyModelId === "bulk"}
-                onClick={() => void handleBulkAction("disable")}
-              >
-                {busyModelId === "bulk" ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <CircleSlash className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                Disable
-              </Button>
-              <div className="mx-1 h-4 w-[1px] bg-border" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-destructive text-xs hover:bg-destructive/10"
-                disabled={busyModelId === "bulk"}
-                onClick={() => void handleBulkAction("delete")}
-              >
-                {busyModelId === "bulk" ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                Delete
-              </Button>
-            </div>
+            <ModelTableBulkActions
+              isBusy={busyModelId === "bulk"}
+              onBulkAction={(action) => void handleBulkAction(action)}
+            />
           )}
         </div>
 
@@ -371,117 +689,26 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredModels.map((model) => {
-              const isBusy = busyModelId === model.id;
-              const isSelected = selectedIds.has(model.id);
-              return (
-                <TableRow key={model.id} data-state={isSelected && "selected"}>
-                  <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelectOne(model.id)}
-                      aria-label={`Select ${model.label}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      <div className="font-medium">{model.label}</div>
-                      <div className="text-muted-foreground text-xs">
-                        {model.modelId}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {providerNameById[model.providerId] ?? "Unknown"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{model.modelType}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {model.capTools && (
-                        <Badge variant="secondary">tools</Badge>
-                      )}
-                      {model.capVision && (
-                        <Badge variant="secondary">vision</Badge>
-                      )}
-                      {model.capReasoning && (
-                        <Badge variant="secondary">reasoning</Badge>
-                      )}
-                      {model.capStructuredOutput && (
-                        <Badge variant="secondary">structured</Badge>
-                      )}
-                      {!model.capTools &&
-                        !model.capVision &&
-                        !model.capReasoning &&
-                        !model.capStructuredOutput && (
-                          <span className="text-muted-foreground text-xs">
-                            none
-                          </span>
-                        )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      <div>{model.contextWindow.toLocaleString()} tokens</div>
-                      {(model.modelType === "embedding" ||
-                        model.modelType === "both") && (
-                        <div className="text-muted-foreground">
-                          {model.embeddingDimensions ?? "-"} dims
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={model.isEnabled}
-                      disabled={isBusy}
-                      onCheckedChange={(checked) =>
-                        void runModelAction(model.id, async () => {
-                          await updateModels(model.id, {
-                            isEnabled: checked,
-                          });
-                        })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isBusy}
-                            onClick={() => {
-                              setEditingModel(model);
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit Model</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={isBusy}
-                            onClick={() => setModelToDelete(model)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete Model</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filteredModels.map((model) => (
+              <ModelTableRow
+                key={model.id}
+                model={model}
+                providerName={providerNameById[model.providerId] ?? "Unknown"}
+                isSelected={selectedIds.has(model.id)}
+                isBusy={busyModelId === model.id}
+                onToggleSelect={toggleSelectOne}
+                onToggleEnabled={(m, checked) =>
+                  void runModelAction(m.id, async () => {
+                    await updateModels(m.id, { isEnabled: checked });
+                  })
+                }
+                onEdit={(m) => {
+                  setEditingModel(m);
+                  setDialogOpen(true);
+                }}
+                onDelete={(m) => setModelToDelete(m)}
+              />
+            ))}
 
             {filteredModels.length === 0 && (
               <TableRow>
@@ -497,23 +724,16 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         </Table>
       </div>
 
-      <ModelFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+      <ModelTableModals
+        dialogOpen={dialogOpen}
+        onDialogOpenChange={setDialogOpen}
         providers={providers}
-        model={editingModel}
-        onSaved={() => {
-          void onRefresh();
-        }}
-      />
-
-      <DeleteConfirmDialog
-        isOpen={!!modelToDelete}
-        onClose={() => setModelToDelete(null)}
-        title="Delete Model"
-        description={`Are you sure you want to delete "${modelToDelete?.label ?? modelToDelete?.modelId ?? modelToDelete?.id}"? This action cannot be undone.`}
-        loading={busyModelId === modelToDelete?.id}
-        onConfirm={async () => {
+        editingModel={editingModel}
+        onRefresh={onRefresh}
+        modelToDelete={modelToDelete}
+        onCloseDeleteModel={() => setModelToDelete(null)}
+        isModelDeleteLoading={busyModelId === modelToDelete?.id}
+        onConfirmDeleteModel={async () => {
           if (!modelToDelete) return;
           await runModelAction(modelToDelete.id, async () => {
             await deleteModel(modelToDelete.id);
@@ -521,15 +741,11 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
             setModelToDelete(null);
           });
         }}
-      />
-
-      <DeleteConfirmDialog
-        isOpen={isBulkDeleteConfirmOpen}
-        onClose={() => setIsBulkDeleteConfirmOpen(false)}
-        title="Delete Models"
-        description={`Are you sure you want to delete ${selectedIds.size} selected models? This action cannot be undone.`}
-        loading={busyModelId === "bulk"}
-        onConfirm={executeBulkDelete}
+        isBulkDeleteConfirmOpen={isBulkDeleteConfirmOpen}
+        onCloseBulkDelete={() => setIsBulkDeleteConfirmOpen(false)}
+        selectedCount={selectedIds.size}
+        isBulkDeleteLoading={busyModelId === "bulk"}
+        onConfirmBulkDelete={executeBulkDelete}
       />
     </div>
   );
