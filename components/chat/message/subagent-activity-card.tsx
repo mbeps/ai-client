@@ -69,6 +69,280 @@ const ROLE_STYLES: Record<
   },
 };
 
+function extractPartsText(parts: unknown[]): string | null {
+  const textParts = (parts as Array<{ type?: string; text?: string }>)
+    .filter((p) => p?.type === "text" && typeof p?.text === "string")
+    .map((p) => p.text as string);
+  return textParts.length > 0 ? textParts.join("\n\n") : null;
+}
+
+function extractSubagentOutputText(result: unknown): string {
+  if (typeof result === "string") return result;
+  if (!result || typeof result !== "object") return "";
+
+  const r = result as Record<string, unknown>;
+  if (Array.isArray(r.parts)) {
+    const partsText = extractPartsText(r.parts);
+    if (partsText) return partsText;
+  }
+
+  const fallback = r.summary || r.value || r.text;
+  return typeof fallback === "string" ? fallback : "Task completed.";
+}
+
+interface SubagentStatusBadgeProps {
+  status: "pending" | "complete" | "error";
+  isError: boolean;
+  outputText: string;
+}
+
+function SubagentStatusBadge({
+  status,
+  isError,
+  outputText,
+}: SubagentStatusBadgeProps) {
+  if (status === "pending") {
+    return (
+      <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-[11px] text-primary">
+        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+        <span>Delegating...</span>
+      </div>
+    );
+  }
+
+  if (isError || outputText.includes("STATUS: BLOCKED")) {
+    return (
+      <div className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-medium text-[11px] text-destructive">
+        <AlertCircle className="h-3 w-3" />
+        <span>Blocked</span>
+      </div>
+    );
+  }
+
+  if (outputText.includes("STATUS: DONE_WITH_CONCERNS")) {
+    return (
+      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 font-medium text-[11px] text-amber-700 dark:text-amber-400">
+        <AlertCircle className="h-3 w-3" />
+        <span>Concerns</span>
+      </div>
+    );
+  }
+
+  if (outputText.includes("STATUS: NEEDS_CONTEXT")) {
+    return (
+      <div className="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-[11px] text-blue-700 dark:text-blue-400">
+        <AlertCircle className="h-3 w-3" />
+        <span>Needs Context</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-[11px] text-emerald-700 dark:text-emerald-400">
+      <CheckCircle2 className="h-3 w-3" />
+      <span>Completed</span>
+    </div>
+  );
+}
+
+function SubagentContextUsage({
+  taskBrief,
+  inputData,
+  result,
+}: {
+  taskBrief: string;
+  inputData?: string;
+  result: unknown;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5 text-xs">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Database className="size-3.5 text-purple-600 dark:text-purple-400" />
+        <span className="font-medium">Context Usage</span>
+      </div>
+      <span className="font-mono text-[11px] text-foreground/80">
+        ~
+        {formatTokens(
+          estimateToolContextTokens({ taskBrief, inputData }, result),
+        )}{" "}
+        tokens
+      </span>
+    </div>
+  );
+}
+
+interface SubagentCardDetailsProps {
+  taskBrief: string;
+  inputData?: string;
+  outputText: string;
+  result: unknown;
+}
+
+function SubagentCardDetails({
+  taskBrief,
+  inputData,
+  outputText,
+  result,
+}: SubagentCardDetailsProps) {
+  return (
+    <AccordionContent className="pb-0">
+      <div className="space-y-3 border-purple-500/20 border-t bg-card/60 p-3 text-xs">
+        <SubagentContextUsage
+          taskBrief={taskBrief}
+          inputData={inputData}
+          result={result}
+        />
+
+        {/* Delegated Prompt from Orchestrator */}
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+            <Workflow className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+            <span>Delegated Prompt from Orchestrator</span>
+          </div>
+          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-foreground text-xs leading-relaxed">
+            <MarkdownRenderer content={taskBrief} />
+          </div>
+        </div>
+
+        {/* Input Data / Context */}
+        {inputData && (
+          <div>
+            <div className="mb-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+              Context Pointers & Input Data
+            </div>
+            <div className="overflow-x-auto whitespace-pre-wrap rounded-lg border border-border/40 bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground leading-relaxed">
+              {inputData}
+            </div>
+          </div>
+        )}
+
+        {/* Worker Findings & Response */}
+        {outputText && (
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+              <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+              <span>Worker Findings & Response</span>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/80 p-3 text-foreground text-xs leading-relaxed shadow-xs">
+              <MarkdownRenderer content={outputText} />
+            </div>
+          </div>
+        )}
+      </div>
+    </AccordionContent>
+  );
+}
+
+function isSubagentError(status: string, result: unknown): boolean {
+  if (status === "error") return true;
+  return Boolean(
+    typeof result === "object" && result !== null && "error" in result,
+  );
+}
+
+function ScratchpadButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="h-6 cursor-pointer gap-1 border-purple-500/30 px-2 text-[10px] text-purple-700 hover:bg-purple-500/10 dark:text-purple-300"
+    >
+      <FileCode className="h-3 w-3" />
+      <span>Scratchpad</span>
+    </Button>
+  );
+}
+
+interface SubagentCardHeaderProps {
+  roleStyle: { label: string; bg: string; text: string; border: string };
+  status: "pending" | "complete" | "error";
+  isError: boolean;
+  outputText: string;
+  messageId?: string;
+  onOpenScratchpad: () => void;
+}
+
+function SubagentCardHeader({
+  roleStyle,
+  status,
+  isError,
+  outputText,
+  messageId,
+  onOpenScratchpad,
+}: SubagentCardHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-2 p-3">
+      <AccordionPrimitive.Header className="flex min-w-0 flex-1">
+        <AccordionPrimitive.Trigger className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400">
+            <Bot className="h-4 w-4" />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={cn(
+                "px-1.5 py-0.5 font-mono font-semibold text-[10px] uppercase tracking-wider",
+                roleStyle.bg,
+                roleStyle.text,
+                roleStyle.border,
+              )}
+            >
+              {roleStyle.label}
+            </Badge>
+          </div>
+        </AccordionPrimitive.Trigger>
+      </AccordionPrimitive.Header>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <SubagentStatusBadge
+          status={status}
+          isError={isError}
+          outputText={outputText}
+        />
+
+        {messageId && <ScratchpadButton onClick={onOpenScratchpad} />}
+
+        <AccordionPrimitive.Header className="flex">
+          <AccordionPrimitive.Trigger className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md outline-none transition-transform hover:bg-muted/50 [[data-state=open]>&>svg]:rotate-180">
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200" />
+          </AccordionPrimitive.Trigger>
+        </AccordionPrimitive.Header>
+      </div>
+    </div>
+  );
+}
+
+function SubagentAccordionWrapper({
+  accordionValue,
+  initialOpen,
+  itemValue,
+  children,
+}: {
+  accordionValue?: string;
+  initialOpen?: boolean;
+  itemValue: string;
+  children: React.ReactNode;
+}) {
+  if (accordionValue) {
+    return <>{children}</>;
+  }
+  return (
+    <Accordion
+      type="single"
+      collapsible
+      defaultValue={initialOpen ? itemValue : undefined}
+      className="w-full"
+    >
+      {children}
+    </Accordion>
+  );
+}
+
 /**
  * Visual card displaying worker subagent delegation lifecycle,
  * task briefs, structured statuses, markdown outputs, and scratchpad access.
@@ -76,206 +350,54 @@ const ROLE_STYLES: Record<
  *
  * @author Maruf Bepary
  */
-export function SubagentActivityCard({
-  chatId,
-  role = "worker",
-  taskBrief = "Delegated task execution",
-  inputData,
-  status,
-  result,
-  messageId,
-  initialOpen = false,
-  accordionValue,
-}: SubagentActivityCardProps) {
+export function SubagentActivityCard(props: SubagentActivityCardProps) {
+  const {
+    chatId,
+    role = "worker",
+    taskBrief = "Delegated task execution",
+    inputData,
+    status,
+    result,
+    messageId,
+    initialOpen = false,
+    accordionValue,
+  } = props;
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
 
-  const roleStyle = ROLE_STYLES[role.toLowerCase()] || ROLE_STYLES.worker;
-
-  const isPending = status === "pending";
-  const isError =
-    status === "error" ||
-    (typeof result === "object" && result !== null && "error" in result);
-
-  // Extract text representation of the subagent result
-  let outputText = "";
-  if (typeof result === "string") {
-    outputText = result;
-  } else if (result && typeof result === "object") {
-    const r = result as Record<string, unknown>;
-    if (Array.isArray(r.parts)) {
-      const textParts = (r.parts as Array<{ type?: string; text?: string }>)
-        .filter((p) => p?.type === "text" && typeof p?.text === "string")
-        .map((p) => p.text as string);
-      if (textParts.length > 0) {
-        outputText = textParts.join("\n\n");
-      }
-    }
-    if (!outputText) {
-      outputText =
-        (r.summary as string) ||
-        (r.value as string) ||
-        (r.text as string) ||
-        "Task completed.";
-    }
-  }
-
-  const isDoneWithConcerns = outputText.includes("STATUS: DONE_WITH_CONCERNS");
-  const isBlocked = outputText.includes("STATUS: BLOCKED");
-  const isNeedsContext = outputText.includes("STATUS: NEEDS_CONTEXT");
-
-  const itemValue = accordionValue ?? "subagent-card";
-
-  const cardContent = (
-    <AccordionItem
-      value={itemValue}
-      className="w-full overflow-hidden rounded-xl border border-purple-500/30 bg-purple-500/5 shadow-xs transition-colors last:border-b"
-    >
-      <div className="flex items-center justify-between gap-2 p-3">
-        <AccordionPrimitive.Header className="flex min-w-0 flex-1">
-          <AccordionPrimitive.Trigger className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400">
-              <Bot className="h-4 w-4" />
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "px-1.5 py-0.5 font-mono font-semibold text-[10px] uppercase tracking-wider",
-                  roleStyle.bg,
-                  roleStyle.text,
-                  roleStyle.border,
-                )}
-              >
-                {roleStyle.label}
-              </Badge>
-            </div>
-          </AccordionPrimitive.Trigger>
-        </AccordionPrimitive.Header>
-
-        <div className="flex shrink-0 items-center gap-2">
-          {/* Status Indicator */}
-          {isPending ? (
-            <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-[11px] text-primary">
-              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              <span>Delegating...</span>
-            </div>
-          ) : isBlocked || isError ? (
-            <div className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-medium text-[11px] text-destructive">
-              <AlertCircle className="h-3 w-3" />
-              <span>Blocked</span>
-            </div>
-          ) : isDoneWithConcerns ? (
-            <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 font-medium text-[11px] text-amber-700 dark:text-amber-400">
-              <AlertCircle className="h-3 w-3" />
-              <span>Concerns</span>
-            </div>
-          ) : isNeedsContext ? (
-            <div className="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-[11px] text-blue-700 dark:text-blue-400">
-              <AlertCircle className="h-3 w-3" />
-              <span>Needs Context</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-[11px] text-emerald-700 dark:text-emerald-400">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Completed</span>
-            </div>
-          )}
-
-          {/* Scratchpad Button */}
-          {messageId && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setScratchpadOpen(true);
-              }}
-              className="h-6 cursor-pointer gap-1 border-purple-500/30 px-2 text-[10px] text-purple-700 hover:bg-purple-500/10 dark:text-purple-300"
-            >
-              <FileCode className="h-3 w-3" />
-              <span>Scratchpad</span>
-            </Button>
-          )}
-
-          <AccordionPrimitive.Header className="flex">
-            <AccordionPrimitive.Trigger className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md outline-none transition-transform hover:bg-muted/50 [[data-state=open]>&>svg]:rotate-180">
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200" />
-            </AccordionPrimitive.Trigger>
-          </AccordionPrimitive.Header>
-        </div>
-      </div>
-
-      <AccordionContent className="pb-0">
-        <div className="space-y-3 border-purple-500/20 border-t bg-card/60 p-3 text-xs">
-          <div className="flex items-center justify-between rounded-md border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5 text-xs">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Database className="size-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium">Context Usage</span>
-            </div>
-            <span className="font-mono text-[11px] text-foreground/80">
-              ~
-              {formatTokens(
-                estimateToolContextTokens({ taskBrief, inputData }, result),
-              )}{" "}
-              tokens
-            </span>
-          </div>
-
-          {/* Delegated Prompt from Orchestrator */}
-          <div>
-            <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-              <Workflow className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-              <span>Delegated Prompt from Orchestrator</span>
-            </div>
-            <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-foreground text-xs leading-relaxed">
-              <MarkdownRenderer content={taskBrief} />
-            </div>
-          </div>
-
-          {/* Input Data / Context */}
-          {inputData && (
-            <div>
-              <div className="mb-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                Context Pointers & Input Data
-              </div>
-              <div className="overflow-x-auto whitespace-pre-wrap rounded-lg border border-border/40 bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground leading-relaxed">
-                {inputData}
-              </div>
-            </div>
-          )}
-
-          {/* Worker Findings & Response */}
-          {outputText && (
-            <div>
-              <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                <span>Worker Findings & Response</span>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-background/80 p-3 text-foreground text-xs leading-relaxed shadow-xs">
-                <MarkdownRenderer content={outputText} />
-              </div>
-            </div>
-          )}
-        </div>
-      </AccordionContent>
-    </AccordionItem>
-  );
+  const roleKey = role.toLowerCase();
+  const roleStyle = ROLE_STYLES[roleKey] || ROLE_STYLES.worker;
+  const isError = isSubagentError(status, result);
+  const outputText = extractSubagentOutputText(result);
+  const itemValue = accordionValue || "subagent-card";
 
   return (
     <>
-      {accordionValue ? (
-        cardContent
-      ) : (
-        <Accordion
-          type="single"
-          collapsible
-          defaultValue={initialOpen ? itemValue : undefined}
-          className="w-full"
+      <SubagentAccordionWrapper
+        accordionValue={accordionValue}
+        initialOpen={initialOpen}
+        itemValue={itemValue}
+      >
+        <AccordionItem
+          value={itemValue}
+          className="w-full overflow-hidden rounded-xl border border-purple-500/30 bg-purple-500/5 shadow-xs transition-colors last:border-b"
         >
-          {cardContent}
-        </Accordion>
-      )}
+          <SubagentCardHeader
+            roleStyle={roleStyle}
+            status={status}
+            isError={isError}
+            outputText={outputText}
+            messageId={messageId}
+            onOpenScratchpad={() => setScratchpadOpen(true)}
+          />
+
+          <SubagentCardDetails
+            taskBrief={taskBrief}
+            inputData={inputData}
+            outputText={outputText}
+            result={result}
+          />
+        </AccordionItem>
+      </SubagentAccordionWrapper>
 
       {messageId && (
         <ScratchpadViewerModal

@@ -143,4 +143,3 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
 
   return { handleSend, handleKeyDown };
 }
-

@@ -35,4 +35,3 @@ export function useChatInputServices(initialModelId?: string) {
     handleApiError,
   };
 }
-

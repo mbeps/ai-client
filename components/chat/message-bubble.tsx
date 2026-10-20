@@ -29,6 +29,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
 import type { DownloadItem } from "@/types/download/download-item";
 import type { Message } from "@/types/message/message";
+import type { ParsedMessageMetadata } from "@/types/message/metadata";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AttachmentGallery } from "./message/attachment-gallery";
@@ -159,9 +160,21 @@ function MessageAvatar({
 interface MessageEditArgs {
   message: Message;
   editContent: string;
-  metadata: ReturnType<typeof parseMessageMetadata>;
+  metadata: ParsedMessageMetadata;
   promptIds: string[];
   assistantId?: string | null;
+}
+
+function fallbackList(list: string[] | null | undefined): string[] {
+  return list ?? [];
+}
+
+function resolvePromptIdForEdit(
+  promptIds: string[],
+  promptMeta: ParsedMessageMetadata["promptMeta"],
+): string | string[] | undefined {
+  if (promptIds.length > 0) return promptIds;
+  return promptMeta?.promptId;
 }
 
 function resolveMessageEditParams({
@@ -171,25 +184,19 @@ function resolveMessageEditParams({
   promptIds,
   assistantId,
 }: MessageEditArgs) {
-  const attachments = message.attachments ?? [];
-  const modelId = metadata.modelId ?? "";
-  const serverIds = metadata.selectedServerIds ?? [];
-  const toolIds = metadata.selectedTools ?? [];
-  const promptId =
-    promptIds.length > 0 ? promptIds : metadata.promptMeta?.promptId;
-  const resolvedAssistantId = assistantId ?? undefined;
+  const promptId = resolvePromptIdForEdit(promptIds, metadata.promptMeta);
 
   return [
     message.id,
     editContent,
-    attachments,
-    modelId,
-    serverIds,
-    toolIds,
+    message.attachments ?? [],
+    metadata.modelId ?? "",
+    fallbackList(metadata.selectedServerIds),
+    fallbackList(metadata.selectedTools),
     promptId,
-    resolvedAssistantId,
-    metadata.selectedKbIds ?? [],
-    metadata.selectedSkillIds ?? [],
+    assistantId ?? undefined,
+    fallbackList(metadata.selectedKbIds),
+    fallbackList(metadata.selectedSkillIds),
     metadata.subagentsEnabled,
     metadata.subagentModelId,
     metadata.subagentExcludedTools,
@@ -210,6 +217,53 @@ interface UserMessageBodyProps {
   onSave: () => void;
   hasAttachments: boolean;
   displayContent: string;
+}
+
+function UserMessageEditor({
+  editContent,
+  onEditContentChange,
+  onCancel,
+  onSave,
+  isSaveDisabled,
+}: {
+  editContent: string;
+  onEditContentChange: (val: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  isSaveDisabled: boolean;
+}) {
+  return (
+    <div className="my-2 w-full space-y-3">
+      <MarkdownTabEditor
+        value={editContent}
+        onChange={onEditContentChange}
+        placeholder="Edit your message..."
+        minHeight="min-h-[140px]"
+        maxHeight="max-h-[500px]"
+        defaultTab="rich"
+      />
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          className="cursor-pointer"
+        >
+          <X className="mr-1.5 h-3.5 w-3.5" />
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={onSave}
+          disabled={isSaveDisabled}
+          className="cursor-pointer"
+        >
+          <Check className="mr-1.5 h-3.5 w-3.5" />
+          Save & Submit
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function UserMessageBody({
@@ -240,36 +294,13 @@ function UserMessageBody({
         knowledgebases={knowledgebases}
       />
       {isEditing ? (
-        <div className="my-2 w-full space-y-3">
-          <MarkdownTabEditor
-            value={editContent}
-            onChange={onEditContentChange}
-            placeholder="Edit your message..."
-            minHeight="min-h-[140px]"
-            maxHeight="max-h-[500px]"
-            defaultTab="rich"
-          />
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCancel}
-              className="cursor-pointer"
-            >
-              <X className="mr-1.5 h-3.5 w-3.5" />
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={onSave}
-              disabled={isSaveDisabled}
-              className="cursor-pointer"
-            >
-              <Check className="mr-1.5 h-3.5 w-3.5" />
-              Save & Submit
-            </Button>
-          </div>
-        </div>
+        <UserMessageEditor
+          editContent={editContent}
+          onEditContentChange={onEditContentChange}
+          onCancel={onCancel}
+          onSave={onSave}
+          isSaveDisabled={isSaveDisabled}
+        />
       ) : (
         <MarkdownRenderer content={displayContent} />
       )}
@@ -314,6 +345,239 @@ function AssistantMessageBody({
       <MarkdownRenderer content={content} />
     </>
   );
+}
+
+function MessageHeader({
+  isUser,
+  image,
+  name,
+  modelName,
+}: {
+  isUser: boolean;
+  image?: string | null;
+  name?: string | null;
+  modelName: string | null;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <MessageAvatar isUser={isUser} image={image} name={name} />
+      <span className="font-semibold text-sm">
+        {isUser ? "You" : (modelName ?? "Assistant")}
+      </span>
+    </div>
+  );
+}
+
+function deriveUserViewData(
+  message: Message,
+  parsedMetadata: ParsedMessageMetadata,
+) {
+  const promptMeta = parsedMetadata.promptMeta;
+  return {
+    promptMeta,
+    selectedKbIds: parsedMetadata.selectedKbIds ?? [],
+    selectedSkillIds: parsedMetadata.selectedSkillIds ?? [],
+    toolData: null,
+    modelName: null,
+    displayContent: promptMeta?.userContent ?? message.content,
+  };
+}
+
+function deriveAssistantViewData(
+  message: Message,
+  parsedMetadata: ParsedMessageMetadata,
+) {
+  return {
+    promptMeta: null,
+    selectedKbIds: [],
+    selectedSkillIds: [],
+    toolData: parsedMetadata.toolData,
+    modelName: parsedMetadata.modelId,
+    displayContent: message.content,
+  };
+}
+
+interface MessageBubbleViewData {
+  parsedMetadata: ParsedMessageMetadata;
+  promptMeta: ParsedMessageMetadata["promptMeta"];
+  selectedKbIds: string[];
+  selectedSkillIds: string[];
+  toolData: ParsedMessageMetadata["toolData"];
+  promptIds: string[];
+  modelName: string | null;
+  citations: Citation[];
+  displayContent: string;
+}
+
+function resolvePromptIds(
+  promptMeta: ParsedMessageMetadata["promptMeta"],
+): string[] {
+  if (!promptMeta) return [];
+  if (Array.isArray(promptMeta.promptIds) && promptMeta.promptIds.length > 0) {
+    return promptMeta.promptIds;
+  }
+  return promptMeta.promptId ? [promptMeta.promptId] : [];
+}
+
+function resolveCitations(
+  streamingCitations: Citation[] | undefined,
+  rawToolData: ParsedMessageMetadata["toolData"],
+): Citation[] {
+  if (streamingCitations && streamingCitations.length > 0) {
+    return streamingCitations;
+  }
+  if (!rawToolData) return [];
+  return extractCitations(rawToolData.toolResults);
+}
+
+function deriveMessageBubbleViewData(
+  message: Message,
+  isUser: boolean,
+  streamingCitations?: Citation[],
+): MessageBubbleViewData {
+  const parsedMetadata = parseMessageMetadata(message.metadata);
+  const baseData = isUser
+    ? deriveUserViewData(message, parsedMetadata)
+    : deriveAssistantViewData(message, parsedMetadata);
+  const promptIds = resolvePromptIds(baseData.promptMeta);
+  const citations = resolveCitations(streamingCitations, baseData.toolData);
+
+  return {
+    parsedMetadata,
+    ...baseData,
+    promptIds,
+    citations,
+  };
+}
+
+function MessageTimelineSection({
+  isUser,
+  reasoning,
+  isStreamingReasoning,
+  toolData,
+  activeToolCalls,
+  isLatest,
+  messageId,
+  chatId,
+}: {
+  isUser: boolean;
+  reasoning?: string;
+  isStreamingReasoning?: boolean;
+  toolData: ParsedMessageMetadata["toolData"];
+  activeToolCalls?: ToolCallState[];
+  isLatest: boolean;
+  messageId: string;
+  chatId?: string;
+}) {
+  if (isUser) return null;
+  return (
+    <ResponseTimeline
+      reasoning={reasoning}
+      isStreamingReasoning={isStreamingReasoning}
+      toolCalls={toolData?.toolCalls}
+      toolResults={toolData?.toolResults}
+      activeToolCalls={activeToolCalls}
+      isLatest={isLatest}
+      messageId={messageId}
+      chatId={chatId}
+    />
+  );
+}
+
+function UserAttachmentSection({
+  isUser,
+  attachments,
+}: {
+  isUser: boolean;
+  attachments?: Attachment[];
+}) {
+  if (!isUser || !attachments || attachments.length === 0) return null;
+  return <AttachmentGallery attachments={attachments} />;
+}
+
+function MessageActionSection({
+  isEditing,
+  message,
+  isUser,
+  onEdit,
+  onDelete,
+  siblings,
+  currentSiblingIndex,
+  onNavigateBranch,
+  onRegenerate,
+  editContent,
+  metadata,
+}: {
+  isEditing: boolean;
+  message: Message;
+  isUser: boolean;
+  onEdit: () => void;
+  onDelete: (id: string) => void;
+  siblings: Message[];
+  currentSiblingIndex: number;
+  onNavigateBranch: (siblingId: string) => void;
+  onRegenerate?: (id: string) => void;
+  editContent?: string;
+  metadata: ParsedMessageMetadata;
+}) {
+  if (isEditing) return null;
+  return (
+    <MessageActions
+      message={message}
+      isUser={isUser}
+      contentToCopy={message.content}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      siblings={siblings}
+      currentSiblingIndex={currentSiblingIndex}
+      onNavigateBranch={onNavigateBranch}
+      onRegenerate={onRegenerate}
+      editContent={editContent}
+      metadata={metadata}
+    />
+  );
+}
+
+interface UseMessageEditingProps {
+  displayContent: string;
+  hasAttachments: boolean;
+  onSaveMessage: (content: string) => void;
+}
+
+function useMessageEditing({
+  displayContent,
+  hasAttachments,
+  onSaveMessage,
+}: UseMessageEditingProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(displayContent);
+
+  const handleStartEdit = () => {
+    setEditContent(displayContent);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (!editContent.trim() && !hasAttachments) {
+      return;
+    }
+    onSaveMessage(editContent);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(displayContent);
+    setIsEditing(false);
+  };
+
+  return {
+    isEditing,
+    editContent,
+    setEditContent,
+    handleStartEdit,
+    handleSave,
+    handleCancel,
+  };
 }
 
 /**
@@ -376,68 +640,36 @@ interface MessageBubbleProps {
   chatId?: string;
 }
 
-export function MessageBubble({
-  message,
-  isLatest,
-  isFirst: _isFirst,
-  assistantId,
-  onDelete,
-  onEdit,
-  siblings,
-  currentSiblingIndex,
-  onNavigateBranch,
-  reasoning,
-  isStreamingReasoning,
-  onRegenerate,
-  onToggleArtifact,
-  activeArtifactId,
-  isCanvasOpen,
-  streamingCitations,
-  activeToolCalls,
-  knowledgebases = [],
-  chatId,
-}: MessageBubbleProps) {
+export function MessageBubble(props: MessageBubbleProps) {
+  const {
+    message,
+    isLatest,
+    assistantId,
+    onDelete,
+    onEdit,
+    siblings,
+    currentSiblingIndex,
+    onNavigateBranch,
+    reasoning,
+    isStreamingReasoning,
+    onRegenerate,
+    onToggleArtifact,
+    activeArtifactId,
+    isCanvasOpen,
+    streamingCitations,
+    activeToolCalls,
+    knowledgebases = [],
+    chatId,
+  } = props;
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
-  const parsedMetadata = useMemo(
-    () => parseMessageMetadata(message.metadata),
-    [message.metadata],
-  );
-  const {
-    promptMeta: rawPromptMeta,
-    toolData: rawToolData,
-    modelId: parsedModelId,
-    selectedKbIds: parsedKbIds,
-    selectedSkillIds: parsedSkillIds,
-  } = parsedMetadata;
-
-  const citations = useMemo(() => {
-    if (streamingCitations && streamingCitations.length > 0)
-      return streamingCitations;
-    if (!rawToolData) return [];
-    return extractCitations(rawToolData.toolResults);
-  }, [rawToolData, streamingCitations]);
-  const promptMeta = isUser ? rawPromptMeta : null;
-  const selectedKbIds = isUser && parsedKbIds ? parsedKbIds : [];
-  const selectedSkillIds = isUser && parsedSkillIds ? parsedSkillIds : [];
   const skills = useAppStore((state) => state.skills);
-  const toolData = isUser ? null : rawToolData;
-  const promptIds = useMemo(() => {
-    if (!promptMeta) return [];
-    if (
-      Array.isArray(promptMeta.promptIds) &&
-      promptMeta.promptIds.length > 0
-    ) {
-      return promptMeta.promptIds;
-    }
-    return promptMeta.promptId ? [promptMeta.promptId] : [];
-  }, [promptMeta]);
 
-  const modelName = useMemo(() => {
-    if (isUser || !parsedModelId) return null;
-    return parsedModelId;
-  }, [isUser, parsedModelId]);
+  const viewData = useMemo(
+    () => deriveMessageBubbleViewData(message, isUser, streamingCitations),
+    [message, isUser, streamingCitations],
+  );
 
   const messageArtifacts = useMemo(
     () => extractMessageArtifacts(message, activeToolCalls),
@@ -449,92 +681,78 @@ export function MessageBubble({
     [message, activeToolCalls],
   );
 
-  const initialContent = promptMeta ? promptMeta.userContent : message.content;
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(initialContent);
+  const hasAttachments = Boolean(
+    message.attachments && message.attachments.length > 0,
+  );
 
-  const handleStartEdit = () => {
-    setEditContent(promptMeta ? promptMeta.userContent : message.content);
-    setIsEditing(true);
-  };
-
-  const handleSave = () => {
-    const hasAttachments = Boolean(
-      message.attachments && message.attachments.length > 0,
-    );
-    if (!editContent.trim() && !hasAttachments) {
-      return;
-    }
-
+  const handleSaveMessage = (content: string) => {
     const editParams = resolveMessageEditParams({
       message,
-      editContent,
-      metadata: parsedMetadata,
-      promptIds,
+      editContent: content,
+      metadata: viewData.parsedMetadata,
+      promptIds: viewData.promptIds,
       assistantId,
     });
     onEdit(...editParams);
-    setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setEditContent(promptMeta ? promptMeta.userContent : message.content);
-    setIsEditing(false);
-  };
+  const {
+    isEditing,
+    editContent,
+    setEditContent,
+    handleStartEdit,
+    handleSave,
+    handleCancel,
+  } = useMessageEditing({
+    displayContent: viewData.displayContent,
+    hasAttachments,
+    onSaveMessage: handleSaveMessage,
+  });
 
   return (
     <div
       className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "rounded-lg bg-muted/30"}`}
     >
-      <div className="flex items-center gap-2">
-        <MessageAvatar
-          isUser={isUser}
-          image={session?.user?.image}
-          name={session?.user?.name}
-        />
-        <span className="font-semibold text-sm">
-          {isUser ? "You" : (modelName ?? "Assistant")}
-        </span>
-      </div>
+      <MessageHeader
+        isUser={isUser}
+        image={session?.user?.image}
+        name={session?.user?.name}
+        modelName={viewData.modelName}
+      />
 
       <div className="flex-1 overflow-hidden">
         <div className="text-sm">
-          {!isUser && (
-            <ResponseTimeline
-              reasoning={reasoning}
-              isStreamingReasoning={isStreamingReasoning}
-              toolCalls={toolData?.toolCalls}
-              toolResults={toolData?.toolResults}
-              activeToolCalls={activeToolCalls}
-              isLatest={isLatest}
-              messageId={message.id}
-              chatId={chatId}
-            />
-          )}
+          <MessageTimelineSection
+            isUser={isUser}
+            reasoning={reasoning}
+            isStreamingReasoning={isStreamingReasoning}
+            toolData={viewData.toolData}
+            activeToolCalls={activeToolCalls}
+            isLatest={isLatest}
+            messageId={message.id}
+            chatId={chatId}
+          />
 
-          {isUser && message.attachments && message.attachments.length > 0 && (
-            <AttachmentGallery attachments={message.attachments} />
-          )}
+          <UserAttachmentSection
+            isUser={isUser}
+            attachments={message.attachments}
+          />
 
           {isUser ? (
             <UserMessageBody
-              promptIds={promptIds}
+              promptIds={viewData.promptIds}
               prompts={prompts}
-              selectedSkillIds={selectedSkillIds}
+              selectedSkillIds={viewData.selectedSkillIds}
               skills={skills}
-              selectedKbIds={selectedKbIds}
+              selectedKbIds={viewData.selectedKbIds}
               knowledgebases={knowledgebases}
               isEditing={isEditing}
               editContent={editContent}
               onEditContentChange={setEditContent}
               onCancel={handleCancel}
               onSave={handleSave}
-              hasAttachments={Boolean(
-                message.attachments && message.attachments.length > 0,
-              )}
-              displayContent={
-                promptMeta ? promptMeta.userContent : message.content
-              }
+              hasAttachments={hasAttachments}
+              displayContent={viewData.displayContent}
             />
           ) : (
             <AssistantMessageBody
@@ -547,24 +765,22 @@ export function MessageBubble({
               createdAt={message.createdAt}
             />
           )}
-          <CitationsList citations={citations} />
+          <CitationsList citations={viewData.citations} />
         </div>
 
-        {!isEditing && (
-          <MessageActions
-            message={message}
-            isUser={isUser}
-            contentToCopy={message.content}
-            onEdit={handleStartEdit}
-            onDelete={onDelete}
-            siblings={siblings}
-            currentSiblingIndex={currentSiblingIndex}
-            onNavigateBranch={onNavigateBranch}
-            onRegenerate={onRegenerate}
-            editContent={promptMeta ? promptMeta.userContent : undefined}
-            metadata={parsedMetadata}
-          />
-        )}
+        <MessageActionSection
+          isEditing={isEditing}
+          message={message}
+          isUser={isUser}
+          onEdit={handleStartEdit}
+          onDelete={onDelete}
+          siblings={siblings}
+          currentSiblingIndex={currentSiblingIndex}
+          onNavigateBranch={onNavigateBranch}
+          onRegenerate={onRegenerate}
+          editContent={viewData.promptMeta?.userContent}
+          metadata={viewData.parsedMetadata}
+        />
       </div>
     </div>
   );

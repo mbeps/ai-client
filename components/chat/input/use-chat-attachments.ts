@@ -113,4 +113,3 @@ export function useChatAttachments(options: UseChatAttachmentsOptions) {
     handleDrop,
   };
 }
-
