@@ -186,4 +186,3 @@ export function swapLanguageState(
   setters.setSourceText(translatedText);
   setters.setTranslatedText(sourceText);
 }
-

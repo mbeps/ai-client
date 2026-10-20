@@ -9,9 +9,9 @@ import {
   mapRunRowToRun,
   resolveInitialSelectedStep,
 } from "@/components/workflows/transform-run/state-helpers";
-import type { StepState } from "@/components/workflows/transform-run/types";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
+import type { StepState } from "@/types/workflows/transform-run";
 
 function parseAgentSteps(rawSteps?: string | null) {
   if (!rawSteps) return [];

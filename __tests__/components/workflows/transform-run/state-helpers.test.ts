@@ -12,7 +12,7 @@ import {
   resolveStepPreviewArtifact,
   resolveTargetAttachmentId,
 } from "@/components/workflows/transform-run/state-helpers";
-import type { StepState } from "@/components/workflows/transform-run/types";
+import type { StepState } from "@/types/workflows/transform-run";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 

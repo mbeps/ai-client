@@ -20,6 +20,16 @@ export type JobStatus =
   | "CANCELLED";
 
 /**
+ * Filter tab categories for active, queued, completed, failed, and all jobs.
+ */
+export type JobFilterTab =
+  | "running"
+  | "queued"
+  | "completed"
+  | "failed"
+  | "all";
+
+/**
  * Normalized representation of an Inngest job run.
  */
 export interface JobItem {

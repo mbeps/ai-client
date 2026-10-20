@@ -1,5 +1,8 @@
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 
+/**
+ * Tool call entry representing an MCP or system tool execution during a transform step.
+ */
 export interface ToolCall {
   toolCallId: string;
   toolName: string;
@@ -7,6 +10,9 @@ export interface ToolCall {
   args: unknown;
 }
 
+/**
+ * Tool result entry containing the execution output from an MCP or system tool.
+ */
 export interface ToolResult {
   toolCallId: string;
   toolName: string;
@@ -14,6 +20,9 @@ export interface ToolResult {
   result: unknown;
 }
 
+/**
+ * Runtime execution state for an individual transform agent step during a workflow run.
+ */
 export interface StepState {
   status: "pending" | "running" | "completed" | "awaiting_review";
   summary?: string;
@@ -23,3 +32,4 @@ export interface StepState {
   toolResults?: ToolResult[];
   outputAttachmentId?: string;
 }
+

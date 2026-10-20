@@ -25,6 +25,302 @@ export interface ListJobsOptions {
   limit?: number;
 }
 
+interface EntityIdBuckets {
+  chatIds: Set<string>;
+  transformRunIds: Set<string>;
+  translationIds: Set<string>;
+  kbDocIds: Set<string>;
+  kbIds: Set<string>;
+}
+
+interface ChatEntity {
+  id: string;
+  title: string;
+  projectId: string | null;
+}
+
+interface TransformEntity {
+  id: string;
+  agentId: string;
+  agentName: string | null;
+}
+
+interface TranslationEntity {
+  id: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+interface KbDocEntity {
+  id: string;
+  name: string;
+  kbId: string;
+}
+
+interface KbEntity {
+  id: string;
+  name: string;
+}
+
+interface EntityMaps {
+  chatMap: Map<string, ChatEntity>;
+  transformMap: Map<string, TransformEntity>;
+  translationMap: Map<string, TranslationEntity>;
+  kbDocMap: Map<string, KbDocEntity>;
+  kbMap: Map<string, KbEntity>;
+}
+
+/**
+ * Collects unique entity IDs per job type for batched database queries.
+ */
+function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
+  const buckets: EntityIdBuckets = {
+    chatIds: new Set<string>(),
+    transformRunIds: new Set<string>(),
+    translationIds: new Set<string>(),
+    kbDocIds: new Set<string>(),
+    kbIds: new Set<string>(),
+  };
+
+  for (const job of jobs) {
+    if (!job.entityId) continue;
+    switch (job.type) {
+      case "chat":
+        buckets.chatIds.add(job.entityId);
+        break;
+      case "transform":
+        buckets.transformRunIds.add(job.entityId);
+        break;
+      case "translation":
+        buckets.translationIds.add(job.entityId);
+        break;
+      case "kb-ingest":
+        buckets.kbDocIds.add(job.entityId);
+        break;
+      case "kb-reindex":
+        buckets.kbIds.add(job.entityId);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return buckets;
+}
+
+/**
+ * Batches parallel database queries for associated entities.
+ */
+async function fetchEntityMaps(
+  userId: string,
+  buckets: EntityIdBuckets,
+): Promise<EntityMaps> {
+  const [chatRows, transformRows, translationRows, kbDocRows, kbRows] =
+    await Promise.all([
+      buckets.chatIds.size > 0
+        ? db
+            .select({
+              id: chat.id,
+              title: chat.title,
+              projectId: chat.projectId,
+            })
+            .from(chat)
+            .where(
+              and(
+                inArray(chat.id, [...buckets.chatIds]),
+                eq(chat.userId, userId),
+              ),
+            )
+        : Promise.resolve([]),
+
+      buckets.transformRunIds.size > 0
+        ? db
+            .select({
+              id: transformRun.id,
+              agentId: transformRun.agentId,
+              agentName: transformAgent.name,
+            })
+            .from(transformRun)
+            .leftJoin(
+              transformAgent,
+              eq(transformRun.agentId, transformAgent.id),
+            )
+            .where(
+              and(
+                inArray(transformRun.id, [...buckets.transformRunIds]),
+                eq(transformRun.userId, userId),
+              ),
+            )
+        : Promise.resolve([]),
+
+      buckets.translationIds.size > 0
+        ? db
+            .select({
+              id: workflowTranslation.id,
+              sourceLanguage: workflowTranslation.sourceLanguage,
+              targetLanguage: workflowTranslation.targetLanguage,
+            })
+            .from(workflowTranslation)
+            .where(
+              and(
+                inArray(workflowTranslation.id, [...buckets.translationIds]),
+                eq(workflowTranslation.userId, userId),
+              ),
+            )
+        : Promise.resolve([]),
+
+      buckets.kbDocIds.size > 0
+        ? db
+            .select({
+              id: kbDocument.id,
+              name: kbDocument.name,
+              kbId: kbDocument.kbId,
+            })
+            .from(kbDocument)
+            .where(
+              and(
+                inArray(kbDocument.id, [...buckets.kbDocIds]),
+                eq(kbDocument.userId, userId),
+              ),
+            )
+        : Promise.resolve([]),
+
+      buckets.kbIds.size > 0
+        ? db
+            .select({
+              id: knowledgebase.id,
+              name: knowledgebase.name,
+            })
+            .from(knowledgebase)
+            .where(
+              and(
+                inArray(knowledgebase.id, [...buckets.kbIds]),
+                eq(knowledgebase.userId, userId),
+              ),
+            )
+        : Promise.resolve([]),
+    ]);
+
+  return {
+    chatMap: new Map(chatRows.map((row) => [row.id, row])),
+    transformMap: new Map(transformRows.map((row) => [row.id, row])),
+    translationMap: new Map(translationRows.map((row) => [row.id, row])),
+    kbDocMap: new Map(kbDocRows.map((row) => [row.id, row])),
+    kbMap: new Map(kbRows.map((row) => [row.id, row])),
+  };
+}
+
+function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
+  if (!entity) {
+    return {
+      ...job,
+      entityDeleted: true,
+      title: "Chat (Deleted or Unavailable)",
+      url: undefined,
+    };
+  }
+  return {
+    ...job,
+    entityDeleted: false,
+    title: entity.title || job.title,
+    url: entity.projectId
+      ? ROUTES.PROJECTS.chat(entity.projectId, entity.id)
+      : ROUTES.CHATS.detail(entity.id),
+  };
+}
+
+function enrichTransformJob(job: JobItem, entity?: TransformEntity): JobItem {
+  if (!entity) {
+    return {
+      ...job,
+      entityDeleted: true,
+      title: "Transform (Deleted or Unavailable)",
+      url: undefined,
+    };
+  }
+  return {
+    ...job,
+    entityDeleted: false,
+    title: entity.agentName || job.title,
+    url: ROUTES.WORKFLOWS.TRANSFORM.runs(entity.agentId, entity.id),
+  };
+}
+
+function enrichTranslationJob(
+  job: JobItem,
+  entity?: TranslationEntity,
+): JobItem {
+  if (!entity) {
+    return {
+      ...job,
+      entityDeleted: true,
+      title: "Translation (Deleted or Unavailable)",
+      url: undefined,
+    };
+  }
+  return {
+    ...job,
+    entityDeleted: false,
+    subtitle: `${entity.sourceLanguage} → ${entity.targetLanguage}`,
+    url: ROUTES.WORKFLOWS.TRANSLATION.path,
+  };
+}
+
+function enrichKbIngestJob(job: JobItem, entity?: KbDocEntity): JobItem {
+  if (!entity) {
+    return {
+      ...job,
+      entityDeleted: true,
+      title: "Document (Deleted or Unavailable)",
+      url: undefined,
+    };
+  }
+  return {
+    ...job,
+    entityDeleted: false,
+    title: entity.name,
+    url: ROUTES.KNOWLEDGEBASES.detail(entity.kbId),
+  };
+}
+
+function enrichKbReindexJob(job: JobItem, entity?: KbEntity): JobItem {
+  if (!entity) {
+    return {
+      ...job,
+      entityDeleted: true,
+      title: "Knowledge Base (Deleted or Unavailable)",
+      url: undefined,
+    };
+  }
+  return {
+    ...job,
+    entityDeleted: false,
+    title: entity.name,
+    url: ROUTES.KNOWLEDGEBASES.detail(entity.id),
+  };
+}
+
+function enrichJobItem(job: JobItem, maps: EntityMaps): JobItem {
+  if (!job.entityId) {
+    return { ...job };
+  }
+
+  switch (job.type) {
+    case "chat":
+      return enrichChatJob(job, maps.chatMap.get(job.entityId));
+    case "transform":
+      return enrichTransformJob(job, maps.transformMap.get(job.entityId));
+    case "translation":
+      return enrichTranslationJob(job, maps.translationMap.get(job.entityId));
+    case "kb-ingest":
+      return enrichKbIngestJob(job, maps.kbDocMap.get(job.entityId));
+    case "kb-reindex":
+      return enrichKbReindexJob(job, maps.kbMap.get(job.entityId));
+    default:
+      return { ...job };
+  }
+}
+
 /**
  * Server Action that retrieves and enriches Inngest background job runs for the authenticated user.
  *
@@ -61,215 +357,9 @@ export async function listJobs(
     };
   }
 
-  // Collect unique entity IDs per type for batched database queries
-  const chatIds = new Set<string>();
-  const transformRunIds = new Set<string>();
-  const translationIds = new Set<string>();
-  const kbDocIds = new Set<string>();
-  const kbIds = new Set<string>();
-
-  for (const job of result.jobs) {
-    if (!job.entityId) continue;
-    switch (job.type) {
-      case "chat":
-        chatIds.add(job.entityId);
-        break;
-      case "transform":
-        transformRunIds.add(job.entityId);
-        break;
-      case "translation":
-        translationIds.add(job.entityId);
-        break;
-      case "kb-ingest":
-        kbDocIds.add(job.entityId);
-        break;
-      case "kb-reindex":
-        kbIds.add(job.entityId);
-        break;
-      default:
-        break;
-    }
-  }
-
-  // Execute queries in parallel using inArray only for non-empty arrays
-  const [chatRows, transformRows, translationRows, kbDocRows, kbRows] =
-    await Promise.all([
-      chatIds.size > 0
-        ? db
-            .select({
-              id: chat.id,
-              title: chat.title,
-              projectId: chat.projectId,
-            })
-            .from(chat)
-            .where(and(inArray(chat.id, [...chatIds]), eq(chat.userId, userId)))
-        : Promise.resolve([]),
-
-      transformRunIds.size > 0
-        ? db
-            .select({
-              id: transformRun.id,
-              agentId: transformRun.agentId,
-              agentName: transformAgent.name,
-            })
-            .from(transformRun)
-            .leftJoin(
-              transformAgent,
-              eq(transformRun.agentId, transformAgent.id),
-            )
-            .where(
-              and(
-                inArray(transformRun.id, [...transformRunIds]),
-                eq(transformRun.userId, userId),
-              ),
-            )
-        : Promise.resolve([]),
-
-      translationIds.size > 0
-        ? db
-            .select({
-              id: workflowTranslation.id,
-              sourceLanguage: workflowTranslation.sourceLanguage,
-              targetLanguage: workflowTranslation.targetLanguage,
-            })
-            .from(workflowTranslation)
-            .where(
-              and(
-                inArray(workflowTranslation.id, [...translationIds]),
-                eq(workflowTranslation.userId, userId),
-              ),
-            )
-        : Promise.resolve([]),
-
-      kbDocIds.size > 0
-        ? db
-            .select({
-              id: kbDocument.id,
-              name: kbDocument.name,
-              kbId: kbDocument.kbId,
-            })
-            .from(kbDocument)
-            .where(
-              and(
-                inArray(kbDocument.id, [...kbDocIds]),
-                eq(kbDocument.userId, userId),
-              ),
-            )
-        : Promise.resolve([]),
-
-      kbIds.size > 0
-        ? db
-            .select({
-              id: knowledgebase.id,
-              name: knowledgebase.name,
-            })
-            .from(knowledgebase)
-            .where(
-              and(
-                inArray(knowledgebase.id, [...kbIds]),
-                eq(knowledgebase.userId, userId),
-              ),
-            )
-        : Promise.resolve([]),
-    ]);
-
-  const chatMap = new Map(chatRows.map((row) => [row.id, row]));
-  const transformMap = new Map(transformRows.map((row) => [row.id, row]));
-  const translationMap = new Map(translationRows.map((row) => [row.id, row]));
-  const kbDocMap = new Map(kbDocRows.map((row) => [row.id, row]));
-  const kbMap = new Map(kbRows.map((row) => [row.id, row]));
-
-  // Enrich each job item with fresh DB metadata and handle deleted entities
-  const enrichedJobs: JobItem[] = result.jobs.map((job) => {
-    const enriched: JobItem = { ...job };
-    if (!enriched.entityId) {
-      return enriched;
-    }
-
-    switch (enriched.type) {
-      case "chat": {
-        const entity = chatMap.get(enriched.entityId);
-        if (!entity) {
-          enriched.entityDeleted = true;
-          enriched.title = "Chat (Deleted or Unavailable)";
-          enriched.url = undefined;
-        } else {
-          enriched.title = entity.title || enriched.title;
-          enriched.url = entity.projectId
-            ? ROUTES.PROJECTS.chat(entity.projectId, entity.id)
-            : ROUTES.CHATS.detail(entity.id);
-          enriched.entityDeleted = false;
-        }
-        break;
-      }
-
-      case "transform": {
-        const entity = transformMap.get(enriched.entityId);
-        if (!entity) {
-          enriched.entityDeleted = true;
-          enriched.title = "Transform (Deleted or Unavailable)";
-          enriched.url = undefined;
-        } else {
-          if (entity.agentName) {
-            enriched.title = entity.agentName;
-          }
-          enriched.url = ROUTES.WORKFLOWS.TRANSFORM.runs(
-            entity.agentId,
-            entity.id,
-          );
-          enriched.entityDeleted = false;
-        }
-        break;
-      }
-
-      case "translation": {
-        const entity = translationMap.get(enriched.entityId);
-        if (!entity) {
-          enriched.entityDeleted = true;
-          enriched.title = "Translation (Deleted or Unavailable)";
-          enriched.url = undefined;
-        } else {
-          enriched.subtitle = `${entity.sourceLanguage} → ${entity.targetLanguage}`;
-          enriched.url = ROUTES.WORKFLOWS.TRANSLATION.path;
-          enriched.entityDeleted = false;
-        }
-        break;
-      }
-
-      case "kb-ingest": {
-        const entity = kbDocMap.get(enriched.entityId);
-        if (!entity) {
-          enriched.entityDeleted = true;
-          enriched.title = "Document (Deleted or Unavailable)";
-          enriched.url = undefined;
-        } else {
-          enriched.title = entity.name;
-          enriched.url = ROUTES.KNOWLEDGEBASES.detail(entity.kbId);
-          enriched.entityDeleted = false;
-        }
-        break;
-      }
-
-      case "kb-reindex": {
-        const entity = kbMap.get(enriched.entityId);
-        if (!entity) {
-          enriched.entityDeleted = true;
-          enriched.title = "Knowledge Base (Deleted or Unavailable)";
-          enriched.url = undefined;
-        } else {
-          enriched.title = entity.name;
-          enriched.url = ROUTES.KNOWLEDGEBASES.detail(entity.id);
-          enriched.entityDeleted = false;
-        }
-        break;
-      }
-
-      default:
-        break;
-    }
-
-    return enriched;
-  });
+  const buckets = collectEntityIds(result.jobs);
+  const maps = await fetchEntityMaps(userId, buckets);
+  const enrichedJobs = result.jobs.map((job) => enrichJobItem(job, maps));
 
   return {
     jobs: enrichedJobs,

@@ -12,13 +12,13 @@ import {
   applyToolCallToStep,
   applyToolResultToStep,
 } from "@/components/workflows/transform-run/state-helpers";
-import type { StepState } from "@/components/workflows/transform-run/types";
 import { useApiError } from "@/hooks/use-api-error";
 import { transformRunChannel } from "@/lib/inngest/channels";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
+import type { StepState } from "@/types/workflows/transform-run";
 
 function handleStepStartEvent(
   event: Record<string, unknown>,

@@ -9,12 +9,12 @@ import { TransformRunFilesSection } from "@/components/workflows/transform-run/t
 import { TransformRunHeader } from "@/components/workflows/transform-run/transform-run-header";
 import { TransformRunPreviewPane } from "@/components/workflows/transform-run/transform-run-preview-pane";
 import { TransformStepTimelineItem } from "@/components/workflows/transform-run/transform-step-timeline-item";
-import type { StepState } from "@/components/workflows/transform-run/types";
 import { useTransformRunArtifacts } from "@/components/workflows/transform-run/use-transform-run-artifacts";
 import { useTransformRunData } from "@/components/workflows/transform-run/use-transform-run-data";
 import { useTransformRunStream } from "@/components/workflows/transform-run/use-transform-run-stream";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { TransformStep } from "@/types/transform/transform-step";
+import type { StepState } from "@/types/workflows/transform-run";
 
 function useIsLgMobile() {
   const [isMobile, setIsMobile] = useState(false);

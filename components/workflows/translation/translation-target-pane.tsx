@@ -61,4 +61,3 @@ export function TranslationTargetPane(props: TranslationTargetPaneProps) {
     </div>
   );
 }
-

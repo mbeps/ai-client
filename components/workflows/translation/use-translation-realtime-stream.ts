@@ -76,4 +76,3 @@ export function useTranslationRealtimeStream(
     );
   }, [messages.all, setTranslatedText, setIsLoading]);
 }
-

@@ -2,7 +2,11 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformRun } from "@/types/transform/transform-run";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import type { TransformRunStatus } from "@/types/transform/transform-run-status";
-import type { StepState, ToolCall, ToolResult } from "./types";
+import type {
+  StepState,
+  ToolCall,
+  ToolResult,
+} from "@/types/workflows/transform-run";
 
 /**
  * Maps database transform run row to typed domain model.

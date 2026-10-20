@@ -143,4 +143,3 @@ export async function uploadRunInputFiles(files: File[]): Promise<string[]> {
   const uploaded = await uploadRunInput(formData);
   return uploaded.map((u) => u.id);
 }
-

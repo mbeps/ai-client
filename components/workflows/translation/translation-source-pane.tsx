@@ -163,4 +163,3 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
     </div>
   );
 }
-

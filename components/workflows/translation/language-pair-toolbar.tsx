@@ -121,4 +121,3 @@ export function LanguagePairToolbar(props: LanguagePairToolbarProps) {
     </div>
   );
 }
-

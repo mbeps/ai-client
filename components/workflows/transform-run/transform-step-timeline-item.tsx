@@ -2,7 +2,11 @@ import { CheckCircle2, Circle, Clock, Loader2 } from "lucide-react";
 import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import { Badge } from "@/components/ui/badge";
 import type { TransformStep } from "@/types/transform/transform-step";
-import type { StepState, ToolCall, ToolResult } from "./types";
+import type {
+  StepState,
+  ToolCall,
+  ToolResult,
+} from "@/types/workflows/transform-run";
 
 const STEP_ICON_STATUS_CLASSES: Record<StepState["status"], string> = {
   completed: "border border-green-500 bg-green-50/50 text-green-500",
