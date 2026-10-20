@@ -1,0 +1,162 @@
+import { Download, Loader2, Play, ThumbsUp } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import type { TransformRunStatus } from "@/types/transform/transform-run-status";
+
+const STATUS_COLORS: Record<string, string> = {
+  completed: "bg-green-500",
+  running: "bg-blue-500",
+  failed: "bg-red-500",
+  pending: "bg-gray-500",
+  awaiting_review: "bg-amber-500",
+};
+
+interface FinalDownloadButtonProps {
+  outputAttachmentIds?: string[];
+  attachmentMeta: Record<string, { url: string; name: string }>;
+}
+
+function FinalDownloadButton({
+  outputAttachmentIds,
+  attachmentMeta,
+}: FinalDownloadButtonProps) {
+  if (!outputAttachmentIds || outputAttachmentIds.length === 0) return null;
+  const finalId = outputAttachmentIds[outputAttachmentIds.length - 1];
+  const finalMeta = attachmentMeta[finalId];
+  if (!finalMeta) return null;
+
+  return (
+    <>
+      <Separator orientation="vertical" className="mr-2 hidden h-8 lg:block" />
+      <Button
+        size="sm"
+        className="bg-primary text-xs shadow-md hover:bg-primary/90"
+        asChild
+      >
+        <a href={finalMeta.url} download={finalMeta.name}>
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          Download Final Result
+        </a>
+      </Button>
+    </>
+  );
+}
+
+interface ApproveButtonProps {
+  onApprove: () => void;
+  isApproving: boolean;
+}
+
+function ApproveButton({ onApprove, isApproving }: ApproveButtonProps) {
+  return (
+    <>
+      <Separator orientation="vertical" className="mr-4 hidden h-8 lg:block" />
+      <Button
+        size="sm"
+        className="bg-amber-600 text-xs shadow-lg hover:bg-amber-700"
+        onClick={onApprove}
+        disabled={isApproving}
+      >
+        {isApproving ? (
+          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+        ) : (
+          <ThumbsUp className="mr-2 h-3 w-3" />
+        )}
+        Approve
+      </Button>
+    </>
+  );
+}
+
+function StatusBadge({ status }: { status: TransformRunStatus }) {
+  const statusColor = STATUS_COLORS[status] ?? "bg-gray-500";
+  return (
+    <div className="flex min-w-fit shrink-0 flex-col gap-0.5">
+      <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+        Status
+      </span>
+      <Badge
+        variant="outline"
+        className="flex h-5 items-center gap-1.5 whitespace-nowrap border-primary/20 bg-primary/5 px-2 text-[10px] capitalize"
+      >
+        <div className={`h-1 w-1 rounded-full ${statusColor} animate-pulse`} />
+        {status.replace("_", " ")}
+      </Badge>
+    </div>
+  );
+}
+
+function ProgressIndicator({ progress }: { progress: number }) {
+  return (
+    <div className="flex min-w-[120px] shrink-0 flex-col gap-1 lg:min-w-40">
+      <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+        Progress
+      </span>
+      <div className="flex items-center gap-2 lg:gap-3">
+        <Progress value={progress} className="h-1.5 flex-1" />
+        <span className="font-bold text-[10px] tabular-nums">
+          {Math.round(progress)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export interface TransformRunHeaderProps {
+  agentName: string;
+  createdAt: Date;
+  status: TransformRunStatus;
+  progress: number;
+  outputAttachmentIds?: string[];
+  attachmentMeta: Record<string, { url: string; name: string }>;
+  onApprove: () => void;
+  isApproving: boolean;
+}
+
+/**
+ * Header section for transform run detail displaying status, progress, and run actions.
+ */
+export function TransformRunHeader({
+  agentName,
+  createdAt,
+  status,
+  progress,
+  outputAttachmentIds,
+  attachmentMeta,
+  onApprove,
+  isApproving,
+}: TransformRunHeaderProps) {
+  return (
+    <div className="flex shrink-0 flex-col gap-4 border-b bg-card/50 p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:gap-6 lg:p-6">
+      <div className="flex items-center gap-3">
+        <PageHeader
+          icon={<Play className="h-6 w-6 text-blue-500 lg:h-8 lg:w-8" />}
+          title={`Run: ${agentName}`}
+          description={`Started on ${createdAt.toLocaleString()}`}
+        />
+      </div>
+
+      <div className="no-scrollbar flex items-center gap-4 overflow-x-auto pb-2 lg:ml-auto lg:gap-6 lg:pb-0">
+        <StatusBadge status={status} />
+        <Separator orientation="vertical" className="hidden h-8 lg:block" />
+        <ProgressIndicator progress={progress} />
+
+        <div className="flex shrink-0 items-center gap-2">
+          {status === "completed" && (
+            <FinalDownloadButton
+              outputAttachmentIds={outputAttachmentIds}
+              attachmentMeta={attachmentMeta}
+            />
+          )}
+
+          {status === "awaiting_review" && (
+            <ApproveButton onApprove={onApprove} isApproving={isApproving} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
