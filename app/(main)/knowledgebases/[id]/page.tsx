@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  AlertCircle,
-  Library,
-  Loader2,
-  Settings,
-  Shield,
-  Upload,
-} from "lucide-react";
-import Link from "next/link";
+import { Library, Loader2, Settings, Shield, Upload } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useState } from "react";
@@ -26,6 +18,7 @@ import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -195,26 +188,7 @@ export default function KnowledgebasePage() {
       </div>
 
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="font-medium text-red-800 text-xs dark:text-red-200">
-              No embedding models configured. Please set up a provider with
-              embedding support to upload documents.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            asChild
-            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-          >
-            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
-              <Settings className="mr-1.5 h-3 w-3" />
-              Go to Settings
-            </Link>
-          </Button>
-        </div>
+        <NoModelsAlertBanner message="No embedding models configured. Please set up a provider with embedding support to upload documents." />
       )}
 
       <SidebarTabs

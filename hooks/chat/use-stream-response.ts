@@ -24,6 +24,7 @@ import {
   extractCompletedToolResults,
 } from "@/lib/chat/stream/handle-stream-tool-calls";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
+import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -604,13 +605,7 @@ export function useStreamResponse(
     }
   }, [chatId]);
 
-  const apiBaseUrl = useMemo(() => {
-    if (typeof window === "undefined") return undefined;
-    if (process.env.NODE_ENV !== "production") {
-      return `${window.location.protocol}//${window.location.hostname}:8288`;
-    }
-    return undefined;
-  }, []);
+  const apiBaseUrl = useMemo(() => getRealtimeApiBaseUrl(), []);
 
   const {
     messages,

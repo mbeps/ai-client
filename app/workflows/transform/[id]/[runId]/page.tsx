@@ -40,6 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { useApiError } from "@/hooks/use-api-error";
 import { transformRunChannel } from "@/lib/inngest/channels";
+import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import { logger } from "@/lib/logger";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
@@ -425,13 +426,7 @@ export default function TransformRunDetailPage() {
     [runId],
   );
 
-  const apiBaseUrl = useMemo(() => {
-    if (typeof window === "undefined") return undefined;
-    if (process.env.NODE_ENV !== "production") {
-      return `${window.location.protocol}//${window.location.hostname}:8288`;
-    }
-    return undefined;
-  }, []);
+  const apiBaseUrl = useMemo(() => getRealtimeApiBaseUrl(), []);
 
   const { messages } = useRealtime({
     channel: runId ? transformRunChannel({ runId }) : undefined,

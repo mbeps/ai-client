@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowLeft,
   BrainCircuit,
   Database,
@@ -30,6 +29,7 @@ import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -49,7 +49,7 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
 import { useAppStore } from "@/lib/store";
-import { toggleSetItem } from "@/lib/utils";
+import { toggleSetItem, updateBulkToolSelection } from "@/lib/utils";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import type { TransformStep } from "@/types/transform/transform-step";
@@ -223,18 +223,9 @@ export default function AgentEditorPage() {
     toolNames: string[],
     enabled: boolean,
   ) => {
-    setTools((prev) => {
-      const next = new Set(prev);
-      toolNames.forEach((name) => {
-        const toolId = `${serverId}:tool:${name}`;
-        if (enabled) {
-          next.add(toolId);
-        } else {
-          next.delete(toolId);
-        }
-      });
-      return next;
-    });
+    setTools((prev) =>
+      updateBulkToolSelection(prev, serverId, toolNames, enabled),
+    );
   };
 
   const handleSave = async () => {
@@ -391,26 +382,7 @@ export default function AgentEditorPage() {
       </div>
 
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="font-medium text-red-800 text-xs dark:text-red-200">
-              No chat models configured. Please set up a provider to configure
-              and run transform agents.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            asChild
-            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-          >
-            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
-              <Settings className="mr-1.5 h-3 w-3" />
-              Go to Settings
-            </Link>
-          </Button>
-        </div>
+        <NoModelsAlertBanner message="No chat models configured. Please set up a provider to configure and run transform agents." />
       )}
 
       <SidebarTabs

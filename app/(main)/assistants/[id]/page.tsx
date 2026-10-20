@@ -37,7 +37,11 @@ import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
-import { sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
+import {
+  sortByUpdatedAt,
+  toggleSetItem,
+  updateBulkToolSelection,
+} from "@/lib/utils";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 
 /**
@@ -190,18 +194,9 @@ export default function AssistantPage() {
     toolNames: string[],
     enabled: boolean,
   ) => {
-    setSelectedTools((prev) => {
-      const next = new Set(prev);
-      toolNames.forEach((name) => {
-        const toolId = `${serverId}:tool:${name}`;
-        if (enabled) {
-          next.add(toolId);
-        } else {
-          next.delete(toolId);
-        }
-      });
-      return next;
-    });
+    setSelectedTools((prev) =>
+      updateBulkToolSelection(prev, serverId, toolNames, enabled),
+    );
   };
 
   const handleDelete = async () => {

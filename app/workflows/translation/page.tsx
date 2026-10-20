@@ -11,11 +11,9 @@ import {
   Loader2,
   Paperclip,
   RotateCcw,
-  Settings,
   X,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -24,6 +22,7 @@ import {
   triggerTranslation,
 } from "@/actions/workflows/translate";
 import { ModelSelector } from "@/components/shared/model-selector";
+import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,11 +44,11 @@ import {
   DEFAULT_TARGET_LANGUAGE,
   LANGUAGES,
 } from "@/config/languages";
-import { ROUTES } from "@/config/routes";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import { translationChannel } from "@/lib/inngest/channels";
+import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -102,13 +101,7 @@ export default function TranslationWorkflowPage() {
     [targetLangValue],
   );
 
-  const apiBaseUrl = useMemo(() => {
-    if (typeof window === "undefined") return undefined;
-    if (process.env.NODE_ENV !== "production") {
-      return `${window.location.protocol}//${window.location.hostname}:8288`;
-    }
-    return undefined;
-  }, []);
+  const apiBaseUrl = useMemo(() => getRealtimeApiBaseUrl(), []);
 
   const fetchTranslationToken = useCallback(async () => {
     if (!activeTranslationId) throw new Error("No active translation");
@@ -330,26 +323,7 @@ export default function TranslationWorkflowPage() {
 
       {/* Global Banner for Missing Models */}
       {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="font-medium text-red-800 text-xs dark:text-red-200">
-              No AI models configured. Please set up a provider to use
-              translation.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            asChild
-            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-          >
-            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
-              <Settings className="mr-1.5 h-3 w-3" />
-              Go to Settings
-            </Link>
-          </Button>
-        </div>
+        <NoModelsAlertBanner message="No AI models configured. Please set up a provider to use translation." />
       )}
 
       {/* Control Bar - Space Efficient */}

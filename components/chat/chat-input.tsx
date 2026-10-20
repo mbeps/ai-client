@@ -33,7 +33,7 @@ import { processAttachment } from "@/lib/attachments/process-attachment";
 import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
 import { AttachmentVisionUnsupportedError } from "@/lib/errors";
 import { useAppStore } from "@/lib/store";
-import { toggleSetItem } from "@/lib/utils";
+import { toggleSetItem, updateBulkToolSelection } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
@@ -408,24 +408,6 @@ async function processFilesToAdd(
     }
   }
   return localNew;
-}
-
-function updateBulkToolSelection(
-  prevTools: Set<string>,
-  serverId: string,
-  toolNames: string[],
-  select: boolean,
-): Set<string> {
-  const next = new Set(prevTools);
-  for (const name of toolNames) {
-    const id = `${serverId}:tool:${name}`;
-    if (select) {
-      next.add(id);
-    } else {
-      next.delete(id);
-    }
-  }
-  return next;
 }
 
 function resolveInitialModelSelection(
