@@ -56,6 +56,37 @@ function resolveJobType(eventName?: string | null): JobType {
 }
 
 /**
+ * Extracts the first truthy value among candidate items.
+ *
+ * @param candidates Values to evaluate in priority order.
+ * @returns The first truthy candidate or undefined.
+ */
+function firstNonEmpty<T>(
+  ...candidates: (T | undefined | null)[]
+): T | undefined {
+  for (const candidate of candidates) {
+    if (candidate) return candidate;
+  }
+  return undefined;
+}
+
+/**
+ * Parses a JSON string and extracts its data property if present.
+ *
+ * @param str JSON string to parse.
+ * @returns Extracted payload object or undefined.
+ */
+function parsePayloadString(str: string): Record<string, any> | undefined {
+  try {
+    const parsed = JSON.parse(str);
+    if (!parsed || typeof parsed !== "object") return undefined;
+    return parsed.data ?? parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Extracts payload data and entity identifiers from trigger event payloads.
  *
  * @param payloads Serialized JSON strings or payload objects from runTrigger.
@@ -64,26 +95,122 @@ function resolveJobType(eventName?: string | null): JobType {
 function parseTriggerPayloadData(
   payloads?: unknown[],
 ): Record<string, any> | undefined {
-  if (!payloads || payloads.length === 0) return undefined;
-  const first = payloads[0];
-
-  if (typeof first === "string") {
-    try {
-      const parsed = JSON.parse(first);
-      return parsed?.data ?? parsed;
-    } catch {
-      return undefined;
-    }
+  const first = payloads?.[0];
+  if (typeof first === "string") return parsePayloadString(first);
+  if (first && typeof first === "object") {
+    const rec = first as Record<string, any>;
+    return rec.data ?? rec;
   }
-
-  if (typeof first === "object" && first !== null) {
-    return (
-      (first as Record<string, any>).data ?? (first as Record<string, any>)
-    );
-  }
-
   return undefined;
 }
+
+/**
+ * Entity ID keys in priority order for metadata extraction.
+ */
+const ENTITY_ID_KEYS = [
+  "chatId",
+  "runId",
+  "translationId",
+  "documentId",
+  "kbId",
+] as const;
+
+/**
+ * Extracts primary entity identifier from parsed event payload data.
+ *
+ * @param payloadData Parsed event data.
+ * @returns Primary entity ID string or undefined.
+ */
+function extractPayloadEntityId(
+  payloadData?: Record<string, any>,
+): string | undefined {
+  if (!payloadData) return undefined;
+  for (const key of ENTITY_ID_KEYS) {
+    if (payloadData[key]) {
+      return String(payloadData[key]);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolves the destination URL for transform workflow runs.
+ *
+ * @param payloadData Parsed event data.
+ * @param entityId Extracted entity identifier.
+ * @returns Formatted transform route path.
+ */
+function resolveTransformUrl(
+  payloadData?: Record<string, any>,
+  entityId?: string,
+): string {
+  if (payloadData?.agentId && entityId) {
+    return `/workflows/transform/${payloadData.agentId}/${entityId}`;
+  }
+  if (entityId) {
+    return `/workflows/transform?runId=${entityId}`;
+  }
+  return "/workflows/transform";
+}
+
+type MetadataResult = {
+  title: string;
+  subtitle?: string;
+  url?: string;
+};
+
+type MetadataBuilder = (
+  payloadData: Record<string, any> | undefined,
+  entityId: string | undefined,
+  fallbackTitle: string,
+) => MetadataResult;
+
+/**
+ * Builders for display title, subtitle, and navigation URL per job type.
+ */
+const JOB_METADATA_BUILDERS: Record<JobType, MetadataBuilder> = {
+  chat: (payloadData, entityId) => ({
+    title: "Chat Response",
+    subtitle: payloadData?.model ? `Model: ${payloadData.model}` : undefined,
+    url: entityId ? `/chats/${entityId}` : undefined,
+  }),
+  transform: (payloadData, entityId) => ({
+    title: "Transform Workflow",
+    subtitle: payloadData?.agentName
+      ? String(payloadData.agentName)
+      : undefined,
+    url: resolveTransformUrl(payloadData, entityId),
+  }),
+  translation: (payloadData) => ({
+    title: "Document Translation",
+    subtitle:
+      payloadData?.sourceLanguage && payloadData?.targetLanguage
+        ? `${payloadData.sourceLanguage} → ${payloadData.targetLanguage}`
+        : undefined,
+    url: "/workflows/translation",
+  }),
+  "kb-ingest": (payloadData, entityId) => ({
+    title: "Document Ingestion",
+    subtitle: payloadData?.documentName
+      ? String(payloadData.documentName)
+      : entityId
+        ? `Document ${entityId}`
+        : undefined,
+    url: "/knowledgebases",
+  }),
+  "kb-reindex": (payloadData, entityId) => ({
+    title: "Knowledge Base Reindex",
+    subtitle: payloadData?.kbTitle
+      ? String(payloadData.kbTitle)
+      : entityId
+        ? `KB ${entityId}`
+        : undefined,
+    url: entityId ? `/knowledgebases/${entityId}` : "/knowledgebases",
+  }),
+  other: (_payloadData, _entityId, fallbackTitle) => ({
+    title: fallbackTitle,
+  }),
+};
 
 /**
  * Computes display title, subtitle, entityId, and navigation URL for a run.
@@ -105,73 +232,17 @@ function resolveJobMetadata(
   entityId?: string;
   url?: string;
 } {
-  let entityId: string | undefined;
-  let title = functionName || eventName || "Background Job";
-  let subtitle: string | undefined;
-  let url: string | undefined;
+  const entityId = extractPayloadEntityId(payloadData);
+  const fallbackTitle = functionName || eventName || "Background Job";
+  const builder = JOB_METADATA_BUILDERS[jobType] ?? JOB_METADATA_BUILDERS.other;
+  const built = builder(payloadData, entityId, fallbackTitle);
 
-  if (payloadData) {
-    if (payloadData.chatId) entityId = String(payloadData.chatId);
-    else if (payloadData.runId) entityId = String(payloadData.runId);
-    else if (payloadData.translationId)
-      entityId = String(payloadData.translationId);
-    else if (payloadData.documentId) entityId = String(payloadData.documentId);
-    else if (payloadData.kbId) entityId = String(payloadData.kbId);
-  }
-
-  switch (jobType) {
-    case "chat":
-      title = "Chat Response";
-      if (payloadData?.model) subtitle = `Model: ${payloadData.model}`;
-      if (entityId) url = `/chats/${entityId}`;
-      break;
-
-    case "transform":
-      title = "Transform Workflow";
-      if (payloadData?.agentName) subtitle = String(payloadData.agentName);
-      if (payloadData?.agentId && entityId) {
-        url = `/workflows/transform/${payloadData.agentId}/${entityId}`;
-      } else if (entityId) {
-        url = `/workflows/transform?runId=${entityId}`;
-      } else {
-        url = `/workflows/transform`;
-      }
-      break;
-
-    case "translation":
-      title = "Document Translation";
-      if (payloadData?.sourceLanguage && payloadData?.targetLanguage) {
-        subtitle = `${payloadData.sourceLanguage} → ${payloadData.targetLanguage}`;
-      }
-      url = "/workflows/translation";
-      break;
-
-    case "kb-ingest":
-      title = "Document Ingestion";
-      if (payloadData?.documentName) {
-        subtitle = String(payloadData.documentName);
-      } else if (entityId) {
-        subtitle = `Document ${entityId}`;
-      }
-      url = "/knowledgebases";
-      break;
-
-    case "kb-reindex":
-      title = "Knowledge Base Reindex";
-      if (payloadData?.kbTitle) {
-        subtitle = String(payloadData.kbTitle);
-      } else if (entityId) {
-        subtitle = `KB ${entityId}`;
-      }
-      url = entityId ? `/knowledgebases/${entityId}` : "/knowledgebases";
-      break;
-
-    default:
-      title = functionName || eventName || "Background Job";
-      break;
-  }
-
-  return { title, subtitle, entityId, url };
+  return {
+    title: built.title,
+    subtitle: built.subtitle,
+    entityId,
+    url: built.url,
+  };
 }
 
 /**
@@ -195,6 +266,23 @@ function computeDurationMs(
 }
 
 /**
+ * Extracts error details from an object-shaped run error output.
+ *
+ * @param obj Error payload object.
+ * @returns Formatted error string or undefined.
+ */
+function parseObjectError(obj: Record<string, any>): string | undefined {
+  if (obj.error) {
+    if (typeof obj.error === "string") return obj.error;
+    return obj.error?.message || JSON.stringify(obj.error);
+  }
+  if (obj.message) {
+    return String(obj.message);
+  }
+  return undefined;
+}
+
+/**
  * Parses error messages from run output if available.
  *
  * @param status Job status.
@@ -207,16 +295,10 @@ function extractErrorMessage(
 ): string | undefined {
   if (status !== "FAILED") return undefined;
   if (!output) return "Job execution failed";
-
   if (typeof output === "string") return output;
-  if (typeof output === "object" && output !== null) {
-    const obj = output as Record<string, any>;
-    if (obj.error) {
-      return typeof obj.error === "string"
-        ? obj.error
-        : obj.error?.message || JSON.stringify(obj.error);
-    }
-    if (obj.message) return String(obj.message);
+  if (typeof output === "object") {
+    const parsed = parseObjectError(output as Record<string, any>);
+    if (parsed) return parsed;
   }
   return "Job execution failed";
 }
@@ -308,6 +390,143 @@ async function fetchDevRunTrigger(
 }
 
 /**
+ * Resolves event name between trigger and node with fallback.
+ *
+ * @param trigger Dev run trigger details.
+ * @param node GraphQL run node.
+ * @returns Resolved event name string.
+ */
+function resolveDevEventName(
+  trigger: { eventName?: string } | null,
+  node: Record<string, any>,
+): string {
+  if (trigger?.eventName) return trigger.eventName;
+  return node.eventName ?? "";
+}
+
+/**
+ * Extracts function name and slug from a dev run node.
+ *
+ * @param node GraphQL run node.
+ * @returns Function name and slug identifiers.
+ */
+function extractDevFunctionInfo(node: Record<string, any>): {
+  name: string;
+  slug: string;
+} {
+  const fn = node.function;
+  const fallback = node.functionID ?? "";
+  return {
+    name: fn?.name || fallback,
+    slug: fn?.slug || fallback,
+  };
+}
+
+/**
+ * Checks whether the payload user ID mismatches the authenticated user.
+ *
+ * @param payloadData Parsed event data.
+ * @param userId Authenticated user identifier.
+ * @returns True if payload belongs to another user.
+ */
+function isMismatchedUser(
+  payloadData: Record<string, any> | undefined,
+  userId: string,
+): boolean {
+  return Boolean(payloadData?.userId && payloadData.userId !== userId);
+}
+
+/**
+ * Asynchronously constructs a JobItem from an Inngest dev-mode GraphQL node.
+ *
+ * @param node GraphQL node representing a run.
+ * @param gqlEndpoint Dev GraphQL endpoint URL.
+ * @param userId Authenticated user identifier.
+ * @param signal AbortSignal for network timeouts.
+ * @returns Built JobItem or null if unauthorized.
+ */
+async function buildDevJobItem(
+  node: Record<string, any>,
+  gqlEndpoint: string,
+  userId: string,
+  signal: AbortSignal,
+): Promise<JobItem | null> {
+  const trigger = await fetchDevRunTrigger(gqlEndpoint, node.id, signal);
+  const payloadData = parseTriggerPayloadData(trigger?.payloads);
+
+  if (isMismatchedUser(payloadData, userId)) {
+    return null;
+  }
+
+  const eventName = resolveDevEventName(trigger, node);
+  const jobType = resolveJobType(eventName);
+  const fnInfo = extractDevFunctionInfo(node);
+  const metadata = resolveJobMetadata(
+    jobType,
+    eventName,
+    fnInfo.name,
+    payloadData,
+  );
+  const status = node.status as JobStatus;
+
+  return {
+    id: node.id,
+    functionId: fnInfo.slug,
+    functionName: fnInfo.name,
+    eventName,
+    type: jobType,
+    title: metadata.title,
+    subtitle: metadata.subtitle,
+    status,
+    queuedAt: node.queuedAt,
+    startedAt: node.startedAt ?? null,
+    endedAt: node.endedAt ?? null,
+    durationMs: computeDurationMs(node.startedAt, node.endedAt),
+    url: metadata.url,
+    errorMessage: extractErrorMessage(status, node.output),
+    entityId: metadata.entityId,
+  };
+}
+
+/**
+ * Builds GraphQL query variables for filtering runs in dev mode.
+ *
+ * @param userId Authenticated user ID.
+ * @param options Status and limit options.
+ * @returns GraphQL variables object.
+ */
+function buildDevRunsQueryVariables(
+  userId: string,
+  options?: { status?: JobStatus[]; limit?: number },
+): { filter: Record<string, unknown>; orderBy: unknown[]; first: number } {
+  const filter: Record<string, unknown> = {
+    from: DEFAULT_FILTER_FROM,
+    query: `event.data.userId == "${userId}"`,
+  };
+
+  if (options?.status && options.status.length > 0) {
+    filter.status = options.status;
+  }
+
+  return {
+    filter,
+    orderBy: [{ field: "QUEUED_AT", direction: "DESC" }],
+    first: options?.limit ?? 20,
+  };
+}
+
+/**
+ * Safely extracts edges array from Inngest GraphQL response body.
+ *
+ * @param body Response body from GraphQL dev server.
+ * @returns Array of run edges.
+ */
+function extractRunEdges(body: any): any[] {
+  const runs = body?.data?.runs;
+  return Array.isArray(runs?.edges) ? runs.edges : [];
+}
+
+/**
  * Retrieves Inngest background job runs for a specific user in dev mode via GraphQL.
  *
  * @param userId Authenticated user identifier.
@@ -320,22 +539,7 @@ async function fetchDevUserRuns(
 ): Promise<ListJobsResult> {
   const baseUrl = env.INNGEST_BASE_URL || "http://127.0.0.1:8288";
   const gqlEndpoint = `${baseUrl}/v0/gql`;
-
-  const filter: Record<string, unknown> = {
-    from: DEFAULT_FILTER_FROM,
-    query: `event.data.userId == "${userId}"`,
-  };
-
-  if (options?.status && options.status.length > 0) {
-    filter.status = options.status;
-  }
-
-  const variables = {
-    filter,
-    orderBy: [{ field: "QUEUED_AT", direction: "DESC" }],
-    first: options?.limit ?? 20,
-  };
-
+  const variables = buildDevRunsQueryVariables(userId, options);
   const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
 
   const res = await fetch(gqlEndpoint, {
@@ -353,55 +557,157 @@ async function fetchDevUserRuns(
   }
 
   const body = await res.json();
-  const edges = body?.data?.runs?.edges ?? [];
+  const edges = extractRunEdges(body);
 
   // Fetch trigger payloads for each run in parallel to extract entity IDs & verify user scoping
   const jobsWithTriggers = await Promise.all(
-    edges.map(async (edge: { node: any }) => {
-      const node = edge.node;
-      const trigger = await fetchDevRunTrigger(gqlEndpoint, node.id, signal);
-      const payloadData = parseTriggerPayloadData(trigger?.payloads);
-
-      // Defense-in-depth: enforce application-level user ownership check
-      if (payloadData?.userId && payloadData.userId !== userId) {
-        return null;
-      }
-
-      const eventName = trigger?.eventName || node.eventName || "";
-      const jobType = resolveJobType(eventName);
-      const functionName = node.function?.name || node.functionID || "";
-      const metadata = resolveJobMetadata(
-        jobType,
-        eventName,
-        functionName,
-        payloadData,
-      );
-      const status = node.status as JobStatus;
-
-      const item: JobItem = {
-        id: node.id,
-        functionId: node.function?.slug || node.functionID || "",
-        functionName,
-        eventName,
-        type: jobType,
-        title: metadata.title,
-        subtitle: metadata.subtitle,
-        status,
-        queuedAt: node.queuedAt,
-        startedAt: node.startedAt ?? null,
-        endedAt: node.endedAt ?? null,
-        durationMs: computeDurationMs(node.startedAt, node.endedAt),
-        url: metadata.url,
-        errorMessage: extractErrorMessage(status, node.output),
-        entityId: metadata.entityId,
-      };
-
-      return item;
-    }),
+    edges.map((edge: { node: any }) =>
+      buildDevJobItem(edge.node, gqlEndpoint, userId, signal),
+    ),
   );
 
   const jobs = jobsWithTriggers.filter((job): job is JobItem => job !== null);
   return { jobs };
+}
+
+/**
+ * Extracts payload data from a production run with field fallbacks.
+ *
+ * @param run Production run record.
+ * @returns Payload data object or undefined.
+ */
+function extractProdPayloadData(
+  run: Record<string, any>,
+): Record<string, any> | undefined {
+  if (run.trigger?.data) return run.trigger.data;
+  if (run.event?.data) return run.event.data;
+  return run.data;
+}
+
+/**
+ * Extracts event name from a production run with fallback priority.
+ *
+ * @param run Production run record.
+ * @returns Event name string.
+ */
+function extractProdEventName(run: Record<string, any>): string {
+  if (run.event_name) return run.event_name;
+  if (run.eventName) return run.eventName;
+  if (run.trigger?.name) return run.trigger.name;
+  return "";
+}
+
+interface NormalizedProdRun {
+  payloadData?: Record<string, any>;
+  eventName: string;
+  functionName: string;
+  functionId: string;
+  status: JobStatus;
+  queuedAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  output: unknown;
+}
+
+/**
+ * Normalizes snake_case / camelCase fallback fields from a production Inngest run.
+ *
+ * @param run Raw run object from Inngest REST API.
+ * @returns Clean normalized run fields.
+ */
+function normalizeProdRunFields(run: Record<string, any>): NormalizedProdRun {
+  const functionId =
+    firstNonEmpty<string>(run.function_id, run.functionId) ?? "";
+  const functionName =
+    firstNonEmpty<string>(run.function_name, run.functionName, functionId) ??
+    "";
+  const queuedAt =
+    firstNonEmpty<string>(run.queued_at, run.queuedAt) ??
+    new Date().toISOString();
+  const startedAt =
+    firstNonEmpty<string>(run.started_at, run.startedAt) ?? null;
+  const endedAt = firstNonEmpty<string>(run.ended_at, run.endedAt) ?? null;
+
+  return {
+    payloadData: extractProdPayloadData(run),
+    eventName: extractProdEventName(run),
+    functionId,
+    functionName,
+    status: (run.status as JobStatus) || "QUEUED",
+    queuedAt,
+    startedAt,
+    endedAt,
+    output: firstNonEmpty(run.output, run.error),
+  };
+}
+
+/**
+ * Constructs a JobItem from a production Inngest run object.
+ *
+ * @param run Raw run record from Inngest REST API.
+ * @param userId Authenticated user identifier.
+ * @returns Normalized JobItem or null if ownership check fails.
+ */
+function buildProdJobItem(
+  run: Record<string, any>,
+  userId: string,
+): JobItem | null {
+  const norm = normalizeProdRunFields(run);
+
+  // Defense-in-depth: enforce application-level user scoping
+  if (isMismatchedUser(norm.payloadData, userId)) {
+    return null;
+  }
+
+  const jobType = resolveJobType(norm.eventName);
+  const metadata = resolveJobMetadata(
+    jobType,
+    norm.eventName,
+    norm.functionName,
+    norm.payloadData,
+  );
+
+  return {
+    id: run.id,
+    functionId: norm.functionId,
+    functionName: norm.functionName,
+    eventName: norm.eventName,
+    type: jobType,
+    title: metadata.title,
+    subtitle: metadata.subtitle,
+    status: norm.status,
+    queuedAt: norm.queuedAt,
+    startedAt: norm.startedAt,
+    endedAt: norm.endedAt,
+    durationMs: computeDurationMs(norm.startedAt, norm.endedAt),
+    url: metadata.url,
+    errorMessage: extractErrorMessage(norm.status, norm.output),
+    entityId: metadata.entityId,
+  };
+}
+
+/**
+ * Constructs URL and query parameters for production Inngest runs API request.
+ *
+ * @param userId Authenticated user identifier.
+ * @param options Status and limit filter options.
+ * @returns Configured URL instance.
+ */
+function buildProdRunsUrl(
+  userId: string,
+  options?: { status?: JobStatus[]; limit?: number },
+): URL {
+  const url = new URL("https://api.inngest.com/v1/runs");
+  url.searchParams.set("query", `event.data.userId == "${userId}"`);
+  url.searchParams.set("limit", String(options?.limit ?? 20));
+
+  if (options?.status && options.status.length > 0) {
+    for (const s of options.status) {
+      url.searchParams.append("status", s);
+    }
+  }
+
+  return url;
 }
 
 /**
@@ -415,16 +721,7 @@ async function fetchProdUserRuns(
   userId: string,
   options?: { status?: JobStatus[]; limit?: number },
 ): Promise<ListJobsResult> {
-  const url = new URL("https://api.inngest.com/v1/runs");
-  url.searchParams.set("query", `event.data.userId == "${userId}"`);
-  url.searchParams.set("limit", String(options?.limit ?? 20));
-
-  if (options?.status && options.status.length > 0) {
-    for (const s of options.status) {
-      url.searchParams.append("status", s);
-    }
-  }
-
+  const url = buildProdRunsUrl(userId, options);
   const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
   const res = await fetch(url.toString(), {
     headers: {
@@ -445,51 +742,7 @@ async function fetchProdUserRuns(
   const runs: any[] = Array.isArray(body?.data) ? body.data : [];
 
   const jobs: JobItem[] = runs
-    .map((run) => {
-      const payloadData =
-        run.trigger?.data || run.event?.data || run.data || undefined;
-
-      // Defense-in-depth: enforce application-level user scoping
-      if (payloadData?.userId && payloadData.userId !== userId) {
-        return null;
-      }
-
-      const eventName =
-        run.event_name || run.eventName || run.trigger?.name || "";
-      const jobType = resolveJobType(eventName);
-      const functionName =
-        run.function_name || run.functionName || run.function_id || "";
-      const metadata = resolveJobMetadata(
-        jobType,
-        eventName,
-        functionName,
-        payloadData,
-      );
-      const status = (run.status as JobStatus) || "QUEUED";
-
-      const item: JobItem = {
-        id: run.id,
-        functionId: run.function_id || run.functionId || "",
-        functionName,
-        eventName,
-        type: jobType,
-        title: metadata.title,
-        subtitle: metadata.subtitle,
-        status,
-        queuedAt: run.queued_at || run.queuedAt || new Date().toISOString(),
-        startedAt: run.started_at || run.startedAt || null,
-        endedAt: run.ended_at || run.endedAt || null,
-        durationMs: computeDurationMs(
-          run.started_at || run.startedAt,
-          run.ended_at || run.endedAt,
-        ),
-        url: metadata.url,
-        errorMessage: extractErrorMessage(status, run.output || run.error),
-        entityId: metadata.entityId,
-      };
-
-      return item;
-    })
+    .map((run) => buildProdJobItem(run, userId))
     .filter((job): job is JobItem => job !== null);
 
   return { jobs };
@@ -535,6 +788,18 @@ export async function fetchUserInngestRuns(
 }
 
 /**
+ * Error phrases indicating an Inngest run has already terminated.
+ */
+const ALREADY_ENDED_PHRASES = [
+  "cannot cancel an ended run",
+  "already completed",
+  "already ended",
+  "already cancelled",
+  "not running",
+  "not active",
+] as const;
+
+/**
  * Checks whether an error message indicates the run has already ended.
  *
  * @param message Error message text.
@@ -543,14 +808,85 @@ export async function fetchUserInngestRuns(
 function isAlreadyEndedError(message?: string): boolean {
   if (!message) return false;
   const lower = message.toLowerCase();
-  return (
-    lower.includes("cannot cancel an ended run") ||
-    lower.includes("already completed") ||
-    lower.includes("already ended") ||
-    lower.includes("already cancelled") ||
-    lower.includes("not running") ||
-    lower.includes("not active")
-  );
+  return ALREADY_ENDED_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
+/**
+ * Executes a run cancellation against the Inngest GraphQL dev server.
+ *
+ * @param runId Inngest run identifier.
+ * @param signal AbortSignal for network timeout.
+ * @returns Success flag and optional error message.
+ */
+async function cancelDevRun(
+  runId: string,
+  signal: AbortSignal,
+): Promise<{ success: boolean; error?: string }> {
+  const baseUrl = env.INNGEST_BASE_URL || "http://127.0.0.1:8288";
+  const gqlEndpoint = `${baseUrl}/v0/gql`;
+
+  const res = await fetch(gqlEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: CANCEL_RUN_MUTATION,
+      variables: { runID: runId },
+    }),
+    signal,
+  });
+
+  if (!res.ok) {
+    return {
+      success: false,
+      error: `Cancel request failed with HTTP ${res.status}`,
+    };
+  }
+
+  const body = await res.json();
+  if (body.errors && body.errors.length > 0) {
+    const errorMsg = body.errors[0]?.message || "";
+    if (isAlreadyEndedError(errorMsg)) {
+      return { success: true };
+    }
+    return { success: false, error: errorMsg };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Executes a run cancellation against the Inngest production REST API.
+ *
+ * @param runId Inngest run identifier.
+ * @param signal AbortSignal for network timeout.
+ * @returns Success flag and optional error message.
+ */
+async function cancelProdRun(
+  runId: string,
+  signal: AbortSignal,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`https://api.inngest.com/v1/runs/${runId}/cancel`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.INNGEST_SIGNING_KEY}`,
+      "Content-Type": "application/json",
+    },
+    signal,
+  });
+
+  if (res.ok || res.status === 409) {
+    return { success: true };
+  }
+
+  const errText = await res.text();
+  if (isAlreadyEndedError(errText)) {
+    return { success: true };
+  }
+
+  return {
+    success: false,
+    error: errText || `Failed with status ${res.status}`,
+  };
 }
 
 /**
@@ -570,63 +906,10 @@ export async function cancelInngestRun(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
-
     if (isDevMode()) {
-      const baseUrl = env.INNGEST_BASE_URL || "http://127.0.0.1:8288";
-      const gqlEndpoint = `${baseUrl}/v0/gql`;
-
-      const res = await fetch(gqlEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: CANCEL_RUN_MUTATION,
-          variables: { runID: runId },
-        }),
-        signal,
-      });
-
-      if (!res.ok) {
-        return {
-          success: false,
-          error: `Cancel request failed with HTTP ${res.status}`,
-        };
-      }
-
-      const body = await res.json();
-      if (body.errors && body.errors.length > 0) {
-        const errorMsg = body.errors[0]?.message || "";
-        if (isAlreadyEndedError(errorMsg)) {
-          return { success: true };
-        }
-        return { success: false, error: errorMsg };
-      }
-
-      return { success: true };
+      return await cancelDevRun(runId, signal);
     }
-
-    // Production mode
-    const res = await fetch(`https://api.inngest.com/v1/runs/${runId}/cancel`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.INNGEST_SIGNING_KEY}`,
-        "Content-Type": "application/json",
-      },
-      signal,
-    });
-
-    if (res.ok || res.status === 409) {
-      return { success: true };
-    }
-
-    const errText = await res.text();
-    if (isAlreadyEndedError(errText)) {
-      return { success: true };
-    }
-
-    return {
-      success: false,
-      error: errText || `Failed with status ${res.status}`,
-    };
+    return await cancelProdRun(runId, signal);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     log.warn("Failed to cancel Inngest run: {error}", {
