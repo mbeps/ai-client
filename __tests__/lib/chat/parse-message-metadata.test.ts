@@ -72,6 +72,14 @@ describe("parseMessageMetadata", () => {
     expect(result.usage).toBeNull();
   });
 
+  it("returns empty default when parsed JSON is a primitive number or non-object", () => {
+    const resultNum = parseMessageMetadata("42");
+    expect(resultNum.modelId).toBeNull();
+
+    const resultStr = parseMessageMetadata('"primitive string"');
+    expect(resultStr.modelId).toBeNull();
+  });
+
   it("uses a non-string metadata value as-is instead of JSON-parsing it", () => {
     // Runtime guard: the declared type is `string | null | undefined`, but the
     // `typeof metadata === "string"` ternary has a live non-string arm. If it
@@ -112,6 +120,31 @@ describe("parseMessageMetadata", () => {
       JSON.stringify({ promptId: "p-1", userContent: 42 }),
     );
     expect(partial.promptMeta).toBeNull();
+
+    // userContent is string but no promptId or promptIds present
+    const noPromptId = parseMessageMetadata(
+      JSON.stringify({ userContent: "hello with no promptId" }),
+    );
+    expect(noPromptId.promptMeta).toBeNull();
+
+    // promptIds is empty array
+    const emptyPromptIds = parseMessageMetadata(
+      JSON.stringify({ userContent: "hello", promptIds: [] }),
+    );
+    expect(emptyPromptIds.promptMeta).toBeNull();
+  });
+
+  it("parses subagents configuration fields when present", () => {
+    const raw = JSON.stringify({
+      subagentsEnabled: true,
+      subagentModelId: "gpt-4o",
+      subagentExcludedTools: ["calculator"],
+    });
+
+    const result = parseMessageMetadata(raw);
+    expect(result.subagentsEnabled).toBe(true);
+    expect(result.subagentModelId).toBe("gpt-4o");
+    expect(result.subagentExcludedTools).toEqual(["calculator"]);
   });
 
   it("returns toolData with an empty toolResults array when toolResults is not an array", () => {

@@ -515,4 +515,37 @@ describe("persistTransformArtifact (T2.5/T2.6)", () => {
     expect(result?.attachmentRow.name).toBe("statement.pdf");
     expect(result?.attachmentRow.mimeType).toBe("application/pdf");
   });
+
+  it("infers application/octet-stream for unknown file extensions", async () => {
+    const result = await persistTransformArtifact(
+      {
+        kind: "download",
+        fileContent: Buffer.from("data").toString("base64"),
+        filename: "archive.unknownext",
+        stepIndex: 0,
+      },
+      "user-1",
+      "run-1",
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.attachmentRow.mimeType).toBe("application/octet-stream");
+  });
+
+  it("handles non-object parsed spreadsheet content gracefully", async () => {
+    await expect(
+      persistTransformArtifact(
+        {
+          kind: "artifact",
+          artifact: {
+            type: "spreadsheet",
+            content: JSON.stringify("plain string"),
+          },
+          stepIndex: 0,
+        },
+        "user-1",
+        "run-1",
+      ),
+    ).rejects.toThrow(InvalidArtifactFormatError);
+  });
 });

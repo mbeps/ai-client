@@ -236,6 +236,42 @@ describe("persistAssistantResponse", () => {
     expect(result).toBe(false);
   });
 
+  it("handles foreign key violation when code is on error.cause", async () => {
+    chainable.limit
+      .mockResolvedValueOnce([{ id: "msg-0" }])
+      .mockResolvedValueOnce([]);
+    const fkViolation = new Error("wrapped db error");
+    (fkViolation as any).cause = { code: "23503" };
+    chainable.returning.mockRejectedValueOnce(fkViolation);
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-deleted",
+      assistantMessageId: "msg-1",
+      content: "Hello",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("handles error object with no message property", async () => {
+    chainable.limit
+      .mockResolvedValueOnce([{ id: "msg-0" }])
+      .mockResolvedValueOnce([]);
+    chainable.returning.mockRejectedValueOnce({ code: "23503" });
+
+    const result = await persistAssistantResponse({
+      chatId: "chat-deleted",
+      assistantMessageId: "msg-1",
+      content: "Hello",
+      parentId: "msg-0",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
+  });
+
   it("re-throws unexpected database errors", async () => {
     chainable.limit
       .mockResolvedValueOnce([{ id: "msg-0" }])

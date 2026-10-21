@@ -47,6 +47,11 @@ describe("inferDownloadType", () => {
     expect(inferDownloadType(undefined, "application/octet-stream")).toBe("file");
     expect(inferDownloadType(undefined, undefined)).toBe("file");
   });
+
+  it("handles unknown extension falling back to MIME type or file", () => {
+    expect(inferDownloadType("unknownext", "application/pdf")).toBe("document");
+    expect(inferDownloadType("unknownext")).toBe("file");
+  });
 });
 
 describe("extractMessageDownloads", () => {
@@ -59,6 +64,15 @@ describe("extractMessageDownloads", () => {
     childrenIds: [],
     metadata: null,
   };
+
+  it("handles invalid extension patterns in filenames", () => {
+    const msg: Message = {
+      ...baseMessage,
+      content: "Check this [Bad Ext](https://example.com/file.toolongextensionname) and [Special](https://example.com/file.ext!)",
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toEqual([]);
+  });
 
   it("returns empty array for user messages", () => {
     const userMsg: Message = { ...baseMessage, role: "user" };
@@ -483,5 +497,299 @@ describe("extractMessageDownloads", () => {
     const items = extractMessageDownloads(msg);
     expect(items).toHaveLength(1);
     expect(items[0].title).toBe("download.csv");
+  });
+
+  it("handles various base64 file indication keys and rejects unindicated data", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+
+    // Unindicated generic data key should NOT produce a download item
+    const unindicatedMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-no-ind",
+            toolName: "data_tool",
+            result: { data: dummyBase64 },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(unindicatedMsg)).toHaveLength(0);
+
+    // Indicated by filename
+    const filenameMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-fn",
+            toolName: "data_tool",
+            result: { data: dummyBase64, filename: "output1.bin" },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(filenameMsg)).toHaveLength(1);
+
+    // Indicated by fileName
+    const fileNameMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-fn2",
+            toolName: "data_tool",
+            result: { data: dummyBase64, fileName: "output2.bin" },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(fileNameMsg)).toHaveLength(1);
+
+    // Indicated by file_path on result
+    const filePathMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-fp",
+            toolName: "data_tool",
+            result: { data: dummyBase64, file_path: "/tmp/output3.bin" },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(filePathMsg)).toHaveLength(1);
+
+    // Indicated by file_path on toolArgs
+    const toolArgsMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-args",
+            toolName: "data_tool",
+            args: { file_path: "/tmp/output4.bin" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-args",
+            toolName: "data_tool",
+            result: { data: dummyBase64 },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(toolArgsMsg)).toHaveLength(1);
+  });
+
+  it("handles record mimeType candidate and MCP image default png mimeType", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+
+    // record with mimeType
+    const mimeMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-mime",
+            toolName: "pdf_tool",
+            result: {
+              data: dummyBase64,
+              mimeType: "application/pdf",
+              filename: "sample.pdf",
+            },
+          },
+        ],
+      },
+    };
+    const items = extractMessageDownloads(mimeMsg);
+    expect(items).toHaveLength(1);
+    expect(items[0].mimeType).toBe("application/pdf");
+
+    // MCP image without mimeType -> defaults to image/png
+    const mcpMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-mcp-img",
+            toolName: "mcp_tool",
+            result: {
+              content: [
+                null,
+                "not-object",
+                {
+                  type: "image",
+                  data: dummyBase64,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    const mcpItems = extractMessageDownloads(mcpMsg);
+    expect(mcpItems).toHaveLength(1);
+    expect(mcpItems[0].mimeType).toBe("image/png");
+  });
+
+  it("handles plain text URLs with and without file extensions or storage domains", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-txt",
+            toolName: "web_search",
+            result:
+              "Visit https://example.com/no-extension-page and https://s3.amazonaws.com/mybucket/data",
+          },
+        ],
+      },
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].url).toBe("https://s3.amazonaws.com/mybucket/data");
+  });
+
+  it("handles primitive, null, and empty payloads safely in tool results and metadata", () => {
+    // Falsy payload, number payload, boolean payload, null item in toolResults
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          null,
+          "primitive-string-without-url",
+          {
+            toolCallId: "tc-primitives",
+            // missing toolName -> defaults to "tool"
+            result: 12345,
+          },
+          {
+            toolCallId: "tc-null",
+            toolName: "null_tool",
+            result: null,
+          },
+          {
+            toolCallId: "tc-invalid-url",
+            toolName: "ftp_tool",
+            result: { url: "ftp://example.com/file.zip" },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(msg)).toHaveLength(0);
+
+    // metadata is invalid JSON string
+    const invalidJsonMsg: Message = {
+      ...baseMessage,
+      metadata: "{invalid-json",
+    };
+    expect(extractMessageDownloads(invalidJsonMsg)).toHaveLength(0);
+
+    // metadata is JSON primitive
+    const primitiveJsonMsg: Message = {
+      ...baseMessage,
+      metadata: "12345",
+    };
+    expect(extractMessageDownloads(primitiveJsonMsg)).toHaveLength(0);
+  });
+
+  it("handles activeToolCalls with missing or empty results", () => {
+    const activeTools: ToolCallState[] = [
+      {
+        toolCallId: "call_active_no_res",
+        toolName: "running_tool",
+        state: "call",
+        // result is undefined
+      },
+    ];
+    expect(extractMessageDownloads(baseMessage, activeTools)).toHaveLength(0);
+  });
+
+  it("handles markdown storage URLs with Storage source label and handles empty content", () => {
+    const msg: Message = {
+      ...baseMessage,
+      content: "Download from S3: [Data Dump](https://s3.amazonaws.com/mybucket/archive)",
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].source).toBe("Storage");
+
+    const emptyContentMsg: Message = {
+      ...baseMessage,
+      content: "",
+    };
+    expect(extractMessageDownloads(emptyContentMsg)).toHaveLength(0);
+  });
+
+  it("extracts download from tool result using output instead of result", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-output-field",
+            toolName: "exporter",
+            output: { url: "https://example.com/output-report.pdf" },
+          },
+        ],
+      },
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("output-report.pdf");
+  });
+
+  it("labels non-storage markdown links as Link", () => {
+    const msg: Message = {
+      ...baseMessage,
+      content: "Read the spec: [Spec Document](https://example.com/docs/spec.pdf)",
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].source).toBe("Link");
+  });
+
+  it("accepts base64url encoded binary data", () => {
+    const base64UrlData =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k-_12";
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-b64url",
+            toolName: "url_safe_b64",
+            result: { data: base64UrlData, filename: "safe.bin" },
+          },
+        ],
+      },
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("safe.bin");
+  });
+
+  it("ignores base64 data shorter than 20 characters", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-short-b64",
+            toolName: "short_tool",
+            result: { data: "dGVzdA==", filename: "short.bin" },
+          },
+        ],
+      },
+    };
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(0);
   });
 });

@@ -293,5 +293,29 @@ describe("executeTranslationWorkflow Inngest Function", () => {
       translatedText: "Ciao mondo!",
     });
   });
+
+  it("survives transient non-Error realtime publish failures", async () => {
+    vi.mocked(inngest.realtime.publish).mockRejectedValue("string publish rejection");
+
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    const result = await fn({
+      event: {
+        data: {
+          translationId: "trans-resilient-str",
+          userId: "user-1",
+          sourceLanguage: "English",
+          targetLanguage: "Italian",
+          sourceText: "Hello world!",
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      success: true,
+      translationId: "trans-resilient-str",
+      translatedText: "Ciao mondo!",
+    });
+  });
 });
 

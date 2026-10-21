@@ -227,6 +227,44 @@ describe("qdrant-memory-client", () => {
       );
     });
 
+    it("handles points with missing payload or missing content gracefully", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({
+        points: [
+          {
+            id: "mem-missing-payload",
+            score: 0.4,
+            payload: undefined,
+          },
+          {
+            id: "mem-missing-content",
+            score: 0.5,
+            payload: {},
+          },
+        ],
+      });
+
+      const results = await searchKeywordMemories(
+        1536,
+        "London",
+        "user-1",
+        5,
+      );
+
+      expect(results).toEqual([
+        {
+          id: "mem-missing-payload",
+          content: "",
+          score: 0.4,
+        },
+        {
+          id: "mem-missing-content",
+          content: "",
+          score: 0.5,
+        },
+      ]);
+    });
+
     it("handles undefined points response gracefully", async () => {
       mockQdrantClient.collectionExists.mockResolvedValue(true);
       mockQdrantClient.query.mockResolvedValue({});
@@ -290,6 +328,44 @@ describe("qdrant-memory-client", () => {
           with_payload: true,
         },
       );
+    });
+
+    it("handles points with missing payload or missing content gracefully", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({
+        points: [
+          {
+            id: "mem-missing-payload",
+            score: 0.4,
+            payload: undefined,
+          },
+          {
+            id: "mem-missing-content",
+            score: 0.5,
+            payload: {},
+          },
+        ],
+      });
+
+      const results = await searchKeywordMemories(
+        1536,
+        "London",
+        "user-1",
+        5,
+      );
+
+      expect(results).toEqual([
+        {
+          id: "mem-missing-payload",
+          content: "",
+          score: 0.4,
+        },
+        {
+          id: "mem-missing-content",
+          content: "",
+          score: 0.5,
+        },
+      ]);
     });
 
     it("handles undefined points response gracefully", async () => {

@@ -83,6 +83,34 @@ describe("create_skill", () => {
       expect.objectContaining({ name: "clean-code" }),
     );
   });
+
+  it("handles Error thrown during skill creation", async () => {
+    serviceMock.createSkillForUser.mockRejectedValue(new Error("Database failure"));
+    const result = await call(registerSkillAuthoringTools("user-1"), "create_skill", {
+      name: "valid-name",
+      displayName: "Valid",
+      description: "desc",
+      content: "content",
+    });
+    expect(result).toEqual({
+      success: false,
+      error: "Database failure",
+    });
+  });
+
+  it("handles non-Error thrown during skill creation", async () => {
+    serviceMock.createSkillForUser.mockRejectedValue("Raw string error");
+    const result = await call(registerSkillAuthoringTools("user-1"), "create_skill", {
+      name: "valid-name",
+      displayName: "Valid",
+      description: "desc",
+      content: "content",
+    });
+    expect(result).toEqual({
+      success: false,
+      error: "Raw string error",
+    });
+  });
 });
 
 describe("update_skill", () => {

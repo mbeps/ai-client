@@ -214,6 +214,14 @@ describe("qdrant-client", () => {
         },
       ]);
     });
+
+    it("handles undefined points response in searchSemanticVectors", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({});
+
+      const res = await searchSemanticVectors(2, [0.1, 0.2], ["kb-1"], 10);
+      expect(res).toEqual([]);
+    });
   });
 
   describe("searchKeywordChunks", () => {
@@ -263,6 +271,14 @@ describe("qdrant-client", () => {
         with_payload: true,
       });
     });
+
+    it("handles undefined points response in searchKeywordChunks", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({});
+
+      const res = await searchKeywordChunks(1024, "query text", ["kb-2"], 5);
+      expect(res).toEqual([]);
+    });
   });
 
   describe("deletePointsByDocumentId", () => {
@@ -302,12 +318,16 @@ describe("qdrant-client", () => {
 
     it("deletes points matching kbIds across collections", async () => {
       mockQdrantClient.getCollections.mockResolvedValue({
-        collections: [{ name: "kb_chunks_2048" }],
+        collections: [
+          { name: "kb_chunks_2048" },
+          { name: "non_matching_collection" },
+        ],
       });
       mockQdrantClient.delete.mockResolvedValue({});
 
       await deletePointsByKbIds(["kb-1", "kb-2"]);
 
+      expect(mockQdrantClient.delete).toHaveBeenCalledTimes(1);
       expect(mockQdrantClient.delete).toHaveBeenCalledWith("kb_chunks_2048", {
         wait: true,
         filter: {

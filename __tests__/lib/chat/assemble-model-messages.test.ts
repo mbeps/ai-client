@@ -414,4 +414,111 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
     const logged = mockLog.warn.mock.calls[0][1] as { error: string };
     expect(logged.error).toContain("JSON");
   });
+
+  it("truncates oversized JSON tool result output (> 12000 chars)", () => {
+    const hugeObj = { big: "x".repeat(15000) };
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "calling tool",
+        metadata: JSON.stringify({
+          toolCalls: [{ toolCallId: "call_big_json", toolName: "fetch_data", args: {} }],
+          toolResults: [
+            { toolCallId: "call_big_json", toolName: "fetch_data", result: hugeObj },
+          ],
+        }),
+      },
+    ]);
+    const toolMsg = messages[1];
+    expect(toolMsg.role).toBe("tool");
+    const part = (toolMsg as any).content[0];
+    expect(part.output.type).toBe("text");
+    expect(part.output.value).toContain("[... Large tool output truncated for context window limits ...]");
+    expect(part.output.value.length).toBe(8000 + "\n\n[... Large tool output truncated for context window limits ...]".length);
+  });
+
+  it("truncates oversized raw string tool result output (> 8000 chars)", () => {
+    const hugeString = "raw text ".repeat(1000);
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "calling tool",
+        metadata: JSON.stringify({
+          toolCalls: [{ toolCallId: "call_big_str", toolName: "fetch_log", args: {} }],
+          toolResults: [
+            { toolCallId: "call_big_str", toolName: "fetch_log", result: hugeString },
+          ],
+        }),
+      },
+    ]);
+    const toolMsg = messages[1];
+    expect(toolMsg.role).toBe("tool");
+    const part = (toolMsg as any).content[0];
+    expect(part.output.type).toBe("text");
+    expect(part.output.value).toContain("[... Large tool output truncated for context window limits ...]");
+  });
+
+  it("formats subagent delegation tool output using formatSubagentResult", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "delegating...",
+        metadata: JSON.stringify({
+          toolCalls: [
+            { toolCallId: "call_delegate", toolName: "delegate_task", args: { task: "research" } },
+            { toolCallId: "call_dispatch", toolName: "subagent_dispatch", args: { task: "code" } },
+          ],
+          toolResults: [
+            { toolCallId: "call_delegate", toolName: "delegate_task", result: { summary: "done research" } },
+            { toolCallId: "call_dispatch", toolName: "subagent_dispatch", result: "all done" },
+          ],
+        }),
+      },
+    ]);
+    expect(messages).toHaveLength(2);
+    const parts = (messages[1] as any).content;
+    expect(parts[0].type).toBe("tool-result");
+    expect(parts[0].toolName).toBe("delegate_task");
+    expect(parts[0].output.type).toBe("text");
+    expect(parts[1].type).toBe("tool-result");
+    expect(parts[1].toolName).toBe("subagent_dispatch");
+    expect(parts[1].output.type).toBe("text");
+  });
+
+  it("falls back to error message when toolResult object has neither result nor output", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "testing",
+        metadata: JSON.stringify({
+          toolCalls: [{ toolCallId: "call_empty_tr", toolName: "dummy", args: {} }],
+          toolResults: [{ toolCallId: "call_empty_tr", toolName: "dummy" }],
+        }),
+      },
+    ]);
+    const parts = (messages[1] as any).content;
+    expect(parts[0].output).toEqual({
+      type: "json",
+      value: { error: "Tool execution did not return a result" },
+    });
+  });
+
+  it("ignores metadata when toolCalls is empty array or not an array", () => {
+    const messages = assembleModelMessages([
+      {
+        role: "assistant",
+        content: "empty tool calls",
+        metadata: JSON.stringify({ toolCalls: [] }),
+      },
+      {
+        role: "assistant",
+        content: "tool calls not array",
+        metadata: JSON.stringify({ toolCalls: "not-array" }),
+      },
+    ]);
+    expect(messages).toEqual([
+      { role: "assistant", content: "empty tool calls" },
+      { role: "assistant", content: "tool calls not array" },
+    ]);
+  });
 });

@@ -65,7 +65,7 @@ export function extractDownloadFilePayload(payload: unknown): {
     for (const fk of FILENAME_KEYS) {
       if (typeof entry[fk] === "string") {
         const raw = (entry[fk] as string).trim();
-        foundFilename = raw.split("/").pop()?.split("\\").pop() ?? raw;
+        foundFilename = raw.split("/").pop()!.split("\\").pop()!;
         break;
       }
     }

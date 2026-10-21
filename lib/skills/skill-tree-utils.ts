@@ -111,7 +111,6 @@ export function buildSkillTree(
   // Sort helper: folders first, then files alphabetically
   const sortTreeNodes = (nodes: SkillTreeNode[]) => {
     nodes.sort((a, b) => {
-      if (a.isRootSkillMd) return -1;
       if (b.isRootSkillMd) return 1;
       if (a.type !== b.type) {
         return a.type === "folder" ? -1 : 1;

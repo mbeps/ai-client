@@ -81,4 +81,13 @@ describe("splitRecursive", () => {
       expect(joined).toContain(word);
     }
   });
+
+  it("falls back to empty string separator when no separators match the text", () => {
+    const text = "a".repeat(50);
+    const chunks = splitRecursive(text, ["XYZ", "123"], 20, 5);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(25);
+    }
+  });
 });

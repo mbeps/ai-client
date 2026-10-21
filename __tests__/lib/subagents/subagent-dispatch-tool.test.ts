@@ -270,6 +270,16 @@ describe("subagent-dispatch-tool", () => {
         });
       });
 
+      it("falls back to default message when object output has no known fields or parts", () => {
+        const result = dispatchTool.toModelOutput({
+          output: { unknownField: 123 },
+        } as any);
+        expect(result).toEqual({
+          type: "text",
+          value: "Subagent finished with no text output.",
+        });
+      });
+
       it("extracts summary from object with summary property", () => {
         const result = dispatchTool.toModelOutput({
           output: { summary: "Executive summary of findings." },

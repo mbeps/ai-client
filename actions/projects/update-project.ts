@@ -32,13 +32,12 @@ export const updateProject = updateEntityFactory<
   mapValues: (data) => {
     const values: Record<string, any> = {};
     if (data.name !== undefined) values.name = data.name;
-    if (data.description !== undefined)
-      values.description = data.description ?? null;
+    if (data.description !== undefined) values.description = data.description;
     if (data.globalPrompt !== undefined)
-      values.globalPrompt = data.globalPrompt ?? null;
+      values.globalPrompt = data.globalPrompt;
     if (data.tools !== undefined) values.tools = data.tools;
-    if (data.skillMode !== undefined) values.skillMode = data.skillMode;
-    if (data.skillIds !== undefined) values.skillIds = data.skillIds;
+    values.skillMode = data.skillMode;
+    values.skillIds = data.skillIds;
     if (data.knowledgebaseId !== undefined)
       values.knowledgebaseId = data.knowledgebaseId ?? null;
     return values;

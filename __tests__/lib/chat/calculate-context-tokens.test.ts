@@ -78,6 +78,9 @@ describe("calculate-context-tokens utility", () => {
           { content: "Hello world this is test content" },
         ),
       ).toBeGreaterThan(0);
+      expect(
+        estimateToolContextTokens("string query", "string result"),
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -189,6 +192,53 @@ describe("calculate-context-tokens utility", () => {
       expect(result.totalTokens).toBeGreaterThan(
         result.breakdown.messages + result.breakdown.toolDefinitions,
       );
+    });
+
+    it("handles delegate_task and manage_artifact tool results properly", () => {
+      const messages: Message[] = [
+        {
+          id: "msg-delegate",
+          chatId: "chat-1",
+          role: "assistant",
+          content: "Delegating task",
+          parentId: null,
+          childrenIds: [],
+          createdAt: new Date(),
+          metadata: JSON.stringify({
+            toolCalls: [
+              {
+                toolCallId: "tc-sub",
+                toolName: "delegate_task",
+                args: {},
+              },
+            ],
+            toolResults: [
+              {
+                toolCallId: "tc-sub",
+                toolName: "delegate_task",
+                result: { output: "Finished task in subagent" },
+              },
+              {
+                toolCallId: "tc-art-with-title",
+                toolName: "manage_artifact",
+                result: { artifact: { title: "Custom Title" } },
+              },
+              {
+                toolCallId: "tc-art-no-title",
+                toolName: "manage_artifact",
+                result: { artifact: {} },
+              },
+            ],
+          }),
+        },
+      ];
+
+      const result = calculateContextUsage({
+        thread: messages,
+        selectedModel: mockModel,
+      });
+
+      expect(result.breakdown.toolResults).toBeGreaterThan(0);
     });
 
     it("flags isNearLimit when tokens exceed 75% of context window", () => {

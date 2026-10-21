@@ -283,6 +283,46 @@ describe("updateProject", () => {
     expect(chainable.update).toHaveBeenCalledOnce();
   });
 
+  it("updates optional fields (description, tools, skillMode, skillIds, knowledgebaseId)", async () => {
+    chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
+    await updateProject(VALID_UUID, {
+      description: "Updated desc",
+      tools: ["tool-1"],
+      skillMode: "specific",
+      skillIds: ["skill-1"],
+      knowledgebaseId: "kb-1",
+    });
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Updated desc",
+        tools: ["tool-1"],
+        skillMode: "specific",
+        skillIds: ["skill-1"],
+        knowledgebaseId: "kb-1",
+      }),
+    );
+  });
+
+  it("updates knowledgebaseId to null and accepts empty payload", async () => {
+    chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
+    await updateProject(VALID_UUID, {
+      knowledgebaseId: null,
+    });
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        knowledgebaseId: null,
+      }),
+    );
+
+    chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
+    await updateProject(VALID_UUID, {});
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        updatedAt: expect.any(Date),
+      }),
+    );
+  });
+
   it("throws 'Not Found' when project is missing or not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
     await expect(

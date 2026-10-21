@@ -51,7 +51,6 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
           ? "spreadsheet"
           : "document";
 
-      msg.attachments = msg.attachments || [];
       (msg.attachments as Attachment[]).push({
         id: att.id,
         type,

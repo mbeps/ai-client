@@ -112,6 +112,21 @@ describe("downloadArtifact", () => {
     );
   });
 
+  it("handles unrecognized JSON object shape in spreadsheet artifact gracefully", () => {
+    const unrecognizedArtifact: ArtifactData = {
+      id: "art-unrec",
+      title: "Empty Workbook",
+      type: "spreadsheet",
+      content: JSON.stringify({ other: "data" }),
+    };
+
+    downloadArtifact(unrecognizedArtifact);
+    expect(mockWriteFile).toHaveBeenCalledWith(
+      expect.anything(),
+      "empty_workbook.xlsx",
+    );
+  });
+
   it("handles malformed JSON in spreadsheet artifact gracefully without throwing", () => {
     const createObjectUrlSpy = vi.spyOn(window.URL, "createObjectURL");
     const brokenArtifact: ArtifactData = {

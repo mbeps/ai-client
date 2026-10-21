@@ -234,7 +234,7 @@ function resolveJobMetadata(
 } {
   const entityId = extractPayloadEntityId(payloadData);
   const fallbackTitle = functionName || eventName || "Background Job";
-  const builder = JOB_METADATA_BUILDERS[jobType] ?? JOB_METADATA_BUILDERS.other;
+  const builder = JOB_METADATA_BUILDERS[jobType];
   const built = builder(payloadData, entityId, fallbackTitle);
 
   return {

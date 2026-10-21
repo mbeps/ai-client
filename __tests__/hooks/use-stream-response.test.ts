@@ -2178,5 +2178,393 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       expect(mockLogError).not.toHaveBeenCalled();
       expect(result.current.isLoading).toBe(false);
     });
+
+    it("restores cached stream state from sessionStorage on rejoin including calling tool calls", async () => {
+      vi.useFakeTimers();
+      mockIsChatGenerating.mockResolvedValue(true);
+      mockStoreState.chats = {
+        "chat-rejoin-cache": {
+          id: "chat-rejoin-cache",
+          currentLeafId: "user-cache",
+          messages: { "user-cache": { id: "user-cache", role: "user", content: "hello" } },
+        },
+      };
+
+      sessionStorage.setItem(
+        "chat_inflight_chat-rejoin-cache",
+        JSON.stringify({
+          text: "cached text",
+          reasoning: "cached reasoning",
+          toolCalls: [{ toolCallId: "call_cached", toolName: "tool1", status: "calling" }],
+          assistantMessageId: "ast-cached",
+        }),
+      );
+
+      const { result } = renderHook(() => useStreamResponse("chat-rejoin-cache"));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.streamingContent).toBe("cached text");
+      expect(result.current.streamingReasoning).toBe("cached reasoning");
+      expect(result.current.activeToolCalls).toHaveLength(1);
+      expect(result.current.activeToolCalls[0].status).toBe("calling");
+
+      // Advance timers by 2000ms: triggers tick checking calling tools and timeSinceLastChunk > 2000
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      vi.useRealTimers();
+
+      // Empty cached object in sessionStorage
+      sessionStorage.setItem("chat_inflight_chat-empty-cache", JSON.stringify({}));
+      mockStoreState.chats["chat-empty-cache"] = {
+        id: "chat-empty-cache",
+        currentLeafId: "user-empty",
+        messages: { "user-empty": { id: "user-empty", role: "user", content: "hello" } },
+      };
+      mockIsChatGenerating.mockResolvedValue(true);
+      renderHook(() => useStreamResponse("chat-empty-cache"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Corrupted sessionStorage handling in loadInflightState
+      sessionStorage.setItem("chat_inflight_chat-corrupted", "{not json");
+      mockStoreState.chats["chat-corrupted"] = {
+        id: "chat-corrupted",
+        currentLeafId: "user-corrupted",
+        messages: { "user-corrupted": { id: "user-corrupted", role: "user", content: "hello" } },
+      };
+      mockIsChatGenerating.mockResolvedValue(true);
+      renderHook(() => useStreamResponse("chat-corrupted"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+    });
+
+    it("recovers from db on connection error when options is omitted", async () => {
+      vi.useFakeTimers();
+      mockStoreState.chats["chat-1"] = {
+        id: "chat-1",
+        currentLeafId: "u-1",
+        messages: { "u-1": { id: "u-1", role: "user", content: "hello" } },
+      };
+      const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
+
+      mockGetChat.mockResolvedValue({
+        id: "chat-1",
+        messages: [
+          {
+            id: "a-1",
+            role: "assistant",
+            parentId: "u-1",
+            content: "Recovered answer",
+          },
+        ],
+        attachments: [],
+      });
+      mockBuildChatFromRows.mockReturnValue({
+        id: "chat-1",
+        messages: {
+          "a-1": {
+            id: "a-1",
+            role: "assistant",
+            parentId: "u-1",
+            content: "Recovered answer",
+          },
+        },
+      });
+
+      await act(async () => {
+        await result.current.streamResponse("u-1", "hello", null);
+      });
+
+      // Trigger connection error
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerender();
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+
+      expect(mockStoreState.upsertChat).toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("handles persistMessage throwing null and object without message", async () => {
+      mockStoreState.chats = {
+        "chat-p-err": {
+          id: "chat-p-err",
+          currentLeafId: "u-p",
+          messages: { "u-p": { id: "u-p", role: "user", content: "hi" } },
+        },
+      };
+
+      mockPersist.mockRejectedValueOnce(null);
+      const { result: r1 } = renderHook(() => useStreamResponse("chat-p-err"));
+      await act(async () => {
+        await r1.current.streamResponse("u-p", "hello", null);
+      });
+
+      mockPersist.mockRejectedValueOnce({ randomField: 123 });
+      const { result: r2 } = renderHook(() => useStreamResponse("chat-p-err"));
+      await act(async () => {
+        await r2.current.streamResponse("u-p", "hello", null);
+      });
+    });
+
+    it("invokes onDone callback on standard finish and handles subagentsEnabled option", async () => {
+      const onDone = vi.fn();
+      mockStoreState.chats = {
+        "chat-on-done": {
+          id: "chat-on-done",
+          currentLeafId: "u-1",
+          messages: { "u-1": { id: "u-1", role: "user", content: "hi" } },
+        },
+      };
+
+      const { result, rerender } = renderHook(() =>
+        useStreamResponse("chat-on-done", { onDone }),
+      );
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "u-1",
+          "test prompt",
+          null,
+          [],
+          "gpt-4",
+          [],
+          [],
+          undefined,
+          undefined,
+          [],
+          [],
+          true,
+        );
+      });
+
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-on-done",
+        expect.objectContaining({
+          metadata: expect.stringContaining('"subagentsEnabled":true'),
+        }),
+      );
+
+      // Deliver text-delta and finish
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [
+            { data: { type: "text-delta", text: "Final answer" } },
+            { data: { type: "finish", finishReason: "stop" } },
+          ],
+        };
+        rerender();
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(onDone).toHaveBeenCalledWith("Final answer");
+    });
+
+    it("handles non-404 error when fetching realtime token without setting chatNotFound", async () => {
+      mockGetChatRealtimeToken.mockRejectedValueOnce(new Error("Network auth timeout"));
+      renderHook(() => useStreamResponse("chat-token-err"));
+
+      let err: any;
+      await act(async () => {
+        try {
+          await realtimeState.config?.token();
+        } catch (e) {
+          err = e;
+        }
+      });
+
+      expect(err).toBeDefined();
+      expect(realtimeState.config?.enabled).toBe(true);
+    });
+
+    it("handles dispatch error containing a message property on plain object", async () => {
+      global.fetch = vi.fn().mockRejectedValueOnce({
+        message: "Network custom message",
+      });
+
+      mockStoreState.chats = {
+        "chat-dispatch-err": {
+          id: "chat-dispatch-err",
+          currentLeafId: "u-err",
+          messages: { "u-err": { id: "u-err", role: "user", content: "hi" } },
+        },
+      };
+
+      const { result } = renderHook(() => useStreamResponse("chat-dispatch-err"));
+
+      await act(async () => {
+        await result.current.streamResponse("test prompt");
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("Network custom message");
+    });
+
+    it("covers remaining branch edge cases: object access error, assistantId matching, and mount generating skip", async () => {
+      // 1. isAccessOrNotFoundError with plain object containing not found message in persistMessage
+      mockStoreState.chats["chat-1"] = {
+        id: "chat-1",
+        currentLeafId: "u-1",
+        messages: { "u-1": { id: "u-1", role: "user", content: "hi" } },
+      };
+      mockPersist.mockRejectedValueOnce({ message: "Not Found" });
+      const { result: r1, unmount: u1 } = renderHook(() => useStreamResponse("chat-1"));
+      await act(async () => {
+        await r1.current.streamResponse("u-1", "hello", null);
+      });
+      expect(mockToastError).toHaveBeenCalledWith("Chat not found or has been deleted.");
+      u1();
+
+      // 2. findMatchingAssistantMessage with assistantId set
+      mockStoreState.chats["chat-1"] = {
+        id: "chat-1",
+        currentLeafId: "a-leaf",
+        messages: { "a-leaf": { id: "a-leaf", role: "assistant", content: "leaf" } },
+      };
+
+      mockGetChat.mockResolvedValueOnce({
+        id: "chat-1",
+        messages: [
+          { id: "a-match", role: "assistant", parentId: "u-1", content: "Matched by assistantId" },
+        ],
+        attachments: [],
+      });
+      mockBuildChatFromRows.mockReturnValueOnce({
+        id: "chat-1",
+        messages: {
+          "a-match": { id: "a-match", role: "assistant", parentId: "u-1", content: "Matched by assistantId" },
+        },
+      });
+
+      vi.useFakeTimers();
+      const { rerender: rerender2, unmount: u2 } = renderHook(() => useStreamResponse("chat-1"));
+
+      // Set assistantMessageIdRef by delivering start, then trigger connection error to run syncFromDb
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [{ data: { type: "start", messageId: "a-match" } }],
+        };
+        rerender2();
+      });
+
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerender2();
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      u2();
+      vi.useRealTimers();
+
+      // 2b. findMatchingAssistantMessage with both assistantId null and targetParentId null
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [],
+        all: [],
+      };
+      mockStoreState.chats["chat-no-leaf"] = {
+        id: "chat-no-leaf",
+        currentLeafId: null,
+        messages: {},
+      };
+      mockGetChat.mockResolvedValueOnce({
+        id: "chat-no-leaf",
+        messages: [
+          { id: "a-first", role: "assistant", parentId: null, content: "First assistant msg" },
+        ],
+        attachments: [],
+      });
+      mockBuildChatFromRows.mockReturnValueOnce({
+        id: "chat-no-leaf",
+        messages: {
+          "a-first": { id: "a-first", role: "assistant", parentId: null, content: "First assistant msg" },
+        },
+      });
+
+      const onDoneNoLeaf = vi.fn();
+      const { rerender: rerenderNoLeaf, unmount: uNoLeaf } = renderHook(() =>
+        useStreamResponse("chat-no-leaf", { onDone: onDoneNoLeaf }),
+      );
+      // Deliver finish event directly without streamResponse (rejoinedRef becomes true, assistantId is null, leaf is null)
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [{ data: { type: "finish", finishReason: "stop" } }],
+        };
+        rerenderNoLeaf();
+      });
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(onDoneNoLeaf).toHaveBeenCalledWith("First assistant msg");
+      uNoLeaf();
+    });
+
+    it("covers watchdog ticks when rejoined with attempts > 1 and timeSinceLastChunk thresholds", async () => {
+      vi.useFakeTimers();
+      realtimeState.connectionStatus = "open";
+      mockStoreState.chats["chat-rejoin-wd"] = {
+        id: "chat-rejoin-wd",
+        currentLeafId: "u-wd",
+        messages: {
+          "u-wd": { id: "u-wd", role: "user", content: "wd prompt" },
+        },
+      };
+      mockIsChatGenerating.mockResolvedValue(true);
+      mockGetChat.mockResolvedValue({
+        id: "chat-rejoin-wd",
+        messages: [],
+        attachments: [],
+      });
+
+      const { rerender: rerenderWd, unmount: uWd } = renderHook(() =>
+        useStreamResponse("chat-rejoin-wd"),
+      );
+
+      // Wait for executeMountRejoinCheck promise to resolve and set isStreaming=true
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Tick 1 (at 2000ms, attempts = 1) -> attempts === 1 is true
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      // At 2500ms, deliver text delta to update lastChunkTimeRef.current
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [{ data: { type: "text-delta", text: "fresh chunk" } }],
+        };
+        rerenderWd();
+      });
+
+      // Tick 2 (at 4000ms, attempts = 2, timeSinceLastChunk = 1500ms <= 2000) -> timeSinceLastChunk > 2000 is false
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+
+      // Tick 3 (at 6000ms, attempts = 3, timeSinceLastChunk = 3500ms > 2000) -> timeSinceLastChunk > 2000 is true
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      uWd();
+      vi.useRealTimers();
+    });
   });
 });

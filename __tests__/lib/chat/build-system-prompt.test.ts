@@ -104,6 +104,13 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     expect(result).toContain("download_file");
   });
 
+  it("injects orchestrator directives when isSubagentDelegationEnabled is true", () => {
+    const result = buildSystemPrompt(null, null, null, false, {
+      isSubagentDelegationEnabled: true,
+    });
+    expect(result).toContain("Orchestrator Directives");
+  });
+
   describe("user context", () => {
     it("injects name and email when both are provided", () => {
       const result = buildSystemPrompt(null, null, null, false, {

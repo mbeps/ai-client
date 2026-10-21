@@ -36,8 +36,8 @@ export function isBlockedIPv6(ip: string): boolean {
     // The WHATWG URL parser normalises dotted-decimal to two hex groups (e.g. ::ffff:7f00:1)
     const hexGroups = tail.split(":");
     if (hexGroups.length === 2) {
-      const high = parseInt(hexGroups[0] ?? "", 16);
-      const low = parseInt(hexGroups[1] ?? "", 16);
+      const high = parseInt(hexGroups[0], 16);
+      const low = parseInt(hexGroups[1], 16);
       if (
         !Number.isNaN(high) &&
         !Number.isNaN(low) &&

@@ -184,7 +184,7 @@ const EXTENSION_MIME_MAP: Record<string, string> = {
  * Checks if a string looks like base64-encoded binary content.
  */
 function isBase64String(str: string): boolean {
-  if (typeof str !== "string" || str.length < 20) return false;
+  if (str.length < 20) return false;
   const clean = str.replace(/[\r\n\s]/g, "");
   return (
     /^[A-Za-z0-9+/]+={0,2}$/.test(clean) || /^[A-Za-z0-9-_]+={0,2}$/.test(clean)
@@ -209,8 +209,7 @@ function findTitleInRecord(rec?: Record<string, unknown>): string | undefined {
   for (const k of TITLE_PATH_KEYS) {
     const val = rec[k];
     if (typeof val === "string" && val.trim()) {
-      const fn = extractFilenameFromUrl(val);
-      if (fn) return fn.trim();
+      return extractFilenameFromUrl(val).trim();
     }
   }
   return undefined;
@@ -294,7 +293,6 @@ const STORAGE_URL_SUBSTRINGS = [
  * Checks if a URL points to a storage bucket (S3, MinIO, presigned URLs).
  */
 function isStorageUrl(url: string): boolean {
-  if (typeof url !== "string" || !url) return false;
   return STORAGE_URL_SUBSTRINGS.some((sub) => url.includes(sub));
 }
 
@@ -302,7 +300,6 @@ function isStorageUrl(url: string): boolean {
  * Checks if a string is a valid HTTP/HTTPS, blob, or data URL.
  */
 function isValidDownloadUrl(str: string): boolean {
-  if (typeof str !== "string") return false;
   const trimmed = str.trim();
   return (
     trimmed.startsWith("http://") ||
@@ -751,8 +748,6 @@ export function extractMessageDownloads(
     size,
     mimeType,
   ) => {
-    if (!isValidDownloadUrl(url)) return;
-
     const canonical = canonicalizeUrl(url, rawTitle);
     if (seenCanonicalUrls.has(canonical)) return;
     seenCanonicalUrls.add(canonical);

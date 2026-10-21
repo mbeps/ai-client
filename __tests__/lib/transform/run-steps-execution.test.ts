@@ -48,7 +48,13 @@ vi.mock("@/lib/logger", () => ({
   logger: logMock,
 }));
 
-import { InvalidArtifactFormatError } from "@/lib/errors";
+import * as xlsx from "xlsx";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import {
+  InvalidArtifactFormatError,
+  ToolsNotSupportedError,
+  VisionNotSupportedError,
+} from "@/lib/errors";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 
 const MOCK_PROVIDER = {
@@ -1210,6 +1216,422 @@ describe("runTransformSteps — execution flows", () => {
         emit: vi.fn(),
       }),
     ).rejects.toThrow("Unexpected S3 upload outage");
+  });
+
+  it("handles mixed image and document attachments when vision is supported", async () => {
+    generateTextMock.mockResolvedValueOnce({ text: "Done", steps: [] });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Vision Step",
+          prompt: "Describe image",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-vision-ok" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: {
+        ...MOCK_PROVIDER,
+        capVision: true,
+      } as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [
+        { id: "img-1", name: "pic.png", mimeType: "image/png" } as any,
+        { id: "doc-1", name: "doc.pdf", mimeType: "application/pdf", type: "document" } as any,
+      ],
+      emit: vi.fn(),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("advertises manage_artifact when agentTools contains MANAGE_ARTIFACT but not in filteredTools", async () => {
+    generateTextMock.mockResolvedValueOnce({ text: "Done", steps: [] });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Agent Tools Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-agent-tools" },
+      agentRow: {
+        ...NO_MUTATION_AGENT,
+        tools: [INTERNAL_TOOL_IDS.MANAGE_ARTIFACT],
+      },
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("captures active workbook path from tool call args when payload lacks it", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [
+        {
+          toolCalls: [],
+          toolResults: [
+            {
+              toolCallId: "tc-1",
+              toolName: "mutate_sheet",
+              result: { success: true },
+              args: { file_path: "/tmp/captured_from_args.xlsx" },
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Args Path Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-args-path" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {
+        mutate_sheet: { execute: vi.fn() },
+      },
+      runToolSourceMap: {
+        mutate_sheet: "excel-server",
+      },
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("handles step with undefined toolCalls and toolResults", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [{}],
+    });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Empty Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-empty-tools" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("resolves non-preferred download tool matching regex and handles parse failure", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [
+        {
+          toolCalls: [],
+          toolResults: [
+            {
+              toolCallId: "tc-mut",
+              toolName: "write_cells",
+              result: { file_path: "/tmp/mutated.xlsx" },
+            },
+          ],
+        },
+      ],
+    });
+
+    const executeCustomExport = vi.fn().mockResolvedValue({
+      file_content: "UEsDBAA=",
+      filename: "out.xlsx",
+    });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Regex Download Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-regex-dl" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [{ name: "custom-server" }],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {
+        write_cells: { execute: vi.fn() },
+        custom_export_data: { execute: executeCustomExport },
+      },
+      runToolSourceMap: {
+        write_cells: "custom-server",
+        custom_export_data: "custom-server",
+      },
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(executeCustomExport).toHaveBeenCalled();
+  });
+
+  it("preserves explicitly emitted artifact over fallback artifact", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "Done",
+      steps: [
+        {
+          toolCalls: [],
+          toolResults: [
+            {
+              toolCallId: "tc-mut",
+              toolName: "modify_cells",
+              result: { file_path: "/tmp/mutated.xlsx" },
+            },
+            {
+              toolCallId: "tc-art",
+              toolName: "manage_artifact",
+              result: {
+                type: "markdown",
+                content: "# Summary",
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    persistTransformArtifactMock.mockResolvedValue({
+      outputAttachmentIds: ["att-md-1"],
+      attachmentRow: { id: "att-md-1", name: "summary.md" },
+    });
+
+    const executeDownload = vi.fn().mockResolvedValue({
+      file_content: Buffer.from("data").toString("base64"),
+      filename: "out.xlsx",
+    });
+
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Preserve Artifact Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-preserve-art" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [{ name: "excel-server" }],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {
+        modify_cells: { execute: vi.fn() },
+        download_file: { execute: executeDownload },
+        manage_artifact: {},
+      },
+      runToolSourceMap: {
+        modify_cells: "excel-server",
+        download_file: "excel-server",
+        manage_artifact: "Internal",
+      },
+      initialAttachmentRows: [],
+      emit: vi.fn(),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("fails step with TOOLS_NOT_SUPPORTED and VISION_NOT_SUPPORTED error codes", async () => {
+    generateTextMock.mockRejectedValueOnce(new ToolsNotSupportedError());
+
+    const emitted1: any[] = [];
+    const res1 = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Tools Fail Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-tools-err" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [],
+      emit: (e) => emitted1.push(e),
+    });
+
+    expect(res1.success).toBe(false);
+    expect(emitted1.some((e) => e.code === "TOOLS_NOT_SUPPORTED")).toBe(true);
+
+    generateTextMock.mockRejectedValueOnce(new VisionNotSupportedError());
+
+    const emitted2: any[] = [];
+    const res2 = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "Vision Fail Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-vision-err" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: MOCK_PROVIDER as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [],
+      emit: (e) => emitted2.push(e),
+    });
+
+    expect(res2.success).toBe(false);
+    expect(emitted2.some((e) => e.code === "VISION_NOT_SUPPORTED")).toBe(true);
+  });
+
+  it("fails step with VisionNotSupportedError when attachments contain image but capVision is falsy", async () => {
+    const emitted: any[] = [];
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "No Vision Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-no-vision" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [],
+      resolvedProvider: {
+        ...MOCK_PROVIDER,
+        modelRow: { capVision: false },
+      } as any,
+      kbContext: "",
+      runMcpTools: {},
+      runToolSourceMap: {},
+      initialAttachmentRows: [
+        { id: "img-1", name: "pic.png", mimeType: "image/png" } as any,
+      ],
+      emit: (e) => emitted.push(e),
+    });
+
+    expect(result.success).toBe(false);
+    expect(emitted.some((e) => e.code === "VISION_NOT_SUPPORTED")).toBe(true);
+  });
+
+  it("fails step with ToolsNotSupportedError when provider lacks capTools but tools are present", async () => {
+    const emitted: any[] = [];
+    const result = await runTransformSteps({
+      steps: [
+        {
+          id: "s0",
+          name: "No Tools Step",
+          prompt: "p",
+          order: 0,
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
+      ],
+      startFromStep: 0,
+      runRow: { id: "run-no-tools" },
+      agentRow: NO_MUTATION_AGENT,
+      userId: "user-1",
+      allServers: [{ name: "srv" }],
+      resolvedProvider: {
+        ...MOCK_PROVIDER,
+        modelRow: { capTools: false },
+      } as any,
+      kbContext: "",
+      runMcpTools: { some_tool: { execute: vi.fn() } },
+      runToolSourceMap: { some_tool: "srv" },
+      initialAttachmentRows: [],
+      emit: (e) => emitted.push(e),
+    });
+
+    expect(result.success).toBe(false);
+    expect(emitted.some((e) => e.code === "TOOLS_NOT_SUPPORTED")).toBe(true);
   });
 });
 

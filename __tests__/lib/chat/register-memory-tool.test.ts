@@ -61,6 +61,11 @@ describe("registerMemoryTool", () => {
 
     expect(result.success).toBe(false);
     expect(mockSaveMemoryForUser).not.toHaveBeenCalled();
+
+    const resultEmpty = await tools.save_memory.execute({
+      content: "",
+    });
+    expect(resultEmpty.success).toBe(false);
   });
 
   it("catches Error thrown by saveMemoryForUser and returns error message", async () => {

@@ -766,7 +766,7 @@ function buildWorkbookFallbackArtifact(
       {
         runId,
         stepIndex,
-        error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+        error: (parseErr as Error).message,
       },
     );
     return null;

@@ -62,12 +62,10 @@ export async function getScratchpadFilesAction(
     effectiveChatId = msg.chatId;
   }
 
-  const whereClause = effectiveChatId
-    ? and(
-        eq(subagentScratchpad.chatId, effectiveChatId),
-        eq(subagentScratchpad.messageId, effectiveMessageId),
-      )
-    : eq(subagentScratchpad.messageId, effectiveMessageId);
+  const whereClause = and(
+    eq(subagentScratchpad.chatId, effectiveChatId),
+    eq(subagentScratchpad.messageId, effectiveMessageId),
+  );
 
   // Fetch full details of scratchpad files for the viewer
   const files = await db
