@@ -223,6 +223,20 @@ describe("deleteResourceWithUnbind", () => {
       expect(chainable.set).toHaveBeenCalledWith({ projectId: null });
     });
 
+    it("falls back to unbindOptions.field when table does not contain property", async () => {
+      chainable.returning.mockResolvedValueOnce([{ id: "res-1" }]);
+
+      const result = await deleteResourceWithUnbind(
+        mockResourceTable,
+        "res-1",
+        "user-1",
+        { table: {}, field: "custom_column" },
+      );
+
+      expect(result).toEqual([{ id: "res-1" }]);
+      expect(chainable.set).toHaveBeenCalledWith({ custom_column: null });
+    });
+
     it("propagates transaction errors", async () => {
       chainable.transaction.mockRejectedValueOnce(new Error("Transaction failed"));
 

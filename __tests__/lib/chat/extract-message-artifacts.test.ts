@@ -521,4 +521,37 @@ describe("extractMessageArtifacts", () => {
     expect(artifacts[0].id).toBe("tc-blank-stream-artifact");
     expect(artifacts[0].content).toBe("# Blank Stream");
   });
+
+  it("handles artifact with undefined or missing id gracefully by generating a fallback id", () => {
+    const assistantMsg: Message = {
+      id: "a-no-id",
+      chatId: "c1",
+      role: "assistant",
+      content: "Here is your note.",
+      parentId: "u1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-no-id",
+            result: {
+              artifact: {
+                id: undefined,
+                type: "markdown",
+                title: "Untitled",
+                content: "Content",
+              },
+            },
+          },
+        ],
+      }),
+    };
+
+    const artifacts = extractMessageArtifacts(assistantMsg);
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0].id).toBe("tc-no-id-artifact");
+    expect(artifacts[0].messageId).toBe("a-no-id");
+  });
 });

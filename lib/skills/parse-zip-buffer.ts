@@ -30,7 +30,7 @@ function decompressZipSlice(
       } catch (err) {
         log.error("Failed to decompress {fileName} in zip: {error}", {
           fileName,
-          error: err instanceof Error ? err.message : String(err),
+          error: (err as Error).message,
         });
         return Buffer.from(rawData);
       }

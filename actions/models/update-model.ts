@@ -51,9 +51,7 @@ export async function updateModels(
       ...(parsed.modelType !== undefined
         ? { modelType: parsed.modelType }
         : {}),
-      ...(parsed.contextWindow !== undefined
-        ? { contextWindow: parsed.contextWindow }
-        : {}),
+      contextWindow: parsed.contextWindow,
       ...(parsed.embeddingDimensions !== undefined
         ? { embeddingDimensions: parsed.embeddingDimensions }
         : {}),

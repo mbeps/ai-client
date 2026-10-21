@@ -150,6 +150,35 @@ describe("registerScratchpadTools", () => {
       });
     });
 
+    it("defaults lineCount to 200 when only startLine is provided", async () => {
+      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+        id: "file-123",
+        chatId: "chat-123",
+        messageId: "msg-456",
+        filePath: "multi.txt",
+        content: "line1\nline2\nline3\nline4\nline5",
+        writtenByRole: "worker",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const tools = registerScratchpadTools(context);
+      const result = await tools.scratchpad_read.execute(
+        { filePath: "multi.txt", startLine: 3 },
+        { messages: [], toolCallId: "call-4c" } as any,
+      );
+
+      expect(result).toEqual({
+        success: true,
+        filePath: "multi.txt",
+        content: "line3\nline4\nline5",
+        totalLines: 5,
+        writtenByRole: "worker",
+        version: 1,
+      });
+    });
+
     it("truncates content exceeding 15,000 characters without pagination", async () => {
       const largeContent = "line\n".repeat(4000); // ~20,000 chars
       vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({

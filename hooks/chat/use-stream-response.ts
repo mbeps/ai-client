@@ -172,14 +172,12 @@ function saveInflightState(
     assistantMessageId: string | null;
   },
 ) {
-  if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(`chat_inflight_${chatId}`, JSON.stringify(state));
   } catch {}
 }
 
 function loadInflightState(chatId: string) {
-  if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(`chat_inflight_${chatId}`);
     return raw ? JSON.parse(raw) : null;
@@ -189,7 +187,6 @@ function loadInflightState(chatId: string) {
 }
 
 function clearInflightState(chatId: string) {
-  if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(`chat_inflight_${chatId}`);
   } catch {}
@@ -228,11 +225,10 @@ function restoreCachedStreamState(
  * Processes a batch of incoming realtime messages, deduplicating against the processed set.
  */
 function processIncomingRealtimeBatch(
-  batch: Array<{ data?: unknown } | unknown> | undefined,
+  batch: Array<{ data?: unknown } | unknown>,
   processedSet: WeakSet<object>,
   onEvent: (event: ChatStreamEvent) => void,
 ) {
-  if (!batch || batch.length === 0) return;
   for (const msg of batch) {
     if (msg && typeof msg === "object" && !processedSet.has(msg)) {
       processedSet.add(msg);
@@ -302,9 +298,9 @@ async function resolveSinglePromptChunk(
 async function resolveContent(
   content: string,
   selectedPromptIds: string[] = [],
-  metadataObj?: Record<string, unknown>,
+  metadataObj: Record<string, unknown> = {},
 ): Promise<{ fullContent: string }> {
-  const meta = metadataObj ?? {};
+  const meta = metadataObj;
   if (selectedPromptIds.length === 0) return { fullContent: content };
 
   const promptChunks: string[] = [];
@@ -603,17 +599,20 @@ function useStreamRefs() {
   const rejoinedRef = useRef(false);
   const checkedChatIdRef = useRef<string | null>(null);
 
-  return {
-    pendingRef,
-    lastChunkTimeRef,
-    accumulatedTextRef,
-    accumulatedReasoningRef,
-    assistantMessageIdRef,
-    activeToolCallsRef,
-    stoppedRef,
-    rejoinedRef,
-    checkedChatIdRef,
-  };
+  return useMemo(
+    () => ({
+      pendingRef,
+      lastChunkTimeRef,
+      accumulatedTextRef,
+      accumulatedReasoningRef,
+      assistantMessageIdRef,
+      activeToolCallsRef,
+      stoppedRef,
+      rejoinedRef,
+      checkedChatIdRef,
+    }),
+    [],
+  );
 }
 
 async function executeMountRejoinCheck(params: {
@@ -625,7 +624,7 @@ async function executeMountRejoinCheck(params: {
 }) {
   try {
     const generating = await isChatGenerating(params.chatId);
-    if (generating && params.refs.pendingRef.current.userMessageId === null) {
+    if (generating) {
       params.refs.rejoinedRef.current = true;
       params.refs.pendingRef.current = {
         userMessageId: params.leafId,
@@ -636,7 +635,7 @@ async function executeMountRejoinCheck(params: {
 
       restoreCachedStreamState(params.chatId, params.refs, params.setters);
       params.setters.setIsStreaming(true);
-    } else if (!generating) {
+    } else {
       clearInflightState(params.chatId);
       await params.syncFromDb();
     }
@@ -924,10 +923,7 @@ function executeStandardFinish(params: {
   if (!params.text && !params.reasoning && completedTools.length === 0) return;
 
   const resolvedAssistantId = params.assistantId || crypto.randomUUID();
-  const durationMs =
-    params.pending.startTime > 0
-      ? Date.now() - params.pending.startTime
-      : undefined;
+  const durationMs = Date.now() - params.pending.startTime;
 
   const toolResults = extractCompletedToolResults(completedTools);
 

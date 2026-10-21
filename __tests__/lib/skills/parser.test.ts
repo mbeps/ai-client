@@ -179,6 +179,30 @@ describe("createSkillZip & extractSkillFromZip", () => {
     expect(extracted.files[0].path).toBe("a.txt");
   });
 
+  it("retains paths when files do not all share the root folder prefix of SKILL.md", () => {
+    const zipBuffer = Buffer.from(
+      createSkillZip({
+        name: "test",
+        description: "desc",
+        content: "Root skill content",
+        files: [
+          { path: "SK/a.txt", content: "aux text" },
+          { path: "OT/b.txt", content: "other text" },
+        ],
+      }),
+    );
+
+    // Overwrite SKILL.md with SK/SK.md
+    let idx = 0;
+    while ((idx = zipBuffer.indexOf(Buffer.from("SKILL.md"), idx)) !== -1) {
+      zipBuffer.write("SK/SK.md", idx);
+      idx += 8;
+    }
+
+    const extracted = extractSkillFromZip(zipBuffer);
+    expect(extracted.files.map((f) => f.path)).toContain("OT/b.txt");
+  });
+
   it("ignores OS artifacts such as __MACOSX and .DS_Store", () => {
     const zipBuffer = Buffer.from(
       createSkillZip({

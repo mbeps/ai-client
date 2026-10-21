@@ -1459,6 +1459,314 @@ describe("generateChatResponse Inngest Function", () => {
       // registerMcpTools never ran, so the no-op default must be used
       expect(mockMcpCleanup).not.toHaveBeenCalled();
     });
+
+    it("allows non-tool-calling model when selectedTools only contain internal non-mcp tool ids", async () => {
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "simple-model",
+        modelRow: { capVision: true, capTools: false },
+        sdkProvider: { chat: () => () => {} },
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-internal-tools",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "simple-model",
+            selectedTools: [
+              "internal:tool:manage_artifact",
+              "search_knowledge_base",
+              "get_file_url",
+              "load_skill",
+            ],
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("resolves target kb IDs from activeKbIds array and handles undefined kbIsReady", async () => {
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        activeKbIds: ["kb-1", "kb-2"],
+        activeKbId: null,
+        kbIsReady: undefined,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        assistantRow: null,
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-active-kb-ids",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("resolves worker chat provider when subagentModelId is provided and handles rejection", async () => {
+      mockResolveProvider
+        .mockResolvedValueOnce({
+          modelId: "orchestrator-model",
+          modelRow: { capVision: true, capTools: true },
+          sdkProvider: { chat: () => () => {} },
+        })
+        .mockRejectedValueOnce(new Error("Worker model not found"));
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-subagent-worker-fail",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "orchestrator-model",
+            subagentsEnabled: true,
+            subagentModelId: "worker-missing",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("handles subagent tool results with preliminary flag and custom worker model", async () => {
+      mockResolveProvider
+        .mockResolvedValueOnce({
+          modelId: "orchestrator-model",
+          modelRow: { capVision: true, capTools: true },
+          sdkProvider: { chat: () => () => {} },
+        })
+        .mockResolvedValueOnce({
+          modelId: "worker-model",
+          modelRow: { capVision: true, capTools: true },
+          sdkProvider: { chat: () => () => {} },
+        });
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield {
+            type: "tool-call",
+            toolCallId: "tc-sub",
+            toolName: "delegate_task",
+            args: { task: "research" },
+          };
+          yield {
+            type: "tool-result",
+            toolCallId: "tc-sub",
+            toolName: "delegate_task",
+            result: { output: "research in progress" },
+            preliminary: true,
+          };
+          yield {
+            type: "tool-result",
+            toolCallId: "tc-sub",
+            toolName: "delegate_task",
+            result: { output: "research finished" },
+            preliminary: false,
+          };
+          yield { type: "text-delta", text: "Final answer" };
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 10, completionTokens: 10 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-subagent-preliminary",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "orchestrator-model",
+            subagentsEnabled: true,
+            subagentModelId: "worker-model",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("handles synthesis pass error when synthesis stream throws", async () => {
+      mockStreamText
+        .mockReturnValueOnce({
+          fullStream: (async function* () {
+            yield {
+              type: "tool-call",
+              toolCallId: "tc-sub",
+              toolName: "delegate_task",
+              args: { task: "deep task" },
+            };
+            yield {
+              type: "tool-result",
+              toolCallId: "tc-sub",
+              toolName: "delegate_task",
+              result: "plain string result",
+            };
+          })(),
+          finishReason: Promise.resolve("tool-calls"),
+          usage: Promise.resolve({ promptTokens: 10, completionTokens: 10 }),
+        })
+        .mockImplementationOnce(() => {
+          throw new Error("Synthesis failure");
+        });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-synth-fail-err",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            subagentsEnabled: true,
+            selectedTools: [],
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+
+      // Non-Error throwable in synthesis
+      mockStreamText
+        .mockReturnValueOnce({
+          fullStream: (async function* () {
+            yield {
+              type: "tool-call",
+              toolCallId: "tc-sub",
+              toolName: "delegate_task",
+              args: { task: "deep task" },
+            };
+            yield {
+              type: "tool-result",
+              toolCallId: "tc-sub",
+              toolName: "delegate_task",
+              result: "string result",
+            };
+          })(),
+          finishReason: Promise.resolve("tool-calls"),
+          usage: Promise.resolve({ promptTokens: 10, completionTokens: 10 }),
+        })
+        .mockImplementationOnce(() => {
+          throw "string synth explosion";
+        });
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-synth-fail-str",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            subagentsEnabled: true,
+            selectedTools: [],
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalled();
+    });
+
+    it("includes serverName in message metadata when tool execution has server origin", async () => {
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [{ id: "srv-1", name: "ExcelServer" }],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        assistantRow: null,
+      });
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield {
+            type: "tool-call",
+            toolCallId: "tc-srv",
+            toolName: "external_mcp_tool",
+            args: { x: 1 },
+          };
+          yield {
+            type: "tool-result",
+            toolCallId: "tc-srv",
+            toolName: "external_mcp_tool",
+            result: { data: "from server" },
+          };
+          yield { type: "text-delta", text: "Answer with server tool" };
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 5, completionTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-server-origin",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.stringContaining('"serverName":"MCP"'),
+        }),
+      );
+    });
+
+    it("sets allTools to undefined when hasAnyTools is false", async () => {
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        assistantRow: null,
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-no-tools",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            selectedTools: ["unmatched_tool"],
+            subagentsEnabled: false,
+          },
+        },
+      });
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: undefined,
+        }),
+      );
+    });
   });
 });
 

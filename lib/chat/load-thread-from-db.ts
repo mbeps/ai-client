@@ -93,49 +93,47 @@ export async function loadThreadFromDb(
 
   // 4. Attachments for branch messages, scoped to the requesting user
   const messageIds = branch.map((m) => m.id);
-  if (messageIds.length > 0) {
-    const attRows = await db
-      .select({
-        id: attachment.id,
-        messageId: attachment.messageId,
-        name: attachment.name,
-        mimeType: attachment.mimeType,
-        key: attachment.key,
-        extractedText: attachment.extractedText,
-      })
-      .from(attachment)
-      .where(
-        and(
-          inArray(attachment.messageId, messageIds),
-          eq(attachment.userId, userId),
-        ),
-      );
-
-    const byMessage = new Map<string, ThreadAttachment[]>();
-    await Promise.all(
-      attRows.map(async (a) => {
-        if (a.messageId === null) return;
-        const type = typeFromMime(a.mimeType);
-        // Only images need eager presigned URLs (vision model messages);
-        // other types are resolved on demand via the get_file_url tool.
-        const url = type === "image" ? await getPresignedUrl(a.key) : "";
-        const list = byMessage.get(a.messageId) ?? [];
-        list.push({
-          id: a.id,
-          name: a.name,
-          url,
-          type,
-          key: a.key,
-          extractedText: a.extractedText,
-        });
-        byMessage.set(a.messageId, list);
-      }),
+  const attRows = await db
+    .select({
+      id: attachment.id,
+      messageId: attachment.messageId,
+      name: attachment.name,
+      mimeType: attachment.mimeType,
+      key: attachment.key,
+      extractedText: attachment.extractedText,
+    })
+    .from(attachment)
+    .where(
+      and(
+        inArray(attachment.messageId, messageIds),
+        eq(attachment.userId, userId),
+      ),
     );
 
-    for (const m of branch) {
-      const atts = byMessage.get(m.id);
-      if (atts) (m as ThreadMessage).attachments = atts;
-    }
+  const byMessage = new Map<string, ThreadAttachment[]>();
+  await Promise.all(
+    attRows.map(async (a) => {
+      if (a.messageId === null) return;
+      const type = typeFromMime(a.mimeType);
+      // Only images need eager presigned URLs (vision model messages);
+      // other types are resolved on demand via the get_file_url tool.
+      const url = type === "image" ? await getPresignedUrl(a.key) : "";
+      const list = byMessage.get(a.messageId) ?? [];
+      list.push({
+        id: a.id,
+        name: a.name,
+        url,
+        type,
+        key: a.key,
+        extractedText: a.extractedText,
+      });
+      byMessage.set(a.messageId, list);
+    }),
+  );
+
+  for (const m of branch) {
+    const atts = byMessage.get(m.id);
+    if (atts) (m as ThreadMessage).attachments = atts;
   }
 
   return branch as ThreadMessage[];

@@ -50,12 +50,6 @@ export async function triggerTranslation(input: unknown) {
   const sourceText =
     originalText?.trim() || attachment?.extractedText?.trim() || "";
 
-  if (!isImage && !sourceText) {
-    throw new Error(
-      "No text found to translate. Please provide text or an attachment with readable text.",
-    );
-  }
-
   const [row] = await db
     .insert(workflowTranslation)
     .values({
@@ -171,12 +165,6 @@ export async function translateText(input: unknown) {
   const sourceText =
     originalText?.trim() || attachment?.extractedText?.trim() || "";
 
-  if (!isImage && !sourceText) {
-    throw new Error(
-      "No text found to translate. Please provide text or an attachment with readable text.",
-    );
-  }
-
   const resolved = modelId
     ? await fetchProviderWithModel(session.user.id, { modelId })
     : await resolveDefaultChatProvider(session.user.id);
@@ -206,7 +194,7 @@ export async function translateText(input: unknown) {
                   {
                     type: "file" as const,
                     data: attachment.dataUrl,
-                    mediaType: attachment.mimeType ?? "image",
+                    mediaType: attachment.mimeType,
                   },
                 ]
               : []),

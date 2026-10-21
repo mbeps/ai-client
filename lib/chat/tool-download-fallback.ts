@@ -109,7 +109,7 @@ function isFileAlreadyDownloaded(
   completedTools: CompletedToolRecord[],
 ): boolean {
   const normTarget = filePath.toLowerCase().replace(/\\/g, "/");
-  const targetBasename = normTarget.split("/").pop() ?? normTarget;
+  const targetBasename = normTarget.split("/").pop()!;
 
   for (const tc of completedTools) {
     // 1. Check if tool call was a download tool targeting this file

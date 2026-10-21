@@ -1612,5 +1612,32 @@ describe("Inngest Run Service", () => {
         }),
       );
     });
+
+    it("handles non-object JSON primitives in trigger payloads", async () => {
+      useDevMode();
+      globalThis.fetch = devFetch(
+        [devNode()],
+        () => triggerJson({ eventName: "chat/response.generate", payloads: [JSON.stringify(123), JSON.stringify({ userId: "user-123" })] }),
+      );
+
+      const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
+      const result = await fetchUserInngestRuns("user-123");
+
+      expect(result.jobs).toHaveLength(1);
+    });
+
+    it("falls back to empty string when dev trigger and node have no eventName", async () => {
+      useDevMode();
+      globalThis.fetch = devFetch(
+        [devNode({ eventName: undefined as any })],
+        () => triggerJson({ eventName: undefined, payloads: [JSON.stringify({ userId: "user-123" })] }),
+      );
+
+      const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
+      const result = await fetchUserInngestRuns("user-123");
+
+      expect(result.jobs).toHaveLength(1);
+      expect(result.jobs[0].title).toBe("fn-name-x");
+    });
   });
 });

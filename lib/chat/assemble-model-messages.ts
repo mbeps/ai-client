@@ -91,7 +91,7 @@ function buildImageParts(
  * Assembles a user message containing attachments into a ModelMessage.
  */
 function assembleUserMessageWithAttachments(m: HistoryMessage): ModelMessage {
-  const attachments = m.attachments ?? [];
+  const attachments = m.attachments!;
   const docParts = buildDocumentAndFileParts(attachments);
   const textParts: TextPart[] =
     typeof m.content === "string" && m.content.trim()

@@ -24,6 +24,16 @@ describe("extractUploadedFilePath", () => {
   it("returns null when object has no file_path and content is not an array", () => {
     expect(extractUploadedFilePath({ other: "field" })).toBeNull();
     expect(extractUploadedFilePath({ content: "not-an-array" })).toBeNull();
+    expect(
+      extractUploadedFilePath({
+        structuredContent: { file_path: "/uploads/structured.txt" },
+      }),
+    ).toBe("/uploads/structured.txt");
+    expect(
+      extractUploadedFilePath({
+        structuredContent: "not-an-object",
+      }),
+    ).toBeNull();
   });
 
   it("extracts file_path from content array containing text JSON", () => {

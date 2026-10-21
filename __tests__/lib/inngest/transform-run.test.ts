@@ -949,4 +949,70 @@ describe("executeTransformRun Inngest Workflow", () => {
       { runId: "run-agent-del" },
     );
   });
+
+  it("handles non-array and non-object items in parsed agent steps", async () => {
+    const runRow = {
+      id: "run-bad-steps",
+      agentId: "agent-bad",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow1 = {
+      id: "agent-bad",
+      requiresFileUpload: false,
+      steps: JSON.stringify({ not: "an-array" }),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      return Promise.resolve([agentRow1]);
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    await expect(
+      fn({
+        event: {
+          data: {
+            runId: "run-bad-steps",
+            userId: "user-1",
+            startFromStep: 0,
+          },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow(/Invalid transform steps/);
+
+    const agentRow2 = {
+      id: "agent-bad",
+      requiresFileUpload: false,
+      steps: JSON.stringify(["primitive-step"]),
+    };
+
+    selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      return Promise.resolve([agentRow2]);
+    });
+
+    await expect(
+      fn({
+        event: {
+          data: {
+            runId: "run-bad-steps",
+            userId: "user-1",
+            startFromStep: 0,
+          },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow(/Invalid transform steps/);
+  });
 });

@@ -35,11 +35,10 @@ export async function updateTransformAgent(
   const values: Record<string, unknown> = {};
   if (validated.name !== undefined) values.name = validated.name;
   if (validated.description !== undefined)
-    values.description = validated.description ?? null;
+    values.description = validated.description;
   if (validated.globalContext !== undefined)
-    values.globalContext = validated.globalContext ?? null;
-  if (validated.modelId !== undefined)
-    values.modelId = validated.modelId ?? null;
+    values.globalContext = validated.globalContext;
+  if (validated.modelId !== undefined) values.modelId = validated.modelId;
   if (validated.tools !== undefined) values.tools = validated.tools;
   if (validated.skillMode !== undefined) values.skillMode = validated.skillMode;
   if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;

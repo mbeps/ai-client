@@ -12,11 +12,6 @@ import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provider";
 
 const RETRY_COUNT = 1;
-const USER_MODEL_TYPES = ["chat", "embedding", "both"] as const;
-
-function toUserModelType(value: string | null | undefined): ProviderModelType {
-  return USER_MODEL_TYPES.find((type) => type === value) ?? "chat";
-}
 
 export type UserModelOption = {
   id: string;
@@ -148,7 +143,7 @@ export function useUserModels(
         label: model.label,
         providerId: model.providerId,
         providerName: model.providerName,
-        modelType: toUserModelType(model.modelType),
+        modelType: model.modelType as ProviderModelType,
         contextWindow: model.contextWindow,
         embeddingDimensions: model.embeddingDimensions,
         capTools: model.capTools,
