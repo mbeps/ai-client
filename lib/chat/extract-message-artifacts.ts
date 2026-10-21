@@ -12,7 +12,10 @@ function appendArtifact(
   art: ArtifactData,
   messageId: string,
 ): void {
-  const id = art.id;
+  const id =
+    typeof art.id === "string" && art.id.trim()
+      ? art.id
+      : `${messageId}-artifact-${artifacts.length}`;
   if (!seenIds.has(id)) {
     seenIds.add(id);
     artifacts.push({ ...art, id, messageId });

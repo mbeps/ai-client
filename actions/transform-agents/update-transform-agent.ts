@@ -38,8 +38,7 @@ export async function updateTransformAgent(
     values.description = validated.description;
   if (validated.globalContext !== undefined)
     values.globalContext = validated.globalContext;
-  if (validated.modelId !== undefined)
-    values.modelId = validated.modelId;
+  if (validated.modelId !== undefined) values.modelId = validated.modelId;
   if (validated.tools !== undefined) values.tools = validated.tools;
   if (validated.skillMode !== undefined) values.skillMode = validated.skillMode;
   if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;

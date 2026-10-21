@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "build-start": "next build && next start",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
