@@ -32,4 +32,3 @@ export interface StepState {
   toolResults?: ToolResult[];
   outputAttachmentId?: string;
 }
-
