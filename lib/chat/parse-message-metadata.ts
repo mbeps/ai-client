@@ -9,6 +9,92 @@ import type {
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
 
+function parseStringArray(val: unknown): string[] | null {
+  if (!Array.isArray(val)) return null;
+  return val as string[];
+}
+
+function parsePromptMeta(
+  parsed: Record<string, unknown>,
+): ParsedMessageMetadata["promptMeta"] {
+  if (typeof parsed.userContent !== "string") {
+    return null;
+  }
+
+  let rawPromptIds: string[] = [];
+  if (Array.isArray(parsed.promptIds)) {
+    rawPromptIds = parsed.promptIds.filter(
+      (id: unknown): id is string => typeof id === "string",
+    );
+  } else if (typeof parsed.promptId === "string") {
+    rawPromptIds = [parsed.promptId];
+  }
+
+  if (rawPromptIds.length === 0) {
+    return null;
+  }
+
+  return {
+    promptId: rawPromptIds[0],
+    promptIds: rawPromptIds,
+    userContent: parsed.userContent,
+  };
+}
+
+function parseToolData(
+  parsed: Record<string, unknown>,
+): ParsedMessageMetadata["toolData"] {
+  if (!Array.isArray(parsed.toolCalls) || parsed.toolCalls.length === 0) {
+    return null;
+  }
+
+  return {
+    toolCalls: parsed.toolCalls as ToolCall[],
+    toolResults: Array.isArray(parsed.toolResults)
+      ? (parsed.toolResults as ToolResult[])
+      : [],
+  };
+}
+
+function resolveTokenCount(
+  primary: unknown,
+  fallback: unknown,
+): number | undefined {
+  if (typeof primary === "number") return primary;
+  if (typeof fallback === "number") return fallback;
+  return undefined;
+}
+
+function resolveTotalTokens(
+  explicitTotal: unknown,
+  prompt: number | undefined,
+  completion: number | undefined,
+): number | undefined {
+  if (typeof explicitTotal === "number") return explicitTotal;
+  if (prompt === undefined && completion === undefined) return undefined;
+  return (prompt ?? 0) + (completion ?? 0);
+}
+
+function parseUsage(usageRaw: unknown): MessageUsage | null {
+  if (!usageRaw || typeof usageRaw !== "object") {
+    return null;
+  }
+
+  const usage = usageRaw as Record<string, unknown>;
+  const promptTokens = resolveTokenCount(usage.promptTokens, usage.inputTokens);
+  const completionTokens = resolveTokenCount(
+    usage.completionTokens,
+    usage.outputTokens,
+  );
+  const totalTokens = resolveTotalTokens(
+    usage.totalTokens,
+    promptTokens,
+    completionTokens,
+  );
+
+  return { promptTokens, completionTokens, totalTokens };
+}
+
 /**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
  *
@@ -39,108 +125,35 @@ export function parseMessageMetadata(
     const parsed =
       typeof metadata === "string" ? JSON.parse(metadata) : metadata;
 
-    const rawPromptIds = Array.isArray(parsed.promptIds)
-      ? (parsed.promptIds.filter(
-          (id: unknown) => typeof id === "string",
-        ) as string[])
-      : typeof parsed.promptId === "string"
-        ? [parsed.promptId]
-        : [];
-
-    const promptMeta =
-      rawPromptIds.length > 0 && typeof parsed.userContent === "string"
-        ? {
-            promptId: rawPromptIds[0],
-            promptIds: rawPromptIds,
-            userContent: parsed.userContent,
-          }
-        : null;
-
-    const toolData =
-      Array.isArray(parsed.toolCalls) && parsed.toolCalls.length > 0
-        ? {
-            toolCalls: parsed.toolCalls as ToolCall[],
-            toolResults: Array.isArray(parsed.toolResults)
-              ? (parsed.toolResults as ToolResult[])
-              : [],
-          }
-        : null;
-
-    const modelId = typeof parsed.model === "string" ? parsed.model : null;
-
-    const selectedServerIds = Array.isArray(parsed.selectedServerIds)
-      ? (parsed.selectedServerIds as string[])
-      : null;
-
-    const selectedTools = Array.isArray(parsed.selectedTools)
-      ? (parsed.selectedTools as string[])
-      : null;
-
-    const selectedKbIds = Array.isArray(parsed.selectedKbIds)
-      ? (parsed.selectedKbIds as string[])
-      : null;
-
-    const selectedSkillIds = Array.isArray(parsed.selectedSkillIds)
-      ? (parsed.selectedSkillIds as string[])
-      : null;
-
-    const reasoning =
-      typeof parsed.reasoning === "string" ? parsed.reasoning : undefined;
-
-    const rawPrompt = parsed.usage?.promptTokens ?? parsed.usage?.inputTokens;
-    const rawCompletion =
-      parsed.usage?.completionTokens ?? parsed.usage?.outputTokens;
-    const rawTotal =
-      parsed.usage?.totalTokens ??
-      (rawPrompt != null || rawCompletion != null
-        ? (rawPrompt ?? 0) + (rawCompletion ?? 0)
-        : undefined);
-
-    const usage: MessageUsage | null =
-      parsed.usage && typeof parsed.usage === "object"
-        ? {
-            promptTokens: typeof rawPrompt === "number" ? rawPrompt : undefined,
-            completionTokens:
-              typeof rawCompletion === "number" ? rawCompletion : undefined,
-            totalTokens: typeof rawTotal === "number" ? rawTotal : undefined,
-          }
-        : null;
-
-    const finishReason =
-      typeof parsed.finishReason === "string" ? parsed.finishReason : null;
-
-    const durationMs =
-      typeof parsed.durationMs === "number" ? parsed.durationMs : null;
-
-    const subagentsEnabled =
-      typeof parsed.subagentsEnabled === "boolean"
-        ? parsed.subagentsEnabled
-        : undefined;
-
-    const subagentModelId =
-      typeof parsed.subagentModelId === "string"
-        ? parsed.subagentModelId
-        : undefined;
-
-    const subagentExcludedTools = Array.isArray(parsed.subagentExcludedTools)
-      ? (parsed.subagentExcludedTools as string[])
-      : undefined;
+    if (!parsed || typeof parsed !== "object") {
+      return empty;
+    }
 
     return {
-      promptMeta,
-      toolData,
-      modelId,
-      selectedServerIds,
-      selectedTools,
-      selectedKbIds,
-      selectedSkillIds,
-      reasoning,
-      usage,
-      finishReason,
-      durationMs,
-      subagentsEnabled,
-      subagentModelId,
-      subagentExcludedTools,
+      promptMeta: parsePromptMeta(parsed),
+      toolData: parseToolData(parsed),
+      modelId: typeof parsed.model === "string" ? parsed.model : null,
+      selectedServerIds: parseStringArray(parsed.selectedServerIds),
+      selectedTools: parseStringArray(parsed.selectedTools),
+      selectedKbIds: parseStringArray(parsed.selectedKbIds),
+      selectedSkillIds: parseStringArray(parsed.selectedSkillIds),
+      reasoning:
+        typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+      usage: parseUsage(parsed.usage),
+      finishReason:
+        typeof parsed.finishReason === "string" ? parsed.finishReason : null,
+      durationMs:
+        typeof parsed.durationMs === "number" ? parsed.durationMs : null,
+      subagentsEnabled:
+        typeof parsed.subagentsEnabled === "boolean"
+          ? parsed.subagentsEnabled
+          : undefined,
+      subagentModelId:
+        typeof parsed.subagentModelId === "string"
+          ? parsed.subagentModelId
+          : undefined,
+      subagentExcludedTools:
+        parseStringArray(parsed.subagentExcludedTools) ?? undefined,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

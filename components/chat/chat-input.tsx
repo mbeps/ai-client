@@ -1,45 +1,21 @@
 "use client";
 
-import { ArrowRight, Bot, Mic, Plus, Save, Square, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useRef, useState } from "react";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
-import { AttachmentBubble } from "@/components/chat/input/attachment-bubble";
+import { ChatInputAttachmentList } from "@/components/chat/input/chat-input-attachment-list";
+import { ChatInputToolbar } from "@/components/chat/input/chat-input-toolbar";
 import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
-import { ModelSelector } from "@/components/shared/model-selector";
-import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
+import { useChatInteraction } from "@/components/chat/input/use-chat-interaction";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
-import {
-  type MentionPromptItem,
-  useMentionCommands,
+import type {
+  MentionItem,
+  MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
-import { useApiError } from "@/hooks/use-api-error";
-import { useIsMobile } from "@/hooks/use-is-mobile";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { useUserModels } from "@/hooks/use-user-models";
-import { processAttachment } from "@/lib/attachments/process-attachment";
-import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
-import { AttachmentVisionUnsupportedError } from "@/lib/errors";
-import { useAppStore } from "@/lib/store";
-import { toggleSetItem } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
-import { AttachmentsMenu } from "./attachments-menu";
-import { ContextUsagePill } from "./context-usage-pill";
 import { MentionCommands } from "./mention-commands";
 import { SubagentConfigDialog } from "./subagent-config-dialog";
 
@@ -47,7 +23,7 @@ import { SubagentConfigDialog } from "./subagent-config-dialog";
  * Props for the ChatInput component.
  * Defines behavior callbacks and UI configuration for message input.
  */
-interface ChatInputProps {
+export interface ChatInputProps {
   /**
    * Callback invoked when user submits a message with content, attachments,
    * model selection, MCP tools, knowledgebases, and skills.
@@ -137,469 +113,90 @@ interface ChatInputProps {
   initialSubagentExcludedTools?: string[];
 }
 
+const EMPTY_MESSAGES: Message[] = [];
+
+function resolveInputDefaults(props: ChatInputProps) {
+  return {
+    initialValue: props.initialValue ?? "",
+    canMentionAssistant: props.canMentionAssistant ?? true,
+    thread: props.thread ?? EMPTY_MESSAGES,
+  };
+}
+
+function resolveContainerClassName(isDragging: boolean): string {
+  const base =
+    "relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30";
+  return isDragging ? `${base} bg-primary/5 ring-2 ring-primary` : base;
+}
+
+function resolveInputPlaceholder(hasNoModels: boolean): string {
+  return hasNoModels
+    ? "Set up a provider to start chatting..."
+    : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases";
+}
+
+function ChatInputMentionCommands(props: {
+  openTrigger: MentionTrigger | null;
+  filteredItems: MentionItem[];
+  selectedIndex: number;
+  onSelect: (item: MentionItem) => void;
+  onClose: () => void;
+}) {
+  if (!props.openTrigger) return null;
+
+  return (
+    <MentionCommands
+      items={props.filteredItems}
+      trigger={props.openTrigger}
+      selectedIndex={props.selectedIndex}
+      onSelect={props.onSelect}
+      onClose={props.onClose}
+      className="absolute bottom-full left-0 mb-2"
+    />
+  );
+}
+
 /**
  * Comprehensive message input component with file upload, model selection,
  * MCP tools, knowledgebases, and agent skills.
  *
  * @author Maruf Bepary
  */
-export function ChatInput({
-  onSend,
-  onCancel,
-  isLoading,
-  onStop,
-  servers,
-  initialValue = "",
-  initialModelId,
-  initialAttachments = [],
-  initialSelectedServerIds = [],
-  initialSelectedTools = DEFAULT_ENABLED_TOOLS,
-  initialSelectedPromptId,
-  initialSelectedAssistantId,
-  initialSelectedKbs = [],
-  initialSelectedSkillIds = [],
-  onKnowledgebaseChange,
-  activeChatAssistantId,
-  canMentionAssistant = true,
-  submitLabel,
-  thread = [],
-  initialSubagentsEnabled = false,
-  initialSubagentModelId,
-  initialSubagentExcludedTools = [],
-}: ChatInputProps) {
-  const [input, setInput] = useState(initialValue);
-  const { models: chatModels, isLoading: isModelsLoading } =
-    useUserModels("chat");
-  const hasNoModels = chatModels.length === 0 && !isModelsLoading;
-  const [modelId, setModelId] = useState<string>(initialModelId ?? "");
-
-  const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
-  const skills = useAppStore((state) => state.skills);
-  const prompts = useAppStore((state) => state.prompts);
-  const mcpPrompts = useAppStore((state) => state.mcpPrompts);
-
-  // -- Derived model capabilities --
-  const selectedModelObj = useMemo(
-    () => chatModels.find((model) => model.modelId === modelId) ?? null,
-    [chatModels, modelId],
-  );
-
-  const supportsVision = useMemo(
-    () => selectedModelObj?.capVision ?? false,
-    [selectedModelObj],
-  );
-
-  const supportsTools = useMemo(() => {
-    if (isModelsLoading && modelId && !selectedModelObj) return true;
-    return selectedModelObj?.capTools ?? false;
-  }, [selectedModelObj, isModelsLoading, modelId]);
-
-  // -- Refs --
+export function ChatInput(props: ChatInputProps) {
+  const defaults = resolveInputDefaults(props);
+  const [input, setInput] = useState(defaults.initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isMobile = useIsMobile();
-  const { handleApiError } = useApiError();
 
-  // -- File Upload Logic --
-  const [attachments, setAttachments] =
-    useState<Attachment[]>(initialAttachments);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const addFiles = useCallback(
-    async (files: FileList | File[]) => {
-      const localNew: Attachment[] = [];
-      for (const file of Array.from(files)) {
-        if (file.type.startsWith("image/") && !supportsVision) {
-          const error = new AttachmentVisionUnsupportedError();
-          handleApiError(error);
-          continue;
-        }
-
-        try {
-          const att = await processAttachment(file, [
-            ...attachments,
-            ...localNew,
-          ]);
-          localNew.push(att);
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : "Failed to process file",
-          );
-        }
-      }
-      if (localNew.length > 0) {
-        setAttachments((prev) => [...prev, ...localNew]);
-      }
-    },
-    [attachments, supportsVision, handleApiError],
-  );
-
-  const removeAttachment = useCallback((id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
-  const clearAttachments = useCallback(() => {
-    setAttachments([]);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      if (e.dataTransfer.files.length > 0) {
-        addFiles(e.dataTransfer.files);
-      }
-    },
-    [addFiles],
-  );
-
-  // -- MCP Selection Logic --
-  const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
-    new Set(initialSelectedServerIds),
-  );
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(
-    new Set(initialSelectedTools),
-  );
-
-  const _toggleServer = useCallback((id: string) => {
-    setSelectedServerIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        setSelectedTools((prevTools) => {
-          const nextTools = new Set(prevTools);
-          nextTools.forEach((tId) => {
-            if (tId.startsWith(`${id}:`)) nextTools.delete(tId);
-          });
-          return nextTools;
-        });
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleTool = useCallback((serverId: string, toolName: string) => {
-    const toolId = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => {
-      if (prev.has(toolId)) return toggleSetItem(prev, toolId);
-      setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
-      return toggleSetItem(prev, toolId);
-    });
-  }, []);
-
-  const handleBulkSelect = useCallback(
-    (serverId: string, toolNames: string[], select: boolean) => {
-      if (select) {
-        setSelectedServerIds((prev) => new Set(prev).add(serverId));
-        setSelectedTools((prev) => {
-          const next = new Set(prev);
-          toolNames.forEach((name) => {
-            next.add(`${serverId}:tool:${name}`);
-          });
-          return next;
-        });
-      } else {
-        setSelectedTools((prev) => {
-          const next = new Set(prev);
-          toolNames.forEach((name) => {
-            next.delete(`${serverId}:tool:${name}`);
-          });
-          return next;
-        });
-      }
-    },
-    [],
-  );
-
-  // -- KB Selection Logic --
-  const [selectedKbs, setSelectedKbs] = useState<Set<string>>(
-    new Set(initialSelectedKbs),
-  );
-
-  const handleToggleKb = useCallback(
-    (id: string) => {
-      setSelectedKbs((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        onKnowledgebaseChange?.(Array.from(next));
-        return next;
-      });
-    },
-    [onKnowledgebaseChange],
-  );
-
-  const handleRemoveKb = useCallback(
-    (id: string) => {
-      setSelectedKbs((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        onKnowledgebaseChange?.(Array.from(next));
-        return next;
-      });
-    },
-    [onKnowledgebaseChange],
-  );
-
-  // -- Skills Selection Logic --
-  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(
-    new Set(initialSelectedSkillIds),
-  );
-
-  // The seed comes from store-backed entities, which hydrate AFTER this
-  // component mounts, so `useState` alone never picks them up. Re-sync when the
-  // seed changes; a no-op once hydrated, and it never clobbers user toggles.
-  const skillSeedKey = initialSelectedSkillIds.join("::");
-  const lastSkillSeedKey = useRef(skillSeedKey);
-  useEffect(() => {
-    if (lastSkillSeedKey.current === skillSeedKey) return;
-    lastSkillSeedKey.current = skillSeedKey;
-    setSelectedSkills(new Set(initialSelectedSkillIds));
-  }, [skillSeedKey, initialSelectedSkillIds]);
-
-  const handleToggleSkill = useCallback((id: string) => {
-    setSelectedSkills((prev) => toggleSetItem(prev, id));
-  }, []);
-
-  const handleRemoveSkill = useCallback((id: string) => {
-    setSelectedSkills((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-
-  // -- Subagents Configuration Logic --
-  const [subagentsEnabled, setSubagentsEnabled] = useState(
-    initialSubagentsEnabled,
-  );
-  const [subagentModelId, setSubagentModelId] = useState<string | undefined>(
-    initialSubagentModelId,
-  );
-  const [subagentExcludedTools, setSubagentExcludedTools] = useState<string[]>(
-    initialSubagentExcludedTools,
-  );
-  const [isSubagentDialogOpen, setIsSubagentDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setSubagentsEnabled(initialSubagentsEnabled);
-  }, [initialSubagentsEnabled]);
-
-  useEffect(() => {
-    setSubagentModelId(initialSubagentModelId);
-  }, [initialSubagentModelId]);
-
-  const _handleToggleExcludedTool = useCallback((toolId: string) => {
-    setSubagentExcludedTools((prev) =>
-      prev.includes(toolId)
-        ? prev.filter((id) => id !== toolId)
-        : [...prev, toolId],
-    );
-  }, []);
-
-  // Estimate tokens consumed by skills in the system prompt.
-  // Selected skills are fully injected (content + bundled files).
-  // The catalog (available skills) includes ALL enabled skills when the model
-  // supports tools — matching buildSystemPrompt which always lists all skills
-  // in the catalog regardless of which are pre-selected.
-  const { selectedSkillTokens, availableSkillCount } = useMemo(() => {
-    const enabledSkills = skills.filter((s) => s.enabled);
-    let injected = 0;
-    for (const skill of enabledSkills) {
-      if (selectedSkills.has(skill.id)) {
-        injected += estimateTokens(skill.content);
-        for (const f of skill.files ?? []) {
-          injected += estimateTokens(f.content);
-        }
-      }
-    }
-    // Catalog only appears when the model supports tool calling
-    const catalog = supportsTools ? enabledSkills.length : 0;
-    return { selectedSkillTokens: injected, availableSkillCount: catalog };
-  }, [skills, selectedSkills, supportsTools]);
-
-  const {
-    openTrigger,
-    setOpenTrigger,
-    filteredItems,
-    selectedIndex,
-    selectedPrompt,
-    setSelectedPrompt,
-    selectedPrompts,
-    setSelectedPrompts,
-    selectedAssistant,
-    setSelectedAssistant,
-    handleInputChange,
-    handleKeyDown: handleCommandKeyDown,
-    handleSelect: handleMentionSelect,
-  } = useMentionCommands(
+  const services = useChatInputServices(props.initialModelId);
+  const interaction = useChatInteraction({
+    props,
+    services,
     input,
     setInput,
     textareaRef,
-    activeChatAssistantId,
-    initialSelectedPromptId,
-    initialSelectedAssistantId,
-    canMentionAssistant,
-    selectedServerIds,
-    (skill) => setSelectedSkills((prev) => new Set(prev).add(skill.id)),
-    (kb) => setSelectedKbs((prev) => new Set(prev).add(kb.id)),
-    knowledgebases,
+    canMentionAssistant: defaults.canMentionAssistant,
+  });
+
+  const containerClass = resolveContainerClassName(
+    interaction.attachments.isDragging,
   );
-
-  const promptList = selectedPrompts || [];
-  const selectedPromptIds = useMemo(
-    () => new Set(promptList.map((p) => p.id)),
-    [promptList],
-  );
-
-  const handleTogglePrompt = useCallback(
-    (prompt: MentionPromptItem) => {
-      if (setSelectedPrompts) {
-        setSelectedPrompts((prev = []) => {
-          if (prev.some((p) => p.id === prompt.id)) {
-            return prev.filter((p) => p.id !== prompt.id);
-          }
-          return [...prev, prompt];
-        });
-      } else {
-        setSelectedPrompt(prompt);
-      }
-    },
-    [setSelectedPrompts, setSelectedPrompt],
-  );
-
-  const handleRemovePrompt = useCallback(
-    (promptId?: string) => {
-      if (setSelectedPrompts) {
-        setSelectedPrompts((prev = []) => {
-          if (!promptId) return [];
-          return prev.filter((p) => p.id !== promptId);
-        });
-      } else {
-        setSelectedPrompt(null);
-      }
-    },
-    [setSelectedPrompts, setSelectedPrompt],
-  );
-
-  // -- Model initialisation --
-  useEffect(() => {
-    if (chatModels.length === 0 || isModelsLoading) return;
-
-    Promise.resolve().then(() => {
-      setModelId((current) => {
-        if (current && chatModels.some((model) => model.modelId === current)) {
-          return current;
-        }
-
-        const initialMatch = initialModelId
-          ? chatModels.find(
-              (model) =>
-                model.modelId === initialModelId || model.id === initialModelId,
-            )
-          : null;
-
-        if (initialMatch) {
-          return initialMatch.modelId;
-        }
-
-        return chatModels[0].modelId;
-      });
-    });
-  }, [chatModels, initialModelId, isModelsLoading]);
-
-  // -- Action handlers --
-  const handleSend = () => {
-    const hasPrompts = promptList.length > 0 || Boolean(selectedPrompt);
-    if (
-      (input.trim() ||
-        attachments.length > 0 ||
-        hasPrompts ||
-        selectedAssistant ||
-        selectedSkills.size > 0 ||
-        selectedKbs.size > 0) &&
-      !isLoading
-    ) {
-      // Auto-suppress tools when the current model does not support tool calling (capTools: false).
-      // This prevents ToolsNotSupportedError on the backend while preserving the user's tool toggle
-      // preferences in the UI if they switch back to a tool-capable model.
-      const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
-      const effectiveServerIds = supportsTools
-        ? Array.from(selectedServerIds)
-        : [];
-
-      const promptIds = promptList.map((p) => p.id);
-      const promptPayload =
-        promptIds.length > 0
-          ? promptIds
-          : selectedPrompt?.id
-            ? [selectedPrompt.id]
-            : undefined;
-
-      onSend(
-        input,
-        attachments,
-        modelId,
-        effectiveServerIds,
-        effectiveTools,
-        promptPayload,
-        selectedAssistant?.id,
-        Array.from(selectedKbs),
-        Array.from(selectedSkills),
-        subagentsEnabled,
-        subagentModelId,
-        subagentExcludedTools,
-      );
-      setInput("");
-      clearAttachments();
-      if (setSelectedPrompts) {
-        setSelectedPrompts([]);
-      } else {
-        setSelectedPrompt(null);
-      }
-      setSelectedAssistant(null);
-      setSelectedSkills(new Set());
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    const wasCommandHandled = handleCommandKeyDown(e);
-    if (wasCommandHandled) return;
-
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const inputPlaceholder = resolveInputPlaceholder(services.hasNoModels);
 
   return (
     <div
-      className={`relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30 ${isDragging ? "bg-primary/5 ring-2 ring-primary" : ""}`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      className={containerClass}
+      onDragOver={interaction.attachments.handleDragOver}
+      onDragLeave={interaction.attachments.handleDragLeave}
+      onDrop={interaction.attachments.handleDrop}
     >
-      {openTrigger && (
-        <MentionCommands
-          items={filteredItems}
-          trigger={openTrigger}
-          selectedIndex={selectedIndex}
-          onSelect={handleMentionSelect}
-          onClose={() => setOpenTrigger(null)}
-          className="absolute bottom-full left-0 mb-2"
-        />
-      )}
+      <ChatInputMentionCommands
+        openTrigger={interaction.mentions.openTrigger}
+        filteredItems={interaction.mentions.filteredItems}
+        selectedIndex={interaction.mentions.selectedIndex}
+        onSelect={interaction.mentions.handleSelect}
+        onClose={interaction.handleCloseMentions}
+      />
 
       <input
         ref={fileInputRef}
@@ -607,244 +204,91 @@ export function ChatInput({
         className="hidden"
         multiple
         accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/markdown,.md,.xlsx,.xlsm,.xls,.csv"
-        onChange={(e) => {
-          if (e.target.files) addFiles(e.target.files);
-          e.target.value = "";
-        }}
+        onChange={interaction.attachments.handleFileInputChange}
       />
 
       <ActiveSelectionChips
-        selectedAssistant={selectedAssistant}
-        selectedPrompt={selectedPrompt}
-        selectedPrompts={selectedPrompts}
-        selectedKbs={selectedKbs}
-        knowledgebases={knowledgebases}
-        selectedSkills={selectedSkills}
-        skills={skills}
-        onRemoveAssistant={() => setSelectedAssistant(null)}
-        onRemovePrompt={handleRemovePrompt}
-        onRemoveKb={handleRemoveKb}
-        onRemoveSkill={handleRemoveSkill}
+        selectedAssistant={interaction.mentions.selectedAssistant}
+        selectedPrompt={interaction.mentions.selectedPrompt}
+        selectedPrompts={interaction.mentions.selectedPrompts}
+        selectedKbs={interaction.selections.selectedKbs}
+        knowledgebases={services.knowledgebases}
+        selectedSkills={interaction.selections.selectedSkills}
+        skills={services.skills}
+        onRemoveAssistant={interaction.handleRemoveAssistant}
+        onRemovePrompt={interaction.prompts.handleRemovePrompt}
+        onRemoveKb={interaction.selections.handleRemoveKb}
+        onRemoveSkill={interaction.selections.handleRemoveSkill}
       />
 
-      <ModelCapabilityBanner hasNoModels={hasNoModels} />
+      <ModelCapabilityBanner hasNoModels={services.hasNoModels} />
 
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 pb-2">
-          {attachments.map((att) => (
-            <AttachmentBubble
-              key={att.id}
-              attachment={att}
-              supportsVision={supportsVision}
-              onRemove={removeAttachment}
-            />
-          ))}
-        </div>
-      )}
+      <ChatInputAttachmentList
+        attachments={interaction.attachments.attachments}
+        supportsVision={services.supportsVision}
+        onRemove={interaction.attachments.removeAttachment}
+      />
 
       <Textarea
         ref={textareaRef}
         value={input}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        placeholder={
-          hasNoModels
-            ? "Set up a provider to start chatting..."
-            : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases"
-        }
+        onChange={interaction.mentions.handleInputChange}
+        onKeyDown={interaction.submit.handleKeyDown}
+        placeholder={inputPlaceholder}
         className="max-h-[120px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         rows={2}
-        disabled={hasNoModels}
+        disabled={services.hasNoModels}
       />
 
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-1.5">
-          {isMobile ? (
-            <Drawer>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DrawerTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      disabled={hasNoModels}
-                      aria-label="Attach files, tools & more"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </DrawerTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Attach files, tools & more</TooltipContent>
-              </Tooltip>
-              <DrawerContent>
-                <AttachmentsMenu
-                  servers={servers}
-                  fileInputRef={fileInputRef}
-                  selectedTools={selectedTools}
-                  onToggleTool={toggleTool}
-                  onBulkSelect={handleBulkSelect}
-                  knowledgebases={knowledgebases}
-                  selectedKbs={selectedKbs}
-                  onToggleKb={handleToggleKb}
-                  skills={skills}
-                  selectedSkills={selectedSkills}
-                  onToggleSkill={handleToggleSkill}
-                  prompts={prompts}
-                  mcpPrompts={mcpPrompts}
-                  selectedPrompt={selectedPrompt}
-                  onSelectPrompt={setSelectedPrompt}
-                  selectedPromptIds={selectedPromptIds}
-                  onTogglePrompt={handleTogglePrompt}
-                  onClearPrompts={() => setSelectedPrompts([])}
-                  supportsVision={supportsVision}
-                  supportsTools={supportsTools}
-                  subagentsEnabled={subagentsEnabled}
-                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
-                />
-              </DrawerContent>
-            </Drawer>
-          ) : (
-            <Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      disabled={hasNoModels}
-                      aria-label="Attach files, tools & more"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Attach files, tools & more</TooltipContent>
-              </Tooltip>
-              <PopoverContent side="top" align="start" className="w-56 p-1">
-                <AttachmentsMenu
-                  servers={servers}
-                  fileInputRef={fileInputRef}
-                  selectedTools={selectedTools}
-                  onToggleTool={toggleTool}
-                  onBulkSelect={handleBulkSelect}
-                  knowledgebases={knowledgebases}
-                  selectedKbs={selectedKbs}
-                  onToggleKb={handleToggleKb}
-                  skills={skills}
-                  selectedSkills={selectedSkills}
-                  onToggleSkill={handleToggleSkill}
-                  prompts={prompts}
-                  mcpPrompts={mcpPrompts}
-                  selectedPrompt={selectedPrompt}
-                  onSelectPrompt={setSelectedPrompt}
-                  selectedPromptIds={selectedPromptIds}
-                  onTogglePrompt={handleTogglePrompt}
-                  onClearPrompts={() => setSelectedPrompts([])}
-                  supportsVision={supportsVision}
-                  supportsTools={supportsTools}
-                  subagentsEnabled={subagentsEnabled}
-                  onOpenSubagents={() => setIsSubagentDialogOpen(true)}
-                />
-              </PopoverContent>
-            </Popover>
-          )}
-
-          <ModelSelector value={modelId} onValueChange={setModelId} />
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {subagentsEnabled && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setIsSubagentDialogOpen(true)}
-                  className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 font-medium text-purple-700 text-xs transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
-                  aria-label="Manage subagents"
-                >
-                  <Bot className="h-3.5 w-3.5 shrink-0" />
-                  <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-in-out group-hover:max-w-24 group-hover:opacity-100">
-                    Subagents
-                  </span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Manage subagents</TooltipContent>
-            </Tooltip>
-          )}
-          <ContextUsagePill
-            thread={thread}
-            selectedModel={selectedModelObj ?? undefined}
-            input={input}
-            draftAttachments={attachments}
-            toolNames={supportsTools ? Array.from(selectedTools) : []}
-            mcpServerCount={supportsTools ? selectedServerIds.size : 0}
-            selectedSkillTokens={selectedSkillTokens}
-            availableSkillCount={availableSkillCount}
-          />
-          {onCancel && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCancel}
-              className="h-7 w-7 rounded-full"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {}} // TODO: Implement voice
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            disabled={hasNoModels}
-          >
-            <Mic className="h-3.5 w-3.5" />
-          </Button>
-          {isLoading ? (
-            <Button
-              size="icon"
-              variant="destructive"
-              className="h-7 w-7 rounded-full"
-              onClick={onStop}
-            >
-              <Square className="h-3 w-3 fill-current" />
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              className="h-7 w-7 rounded-full"
-              onClick={handleSend}
-              aria-label={submitLabel || "Send message"}
-              disabled={
-                hasNoModels ||
-                (!input.trim() &&
-                  attachments.length === 0 &&
-                  promptList.length === 0 &&
-                  !selectedPrompt &&
-                  !selectedAssistant &&
-                  selectedSkills.size === 0 &&
-                  selectedKbs.size === 0)
-              }
-            >
-              {submitLabel === "Save" ? (
-                <Save className="h-3.5 w-3.5" />
-              ) : (
-                <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
+      <ChatInputToolbar
+        isMobile={services.isMobile}
+        hasNoModels={services.hasNoModels}
+        servers={props.servers}
+        fileInputRef={fileInputRef}
+        selectedServerIds={interaction.selections.selectedServerIds}
+        selectedTools={interaction.selections.selectedTools}
+        toggleTool={interaction.selections.toggleTool}
+        handleBulkSelect={interaction.selections.handleBulkSelect}
+        knowledgebases={services.knowledgebases}
+        selectedKbs={interaction.selections.selectedKbs}
+        handleToggleKb={interaction.selections.handleToggleKb}
+        skills={services.skills}
+        selectedSkills={interaction.selections.selectedSkills}
+        handleToggleSkill={interaction.selections.handleToggleSkill}
+        prompts={services.prompts}
+        mcpPrompts={services.mcpPrompts}
+        selectedPrompt={interaction.mentions.selectedPrompt}
+        setSelectedPrompt={interaction.mentions.setSelectedPrompt}
+        selectedPromptIds={interaction.prompts.selectedPromptIds}
+        handleTogglePrompt={interaction.prompts.handleTogglePrompt}
+        handleClearPrompts={interaction.prompts.handleClearPrompts}
+        supportsVision={services.supportsVision}
+        supportsTools={services.supportsTools}
+        subagentsEnabled={interaction.selections.subagentsEnabled}
+        handleOpenSubagents={interaction.handleOpenSubagents}
+        modelId={services.modelId}
+        setModelId={services.setModelId}
+        thread={defaults.thread}
+        selectedModelObj={services.selectedModelObj}
+        input={input}
+        attachments={interaction.attachments.attachments}
+        selectedSkillTokens={interaction.selectedSkillTokens}
+        availableSkillCount={interaction.availableSkillCount}
+        onCancel={props.onCancel}
+        isLoading={props.isLoading}
+        onStop={props.onStop}
+        onSend={interaction.submit.handleSend}
+        submitLabel={props.submitLabel}
+        isSendDisabled={interaction.isSendDisabled}
+      />
 
       <SubagentConfigDialog
-        open={isSubagentDialogOpen}
-        onOpenChange={setIsSubagentDialogOpen}
-        subagentsEnabled={subagentsEnabled}
-        onToggleSubagents={setSubagentsEnabled}
-        subagentModelId={subagentModelId}
-        onSubagentModelChange={setSubagentModelId}
+        open={interaction.selections.isSubagentDialogOpen}
+        onOpenChange={interaction.selections.setIsSubagentDialogOpen}
+        subagentsEnabled={interaction.selections.subagentsEnabled}
+        onToggleSubagents={interaction.selections.setSubagentsEnabled}
+        subagentModelId={interaction.selections.subagentModelId}
+        onSubagentModelChange={interaction.selections.setSubagentModelId}
       />
     </div>
   );

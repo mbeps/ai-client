@@ -1,5 +1,110 @@
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 
+const VALID_ARTIFACT_TYPES = new Set([
+  "markdown",
+  "spreadsheet",
+  "html",
+  "mermaid",
+] as const);
+
+type ArtifactType = "markdown" | "spreadsheet" | "html" | "mermaid";
+
+/**
+ * Parses tool output payload if stringified JSON or validates object shape.
+ */
+function parseToolResultObject(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return raw && typeof raw === "object"
+    ? (raw as Record<string, unknown>)
+    : null;
+}
+
+/**
+ * Resolves valid artifact type from raw artifact properties.
+ */
+function resolveArtifactType(
+  rawArtifact: Record<string, unknown>,
+): ArtifactType | null {
+  const rawType =
+    typeof rawArtifact.type === "string"
+      ? rawArtifact.type.toLowerCase()
+      : typeof rawArtifact.artifact_type === "string"
+        ? rawArtifact.artifact_type.toLowerCase()
+        : null;
+
+  if (rawType && (VALID_ARTIFACT_TYPES as ReadonlySet<string>).has(rawType)) {
+    return rawType as ArtifactType;
+  }
+  return null;
+}
+
+/**
+ * Normalizes content string from string content, sheets array, or serialized object.
+ */
+function resolveArtifactContent(rawArtifact: Record<string, unknown>): string {
+  if (typeof rawArtifact.content === "string") {
+    return rawArtifact.content;
+  }
+  if (Array.isArray(rawArtifact.sheets)) {
+    return JSON.stringify({ sheets: rawArtifact.sheets });
+  }
+  if (rawArtifact.content !== undefined) {
+    return JSON.stringify(rawArtifact.content);
+  }
+  return "";
+}
+
+/**
+ * Extracts unwrapped artifact record if wrapped in { artifact: ... }.
+ */
+function resolveRawArtifact(
+  parsedRecord: Record<string, unknown>,
+): Record<string, unknown> {
+  if (
+    "artifact" in parsedRecord &&
+    parsedRecord.artifact &&
+    typeof parsedRecord.artifact === "object"
+  ) {
+    return parsedRecord.artifact as Record<string, unknown>;
+  }
+  return parsedRecord;
+}
+
+/**
+ * Resolves artifact title with default fallback.
+ */
+function resolveArtifactTitle(rawArtifact: Record<string, unknown>): string {
+  if (typeof rawArtifact.title === "string" && rawArtifact.title.trim()) {
+    return rawArtifact.title;
+  }
+  return "Untitled Artifact";
+}
+
+/**
+ * Resolves artifact ID with toolCallId fallback or default.
+ */
+function resolveArtifactId(
+  rawArtifact: Record<string, unknown>,
+  toolCallId: unknown,
+): string {
+  if (typeof rawArtifact.id === "string" && rawArtifact.id.trim()) {
+    return rawArtifact.id;
+  }
+  if (typeof toolCallId === "string") {
+    return `${toolCallId}-artifact`;
+  }
+  return "artifact-default";
+}
+
 /**
  * Extracts and normalizes structured ArtifactData from a tool result entry if present.
  * Tolerates:
@@ -20,69 +125,17 @@ export function extractArtifactFromToolResult(
 
   if (record.toolName !== "manage_artifact") return null;
 
-  const raw = record.result ?? record.output;
-  let parsed: unknown = raw;
+  const parsedRecord = parseToolResultObject(record.result ?? record.output);
+  if (!parsedRecord) return null;
 
-  if (typeof raw === "string") {
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-
-  if (!parsed || typeof parsed !== "object") return null;
-  const parsedRecord = parsed as Record<string, unknown>;
-  const rawArtifact =
-    "artifact" in parsedRecord &&
-    parsedRecord.artifact &&
-    typeof parsedRecord.artifact === "object"
-      ? (parsedRecord.artifact as Record<string, unknown>)
-      : parsedRecord;
-
-  const rawType =
-    typeof rawArtifact.type === "string"
-      ? rawArtifact.type.toLowerCase()
-      : typeof rawArtifact.artifact_type === "string"
-        ? rawArtifact.artifact_type.toLowerCase()
-        : null;
-
-  if (
-    rawType !== "markdown" &&
-    rawType !== "spreadsheet" &&
-    rawType !== "html" &&
-    rawType !== "mermaid"
-  ) {
-    return null;
-  }
-
-  const type: "markdown" | "spreadsheet" | "html" | "mermaid" = rawType;
-
-  let content: string = "";
-  if (typeof rawArtifact.content === "string") {
-    content = rawArtifact.content;
-  } else if (Array.isArray(rawArtifact.sheets)) {
-    content = JSON.stringify({ sheets: rawArtifact.sheets });
-  } else if (rawArtifact.content !== undefined) {
-    content = JSON.stringify(rawArtifact.content);
-  }
-
-  const title =
-    typeof rawArtifact.title === "string" && rawArtifact.title.trim()
-      ? rawArtifact.title
-      : "Untitled Artifact";
-
-  const id =
-    typeof rawArtifact.id === "string" && rawArtifact.id.trim()
-      ? rawArtifact.id
-      : typeof record.toolCallId === "string"
-        ? `${record.toolCallId}-artifact`
-        : "artifact-default";
+  const rawArtifact = resolveRawArtifact(parsedRecord);
+  const type = resolveArtifactType(rawArtifact);
+  if (!type) return null;
 
   return {
-    id,
+    id: resolveArtifactId(rawArtifact, record.toolCallId),
     type,
-    title,
-    content,
+    title: resolveArtifactTitle(rawArtifact),
+    content: resolveArtifactContent(rawArtifact),
   };
 }

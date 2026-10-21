@@ -4,12 +4,12 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { extractSkillFromZip } from "@/lib/skills/extract-skill-from-zip";
 import {
-  extractSkillFromZip,
   type ParsedSkill,
   parseSkillMarkdown,
-  sanitizeSkillSlug,
-} from "@/lib/skills/parser";
+} from "@/lib/skills/parse-skill-markdown";
+import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**

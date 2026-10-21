@@ -1,0 +1,66 @@
+"use client";
+
+import { Activity } from "lucide-react";
+import type { JobFilterTab } from "@/types/jobs";
+
+const TAB_EMPTY_TITLES: Record<JobFilterTab, string> = {
+  running: "No running jobs",
+  queued: "No queued jobs",
+  completed: "No completed jobs",
+  failed: "No failed jobs",
+  all: "No background jobs found",
+};
+
+const TAB_EMPTY_DESCRIPTIONS: Record<JobFilterTab, string> = {
+  running: "There are currently no background jobs running.",
+  queued: "There are currently no background jobs in queue.",
+  completed: "There are no completed background jobs.",
+  failed: "There are no failed or cancelled background jobs.",
+  all: "There are no background jobs tracked by Inngest.",
+};
+
+function resolveEmptyStateContent(
+  activeTab: JobFilterTab,
+  searchQuery: string,
+): { title: string; description: string } {
+  if (searchQuery.trim()) {
+    return {
+      title: "No matching jobs found",
+      description: `No jobs matched "${searchQuery}". Try a different search keyword.`,
+    };
+  }
+  return {
+    title: TAB_EMPTY_TITLES[activeTab],
+    description: TAB_EMPTY_DESCRIPTIONS[activeTab],
+  };
+}
+
+export interface JobsEmptyStateProps {
+  activeTab: JobFilterTab;
+  searchQuery: string;
+}
+
+/**
+ * Empty state container rendering contextual text based on tab and search filters.
+ */
+export function JobsEmptyState({
+  activeTab,
+  searchQuery,
+}: JobsEmptyStateProps) {
+  const { title, description } = resolveEmptyStateContent(
+    activeTab,
+    searchQuery,
+  );
+
+  return (
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+      <div className="rounded-full bg-muted p-4">
+        <Activity className="size-8 text-muted-foreground" />
+      </div>
+      <h3 className="mt-4 font-semibold text-lg">{title}</h3>
+      <p className="mt-1 max-w-sm text-muted-foreground text-sm">
+        {description}
+      </p>
+    </div>
+  );
+}

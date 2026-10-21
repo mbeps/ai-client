@@ -89,6 +89,54 @@ function getExtension(nameOrUrl: string): string | undefined {
   return undefined;
 }
 
+const MIME_TYPE_PATTERNS: Array<{
+  type: DownloadItemType;
+  matches: (mime: string) => boolean;
+}> = [
+  {
+    type: "spreadsheet",
+    matches: (m) =>
+      m.includes("spreadsheet") || m.includes("excel") || m.includes("csv"),
+  },
+  {
+    type: "document",
+    matches: (m) =>
+      m.includes("pdf") ||
+      m.includes("word") ||
+      m.includes("document") ||
+      m.includes("text/plain"),
+  },
+  {
+    type: "archive",
+    matches: (m) =>
+      m.includes("zip") ||
+      m.includes("tar") ||
+      m.includes("compressed") ||
+      m.includes("archive"),
+  },
+  { type: "image", matches: (m) => m.startsWith("image/") },
+  { type: "audio", matches: (m) => m.startsWith("audio/") },
+  { type: "video", matches: (m) => m.startsWith("video/") },
+  {
+    type: "code",
+    matches: (m) =>
+      m.includes("json") || m.includes("xml") || m.includes("javascript"),
+  },
+];
+
+/**
+ * Infers categorized DownloadItemType from MIME type string.
+ */
+function inferTypeFromMime(mimeType: string): DownloadItemType {
+  const mime = mimeType.toLowerCase();
+  for (const pattern of MIME_TYPE_PATTERNS) {
+    if (pattern.matches(mime)) {
+      return pattern.type;
+    }
+  }
+  return "file";
+}
+
 /**
  * Infers categorized DownloadItemType from an extension or MIME type.
  */
@@ -96,45 +144,13 @@ export function inferDownloadType(
   extension?: string,
   mimeType?: string,
 ): DownloadItemType {
-  if (extension && EXTENSION_TYPE_MAP[extension.toLowerCase()]) {
-    return EXTENSION_TYPE_MAP[extension.toLowerCase()];
+  if (extension) {
+    const extType = EXTENSION_TYPE_MAP[extension.toLowerCase()];
+    if (extType) return extType;
   }
 
   if (mimeType) {
-    const mime = mimeType.toLowerCase();
-    if (
-      mime.includes("spreadsheet") ||
-      mime.includes("excel") ||
-      mime.includes("csv")
-    ) {
-      return "spreadsheet";
-    }
-    if (
-      mime.includes("pdf") ||
-      mime.includes("word") ||
-      mime.includes("document") ||
-      mime.includes("text/plain")
-    ) {
-      return "document";
-    }
-    if (
-      mime.includes("zip") ||
-      mime.includes("tar") ||
-      mime.includes("compressed") ||
-      mime.includes("archive")
-    ) {
-      return "archive";
-    }
-    if (mime.startsWith("image/")) return "image";
-    if (mime.startsWith("audio/")) return "audio";
-    if (mime.startsWith("video/")) return "video";
-    if (
-      mime.includes("json") ||
-      mime.includes("xml") ||
-      mime.includes("javascript")
-    ) {
-      return "code";
-    }
+    return inferTypeFromMime(mimeType);
   }
 
   return "file";
@@ -175,6 +191,31 @@ function isBase64String(str: string): boolean {
   );
 }
 
+const TITLE_DIRECT_KEYS = [
+  "filename",
+  "fileName",
+  "file_name",
+  "name",
+  "title",
+] as const;
+const TITLE_PATH_KEYS = ["file_path", "filePath", "path"] as const;
+
+function findTitleInRecord(rec?: Record<string, unknown>): string | undefined {
+  if (!rec) return undefined;
+  for (const k of TITLE_DIRECT_KEYS) {
+    const val = rec[k];
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  for (const k of TITLE_PATH_KEYS) {
+    const val = rec[k];
+    if (typeof val === "string" && val.trim()) {
+      const fn = extractFilenameFromUrl(val);
+      if (fn) return fn.trim();
+    }
+  }
+  return undefined;
+}
+
 /**
  * Extracts candidate filename from record or toolArgs.
  */
@@ -187,27 +228,18 @@ function extractTitleCandidate(
       ? (toolArgs as Record<string, unknown>)
       : undefined;
 
-  const raw =
-    (typeof record.filename === "string" && record.filename) ||
-    (typeof record.fileName === "string" && record.fileName) ||
-    (typeof record.file_name === "string" && record.file_name) ||
-    (typeof record.name === "string" && record.name) ||
-    (typeof record.title === "string" && record.title) ||
-    (typeof record.file_path === "string" &&
-      extractFilenameFromUrl(record.file_path)) ||
-    (typeof record.filePath === "string" &&
-      extractFilenameFromUrl(record.filePath)) ||
-    (typeof argsRecord?.filename === "string" && argsRecord.filename) ||
-    (typeof argsRecord?.fileName === "string" && argsRecord.fileName) ||
-    (typeof argsRecord?.file_name === "string" && argsRecord.file_name) ||
-    (typeof argsRecord?.file_path === "string" &&
-      extractFilenameFromUrl(argsRecord.file_path)) ||
-    (typeof argsRecord?.filePath === "string" &&
-      extractFilenameFromUrl(argsRecord.filePath)) ||
-    undefined;
-
-  return raw ? raw.trim() : undefined;
+  return findTitleInRecord(record) ?? findTitleInRecord(argsRecord);
 }
+
+const SIZE_KEYS = [
+  "size_bytes",
+  "sizeBytes",
+  "file_size",
+  "fileSize",
+  "size",
+  "byte_count",
+  "byteCount",
+] as const;
 
 /**
  * Extracts candidate size in bytes.
@@ -216,16 +248,7 @@ function extractSizeCandidate(
   record: Record<string, unknown>,
   base64Data?: string,
 ): number | undefined {
-  const sizeKeys = [
-    "size_bytes",
-    "sizeBytes",
-    "file_size",
-    "fileSize",
-    "size",
-    "byte_count",
-    "byteCount",
-  ];
-  for (const k of sizeKeys) {
+  for (const k of SIZE_KEYS) {
     if (typeof record[k] === "number" && (record[k] as number) > 0) {
       return record[k] as number;
     }
@@ -256,21 +279,23 @@ function extractMimeCandidate(
   return undefined;
 }
 
+const STORAGE_URL_SUBSTRINGS = [
+  "/attachments/",
+  "/outputs/",
+  "/transforms/",
+  "X-Amz-Signature",
+  "X-Amz-Credential",
+  ":9000/",
+  "s3.",
+  ".amazonaws.com",
+];
+
 /**
  * Checks if a URL points to a storage bucket (S3, MinIO, presigned URLs).
  */
 function isStorageUrl(url: string): boolean {
-  if (!url || typeof url !== "string") return false;
-  return (
-    url.includes("/attachments/") ||
-    url.includes("/outputs/") ||
-    url.includes("/transforms/") ||
-    url.includes("X-Amz-Signature") ||
-    url.includes("X-Amz-Credential") ||
-    url.includes(":9000/") ||
-    url.includes("s3.") ||
-    url.includes(".amazonaws.com")
-  );
+  if (typeof url !== "string" || !url) return false;
+  return STORAGE_URL_SUBSTRINGS.some((sub) => url.includes(sub));
 }
 
 /**
@@ -302,6 +327,232 @@ function canonicalizeUrl(url: string, rawTitle?: string): string {
   }
 }
 
+type ExtractedPayloadItem = {
+  url: string;
+  title?: string;
+  size?: number;
+  mimeType?: string;
+};
+
+const DIRECT_URL_KEYS = [
+  "url",
+  "download_url",
+  "downloadUrl",
+  "file_url",
+  "fileUrl",
+  "link",
+  "href",
+  "uri",
+];
+
+function extractDirectUrlItem(
+  record: Record<string, unknown>,
+  toolArgs?: unknown,
+): ExtractedPayloadItem | null {
+  for (const key of DIRECT_URL_KEYS) {
+    const val = record[key];
+    if (typeof val === "string" && isValidDownloadUrl(val)) {
+      const titleCandidate = extractTitleCandidate(record, toolArgs);
+      const ext = getExtension(titleCandidate || val);
+      return {
+        url: val,
+        title: titleCandidate,
+        size: extractSizeCandidate(record),
+        mimeType: extractMimeCandidate(record, ext),
+      };
+    }
+  }
+  return null;
+}
+
+const BASE64_KEYS = [
+  "file_content",
+  "fileContent",
+  "content_base64",
+  "contentBase64",
+  "base64",
+  "file_data",
+  "fileData",
+  "blob",
+];
+
+function hasBase64FileIndications(
+  record: Record<string, unknown>,
+  toolArgs?: unknown,
+): boolean {
+  return (
+    Boolean(record.mimeType) ||
+    Boolean(record.contentType) ||
+    Boolean(record.filename) ||
+    Boolean(record.fileName) ||
+    Boolean(record.file_path) ||
+    Boolean((toolArgs as any)?.file_path)
+  );
+}
+
+function findBase64Content(
+  record: Record<string, unknown>,
+  toolArgs?: unknown,
+): string | undefined {
+  for (const key of BASE64_KEYS) {
+    const val = record[key];
+    if (typeof val === "string" && isBase64String(val)) {
+      return val;
+    }
+  }
+
+  // Check generic "data" key if accompanied by file/mime indications
+  if (typeof record.data === "string" && isBase64String(record.data)) {
+    if (hasBase64FileIndications(record, toolArgs)) {
+      return record.data;
+    }
+  }
+  return undefined;
+}
+
+function extractBase64DataItem(
+  record: Record<string, unknown>,
+  toolArgs?: unknown,
+): ExtractedPayloadItem | null {
+  const foundBase64 = findBase64Content(record, toolArgs);
+  if (!foundBase64) return null;
+
+  const titleCandidate = extractTitleCandidate(record, toolArgs);
+  const ext = getExtension(titleCandidate || "");
+  const mime = extractMimeCandidate(record, ext) || "application/octet-stream";
+  const cleanData = foundBase64.replace(/[\r\n\s]/g, "");
+  const dataUrl = `data:${mime};base64,${cleanData}`;
+  const size = extractSizeCandidate(record, cleanData);
+
+  return {
+    url: dataUrl,
+    title: titleCandidate,
+    size,
+    mimeType: mime,
+  };
+}
+
+function extractMcpTextContent(
+  cItem: Record<string, unknown>,
+  toolName: string,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  if (cItem.type !== "text" || typeof cItem.text !== "string") return [];
+  try {
+    const parsedText = JSON.parse(cItem.text);
+    return extractFromPayload(parsedText, toolName, toolArgs);
+  } catch {
+    return extractFromPayload(cItem.text, toolName, toolArgs);
+  }
+}
+
+function extractMcpImageContent(
+  cItem: Record<string, unknown>,
+  record: Record<string, unknown>,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  if (cItem.type !== "image" || typeof cItem.data !== "string") return [];
+  const mime =
+    (typeof cItem.mimeType === "string" && cItem.mimeType) || "image/png";
+  const cleanData = cItem.data.replace(/[\r\n\s]/g, "");
+  return [
+    {
+      url: `data:${mime};base64,${cleanData}`,
+      title: extractTitleCandidate(record, toolArgs),
+      size: extractSizeCandidate(cItem, cItem.data),
+      mimeType: mime,
+    },
+  ];
+}
+
+function extractMcpResourceContent(
+  cItem: Record<string, unknown>,
+  toolName: string,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  if (
+    cItem.type === "resource" &&
+    typeof cItem.resource === "object" &&
+    cItem.resource !== null
+  ) {
+    return extractFromPayload(cItem.resource, toolName, toolArgs);
+  }
+  return [];
+}
+
+function extractSingleMcpContentItem(
+  cItem: Record<string, unknown>,
+  record: Record<string, unknown>,
+  toolName: string,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  return [
+    ...extractMcpTextContent(cItem, toolName, toolArgs),
+    ...extractMcpImageContent(cItem, record, toolArgs),
+    ...extractMcpResourceContent(cItem, toolName, toolArgs),
+  ];
+}
+
+function extractMcpContentItems(
+  record: Record<string, unknown>,
+  toolName: string,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  if (!Array.isArray(record.content)) return [];
+  const discovered: ExtractedPayloadItem[] = [];
+
+  for (const item of record.content) {
+    if (!item || typeof item !== "object") continue;
+    const cItem = item as Record<string, unknown>;
+    discovered.push(
+      ...extractSingleMcpContentItem(cItem, record, toolName, toolArgs),
+    );
+  }
+
+  return discovered;
+}
+
+function extractNestedContainerItems(
+  record: Record<string, unknown>,
+  toolName: string,
+  toolArgs?: unknown,
+): ExtractedPayloadItem[] {
+  const discovered: ExtractedPayloadItem[] = [];
+
+  if (
+    typeof record.structuredContent === "object" &&
+    record.structuredContent !== null
+  ) {
+    discovered.push(
+      ...extractFromPayload(record.structuredContent, toolName, toolArgs),
+    );
+  }
+  if (typeof record.file === "object" && record.file !== null) {
+    discovered.push(...extractFromPayload(record.file, toolName, toolArgs));
+  }
+  for (const listKey of ["files", "downloads", "urls"] as const) {
+    const list = record[listKey];
+    if (Array.isArray(list)) {
+      discovered.push(...extractFromPayload(list, toolName, toolArgs));
+    }
+  }
+
+  return discovered;
+}
+
+function extractUrlsFromPlainText(text: string): ExtractedPayloadItem[] {
+  const discovered: ExtractedPayloadItem[] = [];
+  const urlMatches = text.matchAll(/https?:\/\/[^\s"')]+/g);
+  for (const m of urlMatches) {
+    const url = m[0];
+    const ext = getExtension(url);
+    if (ext || isStorageUrl(url)) {
+      discovered.push({ url });
+    }
+  }
+  return discovered;
+}
+
 /**
  * Inspects any tool result payload and discovers downloadable items.
  */
@@ -309,209 +560,167 @@ function extractFromPayload(
   payload: unknown,
   toolName: string,
   toolArgs?: unknown,
-): Array<{
-  url: string;
-  title?: string;
-  size?: number;
-  mimeType?: string;
-}> {
-  const discovered: Array<{
-    url: string;
-    title?: string;
-    size?: number;
-    mimeType?: string;
-  }> = [];
-
-  if (!payload) return discovered;
+): ExtractedPayloadItem[] {
+  if (!payload) return [];
 
   let parsed: unknown = payload;
   if (typeof payload === "string") {
     try {
       parsed = JSON.parse(payload);
     } catch {
-      // Plain text output: check for embedded URLs
-      const urlMatches = payload.matchAll(/https?:\/\/[^\s"')]+/g);
-      for (const m of urlMatches) {
-        const url = m[0];
-        const ext = getExtension(url);
-        if (ext || isStorageUrl(url)) {
-          discovered.push({ url });
-        }
-      }
-      return discovered;
+      return extractUrlsFromPlainText(payload);
     }
   }
 
   if (Array.isArray(parsed)) {
-    for (const item of parsed) {
-      discovered.push(...extractFromPayload(item, toolName, toolArgs));
-    }
-    return discovered;
+    return parsed.flatMap((item) =>
+      extractFromPayload(item, toolName, toolArgs),
+    );
   }
 
   if (typeof parsed === "object" && parsed !== null) {
     const record = parsed as Record<string, unknown>;
+    const directItem = extractDirectUrlItem(record, toolArgs);
+    const base64Item = extractBase64DataItem(record, toolArgs);
+    const mcpItems = extractMcpContentItems(record, toolName, toolArgs);
+    const nestedItems = extractNestedContainerItems(record, toolName, toolArgs);
 
-    // Case 1: Direct URL properties (url, download_url, file_url, link, href)
-    const directUrlKeys = [
-      "url",
-      "download_url",
-      "downloadUrl",
-      "file_url",
-      "fileUrl",
-      "link",
-      "href",
-      "uri",
+    return [
+      ...(directItem ? [directItem] : []),
+      ...(base64Item ? [base64Item] : []),
+      ...mcpItems,
+      ...nestedItems,
     ];
-
-    let foundUrl: string | undefined;
-    for (const key of directUrlKeys) {
-      if (
-        typeof record[key] === "string" &&
-        isValidDownloadUrl(record[key] as string)
-      ) {
-        foundUrl = record[key] as string;
-        break;
-      }
-    }
-
-    if (foundUrl) {
-      const titleCandidate = extractTitleCandidate(record, toolArgs);
-      const ext = getExtension(titleCandidate || foundUrl);
-      discovered.push({
-        url: foundUrl,
-        title: titleCandidate,
-        size: extractSizeCandidate(record),
-        mimeType: extractMimeCandidate(record, ext),
-      });
-    }
-
-    // Case 2: Base64 / raw binary file content payload
-    const base64Keys = [
-      "file_content",
-      "fileContent",
-      "content_base64",
-      "contentBase64",
-      "base64",
-      "file_data",
-      "fileData",
-      "blob",
-    ];
-
-    let foundBase64: string | undefined;
-    for (const key of base64Keys) {
-      if (
-        typeof record[key] === "string" &&
-        isBase64String(record[key] as string)
-      ) {
-        foundBase64 = record[key] as string;
-        break;
-      }
-    }
-
-    // Check generic "data" key if accompanied by file/mime indications
-    if (
-      !foundBase64 &&
-      typeof record.data === "string" &&
-      isBase64String(record.data)
-    ) {
-      if (
-        record.mimeType ||
-        record.contentType ||
-        record.filename ||
-        record.fileName ||
-        record.file_path ||
-        (toolArgs as any)?.file_path
-      ) {
-        foundBase64 = record.data;
-      }
-    }
-
-    if (foundBase64) {
-      const titleCandidate = extractTitleCandidate(record, toolArgs);
-      const ext = getExtension(titleCandidate || "");
-      const mime =
-        extractMimeCandidate(record, ext) || "application/octet-stream";
-      const cleanData = foundBase64.replace(/[\r\n\s]/g, "");
-      const dataUrl = `data:${mime};base64,${cleanData}`;
-      const size = extractSizeCandidate(record, cleanData);
-
-      discovered.push({
-        url: dataUrl,
-        title: titleCandidate,
-        size,
-        mimeType: mime,
-      });
-    }
-
-    // Case 3: MCP content array unwrapping
-    if (Array.isArray(record.content)) {
-      for (const item of record.content) {
-        if (!item || typeof item !== "object") continue;
-        const cItem = item as Record<string, unknown>;
-
-        if (cItem.type === "text" && typeof cItem.text === "string") {
-          // Attempt JSON parse of text content (e.g. MCP tool stringified result)
-          try {
-            const parsedText = JSON.parse(cItem.text);
-            discovered.push(
-              ...extractFromPayload(parsedText, toolName, toolArgs),
-            );
-          } catch {
-            // Check for plain URLs in text
-            discovered.push(
-              ...extractFromPayload(cItem.text, toolName, toolArgs),
-            );
-          }
-        } else if (cItem.type === "image" && typeof cItem.data === "string") {
-          const mime =
-            (typeof cItem.mimeType === "string" && cItem.mimeType) ||
-            "image/png";
-          const dataUrl = `data:${mime};base64,${cItem.data.replace(/[\r\n\s]/g, "")}`;
-          discovered.push({
-            url: dataUrl,
-            title: extractTitleCandidate(record, toolArgs),
-            size: extractSizeCandidate(cItem, cItem.data),
-            mimeType: mime,
-          });
-        } else if (
-          cItem.type === "resource" &&
-          typeof cItem.resource === "object" &&
-          cItem.resource !== null
-        ) {
-          discovered.push(
-            ...extractFromPayload(cItem.resource, toolName, toolArgs),
-          );
-        }
-      }
-    }
-
-    // Case 4: Structured content and nested objects
-    if (
-      typeof record.structuredContent === "object" &&
-      record.structuredContent !== null
-    ) {
-      discovered.push(
-        ...extractFromPayload(record.structuredContent, toolName, toolArgs),
-      );
-    }
-    if (typeof record.file === "object" && record.file !== null) {
-      discovered.push(...extractFromPayload(record.file, toolName, toolArgs));
-    }
-    if (Array.isArray(record.files)) {
-      discovered.push(...extractFromPayload(record.files, toolName, toolArgs));
-    }
-    if (Array.isArray(record.downloads)) {
-      discovered.push(
-        ...extractFromPayload(record.downloads, toolName, toolArgs),
-      );
-    }
-    if (Array.isArray(record.urls)) {
-      discovered.push(...extractFromPayload(record.urls, toolName, toolArgs));
-    }
   }
 
-  return discovered;
+  return [];
+}
+
+type RegisterDownloadFn = (
+  url: string,
+  rawTitle?: string,
+  source?: string,
+  size?: number,
+  mimeType?: string,
+) => void;
+
+function resolveSourceName(tr: any, raw: any, toolName: string): string {
+  const mcpServerName =
+    raw?._meta?.["io.modelcontextprotocol/serverInfo"]?.name ||
+    raw?.structuredContent?._meta?.["io.modelcontextprotocol/serverInfo"]?.name;
+  return tr?.serverName || mcpServerName || toolName;
+}
+
+function processSinglePersistedToolResult(
+  tr: unknown,
+  toolCallsList: any[],
+  registerItem: RegisterDownloadFn,
+): void {
+  if (!tr || typeof tr !== "object") return;
+  const trRecord = tr as Record<string, unknown>;
+  const toolName =
+    (typeof trRecord.toolName === "string" && trRecord.toolName) || "tool";
+  const raw = trRecord.result !== undefined ? trRecord.result : trRecord.output;
+  const matchingCall = toolCallsList.find(
+    (c: any) => c.toolCallId === trRecord.toolCallId,
+  );
+  const toolArgs = matchingCall?.args;
+  const sourceName = resolveSourceName(tr, raw, toolName);
+
+  const extracted = extractFromPayload(raw, toolName, toolArgs);
+  for (const item of extracted) {
+    registerItem(item.url, item.title, sourceName, item.size, item.mimeType);
+  }
+}
+
+function parseMetadataObject(
+  metadata: unknown,
+): Record<string, unknown> | null {
+  if (!metadata) return null;
+  try {
+    const meta = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    return typeof meta === "object" && meta !== null
+      ? (meta as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractDownloadsFromPersistedMetadata(
+  metadata: unknown,
+  registerItem: RegisterDownloadFn,
+): void {
+  const meta = parseMetadataObject(metadata);
+  if (!meta || !Array.isArray(meta.toolResults)) return;
+
+  const toolCallsList = Array.isArray(meta.toolCalls) ? meta.toolCalls : [];
+  for (const tr of meta.toolResults) {
+    processSinglePersistedToolResult(tr, toolCallsList, registerItem);
+  }
+}
+
+function extractDownloadsFromActiveTools(
+  activeToolCalls: ToolCallState[] | undefined,
+  registerItem: RegisterDownloadFn,
+): void {
+  if (!activeToolCalls || activeToolCalls.length === 0) return;
+
+  for (const tc of activeToolCalls) {
+    if (tc.result) {
+      const sourceName = resolveSourceName(tc, tc.result, tc.toolName);
+      const extracted = extractFromPayload(tc.result, tc.toolName, tc.args);
+      for (const item of extracted) {
+        registerItem(
+          item.url,
+          item.title,
+          sourceName,
+          item.size,
+          item.mimeType,
+        );
+      }
+    }
+  }
+}
+
+function registerMarkdownUrlIfEligible(
+  url: string,
+  label: string | undefined,
+  registerItem: RegisterDownloadFn,
+): void {
+  const isStorage = isStorageUrl(url);
+  if (getExtension(url) || isStorage) {
+    registerItem(url, label, isStorage ? "Storage" : "Link");
+  }
+}
+
+function extractMarkdownLinks(
+  content: string,
+  registerItem: RegisterDownloadFn,
+): void {
+  const matches = content.matchAll(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g);
+  for (const match of matches) {
+    registerMarkdownUrlIfEligible(match[2], match[1], registerItem);
+  }
+}
+
+function extractBareUrls(
+  content: string,
+  registerItem: RegisterDownloadFn,
+): void {
+  const matches = content.matchAll(/(?<!\()(https?:\/\/[^\s"')<]+)/g);
+  for (const match of matches) {
+    registerMarkdownUrlIfEligible(match[1], undefined, registerItem);
+  }
+}
+
+function extractDownloadsFromMarkdown(
+  content: string | undefined,
+  registerItem: RegisterDownloadFn,
+): void {
+  if (!content) return;
+  extractMarkdownLinks(content, registerItem);
+  extractBareUrls(content, registerItem);
 }
 
 /**
@@ -535,12 +744,12 @@ export function extractMessageDownloads(
   const items: DownloadItem[] = [];
   const seenCanonicalUrls = new Set<string>();
 
-  const registerItem = (
-    url: string,
-    rawTitle?: string,
-    source?: string,
-    size?: number,
-    mimeType?: string,
+  const registerItem: RegisterDownloadFn = (
+    url,
+    rawTitle,
+    source,
+    size,
+    mimeType,
   ) => {
     if (!isValidDownloadUrl(url)) return;
 
@@ -576,107 +785,9 @@ export function extractMessageDownloads(
     });
   };
 
-  // 1. Extract from persisted metadata toolResults
-  if (message.metadata) {
-    try {
-      const meta =
-        typeof message.metadata === "string"
-          ? JSON.parse(message.metadata)
-          : message.metadata;
-
-      const toolCallsList = Array.isArray(meta?.toolCalls)
-        ? meta.toolCalls
-        : [];
-
-      if (Array.isArray(meta?.toolResults)) {
-        for (const tr of meta.toolResults) {
-          if (!tr || typeof tr !== "object") continue;
-          const toolName = tr.toolName || "tool";
-          const raw = tr.result ?? (tr as any).output;
-          const matchingCall = toolCallsList.find(
-            (c: any) => c.toolCallId === tr.toolCallId,
-          );
-          const toolArgs = matchingCall?.args;
-
-          const mcpServerName =
-            (raw as any)?._meta?.["io.modelcontextprotocol/serverInfo"]?.name ||
-            (raw as any)?.structuredContent?._meta?.[
-              "io.modelcontextprotocol/serverInfo"
-            ]?.name;
-          const sourceName = tr.serverName || mcpServerName || toolName;
-
-          const extracted = extractFromPayload(raw, toolName, toolArgs);
-          for (const item of extracted) {
-            registerItem(
-              item.url,
-              item.title,
-              sourceName,
-              item.size,
-              item.mimeType,
-            );
-          }
-        }
-      }
-    } catch {
-      // Ignore metadata parse errors
-    }
-  }
-
-  // 2. Extract from active streaming tool calls
-  if (activeToolCalls && activeToolCalls.length > 0) {
-    for (const tc of activeToolCalls) {
-      if (tc.result) {
-        const mcpServerName =
-          (tc.result as any)?._meta?.["io.modelcontextprotocol/serverInfo"]
-            ?.name ||
-          (tc.result as any)?.structuredContent?._meta?.[
-            "io.modelcontextprotocol/serverInfo"
-          ]?.name;
-        const sourceName = mcpServerName || tc.toolName;
-
-        const extracted = extractFromPayload(tc.result, tc.toolName, tc.args);
-        for (const item of extracted) {
-          registerItem(
-            item.url,
-            item.title,
-            sourceName,
-            item.size,
-            item.mimeType,
-          );
-        }
-      }
-    }
-  }
-
-  // 3. Extract from markdown links in message content
-  if (message.content) {
-    // Markdown link syntax: [title](url)
-    const mdLinkMatches = message.content.matchAll(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    );
-    for (const match of mdLinkMatches) {
-      const label = match[1];
-      const url = match[2];
-      const ext = getExtension(url);
-
-      // Only register if it has a file extension or matches storage URL pattern
-      if (ext || isStorageUrl(url)) {
-        registerItem(url, label, isStorageUrl(url) ? "Storage" : "Link");
-      }
-    }
-
-    // Bare URL matching
-    const bareUrlMatches = message.content.matchAll(
-      /(?<!\()(https?:\/\/[^\s"')<]+)/g,
-    );
-    for (const match of bareUrlMatches) {
-      const url = match[1];
-      const ext = getExtension(url);
-      if (ext || isStorageUrl(url)) {
-        registerItem(url, undefined, isStorageUrl(url) ? "Storage" : "Link");
-      }
-    }
-  }
+  extractDownloadsFromPersistedMetadata(message.metadata, registerItem);
+  extractDownloadsFromActiveTools(activeToolCalls, registerItem);
+  extractDownloadsFromMarkdown(message.content, registerItem);
 
   return items;
 }

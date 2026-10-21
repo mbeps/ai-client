@@ -1,58 +1,15 @@
 "use client";
 
-import {
-  AlertCircle,
-  ArrowLeft,
-  BrainCircuit,
-  Database,
-  FileText,
-  History,
-  List,
-  Loader2,
-  Save,
-  Settings,
-  Shield,
-  Wrench,
-} from "lucide-react";
-import Link from "next/link";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { createTransformAgent } from "@/actions/transform-agents/create-transform-agent";
-import { deleteTransformAgent } from "@/actions/transform-agents/delete-transform-agent";
-import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
-import { updateTransformAgent } from "@/actions/transform-agents/update-transform-agent";
-import { createTransformRun } from "@/actions/transform-runs/create-transform-run";
-import { listTransformRuns } from "@/actions/transform-runs/list-transform-runs";
-import { uploadRunInput } from "@/actions/transform-runs/upload-run-input";
-import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
-import { ToolPickerList } from "@/components/chat/tool-picker-list";
-import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
-import {
-  SidebarTabs,
-  SidebarTabsContent,
-  SidebarTabsList,
-  SidebarTabsTrigger,
-} from "@/components/shared/sidebar-tabs";
-import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
-import { Button } from "@/components/ui/button";
-import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
-import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
-import { TransformRunDialog } from "@/components/workflows/sheet-flow/transform-run-dialog";
-import { TransformRunsTab } from "@/components/workflows/sheet-flow/transform-runs-tab";
-import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-steps-tab";
-import { ROUTES } from "@/config/routes";
+import { AgentEditorHeader } from "@/components/workflows/sheet-flow/agent-editor-header";
+import { AgentEditorTabs } from "@/components/workflows/sheet-flow/agent-editor-tabs";
+import { useAgentEditorWorkflow } from "@/components/workflows/sheet-flow/use-agent-editor-workflow";
 import { useApiError } from "@/hooks/use-api-error";
-import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { useUserModels } from "@/hooks/use-user-models";
-import { useAppStore } from "@/lib/store";
-import { toggleSetItem } from "@/lib/utils";
-import type { SkillMode } from "@/schemas/skill/skill-config";
-import type { TransformRunRow } from "@/types/transform/transform-run-row";
-import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Transform agent editor page supporting create/edit/delete operations.
@@ -64,33 +21,9 @@ import type { TransformStep } from "@/types/transform/transform-step";
  */
 export default function AgentEditorPage() {
   const params = useParams();
-  const router = useRouter();
-  const { handleApiError } = useApiError();
   const id = params.id as string;
   const isNew = id === "new";
-
-  const { mcpServers, loadMcpServers, skills, loadSkills } = useAppStore();
-  const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
-  const { models: chatModels, isLoading: isModelsLoading } =
-    useUserModels("chat");
-  const hasNoModels = !isModelsLoading && chatModels.length === 0;
-
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [globalContext, setGlobalContext] = useState("");
-  const [modelId, setModelId] = useState<string>("");
-  const [tools, setTools] = useState<Set<string>>(new Set());
-  const [skillMode, setSkillMode] = useState<SkillMode>("dynamic");
-  const [skillIds, setSkillIds] = useState<Set<string>>(new Set());
-  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [requiresFileUpload, setRequiresFileUpload] = useState(true);
-  const [steps, setSteps] = useState<TransformStep[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(!isNew);
-  const [runs, setRuns] = useState<TransformRunRow[]>([]);
-  const [isLoadingRuns, setIsLoadingRuns] = useState(false);
+  const { handleApiError } = useApiError();
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsString.withDefault("steps").withOptions({
@@ -99,237 +32,9 @@ export default function AgentEditorPage() {
     }),
   );
 
-  // Run dialog state
-  const [runDialogOpen, setRunDialogOpen] = useState(false);
-  const [runFiles, setRunFiles] = useState<File[]>([]);
-  const [dryRun, setDryRun] = useState(false);
-  const [isStartingRun, setIsStartingRun] = useState(false);
+  const workflow = useAgentEditorWorkflow({ id, isNew, handleApiError });
 
-  // Delete state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Load MCP servers and skills if empty
-  useEffect(() => {
-    if (mcpServers.length === 0) {
-      loadMcpServers();
-    }
-    if (skills.length === 0) {
-      loadSkills();
-    }
-  }, [mcpServers.length, loadMcpServers, skills.length, loadSkills]);
-
-  // Load agent data if editing
-  useEffect(() => {
-    if (isNew) return;
-
-    let mounted = true;
-    async function loadAgent() {
-      try {
-        const agent = await getTransformAgent(id);
-        if (!agent && mounted) {
-          notFound();
-        }
-        if (agent && mounted) {
-          setName(agent.name);
-          setDescription(agent.description ?? "");
-          setGlobalContext(agent.globalContext ?? "");
-          setModelId(agent.modelId ?? "");
-          setTools(new Set(agent.tools ?? []));
-          setSkillMode((agent.skillMode as SkillMode) ?? "dynamic");
-          setSkillIds(new Set(agent.skillIds ?? []));
-          setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
-          setRequiresFileUpload(agent.requiresFileUpload);
-          const rawSteps =
-            typeof agent.steps === "string"
-              ? JSON.parse(agent.steps)
-              : agent.steps;
-          setSteps(
-            (rawSteps ?? []).map((step: any, i: number) => ({
-              id: step.id || crypto.randomUUID(),
-              name: step.name || `Step ${i + 1}`,
-              prompt: step.prompt || "",
-              mcpServerIds: step.mcpServerIds ?? [],
-              toolIds: step.toolIds ?? [],
-              order: step.order ?? i,
-              requiresReview: Boolean(step.requiresReview),
-            })),
-          );
-        }
-      } catch (err) {
-        handleApiError(err, "Failed to load agent");
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    }
-
-    loadAgent();
-    return () => {
-      mounted = false;
-    };
-  }, [id, isNew, handleApiError]);
-
-  // Load runs if editing
-  useEffect(() => {
-    if (isNew) return;
-
-    let mounted = true;
-    async function loadRuns() {
-      setIsLoadingRuns(true);
-      try {
-        const result = await listTransformRuns(id);
-        if (mounted) setRuns(result);
-      } catch (err) {
-        handleApiError(err, "Failed to load runs");
-      } finally {
-        if (mounted) setIsLoadingRuns(false);
-      }
-    }
-
-    loadRuns();
-    return () => {
-      mounted = false;
-    };
-  }, [id, isNew, handleApiError]);
-
-  const addStep = () => {
-    const newStep: TransformStep = {
-      id: crypto.randomUUID(),
-      name: `Step ${steps.length + 1}`,
-      prompt: "",
-      mcpServerIds: [],
-      toolIds: [],
-      order: steps.length,
-      requiresReview: false,
-    };
-    setSteps([...steps, newStep]);
-  };
-
-  const updateStep = (index: number, updates: Partial<TransformStep>) => {
-    setSteps(steps.map((s, i) => (i === index ? { ...s, ...updates } : s)));
-  };
-
-  const removeStep = (index: number) => {
-    setSteps(steps.filter((_, i) => i !== index));
-  };
-
-  const toggleTool = (serverId: string, toolName: string) => {
-    const toolId = `${serverId}:tool:${toolName}`;
-    setTools((prev) => toggleSetItem(prev, toolId));
-  };
-
-  const toggleAllTools = (
-    serverId: string,
-    toolNames: string[],
-    enabled: boolean,
-  ) => {
-    setTools((prev) => {
-      const next = new Set(prev);
-      toolNames.forEach((name) => {
-        const toolId = `${serverId}:tool:${name}`;
-        if (enabled) {
-          next.add(toolId);
-        } else {
-          next.delete(toolId);
-        }
-      });
-      return next;
-    });
-  };
-
-  const handleSave = async () => {
-    if (!name.trim()) {
-      toast.error("Please enter an agent name");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        name,
-        description: description.trim() || undefined,
-        globalContext: globalContext.trim() || undefined,
-        modelId: modelId.trim() || undefined,
-        tools: Array.from(tools),
-        skillMode,
-        skillIds: Array.from(skillIds),
-        knowledgeBaseIds: Array.from(knowledgeBaseIds),
-        requiresFileUpload,
-        steps: steps.map((s, i) => ({
-          id: s.id,
-          name: s.name,
-          prompt: s.prompt,
-          mcpServerIds: s.mcpServerIds,
-          toolIds: s.toolIds,
-          order: i,
-          requiresReview: s.requiresReview,
-        })),
-      };
-
-      if (isNew) {
-        const created = await createTransformAgent(payload);
-        toast.success("Agent created successfully");
-        router.push(ROUTES.WORKFLOWS.TRANSFORM.detail(created.id));
-      } else {
-        await updateTransformAgent(id, payload);
-        toast.success("Agent updated successfully");
-      }
-    } catch (err) {
-      handleApiError(err, "Failed to save agent");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleStartRun = async () => {
-    if (requiresFileUpload && runFiles.length === 0) {
-      toast.error("Please select at least one file");
-      return;
-    }
-
-    setIsStartingRun(true);
-    try {
-      let inputAttachmentIds: string[] = [];
-
-      if (runFiles.length > 0) {
-        const formData = new FormData();
-        runFiles.forEach((file) => {
-          formData.append("files", file);
-        });
-        const uploaded = await uploadRunInput(formData);
-        inputAttachmentIds = uploaded.map((u) => u.id);
-      }
-
-      const run = await createTransformRun({
-        agentId: id,
-        dryRun,
-        inputAttachmentIds,
-      });
-
-      toast.success("Run started successfully");
-      setRunDialogOpen(false);
-      setRunFiles([]);
-      router.push(ROUTES.WORKFLOWS.TRANSFORM.runs(id, run.id));
-    } catch (err) {
-      handleApiError(err, "Failed to start run");
-    } finally {
-      setIsStartingRun(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteTransformAgent(id);
-      toast.success("Agent deleted successfully");
-      router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
-    } catch (err) {
-      handleApiError(err, "Failed to delete agent");
-      setIsDeleting(false);
-    }
-  };
-
-  if (isLoading) {
+  if (workflow.form.isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -339,236 +44,75 @@ export default function AgentEditorPage() {
 
   return (
     <PageContainer variant="default" className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={ROUTES.WORKFLOWS.TRANSFORM.path}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <List className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="font-semibold text-xl">
-              {isNew ? "New Transform Agent" : name || "Untitled Agent"}
-            </h1>
-            <p className="text-muted-foreground text-xs">
-              {isNew
-                ? "Configure a multi-step document transformation workflow"
-                : `${steps.length} step${steps.length !== 1 ? "s" : ""} configured`}
-            </p>
-          </div>
-        </div>
+      <AgentEditorHeader
+        isNew={isNew}
+        name={workflow.form.name}
+        stepCount={workflow.form.steps.length}
+        runDialogOpen={workflow.runDialog.runDialogOpen}
+        onRunDialogOpenChange={workflow.runDialog.setRunDialogOpen}
+        requiresFileUpload={workflow.form.requiresFileUpload}
+        runFiles={workflow.runDialog.runFiles}
+        onRunFilesChange={workflow.runDialog.setRunFiles}
+        dryRun={workflow.runDialog.dryRun}
+        onDryRunChange={workflow.runDialog.setDryRun}
+        onStartRun={workflow.runDialog.handleStartRun}
+        isStartingRun={workflow.runDialog.isStartingRun}
+        disabledRun={workflow.isModelBlocked}
+        onSave={workflow.handleSave}
+        isSaving={workflow.isSaving}
+        disabledSave={workflow.isSaveDisabled}
+      />
 
-        <div className="ml-auto flex gap-2">
-          {!isNew && (
-            <TransformRunDialog
-              open={runDialogOpen}
-              onOpenChange={setRunDialogOpen}
-              requiresFileUpload={requiresFileUpload}
-              runFiles={runFiles}
-              onRunFilesChange={setRunFiles}
-              dryRun={dryRun}
-              onDryRunChange={setDryRun}
-              onStartRun={handleStartRun}
-              isStartingRun={isStartingRun}
-              disabled={isModelsLoading || hasNoModels}
-            />
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || isModelsLoading || hasNoModels}
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save Agent
-          </Button>
-        </div>
-      </div>
-
-      {hasNoModels && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <p className="font-medium text-red-800 text-xs dark:text-red-200">
-              No chat models configured. Please set up a provider to configure
-              and run transform agents.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            asChild
-            className="h-7 border-red-200 text-[10px] hover:bg-red-100 dark:border-red-900 dark:hover:bg-red-900/40"
-          >
-            <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
-              <Settings className="mr-1.5 h-3 w-3" />
-              Go to Settings
-            </Link>
-          </Button>
-        </div>
+      {workflow.hasNoModels && (
+        <NoModelsAlertBanner message="No chat models configured. Please set up a provider to configure and run transform agents." />
       )}
 
-      <SidebarTabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
-        <SidebarTabsList>
-          <SidebarTabsTrigger value="steps">
-            <List className="mr-2 h-4 w-4" />
-            <span>Steps ({steps.length})</span>
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="prompt">
-            <FileText className="mr-2 h-4 w-4" />
-            <span>Global Context</span>
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="knowledge">
-            <Database className="mr-2 h-4 w-4" />
-            <span>Knowledge Bases</span>
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="tools">
-            <Wrench className="mr-2 h-4 w-4" />
-            <span>Tools</span>
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="skills">
-            <BrainCircuit className="mr-2 h-4 w-4" />
-            <span>Skills</span>
-          </SidebarTabsTrigger>
-          {!isNew && (
-            <SidebarTabsTrigger value="runs">
-              <History className="mr-2 h-4 w-4" />
-              <span>Runs ({runs.length})</span>
-            </SidebarTabsTrigger>
-          )}
-          <SidebarTabsTrigger value="config">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </SidebarTabsTrigger>
-          {!isNew && (
-            <SidebarTabsTrigger value="danger">
-              <Shield className="mr-2 h-4 w-4" />
-              <span>Danger Zone</span>
-            </SidebarTabsTrigger>
-          )}
-        </SidebarTabsList>
-
-        <SidebarTabsContent value="steps">
-          <TransformStepsTab
-            steps={steps}
-            onAddStep={addStep}
-            onUpdateStep={updateStep}
-            onRemoveStep={removeStep}
-          />
-        </SidebarTabsContent>
-
-        <SidebarTabsContent value="prompt">
-          <TransformContextTab
-            globalContext={globalContext}
-            onGlobalContextChange={setGlobalContext}
-          />
-        </SidebarTabsContent>
-
-        <SidebarTabsContent value="knowledge" className="space-y-4">
-          <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Knowledge Bases</h3>
-            <p className="text-muted-foreground text-sm">
-              Select knowledge bases to provide additional context for this
-              transformation agent.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <KnowledgebasePicker
-              knowledgebases={knowledgebases}
-              selectedIds={knowledgeBaseIds}
-              onSelect={setKnowledgeBaseIds}
-              mode="multiple"
-              allowEmpty={false}
-            />
-          </div>
-        </SidebarTabsContent>
-
-        <SidebarTabsContent value="tools" className="space-y-4">
-          <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Default Tools</h3>
-            <p className="text-muted-foreground text-sm">
-              These tools will be automatically enabled for all steps in this
-              transformation.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <ToolPickerList
-              servers={mcpServers}
-              selectedTools={tools}
-              onToggleTool={toggleTool}
-              onBulkSelect={toggleAllTools}
-            />
-          </div>
-        </SidebarTabsContent>
-
-        <SidebarTabsContent value="skills">
-          <SkillsConfigTab
-            skillMode={skillMode}
-            onSkillModeChange={setSkillMode}
-            selectedSkillIds={skillIds}
-            onToggleSkill={(id) =>
-              setSkillIds((prev) => toggleSetItem(prev, id))
-            }
-            onSelectSkills={setSkillIds}
-            skills={skills}
-            onSave={handleSave}
-            isSaving={isSaving}
-          />
-        </SidebarTabsContent>
-
-        {!isNew && (
-          <SidebarTabsContent value="runs">
-            <TransformRunsTab
-              runs={runs}
-              agentId={id}
-              isLoading={isLoadingRuns}
-            />
-          </SidebarTabsContent>
-        )}
-
-        <SidebarTabsContent value="config">
-          <TransformConfigTab
-            name={name}
-            onNameChange={setName}
-            description={description}
-            onDescriptionChange={setDescription}
-            modelId={modelId}
-            onModelIdChange={setModelId}
-            requiresFileUpload={requiresFileUpload}
-            onRequiresFileUploadChange={setRequiresFileUpload}
-          />
-        </SidebarTabsContent>
-
-        {!isNew && (
-          <SidebarTabsContent value="danger">
-            <DangerZoneCard
-              title="Danger Zone"
-              description="Irreversible actions for this transform agent."
-              consequences="Deleting this agent will permanently remove its configuration and steps. Past runs will be preserved but dissociated. This action cannot be undone."
-              buttonLabel="Delete Agent"
-              onDelete={() => setShowDeleteDialog(true)}
-              isDeleting={isDeleting}
-            />
-          </SidebarTabsContent>
-        )}
-      </SidebarTabs>
+      <AgentEditorTabs
+        activeTab={activeTab}
+        onActiveTabChange={setActiveTab}
+        isNew={isNew}
+        agentId={id}
+        steps={workflow.form.steps}
+        onAddStep={workflow.form.addStep}
+        onUpdateStep={workflow.form.updateStep}
+        onRemoveStep={workflow.form.removeStep}
+        globalContext={workflow.form.globalContext}
+        onGlobalContextChange={workflow.form.setGlobalContext}
+        knowledgebases={workflow.form.knowledgebases}
+        knowledgeBaseIds={workflow.form.knowledgeBaseIds}
+        onSelectKnowledgebases={workflow.form.setKnowledgeBaseIds}
+        mcpServers={workflow.form.mcpServers}
+        tools={workflow.form.tools}
+        onToggleTool={workflow.form.toggleTool}
+        onBulkSelectTools={workflow.form.toggleAllTools}
+        skillMode={workflow.form.skillMode}
+        onSkillModeChange={workflow.form.setSkillMode}
+        skillIds={workflow.form.skillIds}
+        onSelectSkills={workflow.form.setSkillIds}
+        skills={workflow.form.skills}
+        onSave={workflow.handleSave}
+        isSaving={workflow.isSaving}
+        runs={workflow.runs}
+        isLoadingRuns={workflow.isLoadingRuns}
+        name={workflow.form.name}
+        onNameChange={workflow.form.setName}
+        description={workflow.form.description}
+        onDescriptionChange={workflow.form.setDescription}
+        modelId={workflow.form.modelId}
+        onModelIdChange={workflow.form.setModelId}
+        requiresFileUpload={workflow.form.requiresFileUpload}
+        onRequiresFileUploadChange={workflow.form.setRequiresFileUpload}
+        onOpenDeleteDialog={() => workflow.setShowDeleteDialog(true)}
+        isDeleting={workflow.isDeleting}
+      />
 
       <DeleteConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title={`Delete "${name}"?`}
+        isOpen={workflow.showDeleteDialog}
+        onClose={() => workflow.setShowDeleteDialog(false)}
+        onConfirm={workflow.handleDelete}
+        title={`Delete "${workflow.form.name}"?`}
         description="This will permanently delete the transform agent and its configuration. This cannot be undone."
-        loading={isDeleting}
+        loading={workflow.isDeleting}
       />
     </PageContainer>
   );

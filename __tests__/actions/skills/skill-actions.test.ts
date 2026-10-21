@@ -66,7 +66,18 @@ const mockParser = vi.hoisted(() => ({
   sanitizeSkillSlug: vi.fn((slug: string) => slug),
 }));
 
-vi.mock("@/lib/skills/parser", () => mockParser);
+vi.mock("@/lib/skills/create-skill-zip", () => ({
+  createSkillZip: mockParser.createSkillZip,
+}));
+vi.mock("@/lib/skills/extract-skill-from-zip", () => ({
+  extractSkillFromZip: mockParser.extractSkillFromZip,
+}));
+vi.mock("@/lib/skills/parse-skill-markdown", () => ({
+  parseSkillMarkdown: mockParser.parseSkillMarkdown,
+}));
+vi.mock("@/lib/skills/sanitize-skill-slug", () => ({
+  sanitizeSkillSlug: mockParser.sanitizeSkillSlug,
+}));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSkill } from "@/actions/skills/create-skill";

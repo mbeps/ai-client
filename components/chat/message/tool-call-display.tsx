@@ -45,6 +45,365 @@ interface ToolCallDisplayProps {
   chatId?: string;
 }
 
+type RenderChunk =
+  | { type: "subagents"; items: ToolCall[] }
+  | { type: "standard"; item: ToolCall };
+
+function isSubagentCall(tc: ToolCall): boolean {
+  return (
+    tc.toolName === "delegate_task" ||
+    tc.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK
+  );
+}
+
+function groupToolCallsIntoChunks(toolCalls: ToolCall[]): RenderChunk[] {
+  const chunks: RenderChunk[] = [];
+  for (const tc of toolCalls) {
+    if (isSubagentCall(tc)) {
+      const last = chunks[chunks.length - 1];
+      if (last && last.type === "subagents") {
+        last.items.push(tc);
+      } else {
+        chunks.push({ type: "subagents", items: [tc] });
+      }
+    } else {
+      chunks.push({ type: "standard", item: tc });
+    }
+  }
+  return chunks;
+}
+
+function resolveSubagentDefaultOpen(
+  items: ToolCall[],
+  toolResults: ToolResult[],
+  initialOpen: boolean,
+): string[] {
+  const pendingItem = items.find(
+    (tc) => !toolResults.some((tr) => tr.toolCallId === tc.toolCallId),
+  );
+  const defaultOpenId =
+    pendingItem?.toolCallId ?? (initialOpen ? items[0]?.toolCallId : undefined);
+  return defaultOpenId ? [defaultOpenId] : [];
+}
+
+interface SubagentChunkAccordionProps {
+  chunk: { type: "subagents"; items: ToolCall[] };
+  chunkIdx: number;
+  toolResults: ToolResult[];
+  initialOpen: boolean;
+  messageId?: string;
+  chatId?: string;
+}
+
+function SubagentChunkAccordion({
+  chunk,
+  chunkIdx,
+  toolResults,
+  initialOpen,
+  messageId,
+  chatId,
+}: SubagentChunkAccordionProps) {
+  const defaultOpenValues = resolveSubagentDefaultOpen(
+    chunk.items,
+    toolResults,
+    initialOpen,
+  );
+  const groupKey = `subagents-group-${chunk.items[0]?.toolCallId || chunkIdx}`;
+
+  return (
+    <Accordion
+      key={groupKey}
+      type="multiple"
+      defaultValue={defaultOpenValues}
+      className="w-full space-y-2"
+    >
+      {chunk.items.map((tc) => {
+        const result = toolResults.find(
+          (tr) => tr.toolCallId === tc.toolCallId,
+        );
+        const isCompleted = Boolean(result);
+        const isError = Boolean(isCompleted && (result?.result as any)?.error);
+        const args = (tc.args ?? {}) as {
+          role?: string;
+          taskBrief?: string;
+          inputData?: string;
+        };
+
+        return (
+          <SubagentActivityCard
+            key={tc.toolCallId}
+            accordionValue={tc.toolCallId}
+            role={args.role}
+            taskBrief={args.taskBrief}
+            inputData={args.inputData}
+            status={isCompleted ? (isError ? "error" : "complete") : "pending"}
+            result={result?.result}
+            messageId={messageId}
+            chatId={chatId}
+            initialOpen={initialOpen}
+          />
+        );
+      })}
+    </Accordion>
+  );
+}
+
+function ToolCallHeaderTitle({
+  toolName,
+  serverName,
+  isMcpCall,
+}: {
+  toolName: string;
+  serverName?: string;
+  isMcpCall: boolean;
+}) {
+  if (isMcpCall) {
+    return (
+      <span className="flex items-center gap-1.5 font-mono text-xs">
+        <span className="font-semibold text-foreground/90">{serverName}</span>
+        <Circle className="size-1.5 fill-muted-foreground/50 text-muted-foreground/50" />
+        <span>{toolName}</span>
+      </span>
+    );
+  }
+  return <span className="font-mono text-xs">{toolName}</span>;
+}
+
+function ToolCallStatusBadge({ isError }: { isError: boolean }) {
+  return (
+    <div className="ml-2 flex items-center gap-1.5">
+      {isError ? (
+        <XCircle className="size-3.5 text-destructive" />
+      ) : (
+        <CheckCircle2 className="size-3.5 text-success" />
+      )}
+      <span
+        className={cn(
+          "font-bold text-[10px] uppercase",
+          isError ? "text-destructive" : "text-success",
+        )}
+      >
+        {isError ? "Failed" : "Success"}
+      </span>
+    </div>
+  );
+}
+
+function ToolCallContextUsage({ tokens }: { tokens: number }) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5 text-xs">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Database className="size-3.5 text-muted-foreground" />
+        <span className="font-medium">Context Usage</span>
+      </div>
+      <span className="font-mono text-[11px] text-foreground/80">
+        ~{formatTokens(tokens)} tokens
+      </span>
+    </div>
+  );
+}
+
+function ToolCallArgumentsDisplay({ args }: { args: unknown }) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+          Arguments
+        </span>
+        <div className="h-px flex-1 bg-muted" />
+      </div>
+      <div className="max-h-60 overflow-y-auto overflow-x-hidden rounded-md bg-zinc-950/90 ring-1 ring-white/5 ring-inset dark:bg-black/40">
+        <div className="p-2.5">
+          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-300 leading-relaxed">
+            {JSON.stringify(args, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolCallResultDisplay({
+  result,
+  isError,
+}: {
+  result: unknown;
+  isError: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+          Result
+        </span>
+        <div className="h-px flex-1 bg-muted" />
+      </div>
+      <div
+        className={cn(
+          "max-h-80 overflow-y-auto overflow-x-hidden rounded-md ring-1 ring-inset",
+          isError
+            ? "bg-destructive/5 text-destructive ring-destructive/20"
+            : "bg-zinc-950/90 text-zinc-300 ring-white/5 dark:bg-black/40",
+        )}
+      >
+        <div className="p-2.5">
+          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
+            {typeof result === "string"
+              ? result
+              : JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface StandardToolCallCollapsibleProps {
+  toolCall: ToolCall;
+  chunkIdx: number;
+  toolResults: ToolResult[];
+  initialOpen: boolean;
+}
+
+function isMcpServer(name?: string): boolean {
+  if (!name) return false;
+  return name !== "Internal" && name !== "System";
+}
+
+function deriveToolCallViewState(
+  toolCall: ToolCall,
+  toolResults: ToolResult[],
+) {
+  const result = toolResults.find(
+    (tr) => tr.toolCallId === toolCall.toolCallId,
+  );
+  const isCompleted = Boolean(result);
+  const resultObj = result?.result;
+  const isError = Boolean(
+    isCompleted &&
+      typeof resultObj === "object" &&
+      resultObj !== null &&
+      "error" in resultObj,
+  );
+  const serverName = toolCall.serverName ?? result?.serverName;
+  const isMcpCall = isMcpServer(serverName);
+  const estimatedTokens = estimateToolContextTokens(toolCall.args, resultObj);
+
+  return {
+    result,
+    isCompleted,
+    isError,
+    serverName,
+    isMcpCall,
+    estimatedTokens,
+  };
+}
+
+function ToolCallTriggerContent({
+  isCompleted,
+  toolName,
+  serverName,
+  isMcpCall,
+  isError,
+}: {
+  isCompleted: boolean;
+  toolName: string;
+  serverName?: string;
+  isMcpCall: boolean;
+  isError: boolean;
+}) {
+  return (
+    <div className="flex flex-1 items-center gap-2 text-muted-foreground">
+      <div className="relative">
+        <Terminal className="size-4" />
+        {!isCompleted && (
+          <div className="absolute -top-1 -right-1">
+            <Loader2 className="size-2 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
+      <ToolCallHeaderTitle
+        toolName={toolName}
+        serverName={serverName}
+        isMcpCall={isMcpCall}
+      />
+      {isCompleted && <ToolCallStatusBadge isError={isError} />}
+    </div>
+  );
+}
+
+function ToolCallCollapsibleBody({
+  estimatedTokens,
+  args,
+  isCompleted,
+  result,
+  isError,
+}: {
+  estimatedTokens: number;
+  args: unknown;
+  isCompleted: boolean;
+  result: unknown;
+  isError: boolean;
+}) {
+  return (
+    <CollapsibleContent>
+      <div className="border-muted border-t bg-muted/5 p-3 pt-0">
+        <div className="mt-2 space-y-3">
+          <ToolCallContextUsage tokens={estimatedTokens} />
+          <ToolCallArgumentsDisplay args={args} />
+          {isCompleted && (
+            <ToolCallResultDisplay result={result} isError={isError} />
+          )}
+        </div>
+      </div>
+    </CollapsibleContent>
+  );
+}
+
+function StandardToolCallCollapsible({
+  toolCall,
+  chunkIdx,
+  toolResults,
+  initialOpen,
+}: StandardToolCallCollapsibleProps) {
+  const {
+    result,
+    isCompleted,
+    isError,
+    serverName,
+    isMcpCall,
+    estimatedTokens,
+  } = deriveToolCallViewState(toolCall, toolResults);
+  const elementKey = toolCall.toolCallId || String(chunkIdx);
+
+  return (
+    <div key={elementKey}>
+      <Collapsible
+        defaultOpen={initialOpen}
+        className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"
+      >
+        <CollapsibleTrigger className="flex w-full items-center gap-2 p-2.5 font-medium text-sm outline-none transition-colors hover:bg-muted/30">
+          <ToolCallTriggerContent
+            isCompleted={isCompleted}
+            toolName={toolCall.toolName}
+            serverName={serverName}
+            isMcpCall={isMcpCall}
+            isError={isError}
+          />
+          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+        </CollapsibleTrigger>
+        <ToolCallCollapsibleBody
+          estimatedTokens={estimatedTokens}
+          args={toolCall.args}
+          isCompleted={isCompleted}
+          result={result?.result}
+          isError={isError}
+        />
+      </Collapsible>
+    </div>
+  );
+}
+
 /**
  * Displays a collapsible sequence of MCP tool calls and their results.
  * Groups subagent delegations into an independent, multi-expandable Accordion group.
@@ -66,205 +425,31 @@ export function ToolCallDisplay({
 }: ToolCallDisplayProps) {
   if (!toolCalls || toolCalls.length === 0) return null;
 
-  const isSubagentCall = (tc: ToolCall) =>
-    tc.toolName === "delegate_task" ||
-    tc.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
-
-  type RenderChunk =
-    | { type: "subagents"; items: ToolCall[] }
-    | { type: "standard"; item: ToolCall };
-
-  const chunks: RenderChunk[] = [];
-  for (const tc of toolCalls) {
-    if (isSubagentCall(tc)) {
-      const last = chunks[chunks.length - 1];
-      if (last && last.type === "subagents") {
-        last.items.push(tc);
-      } else {
-        chunks.push({ type: "subagents", items: [tc] });
-      }
-    } else {
-      chunks.push({ type: "standard", item: tc });
-    }
-  }
+  const chunks = groupToolCallsIntoChunks(toolCalls);
 
   return (
     <div className="mb-3 space-y-2">
-      {chunks.map((chunk, chunkIdx) => {
-        if (chunk.type === "subagents") {
-          const defaultOpenId =
-            chunk.items.find(
-              (tc) =>
-                !toolResults.some((tr) => tr.toolCallId === tc.toolCallId),
-            )?.toolCallId ??
-            (initialOpen ? chunk.items[0]?.toolCallId : undefined);
-
-          const defaultOpenValues = defaultOpenId ? [defaultOpenId] : [];
-
-          return (
-            <Accordion
-              key={`subagents-group-${chunk.items[0].toolCallId || chunkIdx}`}
-              type="multiple"
-              defaultValue={defaultOpenValues}
-              className="w-full space-y-2"
-            >
-              {chunk.items.map((tc) => {
-                const result = toolResults.find(
-                  (tr) => tr.toolCallId === tc.toolCallId,
-                );
-                const isCompleted = !!result;
-                const isError = isCompleted && (result.result as any)?.error;
-                const args = (tc.args ?? {}) as {
-                  role?: string;
-                  taskBrief?: string;
-                  inputData?: string;
-                };
-
-                return (
-                  <SubagentActivityCard
-                    key={tc.toolCallId}
-                    accordionValue={tc.toolCallId}
-                    role={args.role}
-                    taskBrief={args.taskBrief}
-                    inputData={args.inputData}
-                    status={
-                      isCompleted ? (isError ? "error" : "complete") : "pending"
-                    }
-                    result={result?.result}
-                    messageId={messageId}
-                    chatId={chatId}
-                    initialOpen={initialOpen}
-                  />
-                );
-              })}
-            </Accordion>
-          );
-        }
-
-        const tc = chunk.item;
-        const result = toolResults.find(
-          (tr) => tr.toolCallId === tc.toolCallId,
-        );
-        const isCompleted = !!result;
-        const isError = isCompleted && (result?.result as any)?.error;
-        const serverName = tc.serverName || result?.serverName;
-        const isMcpCall = Boolean(
-          serverName && serverName !== "Internal" && serverName !== "System",
-        );
-        const estimatedTokens = estimateToolContextTokens(
-          tc.args,
-          result?.result,
-        );
-
-        return (
-          <div key={tc.toolCallId || chunkIdx}>
-            <Collapsible
-              defaultOpen={initialOpen}
-              className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"
-            >
-              <CollapsibleTrigger className="flex w-full items-center gap-2 p-2.5 font-medium text-sm outline-none transition-colors hover:bg-muted/30">
-                <div className="flex flex-1 items-center gap-2 text-muted-foreground">
-                  <div className="relative">
-                    <Terminal className="size-4" />
-                    {!isCompleted && (
-                      <div className="absolute -top-1 -right-1">
-                        <Loader2 className="size-2 animate-spin text-primary" />
-                      </div>
-                    )}
-                  </div>
-                  {isMcpCall ? (
-                    <span className="flex items-center gap-1.5 font-mono text-xs">
-                      <span className="font-semibold text-foreground/90">
-                        {serverName}
-                      </span>
-                      <Circle className="size-1.5 fill-muted-foreground/50 text-muted-foreground/50" />
-                      <span>{tc.toolName}</span>
-                    </span>
-                  ) : (
-                    <span className="font-mono text-xs">{tc.toolName}</span>
-                  )}
-                  {isCompleted && (
-                    <div className="ml-2 flex items-center gap-1.5">
-                      {isError ? (
-                        <XCircle className="size-3.5 text-destructive" />
-                      ) : (
-                        <CheckCircle2 className="size-3.5 text-success" />
-                      )}
-                      <span
-                        className={cn(
-                          "font-bold text-[10px] uppercase",
-                          isError ? "text-destructive" : "text-success",
-                        )}
-                      >
-                        {isError ? "Failed" : "Success"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="border-muted border-t bg-muted/5 p-3 pt-0">
-                  <div className="mt-2 space-y-3">
-                    <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5 text-xs">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Database className="size-3.5 text-muted-foreground" />
-                        <span className="font-medium">Context Usage</span>
-                      </div>
-                      <span className="font-mono text-[11px] text-foreground/80">
-                        ~{formatTokens(estimatedTokens)} tokens
-                      </span>
-                    </div>
-
-                    <div>
-                      <div className="mb-1.5 flex items-center gap-2">
-                        <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                          Arguments
-                        </span>
-                        <div className="h-px flex-1 bg-muted" />
-                      </div>
-                      <div className="max-h-60 overflow-y-auto overflow-x-hidden rounded-md bg-zinc-950/90 ring-1 ring-white/5 ring-inset dark:bg-black/40">
-                        <div className="p-2.5">
-                          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-300 leading-relaxed">
-                            {JSON.stringify(tc.args, null, 2)}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-
-                    {isCompleted && (
-                      <div>
-                        <div className="mb-1.5 flex items-center gap-2">
-                          <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                            Result
-                          </span>
-                          <div className="h-px flex-1 bg-muted" />
-                        </div>
-                        <div
-                          className={cn(
-                            "max-h-80 overflow-y-auto overflow-x-hidden rounded-md ring-1 ring-inset",
-                            isError
-                              ? "bg-destructive/5 text-destructive ring-destructive/20"
-                              : "bg-zinc-950/90 text-zinc-300 ring-white/5 dark:bg-black/40",
-                          )}
-                        >
-                          <div className="p-2.5">
-                            <pre className="whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
-                              {typeof result.result === "string"
-                                ? result.result
-                                : JSON.stringify(result.result, null, 2)}
-                            </pre>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        );
-      })}
+      {chunks.map((chunk, chunkIdx) =>
+        chunk.type === "subagents" ? (
+          <SubagentChunkAccordion
+            key={`subagents-group-${chunk.items[0]?.toolCallId || chunkIdx}`}
+            chunk={chunk}
+            chunkIdx={chunkIdx}
+            toolResults={toolResults}
+            initialOpen={initialOpen}
+            messageId={messageId}
+            chatId={chatId}
+          />
+        ) : (
+          <StandardToolCallCollapsible
+            key={chunk.item.toolCallId || chunkIdx}
+            toolCall={chunk.item}
+            chunkIdx={chunkIdx}
+            toolResults={toolResults}
+            initialOpen={initialOpen}
+          />
+        ),
+      )}
     </div>
   );
 }

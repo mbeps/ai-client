@@ -24,7 +24,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       all: false,
-      reporter: ["text", "lcov"],
+      reporter: ["text", "lcov", "json"],
       reportsDirectory: "coverage",
       exclude: [
         "drizzle/**",

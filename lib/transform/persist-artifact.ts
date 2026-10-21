@@ -47,41 +47,150 @@ export type PersistArtifactResult = {
   attachmentRow: AttachmentRow;
 };
 
+const EXTENSION_MIME_MAP: Record<string, string> = {
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xlsm: "application/vnd.ms-excel.sheet.macroEnabled.12",
+  xls: "application/vnd.ms-excel",
+  csv: "text/csv",
+  pdf: "application/pdf",
+  md: "text/markdown",
+  markdown: "text/markdown",
+  html: "text/html",
+  htm: "text/html",
+  json: "application/json",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  zip: "application/zip",
+  txt: "text/plain",
+  mmd: "text/plain",
+};
+
 /** Maps a file extension to its corresponding standard MIME type. */
 function inferMimeTypeFromFilename(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "xlsx":
-      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    case "xlsm":
-      return "application/vnd.ms-excel.sheet.macroEnabled.12";
-    case "xls":
-      return "application/vnd.ms-excel";
-    case "csv":
-      return "text/csv";
-    case "pdf":
-      return "application/pdf";
-    case "md":
-    case "markdown":
-      return "text/markdown";
-    case "html":
-    case "htm":
-      return "text/html";
-    case "json":
-      return "application/json";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "zip":
-      return "application/zip";
-    case "txt":
-    case "mmd":
-      return "text/plain";
-    default:
-      return "application/octet-stream";
+  return (ext && EXTENSION_MIME_MAP[ext]) || "application/octet-stream";
+}
+
+type ResolvedArtifactPayload = {
+  fileBuffer: Buffer;
+  outputName: string;
+  mimeType: string;
+};
+
+const TEXT_ARTIFACT_CONFIG: Record<string, { ext: string; mimeType: string }> =
+  {
+    markdown: { ext: "md", mimeType: "text/markdown" },
+    html: { ext: "html", mimeType: "text/html" },
+    mermaid: { ext: "mmd", mimeType: "text/plain" },
+  };
+
+function appendMultiSheets(
+  workbook: XLSX.WorkBook,
+  sheets: Array<{ name?: string; data?: unknown[][] }>,
+): void {
+  for (const sheet of sheets) {
+    const data = sheet.data || [];
+    const name = sheet.name || "Sheet1";
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(workbook, ws, name);
   }
+}
+
+function appendSheetsFromParsed(
+  workbook: XLSX.WorkBook,
+  parsed: unknown,
+): void {
+  if (Array.isArray(parsed)) {
+    const ws = XLSX.utils.aoa_to_sheet(parsed);
+    XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
+    return;
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return;
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  if (Array.isArray(obj.data)) {
+    const ws = XLSX.utils.aoa_to_sheet(obj.data as unknown[][]);
+    const name = typeof obj.name === "string" ? obj.name : "Sheet1";
+    XLSX.utils.book_append_sheet(workbook, ws, name);
+    return;
+  }
+
+  if (Array.isArray(obj.sheets)) {
+    appendMultiSheets(
+      workbook,
+      obj.sheets as Array<{ name?: string; data?: unknown[][] }>,
+    );
+  }
+}
+
+/**
+ * Constructs an XLSX workbook Buffer from JSON spreadsheet artifact content.
+ * Throws InvalidArtifactFormatError if the workbook has no sheets.
+ */
+function buildSpreadsheetBuffer(artifactContent: string): Buffer {
+  const parsed = JSON.parse(artifactContent);
+  const workbook = XLSX.utils.book_new();
+
+  appendSheetsFromParsed(workbook, parsed);
+
+  if (workbook.SheetNames.length === 0) {
+    throw new InvalidArtifactFormatError(
+      "Spreadsheet artifact contains no valid sheets or recognizable data structure",
+    );
+  }
+
+  return Buffer.from(
+    XLSX.write(workbook, {
+      type: "array",
+      bookType: "xlsx",
+    }) as ArrayBuffer,
+  );
+}
+
+/**
+ * Resolves the file buffer, sanitized file name, and MIME type for artifact/download inputs.
+ * Returns null if the artifact content is empty or the artifact type is unsupported.
+ */
+function resolveArtifactPayload(
+  input: PersistArtifactInput,
+): ResolvedArtifactPayload | null {
+  if (input.kind === "download") {
+    const fileBuffer = Buffer.from(input.fileContent, "base64");
+    const outputName = input.filename
+      ? sanitiseFilename(input.filename)
+      : `step-${input.stepIndex + 1}-output.xlsx`;
+    const mimeType = inferMimeTypeFromFilename(outputName);
+    return { fileBuffer, outputName, mimeType };
+  }
+
+  const artifactType =
+    (input.artifact.type as string | undefined)?.toLowerCase() ?? "";
+  const artifactContent = (input.artifact.content as string | undefined) ?? "";
+
+  if (!artifactContent) {
+    return null;
+  }
+
+  if (artifactType === "spreadsheet") {
+    const fileBuffer = buildSpreadsheetBuffer(artifactContent);
+    const outputName = `step-${input.stepIndex + 1}-output.xlsx`;
+    const mimeType =
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    return { fileBuffer, outputName, mimeType };
+  }
+
+  const textConfig = TEXT_ARTIFACT_CONFIG[artifactType];
+  if (textConfig) {
+    const fileBuffer = Buffer.from(artifactContent, "utf-8");
+    const outputName = `step-${input.stepIndex + 1}-output.${textConfig.ext}`;
+    return { fileBuffer, outputName, mimeType: textConfig.mimeType };
+  }
+
+  return null;
 }
 
 /**
@@ -100,93 +209,14 @@ export async function persistTransformArtifact(
   userId: string,
   runId: string,
 ): Promise<PersistArtifactResult | null> {
-  const outputAttachmentId = randomUUID();
-  let outputName: string;
-  let fileBuffer: Buffer;
-  let mimeType: string;
-
   try {
-    if (input.kind === "artifact") {
-      const artifactType =
-        (input.artifact.type as string | undefined)?.toLowerCase() ?? "";
-      const artifactContent =
-        (input.artifact.content as string | undefined) ?? "";
-
-      if (!artifactContent) {
-        return null;
-      }
-
-      if (artifactType === "spreadsheet") {
-        const parsed = JSON.parse(artifactContent);
-        const workbook = XLSX.utils.book_new();
-
-        if (Array.isArray(parsed)) {
-          const ws = XLSX.utils.aoa_to_sheet(parsed);
-          XLSX.utils.book_append_sheet(workbook, ws, "Sheet1");
-        } else if (
-          parsed &&
-          typeof parsed === "object" &&
-          Array.isArray((parsed as any).data)
-        ) {
-          const ws = XLSX.utils.aoa_to_sheet((parsed as any).data);
-          XLSX.utils.book_append_sheet(
-            workbook,
-            ws,
-            (parsed as any).name ?? "Sheet1",
-          );
-        } else if (
-          parsed &&
-          typeof parsed === "object" &&
-          Array.isArray((parsed as any).sheets)
-        ) {
-          for (const sheet of (parsed as any).sheets as Array<{
-            name?: string;
-            data?: unknown[][];
-          }>) {
-            const ws = XLSX.utils.aoa_to_sheet(sheet.data ?? []);
-            XLSX.utils.book_append_sheet(workbook, ws, sheet.name ?? "Sheet1");
-          }
-        }
-
-        if (workbook.SheetNames.length === 0) {
-          throw new InvalidArtifactFormatError(
-            "Spreadsheet artifact contains no valid sheets or recognizable data structure",
-          );
-        }
-
-        fileBuffer = Buffer.from(
-          XLSX.write(workbook, {
-            type: "array",
-            bookType: "xlsx",
-          }) as ArrayBuffer,
-        );
-        outputName = `step-${input.stepIndex + 1}-output.xlsx`;
-        mimeType =
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-      } else if (artifactType === "markdown") {
-        fileBuffer = Buffer.from(artifactContent, "utf-8");
-        outputName = `step-${input.stepIndex + 1}-output.md`;
-        mimeType = "text/markdown";
-      } else if (artifactType === "html") {
-        fileBuffer = Buffer.from(artifactContent, "utf-8");
-        outputName = `step-${input.stepIndex + 1}-output.html`;
-        mimeType = "text/html";
-      } else if (artifactType === "mermaid") {
-        fileBuffer = Buffer.from(artifactContent, "utf-8");
-        outputName = `step-${input.stepIndex + 1}-output.mmd`;
-        mimeType = "text/plain";
-      } else {
-        // Unknown / unsupported artifact type
-        return null;
-      }
-    } else {
-      fileBuffer = Buffer.from(input.fileContent, "base64");
-      outputName = input.filename
-        ? sanitiseFilename(input.filename)
-        : `step-${input.stepIndex + 1}-output.xlsx`;
-      mimeType = inferMimeTypeFromFilename(outputName);
+    const payload = resolveArtifactPayload(input);
+    if (!payload) {
+      return null;
     }
 
+    const { fileBuffer, outputName, mimeType } = payload;
+    const outputAttachmentId = randomUUID();
     const s3Key = `transform-outputs/${userId}/${outputAttachmentId}-${outputName}`;
 
     // 1. DB record first, then upload; compensate by deleting the row if S3

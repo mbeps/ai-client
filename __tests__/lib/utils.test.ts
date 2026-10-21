@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cn, getPathSegments, sortByUpdatedAt, toggleSetItem } from "@/lib/utils";
+import {
+  cn,
+  getPathSegments,
+  sortByUpdatedAt,
+  toggleSetItem,
+  updateBulkToolSelection,
+} from "@/lib/utils";
 
 describe("cn", () => {
   it("returns a single class name unchanged", () => {
@@ -110,3 +116,50 @@ describe("getPathSegments", () => {
     expect(getPathSegments("")).toEqual([]);
   });
 });
+
+describe("updateBulkToolSelection", () => {
+  it("adds all tools for a server when select is true", () => {
+    const prev = new Set(["server1:tool:read"]);
+    const next = updateBulkToolSelection(
+      prev,
+      "server1",
+      ["write", "delete"],
+      true,
+    );
+    expect(next).toEqual(
+      new Set([
+        "server1:tool:read",
+        "server1:tool:write",
+        "server1:tool:delete",
+      ]),
+    );
+  });
+
+  it("removes all tools for a server when select is false", () => {
+    const prev = new Set([
+      "server1:tool:read",
+      "server1:tool:write",
+      "server2:tool:read",
+    ]);
+    const next = updateBulkToolSelection(
+      prev,
+      "server1",
+      ["read", "write"],
+      false,
+    );
+    expect(next).toEqual(new Set(["server2:tool:read"]));
+  });
+
+  it("does not mutate the original set", () => {
+    const original = new Set(["server1:tool:read"]);
+    updateBulkToolSelection(original, "server1", ["write"], true);
+    expect(original).toEqual(new Set(["server1:tool:read"]));
+  });
+
+  it("handles empty toolNames without changing contents", () => {
+    const original = new Set(["server1:tool:read"]);
+    const next = updateBulkToolSelection(original, "server1", [], true);
+    expect(next).toEqual(new Set(["server1:tool:read"]));
+  });
+});
+

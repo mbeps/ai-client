@@ -1,13 +1,11 @@
 import { deflateSync } from "zlib";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createSkillZip,
-  extractSkillFromZip,
-  formatSkillMarkdown,
-  parseSkillMarkdown,
-  parseZipBuffer,
-  sanitizeSkillSlug,
-} from "@/lib/skills/parser";
+import { createSkillZip } from "@/lib/skills/create-skill-zip";
+import { extractSkillFromZip } from "@/lib/skills/extract-skill-from-zip";
+import { formatSkillMarkdown } from "@/lib/skills/format-skill-markdown";
+import { parseSkillMarkdown } from "@/lib/skills/parse-skill-markdown";
+import { parseZipBuffer } from "@/lib/skills/parse-zip-buffer";
+import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
 
 const { logError } = vi.hoisted(() => ({ logError: vi.fn() }));
 
@@ -763,7 +761,7 @@ describe("parseZipBuffer directory detection", () => {
  * then `inflateSync`, then fall back to the raw bytes and log the failure.
  *
  * `node:zlib` is a Node builtin. `vi.mock` intercepts it in the importing test
- * module but not inside `lib/skills/parser.ts`, so the throw must come from real
+ * module but not inside `lib/skills/parse-zip-buffer.ts`, so the throw must come from real
  * corrupted bytes rather than from a mocked zlib.
  *
  * @param files - Bundled files to place in the archive.

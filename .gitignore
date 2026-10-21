@@ -41,7 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.github/**
+.fallow/
+.fallowrc.json
 
 
 .subagents/**
@@ -58,4 +59,4 @@ evaluations/**
 .superpowers/**
 checklist.md
 .mcp.json
-.fallow/
+

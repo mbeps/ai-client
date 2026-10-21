@@ -51,136 +51,216 @@ interface AttachmentsMenuProps {
   onOpenSubagents?: () => void;
 }
 
+const EMPTY_SERVERS: (McpServer | PublicMcpServer)[] = [];
+const EMPTY_SKILLS: Skill[] = [];
+const EMPTY_PROMPTS: Prompt[] = [];
+const EMPTY_MCP_PROMPTS: DiscoveredPrompt[] = [];
+const EMPTY_KNOWLEDGEBASES: Knowledgebase[] = [];
+const EMPTY_SET = new Set<string>();
+
+function countSelectedPrompts(
+  selectedPromptIds?: Set<string>,
+  selectedPrompt?: MentionPromptItem | null,
+): number {
+  if (selectedPromptIds !== undefined) {
+    return selectedPromptIds.size;
+  }
+  return selectedPrompt ? 1 : 0;
+}
+
+function formatCountBadge(count: number): string {
+  return count > 0 ? ` (${count})` : "";
+}
+
+function SkillsMenuOption(props: {
+  skills?: Skill[];
+  selectedSkills?: Set<string>;
+  onToggleSkill?: (id: string) => void;
+}) {
+  const onToggleSkill = props.onToggleSkill;
+  if (!onToggleSkill) return null;
+
+  return (
+    <SkillsPickerDialog
+      skills={props.skills ?? EMPTY_SKILLS}
+      selectedSkills={props.selectedSkills ?? EMPTY_SET}
+      onToggleSkill={onToggleSkill}
+      trigger={
+        <Button variant="ghost" size="sm" className="w-full justify-start">
+          <BrainCircuit className="mr-2 h-4 w-4" />
+          Select Skills
+          {formatCountBadge(props.selectedSkills?.size ?? 0)}
+        </Button>
+      }
+    />
+  );
+}
+
+function PromptsMenuOption(props: {
+  prompts?: Prompt[];
+  mcpPrompts?: DiscoveredPrompt[];
+  selectedPrompt?: MentionPromptItem | null;
+  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
+  selectedPromptIds?: Set<string>;
+  onTogglePrompt?: (prompt: MentionPromptItem) => void;
+  onClearPrompts?: () => void;
+}) {
+  const { onTogglePrompt, onSelectPrompt } = props;
+  if (!onTogglePrompt && !onSelectPrompt) return null;
+
+  const promptCount = countSelectedPrompts(
+    props.selectedPromptIds,
+    props.selectedPrompt,
+  );
+
+  return (
+    <PromptPickerDialog
+      prompts={props.prompts ?? EMPTY_PROMPTS}
+      mcpPrompts={props.mcpPrompts ?? EMPTY_MCP_PROMPTS}
+      selectedPrompt={props.selectedPrompt ?? null}
+      onSelectPrompt={onSelectPrompt}
+      selectedPromptIds={props.selectedPromptIds}
+      onTogglePrompt={onTogglePrompt}
+      onClearAll={props.onClearPrompts}
+      trigger={
+        <Button variant="ghost" size="sm" className="w-full justify-start">
+          <SquareTerminal className="mr-2 h-4 w-4" />
+          Select Prompts
+          {formatCountBadge(promptCount)}
+        </Button>
+      }
+    />
+  );
+}
+
+function KnowledgebaseMenuOption(props: {
+  knowledgebases?: Knowledgebase[];
+  selectedKbs: Set<string>;
+  onToggleKb: (id: string) => void;
+}) {
+  return (
+    <KnowledgebasePickerDialog
+      knowledgebases={props.knowledgebases ?? EMPTY_KNOWLEDGEBASES}
+      selectedKbs={props.selectedKbs}
+      onToggleKb={props.onToggleKb}
+      trigger={
+        <Button variant="ghost" size="sm" className="w-full justify-start">
+          <Database className="mr-2 h-4 w-4" />
+          Add Knowledgebase
+          {formatCountBadge(props.selectedKbs.size)}
+        </Button>
+      }
+    />
+  );
+}
+
+function ToolsMenuOption(props: {
+  servers?: (McpServer | PublicMcpServer)[];
+  selectedTools: Set<string>;
+  onToggleTool: (serverId: string, toolName: string) => void;
+  onBulkSelect: (
+    serverId: string,
+    toolNames: string[],
+    select: boolean,
+  ) => void;
+  supportsTools?: boolean;
+}) {
+  const supportsTools = props.supportsTools !== false;
+  const toolsButtonLabel = supportsTools ? "Select Tools" : "Tools Unsupported";
+
+  return (
+    <ToolPickerDialog
+      servers={props.servers ?? EMPTY_SERVERS}
+      selectedTools={props.selectedTools}
+      onToggleTool={props.onToggleTool}
+      onBulkSelect={props.onBulkSelect}
+      supportsTools={supportsTools}
+      trigger={
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start"
+          disabled={!supportsTools}
+        >
+          <Wrench className="mr-2 h-4 w-4" />
+          {toolsButtonLabel}
+          {formatCountBadge(props.selectedTools.size)}
+        </Button>
+      }
+    />
+  );
+}
+
+function SubagentsMenuOption(props: { onOpenSubagents?: () => void }) {
+  if (!props.onOpenSubagents) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="w-full justify-start"
+      onClick={props.onOpenSubagents}
+    >
+      <Bot className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" />
+      Subagents
+      <Badge
+        variant="outline"
+        className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
+      >
+        BETA
+      </Badge>
+    </Button>
+  );
+}
+
 /**
  * Menu providing options to upload files, add knowledgebases, select skills, select prompts, and select MCP tools.
  *
  * @author Maruf Bepary
  */
-export const AttachmentsMenu = ({
-  servers = [],
-  fileInputRef,
-  selectedTools,
-  onToggleTool,
-  onBulkSelect,
-  knowledgebases,
-  selectedKbs,
-  onToggleKb,
-  skills = [],
-  selectedSkills = new Set(),
-  onToggleSkill,
-  prompts = [],
-  mcpPrompts = [],
-  selectedPrompt = null,
-  onSelectPrompt,
-  selectedPromptIds,
-  onTogglePrompt,
-  onClearPrompts,
-  supportsVision: _supportsVision = true,
-  supportsTools = true,
-  onOpenSubagents,
-}: AttachmentsMenuProps) => {
-  const promptCount =
-    selectedPromptIds !== undefined
-      ? selectedPromptIds.size
-      : selectedPrompt
-        ? 1
-        : 0;
-
+export const AttachmentsMenu = (props: AttachmentsMenuProps) => {
   return (
     <div className="flex flex-col gap-0.5 p-1">
       <Button
         variant="ghost"
         size="sm"
         className="justify-start"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => props.fileInputRef.current?.click()}
       >
         <Paperclip className="mr-2 h-4 w-4" /> Upload File
       </Button>
 
-      {onToggleSkill && (
-        <SkillsPickerDialog
-          skills={skills}
-          selectedSkills={selectedSkills}
-          onToggleSkill={onToggleSkill}
-          trigger={
-            <Button variant="ghost" size="sm" className="w-full justify-start">
-              <BrainCircuit className="mr-2 h-4 w-4" />
-              Select Skills
-              {selectedSkills.size > 0 ? ` (${selectedSkills.size})` : ""}
-            </Button>
-          }
-        />
-      )}
-
-      {(onTogglePrompt || onSelectPrompt) && (
-        <PromptPickerDialog
-          prompts={prompts}
-          mcpPrompts={mcpPrompts}
-          selectedPrompt={selectedPrompt}
-          onSelectPrompt={onSelectPrompt}
-          selectedPromptIds={selectedPromptIds}
-          onTogglePrompt={onTogglePrompt}
-          onClearAll={onClearPrompts}
-          trigger={
-            <Button variant="ghost" size="sm" className="w-full justify-start">
-              <SquareTerminal className="mr-2 h-4 w-4" />
-              Select Prompts
-              {promptCount > 0 ? ` (${promptCount})` : ""}
-            </Button>
-          }
-        />
-      )}
-
-      <KnowledgebasePickerDialog
-        knowledgebases={knowledgebases || []}
-        selectedKbs={selectedKbs}
-        onToggleKb={onToggleKb}
-        trigger={
-          <Button variant="ghost" size="sm" className="w-full justify-start">
-            <Database className="mr-2 h-4 w-4" />
-            Add Knowledgebase
-            {selectedKbs.size > 0 ? ` (${selectedKbs.size})` : ""}
-          </Button>
-        }
+      <SkillsMenuOption
+        skills={props.skills}
+        selectedSkills={props.selectedSkills}
+        onToggleSkill={props.onToggleSkill}
       />
 
-      <ToolPickerDialog
-        servers={servers}
-        selectedTools={selectedTools}
-        onToggleTool={onToggleTool}
-        onBulkSelect={onBulkSelect}
-        supportsTools={supportsTools}
-        trigger={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-            disabled={!supportsTools}
-          >
-            <Wrench className="mr-2 h-4 w-4" />
-            {supportsTools ? "Select Tools" : "Tools Unsupported"}
-            {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
-          </Button>
-        }
+      <PromptsMenuOption
+        prompts={props.prompts}
+        mcpPrompts={props.mcpPrompts}
+        selectedPrompt={props.selectedPrompt}
+        onSelectPrompt={props.onSelectPrompt}
+        selectedPromptIds={props.selectedPromptIds}
+        onTogglePrompt={props.onTogglePrompt}
+        onClearPrompts={props.onClearPrompts}
       />
 
-      {onOpenSubagents && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          onClick={onOpenSubagents}
-        >
-          <Bot className="mr-2 h-4 w-4 text-purple-600 dark:text-purple-400" />
-          Subagents
-          <Badge
-            variant="outline"
-            className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
-          >
-            BETA
-          </Badge>
-        </Button>
-      )}
+      <KnowledgebaseMenuOption
+        knowledgebases={props.knowledgebases}
+        selectedKbs={props.selectedKbs}
+        onToggleKb={props.onToggleKb}
+      />
+
+      <ToolsMenuOption
+        servers={props.servers}
+        selectedTools={props.selectedTools}
+        onToggleTool={props.onToggleTool}
+        onBulkSelect={props.onBulkSelect}
+        supportsTools={props.supportsTools}
+      />
+
+      <SubagentsMenuOption onOpenSubagents={props.onOpenSubagents} />
     </div>
   );
 };

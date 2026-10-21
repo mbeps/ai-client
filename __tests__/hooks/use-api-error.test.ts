@@ -238,5 +238,12 @@ describe("useApiError hook", () => {
     const secondRef = result.current.handleApiError;
     expect(firstRef).toBe(secondRef);
   });
+
+  it("returns false for unrecognized error codes and shows fallback message if provided", () => {
+    const { result } = renderHook(() => useApiError());
+    const err = { code: "SOME_UNKNOWN_CODE", message: "Unknown problem" };
+    expect(result.current.handleApiError(err, "Fallback message")).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith("Fallback message");
+  });
 });
 

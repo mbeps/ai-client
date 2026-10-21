@@ -26,149 +26,53 @@ import { useAppStore } from "@/lib/store";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
-/**
- * Skill editor page — view, edit, configure, and manage directory hierarchy for an Agent Skill.
- *
- * @author Maruf Bepary
- */
-export default function SkillDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const skillId = params.id as string;
+function validateSkillDraft(
+  name: string,
+  content: string,
+  description: string,
+): string | null {
+  const cleanSlug = name.trim().toLowerCase();
+  if (!cleanSlug) {
+    return "Skill slug is required";
+  }
+  if (!/^[a-z0-9-]+$/.test(cleanSlug)) {
+    return "Skill slug can only contain lowercase letters, numbers, and hyphens";
+  }
+  if (!content.trim()) {
+    return "Skill instructions content is required";
+  }
+  if (description.trim().length > SKILL_DESCRIPTION_MAX_LENGTH) {
+    return `Skill description must be at most ${SKILL_DESCRIPTION_MAX_LENGTH} characters`;
+  }
+  return null;
+}
 
-  const skills = useAppStore((state) => state.skills);
-  const skill = skills.find((s) => s.id === skillId);
-  const loadSkills = useAppStore((state) => state.loadSkills);
+function downloadBase64Zip(filename: string, base64: string): void {
+  const byteCharacters = atob(base64);
+  const byteArray = new Uint8Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+  const blob = new Blob([byteArray], { type: "application/zip" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
 
-  const [loading, setLoading] = useState(skills.length === 0);
-  const [displayName, setDisplayName] = useState(skill?.displayName ?? "");
-  const [name, setName] = useState(skill?.name ?? "");
-  const [description, setDescription] = useState(skill?.description ?? "");
-  const [content, setContent] = useState(skill?.content ?? "");
-  const [enabled, setEnabled] = useState(skill?.enabled ?? true);
-  const [files, setFiles] = useState<SkillBundledFile[]>(skill?.files ?? []);
+function useSkillDirectoryState(
+  initialFiles: SkillBundledFile[],
+  content: string,
+  setContent: (val: string) => void,
+) {
+  const [files, setFiles] = useState<SkillBundledFile[]>(initialFiles);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState<string>("SKILL.md");
   const [fileToMove, setFileToMove] = useState<string | null>(null);
-
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [exporting, setExporting] = useState(false);
-
-  useEffect(() => {
-    if (skills.length === 0) {
-      loadSkills().finally(() => setLoading(false));
-    }
-  }, [loadSkills, skills.length]);
-
-  useEffect(() => {
-    if (skill) {
-      setDisplayName(skill.displayName ?? "");
-      setName(skill.name);
-      setDescription(skill.description ?? "");
-      setContent(skill.content);
-      setEnabled(skill.enabled);
-      setFiles(skill.files ?? []);
-    }
-  }, [skill]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!skill) notFound();
-
-  const handleSave = async (updatedFiles?: SkillBundledFile[]) => {
-    const cleanSlug = name.trim().toLowerCase();
-    if (!cleanSlug) {
-      toast.error("Skill slug is required");
-      return;
-    }
-    if (!/^[a-z0-9-]+$/.test(cleanSlug)) {
-      toast.error(
-        "Skill slug can only contain lowercase letters, numbers, and hyphens",
-      );
-      return;
-    }
-    if (!content.trim()) {
-      toast.error("Skill instructions content is required");
-      return;
-    }
-    if (description.trim().length > SKILL_DESCRIPTION_MAX_LENGTH) {
-      toast.error(
-        `Skill description must be at most ${SKILL_DESCRIPTION_MAX_LENGTH} characters`,
-      );
-      return;
-    }
-
-    setSavingSettings(true);
-    try {
-      const filesToSave = updatedFiles ?? files;
-      await updateSkill(skillId, {
-        name: cleanSlug,
-        displayName: displayName.trim() || undefined,
-        description: description.trim() || undefined,
-        content,
-        enabled,
-        files: filesToSave,
-      });
-
-      if (updatedFiles) setFiles(updatedFiles);
-      await loadSkills();
-      toast.success("Skill saved");
-      router.refresh();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save skill");
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteSkill(skillId);
-      toast.success("Skill deleted");
-      await loadSkills();
-      router.refresh();
-      router.push(ROUTES.SETTINGS.SKILLS.path);
-    } catch {
-      toast.error("Failed to delete skill");
-      setDeleting(false);
-    }
-  };
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const { filename, base64 } = await exportSkillZip(skillId);
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "application/zip" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success("Skill package downloaded");
-    } catch {
-      toast.error("Failed to export skill bundle");
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const isSkillMd = selectedFilePath === "SKILL.md";
   const activeSubfile = files.find(
@@ -261,18 +165,207 @@ export default function SkillDetailPage() {
     }
   };
 
+  return {
+    files,
+    setFiles,
+    emptyFolders,
+    selectedFilePath,
+    setSelectedFilePath,
+    fileToMove,
+    setFileToMove,
+    isSkillMd,
+    activeContent,
+    handleContentChange,
+    handleCreateFile,
+    handleCreateFolder,
+    handleRenameFile,
+    handleDeleteFile,
+    handleRenameFolder,
+    handleDeleteFolder,
+    handleMoveFile,
+  };
+}
+
+type SkillFormState = {
+  displayName: string;
+  name: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+};
+
+function buildInitialSkillForm(skill?: any): SkillFormState {
+  if (!skill) {
+    return {
+      displayName: "",
+      name: "",
+      description: "",
+      content: "",
+      enabled: true,
+    };
+  }
+  return {
+    displayName: skill.displayName || "",
+    name: skill.name,
+    description: skill.description || "",
+    content: skill.content,
+    enabled: skill.enabled,
+  };
+}
+
+function buildSkillUpdatePayload(
+  form: SkillFormState,
+  filesToSave: SkillBundledFile[],
+) {
+  const cleanDisplay = form.displayName.trim();
+  const cleanDesc = form.description.trim();
+  return {
+    name: form.name.trim().toLowerCase(),
+    displayName: cleanDisplay ? cleanDisplay : undefined,
+    description: cleanDesc ? cleanDesc : undefined,
+    content: form.content,
+    enabled: form.enabled,
+    files: filesToSave,
+  };
+}
+
+function useSkillEditorState(skillId: string, initialSkill: any) {
+  const router = useRouter();
+  const loadSkills = useAppStore((state) => state.loadSkills);
+
+  const [form, setForm] = useState<SkillFormState>(() =>
+    buildInitialSkillForm(initialSkill),
+  );
+
+  const setContent = (val: string) => {
+    setForm((prev) => ({ ...prev, content: val }));
+  };
+
+  const directory = useSkillDirectoryState(
+    initialSkill?.files || [],
+    form.content,
+    setContent,
+  );
+
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (!initialSkill) return;
+    setForm(buildInitialSkillForm(initialSkill));
+    directory.setFiles(initialSkill.files || []);
+  }, [initialSkill, directory.setFiles]);
+
+  const handleSave = async (updatedFiles?: SkillBundledFile[]) => {
+    const validationError = validateSkillDraft(
+      form.name,
+      form.content,
+      form.description,
+    );
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setSavingSettings(true);
+    try {
+      const filesToSave = updatedFiles ? updatedFiles : directory.files;
+      const payload = buildSkillUpdatePayload(form, filesToSave);
+      await updateSkill(skillId, payload);
+
+      if (updatedFiles) directory.setFiles(updatedFiles);
+      await loadSkills();
+      toast.success("Skill saved");
+      router.refresh();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save skill");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteSkill(skillId);
+      toast.success("Skill deleted");
+      await loadSkills();
+      router.refresh();
+      router.push(ROUTES.SETTINGS.SKILLS.path);
+    } catch {
+      toast.error("Failed to delete skill");
+      setDeleting(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { filename, base64 } = await exportSkillZip(skillId);
+      downloadBase64Zip(filename, base64);
+      toast.success("Skill package downloaded");
+    } catch {
+      toast.error("Failed to export skill bundle");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return {
+    form,
+    setForm,
+    directory,
+    savingSettings,
+    deleting,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    exporting,
+    handleSave,
+    handleDelete,
+    handleExport,
+  };
+}
+
+function SkillDetailPageContent({
+  skillId,
+  skill,
+}: {
+  skillId: string;
+  skill: any;
+}) {
+  const {
+    form,
+    setForm,
+    directory,
+    savingSettings,
+    deleting,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    exporting,
+    handleSave,
+    handleDelete,
+    handleExport,
+  } = useSkillEditorState(skillId, skill);
+
   return (
     <PageContainer variant="full" className="space-y-6">
-      {/* Simplified Page Header with Editable Title, Slash Command, Description, and Actions */}
       <SkillDetailHeader
-        displayName={displayName}
-        onDisplayNameChange={setDisplayName}
-        name={name}
-        onNameChange={setName}
-        description={description}
-        onDescriptionChange={setDescription}
-        enabled={enabled}
-        onEnabledChange={setEnabled}
+        displayName={form.displayName}
+        onDisplayNameChange={(val) =>
+          setForm((prev) => ({ ...prev, displayName: val }))
+        }
+        name={form.name}
+        onNameChange={(val) => setForm((prev) => ({ ...prev, name: val }))}
+        description={form.description}
+        onDescriptionChange={(val) =>
+          setForm((prev) => ({ ...prev, description: val }))
+        }
+        enabled={form.enabled}
+        onEnabledChange={(val) =>
+          setForm((prev) => ({ ...prev, enabled: val }))
+        }
         onSave={() => handleSave()}
         isSaving={savingSettings}
         onDelete={() => setShowDeleteDialog(true)}
@@ -282,49 +375,55 @@ export default function SkillDetailPage() {
       />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        {/* Left Column: Editor without redundant box wrapper */}
         <div className="lg:col-span-2">
           <SkillFileEditor
-            filePath={selectedFilePath}
-            content={activeContent}
-            onChangeContent={handleContentChange}
+            filePath={directory.selectedFilePath}
+            content={directory.activeContent}
+            onChangeContent={directory.handleContentChange}
             onRename={
-              !isSkillMd
+              !directory.isSkillMd
                 ? () => {
                     const newPath = prompt(
                       "Enter new file path:",
-                      selectedFilePath,
+                      directory.selectedFilePath,
                     );
-                    if (newPath) handleRenameFile(selectedFilePath, newPath);
+                    if (newPath)
+                      directory.handleRenameFile(
+                        directory.selectedFilePath,
+                        newPath,
+                      );
                   }
                 : undefined
             }
             onMove={
-              !isSkillMd ? () => setFileToMove(selectedFilePath) : undefined
+              !directory.isSkillMd
+                ? () => directory.setFileToMove(directory.selectedFilePath)
+                : undefined
             }
             onDelete={
-              !isSkillMd ? () => handleDeleteFile(selectedFilePath) : undefined
+              !directory.isSkillMd
+                ? () => directory.handleDeleteFile(directory.selectedFilePath)
+                : undefined
             }
           />
         </div>
 
-        {/* Right Column: Directory Structure */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
             <SkillDirectorySidebar
-              files={files}
-              selectedPath={selectedFilePath}
-              onSelectFile={setSelectedFilePath}
-              onCreateFile={handleCreateFile}
-              onCreateFolder={handleCreateFolder}
-              onRenameFile={handleRenameFile}
-              onDeleteFile={handleDeleteFile}
-              onRenameFolder={handleRenameFolder}
-              onDeleteFolder={handleDeleteFolder}
-              onMoveFile={handleMoveFile}
-              emptyFolders={emptyFolders}
-              externalMoveFile={fileToMove}
-              onClearExternalMoveFile={() => setFileToMove(null)}
+              files={directory.files}
+              selectedPath={directory.selectedFilePath}
+              onSelectFile={directory.setSelectedFilePath}
+              onCreateFile={directory.handleCreateFile}
+              onCreateFolder={directory.handleCreateFolder}
+              onRenameFile={directory.handleRenameFile}
+              onDeleteFile={directory.handleDeleteFile}
+              onRenameFolder={directory.handleRenameFolder}
+              onDeleteFolder={directory.handleDeleteFolder}
+              onMoveFile={directory.handleMoveFile}
+              emptyFolders={directory.emptyFolders}
+              externalMoveFile={directory.fileToMove}
+              onClearExternalMoveFile={() => directory.setFileToMove(null)}
             />
           </div>
         </div>
@@ -334,10 +433,44 @@ export default function SkillDetailPage() {
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        title={`Delete "${displayName || name}"?`}
+        title={`Delete "${form.displayName || form.name}"?`}
         description="This will permanently delete the agent skill. This cannot be undone."
         loading={deleting}
       />
     </PageContainer>
   );
+}
+
+/**
+ * Skill editor page — view, edit, configure, and manage directory hierarchy for an Agent Skill.
+ *
+ * @author Maruf Bepary
+ */
+export default function SkillDetailPage() {
+  const params = useParams();
+  const skillId = params.id as string;
+
+  const skills = useAppStore((state) => state.skills);
+  const skill = skills.find((s) => s.id === skillId);
+  const loadSkills = useAppStore((state) => state.loadSkills);
+
+  const [loading, setLoading] = useState(skills.length === 0);
+
+  useEffect(() => {
+    if (skills.length === 0) {
+      loadSkills().finally(() => setLoading(false));
+    }
+  }, [loadSkills, skills.length]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!skill) notFound();
+
+  return <SkillDetailPageContent skillId={skillId} skill={skill} />;
 }

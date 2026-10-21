@@ -43,6 +43,221 @@ type ProviderModelsResponse = {
   }>;
 };
 
+type DiscoveredModel = {
+  id: string;
+  types: Set<"chat" | "embedding">;
+};
+
+type InvalidModel = {
+  endpoint: string;
+  source: string;
+};
+
+function isEmbeddingModelId(modelId: string): boolean {
+  const lower = modelId.toLowerCase();
+  return (
+    lower.includes("embed") ||
+    lower.includes("bge-") ||
+    lower.includes("text-embedding")
+  );
+}
+
+/**
+ * Fetches models from a specific provider endpoint, logging errors and returning empty array on failure.
+ */
+async function fetchProviderEndpointModels(
+  url: string,
+  headers: Record<string, string>,
+  userId: string,
+): Promise<Array<{ id?: string }>> {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      log.warn(
+        "Endpoint returned error status (status: {status}, url: {url})",
+        {
+          url,
+          status: response.status,
+          userId,
+        },
+      );
+      return [];
+    }
+
+    const payload = (await response.json()) as ProviderModelsResponse;
+    return payload.data ?? [];
+  } catch (err) {
+    log.error("Failed to fetch models from endpoint: {error}", {
+      error: err instanceof Error ? err.message : String(err),
+      url,
+      userId,
+    });
+    return [];
+  }
+}
+
+/**
+ * Iterates through raw model entries and records valid models or invalid malformed items.
+ */
+function collectDiscoveredModels(
+  list: Array<{ id?: string }>,
+  endpoint: string,
+  sourcePrefix: string,
+  resolveType: (modelId: string) => "chat" | "embedding",
+  modelsMap: Map<string, DiscoveredModel>,
+  invalidModels: InvalidModel[],
+): void {
+  for (const m of list) {
+    if (!m.id) {
+      invalidModels.push({ endpoint, source: sourcePrefix });
+      continue;
+    }
+    const modelId = m.id.trim();
+    if (!modelId) {
+      invalidModels.push({ endpoint, source: `${sourcePrefix} (empty)` });
+      continue;
+    }
+    if (!modelsMap.has(modelId)) {
+      modelsMap.set(modelId, { id: modelId, types: new Set() });
+    }
+    modelsMap.get(modelId)!.types.add(resolveType(modelId));
+  }
+}
+
+/**
+ * Resolves aggregated model types into DB schema modelType enum.
+ */
+function resolveDiscoveredModelType(
+  types: Set<"chat" | "embedding">,
+): "chat" | "embedding" | "both" {
+  const hasChat = types.has("chat");
+  const hasEmbed = types.has("embedding");
+  if (hasChat && hasEmbed) return "both";
+  if (hasEmbed) return "embedding";
+  return "chat";
+}
+
+/**
+ * Inserts a new model or refreshes existing model type without overwriting user customizations.
+ */
+async function upsertDiscoveredModel(
+  providerId: string,
+  userId: string,
+  discovered: DiscoveredModel,
+): Promise<"added" | "unchanged"> {
+  const modelType = resolveDiscoveredModelType(discovered.types);
+  const [existing] = await db
+    .select({ id: aiModel.id, isManuallyAdded: aiModel.isManuallyAdded })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, providerId),
+        eq(aiModel.modelId, discovered.id),
+      ),
+    );
+
+  if (existing?.isManuallyAdded) {
+    return "unchanged";
+  }
+
+  if (existing) {
+    // Preserve existing user configs (label, contextWindow, capabilities, isEnabled).
+    // Only refresh modelType and touch updatedAt.
+    await db
+      .update(aiModel)
+      .set({
+        modelType,
+        updatedAt: new Date(),
+      })
+      .where(eq(aiModel.id, existing.id));
+    return "unchanged";
+  }
+
+  await db.insert(aiModel).values({
+    providerId,
+    userId,
+    modelId: discovered.id,
+    label: discovered.id,
+    modelType,
+    contextWindow: 4096,
+    capTools: false,
+    capVision: false,
+    capReasoning: false,
+    capStructuredOutput: false,
+    isManuallyAdded: false,
+    isEnabled: false,
+  });
+
+  return "added";
+}
+
+/**
+ * Loads provider for the current user and verifies URL is not blocked by SSRF guard.
+ */
+async function loadValidatedProvider(providerId: string, userId: string) {
+  const [provider] = await db
+    .select()
+    .from(aiProvider)
+    .where(and(eq(aiProvider.id, providerId), eq(aiProvider.userId, userId)));
+
+  if (!provider) {
+    throw new Error("Not Found");
+  }
+
+  if (await isBlockedUrl(provider.baseUrl)) {
+    throw new Error("Provider URL is blocked by SSRF guard");
+  }
+
+  return provider;
+}
+
+/**
+ * Builds HTTP headers including bearer auth if apiKey is present.
+ */
+function buildProviderHeaders(
+  decoded: ReturnType<typeof decodeProviderRecord>,
+): Record<string, string> {
+  return {
+    ...(decoded.apiKey ? { Authorization: `Bearer ${decoded.apiKey}` } : {}),
+    ...decoded.headers,
+  };
+}
+
+/**
+ * Removes synced models that are no longer returned by the provider API.
+ */
+async function deleteStaleSyncedModels(
+  providerId: string,
+  userId: string,
+  discoveredModelIds: Set<string>,
+): Promise<number> {
+  const existingSyncedModels = await db
+    .select({ id: aiModel.id, modelId: aiModel.modelId })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, providerId),
+        eq(aiModel.userId, userId),
+        eq(aiModel.isManuallyAdded, false),
+      ),
+    );
+
+  const staleModelIdsToDelete = existingSyncedModels
+    .filter((model) => !discoveredModelIds.has(model.modelId))
+    .map((model) => model.id);
+
+  if (staleModelIdsToDelete.length === 0) {
+    return 0;
+  }
+
+  const deleteRes = await deleteModel(staleModelIdsToDelete);
+  return deleteRes.deletedCount;
+}
+
 export async function syncProviderModels(
   providerId: string,
 ): Promise<SyncProviderModelsResult> {
@@ -53,132 +268,46 @@ export async function syncProviderModels(
     userId: session.user.id,
   });
 
-  const [provider] = await db
-    .select()
-    .from(aiProvider)
-    .where(
-      and(
-        eq(aiProvider.id, providerId),
-        eq(aiProvider.userId, session.user.id),
-      ),
-    );
-
-  if (!provider) {
-    throw new Error("Not Found");
-  }
-
-  if (await isBlockedUrl(provider.baseUrl)) {
-    throw new Error("Provider URL is blocked by SSRF guard");
-  }
-
+  const provider = await loadValidatedProvider(providerId, session.user.id);
   const decoded = decodeProviderRecord(provider);
   const baseUrl = provider.baseUrl.replace(/\/$/, "");
-
-  const commonHeaders = {
-    ...(decoded.apiKey ? { Authorization: `Bearer ${decoded.apiKey}` } : {}),
-    ...decoded.headers,
-  };
-
-  /**
-   * Helper to fetch models from a specific endpoint.
-   * Returns empty array on failure instead of throwing.
-   */
-  async function fetchModels(url: string) {
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: commonHeaders,
-      });
-
-      if (!response.ok) {
-        log.warn(
-          "Endpoint returned error status (status: {status}, url: {url})",
-          {
-            url,
-            status: response.status,
-            userId: session.user.id,
-          },
-        );
-        return [];
-      }
-
-      const payload = (await response.json()) as ProviderModelsResponse;
-      return payload.data ?? [];
-    } catch (err) {
-      log.error("Failed to fetch models from endpoint: {error}", {
-        error: err instanceof Error ? err.message : String(err),
-        url,
-        userId: session.user.id,
-      });
-      return [];
-    }
-  }
+  const commonHeaders = buildProviderHeaders(decoded);
 
   // Probe both endpoints
   const [standardList, embeddingList] = await Promise.all([
-    fetchModels(`${baseUrl}/models`),
-    fetchModels(`${baseUrl}/embeddings/models`),
+    fetchProviderEndpointModels(
+      `${baseUrl}/models`,
+      commonHeaders,
+      session.user.id,
+    ),
+    fetchProviderEndpointModels(
+      `${baseUrl}/embeddings/models`,
+      commonHeaders,
+      session.user.id,
+    ),
   ]);
 
   // Aggregate models and determine types
-  type DiscoveredModel = {
-    id: string;
-    types: Set<"chat" | "embedding">;
-  };
   const modelsMap = new Map<string, DiscoveredModel>();
-  const invalidModels: Array<{ endpoint: string; source: string }> = [];
+  const invalidModels: InvalidModel[] = [];
 
-  // Helper to determine type from ID heuristic
-  const isIdxEmbedding = (modelId: string) => {
-    const lower = modelId.toLowerCase();
-    return (
-      lower.includes("embed") ||
-      lower.includes("bge-") ||
-      lower.includes("text-embedding")
-    );
-  };
+  collectDiscoveredModels(
+    standardList,
+    "/models",
+    "standard",
+    (id) => (isEmbeddingModelId(id) ? "embedding" : "chat"),
+    modelsMap,
+    invalidModels,
+  );
 
-  // Process standard list
-  for (const m of standardList) {
-    if (!m.id) {
-      invalidModels.push({ endpoint: "/models", source: "standard" });
-      continue;
-    }
-    const modelId = m.id.trim();
-    if (!modelId) {
-      invalidModels.push({ endpoint: "/models", source: "standard (empty)" });
-      continue;
-    }
-    if (!modelsMap.has(modelId)) {
-      modelsMap.set(modelId, { id: modelId, types: new Set() });
-    }
-    modelsMap
-      .get(modelId)!
-      .types.add(isIdxEmbedding(modelId) ? "embedding" : "chat");
-  }
-
-  // Process specialized embedding list
-  for (const m of embeddingList) {
-    if (!m.id) {
-      invalidModels.push({
-        endpoint: "/embeddings/models",
-        source: "embedding",
-      });
-      continue;
-    }
-    const modelId = m.id.trim();
-    if (!modelId) {
-      invalidModels.push({
-        endpoint: "/embeddings/models",
-        source: "embedding (empty)",
-      });
-      continue;
-    }
-    if (!modelsMap.has(modelId)) {
-      modelsMap.set(modelId, { id: modelId, types: new Set() });
-    }
-    modelsMap.get(modelId)!.types.add("embedding");
-  }
+  collectDiscoveredModels(
+    embeddingList,
+    "/embeddings/models",
+    "embedding",
+    () => "embedding",
+    modelsMap,
+    invalidModels,
+  );
 
   // If any models have malformed IDs, throw error after collecting all data
   if (invalidModels.length > 0) {
@@ -194,7 +323,6 @@ export async function syncProviderModels(
 
   let added = 0;
   let unchanged = 0;
-  let deleted = 0;
 
   // Check if model count exceeds 1000-model limit
   const totalDiscovered = modelsMap.size;
@@ -205,87 +333,24 @@ export async function syncProviderModels(
   const discoveredModelIds = new Set<string>();
 
   for (const discovered of allModels) {
-    const modelId = discovered.id;
-    discoveredModelIds.add(modelId);
-
-    // Resolve final model type
-    let modelType: "chat" | "embedding" | "both" = "chat";
-    const hasChat = discovered.types.has("chat");
-    const hasEmbed = discovered.types.has("embedding");
-
-    if (hasChat && hasEmbed) {
-      modelType = "both";
-    } else if (hasEmbed) {
-      modelType = "embedding";
-    }
-
-    const [existing] = await db
-      .select({ id: aiModel.id, isManuallyAdded: aiModel.isManuallyAdded })
-      .from(aiModel)
-      .where(
-        and(eq(aiModel.providerId, provider.id), eq(aiModel.modelId, modelId)),
-      );
-
-    if (existing?.isManuallyAdded) {
-      unchanged += 1;
-      continue;
-    }
-
-    if (existing) {
-      // Preserve existing user configs (label, contextWindow, capabilities, isEnabled).
-      // Only refresh modelType and touch updatedAt.
-      await db
-        .update(aiModel)
-        .set({
-          modelType,
-          updatedAt: new Date(),
-        })
-        .where(eq(aiModel.id, existing.id));
-      unchanged += 1;
-      continue;
-    }
-
-    await db.insert(aiModel).values({
-      providerId: provider.id,
-      userId: session.user.id,
-      modelId,
-      label: modelId,
-      modelType,
-      contextWindow: 4096,
-      capTools: false,
-      capVision: false,
-      capReasoning: false,
-      capStructuredOutput: false,
-      isManuallyAdded: false,
-      isEnabled: false,
-    });
-
-    added += 1;
-  }
-
-  // Handle models that were removed from the provider API (excluding manually added models)
-  const existingSyncedModels = await db
-    .select({ id: aiModel.id, modelId: aiModel.modelId })
-    .from(aiModel)
-    .where(
-      and(
-        eq(aiModel.providerId, provider.id),
-        eq(aiModel.userId, session.user.id),
-        eq(aiModel.isManuallyAdded, false),
-      ),
+    discoveredModelIds.add(discovered.id);
+    const status = await upsertDiscoveredModel(
+      provider.id,
+      session.user.id,
+      discovered,
     );
-
-  const staleModelIdsToDelete: string[] = [];
-  for (const model of existingSyncedModels) {
-    if (!discoveredModelIds.has(model.modelId)) {
-      staleModelIdsToDelete.push(model.id);
+    if (status === "added") {
+      added += 1;
+    } else {
+      unchanged += 1;
     }
   }
 
-  if (staleModelIdsToDelete.length > 0) {
-    const deleteRes = await deleteModel(staleModelIdsToDelete);
-    deleted = deleteRes.deletedCount;
-  }
+  const deleted = await deleteStaleSyncedModels(
+    provider.id,
+    session.user.id,
+    discoveredModelIds,
+  );
 
   log.info(
     "Provider model sync complete (added: {added}, unchanged: {unchanged}, deleted: {deleted})",

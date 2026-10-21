@@ -4,6 +4,110 @@ import type { Message } from "@/types/message/message";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
+ * Appends an artifact if its ID has not been encountered yet.
+ */
+function appendArtifact(
+  artifacts: ArtifactData[],
+  seenIds: Set<string>,
+  art: ArtifactData,
+  messageId: string,
+): void {
+  const id = art.id || `${messageId}-art-${artifacts.length}`;
+  if (!seenIds.has(id)) {
+    seenIds.add(id);
+    artifacts.push({ ...art, id, messageId });
+  }
+}
+
+/**
+ * Collects artifacts stored within persisted message metadata toolResults.
+ */
+function collectPersistedArtifacts(
+  message: Message,
+  artifacts: ArtifactData[],
+  seenIds: Set<string>,
+): void {
+  if (!message.metadata) return;
+
+  try {
+    const meta =
+      typeof message.metadata === "string"
+        ? JSON.parse(message.metadata)
+        : message.metadata;
+
+    if (!Array.isArray(meta?.toolResults)) return;
+
+    for (const tr of meta.toolResults) {
+      const art = extractArtifactFromToolResult(tr);
+      if (art) {
+        appendArtifact(artifacts, seenIds, art, message.id);
+      }
+    }
+  } catch {
+    // Ignore metadata parse errors
+  }
+}
+
+/**
+ * Collects artifacts from in-flight streaming manage_artifact tool calls.
+ */
+function collectStreamingArtifacts(
+  message: Message,
+  activeToolCalls: ToolCallState[] | undefined,
+  artifacts: ArtifactData[],
+  seenIds: Set<string>,
+): void {
+  if (!activeToolCalls || activeToolCalls.length === 0) return;
+
+  for (const tc of activeToolCalls) {
+    if (tc.toolName !== "manage_artifact" || !tc.result) continue;
+
+    const art = extractArtifactFromToolResult({
+      toolName: "manage_artifact",
+      toolCallId: tc.toolCallId,
+      result: tc.result,
+    });
+    if (art) {
+      appendArtifact(artifacts, seenIds, art, message.id);
+    }
+  }
+}
+
+/**
+ * Collects standalone Mermaid diagrams from message markdown content.
+ */
+function collectMermaidArtifacts(
+  message: Message,
+  artifacts: ArtifactData[],
+  seenIds: Set<string>,
+): void {
+  if (!message.content) return;
+
+  const mermaidMatches = [
+    ...message.content.matchAll(/```mermaid\s*\n([\s\S]*?)```/g),
+  ];
+
+  mermaidMatches.forEach((m, i) => {
+    const content = m[1].trim();
+    const id = `${message.id}-mermaid-${i}`;
+    // Avoid duplicate if already extracted by manage_artifact with same content
+    const alreadyHasContent = artifacts.some(
+      (a) => a.content.trim() === content,
+    );
+    if (!alreadyHasContent && !seenIds.has(id)) {
+      seenIds.add(id);
+      artifacts.push({
+        id,
+        type: "mermaid",
+        title: i === 0 ? "Mermaid Diagram" : `Mermaid Diagram ${i + 1}`,
+        content,
+        messageId: message.id,
+      });
+    }
+  });
+}
+
+/**
  * Extracts all canvas/artifact items associated with an assistant message.
  * Inspects persisted metadata `toolResults`, in-flight `activeToolCalls`,
  * and embedded Mermaid diagram codeblocks.
@@ -24,77 +128,9 @@ export function extractMessageArtifacts(
   const artifacts: ArtifactData[] = [];
   const seenIds = new Set<string>();
 
-  // 1. Extract from persisted metadata toolResults
-  if (message.metadata) {
-    try {
-      const meta =
-        typeof message.metadata === "string"
-          ? JSON.parse(message.metadata)
-          : message.metadata;
-
-      if (Array.isArray(meta?.toolResults)) {
-        for (const tr of meta.toolResults) {
-          const art = extractArtifactFromToolResult(tr);
-          if (art) {
-            const id = art.id || `${message.id}-art-${artifacts.length}`;
-            if (!seenIds.has(id)) {
-              seenIds.add(id);
-              artifacts.push({ ...art, id, messageId: message.id });
-            }
-          }
-        }
-      }
-    } catch {
-      // Ignore metadata parse errors
-    }
-  }
-
-  // 2. Extract from active streaming tool calls
-  if (activeToolCalls && activeToolCalls.length > 0) {
-    for (const tc of activeToolCalls) {
-      if (tc.toolName !== "manage_artifact") continue;
-
-      if (tc.result) {
-        const art = extractArtifactFromToolResult({
-          toolName: "manage_artifact",
-          toolCallId: tc.toolCallId,
-          result: tc.result,
-        });
-        if (art) {
-          const id = art.id || `${message.id}-art-${artifacts.length}`;
-          if (!seenIds.has(id)) {
-            seenIds.add(id);
-            artifacts.push({ ...art, id, messageId: message.id });
-          }
-        }
-      }
-    }
-  }
-
-  // 3. Extract from Mermaid markdown code blocks
-  if (message.content) {
-    const mermaidMatches = [
-      ...message.content.matchAll(/```mermaid\s*\n([\s\S]*?)```/g),
-    ];
-    mermaidMatches.forEach((m, i) => {
-      const content = m[1].trim();
-      const id = `${message.id}-mermaid-${i}`;
-      // Avoid duplicate if already extracted by manage_artifact with same content
-      const alreadyHasContent = artifacts.some(
-        (a) => a.content.trim() === content,
-      );
-      if (!alreadyHasContent && !seenIds.has(id)) {
-        seenIds.add(id);
-        artifacts.push({
-          id,
-          type: "mermaid",
-          title: i === 0 ? "Mermaid Diagram" : `Mermaid Diagram ${i + 1}`,
-          content,
-          messageId: message.id,
-        });
-      }
-    });
-  }
+  collectPersistedArtifacts(message, artifacts, seenIds);
+  collectStreamingArtifacts(message, activeToolCalls, artifacts, seenIds);
+  collectMermaidArtifacts(message, artifacts, seenIds);
 
   return artifacts;
 }

@@ -13,6 +13,59 @@ const log = getLogger(["app", "chat", "tools"]);
 type McpServerParam = Parameters<typeof getMcpTools>[0][number];
 
 /**
+ * Filters MCP tools based on selectedTools list or includes all by default.
+ */
+function filterSelectedMcpTools(
+  result: Awaited<ReturnType<typeof getMcpTools>>,
+  selectedTools?: string[],
+): {
+  tools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+} {
+  if (selectedTools === undefined) {
+    return {
+      tools: result.tools,
+      toolSourceMap: { ...result.toolSourceMap },
+    };
+  }
+
+  if (selectedTools.length === 0) {
+    return { tools: {}, toolSourceMap: {} };
+  }
+
+  const tools: Record<string, any> = {};
+  const toolSourceMap: Record<string, string> = {};
+
+  for (const [name, toolDef] of Object.entries(result.tools)) {
+    const serverId = result.toolServerIdMap?.[name];
+    const serverName = result.toolSourceMap[name];
+    const isSelected =
+      (serverId && selectedTools.includes(`${serverId}:tool:${name}`)) ||
+      (serverName && selectedTools.includes(`${serverName}:tool:${name}`));
+
+    if (isSelected) {
+      tools[name] = toolDef;
+      toolSourceMap[name] = result.toolSourceMap[name];
+    }
+  }
+
+  return { tools, toolSourceMap };
+}
+
+/**
+ * Resolves active knowledgebase IDs from either array or singular ID.
+ */
+function resolveTargetKbIds(
+  activeKbIds?: string[],
+  activeKbId?: string | null,
+): string[] {
+  if (activeKbIds && activeKbIds.length > 0) {
+    return activeKbIds;
+  }
+  return activeKbId ? [activeKbId] : [];
+}
+
+/**
  * Registers external MCP tools and optionally delegates built-in tools
  * (manage_artifact, search_knowledge_base) for backward compatibility.
  * Filters MCP tools by selectedTools list if provided.
@@ -50,38 +103,13 @@ export async function registerMcpTools(
   if (scopedServers.length > 0) {
     try {
       const result = await getMcpTools(scopedServers);
-
-      if (selectedTools === undefined) {
-        // Fallback for missing selection: include all tools from eligible servers
-        mcpTools = result.tools;
-        toolSourceMap = { ...result.toolSourceMap };
-      } else if (selectedTools.length === 0) {
-        // Explicitly empty selection: no MCP tools
-        mcpTools = {};
-        toolSourceMap = {};
-      } else {
-        // Selective filtering
-        const filteredTools: Record<string, any> = {};
-        for (const [name, toolDef] of Object.entries(result.tools)) {
-          // Full-id match keeps selection server-scoped when duplicate tool
-          // names exist across servers. getMcpTools merges by bare name
-          // (first server wins), so toolSourceMap identifies the owner.
-          const serverId = result.toolServerIdMap?.[name];
-          const serverName = result.toolSourceMap[name];
-          const isSelected =
-            (serverId && selectedTools.includes(`${serverId}:tool:${name}`)) ||
-            (serverName &&
-              selectedTools.includes(`${serverName}:tool:${name}`));
-          if (isSelected) {
-            filteredTools[name] = toolDef;
-            toolSourceMap[name] = result.toolSourceMap[name];
-          }
-        }
-        mcpTools = filteredTools;
-      }
+      const filtered = filterSelectedMcpTools(result, selectedTools);
 
       // Sanitise remote MCP tool names to ensure LLM provider charset compliance (e.g. OpenAI ^[a-zA-Z0-9_-]{1,64}$)
-      const sanitised = sanitiseToolNames(mcpTools, toolSourceMap);
+      const sanitised = sanitiseToolNames(
+        filtered.tools,
+        filtered.toolSourceMap,
+      );
       mcpTools = sanitised.tools;
       toolSourceMap = sanitised.toolSourceMap;
 
@@ -100,12 +128,7 @@ export async function registerMcpTools(
     toolSourceMap.manage_artifact = "Internal";
   }
 
-  const targetKbIds =
-    activeKbIds && activeKbIds.length > 0
-      ? activeKbIds
-      : activeKbId
-        ? [activeKbId]
-        : [];
+  const targetKbIds = resolveTargetKbIds(activeKbIds, activeKbId);
 
   if (targetKbIds.length > 0 && kbIsReady && userId) {
     const kbTools = registerKnowledgebaseTool(

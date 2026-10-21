@@ -1,435 +1,234 @@
 "use client";
 
-import { PanelRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { extractCitations } from "@/lib/chat/extract-citations";
-import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
-import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
-import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { Project } from "@/types/project/project";
+import type { UserSettingsRow } from "@/types/user/user-settings-row";
 import { ArtifactPanel } from "./artifact-panel";
 import { AssistantBar } from "./assistant-bar";
+import { CanvasReopenButton } from "./canvas-reopen-button";
 import { ChatInput } from "./chat-input";
 import { MessageThread } from "./message-thread";
 import { StreamingSection } from "./streaming-section";
+import { useChatArtifactPanel } from "./use-chat-artifact-panel";
 
-/**
- * Props for the ChatUI component.
- * Controls the chat session display and interaction with optional initial messaging.
- */
-interface ChatUIProps {
-  /** Unique identifier for the active chat session. */
-  chatId: string;
+function getThreadLastModelId(thread: Message[]): string | undefined {
+  for (let i = thread.length - 1; i >= 0; i--) {
+    const msg = thread[i];
+    if (msg.role === "user" && msg.metadata) {
+      const { modelId } = parseMessageMetadata(msg.metadata);
+      if (modelId) return modelId;
+    }
+  }
+  return undefined;
+}
 
-  /** Pre-fetched chat data from server for immediate rendering before store hydration. */
-  initialChat?: Chat;
+function resolveInitialModelId(
+  thread: Message[],
+  currentProject: Project | undefined,
+  currentAssistant: Assistant | undefined,
+  userSettings: UserSettingsRow | null,
+): string | undefined {
+  const fromThread = getThreadLastModelId(thread);
+  if (fromThread) return fromThread;
 
-  /** Optional message to send on component mount. Typically from query parameters. */
-  initialMessage?: string;
+  const projectModel = (currentProject as any)?.defaultChatModelId;
+  if (projectModel) return projectModel;
 
-  /** Callback invoked after the initial message is successfully sent. */
-  onInitialMessageSent?: () => void;
+  const assistantModel = (currentAssistant as any)?.defaultChatModelId;
+  if (assistantModel) return assistantModel;
+
+  return userSettings?.defaultChatModelId || undefined;
+}
+
+function resolveInitialSubagents(thread: Message[]): {
+  initialSubagentsEnabled: boolean;
+  initialSubagentModelId: string | undefined;
+} {
+  const lastUserMessage = [...thread].reverse().find((m) => m.role === "user");
+  if (lastUserMessage?.metadata) {
+    const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
+      lastUserMessage.metadata,
+    );
+    return {
+      initialSubagentsEnabled: subagentsEnabled ?? false,
+      initialSubagentModelId: subagentModelId,
+    };
+  }
+  return {
+    initialSubagentsEnabled: false,
+    initialSubagentModelId: undefined,
+  };
+}
+
+function resolveInitialTools(
+  currentProject?: Project,
+  currentAssistant?: Assistant,
+): {
+  initialServerIds: string[];
+  initialSelectedTools: string[];
+} {
+  const projectTools = currentProject?.tools ?? [];
+  const assistantTools = currentAssistant?.tools ?? [];
+  const hasCustomTools = projectTools.length > 0 || assistantTools.length > 0;
+
+  const combined = Array.from(new Set([...projectTools, ...assistantTools]));
+  const serverIds = Array.from(
+    new Set(
+      combined
+        .map((t) => t.split(":")[0])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const customTools = combined.filter((t) => t.includes(":tool:"));
+  const selectedTools = hasCustomTools
+    ? customTools
+    : [...DEFAULT_ENABLED_TOOLS];
+
+  return {
+    initialServerIds: serverIds,
+    initialSelectedTools: selectedTools,
+  };
+}
+
+function resolveInitialKbIds(chat?: Chat, currentProject?: Project): string[] {
+  const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
+  return kbId ? [kbId] : [];
+}
+
+function resolveInitialSkillIds(
+  currentAssistant?: Assistant,
+  currentProject?: Project,
+): string[] {
+  const source = currentAssistant ?? currentProject;
+  return source?.skillMode === "specific" ? (source.skillIds ?? []) : [];
+}
+
+interface InitialChatConfig {
+  initialModelId: string | undefined;
+  initialSubagentsEnabled: boolean;
+  initialSubagentModelId: string | undefined;
+  initialServerIds: string[];
+  initialSelectedTools: string[];
+  initialKbIds: string[];
+  initialSkillIds: string[];
+}
+
+function resolveInitialChatConfig(
+  thread: Message[],
+  currentProject: Project | undefined,
+  currentAssistant: Assistant | undefined,
+  userSettings: UserSettingsRow | null,
+  chat: Chat | undefined,
+): InitialChatConfig {
+  const { initialSubagentsEnabled, initialSubagentModelId } =
+    resolveInitialSubagents(thread);
+  const { initialServerIds, initialSelectedTools } = resolveInitialTools(
+    currentProject,
+    currentAssistant,
+  );
+
+  return {
+    initialModelId: resolveInitialModelId(
+      thread,
+      currentProject,
+      currentAssistant,
+      userSettings,
+    ),
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds: resolveInitialKbIds(chat, currentProject),
+    initialSkillIds: resolveInitialSkillIds(currentAssistant, currentProject),
+  };
 }
 
 /**
- * Main chat interface component rendering messages, input, and artifacts.
- * Orchestrates message reconstruction, streaming, artifact management, and
- * branch navigation via extracted sub-components and hooks.
- *
- * @param props - Configuration for the chat session ID and optional auto-messaging.
- * @returns Chat UI with ScrollArea, MessageThread, StreamingSection, ChatInput, and ArtifactPanel.
- * @see MessageThread for message list rendering.
- * @see StreamingSection for live streaming state display.
- * @see AssistantBar for the current assistant header.
- * @see useStreamResponse for AI response streaming.
- * @see useInitialModel for model resolution.
- * @see useInitialTools for tool/server configuration merging.
- * @see ArtifactPanel for artifact display.
+ * Resolves the active chat prioritizing hydrated store state over pre-fetched chat.
  */
-export function ChatUI({
+export function resolveActiveChat(
+  storeChat: Chat | undefined,
+  initialChat: Chat | undefined,
+  chatId: string,
+): Chat | undefined {
+  if (storeChat && Object.keys(storeChat.messages).length > 0) {
+    return storeChat;
+  }
+  if (initialChat?.id === chatId) {
+    return initialChat;
+  }
+  return storeChat;
+}
+
+function findAssistant(
+  assistants: Assistant[],
+  assistantId?: string | null,
+): Assistant | undefined {
+  if (!assistantId) return undefined;
+  return assistants.find((a) => a.id === assistantId);
+}
+
+function findProject(
+  projects: Project[],
+  projectId?: string | null,
+): Project | undefined {
+  if (!projectId) return undefined;
+  return projects.find((p) => p.id === projectId);
+}
+
+function scrollElementToBottom(container: HTMLElement | null): void {
+  if (!container) return;
+  const viewport = container.querySelector("[data-radix-scroll-area-viewport]");
+  if (viewport) {
+    viewport.scrollTop = viewport.scrollHeight;
+  } else {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function resolveRegeneratePayload(chat?: Chat, assistantMessageId?: string) {
+  if (!chat || !assistantMessageId) return null;
+  const msg = chat.messages[assistantMessageId];
+  if (msg?.role !== "assistant" || !msg.parentId) return null;
+  const parentMsg = chat.messages[msg.parentId];
+  if (!parentMsg) return null;
+  return {
+    parentMsg,
+    payload: extractRegeneratePayload(parentMsg),
+  };
+}
+
+type StreamResponseFn = ReturnType<typeof useStreamResponse>["streamResponse"];
+
+interface UseChatMessageActionsParams {
+  chatId: string;
+  chat?: Chat;
+  streamResponse: StreamResponseFn;
+  deleteMessageDb: (chatId: string, id: string) => void;
+  setCurrentLeafDb: (chatId: string, leafId: string) => void;
+}
+
+function useChatMessageActions({
   chatId,
-  initialChat,
-  initialMessage,
-  onInitialMessageSent,
-}: ChatUIProps) {
-  const storeChat = useAppStore((state) => state.chats[chatId]);
-  const chat =
-    storeChat && Object.keys(storeChat.messages).length > 0
-      ? storeChat
-      : initialChat?.id === chatId
-        ? initialChat
-        : storeChat;
-  const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
-  const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
-  const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
-  const mcpServers = useAppStore((state) => state.mcpServers);
-  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
-  const assistants = useAppStore((state) => state.assistants);
-  const userSettings = useAppStore((state) => state.userSettings);
-
-  // Hydrate essential resources
-  useResourceHydration([
-    "mcpServers",
-    "publicMcpServers",
-    "assistants",
-    "projects",
-    "prompts",
-    "skills",
-    "mcpPrompts",
-    "userSettings",
-  ]);
-
-  const currentAssistant = chat?.assistantId
-    ? assistants.find((a) => a.id === chat.assistantId)
-    : undefined;
-  const projects = useAppStore((state) => state.projects);
-  const currentProject = chat?.projectId
-    ? projects.find((p) => p.id === chat.projectId)
-    : undefined;
-
-  const thread = useMemo(
-    () =>
-      chat?.currentLeafId
-        ? reconstructThread(chat.messages, chat.currentLeafId)
-        : [],
-    [chat?.currentLeafId, chat?.messages],
-  );
-
-  // -- Initial Model Resolution (Inlined) --
-  const initialModelId = useMemo(() => {
-    // 1. Existing chat: get model from the last user message
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage?.metadata) {
-      const { modelId } = parseMessageMetadata(lastUserMessage.metadata);
-      if (modelId) return modelId;
-    }
-
-    // 2. New chat: prioritize Project > Assistant > User Settings
-    if ((currentProject as any)?.defaultChatModelId) {
-      return (currentProject as any).defaultChatModelId;
-    }
-    if ((currentAssistant as any)?.defaultChatModelId) {
-      return (currentAssistant as any).defaultChatModelId;
-    }
-
-    // 3. Application-wide default
-    return userSettings?.defaultChatModelId || undefined;
-  }, [thread, currentProject, currentAssistant, userSettings]);
-
-  // -- Initial Subagents Resolution --
-  const { initialSubagentsEnabled, initialSubagentModelId } = useMemo(() => {
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage?.metadata) {
-      const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
-        lastUserMessage.metadata,
-      );
-      return {
-        initialSubagentsEnabled: subagentsEnabled ?? false,
-        initialSubagentModelId: subagentModelId,
-      };
-    }
-    return {
-      initialSubagentsEnabled: false,
-      initialSubagentModelId: undefined,
-    };
-  }, [thread]);
-
-  // -- Initial Tools Resolution (Inlined) --
-  /**
-   * Resolves initial tools and MCP servers for the chat input.
-   *
-   * @decision Architecture Approach 1 - Active by default tools: If an assistant or project
-   * explicitly defines tools, respect their custom selection. When no custom tools are configured,
-   * activate default internal tools (Canvas) so features like artifacts are enabled out-of-the-box
-   * while remaining toggleable.
-   */
-  const { initialServerIds, initialSelectedTools } = useMemo(() => {
-    const projectTools = currentProject?.tools;
-    const assistantTools = currentAssistant?.tools;
-
-    const hasCustomTools =
-      (projectTools !== undefined &&
-        projectTools !== null &&
-        projectTools.length > 0) ||
-      (assistantTools !== undefined &&
-        assistantTools !== null &&
-        assistantTools.length > 0);
-
-    const combined = new Set<string>();
-    if (projectTools) {
-      projectTools.forEach((t) => {
-        combined.add(t);
-      });
-    }
-    if (assistantTools) {
-      assistantTools.forEach((t) => {
-        combined.add(t);
-      });
-    }
-    const combinedArray = Array.from(combined);
-
-    const serverIds = new Set<string>();
-    combinedArray.forEach((t) => {
-      const serverId = t.split(":")[0];
-      if (serverId) serverIds.add(serverId);
-    });
-
-    const customTools = combinedArray.filter((t) => t.includes(":tool:"));
-    const selectedTools = hasCustomTools
-      ? customTools
-      : [...DEFAULT_ENABLED_TOOLS];
-
-    return {
-      initialServerIds: Array.from(serverIds),
-      initialSelectedTools: selectedTools,
-    };
-  }, [currentProject?.tools, currentAssistant?.tools]);
-
-  const initialKbIds = useMemo(() => {
-    const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
-    return kbId ? [kbId] : [];
-  }, [chat?.knowledgebaseId, currentProject?.knowledgebaseId]);
-
-  // Entity skill config, mirrored from the server-side resolution in
-  // `loadChatContext` (assistant wins over project). Surfaced here so the
-  // composer shows inherited skills as pills instead of silently pre-loading
-  // them. Only `specific` mode pre-loads; `dynamic` leaves selection to the user.
-  const initialSkillIds = useMemo(() => {
-    const source = currentAssistant ?? currentProject;
-    return source?.skillMode === "specific" ? (source.skillIds ?? []) : [];
-  }, [currentAssistant, currentProject]);
-
-  const allEnabledServers = useMemo(() => {
-    return mcpServers.filter((s) => s.enabled);
-  }, [mcpServers]);
-
-  // Streaming state
-  const {
-    isLoading,
-    streamingContent,
-    streamingReasoning,
-    isStreamingReasoning,
-    activeToolCalls,
-    assistantMessageId,
-    streamResponse,
-    stopStream,
-  } = useStreamResponse(chatId);
-
-  const streamingCitations = useMemo(() => {
-    if (activeToolCalls.length === 0) return [];
-
-    const completedSearchToolResults = activeToolCalls
-      .filter(
-        (tc) =>
-          tc.status === "complete" &&
-          tc.toolName === "search_knowledge_base" &&
-          tc.result,
-      )
-      .map((tc) => ({
-        toolCallId: tc.toolCallId,
-        toolName: tc.toolName,
-        result: tc.result,
-      }));
-
-    return extractCitations(completedSearchToolResults);
-  }, [activeToolCalls]);
-
-  // -- Artifact Panel Logic (Inlined) --
-  const updateMessageMetadataDb = useAppStore(
-    (state) => state.updateMessageMetadataDb,
-  );
-
-  const [artifactIndex, setArtifactIndex] = useState<number>(-1);
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
-  const [prevArtifactsLength, setPrevArtifactsLength] = useState(0);
-  const [prevChatId, setPrevChatId] = useState(chatId);
-
-  // Reset artifact states on chat switch
-  if (chatId !== prevChatId) {
-    setPrevChatId(chatId);
-    setPrevArtifactsLength(0);
-    setArtifactIndex(-1);
-    setIsArtifactOpen(false);
-  }
-
-  const allArtifacts = useMemo(() => {
-    const artifacts: ArtifactData[] = [];
-    const seenIds = new Set<string>();
-
-    for (const msg of thread) {
-      const msgArtifacts = extractMessageArtifacts(msg);
-      for (const art of msgArtifacts) {
-        const id = art.id || `${msg.id}-art-${artifacts.length}`;
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          artifacts.push({ ...art, id });
-        }
-      }
-    }
-
-    if (activeToolCalls && activeToolCalls.length > 0) {
-      const streamingMsg: Message = {
-        id: "streaming",
-        role: "assistant",
-        content: streamingContent ?? "",
-        createdAt: new Date(),
-        parentId: null,
-        childrenIds: [],
-        metadata: null,
-      };
-      const streamingArtifacts = extractMessageArtifacts(
-        streamingMsg,
-        activeToolCalls,
-      );
-      for (const art of streamingArtifacts) {
-        const id = art.id || `streaming-art-${artifacts.length}`;
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          artifacts.push({ ...art, id });
-        }
-      }
-    }
-
-    return artifacts;
-  }, [thread, activeToolCalls, streamingContent]);
-
-  const activeArtifact =
-    artifactIndex >= 0 && artifactIndex < allArtifacts.length
-      ? allArtifacts[artifactIndex]
-      : null;
-
-  // Auto-open when artifacts appear / increase and clamp active index
-  if (allArtifacts.length !== prevArtifactsLength) {
-    const isIncrease = allArtifacts.length > prevArtifactsLength;
-    setPrevArtifactsLength(allArtifacts.length);
-
-    if (isIncrease) {
-      setArtifactIndex(allArtifacts.length - 1);
-      setIsArtifactOpen(true);
-    } else if (allArtifacts.length === 0) {
-      setArtifactIndex(-1);
-      setIsArtifactOpen(false);
-    } else if (artifactIndex >= allArtifacts.length) {
-      setArtifactIndex(allArtifacts.length - 1);
-    }
-  }
-
-  const handleToggleArtifact = useCallback(
-    (artifact: ArtifactData) => {
-      // Find index of targeted artifact in allArtifacts
-      const targetIdx = allArtifacts.findIndex(
-        (a) =>
-          a.id === artifact.id ||
-          (a.messageId === artifact.messageId && a.title === artifact.title),
-      );
-
-      if (isArtifactOpen && artifactIndex === targetIdx) {
-        // Already showing this artifact -> toggle closed
-        setIsArtifactOpen(false);
-      } else if (targetIdx >= 0) {
-        // Switch to this artifact and open panel
-        setArtifactIndex(targetIdx);
-        setIsArtifactOpen(true);
-      } else {
-        // Fallback (e.g. streaming artifact not yet in thread)
-        setIsArtifactOpen(true);
-      }
-    },
-    [allArtifacts, isArtifactOpen, artifactIndex],
-  );
-
-  const handleUpdateArtifact = useCallback(
-    (newContent: string) => {
-      const isLatest =
-        allArtifacts.length <= 1 || artifactIndex === allArtifacts.length - 1;
-      if (!isLatest) return;
-
-      if (!activeArtifact?.messageId) return;
-
-      const msg = chat?.messages[activeArtifact.messageId];
-      if (!msg?.metadata) return;
-
-      try {
-        const meta = JSON.parse(msg.metadata);
-        let updated = false;
-
-        if (Array.isArray(meta.toolResults)) {
-          meta.toolResults.forEach((tr: any) => {
-            if (tr.toolName === "manage_artifact") {
-              const raw = tr.result ?? tr.output;
-              const isString = typeof raw === "string";
-              let parsed = raw;
-              if (isString) {
-                try {
-                  parsed = JSON.parse(raw);
-                } catch {
-                  parsed = null;
-                }
-              }
-              if (parsed && typeof parsed === "object") {
-                const target = parsed.artifact ?? parsed;
-                if (target?.id === activeArtifact.id) {
-                  target.content = newContent;
-                  if (isString) {
-                    tr.result = JSON.stringify(parsed);
-                  } else if (tr.result !== undefined) {
-                    tr.result = parsed;
-                  } else {
-                    tr.output = parsed;
-                  }
-                  updated = true;
-                }
-              }
-            }
-          });
-        }
-
-        if (updated) {
-          updateMessageMetadataDb(chatId, msg.id, JSON.stringify(meta));
-        }
-      } catch (e) {
-        logger.error("Failed to update artifact metadata", e);
-      }
-    },
-    [
-      activeArtifact,
-      allArtifacts.length,
-      artifactIndex,
-      chat,
-      chatId,
-      updateMessageMetadataDb,
-    ],
-  );
-
-  const handleKbChange = useCallback(
-    (kbIds: string[]) => {
-      const kbId = kbIds[0] ?? null;
-      setKnowledgebaseDb(chatId, kbId);
-    },
-    [chatId, setKnowledgebaseDb],
-  );
-
+  chat,
+  streamResponse,
+  deleteMessageDb,
+  setCurrentLeafDb,
+}: UseChatMessageActionsParams) {
   const handleSend = useCallback(
     async (
       content: string,
@@ -465,49 +264,134 @@ export function ChatUI({
     [chat?.currentLeafId, streamResponse],
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const handleEdit = useCallback(
+    async (
+      id: string,
+      newContent: string,
+      attachments: Attachment[],
+      model: string,
+      serverIds: string[],
+      toolIds: string[],
+      promptId?: string | string[],
+      assistantId?: string,
+      selectedKbIds?: string[],
+      selectedSkillIds?: string[],
+      subagentsEnabled?: boolean,
+      subagentModelId?: string,
+      subagentExcludedTools?: string[],
+    ) => {
+      const msg = chat?.messages[id];
+      if (!msg) return;
+      await streamResponse(
+        crypto.randomUUID(),
+        newContent,
+        msg.parentId,
+        attachments,
+        model,
+        serverIds,
+        toolIds,
+        promptId,
+        assistantId,
+        selectedKbIds,
+        selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+        subagentExcludedTools,
+      );
+    },
+    [chat, streamResponse],
+  );
+
+  const handleRegenerate = useCallback(
+    async (id: string) => {
+      const data = resolveRegeneratePayload(chat, id);
+      if (!data) return;
+      const { parentMsg, payload } = data;
+
+      await streamResponse(
+        crypto.randomUUID(),
+        payload.userContent,
+        parentMsg.parentId,
+        parentMsg.attachments,
+        payload.model,
+        payload.serverIds,
+        payload.toolIds,
+        payload.promptIds,
+        payload.assistantId,
+        payload.selectedKbIds,
+        payload.selectedSkillIds,
+        payload.subagentsEnabled,
+        payload.subagentModelId,
+        payload.subagentExcludedTools,
+      );
+    },
+    [chat, streamResponse],
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      deleteMessageDb(chatId, id);
+    },
+    [chatId, deleteMessageDb],
+  );
+
+  const handleNavigateBranch = useCallback(
+    (siblingId: string) => {
+      navigateToSiblingLeaf(chat, chatId, siblingId, setCurrentLeafDb);
+    },
+    [chatId, chat, setCurrentLeafDb],
+  );
+
+  return {
+    handleSend,
+    handleEdit,
+    handleRegenerate,
+    handleDelete,
+    handleNavigateBranch,
+  };
+}
+
+function useInitialChatAutoSend(
+  chat: Chat | undefined,
+  initialMessage: string | undefined,
+  onInitialMessageSent: (() => void) | undefined,
+  handleSend: (
+    content: string,
+    attachments?: Attachment[],
+    model?: string,
+    serverIds?: string[],
+    toolIds?: string[],
+    promptId?: string | string[],
+    assistantId?: string,
+    kbIds?: string[],
+    skillIds?: string[],
+  ) => void,
+  initialModelId: string | undefined,
+  initialServerIds: string[],
+  initialSelectedTools: string[],
+  initialKbIds: string[],
+) {
   const sentInitial = useRef(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Load MCP servers once on mount
   useEffect(() => {
-    if (mcpServers.length === 0) {
-      loadMcpServers().catch(() => {});
-    }
-  }, []);
+    if (!initialMessage || !chat || sentInitial.current) return;
+    sentInitial.current = true;
+    onInitialMessageSent?.();
+    clearMsgQueryParamFromUrl();
 
-  useEffect(() => {
-    if (initialMessage && chat && !sentInitial.current) {
-      sentInitial.current = true;
-      onInitialMessageSent?.();
+    if (Object.keys(chat.messages).length > 0) return;
 
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        if (url.searchParams.has("msg")) {
-          url.searchParams.delete("msg");
-          window.history.replaceState(
-            {},
-            "",
-            url.pathname + (url.search ? url.search : ""),
-          );
-        }
-      }
-
-      if (Object.keys(chat.messages).length > 0) {
-        return;
-      }
-
-      handleSend(
-        initialMessage,
-        [],
-        initialModelId || "",
-        initialServerIds,
-        initialSelectedTools,
-        undefined,
-        chat.assistantId || undefined,
-        initialKbIds,
-        [],
-      );
-    }
+    handleSend(
+      initialMessage,
+      [],
+      initialModelId ?? "",
+      initialServerIds,
+      initialSelectedTools,
+      undefined,
+      chat.assistantId ?? undefined,
+      initialKbIds,
+      [],
+    );
   }, [
     chat,
     initialMessage,
@@ -518,146 +402,376 @@ export function ChatUI({
     initialSelectedTools,
     initialKbIds,
   ]);
+}
+
+function extractAssistantId(
+  metadata: string | null | undefined,
+): string | undefined {
+  if (!metadata) return undefined;
+  try {
+    const raw = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    return typeof raw?.assistantId === "string" ? raw.assistantId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractLegacyPromptIds(
+  metadata: string | null | undefined,
+): string[] | undefined {
+  if (!metadata) return undefined;
+  try {
+    const raw = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    if (Array.isArray(raw?.promptIds) && raw.promptIds.length > 0) {
+      return raw.promptIds;
+    }
+    if (typeof raw?.promptId === "string") {
+      return [raw.promptId];
+    }
+  } catch {}
+  return undefined;
+}
+
+function extractPromptInfo(parentMsg: Message) {
+  const meta = parseMessageMetadata(parentMsg.metadata);
+  const promptMeta = meta.promptMeta;
+  const promptIds =
+    promptMeta?.promptIds ?? extractLegacyPromptIds(parentMsg.metadata);
+  return {
+    userContent: promptMeta?.userContent || parentMsg.content,
+    promptIds,
+    assistantId: extractAssistantId(parentMsg.metadata),
+    meta,
+  };
+}
+
+function extractRegeneratePayload(parentMsg: Message) {
+  const { userContent, promptIds, assistantId, meta } =
+    extractPromptInfo(parentMsg);
+
+  return {
+    userContent,
+    model: meta.modelId || "",
+    serverIds: meta.selectedServerIds || [],
+    toolIds: meta.selectedTools || [],
+    promptIds,
+    assistantId,
+    selectedKbIds: meta.selectedKbIds || [],
+    selectedSkillIds: meta.selectedSkillIds || [],
+    subagentsEnabled: meta.subagentsEnabled,
+    subagentModelId: meta.subagentModelId,
+    subagentExcludedTools: meta.subagentExcludedTools,
+  };
+}
+
+function extractActiveStreamingCitations(activeToolCalls: any[]) {
+  if (activeToolCalls.length === 0) return [];
+  const completedSearchToolResults = activeToolCalls
+    .filter(
+      (tc) =>
+        tc.status === "complete" &&
+        tc.toolName === "search_knowledge_base" &&
+        tc.result,
+    )
+    .map((tc) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      result: tc.result,
+    }));
+
+  return extractCitations(completedSearchToolResults);
+}
+
+/**
+ * Props for the ChatUI component.
+ * Controls the chat session display and interaction with optional initial messaging.
+ */
+function clearMsgQueryParamFromUrl(): void {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("msg")) return;
+  url.searchParams.delete("msg");
+  window.history.replaceState({}, "", url.pathname + (url.search || ""));
+}
+
+interface ChatUIProps {
+  /** Unique identifier for the active chat session. */
+  chatId: string;
+
+  /** Pre-fetched chat data from server for immediate rendering before store hydration. */
+  initialChat?: Chat;
+
+  /** Optional message to send on component mount. Typically from query parameters. */
+  initialMessage?: string;
+
+  /** Callback invoked after the initial message is successfully sent. */
+  onInitialMessageSent?: () => void;
+}
+
+/**
+ * Main chat interface component rendering messages, input, and artifacts.
+ * Orchestrates message reconstruction, streaming, artifact management, and
+ * branch navigation via extracted sub-components and hooks.
+ *
+ * @param props - Configuration for the chat session ID and optional auto-messaging.
+ * @returns Chat UI with ScrollArea, MessageThread, StreamingSection, ChatInput, and ArtifactPanel.
+ * @see MessageThread for message list rendering.
+ * @see StreamingSection for live streaming state display.
+ * @see AssistantBar for the current assistant header.
+ * @see useStreamResponse for AI response streaming.
+ * @see useInitialModel for model resolution.
+ * @see useInitialTools for tool/server configuration merging.
+ * @see ArtifactPanel for artifact display.
+ */
+function checkShouldShowReopen(
+  isArtifactOpen: boolean,
+  artifactsLength: number,
+): boolean {
+  return !isArtifactOpen && artifactsLength > 0;
+}
+
+function updateChatKnowledgebase(
+  chatId: string,
+  kbIds: string[],
+  setKnowledgebaseDb: (chatId: string, kbId: string | null) => void,
+): void {
+  setKnowledgebaseDb(chatId, kbIds[0] ?? null);
+}
+
+function checkCanMentionAssistant(
+  threadLength: number,
+  assistantId?: string | null,
+): boolean {
+  return threadLength === 0 && !assistantId;
+}
+
+function filterEnabledMcpServers<T extends { enabled: boolean }>(
+  servers: T[],
+): T[] {
+  return servers.filter((s) => s.enabled);
+}
+
+function useChatInitialSelections(
+  thread: Message[],
+  currentProject: Project | undefined,
+  currentAssistant: Assistant | undefined,
+  userSettings: UserSettingsRow | null,
+  chat: Chat | undefined,
+) {
+  return useMemo(
+    () =>
+      resolveInitialChatConfig(
+        thread,
+        currentProject,
+        currentAssistant,
+        userSettings,
+        chat,
+      ),
+    [thread, currentProject, currentAssistant, userSettings, chat],
+  );
+}
+
+function resolveThread(
+  messages: Record<string, Message> | undefined,
+  currentLeafId: string | null | undefined,
+): Message[] {
+  if (!messages || !currentLeafId) return [];
+  return reconstructThread(messages, currentLeafId);
+}
+
+function navigateToSiblingLeaf(
+  chat: Chat | undefined,
+  chatId: string,
+  siblingId: string,
+  setCurrentLeafDb: (chatId: string, leafId: string) => void,
+): void {
+  if (!chat) return;
+  setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
+}
+
+function useEnsureMcpServersLoaded(
+  mcpServers: { length: number },
+  loadMcpServers: () => Promise<unknown>,
+) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load MCP servers once on mount
+  useEffect(() => {
+    if (mcpServers.length === 0) {
+      loadMcpServers().catch(() => {});
+    }
+  }, []);
+}
+
+function useChatScrollToBottom() {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]",
-      );
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      } else {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }
+    scrollElementToBottom(scrollRef.current);
   }, []);
 
   useEffect(() => {
     scrollToBottom();
   }, [scrollToBottom]);
 
-  const handleDelete = (id: string) => {
-    deleteMessageDb(chatId, id);
+  return scrollRef;
+}
+
+function useChatStore(chatId: string) {
+  const storeChat = useAppStore((state) => state.chats[chatId]);
+  const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
+  const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
+  const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
+  const mcpServers = useAppStore((state) => state.mcpServers);
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
+  const assistants = useAppStore((state) => state.assistants);
+  const userSettings = useAppStore((state) => state.userSettings);
+  const projects = useAppStore((state) => state.projects);
+  const updateMessageMetadataDb = useAppStore(
+    (state) => state.updateMessageMetadataDb,
+  );
+  return {
+    storeChat,
+    deleteMessageDb,
+    setCurrentLeafDb,
+    setKnowledgebaseDb,
+    mcpServers,
+    loadMcpServers,
+    assistants,
+    userSettings,
+    projects,
+    updateMessageMetadataDb,
   };
+}
 
-  const handleEdit = async (
-    id: string,
-    newContent: string,
-    attachments: Attachment[],
-    model: string,
-    serverIds: string[],
-    toolIds: string[],
-    promptId?: string | string[],
-    assistantId?: string,
-    selectedKbIds?: string[],
-    selectedSkillIds?: string[],
-    subagentsEnabled?: boolean,
-    subagentModelId?: string,
-    subagentExcludedTools?: string[],
-  ) => {
-    const msg = chat?.messages[id];
-    if (!msg) return;
-    await streamResponse(
-      crypto.randomUUID(),
-      newContent,
-      msg.parentId,
-      attachments,
-      model,
-      serverIds,
-      toolIds,
-      promptId,
-      assistantId,
-      selectedKbIds,
-      selectedSkillIds,
-      subagentsEnabled,
-      subagentModelId,
-      subagentExcludedTools,
-    );
-  };
+export function ChatUI({
+  chatId,
+  initialChat,
+  initialMessage,
+  onInitialMessageSent,
+}: ChatUIProps) {
+  const {
+    storeChat,
+    deleteMessageDb,
+    setCurrentLeafDb,
+    setKnowledgebaseDb,
+    mcpServers,
+    loadMcpServers,
+    assistants,
+    userSettings,
+    projects,
+    updateMessageMetadataDb,
+  } = useChatStore(chatId);
+  const chat = resolveActiveChat(storeChat, initialChat, chatId);
 
-  const handleRegenerate = async (id: string) => {
-    const msg = chat?.messages[id];
-    if (msg?.role !== "assistant" || !msg.parentId) return;
+  // Hydrate essential resources
+  useResourceHydration([
+    "mcpServers",
+    "publicMcpServers",
+    "assistants",
+    "projects",
+    "prompts",
+    "skills",
+    "mcpPrompts",
+    "userSettings",
+  ]);
 
-    const parentMsg = chat?.messages[msg.parentId];
-    if (!parentMsg) return;
+  const currentAssistant = findAssistant(assistants, chat?.assistantId);
+  const currentProject = findProject(projects, chat?.projectId);
 
-    let promptIds: string[] | undefined;
-    let assistantId: string | undefined;
-    let model: string = "";
-    let serverIds: string[] = [];
-    let toolIds: string[] = [];
-    let selectedKbIds: string[] = [];
-    let selectedSkillIds: string[] = [];
-    let subagentsEnabled: boolean | undefined;
-    let subagentModelId: string | undefined;
-    let subagentExcludedTools: string[] | undefined;
-    let userContent = parentMsg.content;
+  const thread = useMemo(
+    () => resolveThread(chat?.messages, chat?.currentLeafId),
+    [chat?.currentLeafId, chat?.messages],
+  );
 
-    if (parentMsg.metadata) {
-      try {
-        const meta = JSON.parse(parentMsg.metadata);
-        if (Array.isArray(meta.promptIds) && meta.promptIds.length > 0) {
-          promptIds = meta.promptIds;
-          userContent = meta.userContent || parentMsg.content;
-        } else if (meta.promptId) {
-          promptIds = [meta.promptId];
-          userContent = meta.userContent || parentMsg.content;
-        }
-        if (meta.assistantId) {
-          assistantId = meta.assistantId;
-        }
-        if (meta.model) {
-          model = meta.model;
-        }
-        if (Array.isArray(meta.selectedServerIds)) {
-          serverIds = meta.selectedServerIds;
-        }
-        if (Array.isArray(meta.selectedTools)) {
-          toolIds = meta.selectedTools;
-        }
-        if (Array.isArray(meta.selectedKbIds)) {
-          selectedKbIds = meta.selectedKbIds;
-        }
-        if (Array.isArray(meta.selectedSkillIds)) {
-          selectedSkillIds = meta.selectedSkillIds;
-        }
-        if (typeof meta.subagentsEnabled === "boolean") {
-          subagentsEnabled = meta.subagentsEnabled;
-        }
-        if (typeof meta.subagentModelId === "string") {
-          subagentModelId = meta.subagentModelId;
-        }
-        if (Array.isArray(meta.subagentExcludedTools)) {
-          subagentExcludedTools = meta.subagentExcludedTools;
-        }
-      } catch {}
-    }
+  const {
+    initialModelId,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds,
+    initialSkillIds,
+  } = useChatInitialSelections(
+    thread,
+    currentProject,
+    currentAssistant,
+    userSettings,
+    chat,
+  );
 
-    await streamResponse(
-      crypto.randomUUID(),
-      userContent,
-      parentMsg.parentId,
-      parentMsg.attachments,
-      model,
-      serverIds,
-      toolIds,
-      promptIds,
-      assistantId,
-      selectedKbIds,
-      selectedSkillIds,
-      subagentsEnabled,
-      subagentModelId,
-      subagentExcludedTools,
-    );
-  };
+  const allEnabledServers = useMemo(
+    () => filterEnabledMcpServers(mcpServers),
+    [mcpServers],
+  );
 
-  const handleNavigateBranch = useCallback(
-    (siblingId: string) => {
-      if (!chat) return;
-      setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
+  // Streaming state
+  const {
+    isLoading,
+    streamingContent,
+    streamingReasoning,
+    isStreamingReasoning,
+    activeToolCalls,
+    assistantMessageId,
+    streamResponse,
+    stopStream,
+  } = useStreamResponse(chatId);
+
+  const streamingCitations = useMemo(
+    () => extractActiveStreamingCitations(activeToolCalls),
+    [activeToolCalls],
+  );
+
+  const {
+    artifactIndex,
+    setArtifactIndex,
+    isArtifactOpen,
+    setIsArtifactOpen,
+    allArtifacts,
+    activeArtifact,
+    handleToggleArtifact,
+    handleUpdateArtifact,
+    handleReopen,
+  } = useChatArtifactPanel(
+    chatId,
+    chat,
+    thread,
+    activeToolCalls,
+    streamingContent,
+    updateMessageMetadataDb,
+  );
+
+  const handleKbChange = useCallback(
+    (kbIds: string[]) => {
+      updateChatKnowledgebase(chatId, kbIds, setKnowledgebaseDb);
     },
-    [chatId, chat, setCurrentLeafDb],
+    [chatId, setKnowledgebaseDb],
+  );
+
+  const {
+    handleSend,
+    handleEdit,
+    handleRegenerate,
+    handleDelete,
+    handleNavigateBranch,
+  } = useChatMessageActions({
+    chatId,
+    chat,
+    streamResponse,
+    deleteMessageDb,
+    setCurrentLeafDb,
+  });
+
+  const scrollRef = useChatScrollToBottom();
+  useEnsureMcpServersLoaded(mcpServers, loadMcpServers);
+
+  useInitialChatAutoSend(
+    chat,
+    initialMessage,
+    onInitialMessageSent,
+    handleSend,
+    initialModelId,
+    initialServerIds,
+    initialSelectedTools,
+    initialKbIds,
   );
 
   if (!chat) {
@@ -714,7 +828,10 @@ export function ChatUI({
               onStop={stopStream}
               servers={allEnabledServers}
               activeChatAssistantId={chat?.assistantId}
-              canMentionAssistant={thread.length === 0 && !chat?.assistantId}
+              canMentionAssistant={checkCanMentionAssistant(
+                thread.length,
+                chat?.assistantId,
+              )}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedKbs={initialKbIds}
@@ -729,28 +846,8 @@ export function ChatUI({
         </div>
       </div>
 
-      {!isArtifactOpen && allArtifacts.length > 0 && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute top-3 right-3 z-30 size-7 cursor-pointer rounded-md bg-background/80 shadow-xs backdrop-blur-xs transition-colors hover:bg-accent"
-                onClick={() => {
-                  if (artifactIndex < 0 && allArtifacts.length > 0) {
-                    setArtifactIndex(allArtifacts.length - 1);
-                  }
-                  setIsArtifactOpen(true);
-                }}
-                aria-label="Open canvas"
-              >
-                <PanelRight className="size-4 text-muted-foreground" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Open canvas</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      {checkShouldShowReopen(isArtifactOpen, allArtifacts.length) && (
+        <CanvasReopenButton onReopen={handleReopen} />
       )}
 
       <ArtifactPanel

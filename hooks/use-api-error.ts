@@ -19,6 +19,182 @@ import {
   VISION_NOT_SUPPORTED_ERROR_CODE,
 } from "@/lib/errors";
 
+interface ExtractedErrorInfo {
+  code?: string;
+  message: string;
+  raw: Record<string, any> | null;
+}
+
+interface StaticToastConfig {
+  type: "error" | "warning";
+  title: string;
+  description: string;
+}
+
+type DynamicToastHandler = (
+  router: { push: (href: string) => void },
+  message: string,
+  raw: Record<string, any> | null,
+) => void;
+
+const STATIC_CODE_TOASTS: Record<string, StaticToastConfig | undefined> = {
+  [VISION_NOT_SUPPORTED_ERROR_CODE]: {
+    type: "error",
+    title: "Vision Not Supported",
+    description:
+      "The selected model cannot see images. Please switch to a vision-enabled model.",
+  },
+  [TOOLS_NOT_SUPPORTED_ERROR_CODE]: {
+    type: "error",
+    title: "Tools Not Supported",
+    description:
+      "The selected model cannot use tools. Please switch to a model that supports tool calling.",
+  },
+  [REASONING_NOT_SUPPORTED_ERROR_CODE]: {
+    type: "error",
+    title: "Reasoning Not Supported",
+    description:
+      "The selected model does not support advanced reasoning tokens. Please use a different model.",
+  },
+  [STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE]: {
+    type: "error",
+    title: "Structured Output Not Supported",
+    description:
+      "The selected model does not support schema-based structured output. Please use a different model.",
+  },
+  [MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE]: {
+    type: "warning",
+    title: "Model Limit Reached",
+    description:
+      "Provider returned more than 1,000 models. Displaying the first 1,000 available models.",
+  },
+  [ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE]: {
+    type: "error",
+    title: "Image Upload Not Supported",
+    description:
+      "The selected model does not support image analysis. Please switch to a vision-enabled model.",
+  },
+};
+
+/**
+ * Displays error toast for rate limit or credit exhaustion with a provider settings action.
+ */
+function handleRateLimitToast(
+  router: { push: (href: string) => void },
+  message: string,
+): void {
+  const isCredits =
+    message.toLowerCase().includes("openrouter") &&
+    message.toLowerCase().includes("credits");
+
+  toast.error(isCredits ? "Insufficient Credits" : "Rate Limit Reached", {
+    description: message,
+    action: {
+      label: "View Providers",
+      onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
+    },
+  });
+}
+
+const DYNAMIC_CODE_HANDLERS: Record<string, DynamicToastHandler | undefined> = {
+  [MODEL_DUPLICATE_IMPORT_ERROR_CODE]: (_router, _message, raw) => {
+    const duplicateCount = raw?.duplicateCount ?? "some";
+    toast.warning(`${duplicateCount} model(s) skipped (already exist)`, {
+      description: "These models will be skipped during import.",
+    });
+  },
+  [MODEL_MALFORMED_ID_ERROR_CODE]: (_router, _message, raw) => {
+    const invalidCount = raw?.invalidCount ?? "some";
+    toast.warning(`${invalidCount} model(s) skipped (malformed ID)`, {
+      description:
+        "Models with missing or invalid IDs were excluded from sync.",
+    });
+  },
+  [RATE_LIMIT_ERROR_CODE]: handleRateLimitToast,
+  [UNAUTHORIZED_ERROR_CODE]: (router) => {
+    toast.error("Session Expired", {
+      description: UNAUTHORIZED_ERROR_MESSAGE,
+      action: {
+        label: "Log In",
+        onClick: () => router.push(ROUTES.AUTH.LOGIN.path),
+      },
+    });
+  },
+  [PROVIDER_NOT_CONFIGURED_ERROR_CODE]: (router) => {
+    toast.error("No AI Providers Configured", {
+      description:
+        "Please set up an AI provider and enable at least one model to start chatting.",
+      action: {
+        label: "Set up Providers",
+        onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
+      },
+    });
+  },
+  [RAG_EXTRACTION_EMPTY_ERROR_CODE]: (_router, message) => {
+    toast.error("Empty Document", { description: message });
+  },
+};
+
+/**
+ * Resolves message text from a plain error object.
+ */
+function resolveObjectErrorMessage(
+  raw: Record<string, any>,
+  fallback: string,
+): string {
+  return raw.error || raw.message || fallback;
+}
+
+/**
+ * Normalizes error code, message, and original payload from an unknown error value.
+ */
+function extractErrorInfo(
+  error: unknown,
+  fallbackMessage?: string,
+): ExtractedErrorInfo {
+  const fallback = fallbackMessage ?? "An error occurred";
+
+  if (error instanceof Error) {
+    return {
+      code: (error as any).code,
+      message: error.message,
+      raw: error as any,
+    };
+  }
+
+  if (typeof error === "string") {
+    return { message: error, raw: null };
+  }
+
+  if (error && typeof error === "object") {
+    const raw = error as Record<string, any>;
+    return {
+      code: raw.code,
+      message: resolveObjectErrorMessage(raw, fallback),
+      raw,
+    };
+  }
+
+  return { message: fallback, raw: null };
+}
+
+/**
+ * Handles parameterized error codes requiring dynamic messages, counts, or router actions.
+ */
+function handleDynamicCodeToast(
+  code: string,
+  message: string,
+  raw: Record<string, any> | null,
+  router: { push: (href: string) => void },
+): boolean {
+  const handler = DYNAMIC_CODE_HANDLERS[code];
+  if (!handler) {
+    return false;
+  }
+  handler(router, message, raw);
+  return true;
+}
+
 /**
  * Centralises API error handling with feature-specific error codes and user feedback.
  * Detects capability errors (vision, tools, reasoning, structured output),
@@ -37,145 +213,28 @@ export function useApiError() {
   const router = useRouter();
 
   /**
-   * Checks if an error is a missing API key error and shows a toast with a settings link.
+   * Checks if an error is a recognized API/capability/key error and shows an appropriate toast.
    *
    * @param error - The error object or message string to check.
-   * @param fallbackMessage - Optional message to show if error is not an API key error (optional).
-   * @returns True if the error was handled as an API key error, false otherwise.
+   * @param fallbackMessage - Optional message to show if error is not handled by specific code.
+   * @returns True if the error was handled as a recognized API/code error, false otherwise.
    */
   const handleApiError = useCallback(
     (error: unknown, fallbackMessage?: string) => {
-      // Extract code and message from various error formats
-      let code: string | undefined;
-      let message: string;
+      const { code, message, raw } = extractErrorInfo(error, fallbackMessage);
 
-      if (error instanceof Error) {
-        message = error.message;
-        code = (error as any).code;
-      } else if (typeof error === "string") {
-        message = error;
-      } else if (error && typeof error === "object") {
-        message =
-          (error as any).error ||
-          (error as any).message ||
-          (fallbackMessage ?? "An error occurred");
-        code = (error as any).code;
-      } else {
-        message = fallbackMessage ?? "An error occurred";
-      }
+      if (code) {
+        const staticToast = STATIC_CODE_TOASTS[code];
+        if (staticToast) {
+          toast[staticToast.type](staticToast.title, {
+            description: staticToast.description,
+          });
+          return true;
+        }
 
-      // Handle specific capability error codes
-      if (code === VISION_NOT_SUPPORTED_ERROR_CODE) {
-        toast.error("Vision Not Supported", {
-          description:
-            "The selected model cannot see images. Please switch to a vision-enabled model.",
-        });
-        return true;
-      }
-
-      if (code === TOOLS_NOT_SUPPORTED_ERROR_CODE) {
-        toast.error("Tools Not Supported", {
-          description:
-            "The selected model cannot use tools. Please switch to a model that supports tool calling.",
-        });
-        return true;
-      }
-
-      if (code === REASONING_NOT_SUPPORTED_ERROR_CODE) {
-        toast.error("Reasoning Not Supported", {
-          description:
-            "The selected model does not support advanced reasoning tokens. Please use a different model.",
-        });
-        return true;
-      }
-
-      if (code === STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE) {
-        toast.error("Structured Output Not Supported", {
-          description:
-            "The selected model does not support schema-based structured output. Please use a different model.",
-        });
-        return true;
-      }
-
-      if (code === MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE) {
-        toast.warning("Model Limit Reached", {
-          description:
-            "Provider returned more than 1,000 models. Displaying the first 1,000 available models.",
-        });
-        return true;
-      }
-
-      if (code === MODEL_DUPLICATE_IMPORT_ERROR_CODE) {
-        const duplicateCount = (error as any).duplicateCount ?? "some";
-        toast.warning(`${duplicateCount} model(s) skipped (already exist)`, {
-          description: "These models will be skipped during import.",
-        });
-        return true;
-      }
-
-      if (code === RATE_LIMIT_ERROR_CODE) {
-        const isOpenRouterCredits =
-          message.toLowerCase().includes("openrouter") &&
-          message.toLowerCase().includes("credits");
-
-        toast.error(
-          isOpenRouterCredits ? "Insufficient Credits" : "Rate Limit Reached",
-          {
-            description: message,
-            action: {
-              label: "View Providers",
-              onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
-            },
-          },
-        );
-        return true;
-      }
-
-      if (code === UNAUTHORIZED_ERROR_CODE) {
-        toast.error("Session Expired", {
-          description: UNAUTHORIZED_ERROR_MESSAGE,
-          action: {
-            label: "Log In",
-            onClick: () => router.push(ROUTES.AUTH.LOGIN.path),
-          },
-        });
-        return true;
-      }
-
-      if (code === MODEL_MALFORMED_ID_ERROR_CODE) {
-        const invalidCount = (error as any).invalidCount ?? "some";
-        toast.warning(`${invalidCount} model(s) skipped (malformed ID)`, {
-          description:
-            "Models with missing or invalid IDs were excluded from sync.",
-        });
-        return true;
-      }
-
-      if (code === ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE) {
-        toast.error("Image Upload Not Supported", {
-          description:
-            "The selected model does not support image analysis. Please switch to a vision-enabled model.",
-        });
-        return true;
-      }
-
-      if (code === RAG_EXTRACTION_EMPTY_ERROR_CODE) {
-        toast.error("Empty Document", {
-          description: message,
-        });
-        return true;
-      }
-
-      if (code === PROVIDER_NOT_CONFIGURED_ERROR_CODE) {
-        toast.error("No AI Providers Configured", {
-          description:
-            "Please set up an AI provider and enable at least one model to start chatting.",
-          action: {
-            label: "Set up Providers",
-            onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
-          },
-        });
-        return true;
+        if (handleDynamicCodeToast(code, message, raw, router)) {
+          return true;
+        }
       }
 
       if (isApiKeyError(message)) {
@@ -188,7 +247,7 @@ export function useApiError() {
         return true;
       }
 
-      if (fallbackMessage && !isApiKeyError(message)) {
+      if (fallbackMessage) {
         toast.error(fallbackMessage);
       }
 
