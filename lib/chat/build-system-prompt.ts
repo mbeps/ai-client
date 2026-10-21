@@ -101,6 +101,14 @@ export function buildSystemPrompt(
     systemParts.push(formatSkillCatalog(availableSkills));
   }
 
+  // Instructions for tool-generated files and downloads
+  if (supportsTools) {
+    systemParts.push(
+      "## Tool Usage & Generated Files\n" +
+        "When you create, generate, or modify files using tools (such as spreadsheets, workbooks, documents, or data exports) that the user should receive, you MUST call the corresponding download or export tool (such as `download_file` with the `file_path`) so the file content is retrieved and an interactive download button is presented to the user. Do not simply tell the user the file is ready without calling the tool to provide the download.",
+    );
+  }
+
   // Orchestrator directives when subagent delegation is active
   if (options.isSubagentDelegationEnabled) {
     systemParts.push(PROMPTS.SYSTEM.ORCHESTRATOR_DIRECTIVES);

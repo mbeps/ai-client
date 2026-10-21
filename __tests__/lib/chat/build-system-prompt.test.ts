@@ -96,6 +96,14 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     expect(result).toContain("Theme rules");
   });
 
+  it("injects generated file download instructions when tool calling is supported", () => {
+    const result = buildSystemPrompt(null, null, null, false, {
+      supportsTools: true,
+    });
+    expect(result).toContain("Tool Usage & Generated Files");
+    expect(result).toContain("download_file");
+  });
+
   describe("user context", () => {
     it("injects name and email when both are provided", () => {
       const result = buildSystemPrompt(null, null, null, false, {

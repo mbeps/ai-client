@@ -198,7 +198,7 @@ const TITLE_DIRECT_KEYS = [
   "name",
   "title",
 ] as const;
-const TITLE_PATH_KEYS = ["file_path", "filePath"] as const;
+const TITLE_PATH_KEYS = ["file_path", "filePath", "path"] as const;
 
 function findTitleInRecord(rec?: Record<string, unknown>): string | undefined {
   if (!rec) return undefined;

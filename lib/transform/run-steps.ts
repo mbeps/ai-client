@@ -472,19 +472,22 @@ function handleSingleToolResult(
   let uploadedWorkbookPath: string | null = null;
   let artifact: Record<string, unknown> | null = null;
 
-  if (tr.toolName === "upload_file") {
-    uploadedWorkbookPath = extractUploadedFilePath(payload);
-    if (uploadedWorkbookPath) {
-      log.info(
-        "Active workbook file_path captured (runId: {runId}, stepIndex: {stepIndex})",
-        {
-          runId,
-          stepIndex,
-          activeWorkbookFilePath: uploadedWorkbookPath,
-          userId,
-        },
-      );
-    }
+  const extractedPath =
+    extractUploadedFilePath(payload) ??
+    ((tr as any).args ? extractUploadedFilePath((tr as any).args) : null);
+
+  if (extractedPath) {
+    uploadedWorkbookPath = extractedPath;
+    log.info(
+      "Active file_path captured (runId: {runId}, stepIndex: {stepIndex}, tool: {toolName})",
+      {
+        runId,
+        stepIndex,
+        activeWorkbookFilePath: uploadedWorkbookPath,
+        toolName: tr.toolName,
+        userId,
+      },
+    );
   }
 
   if (tr.toolName === "manage_artifact") {
@@ -771,28 +774,51 @@ function buildWorkbookFallbackArtifact(
 }
 
 /**
- * Checks whether the download_file MCP tool is enabled and ready to execute.
+ * Resolves the download tool name available for the current step server.
  */
-function isDownloadToolAvailable(
+function resolveStepDownloadToolName(
   runToolSourceMap: Record<string, string>,
   stepServerNames: Set<string>,
   runMcpTools: Record<string, any>,
-): boolean {
-  const downloadToolSource = runToolSourceMap.download_file;
-  const canUseDownloadTool =
-    typeof downloadToolSource === "string" &&
-    stepServerNames.has(downloadToolSource);
+): string | null {
+  const preferred = [
+    "download_file",
+    "download",
+    "get_file",
+    "export_file",
+    "read_file",
+    "get_file_content",
+    "fetch_file",
+  ];
 
-  if (!canUseDownloadTool) return false;
+  for (const name of preferred) {
+    const src = runToolSourceMap[name];
+    if (
+      src &&
+      stepServerNames.has(src) &&
+      typeof runMcpTools[name]?.execute === "function"
+    ) {
+      return name;
+    }
+  }
 
-  const downloadTool = runMcpTools.download_file as {
-    execute?: (args: { file_path: string }) => Promise<unknown>;
-  };
-  return typeof downloadTool?.execute === "function";
+  for (const [name, tool] of Object.entries(runMcpTools)) {
+    const src = runToolSourceMap[name];
+    if (
+      src &&
+      stepServerNames.has(src) &&
+      /download|export|get_file/i.test(name) &&
+      typeof (tool as any)?.execute === "function"
+    ) {
+      return name;
+    }
+  }
+
+  return null;
 }
 
 /**
- * Downloads mutated workbook via download_file MCP tool when model omitted manage_artifact.
+ * Downloads mutated workbook or generated file via MCP tool when model omitted manage_artifact.
  * @author Maruf Bepary
  */
 async function executeWorkbookDownloadFallback(
@@ -806,19 +832,23 @@ async function executeWorkbookDownloadFallback(
   runToolSourceMap: Record<string, string>,
   stepServerNames: Set<string>,
 ) {
-  if (
-    !isDownloadToolAvailable(runToolSourceMap, stepServerNames, runMcpTools)
-  ) {
+  const downloadToolName = resolveStepDownloadToolName(
+    runToolSourceMap,
+    stepServerNames,
+    runMcpTools,
+  );
+  if (!downloadToolName) {
     return null;
   }
 
-  const downloadTool = runMcpTools.download_file as {
-    execute: (args: { file_path: string }) => Promise<unknown>;
+  const downloadTool = runMcpTools[downloadToolName] as {
+    execute: (args: Record<string, string>) => Promise<unknown>;
   };
 
   try {
     const downloaded = await downloadTool.execute({
       file_path: currentWorkbookPath,
+      path: currentWorkbookPath,
     });
     const downloadPayload = extractDownloadFilePayload(downloaded);
     if (!downloadPayload) return null;
@@ -911,7 +941,7 @@ async function tryDownloadFallback(
   runToolSourceMap: Record<string, string>,
   stepServerNames: Set<string>,
 ) {
-  if (!currentWorkbookPath || !("download_file" in runMcpTools)) {
+  if (!currentWorkbookPath) {
     return null;
   }
 

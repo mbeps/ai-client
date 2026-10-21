@@ -19,6 +19,7 @@ import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
+import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
 import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
@@ -920,6 +921,15 @@ export const generateChatResponse = inngest.createFunction(
           chatId,
         });
         return;
+      }
+
+      if (allTools) {
+        await executeToolDownloadFallback({
+          completedTools,
+          activeTools: allTools,
+          toolSourceMap,
+          emit,
+        });
       }
 
       const finishReason = await safeFinishReason;
