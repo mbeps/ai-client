@@ -11,6 +11,10 @@ export const clientEnvSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
+  ALLOW_PRIVATE_NETWORK_MCP: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 /**
@@ -108,10 +112,6 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .enum(["debug", "info", "warn", "warning", "error", "fatal"])
     .default("info")
     .transform((val) => (val === "warn" ? "warning" : val)),
-  ALLOW_PRIVATE_NETWORK_MCP: z
-    .string()
-    .default("false")
-    .transform((v) => v === "true"),
   PRESIGNED_URL_EXPIRY_SECONDS: z
     .string()
     .default("3600")
@@ -179,7 +179,9 @@ export function validateEnv(
         S3_BUCKET: process.env.S3_BUCKET,
         NODE_ENV: process.env.NODE_ENV,
         LOG_LEVEL: process.env.LOG_LEVEL,
-        ALLOW_PRIVATE_NETWORK_MCP: process.env.ALLOW_PRIVATE_NETWORK_MCP,
+        ALLOW_PRIVATE_NETWORK_MCP:
+          process.env.ALLOW_PRIVATE_NETWORK_MCP ??
+          process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP,
         PRESIGNED_URL_EXPIRY_SECONDS: process.env.PRESIGNED_URL_EXPIRY_SECONDS,
         INNGEST_BASE_URL: process.env.INNGEST_BASE_URL,
         INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
@@ -192,6 +194,9 @@ export function validateEnv(
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
           process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
+        ALLOW_PRIVATE_NETWORK_MCP:
+          process.env.NEXT_PUBLIC_ALLOW_PRIVATE_NETWORK_MCP ??
+          process.env.ALLOW_PRIVATE_NETWORK_MCP,
       };
 
   const schema = isServerEnv ? serverEnvSchema : clientEnvSchema;

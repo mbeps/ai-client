@@ -1,6 +1,5 @@
 "use client";
 
-import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
 import {
@@ -40,6 +39,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
   const [requiresFileUpload, setRequiresFileUpload] = useState(true);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [isNotFound, setIsNotFound] = useState(false);
 
   useEffect(() => {
     if (mcpServers.length === 0) {
@@ -58,7 +58,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
       try {
         const agent = await getTransformAgent(id);
         if (!agent) {
-          if (mounted) notFound();
+          if (mounted) setIsNotFound(true);
           return;
         }
         if (mounted) {
@@ -76,6 +76,13 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
           });
         }
       } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message === "Not Found" || err.message.includes("Not Found"))
+        ) {
+          if (mounted) setIsNotFound(true);
+          return;
+        }
         handleApiError(err, "Failed to load agent");
       } finally {
         if (mounted) setIsLoading(false);
@@ -139,6 +146,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
     steps,
     setSteps,
     isLoading,
+    isNotFound,
     mcpServers,
     skills,
     knowledgebases,

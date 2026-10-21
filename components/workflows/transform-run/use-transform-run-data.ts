@@ -75,42 +75,46 @@ export function useTransformRunData(runId: string) {
 
   useEffect(() => {
     async function load() {
-      const runRow = await getTransformRun(runId);
-      if (!runRow) {
-        setIsLoading(false);
-        return;
-      }
-      const mapped = mapRunRowToRun(runRow);
-      setRun(mapped);
+      try {
+        const runRow = await getTransformRun(runId);
+        if (!runRow) {
+          setIsLoading(false);
+          return;
+        }
+        const mapped = mapRunRowToRun(runRow);
+        setRun(mapped);
 
-      const agentRow = await getTransformAgent(runRow.agentId);
-      if (agentRow) {
-        const mappedAgent = mapAgentRowToAgent(agentRow);
-        setAgent(mappedAgent);
-        setStepStates(
-          buildInitialStepStates(
+        const agentRow = await getTransformAgent(runRow.agentId);
+        if (agentRow) {
+          const mappedAgent = mapAgentRowToAgent(agentRow);
+          setAgent(mappedAgent);
+          setStepStates(
+            buildInitialStepStates(
+              mappedAgent.steps.length,
+              mapped.status,
+              mapped.currentStepIndex,
+              mapped.outputAttachmentIds,
+            ),
+          );
+          const initialSelected = resolveInitialSelectedStep(
             mappedAgent.steps.length,
             mapped.status,
             mapped.currentStepIndex,
-            mapped.outputAttachmentIds,
-          ),
-        );
-        const initialSelected = resolveInitialSelectedStep(
-          mappedAgent.steps.length,
-          mapped.status,
-          mapped.currentStepIndex,
-        );
-        if (initialSelected !== null) {
-          setSelectedStepIndex(initialSelected);
-          setIsArtifactOpen(true);
+          );
+          if (initialSelected !== null) {
+            setSelectedStepIndex(initialSelected);
+            setIsArtifactOpen(true);
+          }
         }
-      }
-      setIsLoading(false);
+        setIsLoading(false);
 
-      await loadAttachmentUrls([
-        ...mapped.inputAttachmentIds,
-        ...mapped.outputAttachmentIds,
-      ]);
+        await loadAttachmentUrls([
+          ...mapped.inputAttachmentIds,
+          ...mapped.outputAttachmentIds,
+        ]);
+      } catch {
+        setIsLoading(false);
+      }
     }
     load();
   }, [runId, loadAttachmentUrls]);

@@ -38,7 +38,10 @@ import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import {
+  hydratedResources,
+  useResourceHydration,
+} from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
 import {
   sortByUpdatedAt,
@@ -424,7 +427,8 @@ function useProjectPageResources(projectId: string) {
   ]);
 
   const project = projects.find((p) => p.id === projectId);
-  const isLoading = hydrationLoading || (projects.length === 0 && !project);
+  const isHydrated = hydratedResources.has("projects");
+  const isLoading = hydrationLoading || !isHydrated;
 
   return {
     project,

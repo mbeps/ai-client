@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -23,6 +23,9 @@
       "!subagents",
       "!__tests__",
       "!tests",
+      "!playwright-report",
+      "!test-results",
+      "!playwright",
       "!.vscode",
       "!wiki",
       "!.agents"
@@ -126,10 +129,15 @@
       "includes": [
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
-        "__tests__/**/*"
+        "__tests__/**/*",
+        "e2e/**/*",
+        "playwright.config.ts"
       ],
       "linter": {
         "rules": {
+          "correctness": {
+            "useHookAtTopLevel": "off"
+          },
           "performance": {
             "noImgElement": "off"
           },

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
@@ -40,6 +40,10 @@ export default function AgentEditorPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (!isNew && workflow.form.isNotFound) {
+    notFound();
   }
 
   return (

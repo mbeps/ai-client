@@ -108,6 +108,7 @@ describe("env configuration and validation", () => {
     it("validates client variables with defaults when isServerEnv is false", () => {
       const parsed = validateEnv({}, false);
       expect(parsed.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(true);
+      expect(parsed.ALLOW_PRIVATE_NETWORK_MCP).toBe(false);
     });
 
     it("parses NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=false correctly", () => {
@@ -116,6 +117,14 @@ describe("env configuration and validation", () => {
         false,
       );
       expect(parsed.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(false);
+    });
+
+    it("parses ALLOW_PRIVATE_NETWORK_MCP=true correctly on client", () => {
+      const parsed = validateEnv(
+        { ALLOW_PRIVATE_NETWORK_MCP: "true" },
+        false,
+      );
+      expect(parsed.ALLOW_PRIVATE_NETWORK_MCP).toBe(true);
     });
   });
 

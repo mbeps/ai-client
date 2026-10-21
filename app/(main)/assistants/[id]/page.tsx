@@ -35,7 +35,10 @@ import {
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import {
+  hydratedResources,
+  useResourceHydration,
+} from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store";
 import {
   sortByUpdatedAt,
@@ -246,7 +249,8 @@ function useAssistantPageResources(assistantId: string) {
   ]);
 
   const assistant = assistants.find((a) => a.id === assistantId);
-  const isLoading = hydrationLoading || (assistants.length === 0 && !assistant);
+  const isHydrated = hydratedResources.has("assistants");
+  const isLoading = hydrationLoading || !isHydrated;
 
   return {
     assistant,
