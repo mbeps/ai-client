@@ -78,7 +78,7 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
           ) : (
             <div
               key={att.id}
-              className="h-48 w-64 animate-pulse rounded-lg border bg-muted/50"
+              className="bg-muted/50 h-48 w-64 animate-pulse rounded-lg border"
             />
           );
         }
@@ -90,19 +90,19 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
             href={displayUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs transition-colors hover:bg-muted"
+            className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors"
           >
-            <AttIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <AttIcon className="text-muted-foreground h-4 w-4 shrink-0" />
             <span className="max-w-[160px] truncate">{att.name}</span>
-            <Download className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <Download className="text-muted-foreground h-3 w-3 shrink-0" />
           </a>
         ) : (
           <div
             key={att.id}
-            className="flex animate-pulse items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs"
+            className="bg-muted/50 flex animate-pulse items-center gap-2 rounded-lg border px-3 py-2 text-xs"
           >
-            <AttIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="max-w-[160px] truncate text-muted-foreground">
+            <AttIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="text-muted-foreground max-w-[160px] truncate">
               {att.name}
             </span>
           </div>

@@ -190,7 +190,7 @@ function SubagentsMenuOption(props: { onOpenSubagents?: () => void }) {
       Subagents
       <Badge
         variant="outline"
-        className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
+        className="ml-auto border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold tracking-wider text-purple-700 uppercase dark:text-purple-300"
       >
         BETA
       </Badge>

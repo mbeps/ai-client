@@ -21,7 +21,7 @@ export default function PromptsPage() {
 
   return (
     <ResourceListPage
-      icon={<Command className="h-8 w-8 text-primary" />}
+      icon={<Command className="text-primary h-8 w-8" />}
       title="Prompts"
       description="Custom shortcuts for your frequently used instructions."
       items={prompts}

@@ -50,7 +50,7 @@ export function EntityCard({
   const cardElement = (
     <Card
       className={cn(
-        "group flex cursor-pointer p-4 transition-colors hover:bg-muted/50",
+        "group hover:bg-muted/50 flex cursor-pointer p-4 transition-colors",
         horizontal
           ? "flex-row items-center justify-between"
           : "min-h-[100px] flex-col justify-between",
@@ -67,13 +67,13 @@ export function EntityCard({
       >
         <div className="flex min-w-0 flex-1 items-start gap-3">
           {icon && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               {icon}
             </div>
           )}
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1 truncate font-semibold leading-none">
+              <div className="min-w-0 flex-1 truncate leading-none font-semibold">
                 {typeof title === "string" ? (
                   <h3 className="truncate">{title}</h3>
                 ) : (

@@ -156,7 +156,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel asChild>
             <Link
               href={ROUTES.CHATS.path}
-              className="flex w-full cursor-pointer items-center hover:text-primary"
+              className="hover:text-primary flex w-full cursor-pointer items-center"
             >
               Recent Chats
             </Link>

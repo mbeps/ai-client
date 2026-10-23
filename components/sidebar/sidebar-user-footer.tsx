@@ -132,7 +132,7 @@ export function SidebarUserFooter(
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleSignOut}
-                className="cursor-pointer focus:bg-destructive focus:text-destructive-foreground"
+                className="focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>

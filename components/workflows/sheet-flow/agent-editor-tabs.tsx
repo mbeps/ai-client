@@ -181,13 +181,13 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
 
       <SidebarTabsContent value="knowledge" className="space-y-4">
         <div className="space-y-1">
-          <h3 className="font-semibold text-lg">Knowledge Bases</h3>
+          <h3 className="text-lg font-semibold">Knowledge Bases</h3>
           <p className="text-muted-foreground text-sm">
             Select knowledge bases to provide additional context for this
             transformation agent.
           </p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <KnowledgebasePicker
             knowledgebases={knowledgebases}
             selectedIds={knowledgeBaseIds}
@@ -200,13 +200,13 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
 
       <SidebarTabsContent value="tools" className="space-y-4">
         <div className="space-y-1">
-          <h3 className="font-semibold text-lg">Default Tools</h3>
+          <h3 className="text-lg font-semibold">Default Tools</h3>
           <p className="text-muted-foreground text-sm">
             These tools will be automatically enabled for all steps in this
             transformation.
           </p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <ToolPickerList
             servers={mcpServers}
             selectedTools={tools}

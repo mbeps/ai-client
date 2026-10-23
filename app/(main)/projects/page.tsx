@@ -24,7 +24,7 @@ export default function ProjectsPage() {
   return (
     <>
       <ResourceListPage
-        icon={<FolderOpen className="h-8 w-8 text-primary" />}
+        icon={<FolderOpen className="text-primary h-8 w-8" />}
         title="Projects"
         description="Manage your workspaces and context boundaries."
         items={projects}

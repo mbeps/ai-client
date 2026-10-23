@@ -69,7 +69,7 @@ export function TransformRunDialog({
                 onChange={(e) =>
                   onRunFilesChange(Array.from(e.target.files ?? []))
                 }
-                className="block w-full text-muted-foreground text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-primary-foreground file:text-sm hover:file:cursor-pointer"
+                className="text-muted-foreground file:bg-primary file:text-primary-foreground block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:cursor-pointer"
               />
               {runFiles.length > 0 && (
                 <p className="text-muted-foreground text-xs">

@@ -74,18 +74,18 @@ export function SkillCard({ skill }: SkillCardProps) {
   };
 
   return (
-    <Card className="flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors hover:bg-muted/30">
+    <Card className="hover:bg-muted/30 flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors">
       <Link
         href={detailUrl}
         className="group block flex-1 space-y-1.5 focus-visible:outline-none"
       >
         <div className="flex items-center gap-1.5">
-          <h3 className="truncate font-semibold text-foreground text-sm leading-none transition-colors group-hover:text-primary">
+          <h3 className="text-foreground group-hover:text-primary truncate text-sm leading-none font-semibold transition-colors">
             {skill.displayName || skill.name}
           </h3>
         </div>
         {skill.description && (
-          <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
             {skill.description}
           </p>
         )}
@@ -137,7 +137,7 @@ export function SkillCard({ skill }: SkillCardProps) {
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7"
               >
                 <Link href={detailUrl} aria-label="Open skill">
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -153,7 +153,7 @@ export function SkillCard({ skill }: SkillCardProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive h-7 w-7"
                 onClick={() => setShowDeleteDialog(true)}
                 aria-label="Delete skill"
               >

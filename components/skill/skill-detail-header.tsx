@@ -76,18 +76,18 @@ export function SkillDetailHeader({
           onChange={(e) => onDisplayNameChange(e.target.value)}
           placeholder={name || "Skill Name"}
           aria-label="Skill name"
-          className="h-auto border-transparent bg-transparent p-0 font-bold text-2xl tracking-tight shadow-none hover:border-border/40 focus-visible:border-border focus-visible:bg-background/80 focus-visible:ring-1 focus-visible:ring-ring md:text-3xl"
+          className="hover:border-border/40 focus-visible:border-border focus-visible:bg-background/80 focus-visible:ring-ring h-auto border-transparent bg-transparent p-0 text-2xl font-bold tracking-tight shadow-none focus-visible:ring-1 md:text-3xl"
         />
 
         {/* Editable Slash Command Slug */}
-        <div className="flex items-center gap-1 text-muted-foreground text-xs">
+        <div className="text-muted-foreground flex items-center gap-1 text-xs">
           <span className="font-mono">Slash command: /</span>
           <Input
             value={name}
             onChange={handleSlugChange}
             placeholder="skill-slug"
             aria-label="Skill slash command slug"
-            className="h-6 w-48 border-muted-foreground/30 bg-transparent px-1.5 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
+            className="border-muted-foreground/30 h-6 w-48 bg-transparent px-1.5 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
           />
         </div>
 
@@ -100,9 +100,9 @@ export function SkillDetailHeader({
             rows={2}
             placeholder="Add a description for what this skill does and when to use it..."
             aria-label="Skill description"
-            className="w-full resize-none pr-16 text-muted-foreground text-sm shadow-none focus-visible:ring-1"
+            className="text-muted-foreground w-full resize-none pr-16 text-sm shadow-none focus-visible:ring-1"
           />
-          <span className="pointer-events-none absolute right-2.5 bottom-2 font-mono text-[11px] text-muted-foreground/70">
+          <span className="text-muted-foreground/70 pointer-events-none absolute right-2.5 bottom-2 font-mono text-[11px]">
             {description.length}/{SKILL_DESCRIPTION_MAX_LENGTH}
           </span>
         </div>
@@ -120,7 +120,7 @@ export function SkillDetailHeader({
           />
           <Label
             htmlFor="skill-enabled"
-            className="cursor-pointer font-medium text-muted-foreground text-sm"
+            className="text-muted-foreground cursor-pointer text-sm font-medium"
           >
             {enabled ? "Enabled" : "Disabled"}
           </Label>
@@ -131,7 +131,7 @@ export function SkillDetailHeader({
           size="sm"
           onClick={onSave}
           disabled={isSaving}
-          className="h-8 gap-1.5 font-medium text-xs"
+          className="h-8 gap-1.5 text-xs font-medium"
         >
           {isSaving ? (
             <>
@@ -175,7 +175,7 @@ export function SkillDetailHeader({
             <DropdownMenuItem
               onClick={onDelete}
               disabled={isDeleting}
-              className="cursor-pointer gap-2 text-destructive text-xs focus:text-destructive"
+              className="text-destructive focus:text-destructive cursor-pointer gap-2 text-xs"
             >
               <Trash2 className="h-4 w-4" />
               Delete Skill

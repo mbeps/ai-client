@@ -75,7 +75,7 @@ export default function NewProviderPage() {
         variant="ghost"
         size="sm"
         asChild
-        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground mb-4 -ml-2 transition-colors"
       >
         <Link href={ROUTES.SETTINGS.PROVIDERS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -84,14 +84,14 @@ export default function NewProviderPage() {
       </Button>
 
       <PageHeader
-        icon={<Database className="h-8 w-8 text-primary" />}
+        icon={<Database className="text-primary h-8 w-8" />}
         title="Add Provider"
         description="Configure an OpenAI-compatible provider endpoint and optional credentials."
       />
 
       <div className="mt-6 space-y-6">
         <div className="space-y-1">
-          <h3 className="font-semibold text-lg">Provider Configuration</h3>
+          <h3 className="text-lg font-semibold">Provider Configuration</h3>
           <p className="text-muted-foreground text-sm">
             Set the provider name, API base URL, authentication key, and custom
             request headers.

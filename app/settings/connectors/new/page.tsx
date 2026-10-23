@@ -79,7 +79,7 @@ export default function NewMcpServerPage() {
         variant="ghost"
         size="sm"
         asChild
-        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground mb-4 -ml-2 transition-colors"
       >
         <Link href={ROUTES.SETTINGS.CONNECTORS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -88,7 +88,7 @@ export default function NewMcpServerPage() {
       </Button>
 
       <PageHeader
-        icon={<Server className="h-8 w-8 text-primary" />}
+        icon={<Server className="text-primary h-8 w-8" />}
         title="Add MCP Server"
         description="Connect a Model Context Protocol server or discover community-shared tools."
       />
@@ -111,7 +111,7 @@ export default function NewMcpServerPage() {
 
         <SidebarTabsContent value="manual" className="space-y-6">
           <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Server Configuration</h3>
+            <h3 className="text-lg font-semibold">Server Configuration</h3>
             <p className="text-muted-foreground text-sm">
               Configure connection parameters and custom authentication headers
               for an HTTP MCP endpoint.

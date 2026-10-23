@@ -465,7 +465,7 @@ export default function ProjectPage() {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -477,7 +477,7 @@ export default function ProjectPage() {
   return (
     <PageContainer className="space-y-6">
       <EntityDetailHeader
-        icon={<FolderKanban className="h-8 w-8 text-primary" />}
+        icon={<FolderKanban className="text-primary h-8 w-8" />}
         title={project.name}
         description={project.description}
         actionLabel="New Chat"

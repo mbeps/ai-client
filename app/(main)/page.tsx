@@ -84,12 +84,12 @@ export default function HomePage() {
         <div className="flex w-full flex-1 flex-col items-center justify-center md:flex-initial">
           <div className="mb-8 space-y-2 text-center md:mb-10">
             <div className="mb-3 flex items-center justify-center gap-2">
-              <Sparkles className="h-6 w-6 text-primary" />
+              <Sparkles className="text-primary h-6 w-6" />
             </div>
-            <h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
               Hello, {session?.user?.name?.split(" ")[0] || "there"}
             </h1>
-            <p className="text-base text-muted-foreground md:text-lg">
+            <p className="text-muted-foreground text-base md:text-lg">
               How can I help you today?
             </p>
           </div>
@@ -107,9 +107,9 @@ export default function HomePage() {
                   className="h-auto w-full justify-between gap-3 px-4 py-3 sm:w-auto sm:justify-start"
                 >
                   <div className="flex items-center gap-3">
-                    <action.icon className="h-5 w-5 text-primary/80" />
+                    <action.icon className="text-primary/80 h-5 w-5" />
                     <div className="text-left">
-                      <div className="font-semibold text-sm">
+                      <div className="text-sm font-semibold">
                         {action.label}
                       </div>
                       <div className="text-muted-foreground text-xs">
@@ -117,7 +117,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
+                  <ArrowRight className="text-muted-foreground/50 h-4 w-4" />
                 </Button>
               </Link>
             ))}

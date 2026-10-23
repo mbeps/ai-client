@@ -87,7 +87,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
 
   if (error) {
     return (
-      <div className="not-typeset rounded-md bg-destructive/10 p-4 font-mono text-destructive text-sm">
+      <div className="not-typeset bg-destructive/10 text-destructive rounded-md p-4 font-mono text-sm">
         {error}
       </div>
     );
@@ -95,7 +95,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
 
   if (!svg) {
     return (
-      <div className="not-typeset flex h-24 animate-pulse items-center justify-center rounded-md bg-muted">
+      <div className="not-typeset bg-muted flex h-24 animate-pulse items-center justify-center rounded-md">
         Loading diagram...
       </div>
     );
@@ -127,14 +127,14 @@ function CodeBlock({ language, value }: { language?: string; value: string }) {
   };
 
   return (
-    <div className="relative my-4 overflow-hidden rounded-lg border border-border bg-muted/60 font-mono text-sm dark:bg-muted/30">
-      <div className="flex select-none items-center justify-between border-border border-b bg-muted/90 px-4 py-1.5 text-muted-foreground text-xs dark:bg-muted/60">
+    <div className="border-border bg-muted/60 dark:bg-muted/30 relative my-4 overflow-hidden rounded-lg border font-mono text-sm">
+      <div className="border-border bg-muted/90 text-muted-foreground dark:bg-muted/60 flex items-center justify-between border-b px-4 py-1.5 text-xs select-none">
         <span className="font-mono lowercase">{language || "text"}</span>
         <button
           type="button"
           onClick={handleCopy}
           aria-label={copied ? "Copied code" : "Copy code"}
-          className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-xs transition-colors hover:text-foreground"
+          className="hover:text-foreground flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-xs transition-colors"
         >
           {copied ? (
             <>
@@ -150,7 +150,7 @@ function CodeBlock({ language, value }: { language?: string; value: string }) {
         </button>
       </div>
       <div className="overflow-x-auto p-4">
-        <pre className="m-0 whitespace-pre bg-transparent p-0 font-mono text-foreground text-sm leading-relaxed">
+        <pre className="text-foreground m-0 bg-transparent p-0 font-mono text-sm leading-relaxed whitespace-pre">
           <code>{value}</code>
         </pre>
       </div>
@@ -189,75 +189,75 @@ export function MarkdownRenderer({
         components={{
           h1: ({ node: _node, ...props }) => (
             <h1
-              className="mt-6 mb-3 border-border border-b pb-1 font-bold text-2xl text-foreground tracking-tight first:mt-0"
+              className="border-border text-foreground mt-6 mb-3 border-b pb-1 text-2xl font-bold tracking-tight first:mt-0"
               {...props}
             />
           ),
           h2: ({ node: _node, ...props }) => (
             <h2
-              className="mt-5 mb-2.5 border-border/50 border-b pb-1 font-semibold text-foreground text-xl tracking-tight first:mt-0"
+              className="border-border/50 text-foreground mt-5 mb-2.5 border-b pb-1 text-xl font-semibold tracking-tight first:mt-0"
               {...props}
             />
           ),
           h3: ({ node: _node, ...props }) => (
             <h3
-              className="mt-4 mb-2 font-semibold text-foreground text-lg tracking-tight first:mt-0"
+              className="text-foreground mt-4 mb-2 text-lg font-semibold tracking-tight first:mt-0"
               {...props}
             />
           ),
           h4: ({ node: _node, ...props }) => (
             <h4
-              className="mt-3 mb-1.5 font-semibold text-base text-foreground first:mt-0"
+              className="text-foreground mt-3 mb-1.5 text-base font-semibold first:mt-0"
               {...props}
             />
           ),
           h5: ({ node: _node, ...props }) => (
             <h5
-              className="mt-2 mb-1 font-semibold text-muted-foreground text-sm uppercase tracking-wider first:mt-0"
+              className="text-muted-foreground mt-2 mb-1 text-sm font-semibold tracking-wider uppercase first:mt-0"
               {...props}
             />
           ),
           h6: ({ node: _node, ...props }) => (
             <h6
-              className="mt-2 mb-1 font-semibold text-muted-foreground text-xs uppercase tracking-wider first:mt-0"
+              className="text-muted-foreground mt-2 mb-1 text-xs font-semibold tracking-wider uppercase first:mt-0"
               {...props}
             />
           ),
           p: ({ node: _node, ...props }) => (
             <p
-              className="my-3 text-foreground leading-7 first:mt-0 last:mb-0"
+              className="text-foreground my-3 leading-7 first:mt-0 last:mb-0"
               {...props}
             />
           ),
           ul: ({ node: _node, ...props }) => (
             <ul
-              className="my-3 list-disc space-y-1 pl-6 text-foreground [&>li>ol]:my-1 [&>li>ul]:my-1"
+              className="text-foreground my-3 list-disc space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
               {...props}
             />
           ),
           ol: ({ node: _node, ...props }) => (
             <ol
-              className="my-3 list-decimal space-y-1 pl-6 text-foreground [&>li>ol]:my-1 [&>li>ul]:my-1"
+              className="text-foreground my-3 list-decimal space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
               {...props}
             />
           ),
           li: ({ node: _node, ...props }) => (
             <li
-              className="my-0.5 leading-relaxed marker:text-muted-foreground"
+              className="marker:text-muted-foreground my-0.5 leading-relaxed"
               {...props}
             />
           ),
           blockquote: ({ node: _node, ...props }) => (
             <blockquote
-              className="my-3 rounded-r-md border-primary/40 border-l-4 bg-muted/20 py-1.5 pl-4 text-muted-foreground italic"
+              className="border-primary/40 bg-muted/20 text-muted-foreground my-3 rounded-r-md border-l-4 py-1.5 pl-4 italic"
               {...props}
             />
           ),
           hr: ({ node: _node, ...props }) => (
-            <hr className="my-6 border-border" {...props} />
+            <hr className="border-border my-6" {...props} />
           ),
           strong: ({ node: _node, ...props }) => (
-            <strong className="font-semibold text-foreground" {...props} />
+            <strong className="text-foreground font-semibold" {...props} />
           ),
           em: ({ node: _node, ...props }) => (
             <em className="italic" {...props} />
@@ -270,7 +270,7 @@ export function MarkdownRenderer({
               return (
                 <input
                   type="checkbox"
-                  className="mr-2 inline-block h-4 w-4 cursor-default rounded border-border align-middle accent-primary"
+                  className="border-border accent-primary mr-2 inline-block h-4 w-4 cursor-default rounded align-middle"
                   {...props}
                 />
               );
@@ -281,7 +281,7 @@ export function MarkdownRenderer({
             return (
               <code
                 className={
-                  "rounded-md border border-border/50 bg-muted px-1.5 py-0.5 font-medium font-mono text-foreground text-xs" +
+                  "border-border/50 bg-muted text-foreground rounded-md border px-1.5 py-0.5 font-mono text-xs font-medium" +
                   (codeCls ?? "")
                 }
                 {...props}
@@ -308,7 +308,7 @@ export function MarkdownRenderer({
             return <CodeBlock language={language} value={rawCode} />;
           },
           table: ({ node: _node, ...props }) => (
-            <div className="typeset-scroll my-4 overflow-x-auto rounded-lg border border-border">
+            <div className="typeset-scroll border-border my-4 overflow-x-auto rounded-lg border">
               <table
                 className="w-full border-collapse text-left text-sm"
                 {...props}
@@ -317,15 +317,15 @@ export function MarkdownRenderer({
           ),
           thead: ({ node: _node, ...props }) => (
             <thead
-              className="border-border border-b bg-muted/50 font-semibold text-foreground"
+              className="border-border bg-muted/50 text-foreground border-b font-semibold"
               {...props}
             />
           ),
           tbody: ({ node: _node, ...props }) => (
-            <tbody className="divide-y divide-border" {...props} />
+            <tbody className="divide-border divide-y" {...props} />
           ),
           tr: ({ node: _node, ...props }) => (
-            <tr className="transition-colors hover:bg-muted/30" {...props} />
+            <tr className="hover:bg-muted/30 transition-colors" {...props} />
           ),
           th: ({ node: _node, ...props }) => (
             <th
@@ -335,7 +335,7 @@ export function MarkdownRenderer({
           ),
           td: ({ node: _node, ...props }) => (
             <td
-              className="border-border border-r p-2.5 text-foreground last:border-r-0"
+              className="border-border text-foreground border-r p-2.5 last:border-r-0"
               {...props}
             />
           ),
@@ -348,7 +348,7 @@ export function MarkdownRenderer({
             );
             return (
               <a
-                className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
+                className="text-primary hover:text-primary/80 font-medium underline underline-offset-4 transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
                 href={href}

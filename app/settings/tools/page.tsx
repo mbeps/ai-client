@@ -21,7 +21,7 @@ export default async function ToolsSettingsPage() {
   return (
     <PageContainer className="space-y-8">
       <PageHeader
-        icon={<Wrench className="size-8 text-primary" />}
+        icon={<Wrench className="text-primary size-8" />}
         title="Tools"
         description="The tools built into the assistant. Connectors add more tools of their own."
       />
@@ -29,7 +29,7 @@ export default async function ToolsSettingsPage() {
       {groups.map(([category, tools]) => (
         <section key={category} className="space-y-4">
           <div className="flex items-baseline gap-3">
-            <h2 className="font-semibold text-xl tracking-tight">{category}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{category}</h2>
             <span className="text-muted-foreground text-sm">
               {tools.length} {tools.length === 1 ? "tool" : "tools"}
             </span>

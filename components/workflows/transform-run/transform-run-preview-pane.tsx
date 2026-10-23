@@ -5,9 +5,9 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 
 function PreviewLoadingState() {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-muted/5 p-12 text-center text-muted-foreground">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="font-medium text-sm">Loading preview...</p>
+    <div className="bg-muted/5 text-muted-foreground flex h-full flex-col items-center justify-center gap-4 p-12 text-center">
+      <Loader2 className="text-primary h-8 w-8 animate-spin" />
+      <p className="text-sm font-medium">Loading preview...</p>
     </div>
   );
 }
@@ -23,15 +23,15 @@ function PreviewEmptyState({
       : "Select a completed step from the timeline to inspect the output at that stage of the process.";
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 bg-muted/5 p-12 text-center text-muted-foreground">
+    <div className="bg-muted/5 text-muted-foreground flex h-full flex-col items-center justify-center gap-6 p-12 text-center">
       <div className="relative">
-        <div className="absolute -inset-4 animate-pulse rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border bg-card shadow-xl">
-          <Play className="h-10 w-10 text-primary/40" />
+        <div className="bg-primary/10 absolute -inset-4 animate-pulse rounded-full blur-2xl" />
+        <div className="bg-card relative flex h-20 w-20 items-center justify-center rounded-2xl border shadow-xl">
+          <Play className="text-primary/40 h-10 w-10" />
         </div>
       </div>
       <div className="max-w-sm space-y-2">
-        <p className="font-bold text-foreground text-lg">Step Preview</p>
+        <p className="text-foreground text-lg font-bold">Step Preview</p>
         <p className="text-muted-foreground/80 text-sm leading-relaxed">
           {description}
         </p>
@@ -65,7 +65,7 @@ export function TransformRunPreviewPane({
       <ResizablePanel
         defaultSize={50}
         minSize={30}
-        className="hidden bg-card lg:block"
+        className="bg-card hidden lg:block"
       >
         <div className="relative h-full overflow-hidden">
           {isLoadingArtifact ? (

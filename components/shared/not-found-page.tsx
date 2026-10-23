@@ -29,9 +29,9 @@ export function NotFoundPage({
 }: NotFoundPageProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-      <h2 className="font-bold text-6xl text-muted-foreground">404</h2>
-      <p className="font-semibold text-xl">{title}</p>
-      <p className="max-w-md text-muted-foreground text-sm">{description}</p>
+      <h2 className="text-muted-foreground text-6xl font-bold">404</h2>
+      <p className="text-xl font-semibold">{title}</p>
+      <p className="text-muted-foreground max-w-md text-sm">{description}</p>
       <Button asChild>
         <Link href={linkHref}>
           {LinkIcon && <LinkIcon className="mr-2 h-4 w-4" />}

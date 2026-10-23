@@ -70,7 +70,7 @@ export function CreateSkillForm({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Skill Details</h3>
+        <h3 className="text-lg font-semibold">Skill Details</h3>
         <p className="text-muted-foreground text-sm">
           Define the skill identifier, description for progressive disclosure
           routing, and instructions.
@@ -102,7 +102,7 @@ export function CreateSkillForm({
                   <FormLabel>Skill Slug</FormLabel>
                   <FormControl>
                     <div className="flex items-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted font-mono text-muted-foreground">
+                      <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 font-mono">
                         /
                       </div>
                       <Input

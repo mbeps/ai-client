@@ -35,7 +35,7 @@ export function TransformConfigTab({
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Agent Details</h3>
+        <h3 className="text-lg font-semibold">Agent Details</h3>
         <p className="text-muted-foreground text-sm">
           Basic configuration and metadata for this transform agent.
         </p>
@@ -66,7 +66,7 @@ export function TransformConfigTab({
           <ModelSelector
             value={modelId}
             onValueChange={onModelIdChange}
-            className="h-10 w-full border bg-card px-3"
+            className="bg-card h-10 w-full border px-3"
           />
         </div>
 

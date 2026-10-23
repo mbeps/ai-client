@@ -145,16 +145,16 @@ export function UploadDocumentDialog({
           </div>
 
           {file && !error && (
-            <p className="truncate text-muted-foreground text-sm">
+            <p className="text-muted-foreground truncate text-sm">
               Selected:{" "}
-              <span className="font-medium text-foreground">{file.name}</span>
+              <span className="text-foreground font-medium">{file.name}</span>
             </p>
           )}
 
           {error && <p className="text-destructive text-sm">{error}</p>}
 
           {statusLabel && (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               {statusLabel}
             </div>
@@ -163,7 +163,7 @@ export function UploadDocumentDialog({
           {hasNoModels && (
             <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 p-2 dark:border-red-900/30 dark:bg-red-950/20">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <p className="font-medium text-[11px] text-red-800 dark:text-red-200">
+              <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
                 No embedding models configured. Please set up a provider first.
               </p>
             </div>

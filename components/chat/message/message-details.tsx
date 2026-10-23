@@ -39,9 +39,9 @@ function DetailRow({
 }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="flex items-center justify-between border-border border-b py-2 last:border-0">
+    <div className="border-border flex items-center justify-between border-b py-2 last:border-0">
       <span className="text-muted-foreground text-sm">{label}</span>
-      <span className="text-right font-medium text-sm">{value}</span>
+      <span className="text-right text-sm font-medium">{value}</span>
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function MessageDetails({ createdAt, metadata }: MessageDetailsProps) {
   const trigger = (
     <button
       type="button"
-      className="inline-flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] transition-colors focus-visible:ring-1 focus-visible:outline-none"
     >
       <Info className="h-3 w-3 shrink-0" />
       <span>

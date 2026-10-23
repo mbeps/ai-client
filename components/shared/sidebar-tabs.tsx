@@ -34,7 +34,7 @@ export function SidebarTabsList({
   return (
     <TabsList
       className={cn(
-        "flex h-auto w-full shrink-0 flex-col items-stretch gap-1 rounded-none border-border border-l bg-transparent p-0 md:w-52",
+        "border-border flex h-auto w-full shrink-0 flex-col items-stretch gap-1 rounded-none border-l bg-transparent p-0 md:w-52",
         className,
       )}
       {...props}
@@ -52,7 +52,7 @@ export function SidebarTabsTrigger({
   return (
     <TabsTrigger
       className={cn(
-        "h-auto justify-start whitespace-normal rounded-none border-0 border-transparent border-l-2 px-4 py-3 text-left font-medium font-sans transition-all hover:bg-muted/30 data-[state=active]:border-primary data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:shadow-none",
+        "hover:bg-muted/30 data-[state=active]:border-primary data-[state=active]:bg-muted/50 data-[state=active]:text-primary h-auto justify-start rounded-none border-0 border-l-2 border-transparent px-4 py-3 text-left font-sans font-medium whitespace-normal transition-all data-[state=active]:shadow-none",
         className,
       )}
       {...props}

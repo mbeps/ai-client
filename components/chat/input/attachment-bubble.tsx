@@ -41,7 +41,7 @@ export function AttachmentBubble({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs transition-opacity duration-200",
+        "bg-muted/50 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition-opacity duration-200",
         isImageUnsupported && "opacity-50 grayscale",
       )}
     >
@@ -57,23 +57,23 @@ export function AttachmentBubble({
               unoptimized
             />
           ) : (
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <ImageIcon className="text-muted-foreground h-4 w-4" />
           )}
           {isImageUnsupported && (
-            <div className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground shadow-sm">
+            <div className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 rounded-full p-0.5 shadow-sm">
               <Zap className="h-2 w-2" />
             </div>
           )}
         </div>
       ) : attachment.type === "spreadsheet" ? (
-        <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+        <FileSpreadsheet className="text-muted-foreground h-4 w-4" />
       ) : (
-        <FileText className="h-4 w-4 text-muted-foreground" />
+        <FileText className="text-muted-foreground h-4 w-4" />
       )}
       <div className="flex flex-col">
         <span className="max-w-[120px] truncate">{attachment.name}</span>
         {isImageUnsupported && (
-          <span className="font-medium text-[10px] text-destructive">
+          <span className="text-destructive text-[10px] font-medium">
             Unsupported
           </span>
         )}
@@ -81,7 +81,7 @@ export function AttachmentBubble({
       <button
         type="button"
         onClick={() => onRemove(attachment.id)}
-        className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+        className="hover:bg-destructive hover:text-destructive-foreground ml-1 rounded-full p-0.5 transition-colors"
       >
         <X className="h-3 w-3" />
       </button>

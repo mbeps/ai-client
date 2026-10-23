@@ -119,9 +119,9 @@ export function ProviderSettingsClient({
 
       {/* Floating loading overlay to prevent layout shift */}
       {isLoading && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="font-medium text-muted-foreground text-xs">
+        <div className="bg-background/80 absolute top-4 right-4 z-50 flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-sm backdrop-blur-sm">
+          <Loader2 className="text-primary h-4 w-4 animate-spin" />
+          <span className="text-muted-foreground text-xs font-medium">
             Syncing registry...
           </span>
         </div>

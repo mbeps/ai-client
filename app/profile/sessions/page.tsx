@@ -19,7 +19,7 @@ export default async function SessionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-bold text-2xl tracking-tight">Active Sessions</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Active Sessions</h2>
         <p className="text-muted-foreground">
           View and manage the devices where you are currently logged in.
         </p>

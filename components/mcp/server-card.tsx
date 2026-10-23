@@ -91,13 +91,13 @@ export function ServerCard({ server }: ServerCardProps) {
   };
 
   return (
-    <Card className="flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors hover:bg-muted/30">
+    <Card className="hover:bg-muted/30 flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors">
       <Link
         href={detailUrl}
         className="group block flex-1 space-y-1.5 focus-visible:outline-none"
       >
         <div className="flex items-center gap-2">
-          <h3 className="truncate font-semibold text-foreground text-sm leading-none transition-colors group-hover:text-primary">
+          <h3 className="text-foreground group-hover:text-primary truncate text-sm leading-none font-semibold transition-colors">
             {server.name}
           </h3>
           {server.isInstalled && (
@@ -107,14 +107,14 @@ export function ServerCard({ server }: ServerCardProps) {
           )}
         </div>
         {server.url && (
-          <p className="line-clamp-2 font-mono text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground line-clamp-2 font-mono text-xs leading-relaxed">
             {server.url}
           </p>
         )}
       </Link>
 
       <div className="mt-4 flex items-center justify-between gap-2 border-t pt-2">
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
           <span
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
@@ -153,7 +153,7 @@ export function ServerCard({ server }: ServerCardProps) {
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7"
               >
                 <Link href={detailUrl} aria-label="Open connector">
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -169,7 +169,7 @@ export function ServerCard({ server }: ServerCardProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive h-7 w-7"
                 onClick={() => setShowDeleteDialog(true)}
                 aria-label={
                   server.isInstalled ? "Uninstall tool" : "Delete server"

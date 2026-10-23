@@ -61,11 +61,11 @@ export function AgentEditorHeader(props: AgentEditorHeaderProps) {
         </Button>
       </Link>
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-lg">
           <List className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-semibold text-xl">{title}</h1>
+          <h1 className="text-xl font-semibold">{title}</h1>
           <p className="text-muted-foreground text-xs">{subtitle}</p>
         </div>
       </div>

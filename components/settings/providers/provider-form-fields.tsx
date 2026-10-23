@@ -86,7 +86,7 @@ export function ProviderFormFields({
 
       <div className="flex items-center justify-between rounded-md border p-3">
         <div>
-          <p className="font-medium text-sm">Requires API key</p>
+          <p className="text-sm font-medium">Requires API key</p>
           <p className="text-muted-foreground text-xs">
             Disable for keyless providers such as local Ollama instances.
           </p>
@@ -113,7 +113,7 @@ export function ProviderFormFields({
 
       <div className="flex items-center justify-between rounded-md border p-3">
         <div>
-          <p className="font-medium text-sm">Enabled</p>
+          <p className="text-sm font-medium">Enabled</p>
           <p className="text-muted-foreground text-xs">
             Disabled providers stay configured but hidden from runtime routing.
           </p>
@@ -150,7 +150,7 @@ export function ProviderFormFields({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 w-9"
                 onClick={() => removeRow(index)}
               >
                 <Trash2 className="h-4 w-4" />

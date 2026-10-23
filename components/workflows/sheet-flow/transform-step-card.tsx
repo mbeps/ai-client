@@ -97,9 +97,9 @@ export function TransformStepCard({
 
   return (
     <Card className="relative overflow-hidden">
-      <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
+      <div className="bg-primary absolute top-0 bottom-0 left-0 w-1" />
       <CardHeader className="flex flex-row items-center gap-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
+        <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">
           {index + 1}
         </div>
         <div className="flex-1">
@@ -143,7 +143,7 @@ export function TransformStepCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground"
+                className="text-muted-foreground h-8 w-8"
                 onClick={() => setIsEditingName(true)}
               >
                 <Edit2 className="h-4 w-4" />
@@ -151,12 +151,12 @@ export function TransformStepCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive h-8 w-8"
                 onClick={onRemove}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-              <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
+              <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab" />
             </>
           )}
         </div>
@@ -170,7 +170,7 @@ export function TransformStepCard({
               name="prompt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="font-bold text-muted-foreground text-xs uppercase tracking-wider">
+                  <FormLabel className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                     AI Prompt
                   </FormLabel>
                   <FormControl>
@@ -195,7 +195,7 @@ export function TransformStepCard({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="font-semibold text-sm">
+                    <FormLabel className="text-sm font-semibold">
                       Human Review
                     </FormLabel>
                     <p className="text-muted-foreground text-xs">

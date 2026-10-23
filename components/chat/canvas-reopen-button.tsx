@@ -24,11 +24,11 @@ export function CanvasReopenButton({ onReopen }: CanvasReopenButtonProps) {
           <Button
             variant="outline"
             size="icon"
-            className="absolute top-3 right-3 z-30 size-7 cursor-pointer rounded-md bg-background/80 shadow-xs backdrop-blur-xs transition-colors hover:bg-accent"
+            className="bg-background/80 hover:bg-accent absolute top-3 right-3 z-30 size-7 cursor-pointer rounded-md shadow-xs backdrop-blur-xs transition-colors"
             onClick={onReopen}
             aria-label="Open canvas"
           >
-            <PanelRight className="size-4 text-muted-foreground" />
+            <PanelRight className="text-muted-foreground size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Open canvas</TooltipContent>

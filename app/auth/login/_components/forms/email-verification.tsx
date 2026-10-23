@@ -46,7 +46,7 @@ export function EmailVerification({ email }: { email: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="mt-2 text-muted-foreground text-sm">
+      <p className="text-muted-foreground mt-2 text-sm">
         We sent you a verification link. Please check your email and click the
         link to verify your account.
       </p>

@@ -281,7 +281,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-base">Documents</h2>
+            <h2 className="text-base font-semibold">Documents</h2>
             <Button
               size="sm"
               onClick={onOpenUpload}
@@ -327,7 +327,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
 function KnowledgebaseHeader({ kb }: { kb: KnowledgebaseRow }) {
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="font-bold text-2xl">{kb.name}</h1>
+      <h1 className="text-2xl font-bold">{kb.name}</h1>
       {kb.description ? (
         <p className="text-muted-foreground">{kb.description}</p>
       ) : null}
@@ -361,7 +361,7 @@ export default function KnowledgebasePage() {
   if (state.isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }

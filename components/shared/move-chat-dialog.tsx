@@ -92,7 +92,7 @@ export function MoveChatDialog({
               <Folder className="mr-2 h-4 w-4" />
               <span>{project.name}</span>
               {project.id === currentProjectId && (
-                <span className="ml-auto text-muted-foreground text-xs">
+                <span className="text-muted-foreground ml-auto text-xs">
                   Current
                 </span>
               )}

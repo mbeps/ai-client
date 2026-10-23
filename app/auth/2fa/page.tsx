@@ -31,7 +31,7 @@ export default async function TwoFactorPage() {
     <div className="my-6 px-4">
       <Card className="mx-auto w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="font-bold text-2xl">
+          <CardTitle className="text-2xl font-bold">
             Two-Factor Authentication
           </CardTitle>
         </CardHeader>

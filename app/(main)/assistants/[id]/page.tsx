@@ -416,7 +416,7 @@ export default function AssistantPage() {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -428,7 +428,7 @@ export default function AssistantPage() {
   return (
     <PageContainer className="space-y-6">
       <EntityDetailHeader
-        icon={<Bot className="h-8 w-8 text-primary" />}
+        icon={<Bot className="text-primary h-8 w-8" />}
         title={assistant.name}
         description={assistant.description}
         actionLabel="Chat with Assistant"

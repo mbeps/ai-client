@@ -53,7 +53,7 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
     : "Type or paste text to translate...";
 
   return (
-    <div className="group relative flex min-h-[280px] flex-col rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/20">
+    <div className="group bg-card hover:border-primary/20 relative flex min-h-[280px] flex-col rounded-xl border shadow-sm transition-colors">
       <input
         type="file"
         ref={fileInputRef}
@@ -67,14 +67,14 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
           value={sourceText}
           onChange={(e) => onSourceTextChange(e.target.value)}
           placeholder={placeholder}
-          className="scrollbar-thin min-h-[140px] flex-1 resize-none border-0 p-4 text-sm leading-relaxed focus-visible:ring-0"
+          className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 p-4 text-sm leading-relaxed focus-visible:ring-0"
           disabled={isExtracting}
         />
 
         {attachment && (
           <div className="px-4 pb-3">
-            <div className="group/attach flex items-center gap-3 rounded-lg border bg-muted/30 p-2">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-primary/10">
+            <div className="group/attach bg-muted/30 flex items-center gap-3 rounded-lg border p-2">
+              <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded">
                 {isImageAttachment ? (
                   <div className="relative h-10 w-10">
                     <Image
@@ -86,14 +86,14 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
                     />
                   </div>
                 ) : (
-                  <FileText className="h-5 w-5 text-primary" />
+                  <FileText className="text-primary h-5 w-5" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-xs">
+                <p className="truncate text-xs font-medium">
                   {attachment.name}
                 </p>
-                <p className="text-[10px] text-muted-foreground uppercase">
+                <p className="text-muted-foreground text-[10px] uppercase">
                   {attachment.type}
                 </p>
               </div>
@@ -118,9 +118,9 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-between border-t bg-muted/10 p-2">
+      <div className="bg-muted/10 flex shrink-0 items-center justify-between border-t p-2">
         <div className="flex items-center gap-1">
-          <span className="ml-2 text-[10px] text-muted-foreground">
+          <span className="text-muted-foreground ml-2 text-[10px]">
             {sourceText.length} / 5000
           </span>
           <Tooltip>
@@ -130,7 +130,7 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isExtracting || !!attachment}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
                 aria-label="Attach file"
               >
                 {isExtracting ? (
@@ -150,7 +150,7 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
                 variant="ghost"
                 size="icon"
                 onClick={onReset}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
                 aria-label="Reset text"
               >
                 <RotateCcw className="h-3.5 w-3.5" />

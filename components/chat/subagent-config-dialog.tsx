@@ -43,11 +43,11 @@ export function SubagentConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="flex items-center gap-2 font-semibold text-base">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <span>Subagents</span>
             <Badge
               variant="outline"
-              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono font-semibold text-[10px] text-purple-700 uppercase tracking-wider dark:text-purple-300"
+              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold tracking-wider text-purple-700 uppercase dark:text-purple-300"
             >
               BETA
             </Badge>
@@ -60,8 +60,8 @@ export function SubagentConfigDialog({
 
         <div className="space-y-4 p-4">
           {/* Main Toggle */}
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
-            <span className="font-medium text-foreground text-sm">
+          <div className="border-border bg-card flex items-center justify-between rounded-lg border p-3">
+            <span className="text-foreground text-sm font-medium">
               Enable Subagents
             </span>
             <Switch
@@ -73,7 +73,7 @@ export function SubagentConfigDialog({
 
           {/* Worker Model Selection */}
           <div className="space-y-2">
-            <label className="font-medium text-foreground text-xs">
+            <label className="text-foreground text-xs font-medium">
               Worker Subagent Model
             </label>
             <p className="text-muted-foreground text-xs">
@@ -88,20 +88,20 @@ export function SubagentConfigDialog({
           </div>
 
           {/* Topological Sandboxing Notice */}
-          <div className="space-y-1 rounded-lg border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed">
-            <div className="flex items-center gap-1.5 font-medium text-foreground">
+          <div className="border-border/60 bg-muted/30 space-y-1 rounded-lg border p-3 text-xs leading-relaxed">
+            <div className="text-foreground flex items-center gap-1.5 font-medium">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               Tool Inheritance &amp; Sandboxing
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
               Worker subagents dynamically inherit all tools enabled on the main
               chat (MCP servers, knowledge bases, skills, memory). Canvas
               artifacts (
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
                 manage_artifact
               </code>
               ) and recursive delegation (
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
                 delegate_task
               </code>
               ) are permanently locked out.
@@ -110,7 +110,7 @@ export function SubagentConfigDialog({
         </div>
 
         {/* Dialog Footer with Cancel and Done */}
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-muted/20 px-4 py-3">
+        <div className="bg-muted/20 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-3">
           <Button
             type="button"
             variant="ghost"

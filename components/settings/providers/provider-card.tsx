@@ -58,7 +58,7 @@ export function ProviderCard({
   return (
     <EntityCard
       horizontal
-      className="cursor-default border shadow-none hover:bg-muted/30"
+      className="hover:bg-muted/30 cursor-default border shadow-none"
       title={<span className="font-semibold">{provider.name}</span>}
       description={provider.baseUrl}
       rightActions={

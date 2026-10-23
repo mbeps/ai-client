@@ -66,7 +66,7 @@ export function SkillBundleUploader({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Import Skill Bundle</h3>
+        <h3 className="text-lg font-semibold">Import Skill Bundle</h3>
         <p className="text-muted-foreground text-sm">
           Import a <code>SKILL.md</code> file or a <code>.zip</code> bundle
           containing instructions and reference subfiles.
@@ -107,12 +107,12 @@ export function SkillBundleUploader({
         {selectedFile ? (
           <>
             {selectedFile.name.endsWith(".zip") ? (
-              <FileArchive className="h-12 w-12 text-primary" />
+              <FileArchive className="text-primary h-12 w-12" />
             ) : (
-              <FileText className="h-12 w-12 text-primary" />
+              <FileText className="text-primary h-12 w-12" />
             )}
             <div className="space-y-1">
-              <p className="flex items-center justify-center gap-2 font-medium text-base text-foreground">
+              <p className="text-foreground flex items-center justify-center gap-2 text-base font-medium">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 {selectedFile.name}
               </p>
@@ -135,11 +135,11 @@ export function SkillBundleUploader({
           </>
         ) : (
           <>
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-full">
               <Upload className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-base">
+              <p className="text-base font-medium">
                 Drop your skill file here, or{" "}
                 <span className="text-primary underline underline-offset-2">
                   browse

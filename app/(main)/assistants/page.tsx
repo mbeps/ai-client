@@ -24,7 +24,7 @@ export default function AssistantsPage() {
   return (
     <>
       <ResourceListPage
-        icon={<Bot className="h-8 w-8 text-primary" />}
+        icon={<Bot className="text-primary h-8 w-8" />}
         title="Assistants"
         description="Custom AI personas tailored for specific tasks."
         items={assistants}

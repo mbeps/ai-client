@@ -5,6 +5,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 # Features
 
 ## Chat Interface & UX
+
 - **Branching conversations** — Edit any message to create sibling branches non-destructively; navigate trees intuitively.
 - **Durable background execution** — Long-running AI response generation runs as background jobs with Inngest, allowing navigation between chats or browser reloads without losing generation progress.
 - **Real-time streaming** — Inngest Realtime streams text, reasoning tokens (`<Thinking>`), and tool calls over WebSockets directly to the chat interface.
@@ -12,6 +13,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **Message trees** — Explore alternative conversation paths via interactive branch controls with state persistence across branches.
 
 ## AI & Artifacts
+
 - **Artifacts & Canvas** — Sidecar rendering for Markdown, HTML, Mermaid diagrams, and XLSX spreadsheets with persistent edits, AI-driven updates, and export capabilities.
 - **Multi-Provider Model Support** — Connect to any OpenAI-compatible provider (OpenRouter, Ollama, Groq, Azure, local models). Register multiple providers with encrypted credentials and select per-message model configuration.
 - **Automatic Model Discovery** — Dual-endpoint synchronisation discovers both chat and embedding models from any OpenAI-compatible provider via `/v1/models` and `/v1/embeddings/models` endpoints.
@@ -19,6 +21,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **KaTeX & Mermaid** — Full support for mathematical notation (KaTeX) and sophisticated diagramming (Mermaid) within the chat and artifact panels.
 
 ## Knowledge Bases (RAG)
+
 - **Agentic RAG implementation** — LLM-driven knowledge retrieval where the AI uses specialised tools to query context based on intent.
 - **Flexible Embedding Models** — Select any embedding model from registered providers for knowledge base indexing. Dimensionless vector storage supports arbitrary embedding dimensions.
 - **Hybrid Semantic Search** — Combines vector embeddings with full-text search in Qdrant using Reciprocal Rank Fusion (RRF) for precise semantic retrieval.
@@ -26,28 +29,33 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **Document Management** — Full lifecycle tracking for indexed documents including token counting and status monitoring.
 
 ## Model Context Protocol (MCP)
+
 - **HTTP Transport Integration** — Connect to remote MCP servers via the official TypeScript SDK to extend AI capabilities with custom toolsets.
 - **Granular Tool Control** — Searchable tool picker for per-message tool selection and resource management.
 - **Default Tooling** — Automatically enable specific tools for chats associated with particular Projects or Assistants.
 - **SSRF Protection** — Mandatory URL validation for MCP server registrations to ensure secure communication with remote services.
 
 ## Specialised Workflows
+
 - **Transform Workflow** — Multi-step spreadsheet automation engine with Inngest durable job execution and manual review/approval gates.
 - **Translation Workflow** — Dedicated side-by-side interface for linguistic translation with auto-detection and language swapping.
 - **S3-Integrated Processing** — Efficient file handling using presigned S3 URLs passed directly to AI tools, avoiding large payload transfers.
 
 ## Authentication & Security
+
 - **Comprehensive Authorisation** — Multi-method login via Email/Password, GitHub/Discord OAuth, and WebAuthn Passkeys.
 - **Enhanced Security** — TOTP-based Multi-Factor Authentication (MFA) with secure recovery via backup codes.
 - **Session Governance** — Fingerprinted session tracking with a management interface for global session revocation.
 - **Global System Prompts** — Per-user preference layer that prepends global instructions across all conversation contexts.
 
 ## Collaboration & Organisation
+
 - **Projects** — Group related chats with shared system prompts, knowledge bases, and default tool configurations.
 - **Assistants** — Define distinct AI personas with unique avatars and system instructions for re-use across the application.
 - **Resource Management** — Centralised management of prompts, knowledge bases, and MCP server configurations.
 
 ## Architecture & Persistence
+
 - **Postgres 17 & Drizzle ORM** — Relational data integrity with type-safe schema management.
 - **Inngest Event Engine** — Durable background job orchestration with local dev server and subscription token-based WebSocket channels.
 - **Hybrid State Management** — Optimistic UI updates via Zustand paired with robust Server Action-based persistence.
@@ -68,6 +76,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 # Stack
 
 ## Frontend
+
 - [Next.js](https://nextjs.org/docs): React framework with App Router and Server Components.
 - [React](https://react.dev): Component-based UI library.
 - [TypeScript](https://www.typescriptlang.org/docs): Type-safe programming language.
@@ -81,17 +90,20 @@ AI Client is a full-featured conversational workspace with branching message tre
 - [BlockNote](https://www.blocknote.dev): Rich text editor.
 
 ## Backend
+
 - [Inngest](https://www.inngest.com/docs): Durable execution engine for background workflows and real-time streaming.
 - [Better Auth](https://better-auth.com/docs): Multi-method authentication supporting email, OAuth, passkeys, and two-factor authentication.
 - [Postmark](https://postmark.com): Transactional email delivery service.
 - [MinIO](https://docs.min.io): S3-compatible object storage service.
 
 ## Database
+
 - [PostgreSQL](https://www.postgresql.org/docs): Primary relational database.
 - [Qdrant](https://qdrant.tech): Vector database for semantic chunk embeddings and keyword retrieval.
 - [Drizzle ORM](https://orm.drizzle.team): Type-safe SQL query builder and migrations.
 
 ## AI & Tooling
+
 - [Vercel AI SDK](https://sdk.vercel.ai/docs): Streaming responses and tool integration with multi-provider support.
 - [Model Context Protocol](https://modelcontextprotocol.io): Standardised protocol for connecting AI models to external tools and resources.
 

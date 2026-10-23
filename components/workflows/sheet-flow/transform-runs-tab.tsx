@@ -23,17 +23,17 @@ export function TransformRunsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg">Run History</h3>
+        <h3 className="text-lg font-semibold">Run History</h3>
         <p className="text-muted-foreground text-sm">
           History of transformations executed by this agent.
         </p>
       </div>
       {isLoading ? (
         <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         </div>
       ) : runs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+        <div className="text-muted-foreground flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
           <p>No runs yet.</p>
         </div>
       ) : (

@@ -87,7 +87,7 @@ export function MessageActions({
     <div className="mt-2 flex items-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
       {/* Branching Navigation */}
       {siblings.length > 1 && (
-        <div className="mr-2 flex items-center gap-1 text-muted-foreground text-xs">
+        <div className="text-muted-foreground mr-2 flex items-center gap-1 text-xs">
           <Button
             variant="ghost"
             size="icon"
@@ -127,7 +127,7 @@ export function MessageActions({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-6 w-6"
             aria-label="Copy markdown"
             onClick={handleCopy}
           >
@@ -147,7 +147,7 @@ export function MessageActions({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-6 w-6"
               aria-label="Edit message"
               onClick={() =>
                 onEdit?.(message.id, editContent ?? message.content)
@@ -165,7 +165,7 @@ export function MessageActions({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+            className="text-muted-foreground hover:bg-destructive hover:text-destructive-foreground h-6 w-6"
             aria-label="Delete message"
             onClick={() => onDelete(message.id)}
           >
@@ -181,7 +181,7 @@ export function MessageActions({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-6 w-6"
               aria-label="Regenerate response"
               onClick={() => onRegenerate(message.id)}
               disabled={isLoading || hasNoModels}

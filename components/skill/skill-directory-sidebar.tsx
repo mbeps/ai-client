@@ -117,15 +117,15 @@ export function SkillDirectorySidebar({
   };
 
   return (
-    <Card className="flex flex-col gap-0 overflow-hidden rounded-lg border border-border/70 bg-card py-0 shadow-xs">
+    <Card className="border-border/70 bg-card flex flex-col gap-0 overflow-hidden rounded-lg border py-0 shadow-xs">
       {/* Directory header bar matching the gray toolbar of the editor with comfortable top/bottom padding */}
-      <div className="flex min-h-[50px] items-center justify-between border-border/70 border-b bg-muted/60 px-4 py-3 dark:bg-muted/30">
+      <div className="border-border/70 bg-muted/60 dark:bg-muted/30 flex min-h-[50px] items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <Files className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold text-sm">Directory</h3>
+          <Files className="text-primary h-4 w-4" />
+          <h3 className="text-sm font-semibold">Directory</h3>
           <Badge
             variant="secondary"
-            className="px-1.5 py-0 font-normal text-xs"
+            className="px-1.5 py-0 text-xs font-normal"
           >
             {files.length + 1}
           </Badge>
@@ -139,7 +139,7 @@ export function SkillDirectorySidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground h-7 w-7"
                   onClick={() => openNewFileDialog("")}
                   title="New File"
                   aria-label="New File"
@@ -155,7 +155,7 @@ export function SkillDirectorySidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground h-7 w-7"
                   onClick={() => openNewFolderDialog("")}
                   title="New Folder"
                   aria-label="New Folder"

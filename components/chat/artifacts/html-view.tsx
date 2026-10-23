@@ -17,7 +17,7 @@ export interface HtmlViewProps {
 export default function HtmlView({ content }: HtmlViewProps) {
   if (!content) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
         <AlertCircle className="h-8 w-8" />
         <p>No HTML content to display.</p>
       </div>

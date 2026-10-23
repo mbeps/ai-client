@@ -66,7 +66,7 @@ export function MentionCommands({
   return (
     <div
       className={cn(
-        "fade-in-0 zoom-in-95 z-50 w-[380px] animate-in overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
+        "fade-in-0 zoom-in-95 animate-in bg-popover text-popover-foreground z-50 w-[380px] overflow-hidden rounded-md border shadow-md",
         className,
       )}
     >
@@ -93,12 +93,12 @@ export function MentionCommands({
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    <BrainCircuit className="h-4 w-4 shrink-0 text-primary" />
+                    <BrainCircuit className="text-primary h-4 w-4 shrink-0" />
                     <div className="flex w-full items-center justify-between overflow-hidden">
                       <span className="truncate font-medium">
                         {item.displayName || item.name}
                       </span>
-                      <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      <span className="bg-muted text-muted-foreground ml-2 shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
                         /{item.name}
                       </span>
                     </div>
@@ -128,7 +128,7 @@ export function MentionCommands({
                     {isMcp ? (
                       <Zap className="h-4 w-4 shrink-0 text-amber-500" />
                     ) : (
-                      <SquareTerminal className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <SquareTerminal className="text-muted-foreground h-4 w-4 shrink-0" />
                     )}
 
                     <div className="flex w-full items-center justify-between overflow-hidden">
@@ -136,7 +136,7 @@ export function MentionCommands({
                         {isMcp ? (item as any).name : (item as any).title}
                       </span>
                       {!isMcp && (
-                        <span className="ml-2 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">
+                        <span className="bg-muted text-muted-foreground ml-2 shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase">
                           {(item as any).shortcut.startsWith("/")
                             ? (item as any).shortcut
                             : `/${(item as any).shortcut}`}
@@ -145,7 +145,7 @@ export function MentionCommands({
                       {isMcp && (
                         <Badge
                           variant="outline"
-                          className="ml-2 h-4 max-w-[100px] truncate px-1 py-0 font-normal text-[10px]"
+                          className="ml-2 h-4 max-w-[100px] truncate px-1 py-0 text-[10px] font-normal"
                         >
                           {(item as any).sourceServer}
                         </Badge>
@@ -186,7 +186,7 @@ export function MentionCommands({
                         {(item as Assistant).name}
                       </span>
                       {(item as Assistant).description && (
-                        <span className="truncate text-muted-foreground text-xs">
+                        <span className="text-muted-foreground truncate text-xs">
                           {(item as Assistant).description}
                         </span>
                       )}
@@ -216,7 +216,7 @@ export function MentionCommands({
                     <div className="flex w-full flex-col overflow-hidden">
                       <span className="truncate font-medium">{item.name}</span>
                       {item.description && (
-                        <span className="truncate text-muted-foreground text-xs">
+                        <span className="text-muted-foreground truncate text-xs">
                           {item.description}
                         </span>
                       )}

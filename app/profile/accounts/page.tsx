@@ -19,7 +19,7 @@ export default async function LinkedAccountsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-bold text-2xl tracking-tight">Linked Accounts</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Linked Accounts</h2>
         <p className="text-muted-foreground">
           Connect your account with other services for easier login.
         </p>

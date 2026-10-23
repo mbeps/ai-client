@@ -29,7 +29,7 @@ export function AssistantCard({ assistant }: AssistantCardProps) {
 
   return (
     <EntityCard
-      icon={<Bot className="h-5 w-5 text-primary" />}
+      icon={<Bot className="text-primary h-5 w-5" />}
       title={assistant.name}
       description={assistant.description}
       menu={<AssistantOptions assistant={assistant} />}

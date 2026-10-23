@@ -105,7 +105,7 @@ export function SignInTab({
                       type="button"
                       variant="link"
                       size="sm"
-                      className="font-normal text-sm underline"
+                      className="text-sm font-normal underline"
                     >
                       <HelpCircle className="mr-2 h-4 w-4" />
                       Forgot password?

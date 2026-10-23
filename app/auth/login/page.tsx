@@ -88,7 +88,7 @@ export default function LoginPage() {
         )}
       <TabsContent value={TAB_VALUES.SIGN_IN}>
         <Card>
-          <CardHeader className="font-bold text-2xl">
+          <CardHeader className="text-2xl font-bold">
             <CardTitle>Sign In</CardTitle>
           </CardHeader>
           <CardContent>
@@ -110,7 +110,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.SIGN_UP}>
         <Card>
-          <CardHeader className="font-bold text-2xl">
+          <CardHeader className="text-2xl font-bold">
             <CardTitle>Sign Up</CardTitle>
           </CardHeader>
           <CardContent>
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.EMAIL_VERIFICATION}>
         <Card>
-          <CardHeader className="font-bold text-2xl">
+          <CardHeader className="text-2xl font-bold">
             <CardTitle>Verify Your Email</CardTitle>
           </CardHeader>
           <CardContent>
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
       <TabsContent value={TAB_VALUES.FORGOT_PASSWORD}>
         <Card>
-          <CardHeader className="font-bold text-2xl">
+          <CardHeader className="text-2xl font-bold">
             <CardTitle>Forgot Password</CardTitle>
           </CardHeader>
           <CardContent>

@@ -102,7 +102,7 @@ export function PromptForm({
                 <FormLabel>Shortcut</FormLabel>
                 <FormControl>
                   <div className="flex items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 bg-muted font-mono text-muted-foreground">
+                    <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center rounded-l-md border border-r-0 font-mono">
                       /
                     </div>
                     <Input

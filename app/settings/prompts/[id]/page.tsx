@@ -65,7 +65,7 @@ export default function PromptDetailPage() {
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -109,7 +109,7 @@ export default function PromptDetailPage() {
   return (
     <PageContainer variant="default">
       <PageHeader
-        icon={<Command className="h-8 w-8 text-primary" />}
+        icon={<Command className="text-primary h-8 w-8" />}
         title={prompt.title}
         description={`Edit shortcut: ${prompt.shortcut}`}
       />
@@ -128,7 +128,7 @@ export default function PromptDetailPage() {
 
         <SidebarTabsContent value="general" className="space-y-6">
           <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Prompt Configuration</h3>
+            <h3 className="text-lg font-semibold">Prompt Configuration</h3>
             <p className="text-muted-foreground text-sm">
               Modify the prompt title, shortcut, and expansion text.
             </p>

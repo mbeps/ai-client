@@ -111,14 +111,14 @@ function JobStatusBadge({ status }: { status: JobStatus }) {
           variant="destructive"
           className="border-destructive/30 bg-destructive/10 text-destructive"
         >
-          <span className="mr-1.5 size-2 rounded-full bg-destructive" />
+          <span className="bg-destructive mr-1.5 size-2 rounded-full" />
           Failed
         </Badge>
       );
     case "CANCELLED":
       return (
         <Badge variant="outline" className="text-muted-foreground">
-          <span className="mr-1.5 size-2 rounded-full bg-muted-foreground/60" />
+          <span className="bg-muted-foreground/60 mr-1.5 size-2 rounded-full" />
           Cancelled
         </Badge>
       );
@@ -134,7 +134,7 @@ function JobDeletedBadge() {
       <TooltipTrigger asChild>
         <Badge
           variant="outline"
-          className="cursor-help border-dashed text-muted-foreground text-xs"
+          className="text-muted-foreground cursor-help border-dashed text-xs"
         >
           Deleted
         </Badge>
@@ -183,17 +183,17 @@ function JobCardTitle({
       {hasLink ? (
         <Link
           href={url as string}
-          className="truncate font-medium text-foreground text-sm transition-colors hover:text-primary hover:underline"
+          className="text-foreground hover:text-primary truncate text-sm font-medium transition-colors hover:underline"
         >
           {title}
         </Link>
       ) : (
-        <span className="truncate font-medium text-foreground text-sm">
+        <span className="text-foreground truncate text-sm font-medium">
           {title}
         </span>
       )}
       {subtitle && (
-        <span className="truncate text-muted-foreground text-xs">
+        <span className="text-muted-foreground truncate text-xs">
           {subtitle}
         </span>
       )}
@@ -216,14 +216,14 @@ function JobCardMetaDetails({
 }: JobCardMetaDetailsProps) {
   if (errorMessage) {
     return (
-      <p className="mt-0.5 line-clamp-1 font-mono text-destructive text-xs">
+      <p className="text-destructive mt-0.5 line-clamp-1 font-mono text-xs">
         {errorMessage}
       </p>
     );
   }
 
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
+    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
       {timingText && (
         <span className="flex items-center gap-1">
           <Clock className="size-3 shrink-0" />
@@ -304,10 +304,10 @@ export function JobRunCard({ job, onCancel }: JobRunCardProps) {
   const timingText = formatJobTiming(job.startedAt, job.queuedAt);
 
   return (
-    <Card className="py-0 transition-all hover:border-primary/30">
+    <Card className="hover:border-primary/30 py-0 transition-all">
       <CardContent className="flex items-center gap-2.5 p-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <div className="shrink-0 rounded-md bg-secondary/50 p-1.5 text-secondary-foreground">
+          <div className="bg-secondary/50 text-secondary-foreground shrink-0 rounded-md p-1.5">
             <TypeIcon className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">

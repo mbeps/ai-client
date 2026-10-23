@@ -21,7 +21,7 @@ export default function ConnectorsPage() {
 
   return (
     <ResourceListPage
-      icon={<Wrench className="h-8 w-8 text-primary" />}
+      icon={<Wrench className="text-primary h-8 w-8" />}
       title="Connectors"
       description="Manage MCP servers and the tools they expose."
       items={mcpServers}

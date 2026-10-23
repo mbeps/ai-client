@@ -66,14 +66,14 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
   return (
     <div className="space-y-6">
       {/* Delete / Uninstall Server Section */}
-      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-6">
+      <div className="border-destructive/20 bg-destructive/5 rounded-lg border p-6">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-1">
-            <h3 className="flex items-center gap-2 font-semibold text-destructive text-lg">
+            <h3 className="text-destructive flex items-center gap-2 text-lg font-semibold">
               <Trash2 className="h-5 w-5" />
               {server.isInstalled ? "Uninstall Tool" : "Delete Server"}
             </h3>
-            <p className="max-w-2xl text-muted-foreground text-sm">
+            <p className="text-muted-foreground max-w-2xl text-sm">
               {server.isInstalled
                 ? "Remove this community tool subscription from your account."
                 : "Permanently remove this MCP server configuration. This will affect all assistants and chats using this server. This action is irreversible."}

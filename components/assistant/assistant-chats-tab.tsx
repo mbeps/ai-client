@@ -25,7 +25,7 @@ export function AssistantChatsTab({
   return (
     <div className="space-y-4">
       <div className="relative w-full sm:max-w-xs">
-        <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
         <Input
           placeholder="Search chats..."
           className="pl-9"

@@ -82,13 +82,13 @@ function BreakdownItem({
     totalTokens > 0 ? ((tokens / totalTokens) * 100).toFixed(1) : "0.0";
 
   return (
-    <div className="flex items-center justify-between border-border/50 border-b py-1.5 text-xs last:border-0">
+    <div className="border-border/50 flex items-center justify-between border-b py-1.5 text-xs last:border-0">
       <span className="text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2">
-        <span className="font-mono text-muted-foreground">
+        <span className="text-muted-foreground font-mono">
           {formatTokens(tokens)} tokens
         </span>
-        <span className="w-12 text-right font-medium text-foreground">
+        <span className="text-foreground w-12 text-right font-medium">
           {percent}%
         </span>
       </div>
@@ -151,7 +151,7 @@ export function ContextUsagePill({
     <button
       type="button"
       className={cn(
-        "flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border border-border/60 px-2 font-medium text-[11px] text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "border-border/60 text-muted-foreground hover:bg-muted/70 hover:text-foreground focus-visible:ring-ring flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2 text-[11px] font-medium transition-colors select-none focus-visible:ring-1 focus-visible:outline-none",
         isExceeded &&
           "border-destructive/50 text-destructive hover:text-destructive",
         isNearLimit &&
@@ -179,19 +179,19 @@ export function ContextUsagePill({
     >
       <div className="space-y-4 pt-1 pb-2">
         {/* Context Window Summary */}
-        <div className="space-y-2.5 rounded-lg border border-border/70 bg-muted/20 p-3.5">
+        <div className="border-border/70 bg-muted/20 space-y-2.5 rounded-lg border p-3.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-foreground">
+            <span className="text-foreground font-semibold">
               Context Window
             </span>
-            <span className="font-bold text-foreground">
+            <span className="text-foreground font-bold">
               {formatTokens(totalTokens)} / {formatTokens(maxTokens)} tokens (
               {displayPercentage})
             </span>
           </div>
 
           {/* Progress Bar */}
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300 ease-in-out",
@@ -210,10 +210,10 @@ export function ContextUsagePill({
         <div className="space-y-3">
           {/* System Section */}
           <div className="space-y-1">
-            <h4 className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+            <h4 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
               System
             </h4>
-            <div className="rounded-md border border-border/50 bg-muted/10 px-3">
+            <div className="border-border/50 bg-muted/10 rounded-md border px-3">
               <BreakdownItem
                 label="System Instructions"
                 tokens={breakdown.systemInstructions}
@@ -234,10 +234,10 @@ export function ContextUsagePill({
 
           {/* User Context Section */}
           <div className="space-y-1">
-            <h4 className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+            <h4 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
               User Context
             </h4>
-            <div className="rounded-md border border-border/50 bg-muted/10 px-3">
+            <div className="border-border/50 bg-muted/10 rounded-md border px-3">
               <BreakdownItem
                 label="Messages"
                 tokens={breakdown.messages}
@@ -259,10 +259,10 @@ export function ContextUsagePill({
           {/* Draft Section */}
           {breakdown.draft > 0 && (
             <div className="space-y-1">
-              <h4 className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+              <h4 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                 Current Input
               </h4>
-              <div className="rounded-md border border-border/50 bg-muted/10 px-3">
+              <div className="border-border/50 bg-muted/10 rounded-md border px-3">
                 <BreakdownItem
                   label="Unsent Draft & Staged Files"
                   tokens={breakdown.draft}

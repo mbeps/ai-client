@@ -48,12 +48,12 @@ export function ErrorPage({
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="flex flex-col items-center gap-2">
-        <h2 className="font-semibold text-xl">{heading}</h2>
-        <p className="max-w-md text-muted-foreground text-sm">
+        <h2 className="text-xl font-semibold">{heading}</h2>
+        <p className="text-muted-foreground max-w-md text-sm">
           {error.message || fallbackDescription}
         </p>
         {error.digest && (
-          <p className="font-mono text-muted-foreground text-xs">
+          <p className="text-muted-foreground font-mono text-xs">
             Error ID: {error.digest}
           </p>
         )}

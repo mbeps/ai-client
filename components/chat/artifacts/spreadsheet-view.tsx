@@ -266,9 +266,9 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
 
   if (!hasAnyData) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
         <AlertCircle className="h-8 w-8 text-amber-500" />
-        <h3 className="font-semibold text-foreground text-sm">
+        <h3 className="text-foreground text-sm font-semibold">
           Empty Spreadsheet
         </h3>
         <p className="text-xs">
@@ -279,11 +279,11 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-foreground">
+    <div className="bg-background text-foreground relative flex h-full w-full flex-col overflow-hidden">
       {/* Header with Search and Export */}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-muted/20 p-2">
+      <div className="bg-muted/20 flex shrink-0 items-center justify-between gap-2 border-b p-2">
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             placeholder="Search sheet..."
             className="h-9 pl-8"
@@ -304,23 +304,23 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
 
       {/* Grid Content */}
       {activeSheet.data.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+        <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
           <AlertCircle className="h-6 w-6 text-amber-500" />
-          <p className="font-medium text-sm">This sheet contains no data.</p>
+          <p className="text-sm font-medium">This sheet contains no data.</p>
         </div>
       ) : (
         <ScrollArea className="relative w-full flex-1">
           <div className="min-w-max p-4">
-            <Table className="border bg-card">
-              <TableHeader className="sticky top-0 z-10 bg-muted/50 shadow-sm">
+            <Table className="bg-card border">
+              <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header, i) => (
                       <TableHead
                         key={header.id}
                         className={cn(
-                          "whitespace-nowrap border-r px-4 py-2 font-semibold",
-                          i === 0 && "w-[50px] bg-muted/50 text-center",
+                          "border-r px-4 py-2 font-semibold whitespace-nowrap",
+                          i === 0 && "bg-muted/50 w-[50px] text-center",
                         )}
                       >
                         {flexRender(
@@ -337,7 +337,7 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="py-8 text-center text-muted-foreground"
+                      className="text-muted-foreground py-8 text-center"
                     >
                       No matching results.
                     </TableCell>
@@ -349,9 +349,9 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
                         <TableCell
                           key={cell.id}
                           className={cn(
-                            "whitespace-nowrap border-r px-4 py-2",
+                            "border-r px-4 py-2 whitespace-nowrap",
                             i === 0 &&
-                              "bg-muted/10 text-center font-medium text-muted-foreground text-xs",
+                              "bg-muted/10 text-muted-foreground text-center text-xs font-medium",
                           )}
                         >
                           {flexRender(
@@ -372,10 +372,10 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
 
       {/* Footer Sheet Navigation */}
       {spreadsheetData.sheets.length > 1 && (
-        <div className="no-scrollbar flex shrink-0 items-center gap-1 overflow-x-auto border-t bg-muted/30 p-1">
-          <div className="flex items-center gap-1 border-r px-2 py-1 text-muted-foreground">
+        <div className="no-scrollbar bg-muted/30 flex shrink-0 items-center gap-1 overflow-x-auto border-t p-1">
+          <div className="text-muted-foreground flex items-center gap-1 border-r px-2 py-1">
             <SheetIcon className="h-3 w-3" />
-            <span className="font-bold text-[10px] uppercase tracking-wider">
+            <span className="text-[10px] font-bold tracking-wider uppercase">
               Sheets
             </span>
           </div>
@@ -387,9 +387,9 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
                 setGlobalFilter(""); // Clear filter when switching sheets
               }}
               className={cn(
-                "whitespace-nowrap rounded-md px-3 py-1.5 font-medium text-xs transition-colors",
+                "rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
                 activeSheetIndex === idx
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                  ? "bg-background text-foreground ring-border shadow-sm ring-1"
                   : "text-muted-foreground hover:bg-muted/50",
               )}
             >

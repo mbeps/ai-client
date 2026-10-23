@@ -58,7 +58,7 @@ function PromptChip({
   const isMcp = pid.startsWith("mcp:");
   if (isMcp) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs">
+      <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs">
         <Zap className="h-3 w-3 text-amber-500" />/{promptEntry?.title ?? pid}
       </span>
     );
@@ -66,7 +66,7 @@ function PromptChip({
   return (
     <Link
       href={ROUTES.SETTINGS.PROMPTS.detail(pid)}
-      className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
+      className="bg-primary/10 text-primary hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors"
     >
       <Command className="h-3 w-3" />/
       {promptEntry?.shortcut ?? promptEntry?.title ?? pid}
@@ -106,9 +106,9 @@ function UserMessageContextChips({
         return (
           <span
             key={skillId}
-            className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs"
+            className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
           >
-            <BrainCircuit className="h-3 w-3 text-primary" />/
+            <BrainCircuit className="text-primary h-3 w-3" />/
             {skill?.displayName ?? skill?.name ?? skillId}
           </span>
         );
@@ -119,7 +119,7 @@ function UserMessageContextChips({
           <Link
             key={kbId}
             href={ROUTES.KNOWLEDGEBASES.detail(kbId)}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary text-xs transition-colors hover:bg-primary/20"
+            className="bg-primary/10 text-primary hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors"
           >
             <Database className="h-3 w-3" />
             {kb?.name ?? kbId}
@@ -360,7 +360,7 @@ function MessageHeader({
   return (
     <div className="flex items-center gap-2">
       <MessageAvatar isUser={isUser} image={image} name={name} />
-      <span className="font-semibold text-sm">
+      <span className="text-sm font-semibold">
         {isUser ? "You" : (modelName ?? "Assistant")}
       </span>
     </div>
@@ -707,7 +707,7 @@ export function MessageBubble(props: MessageBubbleProps) {
 
   return (
     <div
-      className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "rounded-lg bg-muted/30"}`}
+      className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
     >
       <MessageHeader
         isUser={isUser}

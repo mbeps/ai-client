@@ -324,7 +324,7 @@ function ModelTableBulkActions({
   onBulkAction: (action: "enable" | "disable" | "delete") => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 p-1">
+    <div className="bg-muted/50 flex items-center gap-1.5 rounded-lg border p-1">
       <Button
         variant="ghost"
         size="sm"
@@ -353,11 +353,11 @@ function ModelTableBulkActions({
         )}
         Disable
       </Button>
-      <div className="mx-1 h-4 w-[1px] bg-border" />
+      <div className="bg-border mx-1 h-4 w-[1px]" />
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 px-2 text-destructive text-xs hover:bg-destructive/10"
+        className="text-destructive hover:bg-destructive/10 h-7 px-2 text-xs"
         disabled={isBusy}
         onClick={() => onBulkAction("delete")}
       >
@@ -714,7 +714,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
               <TableRow>
                 <TableCell
                   colSpan={8}
-                  className="py-8 text-center text-muted-foreground text-sm"
+                  className="text-muted-foreground py-8 text-center text-sm"
                 >
                   No models found.
                 </TableCell>

@@ -55,7 +55,7 @@ function BlockNoteEditor({
   }, []);
 
   return (
-    <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-4">
+    <div className="custom-scrollbar bg-background h-full w-full overflow-y-auto p-4">
       <BlockNoteView
         editor={editor}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
@@ -128,7 +128,7 @@ export default function MarkdownView({
 
   if (!parsedBlocks) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );

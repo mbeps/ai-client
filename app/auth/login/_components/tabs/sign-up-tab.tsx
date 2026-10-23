@@ -125,7 +125,7 @@ export function SignUpTab({
           </form>
         </Form>
       ) : (
-        <div className="p-4 text-center text-muted-foreground text-sm">
+        <div className="text-muted-foreground p-4 text-center text-sm">
           Email registration is currently disabled.
         </div>
       )}

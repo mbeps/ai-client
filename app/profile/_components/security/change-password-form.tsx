@@ -96,14 +96,14 @@ export function ChangePasswordForm() {
           control={form.control}
           name="revokeOtherSessions"
           render={({ field }) => (
-            <FormItem className="flex items-center space-x-2 space-y-0">
+            <FormItem className="flex items-center space-y-0 space-x-2">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <FormLabel className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Log out other sessions
               </FormLabel>
               <FormMessage />

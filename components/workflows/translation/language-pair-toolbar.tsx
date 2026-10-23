@@ -40,7 +40,7 @@ export function LanguagePairToolbar(props: LanguagePairToolbarProps) {
   } = props;
 
   return (
-    <div className="flex shrink-0 flex-col items-center gap-2 rounded-lg border bg-muted/30 p-1.5 shadow-sm sm:flex-row">
+    <div className="bg-muted/30 flex shrink-0 flex-col items-center gap-2 rounded-lg border p-1.5 shadow-sm sm:flex-row">
       <div className="w-full flex-1">
         <Combobox
           items={LANGUAGES}
@@ -79,7 +79,7 @@ export function LanguagePairToolbar(props: LanguagePairToolbarProps) {
             size="icon"
             onClick={onSwapLanguages}
             disabled={sourceLangValue === "auto"}
-            className="h-8 w-8 shrink-0 rounded-full hover:bg-background"
+            className="hover:bg-background h-8 w-8 shrink-0 rounded-full"
             aria-label="Swap languages"
           >
             <ArrowLeftRight className="h-3.5 w-3.5 rotate-90 transition-transform sm:rotate-0" />

@@ -60,8 +60,8 @@ export function ServerSharingTab({ serverId }: ServerSharingTabProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="flex items-center gap-2 font-semibold text-lg">
-          <Globe className="h-5 w-5 text-primary" />
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <Globe className="text-primary h-5 w-5" />
           Public Sharing
         </h3>
         <p className="text-muted-foreground text-sm">
@@ -87,10 +87,10 @@ export function ServerSharingTab({ serverId }: ServerSharingTabProps) {
         />
       </div>
 
-      <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="bg-muted/50 flex items-start gap-3 rounded-lg p-4 text-sm">
+        <Info className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
         <div className="text-muted-foreground">
-          <p className="font-medium text-foreground">Important Note</p>
+          <p className="text-foreground font-medium">Important Note</p>
           <p>
             Public servers are accessible to all users on the platform. Ensure
             that your server does not expose sensitive data or internal
