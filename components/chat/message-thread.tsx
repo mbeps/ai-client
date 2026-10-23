@@ -30,7 +30,6 @@ interface MessageThreadProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
   /** Callback to delete a message. */
   onDelete: (id: string) => void;
@@ -101,7 +100,6 @@ export function MessageThread({
             key={msg.id}
             message={msg}
             isLatest={index === thread.length - 1}
-            isFirst={index === 0}
             assistantId={chat?.assistantId}
             onDelete={onDelete}
             onEdit={onEdit}

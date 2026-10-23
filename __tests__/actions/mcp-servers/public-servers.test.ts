@@ -64,11 +64,9 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 import { addPublicServer } from "@/actions/mcp-servers/add-public-server";
-import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
 import { toggleMcpServerPublic } from "@/actions/mcp-servers/toggle-mcp-server-public";
-import { uninstallPublicServer } from "@/actions/mcp-servers/uninstall-public-server";
 import { updateInstalledServerHeaders } from "@/actions/mcp-servers/update-installed-server-headers";
 import { requireSession } from "@/lib/auth/require-session";
 
@@ -178,13 +176,6 @@ describe("addPublicServer", () => {
         headers: null,
       }),
     );
-  });
-});
-
-describe("uninstallPublicServer", () => {
-  it("deletes installation record from userMcpServerInstall", async () => {
-    await uninstallPublicServer("srv-pub-1");
-    expect(chainable.delete).toHaveBeenCalledTimes(1);
   });
 });
 

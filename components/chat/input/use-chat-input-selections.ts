@@ -10,7 +10,6 @@ export interface ChatInputSelectionsOptions {
   onKnowledgebaseChange?: (kbIds: string[]) => void;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
-  initialSubagentExcludedTools?: string[];
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
@@ -163,16 +162,12 @@ function useSkillSelections(initialSkillIds?: string[]) {
 function useSubagentSelections(
   initialSubagentsEnabled?: boolean,
   initialSubagentModelId?: string,
-  initialSubagentExcludedTools?: string[],
 ) {
   const [subagentsEnabled, setSubagentsEnabled] = useState(
     Boolean(initialSubagentsEnabled),
   );
   const [subagentModelId, setSubagentModelId] = useState<string | undefined>(
     initialSubagentModelId,
-  );
-  const [subagentExcludedTools, setSubagentExcludedTools] = useState<string[]>(
-    initialSubagentExcludedTools ?? EMPTY_STRING_ARRAY,
   );
   const [isSubagentDialogOpen, setIsSubagentDialogOpen] = useState(false);
 
@@ -189,8 +184,6 @@ function useSubagentSelections(
     setSubagentsEnabled,
     subagentModelId,
     setSubagentModelId,
-    subagentExcludedTools,
-    setSubagentExcludedTools,
     isSubagentDialogOpen,
     setIsSubagentDialogOpen,
   };
@@ -213,7 +206,6 @@ export function useChatInputSelections(props: ChatInputSelectionsOptions) {
   const subagents = useSubagentSelections(
     props.initialSubagentsEnabled,
     props.initialSubagentModelId,
-    props.initialSubagentExcludedTools,
   );
 
   return {

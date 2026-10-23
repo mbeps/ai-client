@@ -242,7 +242,6 @@ function useChatMessageActions({
       selectedSkillIds: string[] = [],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
-      subagentExcludedTools?: string[],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -258,7 +257,6 @@ function useChatMessageActions({
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
-        subagentExcludedTools,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -278,7 +276,6 @@ function useChatMessageActions({
       selectedSkillIds?: string[],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
-      subagentExcludedTools?: string[],
     ) => {
       const msg = chat?.messages[id];
       if (!msg) return;
@@ -296,7 +293,6 @@ function useChatMessageActions({
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
-        subagentExcludedTools,
       );
     },
     [chat, streamResponse],
@@ -322,7 +318,6 @@ function useChatMessageActions({
         payload.selectedSkillIds,
         payload.subagentsEnabled,
         payload.subagentModelId,
-        payload.subagentExcludedTools,
       );
     },
     [chat, streamResponse],
@@ -460,7 +455,6 @@ function extractRegeneratePayload(parentMsg: Message) {
     selectedSkillIds: meta.selectedSkillIds || [],
     subagentsEnabled: meta.subagentsEnabled,
     subagentModelId: meta.subagentModelId,
-    subagentExcludedTools: meta.subagentExcludedTools,
   };
 }
 

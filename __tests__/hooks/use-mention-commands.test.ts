@@ -159,7 +159,7 @@ describe("useMentionCommands", () => {
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef),
       );
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
       expect(result.current.selectedAssistant).toBeNull();
     });
 
@@ -176,9 +176,9 @@ describe("useMentionCommands", () => {
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, "p1"),
       );
-      expect(result.current.selectedPrompt).toEqual(
+      expect(result.current.selectedPrompts).toEqual([
         expect.objectContaining({ id: "p1", isMcp: false }),
-      );
+      ]);
     });
 
     it("initializes selectedPrompt from mcp prompt id", () => {
@@ -197,9 +197,9 @@ describe("useMentionCommands", () => {
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, "mcp:srv-1:mcp-test"),
       );
-      expect(result.current.selectedPrompt).toEqual(
+      expect(result.current.selectedPrompts).toEqual([
         expect.objectContaining({ id: "mcp:srv-1:mcp-test", isMcp: true }),
-      );
+      ]);
     });
 
     it("returns null for unknown initialSelectedPromptId", () => {
@@ -207,7 +207,7 @@ describe("useMentionCommands", () => {
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, "non-existent-prompt"),
       );
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
     });
 
     it("initializes selectedAssistant from assistant id", () => {
@@ -406,7 +406,7 @@ describe("useMentionCommands", () => {
       });
 
       expect(setInput).toHaveBeenLastCalledWith("");
-      expect(result.current.selectedPrompt).toEqual(SAMPLE_PROMPTS[0]);
+      expect(result.current.selectedPrompts).toEqual([SAMPLE_PROMPTS[0]]);
       expect(result.current.openTrigger).toBeNull();
     });
 
@@ -457,7 +457,6 @@ describe("useMentionCommands", () => {
       });
 
       expect(setInput).toHaveBeenLastCalledWith("");
-      expect(result.current.selectedKnowledgebase).toEqual(SAMPLE_KNOWLEDGEBASES[0]);
       expect(onSelectKnowledgebase).toHaveBeenCalledWith(SAMPLE_KNOWLEDGEBASES[0]);
       expect(result.current.openTrigger).toBeNull();
     });
@@ -605,9 +604,9 @@ describe("useMentionCommands", () => {
         expect(handled).toBe(true);
       });
 
-      expect(result.current.selectedPrompt).toEqual(
+      expect(result.current.selectedPrompts).toEqual([
         expect.objectContaining({ id: SAMPLE_PROMPTS[0].id }),
-      );
+      ]);
     });
 
     it("closes the palette with Escape", () => {
@@ -950,7 +949,7 @@ describe("useMentionCommands", () => {
 
       expect(setInput).not.toHaveBeenCalled();
       expect(result.current.openTrigger).toBe("/");
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
     });
 
     it("closes the palette without selecting when a '/' item is neither a skill nor a prompt", () => {
@@ -969,7 +968,7 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(onSelectSkill).not.toHaveBeenCalled();
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
       expect(result.current.openTrigger).toBeNull();
     });
 
@@ -990,7 +989,6 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(result.current.selectedAssistant).toBeNull();
-      expect(result.current.selectedKnowledgebase).toBeNull();
       expect(result.current.openTrigger).toBeNull();
     });
 
@@ -1022,7 +1020,6 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(onSelectKnowledgebase).not.toHaveBeenCalled();
-      expect(result.current.selectedKnowledgebase).toBeNull();
       expect(result.current.openTrigger).toBeNull();
     });
 
@@ -1045,7 +1042,7 @@ describe("useMentionCommands", () => {
 
       expect(handled).toBe(true);
       expect(setInput).not.toHaveBeenCalled();
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
       expect(result.current.openTrigger).toBe("/");
     });
   });
@@ -1066,8 +1063,6 @@ describe("useMentionCommands", () => {
           expect.objectContaining({ isMcp: false, isSkill: false }),
         );
       }
-      // selectedPrompt is the head of the array.
-      expect(result.current.selectedPrompt?.id).toBe("p1");
     });
 
     it("skips ids that resolve to neither a local nor an MCP prompt", () => {
@@ -1086,8 +1081,8 @@ describe("useMentionCommands", () => {
     });
   });
 
-  describe("setSelectedPrompt", () => {
-    it("clears the whole selection when passed null", () => {
+  describe("setSelectedPrompts", () => {
+    it("clears the whole selection when passed []", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, ["p1", "p2"]),
@@ -1095,14 +1090,13 @@ describe("useMentionCommands", () => {
       expect(result.current.selectedPrompts).toHaveLength(2);
 
       act(() => {
-        result.current.setSelectedPrompt(null);
+        result.current.setSelectedPrompts([]);
       });
 
       expect(result.current.selectedPrompts).toEqual([]);
-      expect(result.current.selectedPrompt).toBeNull();
     });
 
-    it("replaces the selection with the single prompt passed", () => {
+    it("replaces the selection with the array passed", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, ["p1", "p2"]),
@@ -1116,11 +1110,10 @@ describe("useMentionCommands", () => {
       };
 
       act(() => {
-        result.current.setSelectedPrompt(single);
+        result.current.setSelectedPrompts([single]);
       });
 
       expect(result.current.selectedPrompts).toEqual([single]);
-      expect(result.current.selectedPrompt).toEqual(single);
     });
 
     it("accepts an MCP prompt item and keeps its id intact", () => {
@@ -1140,25 +1133,26 @@ describe("useMentionCommands", () => {
       );
 
       act(() => {
-        result.current.setSelectedPrompt({
-          id: "mcp:srv-1:mcp-test",
-          title: "mcp-test",
-          shortcut: "mcp-test",
-          sourceServer: "Server 1",
-          isMcp: true,
-        } as any);
+        result.current.setSelectedPrompts([
+          {
+            id: "mcp:srv-1:mcp-test",
+            title: "mcp-test",
+            shortcut: "mcp-test",
+            sourceServer: "Server 1",
+            isMcp: true,
+          } as any,
+        ]);
       });
 
-      expect(result.current.selectedPrompt).toEqual(
+      expect(result.current.selectedPrompts).toEqual([
         expect.objectContaining({ id: "mcp:srv-1:mcp-test", isMcp: true }),
-      );
+      ]);
     });
   });
 
   describe("multi-prompt selection guard", () => {
     it("appends a new prompt to an existing selection", () => {
       const setInput = vi.fn();
-      const onSelectPrompt = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands(
           "/trans",
@@ -1166,13 +1160,6 @@ describe("useMentionCommands", () => {
           textareaRef,
           null,
           "p1",
-          undefined,
-          true,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          onSelectPrompt,
         ),
       );
       expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
@@ -1188,16 +1175,11 @@ describe("useMentionCommands", () => {
         "p1",
         "p2",
       ]);
-      // onSelectPrompt still fires for the newly appended prompt.
-      expect(onSelectPrompt).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "p2" }),
-      );
       expect(result.current.openTrigger).toBeNull();
     });
 
     it("keeps the selection unchanged when the prompt is already selected", () => {
       const setInput = vi.fn();
-      const onSelectPrompt = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands(
           "/sum",
@@ -1205,13 +1187,6 @@ describe("useMentionCommands", () => {
           textareaRef,
           null,
           "p1",
-          undefined,
-          true,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          onSelectPrompt,
         ),
       );
       expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
@@ -1226,9 +1201,6 @@ describe("useMentionCommands", () => {
       // Still one entry, not a duplicate.
       expect(result.current.selectedPrompts).toHaveLength(1);
       expect(result.current.selectedPrompts.map((p) => p.id)).toEqual(["p1"]);
-      expect(onSelectPrompt).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "p1" }),
-      );
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(result.current.openTrigger).toBeNull();
     });
@@ -1238,7 +1210,6 @@ describe("useMentionCommands", () => {
     it("still strips the trigger and closes the palette for a trigger outside '/', '@' and '#'", () => {
       const setInput = vi.fn();
       const onSelectSkill = vi.fn();
-      const onSelectPrompt = vi.fn();
       const onSelectKnowledgebase = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands(
@@ -1253,7 +1224,6 @@ describe("useMentionCommands", () => {
           onSelectSkill,
           onSelectKnowledgebase,
           SAMPLE_KNOWLEDGEBASES,
-          onSelectPrompt,
         ),
       );
 
@@ -1273,9 +1243,8 @@ describe("useMentionCommands", () => {
 
       expect(setInput).toHaveBeenLastCalledWith("");
       expect(onSelectSkill).not.toHaveBeenCalled();
-      expect(onSelectPrompt).not.toHaveBeenCalled();
       expect(onSelectKnowledgebase).not.toHaveBeenCalled();
-      expect(result.current.selectedPrompt).toBeNull();
+      expect(result.current.selectedPrompts).toEqual([]);
       expect(result.current.openTrigger).toBeNull();
     });
   });

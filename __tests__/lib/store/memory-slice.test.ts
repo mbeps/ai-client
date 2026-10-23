@@ -56,7 +56,7 @@ describe("EntitySlice Memory State", () => {
       useAppStore.getState().memories.find((m) => m.id === "mem-test")?.content,
     ).toBe("Updated content");
 
-    useAppStore.getState().removeMemory("mem-test");
+    useAppStore.getState().removeMemories(["mem-test"]);
     expect(
       useAppStore.getState().memories.find((m) => m.id === "mem-test"),
     ).toBeUndefined();

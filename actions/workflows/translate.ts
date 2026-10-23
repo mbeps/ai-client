@@ -1,23 +1,13 @@
 "use server";
 
-import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { getClientSubscriptionToken } from "inngest/react";
-import { PROMPTS } from "@/config/prompts";
 import { db } from "@/drizzle/db";
 import { workflowTranslation } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
-import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { ProviderNotConfiguredError, RateLimitError } from "@/lib/errors";
 import { translationChannel } from "@/lib/inngest/channels";
 import { inngest } from "@/lib/inngest/client";
-import { getLogger } from "@/lib/logger";
 import { translateRequestSchema } from "@/schemas/workflows/workflows";
-
-const log = getLogger(["app", "actions", "workflow"]);
 
 /**
  * Server action to initiate an asynchronous background translation via Inngest.
@@ -131,88 +121,4 @@ export async function getLatestTranslationAction() {
     .limit(1);
 
   return row ?? null;
-}
-
-/**
- * Synchronous Server Action to translate text using AI with optional source language detection.
- * Resolves the appropriate chat model (user-specified or default) and constructs a translation prompt.
- *
- * @param input - The translation request data validated against translateRequestSchema.
- * @returns Translated text string.
- * @throws 401 Unauthorized if user is not authenticated.
- * @throws ValidationError if input fails schema validation.
- * @throws ProviderNotConfiguredError if no chat model is available.
- * @throws RateLimitError if provider rate limit is exceeded.
- * @author Maruf Bepary
- */
-export async function translateText(input: unknown) {
-  const session = await requireSession();
-
-  const parsed = translateRequestSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(`Invalid translation request: ${parsed.error.message}`);
-  }
-
-  const {
-    text: originalText,
-    sourceLanguage,
-    targetLanguage,
-    modelId,
-    attachment,
-  } = parsed.data;
-
-  const isImage = attachment?.type === "image";
-  const sourceText =
-    originalText?.trim() || attachment?.extractedText?.trim() || "";
-
-  const resolved = modelId
-    ? await fetchProviderWithModel(session.user.id, { modelId })
-    : await resolveDefaultChatProvider(session.user.id);
-
-  const sourceDesc =
-    sourceLanguage === "auto" || sourceLanguage === "Auto Detect"
-      ? "automatically detected language"
-      : sourceLanguage;
-
-  const prompt = PROMPTS.WORKFLOWS.TRANSLATE(
-    sourceDesc,
-    targetLanguage,
-    sourceText,
-    isImage,
-  );
-
-  try {
-    const { text: translatedText } = await generateText({
-      model: resolved.sdkProvider.chat(resolved.modelId),
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            ...(isImage && attachment?.dataUrl
-              ? [
-                  {
-                    type: "file" as const,
-                    data: attachment.dataUrl,
-                    mediaType: attachment.mimeType,
-                  },
-                ]
-              : []),
-          ],
-        },
-      ],
-    });
-
-    return translatedText.trim();
-  } catch (error) {
-    if (error instanceof ProviderNotConfiguredError) throw error;
-    if (isRateLimitError(error)) {
-      throw new RateLimitError(normalizeRateLimitMessage(error));
-    }
-    log.error("Translation action failed: {error}", {
-      error: error instanceof Error ? error.message : String(error),
-      userId: session.user.id,
-    });
-    throw new Error("Failed to translate text. Please try again.");
-  }
 }

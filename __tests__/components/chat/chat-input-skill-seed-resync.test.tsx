@@ -61,8 +61,8 @@ vi.mock("@/hooks/chat/use-mention-commands", () => ({
     handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(e.target.value);
     },
-    selectedPrompt: null,
-    setSelectedPrompt: vi.fn(),
+    selectedPrompts: [],
+    setSelectedPrompts: vi.fn(),
     selectedAssistant: null,
     setSelectedAssistant: vi.fn(),
   }),

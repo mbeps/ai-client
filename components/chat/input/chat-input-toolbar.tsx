@@ -247,8 +247,6 @@ export interface ChatInputToolbarProps {
   handleToggleSkill: (id: string) => void;
   prompts: Prompt[];
   mcpPrompts: DiscoveredPrompt[];
-  selectedPrompt: MentionPromptItem | null;
-  setSelectedPrompt: (prompt: MentionPromptItem | null) => void;
   selectedPromptIds: Set<string>;
   handleTogglePrompt: (prompt: MentionPromptItem) => void;
   handleClearPrompts: () => void;
@@ -301,8 +299,6 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
             onToggleSkill={props.handleToggleSkill}
             prompts={props.prompts}
             mcpPrompts={props.mcpPrompts}
-            selectedPrompt={props.selectedPrompt}
-            onSelectPrompt={props.setSelectedPrompt}
             selectedPromptIds={props.selectedPromptIds}
             onTogglePrompt={props.handleTogglePrompt}
             onClearPrompts={props.handleClearPrompts}

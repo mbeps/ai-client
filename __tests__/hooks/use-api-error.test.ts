@@ -6,12 +6,9 @@ import {
   MISSING_API_KEY_ERROR,
   MODEL_DUPLICATE_IMPORT_ERROR_CODE,
   MODEL_MALFORMED_ID_ERROR_CODE,
-  MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE,
   PROVIDER_NOT_CONFIGURED_ERROR_CODE,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
   RATE_LIMIT_ERROR_CODE,
-  REASONING_NOT_SUPPORTED_ERROR_CODE,
-  STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE,
   TOOLS_NOT_SUPPORTED_ERROR_CODE,
   UNAUTHORIZED_ERROR_CODE,
   VISION_NOT_SUPPORTED_ERROR_CODE,
@@ -107,33 +104,6 @@ describe("useApiError hook", () => {
     expect(result.current.handleApiError(err)).toBe(true);
     expect(toast.error).toHaveBeenCalledWith("Tools Not Supported", expect.objectContaining({
       description: expect.stringContaining("cannot use tools"),
-    }));
-  });
-
-  it("handles REASONING_NOT_SUPPORTED_ERROR_CODE", () => {
-    const { result } = renderHook(() => useApiError());
-    const err = { code: REASONING_NOT_SUPPORTED_ERROR_CODE, message: "No reasoning" };
-    expect(result.current.handleApiError(err)).toBe(true);
-    expect(toast.error).toHaveBeenCalledWith("Reasoning Not Supported", expect.objectContaining({
-      description: expect.stringContaining("reasoning tokens"),
-    }));
-  });
-
-  it("handles STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE", () => {
-    const { result } = renderHook(() => useApiError());
-    const err = { code: STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE, message: "No json schema" };
-    expect(result.current.handleApiError(err)).toBe(true);
-    expect(toast.error).toHaveBeenCalledWith("Structured Output Not Supported", expect.objectContaining({
-      description: expect.stringContaining("structured output"),
-    }));
-  });
-
-  it("handles MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE", () => {
-    const { result } = renderHook(() => useApiError());
-    const err = { code: MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE, message: "Too many models" };
-    expect(result.current.handleApiError(err)).toBe(true);
-    expect(toast.warning).toHaveBeenCalledWith("Model Limit Reached", expect.objectContaining({
-      description: expect.stringContaining("first 1,000"),
     }));
   });
 

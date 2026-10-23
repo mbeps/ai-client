@@ -14,25 +14,19 @@ import {
   MODEL_CAPABILITY_ERROR_CODE,
   MODEL_DUPLICATE_IMPORT_ERROR_CODE,
   MODEL_MALFORMED_ID_ERROR_CODE,
-  MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE,
   ModelCapabilityError,
   ModelDuplicateImportError,
   ModelMalformedIdError,
-  ModelSyncLimitExceededError,
-  NotFoundError,
   PROVIDER_KEY_CORRUPTED_ERROR_CODE,
   PROVIDER_NOT_CONFIGURED_ERROR_CODE,
   ProviderKeyCorruptedError,
   ProviderNotConfiguredError,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
   RATE_LIMIT_ERROR_CODE,
-  REASONING_NOT_SUPPORTED_ERROR_CODE,
-  STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE,
   TOOLS_NOT_SUPPORTED_ERROR_CODE,
   VISION_NOT_SUPPORTED_ERROR_CODE,
   RagExtractionEmptyError,
   RateLimitError,
-  ReasoningNotSupportedError,
   ToolsNotSupportedError,
   VisionNotSupportedError,
   isApiKeyError,
@@ -136,12 +130,6 @@ describe("lib/errors", () => {
     expect(toolsDefault.code).toBe(TOOLS_NOT_SUPPORTED_ERROR_CODE);
     const toolsCustom = new ToolsNotSupportedError("Tools disabled");
     expect(toolsCustom.message).toBe("Tools disabled");
-
-    const reasoningDefault = new ReasoningNotSupportedError();
-    expect(reasoningDefault.name).toBe("ReasoningNotSupportedError");
-    expect(reasoningDefault.code).toBe(REASONING_NOT_SUPPORTED_ERROR_CODE);
-    const reasoningCustom = new ReasoningNotSupportedError("Reasoning disabled");
-    expect(reasoningCustom.message).toBe("Reasoning disabled");
   });
 
   it("AttachmentVisionUnsupportedError with default and custom message", () => {
@@ -151,15 +139,6 @@ describe("lib/errors", () => {
 
     const customErr = new AttachmentVisionUnsupportedError("Switch model now");
     expect(customErr.message).toBe("Switch model now");
-  });
-
-  it("ModelSyncLimitExceededError with default and custom message", () => {
-    const defaultErr = new ModelSyncLimitExceededError();
-    expect(defaultErr.name).toBe("ModelSyncLimitExceededError");
-    expect(defaultErr.code).toBe(MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE);
-
-    const customErr = new ModelSyncLimitExceededError("Too many models");
-    expect(customErr.message).toBe("Too many models");
   });
 
   it("ModelDuplicateImportError with default and custom message", () => {
@@ -181,16 +160,6 @@ describe("lib/errors", () => {
 
     const customErr = new RagExtractionEmptyError("Custom empty");
     expect(customErr.message).toBe("Custom empty");
-  });
-
-  it("NotFoundError with default and custom message", () => {
-    const defaultErr = new NotFoundError();
-    expect(defaultErr.name).toBe("NotFoundError");
-    expect(defaultErr.code).toBe("NOT_FOUND");
-    expect(defaultErr.message).toBe("Not Found");
-
-    const customErr = new NotFoundError("Project not found");
-    expect(customErr.message).toBe("Project not found");
   });
 
   it("isApiKeyError recognizes missing API key messages", () => {

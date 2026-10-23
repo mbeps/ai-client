@@ -48,7 +48,6 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { deleteObject } from "@/lib/storage/delete-object";
-import { deleteObjects } from "@/lib/storage/delete-objects";
 import { downloadObject } from "@/lib/storage/download-object";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { S3_BUCKET } from "@/lib/storage/s3-instance";
@@ -120,39 +119,6 @@ describe("deleteObject", () => {
   });
 });
 
-describe("deleteObjects", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSend.mockResolvedValue({});
-  });
-
-  it("is a no-op when keys array is empty", async () => {
-    await deleteObjects([]);
-    expect(mockSend).not.toHaveBeenCalled();
-  });
-
-  it("calls s3Client.send once for multiple keys", async () => {
-    const keys = ["key1", "key2", "key3"];
-    await deleteObjects(keys);
-    expect(mockSend).toHaveBeenCalledOnce();
-  });
-
-  it("sends the correct bucket and objects structure", async () => {
-    const keys = ["a/b.png", "c/d.pdf"];
-    await deleteObjects(keys);
-    const cmd = mockSend.mock.calls[0][0];
-    expect(cmd.Bucket).toBe("test-bucket");
-    expect(cmd.Delete.Objects).toEqual([
-      { Key: "a/b.png" },
-      { Key: "c/d.pdf" },
-    ]);
-  });
-
-  it("throws when s3Client.send rejects", async () => {
-    mockSend.mockRejectedValueOnce(new Error("batch delete failed"));
-    await expect(deleteObjects(["k1"])).rejects.toThrow("batch delete failed");
-  });
-});
 
 describe("getPresignedUrl", () => {
   beforeEach(() => {

@@ -367,12 +367,3 @@ export async function listJobs(
     error: result.error,
   };
 }
-
-/**
- * Server Action alias for listJobs.
- */
-export async function listUserJobsAction(
-  options?: ListJobsOptions,
-): Promise<ListJobsResult> {
-  return listJobs(options);
-}

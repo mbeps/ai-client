@@ -192,25 +192,12 @@ export const VISION_NOT_SUPPORTED_ERROR_CODE = "VISION_NOT_SUPPORTED" as const;
 /** Error code for model not supporting tool calling. */
 export const TOOLS_NOT_SUPPORTED_ERROR_CODE = "TOOLS_NOT_SUPPORTED" as const;
 
-/** Error code for model not supporting advanced reasoning. */
-export const REASONING_NOT_SUPPORTED_ERROR_CODE =
-  "REASONING_NOT_SUPPORTED" as const;
-
-/** Error code for model not supporting structured output. */
-export const STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE =
-  "STRUCTURED_OUTPUT_NOT_SUPPORTED" as const;
-
-/** Error code for model sync operation exceeding limits. */
-export const MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE =
-  "MODEL_SYNC_LIMIT_EXCEEDED" as const;
-
 /**
  * Base error for when a model lacks a required capability (vision, tools, reasoning, etc.).
  * Subclassed for specific capability limitations with tailored error messages.
  *
  * @see VisionNotSupportedError for vision capability errors
  * @see ToolsNotSupportedError for tool calling errors
- * @see ReasoningNotSupportedError for reasoning token errors
  * @author Maruf Bepary
  */
 export class ModelCapabilityError extends Error {
@@ -256,24 +243,6 @@ export class ToolsNotSupportedError extends ModelCapabilityError {
   }
 }
 
-/**
- * Error thrown when attempting to use extended thinking/reasoning with an incompatible model.
- * Thrown when reasoning tokens are requested from models that do not support them.
- *
- * @see ModelCapabilityError for base capability error
- * @author Maruf Bepary
- */
-export class ReasoningNotSupportedError extends ModelCapabilityError {
-  override readonly code = REASONING_NOT_SUPPORTED_ERROR_CODE;
-
-  constructor(
-    message = "The selected model does not support advanced reasoning tokens.",
-  ) {
-    super(message);
-    this.name = "ReasoningNotSupportedError";
-  }
-}
-
 /** Error code for attachment submitted to non-vision model. */
 export const ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE =
   "ATTACHMENT_VISION_UNSUPPORTED" as const;
@@ -299,23 +268,6 @@ export class AttachmentVisionUnsupportedError extends Error {
   ) {
     super(message);
     this.name = "AttachmentVisionUnsupportedError";
-  }
-}
-
-/**
- * Error thrown when a model sync/import operation exceeds configured limits.
- * Prevents excessive API calls or data transfers during bulk model operations.
- *
- * @author Maruf Bepary
- */
-export class ModelSyncLimitExceededError extends Error {
-  readonly code = MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE;
-
-  constructor(
-    message = "The model sync operation has exceeded the maximum limit",
-  ) {
-    super(message);
-    this.name = "ModelSyncLimitExceededError";
   }
 }
 
@@ -358,21 +310,6 @@ export class RagExtractionEmptyError extends Error {
   ) {
     super(message);
     this.name = "RagExtractionEmptyError";
-  }
-}
-
-/**
- * Generic error thrown when a requested resource is not found in the database.
- * Used for 404-equivalent errors when querying entities like chats, projects, etc.
- *
- * @author Maruf Bepary
- */
-export class NotFoundError extends Error {
-  readonly code: string = "NOT_FOUND";
-
-  constructor(message?: string) {
-    super(message ?? "Not Found");
-    this.name = "NotFoundError";
   }
 }
 

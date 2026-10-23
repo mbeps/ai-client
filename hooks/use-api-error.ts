@@ -7,12 +7,9 @@ import {
   isApiKeyError,
   MODEL_DUPLICATE_IMPORT_ERROR_CODE,
   MODEL_MALFORMED_ID_ERROR_CODE,
-  MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE,
   PROVIDER_NOT_CONFIGURED_ERROR_CODE,
   RAG_EXTRACTION_EMPTY_ERROR_CODE,
   RATE_LIMIT_ERROR_CODE,
-  REASONING_NOT_SUPPORTED_ERROR_CODE,
-  STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE,
   TOOLS_NOT_SUPPORTED_ERROR_CODE,
   UNAUTHORIZED_ERROR_CODE,
   UNAUTHORIZED_ERROR_MESSAGE,
@@ -49,24 +46,6 @@ const STATIC_CODE_TOASTS: Record<string, StaticToastConfig | undefined> = {
     title: "Tools Not Supported",
     description:
       "The selected model cannot use tools. Please switch to a model that supports tool calling.",
-  },
-  [REASONING_NOT_SUPPORTED_ERROR_CODE]: {
-    type: "error",
-    title: "Reasoning Not Supported",
-    description:
-      "The selected model does not support advanced reasoning tokens. Please use a different model.",
-  },
-  [STRUCTURED_OUTPUT_NOT_SUPPORTED_ERROR_CODE]: {
-    type: "error",
-    title: "Structured Output Not Supported",
-    description:
-      "The selected model does not support schema-based structured output. Please use a different model.",
-  },
-  [MODEL_SYNC_LIMIT_EXCEEDED_ERROR_CODE]: {
-    type: "warning",
-    title: "Model Limit Reached",
-    description:
-      "Provider returned more than 1,000 models. Displaying the first 1,000 available models.",
   },
   [ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE]: {
     type: "error",

@@ -4,8 +4,8 @@ import { Loader2 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { cancelJobAction } from "@/actions/jobs/cancel-job";
-import { listUserJobsAction } from "@/actions/jobs/list-jobs";
+import { cancelJob } from "@/actions/jobs/cancel-job";
+import { listJobs } from "@/actions/jobs/list-jobs";
 import { CancelJobDialog } from "@/components/jobs/cancel-job-dialog";
 import { JobRunCard } from "@/components/jobs/job-run-card";
 import { JobsControlsBar } from "@/components/jobs/jobs-controls-bar";
@@ -110,7 +110,7 @@ export function JobsView() {
       setLoading(true);
     }
     try {
-      const res = await listUserJobsAction();
+      const res = await listJobs();
       setJobs(res.jobs || []);
       setOffline(Boolean(res.offline));
       if (res.error && !res.offline) {
@@ -132,7 +132,7 @@ export function JobsView() {
 
     startTransition(async () => {
       try {
-        const res = await cancelJobAction(cancelTarget.id, {
+        const res = await cancelJob(cancelTarget.id, {
           chatId:
             cancelTarget.type === "chat" ? cancelTarget.entityId : undefined,
           transformRunId:

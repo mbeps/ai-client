@@ -366,11 +366,6 @@ export type AppState = {
   updateMemory: (memory: Memory) => void;
 
   /**
-   * Optimistically removes a memory from the local store.
-   */
-  removeMemory: (id: string) => void;
-
-  /**
    * Optimistically removes multiple memories from the local store.
    */
   removeMemories: (ids: string[]) => void;

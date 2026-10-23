@@ -40,8 +40,6 @@ interface AttachmentsMenuProps {
   onToggleSkill?: (id: string) => void;
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
-  selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   selectedPromptIds?: Set<string>;
   onTogglePrompt?: (prompt: MentionPromptItem) => void;
   onClearPrompts?: () => void;
@@ -58,14 +56,8 @@ const EMPTY_MCP_PROMPTS: DiscoveredPrompt[] = [];
 const EMPTY_KNOWLEDGEBASES: Knowledgebase[] = [];
 const EMPTY_SET = new Set<string>();
 
-function countSelectedPrompts(
-  selectedPromptIds?: Set<string>,
-  selectedPrompt?: MentionPromptItem | null,
-): number {
-  if (selectedPromptIds !== undefined) {
-    return selectedPromptIds.size;
-  }
-  return selectedPrompt ? 1 : 0;
+function countSelectedPrompts(selectedPromptIds?: Set<string>): number {
+  return selectedPromptIds?.size ?? 0;
 }
 
 function formatCountBadge(count: number): string {
@@ -99,26 +91,19 @@ function SkillsMenuOption(props: {
 function PromptsMenuOption(props: {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
-  selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   selectedPromptIds?: Set<string>;
   onTogglePrompt?: (prompt: MentionPromptItem) => void;
   onClearPrompts?: () => void;
 }) {
-  const { onTogglePrompt, onSelectPrompt } = props;
-  if (!onTogglePrompt && !onSelectPrompt) return null;
+  const { onTogglePrompt } = props;
+  if (!onTogglePrompt) return null;
 
-  const promptCount = countSelectedPrompts(
-    props.selectedPromptIds,
-    props.selectedPrompt,
-  );
+  const promptCount = countSelectedPrompts(props.selectedPromptIds);
 
   return (
     <PromptPickerDialog
       prompts={props.prompts ?? EMPTY_PROMPTS}
       mcpPrompts={props.mcpPrompts ?? EMPTY_MCP_PROMPTS}
-      selectedPrompt={props.selectedPrompt ?? null}
-      onSelectPrompt={onSelectPrompt}
       selectedPromptIds={props.selectedPromptIds}
       onTogglePrompt={onTogglePrompt}
       onClearAll={props.onClearPrompts}
@@ -239,8 +224,6 @@ export const AttachmentsMenu = (props: AttachmentsMenuProps) => {
       <PromptsMenuOption
         prompts={props.prompts}
         mcpPrompts={props.mcpPrompts}
-        selectedPrompt={props.selectedPrompt}
-        onSelectPrompt={props.onSelectPrompt}
         selectedPromptIds={props.selectedPromptIds}
         onTogglePrompt={props.onTogglePrompt}
         onClearPrompts={props.onClearPrompts}

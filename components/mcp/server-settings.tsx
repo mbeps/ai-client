@@ -34,7 +34,6 @@ export interface ServerSettingsProps {
  * @param props.serverId - ID of the server to manage settings for; used in delete operation
  * @see {@link EditServerForm} for editing server configuration
  * @see {@link ServerSharingTab} for public sharing settings
- * @see {@link ServerOptions} for quick actions menu
  * @see {@link DeleteConfirmDialog} for deletion confirmation UX
  * @author Maruf Bepary
  */

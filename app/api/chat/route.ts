@@ -55,7 +55,6 @@ export async function POST(req: Request) {
     selectedKbIds,
     subagentsEnabled,
     subagentModelId,
-    subagentExcludedTools,
   } = parsed.data;
 
   // Ensure model is undefined if empty or whitespace-only
@@ -107,7 +106,6 @@ export async function POST(req: Request) {
         selectedKbIds,
         subagentsEnabled: subagentsEnabled ?? false,
         subagentModelId,
-        subagentExcludedTools,
       },
     });
 

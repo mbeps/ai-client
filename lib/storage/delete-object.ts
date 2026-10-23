@@ -10,7 +10,6 @@ const log = getLogger(["app", "storage", "s3"]);
  *
  * @param key - S3 object key to delete
  * @throws {Error} When deletion fails (network, credentials, bucket permissions)
- * @see {@link deleteObjects} for batch deletion
  */
 export async function deleteObject(key: string) {
   log.debug("Deleting S3 object (key: {key})", { key });

@@ -51,5 +51,4 @@ export type ParsedMessageMetadata = {
   durationMs: number | null;
   subagentsEnabled?: boolean;
   subagentModelId?: string;
-  subagentExcludedTools?: string[];
 };

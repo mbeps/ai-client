@@ -61,8 +61,8 @@ describe("PromptPicker", () => {
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={null}
-        onSelectPrompt={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={vi.fn()}
       />,
     );
 
@@ -86,8 +86,8 @@ describe("PromptPicker", () => {
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={null}
-        onSelectPrompt={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={vi.fn()}
       />,
     );
 
@@ -99,20 +99,20 @@ describe("PromptPicker", () => {
     expect(screen.queryByText("analyze-repo")).toBeNull();
   });
 
-  it("calls onSelectPrompt when a prompt is clicked", () => {
-    const handleSelect = vi.fn();
+  it("calls onTogglePrompt when a prompt is clicked", () => {
+    const handleToggle = vi.fn();
     render(
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={null}
-        onSelectPrompt={handleSelect}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={handleToggle}
       />,
     );
 
     fireEvent.click(screen.getByText("Internal Prompts"));
     fireEvent.click(screen.getByText("Summarise Text"));
-    expect(handleSelect).toHaveBeenCalledWith(
+    expect(handleToggle).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "p1",
         title: "Summarise Text",
@@ -122,35 +122,33 @@ describe("PromptPicker", () => {
     );
   });
 
-  it("calls onSelectPrompt(null) when selected prompt is clicked to deselect", () => {
-    const handleSelect = vi.fn();
-    const selected: MentionPromptItem = {
-      ...mockPrompts[0],
-      isMcp: false,
-      isSkill: false,
-    };
-
+  it("calls onTogglePrompt when selected prompt is clicked to deselect", () => {
+    const handleToggle = vi.fn();
     render(
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={selected}
-        onSelectPrompt={handleSelect}
+        selectedPromptIds={new Set(["p1"])}
+        onTogglePrompt={handleToggle}
       />,
     );
 
     fireEvent.click(screen.getByText("Summarise Text"));
-    expect(handleSelect).toHaveBeenCalledWith(null);
+    expect(handleToggle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "p1",
+      }),
+    );
   });
 
   it("selects a prompt from section when section checkbox is clicked", () => {
-    const handleSelect = vi.fn();
+    const handleToggle = vi.fn();
     render(
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={null}
-        onSelectPrompt={handleSelect}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={handleToggle}
       />,
     );
 
@@ -158,7 +156,7 @@ describe("PromptPicker", () => {
       "Select all from Internal Prompts",
     );
     fireEvent.click(sectionCheckbox);
-    expect(handleSelect).toHaveBeenCalledWith(
+    expect(handleToggle).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "p1",
         title: "Summarise Text",
@@ -167,19 +165,13 @@ describe("PromptPicker", () => {
   });
 
   it("deselects prompt when section checkbox is clicked and section prompt was selected", () => {
-    const handleSelect = vi.fn();
-    const selected: MentionPromptItem = {
-      ...mockPrompts[0],
-      isMcp: false,
-      isSkill: false,
-    };
-
+    const handleToggle = vi.fn();
     render(
       <PromptPicker
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={selected}
-        onSelectPrompt={handleSelect}
+        selectedPromptIds={new Set(["p1", "p2"])}
+        onTogglePrompt={handleToggle}
       />,
     );
 
@@ -187,7 +179,11 @@ describe("PromptPicker", () => {
       "Select all from Internal Prompts",
     );
     fireEvent.click(sectionCheckbox);
-    expect(handleSelect).toHaveBeenCalledWith(null);
+    expect(handleToggle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "p1",
+      }),
+    );
   });
 });
 
@@ -197,8 +193,8 @@ describe("PromptPickerDialog", () => {
       <PromptPickerDialog
         prompts={[]}
         mcpPrompts={[]}
-        selectedPrompt={null}
-        onSelectPrompt={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={vi.fn()}
         trigger={<button>Open Dialog</button>}
       />,
     );
@@ -209,18 +205,12 @@ describe("PromptPickerDialog", () => {
   });
 
   it("renders prompt list and selection count in dialog", () => {
-    const selected: MentionPromptItem = {
-      ...mockPrompts[0],
-      isMcp: false,
-      isSkill: false,
-    };
-
     render(
       <PromptPickerDialog
         prompts={mockPrompts}
         mcpPrompts={mockMcpPrompts}
-        selectedPrompt={selected}
-        onSelectPrompt={vi.fn()}
+        selectedPromptIds={new Set(["p1"])}
+        onTogglePrompt={vi.fn()}
         trigger={<button>Open Dialog</button>}
       />,
     );

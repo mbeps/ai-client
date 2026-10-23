@@ -47,7 +47,6 @@ interface BuildMetadataOptions {
   selectedSkillIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
-  subagentExcludedTools?: string[];
 }
 
 interface CachedStreamStateRefs {
@@ -71,13 +70,10 @@ interface StreamRequestOptions {
   selectedServerIds?: string[];
   selectedTools?: string[];
   selectedAssistantId?: string;
-  selectedPromptIds?: string[];
-  selectedPromptId?: string;
   selectedSkillIds?: string[];
   selectedKbIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
-  subagentExcludedTools?: string[];
 }
 
 interface StreamDeltaRefs {
@@ -117,7 +113,6 @@ interface StreamResponseExecutionParams {
   selectedSkillIds: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
-  subagentExcludedTools?: string[];
   addMessage: ReturnType<typeof useStreamStore>["addMessage"];
   updateMessageAttachments: ReturnType<
     typeof useStreamStore
@@ -151,7 +146,6 @@ function buildMetadata(options: BuildMetadataOptions): Record<string, unknown> {
   const listEntries: [string, string[] | undefined][] = [
     ["selectedKbIds", options.selectedKbIds],
     ["selectedSkillIds", options.selectedSkillIds],
-    ["subagentExcludedTools", options.subagentExcludedTools],
   ];
   for (const [key, list] of listEntries) {
     if (list && list.length > 0) metadataObj[key] = list;
@@ -1236,13 +1230,10 @@ async function executeStreamResponse(
       selectedServerIds: params.selectedServerIds,
       selectedTools: params.selectedTools,
       selectedAssistantId: params.selectedAssistantId,
-      selectedPromptIds: params.selectedPromptIds,
-      selectedPromptId: params.selectedPromptIds[0],
       selectedSkillIds: params.selectedSkillIds,
       selectedKbIds: params.selectedKbIds,
       subagentsEnabled: params.subagentsEnabled,
       subagentModelId: params.subagentModelId,
-      subagentExcludedTools: params.subagentExcludedTools,
     },
     params.handleApiError,
   );
@@ -1431,7 +1422,6 @@ export function useStreamResponse(
       selectedSkillIds: string[] = [],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
-      subagentExcludedTools?: string[],
     ): Promise<string> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
@@ -1454,7 +1444,6 @@ export function useStreamResponse(
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
-        subagentExcludedTools,
         addMessage,
         updateMessageAttachments,
         handleApiError,

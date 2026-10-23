@@ -26,18 +26,15 @@ export interface SubagentExecutionMetadata {
  * Filter tools to guarantee the 2-layer architectural boundary:
  * 1. `delegate_task` is strictly omitted to prevent subagents from calling subagents.
  * 2. `manage_artifact` is strictly omitted to protect the user canvas from partial worker drafts.
- * 3. Any user-specified excluded tools are also stripped.
  */
 export function getSubagentTools(
   availableTools: Record<string, any>,
-  userExcludedTools: string[] = [],
 ): Record<string, any> {
   const forbidden = new Set([
     "delegate_task",
     "subagent_dispatch",
     "manage_artifact",
     INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
-    ...userExcludedTools,
   ]);
 
   const sanitized: Record<string, any> = {};
@@ -78,7 +75,6 @@ export interface CreateSubagentDispatchToolParams {
   defaultModel: any;
   customWorkerModel?: any;
   availableTools: Record<string, any>;
-  excludedTools?: string[];
   maxSteps?: number;
 }
 
@@ -156,7 +152,6 @@ export function createSubagentDispatchTool(
     defaultModel,
     customWorkerModel,
     availableTools,
-    excludedTools = [],
     maxSteps = 10,
   } = params;
 
@@ -186,7 +181,7 @@ export function createSubagentDispatchTool(
     }),
     execute: async function* ({ role, taskBrief, inputData }, { abortSignal }) {
       const selectedModel = customWorkerModel ?? defaultModel;
-      const workerTools = getSubagentTools(availableTools, excludedTools);
+      const workerTools = getSubagentTools(availableTools);
 
       const runId = crypto.randomUUID();
       const parentInvocationId = crypto.randomUUID();

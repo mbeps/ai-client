@@ -16,7 +16,6 @@ export interface UseChatSubmitOptions {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
   isLoading?: boolean;
   isSendDisabled: boolean;
@@ -24,7 +23,6 @@ export interface UseChatSubmitOptions {
   selectedTools: Set<string>;
   selectedServerIds: Set<string>;
   promptList: MentionPromptItem[];
-  selectedPrompt?: MentionPromptItem | null;
   input: string;
   setInput: (val: string) => void;
   attachments: Attachment[];
@@ -38,7 +36,6 @@ export interface UseChatSubmitOptions {
   selectedSkills: Set<string>;
   subagentsEnabled: boolean;
   subagentModelId?: string;
-  subagentExcludedTools: string[];
   handleCommandKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
@@ -54,7 +51,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedTools,
     selectedServerIds,
     promptList,
-    selectedPrompt,
     input,
     setInput,
     attachments,
@@ -68,7 +64,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
-    subagentExcludedTools,
     handleCommandKeyDown,
   } = options;
 
@@ -79,10 +74,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     const effectiveServerIds = supportsTools
       ? Array.from(selectedServerIds)
       : [];
-    const promptPayload = resolvePromptPayload(
-      promptList.map((p) => p.id),
-      selectedPrompt?.id,
-    );
+    const promptPayload = resolvePromptPayload(promptList.map((p) => p.id));
 
     onSend(
       input,
@@ -96,7 +88,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
       Array.from(selectedSkills),
       subagentsEnabled,
       subagentModelId,
-      subagentExcludedTools,
     );
     setInput("");
     clearAttachments();
@@ -110,7 +101,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedTools,
     selectedServerIds,
     promptList,
-    selectedPrompt,
     onSend,
     input,
     attachments,
@@ -120,7 +110,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
-    subagentExcludedTools,
     setInput,
     clearAttachments,
     handleClearPrompts,

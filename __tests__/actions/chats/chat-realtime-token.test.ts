@@ -21,13 +21,9 @@ vi.mock("inngest/react", () => ({
   getClientSubscriptionToken: vi.fn().mockResolvedValue("mock-chat-token"),
 }));
 
-import {
-  getChatRealtimeToken,
-  triggerChatResponseAction,
-} from "@/actions/chats/chat-realtime-token";
-import { inngest } from "@/lib/inngest/client";
+import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
 
-describe("Chat Realtime Token & Trigger Actions", () => {
+describe("Chat Realtime Token Action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -46,46 +42,6 @@ describe("Chat Realtime Token & Trigger Actions", () => {
 
       const token = await getChatRealtimeToken("chat-123");
       expect(token).toBe("mock-chat-token");
-    });
-  });
-
-  describe("triggerChatResponseAction", () => {
-    it("throws an error when chat is not found or access is denied", async () => {
-      chainable.where.mockResolvedValueOnce([]);
-
-      await expect(
-        triggerChatResponseAction({
-          chatId: "chat-123",
-          userMessageId: "msg-123",
-        }),
-      ).rejects.toThrow("Chat not found or access denied");
-    });
-
-    it("dispatches chat/response.generate event to Inngest when valid", async () => {
-      chainable.where.mockResolvedValueOnce([{ id: "chat-123" }]);
-
-      const result = await triggerChatResponseAction({
-        chatId: "chat-123",
-        userMessageId: "msg-123",
-        model: "openai/gpt-4o",
-        selectedServerIds: ["srv-1"],
-      });
-
-      expect(result).toEqual({ success: true });
-      expect(inngest.send).toHaveBeenCalledWith({
-        name: "chat/response.generate",
-        data: {
-          chatId: "chat-123",
-          userId: "user-1",
-          userMessageId: "msg-123",
-          model: "openai/gpt-4o",
-          selectedServerIds: ["srv-1"],
-          selectedTools: undefined,
-          selectedAssistantId: undefined,
-          selectedSkillIds: undefined,
-          selectedKbIds: undefined,
-        },
-      });
     });
   });
 });
