@@ -49,16 +49,14 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock Server Actions
-const mockListUserJobsAction = vi.hoisted(() => vi.fn());
+const mockListJobs = vi.hoisted(() => vi.fn());
 vi.mock("@/actions/jobs/list-jobs", () => ({
-  listUserJobsAction: mockListUserJobsAction,
-  listJobs: mockListUserJobsAction,
+  listJobs: mockListJobs,
 }));
 
-const mockCancelJobAction = vi.hoisted(() => vi.fn());
+const mockCancelJob = vi.hoisted(() => vi.fn());
 vi.mock("@/actions/jobs/cancel-job", () => ({
-  cancelJobAction: mockCancelJobAction,
-  cancelJob: mockCancelJobAction,
+  cancelJob: mockCancelJob,
 }));
 
 const sampleJobs: JobItem[] = [
@@ -153,11 +151,11 @@ describe("Running Jobs Page & JobsView Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQueryParams = { tab: "running" };
-    mockListUserJobsAction.mockResolvedValue({
+    mockListJobs.mockResolvedValue({
       jobs: sampleJobs,
       offline: false,
     });
-    mockCancelJobAction.mockResolvedValue({
+    mockCancelJob.mockResolvedValue({
       success: true,
     });
   });
@@ -180,7 +178,7 @@ describe("Running Jobs Page & JobsView Component", () => {
       screen.getByRole("heading", { name: "Running Jobs" }),
     ).toBeInTheDocument();
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(1);
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -188,7 +186,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     render(<JobsView />);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(1);
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
     });
 
     // RUNNING tab shows active running job
@@ -206,7 +204,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     render(<JobsView />);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalled();
+      expect(mockListJobs).toHaveBeenCalled();
     });
 
     // Running = 1
@@ -317,18 +315,18 @@ describe("Running Jobs Page & JobsView Component", () => {
     expect(screen.getByText("Spanish Localization")).toBeInTheDocument();
   });
 
-  it("manual refresh button triggers listUserJobsAction", async () => {
+  it("manual refresh button triggers listJobs", async () => {
     render(<JobsView />);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(1);
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
     });
 
     const refreshButton = screen.getByRole("button", { name: /refresh/i });
     fireEvent.click(refreshButton);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(2);
+      expect(mockListJobs).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -336,7 +334,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     render(<JobsView />);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(1);
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
     });
 
     const toggle = screen.getByRole("switch", { name: /auto-refresh/i });
@@ -359,12 +357,12 @@ describe("Running Jobs Page & JobsView Component", () => {
     fireEvent(document, new Event("visibilitychange"));
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalledTimes(2);
+      expect(mockListJobs).toHaveBeenCalledTimes(2);
     });
   });
 
   it("offline banner renders when offline: true and clicking Retry triggers reload", async () => {
-    mockListUserJobsAction.mockResolvedValueOnce({
+    mockListJobs.mockResolvedValueOnce({
       jobs: [],
       offline: true,
       error: "Inngest server is not reachable",
@@ -381,7 +379,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     ).toBeInTheDocument();
 
     // Mock successful next call
-    mockListUserJobsAction.mockResolvedValueOnce({
+    mockListJobs.mockResolvedValueOnce({
       jobs: sampleJobs,
       offline: false,
     });
@@ -395,7 +393,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     });
   });
 
-  it("cancelling a job opens confirmation dialog, calls cancelJobAction, shows toast, and updates list", async () => {
+  it("cancelling a job opens confirmation dialog, calls cancelJob, shows toast, and updates list", async () => {
     render(<JobsView />);
 
     await waitFor(() => {
@@ -420,7 +418,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(mockCancelJobAction).toHaveBeenCalledWith("run-1", {
+      expect(mockCancelJob).toHaveBeenCalledWith("run-1", {
         chatId: "chat-1",
         transformRunId: undefined,
       });
@@ -452,7 +450,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(mockCancelJobAction).toHaveBeenCalledWith("run-2", {
+      expect(mockCancelJob).toHaveBeenCalledWith("run-2", {
         chatId: undefined,
         transformRunId: "run-2",
       });
@@ -464,7 +462,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     render(<JobsView />);
 
     await waitFor(() => {
-      expect(mockListUserJobsAction).toHaveBeenCalled();
+      expect(mockListJobs).toHaveBeenCalled();
     });
 
     // Switch to All via Show all button where deleted entity is present
@@ -488,7 +486,7 @@ describe("Running Jobs Page & JobsView Component", () => {
 
   it("handles empty states for 'Running' and filtered search results", async () => {
     const user = userEvent.setup();
-    mockListUserJobsAction.mockResolvedValueOnce({
+    mockListJobs.mockResolvedValueOnce({
       jobs: [],
       offline: false,
     });

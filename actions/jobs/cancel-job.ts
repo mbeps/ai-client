@@ -80,13 +80,3 @@ export async function cancelJob(
 
   return { success: true };
 }
-
-/**
- * Server Action alias for cancelJob.
- */
-export async function cancelJobAction(
-  runId: string,
-  options?: CancelJobOptions,
-): Promise<{ success: boolean; error?: string }> {
-  return cancelJob(runId, options);
-}

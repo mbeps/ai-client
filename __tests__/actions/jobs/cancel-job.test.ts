@@ -39,7 +39,7 @@ vi.mock("@/drizzle/db", () => ({
   },
 }));
 
-import { cancelJob, cancelJobAction } from "@/actions/jobs/cancel-job";
+import { cancelJob } from "@/actions/jobs/cancel-job";
 import { transformRun } from "@/drizzle/schema";
 
 describe("cancelJob Server Action", () => {
@@ -146,54 +146,6 @@ describe("cancelJob Server Action", () => {
       });
       expect(mockUpdate).toHaveBeenCalledWith(transformRun);
       expect(result).toEqual({ success: true });
-    });
-  });
-});
-
-describe("cancelJobAction alias", () => {
-  const mockUser = { id: "user-123", email: "test@example.com" };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockRequireSession.mockResolvedValue({
-      user: mockUser,
-      session: { id: "session-abc" },
-    });
-    mockCancelInngestRun.mockResolvedValue({ success: true });
-  });
-
-  it("delegates to cancelJob and returns its result", async () => {
-    const result = await cancelJobAction("run-abc");
-
-    expect(mockCancelInngestRun).toHaveBeenCalledWith("run-abc", mockUser.id);
-    expect(result).toEqual({ success: true });
-  });
-
-  it("forwards options to the transform cancel path", async () => {
-    const result = await cancelJobAction("run-abc", {
-      transformRunId: "run-tf-777",
-    });
-
-    expect(mockUpdate).toHaveBeenCalledWith(transformRun);
-    expect(mockUpdateSet).toHaveBeenCalledWith({
-      status: "failed",
-      errorMessage: "Cancelled by user",
-    });
-    expect(mockInngest.send).not.toHaveBeenCalled();
-    expect(result).toEqual({ success: true });
-  });
-
-  it("propagates the failure result from the delegated call", async () => {
-    mockCancelInngestRun.mockResolvedValueOnce({
-      success: false,
-      error: "Run not found or already completed",
-    });
-
-    const result = await cancelJobAction("run-abc");
-
-    expect(result).toEqual({
-      success: false,
-      error: "Run not found or already completed",
     });
   });
 });
