@@ -208,6 +208,33 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
   });
 
+  it("does not send selectedPromptId or selectedPromptIds in the request body to /api/chat", async () => {
+    mockStoreState.prompts = [
+      { id: "prompt-1", content: "Prompt instructions" },
+    ] as any;
+
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-1",
+        "hello",
+        null,
+        [],
+        "gpt-x",
+        [],
+        [],
+        "prompt-1",
+      );
+    });
+
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("/api/chat");
+    const body = JSON.parse(init.body);
+    expect(body.selectedPromptId).toBeUndefined();
+    expect(body.selectedPromptIds).toBeUndefined();
+  });
+
   it("optimistically inserts the user message into the store", async () => {
     const { result } = renderHook(() => useStreamResponse("chat-1"));
 

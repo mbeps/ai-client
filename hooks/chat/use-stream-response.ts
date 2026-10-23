@@ -70,8 +70,6 @@ interface StreamRequestOptions {
   selectedServerIds?: string[];
   selectedTools?: string[];
   selectedAssistantId?: string;
-  selectedPromptIds?: string[];
-  selectedPromptId?: string;
   selectedSkillIds?: string[];
   selectedKbIds?: string[];
   subagentsEnabled?: boolean;
@@ -1232,8 +1230,6 @@ async function executeStreamResponse(
       selectedServerIds: params.selectedServerIds,
       selectedTools: params.selectedTools,
       selectedAssistantId: params.selectedAssistantId,
-      selectedPromptIds: params.selectedPromptIds,
-      selectedPromptId: params.selectedPromptIds[0],
       selectedSkillIds: params.selectedSkillIds,
       selectedKbIds: params.selectedKbIds,
       subagentsEnabled: params.subagentsEnabled,

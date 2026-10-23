@@ -132,8 +132,6 @@ export const chatRequestSchema = z
     selectedServerIds: z.array(z.string()).max(20).optional(),
     selectedTools: z.array(z.string()).max(100).optional(),
     selectedAssistantId: idField.optional(),
-    selectedPromptId: idField.optional(),
-    selectedPromptIds: z.array(z.string()).max(10).optional(),
     selectedSkillIds: z.array(z.string()).max(20).optional(),
     selectedKbIds: z.array(idField).max(5).optional(),
     subagentsEnabled: z.boolean().optional(),

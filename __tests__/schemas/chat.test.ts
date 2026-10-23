@@ -260,20 +260,26 @@ describe("chatRequestSchema", () => {
       selectedServerIds: ["server-1"],
       selectedTools: ["search"],
       selectedAssistantId: VALID_UUID,
-      selectedPromptId: VALID_UUID,
-      selectedPromptIds: [VALID_UUID],
+      selectedSkillIds: ["skill-1"],
       selectedKbIds: [VALID_UUID],
     });
     expect(result.success).toBe(true);
   });
 
-  it("rejects more than 10 selectedPromptIds", () => {
-    const result = chatRequestSchema.safeParse({
+  it("rejects selectedPromptId and selectedPromptIds (now expanded client-side)", () => {
+    const resultWithPromptId = chatRequestSchema.safeParse({
       chatId: VALID_UUID,
       userMessageId: VALID_UUID,
-      selectedPromptIds: Array.from({ length: 11 }, () => "prompt-id"),
+      selectedPromptId: VALID_UUID,
     });
-    expect(result.success).toBe(false);
+    expect(resultWithPromptId.success).toBe(false);
+
+    const resultWithPromptIds = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      selectedPromptIds: [VALID_UUID],
+    });
+    expect(resultWithPromptIds.success).toBe(false);
   });
 
   it("rejects non-UUID chatId", () => {
