@@ -49,7 +49,6 @@ vi.mock("@/lib/auth/require-session", () => ({
 
 import { createMcpServer } from "@/actions/mcp-servers/create-mcp-server";
 import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
-import { renameMcpServer } from "@/actions/mcp-servers/rename-mcp-server";
 import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import { updateMcpServer } from "@/actions/mcp-servers/update-mcp-server";
 
@@ -132,16 +131,6 @@ describe("mcp server personal actions", () => {
         .mockResolvedValueOnce([]);
 
       await expect(deleteMcpServer("missing-id")).rejects.toThrow("Not Found");
-    });
-  });
-
-  describe("renameMcpServer", () => {
-    it("renames MCP server", async () => {
-      const updated = { id: "srv-1", name: "Renamed Server" };
-      chainable.returning.mockResolvedValueOnce([updated]);
-
-      const result = await renameMcpServer("srv-1", "Renamed Server");
-      expect(result).toEqual(updated);
     });
   });
 

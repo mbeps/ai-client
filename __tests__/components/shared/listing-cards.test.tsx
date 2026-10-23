@@ -20,10 +20,6 @@ vi.mock("@/components/prompt/prompt-options", () => ({
   PromptOptions: () => <button type="button" aria-label="Prompt options">Prompt Options</button>,
 }));
 
-vi.mock("@/components/mcp/server-options", () => ({
-  ServerOptions: () => <button type="button" aria-label="Server options">Server Options</button>,
-}));
-
 vi.mock("@/components/knowledgebase/knowledgebase-options", () => ({
   KnowledgebaseOptions: () => <button type="button" aria-label="KB options">KB Options</button>,
 }));
