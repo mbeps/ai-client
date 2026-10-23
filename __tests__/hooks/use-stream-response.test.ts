@@ -66,7 +66,6 @@ const mockGetChatRealtimeToken = vi.hoisted(() =>
 );
 vi.mock("@/actions/chats/chat-realtime-token", () => ({
   getChatRealtimeToken: mockGetChatRealtimeToken,
-  triggerChatResponseAction: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 const mockProcessAttachments = vi.hoisted(() => vi.fn());
