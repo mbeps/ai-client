@@ -25,7 +25,6 @@ export interface ChatInteractionProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
@@ -40,7 +39,6 @@ export interface ChatInteractionProps {
   activeChatAssistantId?: string | null;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
-  initialSubagentExcludedTools?: string[];
 }
 
 function calculateSkillTokens(
@@ -170,7 +168,6 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selectedSkills: selections.selectedSkills,
     subagentsEnabled: selections.subagentsEnabled,
     subagentModelId: selections.subagentModelId,
-    subagentExcludedTools: selections.subagentExcludedTools,
     handleCommandKeyDown: mentions.handleKeyDown,
   });
 

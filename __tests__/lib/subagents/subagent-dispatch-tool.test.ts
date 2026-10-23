@@ -20,7 +20,7 @@ vi.mock("ai", async (importOriginal) => {
 
 describe("subagent-dispatch-tool", () => {
   describe("getSubagentTools", () => {
-    it("strictly strips delegate_task, manage_artifact, and user excluded tools", () => {
+    it("strictly strips delegate_task and manage_artifact", () => {
       const mockTools = {
         delegate_task: { description: "delegate" },
         subagent_dispatch: { description: "dispatch" },
@@ -29,10 +29,9 @@ describe("subagent-dispatch-tool", () => {
         scratchpad_write: { description: "write" },
         scratchpad_read: { description: "read" },
         search_knowledge_base: { description: "kb" },
-        custom_scraper: { description: "scraper" },
       };
 
-      const result = getSubagentTools(mockTools, ["custom_scraper"]);
+      const result = getSubagentTools(mockTools);
 
       expect(result).toHaveProperty("scratchpad_write");
       expect(result).toHaveProperty("scratchpad_read");
@@ -43,7 +42,6 @@ describe("subagent-dispatch-tool", () => {
       expect(result).not.toHaveProperty("subagent_dispatch");
       expect(result).not.toHaveProperty("manage_artifact");
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
-      expect(result).not.toHaveProperty("custom_scraper");
     });
   });
 

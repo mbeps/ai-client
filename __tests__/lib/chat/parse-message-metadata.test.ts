@@ -138,13 +138,11 @@ describe("parseMessageMetadata", () => {
     const raw = JSON.stringify({
       subagentsEnabled: true,
       subagentModelId: "gpt-4o",
-      subagentExcludedTools: ["calculator"],
     });
 
     const result = parseMessageMetadata(raw);
     expect(result.subagentsEnabled).toBe(true);
     expect(result.subagentModelId).toBe("gpt-4o");
-    expect(result.subagentExcludedTools).toEqual(["calculator"]);
   });
 
   it("returns toolData with an empty toolResults array when toolResults is not an array", () => {

@@ -40,7 +40,6 @@ export interface ChatInputProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -108,9 +107,6 @@ export interface ChatInputProps {
 
   /** Initial worker subagent model ID. */
   initialSubagentModelId?: string;
-
-  /** Initial worker subagent excluded tools. */
-  initialSubagentExcludedTools?: string[];
 }
 
 const EMPTY_MESSAGES: Message[] = [];

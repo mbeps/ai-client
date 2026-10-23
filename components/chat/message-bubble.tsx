@@ -199,7 +199,6 @@ function resolveMessageEditParams({
     fallbackList(metadata.selectedSkillIds),
     metadata.subagentsEnabled,
     metadata.subagentModelId,
-    metadata.subagentExcludedTools,
   ] as const;
 }
 
@@ -589,8 +588,6 @@ interface MessageBubbleProps {
   message: Message;
   /** Whether this message is the last one in the current thread. */
   isLatest: boolean;
-  /** Whether this message is the first one in the thread. */
-  isFirst?: boolean;
   /** Assistant ID bound to the chat. */
   assistantId?: string | null;
   /** Callback to delete this message from the conversation tree. */
@@ -609,7 +606,6 @@ interface MessageBubbleProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;

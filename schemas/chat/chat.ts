@@ -138,7 +138,6 @@ export const chatRequestSchema = z
     selectedKbIds: z.array(idField).max(5).optional(),
     subagentsEnabled: z.boolean().optional(),
     subagentModelId: z.string().max(100).optional(),
-    subagentExcludedTools: z.array(z.string()).max(50).optional(),
   })
   .strict();
 

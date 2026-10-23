@@ -92,7 +92,6 @@ describe("MessageBubble message editing", () => {
   const defaultProps = {
     message: mockUserMessage,
     isLatest: true,
-    isFirst: true,
     assistantId: null,
     onDelete: vi.fn(),
     onEdit: vi.fn(),
@@ -167,7 +166,6 @@ describe("MessageBubble message editing", () => {
       undefined,
       ["kb-1"],
       [],
-      undefined,
       undefined,
       undefined,
     );

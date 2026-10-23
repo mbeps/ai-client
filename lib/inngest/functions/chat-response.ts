@@ -59,7 +59,6 @@ interface BuildOrchestratorToolSetParams {
   fileAttachments: Array<{ name: string; key: string; type?: string }>;
   isMemoryEnabled: boolean;
   subagentsEnabled?: boolean;
-  subagentExcludedTools?: string[];
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
@@ -326,7 +325,6 @@ function buildScratchpadTools(
 function buildSubagentDispatchTools(params: {
   isSubagentDelegationEnabled: boolean;
   orchestratorActiveTools: Record<string, any>;
-  subagentExcludedTools?: string[];
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
@@ -342,7 +340,6 @@ function buildSubagentDispatchTools(params: {
       defaultModel: params.resolved.sdkProvider.chat(params.resolvedModelId),
       customWorkerModel,
       availableTools: params.orchestratorActiveTools,
-      excludedTools: params.subagentExcludedTools,
       maxSteps: env.CHAT_MAX_STEPS,
     }),
   };
@@ -365,7 +362,6 @@ function buildOrchestratorToolSet(
     fileAttachments,
     isMemoryEnabled,
     subagentsEnabled,
-    subagentExcludedTools,
     resolved,
     resolvedModelId,
     workerResolved,
@@ -443,7 +439,6 @@ function buildOrchestratorToolSet(
   const subagentDispatchTools = buildSubagentDispatchTools({
     isSubagentDelegationEnabled,
     orchestratorActiveTools,
-    subagentExcludedTools,
     resolved,
     resolvedModelId,
     workerResolved,
@@ -750,7 +745,6 @@ export const generateChatResponse = inngest.createFunction(
       selectedKbIds,
       subagentsEnabled,
       subagentModelId,
-      subagentExcludedTools,
     } = event.data;
 
     const { controller: abortController, release: releaseAbortController } =
@@ -828,7 +822,6 @@ export const generateChatResponse = inngest.createFunction(
         fileAttachments,
         isMemoryEnabled,
         subagentsEnabled,
-        subagentExcludedTools,
         resolved,
         resolvedModelId,
         workerResolved,

@@ -152,8 +152,6 @@ export function parseMessageMetadata(
         typeof parsed.subagentModelId === "string"
           ? parsed.subagentModelId
           : undefined,
-      subagentExcludedTools:
-        parseStringArray(parsed.subagentExcludedTools) ?? undefined,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

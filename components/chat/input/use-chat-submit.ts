@@ -16,7 +16,6 @@ export interface UseChatSubmitOptions {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
-    subagentExcludedTools?: string[],
   ) => void;
   isLoading?: boolean;
   isSendDisabled: boolean;
@@ -38,7 +37,6 @@ export interface UseChatSubmitOptions {
   selectedSkills: Set<string>;
   subagentsEnabled: boolean;
   subagentModelId?: string;
-  subagentExcludedTools: string[];
   handleCommandKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
@@ -68,7 +66,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
-    subagentExcludedTools,
     handleCommandKeyDown,
   } = options;
 
@@ -96,7 +93,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
       Array.from(selectedSkills),
       subagentsEnabled,
       subagentModelId,
-      subagentExcludedTools,
     );
     setInput("");
     clearAttachments();
@@ -120,7 +116,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
-    subagentExcludedTools,
     setInput,
     clearAttachments,
     handleClearPrompts,
