@@ -99,7 +99,7 @@ export function ProfileSidebar({
                 <span className="truncate font-semibold">
                   {session?.user?.name}
                 </span>
-                <span className="truncate text-muted-foreground text-xs">
+                <span className="text-muted-foreground truncate text-xs">
                   {session?.user?.email}
                 </span>
               </div>

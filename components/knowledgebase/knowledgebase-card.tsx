@@ -31,15 +31,15 @@ export function KnowledgebaseCard({
       href={ROUTES.KNOWLEDGEBASES.detail(kb.id)}
       className="group block h-full focus-visible:outline-none"
     >
-      <Card className="flex h-full min-h-[100px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50">
+      <Card className="hover:bg-muted/50 flex h-full min-h-[100px] cursor-pointer flex-col justify-between p-4 transition-colors">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Database className="h-5 w-5 text-primary" />
+            <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <Database className="text-primary h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
-                <h3 className="truncate font-semibold leading-none">
+                <h3 className="truncate leading-none font-semibold">
                   {kb.name}
                 </h3>
                 {kb.indexStatus === "stale" && (
@@ -62,7 +62,7 @@ export function KnowledgebaseCard({
                 )}
               </div>
               {kb.description && (
-                <p className="line-clamp-2 text-muted-foreground text-sm">
+                <p className="text-muted-foreground line-clamp-2 text-sm">
                   {kb.description}
                 </p>
               )}

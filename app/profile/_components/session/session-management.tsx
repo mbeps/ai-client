@@ -46,7 +46,7 @@ export function SessionManagement({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-lg">Other Active Sessions</h3>
+          <h3 className="text-lg font-medium">Other Active Sessions</h3>
           {otherSessions.length > 0 && (
             <BetterAuthActionButton
               variant="destructive"
@@ -61,7 +61,7 @@ export function SessionManagement({
 
         {otherSessions.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
+            <CardContent className="text-muted-foreground py-8 text-center">
               No other active sessions
             </CardContent>
           </Card>

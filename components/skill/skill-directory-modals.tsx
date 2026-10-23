@@ -148,14 +148,14 @@ function MoveOrDeleteFolderModals(props: MoveOrDeleteFolderModalsProps) {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <label className="font-medium text-sm">Quick Destination</label>
+              <label className="text-sm font-medium">Quick Destination</label>
               <div className="flex flex-wrap gap-1.5">
                 <Button
                   type="button"
                   variant={selectedMoveFolder === "" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedMoveFolder("")}
-                  className="h-8 font-medium text-xs"
+                  className="h-8 text-xs font-medium"
                 >
                   Root (/)
                 </Button>
@@ -168,7 +168,7 @@ function MoveOrDeleteFolderModals(props: MoveOrDeleteFolderModalsProps) {
                     }
                     size="sm"
                     onClick={() => setSelectedMoveFolder(folder)}
-                    className="h-8 font-medium text-xs"
+                    className="h-8 text-xs font-medium"
                   >
                     {folder}/
                   </Button>
@@ -177,7 +177,7 @@ function MoveOrDeleteFolderModals(props: MoveOrDeleteFolderModalsProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-medium text-sm">
+              <label className="text-sm font-medium">
                 Or Destination Folder Path
               </label>
               <Input

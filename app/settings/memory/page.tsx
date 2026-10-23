@@ -325,7 +325,7 @@ export default function MemoryPage() {
   return (
     <>
       <ResourceListPage
-        icon={<Brain className="h-8 w-8 text-primary" />}
+        icon={<Brain className="text-primary h-8 w-8" />}
         title="Memory"
         description="Facts, preferences, and details remembered across your chats."
         items={memories}

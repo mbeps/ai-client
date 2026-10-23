@@ -134,7 +134,7 @@ export function DownloadCard({
       case "spreadsheet":
         return <FileSpreadsheet className="size-5 text-emerald-500" />;
       case "document":
-        return <FileText className="size-5 text-primary" />;
+        return <FileText className="text-primary size-5" />;
       case "archive":
         return <Archive className="size-5 text-amber-500" />;
       case "code":
@@ -146,7 +146,7 @@ export function DownloadCard({
       case "video":
         return <FileVideo className="size-5 text-indigo-500" />;
       default:
-        return <FileDown className="size-5 text-primary" />;
+        return <FileDown className="text-primary size-5" />;
     }
   };
 
@@ -158,21 +158,21 @@ export function DownloadCard({
       onClick={handleCardClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group my-3 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 outline-none transition-all",
-        "border-border/70 bg-card/70 hover:border-border hover:bg-card hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "group my-3 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all outline-none",
+        "border-border/70 bg-card/70 hover:border-border hover:bg-card focus-visible:ring-ring hover:shadow-xs focus-visible:ring-2 focus-visible:ring-offset-1",
         className,
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background/80 shadow-xs">
+        <div className="border-border/50 bg-background/80 flex size-10 shrink-0 items-center justify-center rounded-lg border shadow-xs">
           {renderIcon()}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h4 className="truncate font-medium text-foreground text-sm">
+          <h4 className="text-foreground truncate text-sm font-medium">
             {item.title}
           </h4>
-          <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <span>{typeLabel}</span>
             {sizeLabel && (
               <>
@@ -201,7 +201,7 @@ export function DownloadCard({
         size="sm"
         disabled={isDownloading}
         onClick={handleButtonClick}
-        className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-3.5 font-medium text-primary-foreground text-xs shadow-xs transition-all hover:bg-primary/90"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-xs font-medium shadow-xs transition-all"
       >
         {isDownloading ? (
           <>

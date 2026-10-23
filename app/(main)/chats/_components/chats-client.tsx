@@ -53,7 +53,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
 
   return (
     <ResourceListPage
-      icon={<MessageSquare className="h-8 w-8 text-primary" />}
+      icon={<MessageSquare className="text-primary h-8 w-8" />}
       title="Chats"
       description="Your conversation history."
       items={allChats}

@@ -33,7 +33,7 @@ function FinalDownloadButton({
       <Separator orientation="vertical" className="mr-2 hidden h-8 lg:block" />
       <Button
         size="sm"
-        className="bg-primary text-xs shadow-md hover:bg-primary/90"
+        className="bg-primary hover:bg-primary/90 text-xs shadow-md"
         asChild
       >
         <a href={finalMeta.url} download={finalMeta.name}>
@@ -75,12 +75,12 @@ function StatusBadge({ status }: { status: TransformRunStatus }) {
   const statusColor = STATUS_COLORS[status] ?? "bg-gray-500";
   return (
     <div className="flex min-w-fit shrink-0 flex-col gap-0.5">
-      <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+      <span className="text-muted-foreground/70 text-[10px] font-bold tracking-wider uppercase">
         Status
       </span>
       <Badge
         variant="outline"
-        className="flex h-5 items-center gap-1.5 whitespace-nowrap border-primary/20 bg-primary/5 px-2 text-[10px] capitalize"
+        className="border-primary/20 bg-primary/5 flex h-5 items-center gap-1.5 px-2 text-[10px] whitespace-nowrap capitalize"
       >
         <div className={`h-1 w-1 rounded-full ${statusColor} animate-pulse`} />
         {status.replace("_", " ")}
@@ -92,12 +92,12 @@ function StatusBadge({ status }: { status: TransformRunStatus }) {
 function ProgressIndicator({ progress }: { progress: number }) {
   return (
     <div className="flex min-w-[120px] shrink-0 flex-col gap-1 lg:min-w-40">
-      <span className="font-bold text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+      <span className="text-muted-foreground/70 text-[10px] font-bold tracking-wider uppercase">
         Progress
       </span>
       <div className="flex items-center gap-2 lg:gap-3">
         <Progress value={progress} className="h-1.5 flex-1" />
-        <span className="font-bold text-[10px] tabular-nums">
+        <span className="text-[10px] font-bold tabular-nums">
           {Math.round(progress)}%
         </span>
       </div>
@@ -130,7 +130,7 @@ export function TransformRunHeader({
   isApproving,
 }: TransformRunHeaderProps) {
   return (
-    <div className="flex shrink-0 flex-col gap-4 border-b bg-card/50 p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:gap-6 lg:p-6">
+    <div className="bg-card/50 flex shrink-0 flex-col gap-4 border-b p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:gap-6 lg:p-6">
       <div className="flex items-center gap-3">
         <PageHeader
           icon={<Play className="h-6 w-6 text-blue-500 lg:h-8 lg:w-8" />}

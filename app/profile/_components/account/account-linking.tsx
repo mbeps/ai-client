@@ -29,11 +29,11 @@ export function AccountLinking({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="font-medium text-lg">Linked Accounts</h3>
+        <h3 className="text-lg font-medium">Linked Accounts</h3>
 
         {currentAccounts.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-secondary-muted">
+            <CardContent className="text-secondary-muted py-8 text-center">
               No linked accounts found
             </CardContent>
           </Card>
@@ -51,7 +51,7 @@ export function AccountLinking({
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-medium text-lg">Link Other Accounts</h3>
+        <h3 className="text-lg font-medium">Link Other Accounts</h3>
         <div className="grid gap-3">
           {SUPPORTED_OAUTH_PROVIDERS.filter(
             (provider) =>

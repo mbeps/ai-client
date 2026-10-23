@@ -106,7 +106,7 @@ export function ImportExportPanel({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="font-semibold text-base">Import / Export</h3>
+        <h3 className="text-base font-semibold">Import / Export</h3>
         <p className="text-muted-foreground text-sm">
           Export provider registry snapshots or import model/provider
           definitions.
@@ -147,7 +147,7 @@ export function ImportExportPanel({
 
         {providers.length > 0 && (
           <div className="space-y-2">
-            <p className="font-medium text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-xs font-medium">
               Per-provider export
             </p>
             <div className="flex flex-wrap gap-2">

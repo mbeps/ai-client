@@ -108,11 +108,11 @@ export function PublicServerDiscovery({
     <div className="flex h-full max-h-[80vh] flex-col">
       <div className="space-y-4 border-b p-4">
         <div className="flex items-center gap-2">
-          <Globe className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-lg">Community Tools</h2>
+          <Globe className="text-primary h-5 w-5" />
+          <h2 className="text-lg font-semibold">Community Tools</h2>
         </div>
         <div className="relative">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search public servers..."
             className="pl-9"
@@ -148,12 +148,12 @@ export function PublicServerDiscovery({
               return (
                 <Card
                   key={server.id}
-                  className="p-4 transition-colors hover:bg-muted/30"
+                  className="hover:bg-muted/30 p-4 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <Server className="h-5 w-5 text-primary" />
+                      <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                        <Server className="text-primary h-5 w-5" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export function PublicServerDiscovery({
                             HTTP
                           </Badge>
                         </div>
-                        <p className="truncate font-mono text-muted-foreground text-xs">
+                        <p className="text-muted-foreground truncate font-mono text-xs">
                           {info}
                         </p>
                       </div>

@@ -99,7 +99,7 @@ export function SkillsPicker({
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <div className="relative shrink-0">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           placeholder="Search skills..."
           value={search}
@@ -108,12 +108,12 @@ export function SkillsPicker({
         />
       </div>
 
-      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
           onClick={handleToggleAll}
           disabled={filteredSkills.length === 0}
         >
@@ -137,7 +137,7 @@ export function SkillsPicker({
       >
         <div className="space-y-2">
           {filteredSkills.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm">
+            <div className="text-muted-foreground py-8 text-center text-sm">
               No skills found.
             </div>
           ) : (
@@ -149,7 +149,7 @@ export function SkillsPicker({
                 <div
                   key={s.id}
                   className={cn(
-                    "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
+                    "group bg-card hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
                     isSelected && "border-primary bg-primary/5",
                   )}
                   onClick={() => onToggleSkill(s.id)}
@@ -163,18 +163,18 @@ export function SkillsPicker({
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-medium text-sm leading-none">
+                      <span className="truncate text-sm leading-none font-medium">
                         {s.displayName || s.name}
                       </span>
                       <Badge
                         variant="secondary"
-                        className="h-4 shrink-0 bg-muted px-1 py-0 text-[10px] text-muted-foreground"
+                        className="bg-muted text-muted-foreground h-4 shrink-0 px-1 py-0 text-[10px]"
                       >
                         /{s.name}
                       </Badge>
                     </div>
                     {s.description && (
-                      <p className="line-clamp-2 text-muted-foreground text-xs">
+                      <p className="text-muted-foreground line-clamp-2 text-xs">
                         {s.description}
                       </p>
                     )}

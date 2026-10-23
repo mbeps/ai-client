@@ -28,7 +28,7 @@ export function ProjectKnowledgebaseTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Knowledge Base</h3>
+        <h3 className="text-lg font-semibold">Knowledge Base</h3>
         <p className="text-muted-foreground text-sm">
           Attach a knowledge base to provide context to the AI in all chats
           within this project.

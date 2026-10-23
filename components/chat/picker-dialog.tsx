@@ -94,7 +94,7 @@ export function PickerDialog({
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0 sm:max-h-[600px] sm:max-w-lg">
         <DialogHeader className="border-b px-4 py-3.5 pr-12">
-          <DialogTitle className="font-semibold text-base">{title}</DialogTitle>
+          <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
           {description && (
             <DialogDescription className="sr-only">
               {description}
@@ -103,9 +103,9 @@ export function PickerDialog({
         </DialogHeader>
 
         {isEmpty ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+          <div className="text-muted-foreground px-4 py-8 text-center text-sm">
             {EmptyIcon && (
-              <EmptyIcon className="mx-auto mb-3 h-8 w-8 text-primary opacity-40" />
+              <EmptyIcon className="text-primary mx-auto mb-3 h-8 w-8 opacity-40" />
             )}
             {emptyTitle && <p className="mb-2">{emptyTitle}</p>}
             {emptyAction && (
@@ -122,13 +122,13 @@ export function PickerDialog({
           <>
             {children}
 
-            <div className="flex shrink-0 items-center justify-between border-t bg-muted/20 px-4 py-3">
+            <div className="bg-muted/20 flex shrink-0 items-center justify-between border-t px-4 py-3">
               {manageAction ? (
                 <Button
                   variant="outline"
                   size="sm"
                   asChild
-                  className="h-8 gap-1.5 text-muted-foreground text-xs hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground h-8 gap-1.5 text-xs"
                 >
                   <Link
                     href={manageAction.href}

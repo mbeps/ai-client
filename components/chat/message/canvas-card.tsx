@@ -109,7 +109,7 @@ export function CanvasCard({
       case "mermaid":
         return <Workflow className="size-5 text-sky-500" />;
       default:
-        return <FileText className="size-5 text-primary" />;
+        return <FileText className="text-primary size-5" />;
     }
   };
 
@@ -121,24 +121,24 @@ export function CanvasCard({
       onClick={handleCardClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group my-3 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 outline-none transition-all",
-        "bg-card/70 hover:bg-card hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "group my-3 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-all outline-none",
+        "bg-card/70 hover:bg-card focus-visible:ring-ring hover:shadow-xs focus-visible:ring-2 focus-visible:ring-offset-1",
         isOpen
-          ? "border-primary/50 bg-accent/20 ring-1 ring-primary/20"
+          ? "border-primary/50 bg-accent/20 ring-primary/20 ring-1"
           : "border-border/70 hover:border-border",
         className,
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background/80 shadow-xs">
+        <div className="border-border/50 bg-background/80 flex size-10 shrink-0 items-center justify-center rounded-lg border shadow-xs">
           {renderIcon()}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h4 className="truncate font-medium text-foreground text-sm">
+          <h4 className="text-foreground truncate text-sm font-medium">
             {artifact.title || "Untitled Artifact"}
           </h4>
-          <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <span>{typeLabel}</span>
             {formattedDate && (
               <>
@@ -161,7 +161,7 @@ export function CanvasCard({
               e.stopPropagation();
               onDownload();
             }}
-            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-medium text-xs shadow-xs transition-all hover:bg-accent"
+            className="hover:bg-accent flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs transition-all"
           >
             <Download className="size-3.5" />
             <span className="hidden sm:inline">Download</span>
@@ -174,7 +174,7 @@ export function CanvasCard({
           variant={isOpen ? "secondary" : "default"}
           onClick={handleButtonClick}
           className={cn(
-            "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 font-medium text-xs shadow-xs transition-all",
+            "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-xs font-medium shadow-xs transition-all",
             !isOpen && "bg-primary text-primary-foreground hover:bg-primary/90",
           )}
         >

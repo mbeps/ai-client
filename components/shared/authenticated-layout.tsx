@@ -44,7 +44,7 @@ export function AuthenticatedLayout({
 
   if (isPending || !session) {
     return (
-      <div className="flex h-dvh w-full items-center justify-center bg-background">
+      <div className="bg-background flex h-dvh w-full items-center justify-center">
         <Spinner size="xl" />
       </div>
     );
@@ -54,8 +54,8 @@ export function AuthenticatedLayout({
     <div className="h-dvh w-full overflow-hidden">
       <SidebarProvider className="h-full min-h-0">
         {sidebar}
-        <main className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px]">
+        <main className="bg-background relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="bg-background flex h-14 items-center gap-4 border-b px-4 lg:h-[60px]">
             <SidebarTrigger />
             <div className="w-full flex-1">
               {showBreadcrumbs && <DynamicBreadcrumbs />}

@@ -37,7 +37,7 @@ export function TransformRunCard({ run, agentId }: TransformRunCardProps) {
       href={ROUTES.WORKFLOWS.TRANSFORM.runs(agentId, run.id)}
       className="group block"
     >
-      <Card className="transition-colors hover:border-primary/50">
+      <Card className="hover:border-primary/50 transition-colors">
         <CardContent className="flex items-center justify-between px-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export function TransformRunCard({ run, agentId }: TransformRunCardProps) {
               })}
             </p>
           </div>
-          <Play className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+          <Play className="text-muted-foreground group-hover:text-primary h-4 w-4 transition-colors" />
         </CardContent>
       </Card>
     </Link>

@@ -91,7 +91,7 @@ function SubagentsBadgeButton({ onOpen }: { onOpen: () => void }) {
         <button
           type="button"
           onClick={onOpen}
-          className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 font-medium text-purple-700 text-xs transition-all duration-300 ease-in-out hover:bg-purple-500/20 hover:px-2.5 group-hover:gap-1.5 dark:text-purple-300"
+          className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 text-xs font-medium text-purple-700 transition-all duration-300 ease-in-out group-hover:gap-1.5 hover:bg-purple-500/20 hover:px-2.5 dark:text-purple-300"
           aria-label="Manage subagents"
         >
           <Bot className="h-3.5 w-3.5 shrink-0" />
@@ -167,7 +167,7 @@ function VoiceInputButton({ disabled }: { disabled: boolean }) {
       variant="ghost"
       size="icon"
       onClick={() => {}} // TODO: Implement voice
-      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+      className="text-muted-foreground hover:text-foreground h-7 w-7"
       disabled={disabled}
     >
       <Mic className="h-3.5 w-3.5" />

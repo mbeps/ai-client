@@ -38,13 +38,13 @@ export function TransformAgentCard({ agent }: TransformAgentCardProps) {
   return (
     <EntityCard
       horizontal
-      icon={<Settings2 className="h-4 w-4 text-primary" />}
+      icon={<Settings2 className="text-primary h-4 w-4" />}
       title={
         <div className="flex items-center gap-2">
-          <h3 className="truncate font-semibold text-base">{agent.name}</h3>
+          <h3 className="truncate text-base font-semibold">{agent.name}</h3>
           <Badge
             variant="secondary"
-            className="h-5 px-1.5 font-medium text-[10px]"
+            className="h-5 px-1.5 text-[10px] font-medium"
           >
             {agent.steps.length} {agent.steps.length === 1 ? "step" : "steps"}
           </Badge>

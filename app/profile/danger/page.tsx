@@ -18,7 +18,7 @@ export default async function DangerZonePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-bold text-2xl tracking-tight">Danger Zone</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Danger Zone</h2>
         <p className="text-muted-foreground">
           Critical actions that can have permanent consequences for your
           account.
@@ -26,7 +26,7 @@ export default async function DangerZonePage() {
       </div>
       <div className="space-y-4">
         <div>
-          <h3 className="font-medium text-destructive text-lg">
+          <h3 className="text-destructive text-lg font-medium">
             Delete Account
           </h3>
           <p className="text-muted-foreground text-sm">

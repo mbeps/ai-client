@@ -22,7 +22,7 @@ export function NoModelsAlertBanner({
     >
       <div className="flex items-center gap-2">
         <AlertCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-        <p className="font-medium text-red-800 text-xs dark:text-red-200">
+        <p className="text-xs font-medium text-red-800 dark:text-red-200">
           {message}
         </p>
       </div>

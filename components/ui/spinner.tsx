@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 /**
  * Size variants for the Spinner component.
  */
-const spinnerVariants = cva("animate-spin text-muted-foreground", {
+const spinnerVariants = cva("text-muted-foreground animate-spin", {
   variants: {
     size: {
       default: "size-6",

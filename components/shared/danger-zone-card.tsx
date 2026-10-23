@@ -47,7 +47,7 @@ export function DangerZoneCard({
     <Card className="border-destructive/50 shadow-none">
       <CardHeader>
         <div className="mb-1 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-destructive" />
+          <Shield className="text-destructive h-5 w-5" />
           <CardTitle className="text-destructive">{title}</CardTitle>
         </div>
         <CardDescription>{description}</CardDescription>

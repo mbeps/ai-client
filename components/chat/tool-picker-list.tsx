@@ -183,7 +183,7 @@ export function ToolPickerList({
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <div className="relative shrink-0">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           placeholder="Search tools and resources..."
           className="pl-9"
@@ -192,12 +192,12 @@ export function ToolPickerList({
         />
       </div>
 
-      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
           onClick={toggleAll}
           disabled={allDiscoveredTools.length === 0}
         >
@@ -224,18 +224,18 @@ export function ToolPickerList({
             "artifacts canvas manage_artifact memory save_memory".includes(
               search.toLowerCase(),
             )) && (
-            <div className="flex flex-col overflow-hidden rounded-lg border border-primary/20">
+            <div className="border-primary/20 flex flex-col overflow-hidden rounded-lg border">
               <div
-                className="flex shrink-0 cursor-pointer items-center justify-between bg-primary/5 p-3 transition-colors hover:bg-primary/10"
+                className="bg-primary/5 hover:bg-primary/10 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
                 onClick={() => toggleExpand("internal")}
               >
                 <div className="flex items-center gap-3">
                   {expandedServers.has("internal") || search.length > 0 ? (
-                    <ChevronDown className="h-4 w-4 text-primary" />
+                    <ChevronDown className="text-primary h-4 w-4" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-primary" />
+                    <ChevronRight className="text-primary h-4 w-4" />
                   )}
-                  <span className="font-medium text-primary">
+                  <span className="text-primary font-medium">
                     Internal Tools
                   </span>
                   {(() => {
@@ -284,11 +284,11 @@ export function ToolPickerList({
               </div>
 
               {(expandedServers.has("internal") || search.length > 0) && (
-                <div className="space-y-4 border-primary/20 border-t bg-card/50 p-3">
+                <div className="border-primary/20 bg-card/50 space-y-4 border-t p-3">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex flex-col gap-1">
-                        <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
+                        <label className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors">
                           <Checkbox
                             checked={selectedTools.has(
                               INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
@@ -299,10 +299,10 @@ export function ToolPickerList({
                             className="mt-0.5"
                           />
                           <div className="flex min-w-0 flex-col">
-                            <span className="truncate font-medium text-xs">
+                            <span className="truncate text-xs font-medium">
                               Artifacts / Canvas
                             </span>
-                            <span className="line-clamp-2 text-[10px] text-muted-foreground">
+                            <span className="text-muted-foreground line-clamp-2 text-[10px]">
                               Allows the AI to generate interactive Markdown,
                               Spreadsheets, HTML UI, and Mermaid diagrams in a
                               side panel.
@@ -310,7 +310,7 @@ export function ToolPickerList({
                           </div>
                         </label>
 
-                        <label className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent">
+                        <label className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors">
                           <Checkbox
                             checked={selectedTools.has(
                               INTERNAL_TOOL_IDS.MANAGE_MEMORY,
@@ -321,10 +321,10 @@ export function ToolPickerList({
                             className="mt-0.5"
                           />
                           <div className="flex min-w-0 flex-col">
-                            <span className="truncate font-medium text-xs">
+                            <span className="truncate text-xs font-medium">
                               Memory
                             </span>
-                            <span className="line-clamp-2 text-[10px] text-muted-foreground">
+                            <span className="text-muted-foreground line-clamp-2 text-[10px]">
                               Allows the AI to remember your preferences and
                               facts across conversations.
                             </span>
@@ -343,7 +343,7 @@ export function ToolPickerList({
             !"artifacts canvas manage_artifact memory save_memory".includes(
               search.toLowerCase(),
             ) && (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 No tools found matching &quot;{search}&quot;
               </div>
             )}
@@ -369,7 +369,7 @@ export function ToolPickerList({
                 className="flex flex-col overflow-hidden rounded-lg border"
               >
                 <div
-                  className="flex shrink-0 cursor-pointer items-center justify-between bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                  className="bg-muted/30 hover:bg-muted/50 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
                   onClick={() => toggleExpand(server.id)}
                 >
                   <div className="flex items-center gap-3">
@@ -390,10 +390,10 @@ export function ToolPickerList({
                   </div>
                   <div className="flex items-center gap-2">
                     {content?.loading && (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                      <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />
                     )}
                     {content?.error && (
-                      <AlertCircle className="h-3 w-3 text-destructive" />
+                      <AlertCircle className="text-destructive h-3 w-3" />
                     )}
                     <div
                       className="flex items-center"
@@ -417,14 +417,14 @@ export function ToolPickerList({
                 </div>
 
                 {(isExpanded || search.length > 0) && (
-                  <div className="space-y-4 border-t bg-card/50 p-3">
+                  <div className="bg-card/50 space-y-4 border-t p-3">
                     {content?.loading ? (
-                      <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground text-sm">
+                      <div className="text-muted-foreground flex items-center justify-center gap-2 py-4 text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Discovering tools...
                       </div>
                     ) : content?.error ? (
-                      <div className="flex items-center justify-between py-2 text-destructive text-sm">
+                      <div className="text-destructive flex items-center justify-between py-2 text-sm">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4" />
                           <span>{content.error}</span>
@@ -443,7 +443,7 @@ export function ToolPickerList({
                         {/* Tools section */}
                         {serverTools.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="sticky top-0 z-10 flex items-center gap-1.5 bg-background/95 px-1 py-1 font-bold text-[10px] text-muted-foreground uppercase backdrop-blur">
+                            <h4 className="bg-background/95 text-muted-foreground sticky top-0 z-10 flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase backdrop-blur">
                               <Wrench className="h-3 w-3" /> Tools
                             </h4>
                             <div className="flex flex-col gap-1">
@@ -464,7 +464,7 @@ export function ToolPickerList({
                                   return (
                                     <label
                                       key={tool.name}
-                                      className="group flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors hover:bg-accent"
+                                      className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors"
                                     >
                                       <Checkbox
                                         checked={isChecked}
@@ -474,11 +474,11 @@ export function ToolPickerList({
                                         className="mt-0.5"
                                       />
                                       <div className="flex min-w-0 flex-col">
-                                        <span className="truncate font-medium text-xs">
+                                        <span className="truncate text-xs font-medium">
                                           {tool.name}
                                         </span>
                                         {tool.description && (
-                                          <span className="line-clamp-1 text-[10px] text-muted-foreground">
+                                          <span className="text-muted-foreground line-clamp-1 text-[10px]">
                                             {tool.description}
                                           </span>
                                         )}
@@ -491,7 +491,7 @@ export function ToolPickerList({
                         )}
 
                         {serverTools.length === 0 && (
-                          <div className="py-2 text-center text-muted-foreground text-xs">
+                          <div className="text-muted-foreground py-2 text-center text-xs">
                             No tools available
                           </div>
                         )}

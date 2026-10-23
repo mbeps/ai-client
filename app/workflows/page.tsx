@@ -39,7 +39,7 @@ export default function WorkflowsPage() {
   return (
     <PageContainer className="space-y-6">
       <div>
-        <h1 className="font-bold text-3xl tracking-tight">Workflows</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
         <p className="text-muted-foreground">
           Select an automated workflow to get started.
         </p>
@@ -48,13 +48,13 @@ export default function WorkflowsPage() {
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {WORKFLOWS.map((workflow) => (
           <Link key={workflow.name} href={workflow.href} className="group">
-            <Card className="h-full overflow-hidden p-0 transition-all hover:border-primary/40 hover:shadow-md">
+            <Card className="hover:border-primary/40 h-full overflow-hidden p-0 transition-all hover:shadow-md">
               <CardHeader className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 rounded-lg bg-secondary/50 p-2 transition-colors group-hover:bg-secondary">
+                  <div className="bg-secondary/50 group-hover:bg-secondary shrink-0 rounded-lg p-2 transition-colors">
                     <workflow.icon className={`h-4 w-4 ${workflow.color}`} />
                   </div>
-                  <CardTitle className="truncate font-semibold text-sm transition-colors group-hover:text-primary">
+                  <CardTitle className="group-hover:text-primary truncate text-sm font-semibold transition-colors">
                     {workflow.name}
                   </CardTitle>
                 </div>

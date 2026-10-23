@@ -38,8 +38,8 @@ export function InternalToolCard({
         <CardTitle className="font-mono text-base">{name}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="px-5 text-muted-foreground text-sm">
-        <span className="font-medium text-foreground">Availability:</span>{" "}
+      <CardContent className="text-muted-foreground px-5 text-sm">
+        <span className="text-foreground font-medium">Availability:</span>{" "}
         {availability}
       </CardContent>
     </Card>

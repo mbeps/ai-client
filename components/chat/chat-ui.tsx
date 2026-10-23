@@ -813,7 +813,7 @@ export function ChatUI({
           </div>
         </ScrollArea>
 
-        <div className="shrink-0 bg-background/80 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
+        <div className="bg-background/80 shrink-0 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
           <div className="mx-auto max-w-4xl">
             <ChatInput
               key={chatId}

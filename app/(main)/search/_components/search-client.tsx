@@ -98,8 +98,8 @@ export function SearchClient({
         {projects.length > 0 && (
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="font-bold text-xl tracking-tight">Projects</h2>
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
+              <h2 className="text-xl font-bold tracking-tight">Projects</h2>
+              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 {projects.length}
               </span>
             </div>
@@ -114,8 +114,8 @@ export function SearchClient({
         {assistants.length > 0 && (
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="font-bold text-xl tracking-tight">Assistants</h2>
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
+              <h2 className="text-xl font-bold tracking-tight">Assistants</h2>
+              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 {assistants.length}
               </span>
             </div>
@@ -130,8 +130,8 @@ export function SearchClient({
         {chats.length > 0 && (
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="font-bold text-xl tracking-tight">Chats</h2>
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs">
+              <h2 className="text-xl font-bold tracking-tight">Chats</h2>
+              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 {chats.length}
               </span>
             </div>
@@ -148,7 +148,7 @@ export function SearchClient({
 
   return (
     <ResourceListPage
-      icon={<Search className="h-8 w-8 text-primary" />}
+      icon={<Search className="text-primary h-8 w-8" />}
       title="Global Search"
       description="Search across all your chats, projects, and assistants."
       items={items}

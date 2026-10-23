@@ -27,14 +27,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <EntityCard
       href={ROUTES.PROJECTS.detail(project.id)}
-      icon={<FolderOpen className="h-5 w-5 text-primary" />}
+      icon={<FolderOpen className="text-primary h-5 w-5" />}
       title={
         <div className="flex items-center gap-1.5">
-          <h3 className="truncate font-semibold leading-none">
+          <h3 className="truncate leading-none font-semibold">
             {project.name}
           </h3>
           {project.isPinned && (
-            <Pin className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <Pin className="text-muted-foreground h-3 w-3 shrink-0" />
           )}
         </div>
       }

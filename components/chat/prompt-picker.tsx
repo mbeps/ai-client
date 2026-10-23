@@ -244,7 +244,7 @@ export function PromptPicker({
       <div
         key={item.id}
         className={cn(
-          "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
+          "group bg-card hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
           isSelected && "border-primary bg-primary/5",
         )}
         onClick={() => handleToggle(item)}
@@ -258,13 +258,13 @@ export function PromptPicker({
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate font-medium text-sm leading-none">
+            <span className="truncate text-sm leading-none font-medium">
               {item.title}
             </span>
             {!item.isMcp && "shortcut" in item && item.shortcut && (
               <Badge
                 variant="secondary"
-                className="h-4 shrink-0 bg-muted px-1 py-0 font-mono text-[10px] text-muted-foreground"
+                className="bg-muted text-muted-foreground h-4 shrink-0 px-1 py-0 font-mono text-[10px]"
               >
                 {item.shortcut.startsWith("/")
                   ? item.shortcut
@@ -273,11 +273,11 @@ export function PromptPicker({
             )}
           </div>
           {"description" in item && item.description ? (
-            <p className="line-clamp-2 text-muted-foreground text-xs">
+            <p className="text-muted-foreground line-clamp-2 text-xs">
               {item.description}
             </p>
           ) : "content" in item && item.content ? (
-            <p className="line-clamp-2 font-mono text-muted-foreground text-xs">
+            <p className="text-muted-foreground line-clamp-2 font-mono text-xs">
               {item.content}
             </p>
           ) : null}
@@ -289,7 +289,7 @@ export function PromptPicker({
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <div className="relative shrink-0">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           placeholder="Search prompts..."
           value={search}
@@ -298,12 +298,12 @@ export function PromptPicker({
         />
       </div>
 
-      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
           onClick={handleToggleAll}
           disabled={filteredItems.length === 0}
         >
@@ -327,7 +327,7 @@ export function PromptPicker({
       >
         <div className="space-y-4">
           {filteredItems.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm">
+            <div className="text-muted-foreground py-8 text-center text-sm">
               {search.length > 0 ? (
                 <>No prompts found matching &quot;{search}&quot;</>
               ) : (
@@ -346,19 +346,19 @@ export function PromptPicker({
                 return (
                   <div
                     key={group.id}
-                    className="flex flex-col overflow-hidden rounded-lg border border-primary/20"
+                    className="border-primary/20 flex flex-col overflow-hidden rounded-lg border"
                   >
                     <div
-                      className="flex shrink-0 cursor-pointer items-center justify-between bg-primary/5 p-3 transition-colors hover:bg-primary/10"
+                      className="bg-primary/5 hover:bg-primary/10 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
                       onClick={() => toggleExpand(group.id)}
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-primary" />
+                          <ChevronDown className="text-primary h-4 w-4" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-primary" />
+                          <ChevronRight className="text-primary h-4 w-4" />
                         )}
-                        <span className="font-medium text-primary">
+                        <span className="text-primary font-medium">
                           {group.name}
                         </span>
                         {selectedInGroup > 0 && (
@@ -401,7 +401,7 @@ export function PromptPicker({
                     </div>
 
                     {isExpanded && (
-                      <div className="space-y-2 border-primary/20 border-t bg-card/50 p-3">
+                      <div className="border-primary/20 bg-card/50 space-y-2 border-t p-3">
                         {group.items.map((item) => renderPromptCard(item))}
                       </div>
                     )}
@@ -415,7 +415,7 @@ export function PromptPicker({
                   className="flex flex-col overflow-hidden rounded-lg border"
                 >
                   <div
-                    className="flex shrink-0 cursor-pointer items-center justify-between bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                    className="bg-muted/30 hover:bg-muted/50 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
                     onClick={() => toggleExpand(group.id)}
                   >
                     <div className="flex items-center gap-3">
@@ -465,7 +465,7 @@ export function PromptPicker({
                   </div>
 
                   {isExpanded && (
-                    <div className="space-y-2 border-t bg-card/50 p-3">
+                    <div className="bg-card/50 space-y-2 border-t p-3">
                       {group.items.map((item) => renderPromptCard(item))}
                     </div>
                   )}

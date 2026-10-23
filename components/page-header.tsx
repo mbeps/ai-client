@@ -33,7 +33,7 @@ export function PageHeader({
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <h1 className="font-bold text-3xl tracking-tight">{title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
           <p className="text-muted-foreground">{description}</p>
         </div>
       </div>

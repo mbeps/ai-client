@@ -134,7 +134,7 @@ export function KnowledgebasePicker({
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <div className="relative shrink-0">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           placeholder="Search knowledge bases..."
           value={search}
@@ -143,12 +143,12 @@ export function KnowledgebasePicker({
         />
       </div>
 
-      <div className="flex shrink-0 items-center justify-between px-0.5 text-muted-foreground text-xs">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
           onClick={handleToggleAll}
           disabled={readyKbs.length === 0}
         >
@@ -174,20 +174,20 @@ export function KnowledgebasePicker({
           {allowEmpty && mode === "single" && (
             <div
               className={cn(
-                "group flex cursor-pointer items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
+                "group bg-card hover:bg-accent/50 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
                 selectedIds.size === 0 && "border-primary bg-primary/5",
               )}
               onClick={clearSelection}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                <XCircle className="h-4 w-4 text-muted-foreground" />
+              <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                <XCircle className="text-muted-foreground h-4 w-4" />
               </div>
-              <div className="font-medium text-sm">{emptyLabel}</div>
+              <div className="text-sm font-medium">{emptyLabel}</div>
             </div>
           )}
 
           {filteredKbs.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm">
+            <div className="text-muted-foreground py-8 text-center text-sm">
               No knowledge bases found.
             </div>
           ) : (
@@ -199,7 +199,7 @@ export function KnowledgebasePicker({
                 <div
                   key={kb.id}
                   className={cn(
-                    "group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50",
+                    "group bg-card hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
                     selectedIds.has(kb.id) && "border-primary bg-primary/5",
                     !isReady && "cursor-not-allowed opacity-60",
                   )}
@@ -215,13 +215,13 @@ export function KnowledgebasePicker({
                   </div>
                   <div className="flex min-w-0 flex-1 gap-3">
                     {showIcons && (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <Database className="h-4 w-4 text-primary" />
+                      <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                        <Database className="text-primary h-4 w-4" />
                       </div>
                     )}
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="truncate font-medium text-sm leading-none">
+                        <div className="truncate text-sm leading-none font-medium">
                           {kb.name}
                         </div>
                         {!isReady && (
@@ -242,7 +242,7 @@ export function KnowledgebasePicker({
                         )}
                       </div>
                       {kb.description && (
-                        <p className="line-clamp-1 text-muted-foreground text-xs">
+                        <p className="text-muted-foreground line-clamp-1 text-xs">
                           {kb.description}
                         </p>
                       )}

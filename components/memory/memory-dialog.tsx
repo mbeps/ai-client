@@ -121,7 +121,7 @@ export function MemoryDialog({
               disabled={isPending}
               className="resize-none"
             />
-            <div className="flex justify-end text-muted-foreground text-xs">
+            <div className="text-muted-foreground flex justify-end text-xs">
               {content.length}/2000
             </div>
           </div>

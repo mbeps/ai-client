@@ -40,14 +40,14 @@ export function ModelDetailsHoverCard({
       <HoverCardContent side={side} align="start" className="w-64 p-3">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
-            <span className="font-semibold text-xs">{model.label}</span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-xs font-semibold">{model.label}</span>
+            <span className="text-muted-foreground text-[10px]">
               {model.providerName}
             </span>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
+            <span className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
               Context Window
             </span>
             <span className="text-xs">
@@ -61,7 +61,7 @@ export function ModelDetailsHoverCard({
             model.capReasoning ||
             model.capStructuredOutput) && (
             <div className="flex flex-col gap-1.5">
-              <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
+              <span className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                 Capabilities
               </span>
               <div className="flex flex-wrap gap-1">
@@ -76,15 +76,15 @@ export function ModelDetailsHoverCard({
           )}
 
           {model.capReasoning && (
-            <div className="mt-0.5 flex flex-col gap-1.5 border-border/50 border-t pt-2.5">
-              <div className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
+            <div className="border-border/50 mt-0.5 flex flex-col gap-1.5 border-t pt-2.5">
+              <div className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase">
                 <BrainCircuit className="h-3 w-3 text-amber-500" />
                 Reasoning
               </div>
               <div className="flex items-center gap-1.5">
                 <Badge
                   variant="outline"
-                  className="h-4 border-amber-500/20 bg-amber-500/5 px-1.5 py-0 font-medium text-[10px] text-amber-600"
+                  className="h-4 border-amber-500/20 bg-amber-500/5 px-1.5 py-0 text-[10px] font-medium text-amber-600"
                 >
                   Enabled
                 </Badge>

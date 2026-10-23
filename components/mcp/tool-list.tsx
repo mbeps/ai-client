@@ -64,7 +64,7 @@ function renderToolContent(tool: DiscoveredTool) {
     <>
       {tool.description && (
         <div className="space-y-1">
-          <h4 className="font-semibold text-muted-foreground text-xs">
+          <h4 className="text-muted-foreground text-xs font-semibold">
             Description
           </h4>
           <p className="text-foreground/80 text-sm leading-relaxed">
@@ -78,7 +78,7 @@ function renderToolContent(tool: DiscoveredTool) {
           (tool.inputSchema.properties as Record<string, unknown>) || {},
         ).length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-muted-foreground text-xs">
+            <h4 className="text-muted-foreground text-xs font-semibold">
               Parameters
             </h4>
             <div className="grid gap-2">
@@ -87,17 +87,17 @@ function renderToolContent(tool: DiscoveredTool) {
               ).map(([propName, prop]: [string, any]) => (
                 <div
                   key={propName}
-                  className="flex flex-col gap-1 rounded-md border border-border/50 bg-muted/50 p-2"
+                  className="border-border/50 bg-muted/50 flex flex-col gap-1 rounded-md border p-2"
                 >
                   <div className="flex items-center justify-between">
-                    <code className="rounded px-1.5 py-0.5 font-bold text-primary text-xs">
+                    <code className="text-primary rounded px-1.5 py-0.5 text-xs font-bold">
                       {propName}
                     </code>
                     <Badge variant="outline" className="h-4 text-[10px]">
                       {prop.type}
                       {(tool.inputSchema.required as string[])?.includes(
                         propName,
-                      ) && <span className="ml-1 text-destructive">*</span>}
+                      ) && <span className="text-destructive ml-1">*</span>}
                     </Badge>
                   </div>
                   {prop.description && (

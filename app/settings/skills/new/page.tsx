@@ -93,7 +93,7 @@ export default function NewSkillPage() {
         variant="ghost"
         size="sm"
         asChild
-        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground mb-4 -ml-2 transition-colors"
       >
         <Link href={ROUTES.SETTINGS.SKILLS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -102,7 +102,7 @@ export default function NewSkillPage() {
       </Button>
 
       <PageHeader
-        icon={<BrainCircuit className="h-8 w-8 text-primary" />}
+        icon={<BrainCircuit className="text-primary h-8 w-8" />}
         title="New Agent Skill"
         description="Create a skill with metadata and instructions, or upload an existing skill package."
       />

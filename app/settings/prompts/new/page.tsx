@@ -53,7 +53,7 @@ export default function NewPromptPage() {
         variant="ghost"
         size="sm"
         asChild
-        className="mb-4 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground mb-4 -ml-2 transition-colors"
       >
         <Link href={ROUTES.SETTINGS.PROMPTS.path}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -62,7 +62,7 @@ export default function NewPromptPage() {
       </Button>
 
       <PageHeader
-        icon={<Command className="h-8 w-8 text-primary" />}
+        icon={<Command className="text-primary h-8 w-8" />}
         title="New Prompt"
         description="Create a custom prompt shortcut to quickly insert text into your chats."
       />

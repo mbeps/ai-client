@@ -35,7 +35,7 @@ function AttachmentFileCard({
         >
           <div className="flex items-center gap-3">
             <div
-              className={`rounded-lg bg-background p-2 shadow-sm ${iconBorderClass}`}
+              className={`bg-background rounded-lg p-2 shadow-sm ${iconBorderClass}`}
             >
               <Download className="h-4 w-4" />
             </div>
@@ -45,7 +45,7 @@ function AttachmentFileCard({
               >
                 {meta.name}
               </p>
-              <p className="text-[10px] text-muted-foreground">{subtitle}</p>
+              <p className="text-muted-foreground text-[10px]">{subtitle}</p>
             </div>
           </div>
           <Button
@@ -67,10 +67,10 @@ function StorageNotice() {
       <div className="flex gap-3">
         <AlertCircle className="h-5 w-5 shrink-0 text-blue-600" />
         <div className="space-y-1">
-          <p className="font-semibold text-blue-900 text-sm">
+          <p className="text-sm font-semibold text-blue-900">
             Storage Optimization
           </p>
-          <p className="text-blue-700/80 text-xs leading-relaxed">
+          <p className="text-xs leading-relaxed text-blue-700/80">
             Intermediate step previews are temporary and stored in memory for
             the current session. Only the final result is saved to permanent
             storage.
@@ -107,7 +107,7 @@ export function TransformRunFilesSection({
     <div className="space-y-4">
       {(hasOutputs || hasInputs) && (
         <div className="space-y-3">
-          <h4 className="flex items-center gap-2 font-bold text-muted-foreground/70 text-xs uppercase tracking-widest">
+          <h4 className="text-muted-foreground/70 flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
             <Download className="h-3 w-3" />
             Files & Workbooks
           </h4>

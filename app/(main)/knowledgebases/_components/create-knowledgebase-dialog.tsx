@@ -128,7 +128,7 @@ export function CreateKnowledgebaseDialog({
             {hasNoModels && (
               <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 p-2 dark:border-red-900/30 dark:bg-red-950/20">
                 <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <p className="font-medium text-[11px] text-red-800 dark:text-red-200">
+                <p className="text-[11px] font-medium text-red-800 dark:text-red-200">
                   No embedding models configured. Please set up a provider
                   first.
                 </p>

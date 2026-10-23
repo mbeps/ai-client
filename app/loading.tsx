@@ -6,7 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
  */
 export default function RootLoading() {
   return (
-    <div className="flex h-full min-h-screen w-full items-center justify-center bg-background">
+    <div className="bg-background flex h-full min-h-screen w-full items-center justify-center">
       <Spinner size="lg" />
     </div>
   );

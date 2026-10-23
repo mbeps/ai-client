@@ -36,15 +36,15 @@ function renderResourceContent(res: DiscoveredResource) {
   return (
     <>
       <div className="space-y-1">
-        <h4 className="font-semibold text-muted-foreground text-xs">URI</h4>
-        <code className="break-all rounded bg-muted p-1 text-xs">
+        <h4 className="text-muted-foreground text-xs font-semibold">URI</h4>
+        <code className="bg-muted rounded p-1 text-xs break-all">
           {res.uri}
         </code>
       </div>
 
       {res.description && (
         <div className="space-y-1">
-          <h4 className="font-semibold text-muted-foreground text-xs">
+          <h4 className="text-muted-foreground text-xs font-semibold">
             Description
           </h4>
           <p className="text-foreground/80 text-sm leading-relaxed">
@@ -55,7 +55,7 @@ function renderResourceContent(res: DiscoveredResource) {
 
       {res.mimeType && (
         <div className="space-y-1">
-          <h4 className="font-semibold text-muted-foreground text-xs">
+          <h4 className="text-muted-foreground text-xs font-semibold">
             MIME Type
           </h4>
           <Badge variant="outline" className="text-[10px]">

@@ -20,7 +20,7 @@ export default function SkillsPage() {
 
   return (
     <ResourceListPage
-      icon={<BrainCircuit className="h-8 w-8 text-primary" />}
+      icon={<BrainCircuit className="text-primary h-8 w-8" />}
       title="Agent Skills"
       description="Modular instructions and workflows that give AI models specialized domain capabilities."
       items={skills}

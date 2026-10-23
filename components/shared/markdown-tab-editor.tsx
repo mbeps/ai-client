@@ -81,7 +81,7 @@ function InnerBlockNoteEditor({
   }, [onChange]);
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-card px-2 py-3">
+    <div className="bg-card h-full w-full overflow-y-auto px-2 py-3">
       <BlockNoteView
         editor={editor}
         editable={!disabled}
@@ -153,7 +153,7 @@ function BlockNoteTabContent({
 
   if (!parsedBlocks) {
     return (
-      <div className="flex h-full min-h-[200px] items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full min-h-[200px] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
@@ -195,31 +195,31 @@ export function MarkdownTabEditor({
   return (
     <div
       className={cn(
-        "w-full overflow-hidden rounded-lg border border-input bg-card shadow-2xs transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring",
+        "border-input bg-card focus-within:border-ring focus-within:ring-ring w-full overflow-hidden rounded-lg border shadow-2xs transition-colors focus-within:ring-1",
         className,
       )}
     >
       <Tabs defaultValue={normalizedDefaultTab} className="w-full">
         {/* Integrated Toolbar Header with Seamless Grey Background */}
-        <div className="flex items-center justify-between border-border/70 border-b bg-muted/60 px-3 py-2 dark:bg-muted/30">
+        <div className="border-border/70 bg-muted/60 dark:bg-muted/30 flex items-center justify-between border-b px-3 py-2">
           <TabsList className="h-auto gap-1 border-0 bg-transparent p-0 shadow-none">
             <TabsTrigger
               value="rich"
-              className="h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 font-medium text-muted-foreground text-sm shadow-none transition-all hover:text-foreground data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
+              className="text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 text-sm font-medium shadow-none transition-all data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
             >
-              <Sparkles className="h-4 w-4 text-primary" />
+              <Sparkles className="text-primary h-4 w-4" />
               <span>Rich Text</span>
             </TabsTrigger>
             <TabsTrigger
               value="raw"
-              className="h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 font-medium text-muted-foreground text-sm shadow-none transition-all hover:text-foreground data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
+              className="text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 text-sm font-medium shadow-none transition-all data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
             >
               <Code2 className="h-4 w-4" />
               <span>Raw Text</span>
             </TabsTrigger>
             <TabsTrigger
               value="preview"
-              className="h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 font-medium text-muted-foreground text-sm shadow-none transition-all hover:text-foreground data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
+              className="text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground h-8 cursor-pointer gap-2 rounded-md border-0 border-transparent px-3.5 py-1.5 text-sm font-medium shadow-none transition-all data-[state=active]:border-0 data-[state=active]:border-transparent data-[state=active]:shadow-xs dark:data-[state=active]:border-transparent"
             >
               <Eye className="h-4 w-4" />
               <span>Preview</span>
@@ -231,7 +231,7 @@ export function MarkdownTabEditor({
         <TabsContent value="rich" className="mt-0 focus-visible:outline-hidden">
           <div
             className={cn(
-              "flex flex-col overflow-y-auto bg-card text-sm",
+              "bg-card flex flex-col overflow-y-auto text-sm",
               minHeight,
               maxHeight,
             )}
@@ -266,7 +266,7 @@ export function MarkdownTabEditor({
         >
           <div
             className={cn(
-              "overflow-y-auto bg-card px-6 py-4 text-sm",
+              "bg-card overflow-y-auto px-6 py-4 text-sm",
               minHeight,
               maxHeight,
             )}
@@ -274,7 +274,7 @@ export function MarkdownTabEditor({
             {value.trim() ? (
               <MarkdownRenderer content={value} />
             ) : (
-              <div className="flex h-full min-h-[160px] items-center justify-center text-muted-foreground text-sm italic">
+              <div className="text-muted-foreground flex h-full min-h-[160px] items-center justify-center text-sm italic">
                 No markdown content to preview
               </div>
             )}

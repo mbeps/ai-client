@@ -195,7 +195,7 @@ function QRCodeVerify({
   if (successfullyEnabled) {
     return (
       <>
-        <p className="mb-2 text-muted-foreground text-sm">
+        <p className="text-muted-foreground mb-2 text-sm">
           Save these backup codes in a safe place. You can use them to access
           your account.
         </p>
@@ -258,10 +258,10 @@ function QRCodeVerify({
           <QRCode size={256} value={totpURI} />
         </div>
         <div className="text-center">
-          <p className="mb-2 text-muted-foreground text-sm">
+          <p className="text-muted-foreground mb-2 text-sm">
             Or enter this code manually:
           </p>
-          <code className="break-all rounded bg-muted px-2 py-1 font-mono text-sm">
+          <code className="bg-muted rounded px-2 py-1 font-mono text-sm break-all">
             {new URL(totpURI).searchParams.get("secret")}
           </code>
         </div>

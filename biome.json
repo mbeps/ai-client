@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -111,12 +111,8 @@
         "noPrototypeBuiltins": "off"
       },
       "nursery": {
-        "useSortedClasses": {
-          "level": "warn",
-          "options": {
-            "attributes": ["classList", "className", "tw"],
-            "functions": ["clsx", "cva", "twMerge", "cn"]
-          }
+        "useTailwindSortedClasses": {
+          "level": "warn"
         }
       }
     }
@@ -143,5 +139,10 @@
         }
       }
     }
-  ]
+  ],
+  "tailwind": {
+    "attributes": ["class", "className", "classList", "tw"],
+    "mergeFunctions": ["clsx", "twMerge", "cn"],
+    "variantFunctions": ["cva"]
+  }
 }

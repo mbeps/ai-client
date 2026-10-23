@@ -38,11 +38,11 @@ export function EntityDetailHeader({
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <div className="bg-primary/10 flex h-16 w-16 shrink-0 items-center justify-center rounded-full">
           {icon}
         </div>
         <div>
-          <h1 className="font-bold text-3xl">{title}</h1>
+          <h1 className="text-3xl font-bold">{title}</h1>
           {description && (
             <p className="text-muted-foreground">{description}</p>
           )}

@@ -64,11 +64,11 @@ export default async function TransformAgentsPage() {
 
       {agents.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-          <div className="rounded-full bg-muted p-4">
-            <Settings2 className="h-8 w-8 text-muted-foreground" />
+          <div className="bg-muted rounded-full p-4">
+            <Settings2 className="text-muted-foreground h-8 w-8" />
           </div>
-          <h2 className="mt-4 font-semibold text-xl">No agents found</h2>
-          <p className="mt-2 text-muted-foreground">
+          <h2 className="mt-4 text-xl font-semibold">No agents found</h2>
+          <p className="text-muted-foreground mt-2">
             Get started by creating your first transformation agent.
           </p>
           <Button className="mt-6" asChild>

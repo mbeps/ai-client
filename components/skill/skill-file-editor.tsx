@@ -35,16 +35,16 @@ export function SkillFileEditor({
       {/* Header bar: File name, badge, and optional subfile actions */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-semibold text-foreground text-sm">
+          <span className="text-foreground truncate text-sm font-semibold">
             {filePath}
           </span>
 
           {isRootSkillMd ? (
-            <Badge variant="secondary" className="font-normal text-xs">
+            <Badge variant="secondary" className="text-xs font-normal">
               Primary Instructions
             </Badge>
           ) : (
-            <Badge variant="outline" className="font-normal text-xs">
+            <Badge variant="outline" className="text-xs font-normal">
               Subfile
             </Badge>
           )}
@@ -57,7 +57,7 @@ export function SkillFileEditor({
                 variant="outline"
                 size="sm"
                 onClick={onRename}
-                className="h-7 gap-1 font-medium text-xs"
+                className="h-7 gap-1 text-xs font-medium"
               >
                 <Pencil className="h-3 w-3" />
                 Rename
@@ -69,7 +69,7 @@ export function SkillFileEditor({
                 variant="outline"
                 size="sm"
                 onClick={onMove}
-                className="h-7 gap-1 font-medium text-xs"
+                className="h-7 gap-1 text-xs font-medium"
               >
                 <FolderInput className="h-3 w-3" />
                 Move
@@ -81,7 +81,7 @@ export function SkillFileEditor({
                 variant="outline"
                 size="sm"
                 onClick={onDelete}
-                className="h-7 gap-1 border-destructive/30 font-medium text-destructive text-xs hover:bg-destructive/10 hover:text-destructive"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive h-7 gap-1 text-xs font-medium"
               >
                 <Trash2 className="h-3 w-3" />
                 Delete File

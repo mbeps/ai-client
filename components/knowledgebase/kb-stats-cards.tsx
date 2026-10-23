@@ -36,15 +36,15 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
     <div className="flex flex-wrap gap-3">
       <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
+          <CardDescription className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase">
             <FileText className="h-3.5 w-3.5" />
             Documents
           </CardDescription>
           <div className="mt-1 flex flex-col gap-0.5">
-            <CardTitle className="font-bold text-xl">
+            <CardTitle className="text-xl font-bold">
               {documents.length}
             </CardTitle>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground text-[10px]">
               {documents.length === 0
                 ? "Empty"
                 : `${readyCount} of ${documents.length} ready`}
@@ -55,7 +55,7 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
 
       <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
+          <CardDescription className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase">
             <RefreshCw
               className={cn(
                 "h-3.5 w-3.5",
@@ -66,7 +66,7 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
           </CardDescription>
           <div className="mt-1 flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <CardTitle className="font-bold text-xl capitalize">
+              <CardTitle className="text-xl font-bold capitalize">
                 {kb.indexStatus}
               </CardTitle>
               {kb.indexStatus === "stale" && (
@@ -86,7 +86,7 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
                 </Tooltip>
               )}
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground text-[10px]">
               {kb.indexStatus === "indexing"
                 ? "Processing documents..."
                 : kb.indexStatus === "stale"
@@ -99,15 +99,15 @@ export function KbStatsCards({ kb, documents, onReindex }: KbStatsCardsProps) {
 
       <Card className="min-w-[200px] flex-1 shadow-none">
         <CardHeader>
-          <CardDescription className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider">
+          <CardDescription className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase">
             <Calendar className="h-3.5 w-3.5" />
             Stats
           </CardDescription>
           <div className="mt-1 flex flex-col gap-0.5">
-            <CardTitle className="font-medium text-sm">
+            <CardTitle className="text-sm font-medium">
               Created {format(kb.createdAt, "PPP")}
             </CardTitle>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground text-[10px]">
               Updated {format(kb.updatedAt, "PP")}
             </p>
           </div>

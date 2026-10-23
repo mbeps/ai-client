@@ -75,7 +75,7 @@ export function MessageThread({
   if (thread.length === 0) {
     return (
       <div className="flex h-[50vh] flex-col items-center justify-center text-center opacity-50">
-        <h2 className="mb-2 font-bold text-2xl">How can I help you today?</h2>
+        <h2 className="mb-2 text-2xl font-bold">How can I help you today?</h2>
         <p>Try asking for a diagram, math formula, or standard text.</p>
       </div>
     );

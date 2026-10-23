@@ -95,7 +95,7 @@ export function ResourceListPage<T extends SortableResource>({
 
       <div className="mb-6 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             placeholder={searchPlaceholder}
             className="pl-9"
@@ -107,7 +107,7 @@ export function ResourceListPage<T extends SortableResource>({
       </div>
 
       {loadError && (
-        <p role="alert" className="mb-4 text-destructive text-sm">
+        <p role="alert" className="text-destructive mb-4 text-sm">
           {loadError}
         </p>
       )}

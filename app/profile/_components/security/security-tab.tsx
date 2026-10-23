@@ -37,7 +37,7 @@ export async function SecurityTab({
         (hasPasswordAccount ? (
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-lg">Change Password</h3>
+              <h3 className="text-lg font-medium">Change Password</h3>
               <p className="text-muted-foreground text-sm">
                 Update your password for improved security.
               </p>
@@ -47,7 +47,7 @@ export async function SecurityTab({
         ) : (
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-lg">Set Password</h3>
+              <h3 className="text-lg font-medium">Set Password</h3>
               <p className="text-muted-foreground text-sm">
                 We will send you a password reset email to set up a password.
               </p>
@@ -61,7 +61,7 @@ export async function SecurityTab({
           <Separator />
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="font-medium text-lg">Two-Factor Authentication</h3>
+              <h3 className="text-lg font-medium">Two-Factor Authentication</h3>
               <Badge variant={isTwoFactorEnabled ? "default" : "secondary"}>
                 {isTwoFactorEnabled ? "Enabled" : "Disabled"}
               </Badge>
@@ -74,7 +74,7 @@ export async function SecurityTab({
       <Separator />
       <div className="space-y-4">
         <div>
-          <h3 className="font-medium text-lg">Passkeys</h3>
+          <h3 className="text-lg font-medium">Passkeys</h3>
         </div>
         <PasskeyManagement passkeys={passkeys} />
       </div>

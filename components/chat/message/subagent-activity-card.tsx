@@ -103,8 +103,8 @@ function SubagentStatusBadge({
 }: SubagentStatusBadgeProps) {
   if (status === "pending") {
     return (
-      <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-[11px] text-primary">
-        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+      <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium">
+        <Loader2 className="text-primary h-3 w-3 animate-spin" />
         <span>Delegating...</span>
       </div>
     );
@@ -112,7 +112,7 @@ function SubagentStatusBadge({
 
   if (isError || outputText.includes("STATUS: BLOCKED")) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-medium text-[11px] text-destructive">
+      <div className="bg-destructive/10 text-destructive flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
         <AlertCircle className="h-3 w-3" />
         <span>Blocked</span>
       </div>
@@ -121,7 +121,7 @@ function SubagentStatusBadge({
 
   if (outputText.includes("STATUS: DONE_WITH_CONCERNS")) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 font-medium text-[11px] text-amber-700 dark:text-amber-400">
+      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
         <AlertCircle className="h-3 w-3" />
         <span>Concerns</span>
       </div>
@@ -130,7 +130,7 @@ function SubagentStatusBadge({
 
   if (outputText.includes("STATUS: NEEDS_CONTEXT")) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-[11px] text-blue-700 dark:text-blue-400">
+      <div className="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400">
         <AlertCircle className="h-3 w-3" />
         <span>Needs Context</span>
       </div>
@@ -138,7 +138,7 @@ function SubagentStatusBadge({
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-[11px] text-emerald-700 dark:text-emerald-400">
+    <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
       <CheckCircle2 className="h-3 w-3" />
       <span>Completed</span>
     </div>
@@ -156,11 +156,11 @@ function SubagentContextUsage({
 }) {
   return (
     <div className="flex items-center justify-between rounded-md border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5 text-xs">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-1.5">
         <Database className="size-3.5 text-purple-600 dark:text-purple-400" />
         <span className="font-medium">Context Usage</span>
       </div>
-      <span className="font-mono text-[11px] text-foreground/80">
+      <span className="text-foreground/80 font-mono text-[11px]">
         ~
         {formatTokens(
           estimateToolContextTokens({ taskBrief, inputData }, result),
@@ -186,7 +186,7 @@ function SubagentCardDetails({
 }: SubagentCardDetailsProps) {
   return (
     <AccordionContent className="pb-0">
-      <div className="space-y-3 border-purple-500/20 border-t bg-card/60 p-3 text-xs">
+      <div className="bg-card/60 space-y-3 border-t border-purple-500/20 p-3 text-xs">
         <SubagentContextUsage
           taskBrief={taskBrief}
           inputData={inputData}
@@ -195,11 +195,11 @@ function SubagentCardDetails({
 
         {/* Delegated Prompt from Orchestrator */}
         <div>
-          <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+          <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
             <Workflow className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             <span>Delegated Prompt from Orchestrator</span>
           </div>
-          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-foreground text-xs leading-relaxed">
+          <div className="text-foreground rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-xs leading-relaxed">
             <MarkdownRenderer content={taskBrief} />
           </div>
         </div>
@@ -207,10 +207,10 @@ function SubagentCardDetails({
         {/* Input Data / Context */}
         {inputData && (
           <div>
-            <div className="mb-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+            <div className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
               Context Pointers & Input Data
             </div>
-            <div className="overflow-x-auto whitespace-pre-wrap rounded-lg border border-border/40 bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground leading-relaxed">
+            <div className="border-border/40 bg-muted/40 text-muted-foreground overflow-x-auto rounded-lg border p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
               {inputData}
             </div>
           </div>
@@ -219,11 +219,11 @@ function SubagentCardDetails({
         {/* Worker Findings & Response */}
         {outputText && (
           <div>
-            <div className="mb-1.5 flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+            <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
               <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
               <span>Worker Findings & Response</span>
             </div>
-            <div className="rounded-lg border border-border/60 bg-background/80 p-3 text-foreground text-xs leading-relaxed shadow-xs">
+            <div className="border-border/60 bg-background/80 text-foreground rounded-lg border p-3 text-xs leading-relaxed shadow-xs">
               <MarkdownRenderer content={outputText} />
             </div>
           </div>
@@ -286,7 +286,7 @@ function SubagentCardHeader({
             <Badge
               variant="outline"
               className={cn(
-                "px-1.5 py-0.5 font-mono font-semibold text-[10px] uppercase tracking-wider",
+                "px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider uppercase",
                 roleStyle.bg,
                 roleStyle.text,
                 roleStyle.border,
@@ -308,8 +308,8 @@ function SubagentCardHeader({
         {messageId && <ScratchpadButton onClick={onOpenScratchpad} />}
 
         <AccordionPrimitive.Header className="flex">
-          <AccordionPrimitive.Trigger className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md outline-none transition-transform hover:bg-muted/50 [[data-state=open]>&>svg]:rotate-180">
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200" />
+          <AccordionPrimitive.Trigger className="hover:bg-muted/50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition-transform outline-none [[data-state=open]>&>svg]:rotate-180">
+            <ChevronDown className="text-muted-foreground h-3.5 w-3.5 transition-transform duration-200" />
           </AccordionPrimitive.Trigger>
         </AccordionPrimitive.Header>
       </div>

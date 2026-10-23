@@ -113,22 +113,22 @@ function StatCardButton({
       aria-label={`${card.label} jobs, ${count} total`}
       onClick={onClick}
       className={cn(
-        "flex h-11 cursor-pointer select-none items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150",
-        "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "flex h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150 select-none",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden",
         isActive ? card.colorClasses.active : card.colorClasses.inactive,
       )}
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <Icon className={cn("size-4 shrink-0", card.colorClasses.icon)} />
         <span
-          className={cn("truncate font-medium text-sm", card.colorClasses.text)}
+          className={cn("truncate text-sm font-medium", card.colorClasses.text)}
         >
           {card.label}
         </span>
       </div>
       <span
         className={cn(
-          "shrink-0 font-bold text-base tabular-nums",
+          "shrink-0 text-base font-bold tabular-nums",
           card.colorClasses.count,
         )}
       >

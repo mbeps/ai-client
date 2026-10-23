@@ -94,7 +94,7 @@ export function ModelSelector({
       <ComboboxTrigger
         aria-label="Select model"
         className={cn(
-          "flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border border-border/60 px-2 text-left text-xs transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed",
+          "border-border/60 hover:bg-muted/70 hover:text-foreground focus-visible:ring-ring flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border px-2 text-left text-xs transition-colors focus-visible:ring-1 disabled:cursor-not-allowed",
           className,
         )}
       >
@@ -121,7 +121,7 @@ export function ModelSelector({
         <ComboboxList>
           {(group: ModelGroup) => (
             <ComboboxGroup key={group.provider} items={group.items}>
-              <ComboboxLabel className="font-semibold text-[10px] text-muted-foreground/70 capitalize tracking-wider">
+              <ComboboxLabel className="text-muted-foreground/70 text-[10px] font-semibold tracking-wider capitalize">
                 {group.provider}
               </ComboboxLabel>
               <ComboboxCollection>

@@ -74,7 +74,7 @@ export function SkillsConfigTab({
   return (
     <div className={cn("space-y-6", className)}>
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">{title}</h3>
+        <h3 className="text-lg font-semibold">{title}</h3>
         <p className="text-muted-foreground text-sm">{description}</p>
       </div>
 
@@ -88,7 +88,7 @@ export function SkillsConfigTab({
               key={option.value}
               onClick={() => onSkillModeChange(option.value)}
               className={cn(
-                "group relative flex cursor-pointer flex-col justify-between rounded-lg border bg-card p-4 transition-all hover:bg-accent/40",
+                "group bg-card hover:bg-accent/40 relative flex cursor-pointer flex-col justify-between rounded-lg border p-4 transition-all",
                 isSelected
                   ? "border-primary bg-primary/5 shadow-xs"
                   : "border-border",
@@ -106,7 +106,7 @@ export function SkillsConfigTab({
                   >
                     <Icon className="h-4 w-4" />
                   </div>
-                  <span className="font-medium text-sm leading-tight">
+                  <span className="text-sm leading-tight font-medium">
                     {option.title}
                   </span>
                 </div>
@@ -131,13 +131,13 @@ export function SkillsConfigTab({
       {skillMode === "specific" && (
         <div className="space-y-3">
           <div className="space-y-0.5">
-            <h4 className="font-medium text-sm">Select Skills to Pre-Load</h4>
+            <h4 className="text-sm font-medium">Select Skills to Pre-Load</h4>
             <p className="text-muted-foreground text-xs">
               Selected skills will be active in instructions. Other enabled
               skills can still be dynamically loaded if needed.
             </p>
           </div>
-          <div className="flex max-h-[500px] flex-col overflow-hidden rounded-md border bg-card p-4">
+          <div className="bg-card flex max-h-[500px] flex-col overflow-hidden rounded-md border p-4">
             <SkillsPicker
               skills={skills}
               selectedIds={selectedSkillIds}

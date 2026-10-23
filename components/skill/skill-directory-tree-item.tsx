@@ -45,11 +45,11 @@ export interface SkillDirectoryTreeItemProps {
 
 function getFileIcon(name: string, isRootSkillMd?: boolean) {
   if (isRootSkillMd) {
-    return <FileText className="h-4 w-4 shrink-0 text-primary" />;
+    return <FileText className="text-primary h-4 w-4 shrink-0" />;
   }
   const lower = name.toLowerCase();
   if (lower.endsWith(".md") || lower.endsWith(".txt")) {
-    return <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />;
+    return <FileText className="text-muted-foreground h-4 w-4 shrink-0" />;
   }
   if (
     lower.endsWith(".ts") ||
@@ -60,7 +60,7 @@ function getFileIcon(name: string, isRootSkillMd?: boolean) {
   ) {
     return <FileCode className="h-4 w-4 shrink-0 text-amber-500" />;
   }
-  return <File className="h-4 w-4 shrink-0 text-muted-foreground" />;
+  return <File className="text-muted-foreground h-4 w-4 shrink-0" />;
 }
 
 /**
@@ -108,7 +108,7 @@ export function SkillDirectoryTreeItem({
           className={cn(
             "group flex h-8 items-center justify-between rounded-md pr-1 transition-colors",
             isDragOver
-              ? "bg-primary/20 ring-1 ring-primary"
+              ? "bg-primary/20 ring-primary ring-1"
               : "hover:bg-muted/60",
           )}
         >
@@ -118,16 +118,16 @@ export function SkillDirectoryTreeItem({
             className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm"
           >
             {isOpen ? (
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
             )}
             {isOpen ? (
               <FolderOpen className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             ) : (
               <Folder className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             )}
-            <span className="truncate font-medium text-foreground text-sm">
+            <span className="text-foreground truncate text-sm font-medium">
               {node.name}
             </span>
           </button>
@@ -139,7 +139,7 @@ export function SkillDirectoryTreeItem({
                 size="icon"
                 className="h-7 w-7 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
               >
-                <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                <MoreVertical className="text-muted-foreground h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -167,7 +167,7 @@ export function SkillDirectoryTreeItem({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDeleteFolder(node.path)}
-                className="gap-2 text-destructive text-xs focus:text-destructive"
+                className="text-destructive focus:text-destructive gap-2 text-xs"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Folder
@@ -213,7 +213,7 @@ export function SkillDirectoryTreeItem({
       className={cn(
         "group flex h-8 items-center justify-between rounded-md pr-1 transition-colors",
         isSelected
-          ? "bg-primary/10 font-medium text-primary"
+          ? "bg-primary/10 text-primary font-medium"
           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
     >
@@ -223,11 +223,11 @@ export function SkillDirectoryTreeItem({
         className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm"
       >
         {getFileIcon(node.name, node.isRootSkillMd)}
-        <span className="truncate font-normal text-sm">{node.name}</span>
+        <span className="truncate text-sm font-normal">{node.name}</span>
         {node.isRootSkillMd && (
           <Badge
             variant="secondary"
-            className="px-1.5 py-0 font-normal text-xs"
+            className="px-1.5 py-0 text-xs font-normal"
           >
             Main
           </Badge>
@@ -262,7 +262,7 @@ export function SkillDirectoryTreeItem({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDeleteFile(node.path)}
-              className="gap-2 text-destructive text-xs focus:text-destructive"
+              className="text-destructive focus:text-destructive gap-2 text-xs"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete

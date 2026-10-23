@@ -23,15 +23,15 @@ export function TranslationTargetPane(props: TranslationTargetPaneProps) {
   const { translatedText, isLoading, isCopied, onCopy } = props;
 
   return (
-    <div className="group relative flex min-h-[280px] flex-col overflow-hidden rounded-xl border bg-muted/5 shadow-sm transition-colors hover:border-primary/20">
+    <div className="group bg-muted/5 hover:border-primary/20 relative flex min-h-[280px] flex-col overflow-hidden rounded-xl border shadow-sm transition-colors">
       <Textarea
         value={translatedText}
         readOnly
         placeholder={isLoading ? "Translating..." : "Translation..."}
-        className="scrollbar-thin min-h-[140px] flex-1 resize-none border-0 bg-transparent p-4 text-sm leading-relaxed focus-visible:ring-0"
+        className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 bg-transparent p-4 text-sm leading-relaxed focus-visible:ring-0"
       />
 
-      <div className="flex shrink-0 items-center justify-end border-t bg-muted/10 p-2">
+      <div className="bg-muted/10 flex shrink-0 items-center justify-end border-t p-2">
         {translatedText && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -39,7 +39,7 @@ export function TranslationTargetPane(props: TranslationTargetPaneProps) {
                 variant="ghost"
                 size="icon"
                 onClick={onCopy}
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
                 aria-label="Copy translation"
               >
                 {isCopied ? (
@@ -54,8 +54,8 @@ export function TranslationTargetPane(props: TranslationTargetPaneProps) {
         )}
       </div>
       {isLoading && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[1px]">
-          <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+        <div className="bg-background/20 pointer-events-none absolute inset-0 flex items-center justify-center backdrop-blur-[1px]">
+          <Loader2 className="text-primary/50 h-6 w-6 animate-spin" />
         </div>
       )}
     </div>

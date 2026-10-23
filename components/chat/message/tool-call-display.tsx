@@ -160,8 +160,8 @@ function ToolCallHeaderTitle({
   if (isMcpCall) {
     return (
       <span className="flex items-center gap-1.5 font-mono text-xs">
-        <span className="font-semibold text-foreground/90">{serverName}</span>
-        <Circle className="size-1.5 fill-muted-foreground/50 text-muted-foreground/50" />
+        <span className="text-foreground/90 font-semibold">{serverName}</span>
+        <Circle className="fill-muted-foreground/50 text-muted-foreground/50 size-1.5" />
         <span>{toolName}</span>
       </span>
     );
@@ -173,13 +173,13 @@ function ToolCallStatusBadge({ isError }: { isError: boolean }) {
   return (
     <div className="ml-2 flex items-center gap-1.5">
       {isError ? (
-        <XCircle className="size-3.5 text-destructive" />
+        <XCircle className="text-destructive size-3.5" />
       ) : (
-        <CheckCircle2 className="size-3.5 text-success" />
+        <CheckCircle2 className="text-success size-3.5" />
       )}
       <span
         className={cn(
-          "font-bold text-[10px] uppercase",
+          "text-[10px] font-bold uppercase",
           isError ? "text-destructive" : "text-success",
         )}
       >
@@ -191,12 +191,12 @@ function ToolCallStatusBadge({ isError }: { isError: boolean }) {
 
 function ToolCallContextUsage({ tokens }: { tokens: number }) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5 text-xs">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
-        <Database className="size-3.5 text-muted-foreground" />
+    <div className="border-border/40 bg-muted/30 flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs">
+      <div className="text-muted-foreground flex items-center gap-1.5">
+        <Database className="text-muted-foreground size-3.5" />
         <span className="font-medium">Context Usage</span>
       </div>
-      <span className="font-mono text-[11px] text-foreground/80">
+      <span className="text-foreground/80 font-mono text-[11px]">
         ~{formatTokens(tokens)} tokens
       </span>
     </div>
@@ -207,14 +207,14 @@ function ToolCallArgumentsDisplay({ args }: { args: unknown }) {
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+        <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
           Arguments
         </span>
-        <div className="h-px flex-1 bg-muted" />
+        <div className="bg-muted h-px flex-1" />
       </div>
-      <div className="max-h-60 overflow-y-auto overflow-x-hidden rounded-md bg-zinc-950/90 ring-1 ring-white/5 ring-inset dark:bg-black/40">
+      <div className="max-h-60 overflow-x-hidden overflow-y-auto rounded-md bg-zinc-950/90 ring-1 ring-white/5 ring-inset dark:bg-black/40">
         <div className="p-2.5">
-          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-300 leading-relaxed">
+          <pre className="font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-zinc-300">
             {JSON.stringify(args, null, 2)}
           </pre>
         </div>
@@ -233,21 +233,21 @@ function ToolCallResultDisplay({
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+        <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
           Result
         </span>
-        <div className="h-px flex-1 bg-muted" />
+        <div className="bg-muted h-px flex-1" />
       </div>
       <div
         className={cn(
-          "max-h-80 overflow-y-auto overflow-x-hidden rounded-md ring-1 ring-inset",
+          "max-h-80 overflow-x-hidden overflow-y-auto rounded-md ring-1 ring-inset",
           isError
             ? "bg-destructive/5 text-destructive ring-destructive/20"
             : "bg-zinc-950/90 text-zinc-300 ring-white/5 dark:bg-black/40",
         )}
       >
         <div className="p-2.5">
-          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
+          <pre className="font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap">
             {typeof result === "string"
               ? result
               : JSON.stringify(result, null, 2)}
@@ -313,12 +313,12 @@ function ToolCallTriggerContent({
   isError: boolean;
 }) {
   return (
-    <div className="flex flex-1 items-center gap-2 text-muted-foreground">
+    <div className="text-muted-foreground flex flex-1 items-center gap-2">
       <div className="relative">
         <Terminal className="size-4" />
         {!isCompleted && (
           <div className="absolute -top-1 -right-1">
-            <Loader2 className="size-2 animate-spin text-primary" />
+            <Loader2 className="text-primary size-2 animate-spin" />
           </div>
         )}
       </div>
@@ -347,7 +347,7 @@ function ToolCallCollapsibleBody({
 }) {
   return (
     <CollapsibleContent>
-      <div className="border-muted border-t bg-muted/5 p-3 pt-0">
+      <div className="border-muted bg-muted/5 border-t p-3 pt-0">
         <div className="mt-2 space-y-3">
           <ToolCallContextUsage tokens={estimatedTokens} />
           <ToolCallArgumentsDisplay args={args} />
@@ -380,9 +380,9 @@ function StandardToolCallCollapsible({
     <div key={elementKey}>
       <Collapsible
         defaultOpen={initialOpen}
-        className="w-full overflow-hidden rounded-lg border border-muted bg-muted/20"
+        className="border-muted bg-muted/20 w-full overflow-hidden rounded-lg border"
       >
-        <CollapsibleTrigger className="flex w-full items-center gap-2 p-2.5 font-medium text-sm outline-none transition-colors hover:bg-muted/30">
+        <CollapsibleTrigger className="hover:bg-muted/30 flex w-full items-center gap-2 p-2.5 text-sm font-medium transition-colors outline-none">
           <ToolCallTriggerContent
             isCompleted={isCompleted}
             toolName={toolCall.toolName}
@@ -390,7 +390,7 @@ function StandardToolCallCollapsible({
             isMcpCall={isMcpCall}
             isError={isError}
           />
-          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          <ChevronDown className="text-muted-foreground size-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
         </CollapsibleTrigger>
         <ToolCallCollapsibleBody
           estimatedTokens={estimatedTokens}

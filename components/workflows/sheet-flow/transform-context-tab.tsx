@@ -20,7 +20,7 @@ export function TransformContextTab({
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Global Context</h3>
+        <h3 className="text-lg font-semibold">Global Context</h3>
         <p className="text-muted-foreground text-sm">
           Provide background information that applies to all steps in this
           transformation.

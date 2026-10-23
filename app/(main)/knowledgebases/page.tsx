@@ -56,7 +56,7 @@ export default function KnowledgebasesPage() {
             <NoModelsAlertBanner message="No embedding models configured. Please set up a provider with embedding support to create knowledgebases." />
           ) : undefined
         }
-        icon={<Database className="h-8 w-8 text-primary" />}
+        icon={<Database className="text-primary h-8 w-8" />}
         title="Knowledgebases"
         description="Manage your documents and global context."
         items={knowledgebases}

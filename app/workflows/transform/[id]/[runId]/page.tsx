@@ -56,7 +56,7 @@ function checkShowPreviewPane(
 function StreamErrorAlert({ error }: { error: string | null }) {
   if (!error) return null;
   return (
-    <div className="m-4 flex shrink-0 items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-destructive text-sm">
+    <div className="border-destructive/50 bg-destructive/10 text-destructive m-4 flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm">
       <AlertCircle className="h-4 w-4" />
       {error}
     </div>
@@ -78,8 +78,8 @@ function TransformRunTimeline({
 }: TransformRunTimelineProps) {
   return (
     <div className="space-y-6">
-      <h3 className="font-bold text-lg tracking-tight">Execution Timeline</h3>
-      <div className="relative before:absolute before:top-4 before:bottom-4 before:left-4 before:w-px before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
+      <h3 className="text-lg font-bold tracking-tight">Execution Timeline</h3>
+      <div className="before:from-muted before:via-muted relative before:absolute before:top-4 before:bottom-4 before:left-4 before:w-px before:bg-gradient-to-b before:to-transparent">
         {steps.map((step, index) => (
           <TransformStepTimelineItem
             key={step.id}
@@ -145,7 +145,7 @@ export default function TransformRunDetailPage() {
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }

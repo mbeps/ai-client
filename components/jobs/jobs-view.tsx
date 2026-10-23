@@ -27,7 +27,7 @@ function JobsHeader() {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="font-bold text-3xl tracking-tight">Running Jobs</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Running Jobs</h1>
         <p className="text-muted-foreground">
           Monitor, track, and manage active background tasks and workflow runs.
         </p>
@@ -191,7 +191,7 @@ export function JobsView() {
 
       {loading && jobs.length === 0 && (
         <div className="flex items-center justify-center p-12">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground size-8 animate-spin" />
         </div>
       )}
 

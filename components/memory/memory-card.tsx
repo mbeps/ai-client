@@ -53,13 +53,13 @@ export function MemoryCard({
   return (
     <Card
       className={cn(
-        "flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors hover:bg-muted/30",
+        "hover:bg-muted/30 flex h-full min-h-[110px] flex-col justify-between p-4 transition-colors",
         isSelected && "border-primary/60 bg-primary/5 dark:bg-primary/10",
       )}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
-          <p className="flex-1 whitespace-pre-wrap break-words text-foreground text-sm leading-relaxed">
+          <p className="text-foreground flex-1 text-sm leading-relaxed break-words whitespace-pre-wrap">
             {memory.content}
           </p>
           {onToggleSelect && (
@@ -88,7 +88,7 @@ export function MemoryCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7"
                 onClick={() => onEdit(memory)}
                 aria-label="Edit memory"
               >
@@ -104,7 +104,7 @@ export function MemoryCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive h-7 w-7"
                 onClick={() => onDelete(memory)}
                 aria-label="Delete memory"
               >

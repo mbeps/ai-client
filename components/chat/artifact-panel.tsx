@@ -108,16 +108,16 @@ export function ArtifactPanel({
 
   return (
     <div
-      className={`slide-in-from-right flex h-full animate-in flex-col overflow-hidden border-l bg-card shadow-xl transition-all duration-300 md:shadow-none ${
+      className={`slide-in-from-right animate-in bg-card flex h-full flex-col overflow-hidden border-l shadow-xl transition-all duration-300 md:shadow-none ${
         isFullWidth
           ? "relative w-full"
           : "absolute top-0 right-0 z-50 w-full md:relative md:w-[60%] lg:w-[55%] xl:w-[50%]"
       }`}
     >
-      <div className="flex shrink-0 items-center justify-between border-b bg-muted/30 p-3">
+      <div className="bg-muted/30 flex shrink-0 items-center justify-between border-b p-3">
         <div className="flex min-w-0 items-center gap-3">
           {artifacts.length > 1 && onNavigate && (
-            <div className="flex items-center overflow-hidden rounded-md border bg-background">
+            <div className="bg-background flex items-center overflow-hidden rounded-md border">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -133,7 +133,7 @@ export function ArtifactPanel({
                 </TooltipTrigger>
                 <TooltipContent>Previous artifact</TooltipContent>
               </Tooltip>
-              <span className="px-2 font-medium text-[10px] tabular-nums">
+              <span className="px-2 text-[10px] font-medium tabular-nums">
                 {currentIndex + 1} / {artifacts.length}
               </span>
               <Tooltip>
@@ -154,10 +154,10 @@ export function ArtifactPanel({
             </div>
           )}
           <div className="flex min-w-0 flex-col">
-            <h3 className="truncate font-semibold text-sm">
+            <h3 className="truncate text-sm font-semibold">
               {artifact.title || "Artifact"}
             </h3>
-            <span className="text-[10px] text-muted-foreground uppercase leading-none">
+            <span className="text-muted-foreground text-[10px] leading-none uppercase">
               {artifact.type}
             </span>
           </div>
@@ -170,7 +170,7 @@ export function ArtifactPanel({
                 variant="ghost"
                 size="icon"
                 onClick={handleCopy}
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
                 aria-label="Copy content"
               >
                 {copied ? (
@@ -189,7 +189,7 @@ export function ArtifactPanel({
                 variant="ghost"
                 size="icon"
                 onClick={handleDownload}
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
                 aria-label="Download file"
               >
                 <Download className="h-4 w-4" />
@@ -198,7 +198,7 @@ export function ArtifactPanel({
             <TooltipContent>Download file</TooltipContent>
           </Tooltip>
 
-          <div className="mx-1 h-4 w-px bg-border" />
+          <div className="bg-border mx-1 h-4 w-px" />
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -206,7 +206,7 @@ export function ArtifactPanel({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-8 w-8"
                 aria-label="Close artifact"
               >
                 <X className="h-4 w-4" />
@@ -218,7 +218,7 @@ export function ArtifactPanel({
       </div>
 
       {!isLatest && (
-        <div className="flex shrink-0 items-center justify-between border-amber-500/20 border-b bg-amber-500/10 px-4 py-2 text-amber-800 text-xs dark:text-amber-300">
+        <div className="flex shrink-0 items-center justify-between border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>
@@ -237,7 +237,7 @@ export function ArtifactPanel({
         </div>
       )}
 
-      <div className="relative flex-1 overflow-hidden bg-muted/5">
+      <div className="bg-muted/5 relative flex-1 overflow-hidden">
         <Tabs value={artifact.type} className="flex h-full w-full flex-col">
           <TabsList className="hidden">
             <TabsTrigger value="markdown">Markdown</TabsTrigger>
@@ -257,7 +257,7 @@ export function ArtifactPanel({
                 onUpdate={onUpdate}
               />
             ) : (
-              <div className="custom-scrollbar h-full w-full overflow-y-auto bg-background p-6">
+              <div className="custom-scrollbar bg-background h-full w-full overflow-y-auto p-6">
                 <MarkdownRenderer content={artifact.content} />
               </div>
             )}

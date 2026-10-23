@@ -26,7 +26,7 @@ export function AssistantPromptTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">System Prompt</h3>
+        <h3 className="text-lg font-semibold">System Prompt</h3>
         <p className="text-muted-foreground text-sm">
           Customize the persona and capabilities of this assistant.
         </p>

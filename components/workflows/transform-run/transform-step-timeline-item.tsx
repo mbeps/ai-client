@@ -98,13 +98,13 @@ function StepTimelineContent({
   return (
     <div className={`rounded-xl border p-4 transition-all ${containerClass}`}>
       <div className="mb-1 flex items-center gap-2">
-        <h4 className={`font-bold text-sm ${isSelected ? "text-primary" : ""}`}>
+        <h4 className={`text-sm font-bold ${isSelected ? "text-primary" : ""}`}>
           {name}
         </h4>
         {isCompleted && (
           <Badge
             variant="secondary"
-            className="h-4 border-green-500/20 bg-green-500/10 text-[10px] text-green-700 uppercase tracking-tighter"
+            className="h-4 border-green-500/20 bg-green-500/10 text-[10px] tracking-tighter text-green-700 uppercase"
           >
             Done
           </Badge>
@@ -113,7 +113,7 @@ function StepTimelineContent({
 
       <StepToolCalls toolCalls={toolCalls} toolResults={toolResults} />
 
-      <p className="mt-2 line-clamp-2 text-muted-foreground text-xs">
+      <p className="text-muted-foreground mt-2 line-clamp-2 text-xs">
         {summaryText}
       </p>
     </div>

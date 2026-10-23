@@ -51,17 +51,17 @@ export function ChatCard({ chat }: ChatCardProps) {
       href={targetHref}
       className="group block h-full focus-visible:outline-none"
     >
-      <Card className="flex h-full min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors hover:bg-muted/50">
+      <Card className="hover:bg-muted/50 flex h-full min-h-[80px] cursor-pointer flex-col justify-between p-4 transition-colors">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <MessageSquare className="h-5 w-5 text-primary" />
+            <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <MessageSquare className="text-primary h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 space-y-1">
-              <h3 className="truncate font-semibold leading-none">
+              <h3 className="truncate leading-none font-semibold">
                 {chat.title}
               </h3>
-              <p className="truncate text-muted-foreground text-xs">
+              <p className="text-muted-foreground truncate text-xs">
                 <span>
                   {chat.projectId
                     ? "Project Chat"
@@ -71,7 +71,7 @@ export function ChatCard({ chat }: ChatCardProps) {
                 </span>
                 {formattedDate && (
                   <>
-                    <span className="mx-1 text-muted-foreground/40">•</span>
+                    <span className="text-muted-foreground/40 mx-1">•</span>
                     <span>{formattedDate}</span>
                   </>
                 )}

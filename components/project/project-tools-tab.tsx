@@ -34,7 +34,7 @@ export function ProjectToolsTab({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Default Tools</h3>
+        <h3 className="text-lg font-semibold">Default Tools</h3>
         <p className="text-muted-foreground text-sm">
           Select tools and resources that should be enabled by default for all
           new chats in this project.

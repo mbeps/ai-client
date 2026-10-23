@@ -110,9 +110,9 @@ export function McpItemList<T>({
     return (
       <Card className="border-destructive/50">
         <CardContent className="flex items-center gap-3 pt-6">
-          <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+          <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
           <div className="flex-1">
-            <p className="font-medium text-sm">
+            <p className="text-sm font-medium">
               Failed to discover {itemKind}s
             </p>
             <p className="text-muted-foreground text-xs">{error}</p>
@@ -133,7 +133,7 @@ export function McpItemList<T>({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 font-medium text-muted-foreground text-sm">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
           <Icon className="h-4 w-4" />
           <span>
             {items.length} {itemKind}
@@ -146,21 +146,21 @@ export function McpItemList<T>({
         </Button>
       </div>
 
-      <Card className="overflow-hidden border-none bg-background/50 shadow-none">
+      <Card className="bg-background/50 overflow-hidden border-none shadow-none">
         <Accordion type="single" collapsible className="w-full">
           {items.map((item) => (
             <AccordionItem
               key={getItemKey(item)}
               value={getItemKey(item)}
-              className="border-border/50 border-b px-4 transition-colors last:border-0 hover:bg-muted/30"
+              className="border-border/50 hover:bg-muted/30 border-b px-4 transition-colors last:border-0"
             >
               <AccordionTrigger className="py-4 hover:no-underline">
                 <div className="flex items-center gap-3 text-left">
-                  <div className="rounded-md bg-primary/10 p-2 text-primary">
+                  <div className="bg-primary/10 text-primary rounded-md p-2">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-mono font-semibold text-sm">
+                    <p className="font-mono text-sm font-semibold">
                       {getItemLabel(item)}
                     </p>
                   </div>

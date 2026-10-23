@@ -1,7 +1,6 @@
 # Migration numbering note
 
 Migration file numbers are **not strictly sequential** and contain duplicates:
-
 - `0029` appears twice (`0029_overrated_scrambler.sql`, `0029_provider_registry_reindex_flags.sql`)
 - `0030` appears twice (`0030_fierce_thunder.sql`, `0030_vengeful_goblin_queen.sql`)
 - `0027` is missing

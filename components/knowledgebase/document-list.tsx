@@ -70,7 +70,7 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
 
   if (documents.length === 0) {
     return (
-      <p className="py-4 text-muted-foreground text-sm">
+      <p className="text-muted-foreground py-4 text-sm">
         No documents uploaded yet.
       </p>
     );
@@ -85,14 +85,14 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
         const Icon = cfg.icon;
         return (
           <li key={doc.id} className="group flex items-center gap-2 px-3 py-2">
-            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <FileText className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-[13px] leading-tight">
+              <p className="truncate text-[13px] leading-tight font-medium">
                 {doc.name}
               </p>
-              <p className="mt-0.5 truncate text-[10px] text-muted-foreground leading-tight">
+              <p className="text-muted-foreground mt-0.5 truncate text-[10px] leading-tight">
                 {doc.status === "failed" && doc.statusMessage ? (
-                  <span className="font-medium text-destructive">
+                  <span className="text-destructive font-medium">
                     {doc.statusMessage}
                   </span>
                 ) : (
@@ -106,7 +106,7 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
             <div className="flex items-center gap-1.5">
               <Badge
                 variant={cfg.variant}
-                className="flex h-5 shrink-0 items-center gap-1 px-1.5 py-0 font-normal text-[10px]"
+                className="flex h-5 shrink-0 items-center gap-1 px-1.5 py-0 text-[10px] font-normal"
               >
                 <Icon
                   className={`h-2.5 w-2.5 ${doc.status === "processing" ? "animate-spin" : ""}`}

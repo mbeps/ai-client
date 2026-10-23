@@ -53,15 +53,15 @@ export function ActiveSelectionChips({
   return (
     <div className="flex flex-wrap gap-2 pb-2">
       {selectedAssistant && (
-        <div className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
-          <Bot className="h-3 w-3 text-muted-foreground" />
+        <div className="bg-muted/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs">
+          <Bot className="text-muted-foreground h-3 w-3" />
           <span className="max-w-[160px] truncate">
             @{selectedAssistant.name}
           </span>
           <button
             type="button"
             onClick={onRemoveAssistant}
-            className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+            className="hover:bg-destructive hover:text-destructive-foreground ml-1 rounded-full p-0.5 transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -71,12 +71,12 @@ export function ActiveSelectionChips({
       {promptList.map((prompt) => (
         <div
           key={prompt.id}
-          className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+          className="bg-muted/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs"
         >
           {prompt.isMcp ? (
             <Zap className="h-3 w-3 text-amber-500" />
           ) : (
-            <Command className="h-3 w-3 text-muted-foreground" />
+            <Command className="text-muted-foreground h-3 w-3" />
           )}
           {prompt.isMcp ? (
             <span className="max-w-[160px] truncate">
@@ -94,7 +94,7 @@ export function ActiveSelectionChips({
           <button
             type="button"
             onClick={() => onRemovePrompt(prompt.id)}
-            className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+            className="hover:bg-destructive hover:text-destructive-foreground ml-1 rounded-full p-0.5 transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -106,9 +106,9 @@ export function ActiveSelectionChips({
         return (
           <div
             key={skillId}
-            className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+            className="bg-muted/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs"
           >
-            <BrainCircuit className="h-3 w-3 shrink-0 text-primary" />
+            <BrainCircuit className="text-primary h-3 w-3 shrink-0" />
             <span className="max-w-[160px] truncate">
               /{item?.name ?? item?.displayName ?? skillId}
             </span>
@@ -116,7 +116,7 @@ export function ActiveSelectionChips({
               <button
                 type="button"
                 onClick={() => onRemoveSkill(skillId)}
-                className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+                className="hover:bg-destructive hover:text-destructive-foreground ml-1 rounded-full p-0.5 transition-colors"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -130,14 +130,14 @@ export function ActiveSelectionChips({
         return (
           <div
             key={kbId}
-            className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs"
+            className="bg-muted/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs"
           >
-            <Database className="h-3 w-3 text-muted-foreground" />
+            <Database className="text-muted-foreground h-3 w-3" />
             <span className="max-w-[160px] truncate">{kb?.name ?? kbId}</span>
             <button
               type="button"
               onClick={() => onRemoveKb(kbId)}
-              className="ml-1 rounded-full p-0.5 transition-colors hover:bg-destructive hover:text-destructive-foreground"
+              className="hover:bg-destructive hover:text-destructive-foreground ml-1 rounded-full p-0.5 transition-colors"
             >
               <X className="h-3 w-3" />
             </button>

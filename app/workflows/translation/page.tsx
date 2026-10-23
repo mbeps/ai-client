@@ -30,11 +30,11 @@ export default function TranslationWorkflowPage() {
       {/* Header Row */}
       <div className="flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Languages className="h-4 w-4 text-primary" />
-          <h1 className="font-semibold text-lg">Translation</h1>
+          <Languages className="text-primary h-4 w-4" />
+          <h1 className="text-lg font-semibold">Translation</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase">
+          <span className="text-muted-foreground text-[10px] font-medium uppercase">
             Model
           </span>
           <ModelSelector
@@ -88,7 +88,7 @@ export default function TranslationWorkflowPage() {
           size="sm"
           onClick={workflow.handleTranslate}
           disabled={!workflow.canTranslate}
-          className="h-8 px-8 font-medium text-xs shadow-sm transition-all"
+          className="h-8 px-8 text-xs font-medium shadow-sm transition-all"
         >
           {workflow.isLoading ? (
             <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />

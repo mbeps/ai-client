@@ -16,7 +16,7 @@ interface JobsSearchBarProps {
 function JobsSearchBar({ value, onChange }: JobsSearchBarProps) {
   return (
     <div className="relative flex-1 sm:max-w-md">
-      <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
       <Input
         placeholder="Search jobs by title, type, or function..."
         value={value}
@@ -63,7 +63,7 @@ export function JobsControlsBar({
             variant="ghost"
             size="sm"
             onClick={onShowAll}
-            className="h-8 text-muted-foreground text-xs hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-8 text-xs"
           >
             Show all ({totalJobs})
           </Button>
