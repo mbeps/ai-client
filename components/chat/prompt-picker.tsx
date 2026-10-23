@@ -24,8 +24,6 @@ import type { Prompt } from "@/types/prompt/prompt";
 interface PromptPickerProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
-  selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   selectedPromptIds?: Set<string>;
   onTogglePrompt?: (prompt: MentionPromptItem) => void;
   onSelectAll?: (prompts: MentionPromptItem[]) => void;
@@ -50,8 +48,6 @@ interface PromptGroup {
 export function PromptPicker({
   prompts = [],
   mcpPrompts = [],
-  selectedPrompt,
-  onSelectPrompt,
   selectedPromptIds,
   onTogglePrompt,
   onSelectAll,
@@ -76,17 +72,6 @@ export function PromptPicker({
           initial.add(sId);
         }
       });
-    } else if (selectedPrompt) {
-      if (selectedPrompt.isMcp) {
-        const sId =
-          ("serverId" in selectedPrompt &&
-          typeof selectedPrompt.serverId === "string"
-            ? selectedPrompt.serverId
-            : "") || selectedPrompt.sourceServer;
-        if (sId) initial.add(sId);
-      } else {
-        initial.add("internal");
-      }
     }
     return initial;
   });
@@ -217,19 +202,11 @@ export function PromptPicker({
     if (selectedPromptIds) {
       return filteredItems.every((item) => selectedPromptIds.has(item.id));
     }
-    return selectedPrompt !== null;
-  }, [filteredItems, selectedPromptIds, selectedPrompt]);
+    return false;
+  }, [filteredItems, selectedPromptIds]);
 
   const handleToggle = (item: MentionPromptItem) => {
-    if (onTogglePrompt) {
-      onTogglePrompt(item);
-    } else if (onSelectPrompt) {
-      if (selectedPrompt?.id === item.id) {
-        onSelectPrompt(null);
-      } else {
-        onSelectPrompt(item);
-      }
-    }
+    onTogglePrompt?.(item);
   };
 
   const handleToggleAll = () => {
@@ -249,12 +226,6 @@ export function PromptPicker({
           if (!selectedPromptIds.has(item.id)) onTogglePrompt(item);
         });
       }
-    } else if (onSelectPrompt) {
-      if (isAllSelected) {
-        onSelectPrompt(null);
-      } else if (filteredItems.length > 0) {
-        onSelectPrompt(filteredItems[0]);
-      }
     }
   };
 
@@ -263,17 +234,11 @@ export function PromptPicker({
       return filteredItems.filter((item) => selectedPromptIds.has(item.id))
         .length;
     }
-    return selectedPrompt
-      ? filteredItems.some((item) => item.id === selectedPrompt.id)
-        ? 1
-        : 0
-      : 0;
-  }, [filteredItems, selectedPromptIds, selectedPrompt]);
+    return 0;
+  }, [filteredItems, selectedPromptIds]);
 
   const renderPromptCard = (item: MentionPromptItem) => {
-    const isSelected = selectedPromptIds
-      ? selectedPromptIds.has(item.id)
-      : selectedPrompt?.id === item.id;
+    const isSelected = selectedPromptIds?.has(item.id) ?? false;
 
     return (
       <div
@@ -374,9 +339,7 @@ export function PromptPicker({
               const isExpanded =
                 expandedGroups.has(group.id) || search.length > 0;
               const selectedInGroup = group.items.filter((item) =>
-                selectedPromptIds
-                  ? selectedPromptIds.has(item.id)
-                  : selectedPrompt?.id === item.id,
+                selectedPromptIds?.has(item.id),
               ).length;
 
               if (group.isInternal) {
@@ -412,10 +375,18 @@ export function PromptPicker({
                           className="flex items-center"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (selectedInGroup > 0) {
-                              onSelectPrompt?.(null);
-                            } else if (group.items.length > 0) {
-                              onSelectPrompt?.(group.items[0]);
+                            if (onTogglePrompt) {
+                              if (selectedInGroup > 0) {
+                                group.items.forEach((item) => {
+                                  if (selectedPromptIds?.has(item.id))
+                                    onTogglePrompt(item);
+                                });
+                              } else {
+                                group.items.forEach((item) => {
+                                  if (!selectedPromptIds?.has(item.id))
+                                    onTogglePrompt(item);
+                                });
+                              }
                             }
                           }}
                         >
@@ -468,10 +439,18 @@ export function PromptPicker({
                         className="flex items-center"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (selectedInGroup > 0) {
-                            onSelectPrompt?.(null);
-                          } else if (group.items.length > 0) {
-                            onSelectPrompt?.(group.items[0]);
+                          if (onTogglePrompt) {
+                            if (selectedInGroup > 0) {
+                              group.items.forEach((item) => {
+                                if (selectedPromptIds?.has(item.id))
+                                  onTogglePrompt(item);
+                              });
+                            } else {
+                              group.items.forEach((item) => {
+                                if (!selectedPromptIds?.has(item.id))
+                                  onTogglePrompt(item);
+                              });
+                            }
                           }
                         }}
                       >
@@ -503,8 +482,6 @@ export function PromptPicker({
 interface PromptPickerDialogProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
-  selectedPrompt?: MentionPromptItem | null;
-  onSelectPrompt?: (prompt: MentionPromptItem | null) => void;
   selectedPromptIds?: Set<string>;
   onTogglePrompt?: (prompt: MentionPromptItem) => void;
   onClearAll?: () => void;
@@ -519,17 +496,13 @@ interface PromptPickerDialogProps {
 export function PromptPickerDialog({
   prompts = [],
   mcpPrompts = [],
-  selectedPrompt,
-  onSelectPrompt,
   selectedPromptIds,
   onTogglePrompt,
   onClearAll,
   trigger,
 }: PromptPickerDialogProps) {
   const totalCount = prompts.length + mcpPrompts.length;
-  const hasSelection =
-    (selectedPromptIds && selectedPromptIds.size > 0) ||
-    Boolean(selectedPrompt);
+  const hasSelection = selectedPromptIds && selectedPromptIds.size > 0;
 
   return (
     <PickerDialog
@@ -561,7 +534,6 @@ export function PromptPickerDialog({
             size="sm"
             onClick={() => {
               onClearAll?.();
-              onSelectPrompt?.(null);
             }}
             className="h-8 text-xs"
           >
@@ -574,8 +546,6 @@ export function PromptPickerDialog({
       <PromptPicker
         prompts={prompts}
         mcpPrompts={mcpPrompts}
-        selectedPrompt={selectedPrompt}
-        onSelectPrompt={onSelectPrompt}
         selectedPromptIds={selectedPromptIds}
         onTogglePrompt={onTogglePrompt}
         onClearAll={onClearAll}

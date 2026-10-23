@@ -133,14 +133,13 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
   const prompts = useChatPromptSelection(
     mentions.selectedPrompts,
     mentions.setSelectedPrompts,
-    mentions.setSelectedPrompt,
   );
 
   const isSendDisabled = checkIsSendDisabled(
     services.hasNoModels,
     input,
     attachments.attachments.length,
-    prompts.promptList.length > 0 || Boolean(mentions.selectedPrompt),
+    prompts.promptList.length > 0,
     Boolean(mentions.selectedAssistant),
     selections.selectedSkills.size,
     selections.selectedKbs.size,
@@ -154,7 +153,6 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selectedTools: selections.selectedTools,
     selectedServerIds: selections.selectedServerIds,
     promptList: prompts.promptList,
-    selectedPrompt: mentions.selectedPrompt,
     input,
     setInput,
     attachments: attachments.attachments,

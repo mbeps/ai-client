@@ -23,7 +23,6 @@ export interface UseChatSubmitOptions {
   selectedTools: Set<string>;
   selectedServerIds: Set<string>;
   promptList: MentionPromptItem[];
-  selectedPrompt?: MentionPromptItem | null;
   input: string;
   setInput: (val: string) => void;
   attachments: Attachment[];
@@ -52,7 +51,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedTools,
     selectedServerIds,
     promptList,
-    selectedPrompt,
     input,
     setInput,
     attachments,
@@ -76,10 +74,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     const effectiveServerIds = supportsTools
       ? Array.from(selectedServerIds)
       : [];
-    const promptPayload = resolvePromptPayload(
-      promptList.map((p) => p.id),
-      selectedPrompt?.id,
-    );
+    const promptPayload = resolvePromptPayload(promptList.map((p) => p.id));
 
     onSend(
       input,
@@ -106,7 +101,6 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedTools,
     selectedServerIds,
     promptList,
-    selectedPrompt,
     onSend,
     input,
     attachments,

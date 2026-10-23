@@ -97,7 +97,6 @@ export function useMentionCommands(
   onSelectSkill?: (skill: Skill) => void,
   onSelectKnowledgebase?: (kb: Knowledgebase) => void,
   knowledgebases?: Knowledgebase[],
-  onSelectPrompt?: (prompt: MentionPromptItem) => void,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
@@ -143,23 +142,11 @@ export function useMentionCommands(
     },
   );
 
-  const selectedPrompt = selectedPrompts[0] ?? null;
-  const setSelectedPrompt = useCallback((prompt: MentionPromptItem | null) => {
-    if (!prompt) {
-      setSelectedPrompts([]);
-    } else {
-      setSelectedPrompts([prompt]);
-    }
-  }, []);
-
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
     initialSelectedAssistantId
       ? assistants.find((a) => a.id === initialSelectedAssistantId) || null
       : null,
   );
-
-  const [selectedKnowledgebase, setSelectedKnowledgebase] =
-    useState<Knowledgebase | null>(null);
 
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];
@@ -332,7 +319,6 @@ export function useMentionCommands(
               if (prev.some((p) => p.id === item.id)) return prev;
               return [...prev, item];
             });
-            onSelectPrompt?.(item);
           }
         } else if (openTrigger === "@") {
           if (isAssistantItem(item)) {
@@ -340,7 +326,6 @@ export function useMentionCommands(
           }
         } else if (openTrigger === "#") {
           if (isKnowledgebaseItem(item)) {
-            setSelectedKnowledgebase(item);
             onSelectKnowledgebase?.(item);
           }
         }
@@ -363,7 +348,6 @@ export function useMentionCommands(
       openTrigger,
       onSelectSkill,
       onSelectKnowledgebase,
-      onSelectPrompt,
     ],
   );
 
@@ -407,14 +391,10 @@ export function useMentionCommands(
     filteredItems,
     selectedIndex,
     setSelectedIndex,
-    selectedPrompt,
-    setSelectedPrompt,
     selectedPrompts,
     setSelectedPrompts,
     selectedAssistant,
     setSelectedAssistant,
-    selectedKnowledgebase,
-    setSelectedKnowledgebase,
     handleInputChange,
     handleKeyDown,
     handleSelect,

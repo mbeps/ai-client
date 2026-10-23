@@ -9,7 +9,6 @@ import type { Skill } from "@/types/skill/skill";
 
 interface ActiveSelectionChipsProps {
   selectedAssistant: { name: string } | null;
-  selectedPrompt?: MentionPromptItem | null;
   selectedPrompts?: MentionPromptItem[];
   selectedKbs: Set<string>;
   knowledgebases: Knowledgebase[];
@@ -30,7 +29,6 @@ interface ActiveSelectionChipsProps {
  */
 export function ActiveSelectionChips({
   selectedAssistant,
-  selectedPrompt,
   selectedPrompts = [],
   selectedKbs,
   knowledgebases,
@@ -41,12 +39,7 @@ export function ActiveSelectionChips({
   onRemoveKb,
   onRemoveSkill,
 }: ActiveSelectionChipsProps) {
-  const promptList: MentionPromptItem[] =
-    selectedPrompts.length > 0
-      ? selectedPrompts
-      : selectedPrompt
-        ? [selectedPrompt]
-        : [];
+  const promptList: MentionPromptItem[] = selectedPrompts;
 
   if (
     !selectedAssistant &&

@@ -205,7 +205,6 @@ export function ChatInput(props: ChatInputProps) {
 
       <ActiveSelectionChips
         selectedAssistant={interaction.mentions.selectedAssistant}
-        selectedPrompt={interaction.mentions.selectedPrompt}
         selectedPrompts={interaction.mentions.selectedPrompts}
         selectedKbs={interaction.selections.selectedKbs}
         knowledgebases={services.knowledgebases}
@@ -253,8 +252,6 @@ export function ChatInput(props: ChatInputProps) {
         handleToggleSkill={interaction.selections.handleToggleSkill}
         prompts={services.prompts}
         mcpPrompts={services.mcpPrompts}
-        selectedPrompt={interaction.mentions.selectedPrompt}
-        setSelectedPrompt={interaction.mentions.setSelectedPrompt}
         selectedPromptIds={interaction.prompts.selectedPromptIds}
         handleTogglePrompt={interaction.prompts.handleTogglePrompt}
         handleClearPrompts={interaction.prompts.handleClearPrompts}

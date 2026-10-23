@@ -3,21 +3,18 @@ import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 
 export function resolvePromptPayload(
   promptIds: string[],
-  selectedPromptId?: string,
 ): string[] | undefined {
-  if (promptIds.length > 0) return promptIds;
-  return selectedPromptId ? [selectedPromptId] : undefined;
+  return promptIds.length > 0 ? promptIds : undefined;
 }
 
 /**
- * Manages selection and toggle state for single and multiple prompt items.
+ * Manages selection and toggle state for multiple prompt items.
  */
 export function useChatPromptSelection(
   selectedPrompts: MentionPromptItem[] | undefined,
   setSelectedPrompts:
     | React.Dispatch<React.SetStateAction<MentionPromptItem[]>>
     | undefined,
-  setSelectedPrompt: ((prompt: MentionPromptItem | null) => void) | undefined,
 ) {
   const promptList = selectedPrompts || [];
   const selectedPromptIds = useMemo(
@@ -34,11 +31,9 @@ export function useChatPromptSelection(
           }
           return [...prev, prompt];
         });
-      } else if (setSelectedPrompt) {
-        setSelectedPrompt(prompt);
       }
     },
-    [setSelectedPrompts, setSelectedPrompt],
+    [setSelectedPrompts],
   );
 
   const handleRemovePrompt = useCallback(
@@ -48,20 +43,16 @@ export function useChatPromptSelection(
           if (!promptId) return [];
           return prev.filter((p) => p.id !== promptId);
         });
-      } else if (setSelectedPrompt) {
-        setSelectedPrompt(null);
       }
     },
-    [setSelectedPrompts, setSelectedPrompt],
+    [setSelectedPrompts],
   );
 
   const handleClearPrompts = useCallback(() => {
     if (setSelectedPrompts) {
       setSelectedPrompts([]);
-    } else if (setSelectedPrompt) {
-      setSelectedPrompt(null);
     }
-  }, [setSelectedPrompts, setSelectedPrompt]);
+  }, [setSelectedPrompts]);
 
   return {
     promptList,
