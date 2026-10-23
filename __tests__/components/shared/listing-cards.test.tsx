@@ -16,10 +16,6 @@ vi.mock("@/components/chat/chat-options", () => ({
   ChatOptions: () => <button type="button" aria-label="Chat options">Chat Options</button>,
 }));
 
-vi.mock("@/components/prompt/prompt-options", () => ({
-  PromptOptions: () => <button type="button" aria-label="Prompt options">Prompt Options</button>,
-}));
-
 vi.mock("@/components/knowledgebase/knowledgebase-options", () => ({
   KnowledgebaseOptions: () => <button type="button" aria-label="KB options">KB Options</button>,
 }));
