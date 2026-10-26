@@ -14,6 +14,11 @@ import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformStep } from "@/types/transform/transform-step";
 
+/**
+ * Represents use agent editor form params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseAgentEditorFormParams {
   id: string;
   isNew: boolean;
@@ -22,6 +27,10 @@ export interface UseAgentEditorFormParams {
 
 /**
  * Manages transform agent configuration fields, steps, tools, and entity loading.
+ *
+ * @param params - Target params
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useAgentEditorForm(params: UseAgentEditorFormParams) {
   const { id, isNew, handleApiError } = params;

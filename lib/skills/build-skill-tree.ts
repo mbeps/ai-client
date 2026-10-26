@@ -3,10 +3,11 @@ import { cleanPath } from "@/lib/skills/skill-tree-utils";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
- * Builds a nested hierarchical tree from a flat list of skill bundled files.
- * Pinned at root: SKILL.md.
- * Children are sorted: folders first alphabetically, then files alphabetically.
+ * Builds a nested hierarchical tree from a flat list of skill bundled files. Pinned at root: SKILL.md. Children are sorted: folders first alphabetically, then files alphabetically.
  *
+ * @param files - Target files
+ * @param emptyFolders - Target empty folders
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function buildSkillTree(

@@ -1,8 +1,11 @@
 import { RateLimitError } from "@/lib/error/rate-limit-error";
 
 /**
- * Checks if a given error is a rate limit error (429).
- * Specifically handles Vercel AI SDK errors and common error keywords.
+ * Checks if a given error is a rate limit error (429). Specifically handles Vercel AI SDK errors and common error keywords.
+ *
+ * @param error - Target error
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function isRateLimitError(error: unknown): boolean {
   if (error instanceof RateLimitError) return true;

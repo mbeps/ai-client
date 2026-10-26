@@ -24,5 +24,16 @@ export const LANGUAGES = [
   { label: "Thai", value: "th" },
 ];
 
+/**
+ * Default source language code for translation workflows ("auto" detects input language).
+ *
+ * @author Maruf Bepary
+ */
 export const DEFAULT_SOURCE_LANGUAGE = "auto";
+
+/**
+ * Default target language code for translation workflows ("en" for English).
+ *
+ * @author Maruf Bepary
+ */
 export const DEFAULT_TARGET_LANGUAGE = "en";

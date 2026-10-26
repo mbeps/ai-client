@@ -10,13 +10,23 @@ import {
 } from "@/schemas/skill/skill-file";
 import type { SkillRow } from "@/types/skill/skill-row";
 
+/**
+ * Renders the not  found  error component.
+ *
+ * @param name - Target name
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 const NOT_FOUND_ERROR = (name: string) => `Skill "${name}" not found.`;
 
 /**
- * Removes one bundled reference file.
+ * Removes one bundled reference file. Refuses `SKILL.md`: `content` is `NOT NULL`, so a skill cannot exist without a body, and there is no representable state for "no body".
  *
- * Refuses `SKILL.md`: `content` is `NOT NULL`, so a skill cannot exist without a
- * body, and there is no representable state for "no body".
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @param path - Target path
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function deleteSkillFileForUser(
   userId: string,

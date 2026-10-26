@@ -26,6 +26,13 @@ import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
+/**
+ * Renders the user attachment section component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function UserAttachmentSection({
   isUser,
   attachments,
@@ -94,6 +101,13 @@ interface MessageBubbleProps {
   chatId?: string;
 }
 
+/**
+ * Renders the message bubble component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function MessageBubble(props: MessageBubbleProps) {
   const {
     message,

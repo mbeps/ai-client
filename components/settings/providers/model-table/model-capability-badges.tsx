@@ -10,6 +10,13 @@ const CAPABILITY_CONFIGS = [
   { key: "capStructuredOutput", label: "structured" },
 ] as const;
 
+/**
+ * Renders the model capability badges component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ModelCapabilityBadges({ model }: { model: AiModelRow }) {
   const activeCaps = CAPABILITY_CONFIGS.filter((c) => Boolean(model[c.key]));
 

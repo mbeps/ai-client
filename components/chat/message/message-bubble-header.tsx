@@ -5,6 +5,11 @@ import { MessageAvatar } from "@/components/chat/message/message-avatar";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
+/**
+ * Represents message header props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageHeaderProps {
   isUser: boolean;
   image?: string | null;
@@ -12,6 +17,13 @@ interface MessageHeaderProps {
   modelName: string | null;
 }
 
+/**
+ * Renders the message header component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function MessageHeader({
   isUser,
   image,
@@ -28,6 +40,11 @@ export function MessageHeader({
   );
 }
 
+/**
+ * Represents message action section props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageActionSectionProps {
   isEditing: boolean;
   message: Message;
@@ -42,6 +59,13 @@ interface MessageActionSectionProps {
   metadata: ParsedMessageMetadata;
 }
 
+/**
+ * Renders the message action section component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function MessageActionSection({
   isEditing,
   message,

@@ -14,8 +14,8 @@ import { inngest } from "@/lib/inngest/client";
  *
  * @async
  * @param kbId - Knowledge base UUID to re-index
- * @returns {processedCount, failedCount} re-indexing summary
- * @throws "Not Found" if KB not owned by current user
+ * @returns Re-indexing summary with processed and failed counts
+ * @throws {Error} if KB not found or not owned by current user
  * @author Maruf Bepary
  */
 export async function reindexKnowledgebase(kbId: string) {

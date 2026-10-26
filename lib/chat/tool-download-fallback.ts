@@ -3,6 +3,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "download-fallback"]);
 
+/**
+ * Represents completed tool record.
+ *
+ * @author Maruf Bepary
+ */
 interface CompletedToolRecord {
   toolCallId: string;
   toolName: string;
@@ -10,6 +15,11 @@ interface CompletedToolRecord {
   result?: unknown;
 }
 
+/**
+ * Represents execute tool download fallback params.
+ *
+ * @author Maruf Bepary
+ */
 interface ExecuteToolDownloadFallbackParams {
   completedTools: CompletedToolRecord[];
   activeTools: Record<string, any>;
@@ -46,6 +56,10 @@ const READ_ONLY_TOOL_PREFIXES = [
 
 /**
  * Checks if a tool name indicates a read-only operation.
+ *
+ * @param toolName - Target tool name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isReadOnlyTool(toolName: string): boolean {
   const lower = toolName.toLowerCase();
@@ -54,6 +68,10 @@ function isReadOnlyTool(toolName: string): boolean {
 
 /**
  * Checks if a candidate string looks like a valid filename with an extension.
+ *
+ * @param candidate - Target candidate
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isValidFilePath(candidate: unknown): candidate is string {
   if (typeof candidate !== "string") return false;
@@ -65,6 +83,10 @@ function isValidFilePath(candidate: unknown): candidate is string {
 
 /**
  * Extracts candidate file path from tool arguments or result.
+ *
+ * @param record - Target record
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractFilePathFromRecord(record: unknown): string | null {
   if (!record || typeof record !== "object") return null;
@@ -103,6 +125,11 @@ function extractFilePathFromRecord(record: unknown): string | null {
 
 /**
  * Checks whether a file path has already been downloaded or exported in completedTools.
+ *
+ * @param filePath - Target file path
+ * @param completedTools - Target completed tools
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isFileAlreadyDownloaded(
   filePath: string,
@@ -159,6 +186,12 @@ function isFileAlreadyDownloaded(
 
 /**
  * Identifies the best download tool available on the given server or active tool set.
+ *
+ * @param serverName - Target server name
+ * @param activeTools - Target active tools
+ * @param toolSourceMap - Target tool source map
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function findDownloadToolName(
   serverName: string,
@@ -195,6 +228,12 @@ function findDownloadToolName(
 
 /**
  * Builds the arguments object expected by the download tool.
+ *
+ * @param tool - Target tool
+ * @param filePath - Target file path
+ * @param preferredKey - Target preferred key
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildDownloadToolArgs(
   tool: any,

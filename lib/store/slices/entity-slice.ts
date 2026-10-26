@@ -13,8 +13,14 @@ import type { AppState } from "@/types/app/app-state";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
- * Helper to generate standard CRUD loader methods (fetch -> map -> set).
- * Centralises the logic for loading database entries into the Zustand store.
+ * Helper to generate standard CRUD loader methods (fetch -> map -> set). Centralises the logic for loading database entries into the Zustand store.
+ *
+ * @param set - Target set
+ * @param key - Target key
+ * @param listAction - Target list action
+ * @param mapper - Target mapper
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 const createEntityLoader = <K extends keyof AppState, R>(
   set: (state: Partial<AppState>) => void,
@@ -33,6 +39,11 @@ const createEntityLoader = <K extends keyof AppState, R>(
   };
 };
 
+/**
+ * Represents entity slice.
+ *
+ * @author Maruf Bepary
+ */
 type EntitySlice = Pick<
   AppState,
   | "projects"
@@ -63,6 +74,13 @@ type EntitySlice = Pick<
   | "resetEntityState"
 >;
 
+/**
+ * Creates entity slice.
+ *
+ * @param set - Target set
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   set,
 ) => ({

@@ -14,6 +14,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+/**
+ * Represents transform run dialog props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformRunDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

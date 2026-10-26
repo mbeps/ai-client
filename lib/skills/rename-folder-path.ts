@@ -3,6 +3,12 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Renames a folder prefix for all files contained inside it.
+ *
+ * @param files - Target files
+ * @param oldPrefix - Target old prefix
+ * @param newPrefix - Target new prefix
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function renameFolderPath(
   files: SkillBundledFile[],

@@ -6,16 +6,21 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "messages"]);
 
+/**
+ * Represents message orchestration options.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageOrchestrationOptions {
   history: ThreadMessage[];
 }
 
 /**
- * Orchestrates the final set of messages to be sent to the AI model.
- * Converts the thread history into model messages and truncates to the most
- * recent `env.CHAT_MAX_HISTORY_TURNS` entries (the last message is always
- * kept, with a warning logged on truncation). The system prompt is NOT
- * included here — the route passes it separately via `streamText({ system })`.
+ * Orchestrates the final set of messages to be sent to the AI model. Converts the thread history into model messages and truncates to the most recent `env.CHAT_MAX_HISTORY_TURNS` entries (the last message is always kept, with a warning logged on truncation). The system prompt is NOT included here — the route passes it separately via `streamText({ system })`.
+ *
+ * @param options - Target options
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function prepareChatMessages(
   options: MessageOrchestrationOptions,

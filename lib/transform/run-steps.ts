@@ -21,6 +21,11 @@ import type { TransformStep } from "@/types/transform/transform-step";
 
 const log = getLogger(["app", "transform", "steps"]);
 
+/**
+ * Represents run transform steps options.
+ *
+ * @author Maruf Bepary
+ */
 export interface RunTransformStepsOptions {
   steps: TransformStep[];
   startFromStep: number;
@@ -46,6 +51,11 @@ export interface RunTransformStepsOptions {
   emit: (data: any) => void;
 }
 
+/**
+ * Represents prepare step execution params.
+ *
+ * @author Maruf Bepary
+ */
 interface PrepareStepExecutionParams {
   step: TransformStep;
   agentRow: RunTransformStepsOptions["agentRow"];
@@ -60,6 +70,11 @@ interface PrepareStepExecutionParams {
   currentAttachmentRows: AttachmentRow[];
 }
 
+/**
+ * Represents step execution preparation.
+ *
+ * @author Maruf Bepary
+ */
 interface StepExecutionPreparation {
   filteredTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -67,6 +82,13 @@ interface StepExecutionPreparation {
   systemPrompt: string;
 }
 
+/**
+ * Performs prepare step execution.
+ *
+ * @param params - Target params
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function prepareStepExecution(
   params: PrepareStepExecutionParams,
 ): Promise<StepExecutionPreparation> {

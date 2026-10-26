@@ -67,12 +67,23 @@ const EXTENSION_MIME_MAP: Record<string, string> = {
   mmd: "text/plain",
 };
 
-/** Maps a file extension to its corresponding standard MIME type. */
+/**
+ * Maps a file extension to its corresponding standard MIME type.
+ *
+ * @param filename - Target filename
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function inferMimeTypeFromFilename(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   return (ext && EXTENSION_MIME_MAP[ext]) || "application/octet-stream";
 }
 
+/**
+ * Represents resolved artifact payload.
+ *
+ * @author Maruf Bepary
+ */
 type ResolvedArtifactPayload = {
   fileBuffer: Buffer;
   outputName: string;
@@ -86,6 +97,14 @@ const TEXT_ARTIFACT_CONFIG: Record<string, { ext: string; mimeType: string }> =
     mermaid: { ext: "mmd", mimeType: "text/plain" },
   };
 
+/**
+ * Performs append multi sheets.
+ *
+ * @param workbook - Target workbook
+ * @param sheets - Target sheets
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function appendMultiSheets(
   workbook: XLSX.WorkBook,
   sheets: Array<{ name?: string; data?: unknown[][] }>,
@@ -98,6 +117,14 @@ function appendMultiSheets(
   }
 }
 
+/**
+ * Performs append sheets from parsed.
+ *
+ * @param workbook - Target workbook
+ * @param parsed - Parsed data payload
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function appendSheetsFromParsed(
   workbook: XLSX.WorkBook,
   parsed: unknown,
@@ -129,8 +156,11 @@ function appendSheetsFromParsed(
 }
 
 /**
- * Constructs an XLSX workbook Buffer from JSON spreadsheet artifact content.
- * Throws InvalidArtifactFormatError if the workbook has no sheets.
+ * Constructs an XLSX workbook Buffer from JSON spreadsheet artifact content. Throws InvalidArtifactFormatError if the workbook has no sheets.
+ *
+ * @param artifactContent - Target artifact content
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildSpreadsheetBuffer(artifactContent: string): Buffer {
   const parsed = JSON.parse(artifactContent);
@@ -153,8 +183,11 @@ function buildSpreadsheetBuffer(artifactContent: string): Buffer {
 }
 
 /**
- * Resolves the file buffer, sanitized file name, and MIME type for artifact/download inputs.
- * Returns null if the artifact content is empty or the artifact type is unsupported.
+ * Resolves the file buffer, sanitized file name, and MIME type for artifact/download inputs. Returns null if the artifact content is empty or the artifact type is unsupported.
+ *
+ * @param input - Target input
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveArtifactPayload(
   input: PersistArtifactInput,

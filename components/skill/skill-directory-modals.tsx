@@ -16,6 +16,11 @@ import { getAllFolders } from "@/lib/skills/get-all-folders";
 import { cleanPath } from "@/lib/skills/skill-tree-utils";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
+/**
+ * Represents skill directory modals props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillDirectoryModalsProps {
   files: SkillBundledFile[];
   emptyFolders?: string[];
@@ -50,6 +55,15 @@ export interface SkillDirectoryModalsProps {
   onMoveFile: (sourcePath: string, targetFolder: string) => void;
 }
 
+/**
+ * Validates new skill file path.
+ *
+ * @param raw - Raw input data to process
+ * @param targetParent - Target target parent
+ * @param files - Target files
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function validateNewSkillFilePath(
   raw: string,
   targetParent: string,
@@ -75,6 +89,15 @@ function validateNewSkillFilePath(
   return { fullPath };
 }
 
+/**
+ * Validates renamed skill file path.
+ *
+ * @param newInput - Target new input
+ * @param fileToRename - Target file to rename
+ * @param files - Target files
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function validateRenamedSkillFilePath(
   newInput: string,
   fileToRename: string,
@@ -98,6 +121,11 @@ function validateRenamedSkillFilePath(
   return { cleaned };
 }
 
+/**
+ * Represents move or delete folder modals props.
+ *
+ * @author Maruf Bepary
+ */
 type MoveOrDeleteFolderModalsProps = {
   moveFileDialogOpen: boolean;
   onCloseMoveFileDialog: () => void;
@@ -111,6 +139,13 @@ type MoveOrDeleteFolderModalsProps = {
   affectedFilesCount: number;
 };
 
+/**
+ * Renders the move or delete folder modals component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function MoveOrDeleteFolderModals(props: MoveOrDeleteFolderModalsProps) {
   const [selectedMoveFolder, setSelectedMoveFolder] = useState("");
 

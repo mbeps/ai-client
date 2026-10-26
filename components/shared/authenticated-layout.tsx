@@ -8,6 +8,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 
+/**
+ * Represents authenticated layout props.
+ *
+ * @author Maruf Bepary
+ */
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
   sidebar: React.ReactNode;

@@ -1,5 +1,9 @@
 /**
  * Checks whether a hostname is an IP literal (IPv4 or IPv6).
+ *
+ * @param hostname - Target hostname
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function isIpLiteral(hostname: string): boolean {
   // IPv6 literal (with brackets, as parsed by URL)

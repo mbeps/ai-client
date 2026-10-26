@@ -13,6 +13,15 @@ const MANAGE_ARTIFACT_SYSTEM_INSTRUCTIONS =
   "  - 'mermaid': Use for diagrams, workflows, and charts.\n" +
   "Whenever you create or update major output content for a step, call manage_artifact so the user can inspect it in the side canvas.";
 
+/**
+ * Checks manage artifact enabled.
+ *
+ * @param filteredTools - Target filtered tools
+ * @param agentTools - Target agent tools
+ * @param stepTools - Target step tools
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function checkManageArtifactEnabled(
   filteredTools: Record<string, any>,
   agentTools: string[] | null,
@@ -23,6 +32,11 @@ function checkManageArtifactEnabled(
   return Boolean(stepTools?.includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT));
 }
 
+/**
+ * Represents build step system prompt params.
+ *
+ * @author Maruf Bepary
+ */
 export interface BuildStepSystemPromptParams {
   step: TransformStep;
   agentRow: {
@@ -36,6 +50,13 @@ export interface BuildStepSystemPromptParams {
   fileContext: string;
 }
 
+/**
+ * Constructs step system prompt.
+ *
+ * @param params - Target params
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function buildStepSystemPrompt(
   params: BuildStepSystemPromptParams,
 ): string {

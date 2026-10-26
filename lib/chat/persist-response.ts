@@ -5,6 +5,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["chat", "persist"]);
 
+/**
+ * Represents persist assistant response params.
+ *
+ * @author Maruf Bepary
+ */
 type PersistAssistantResponseParams = {
   chatId: string;
   assistantMessageId: string;
@@ -14,20 +19,11 @@ type PersistAssistantResponseParams = {
 };
 
 /**
- * Persists the assistant's response to the database:
- * 1. Checks if an assistant reply for this `parentId` (user message) already
- *    exists — if so, the client already persisted a partial response on stop
- *    and we skip to avoid overwriting it.
- * 2. Inserts a new `message` row with role `assistant`.
- * 3. Updates the parent `chat` row's `currentLeafId` so the tree points to
- *    the new leaf.
+ * Persists the assistant's response to the database: 1. Checks if an assistant reply for this `parentId` (user message) already exists — if so, the client already persisted a partial response on stop and we skip to avoid overwriting it. 2. Inserts a new `message` row with role `assistant`. 3. Updates the parent `chat` row's `currentLeafId` so the tree points to the new leaf. Both insert and update share the same `chatId` and `assistantMessageId` — they are intentionally sequential to avoid a race where the leaf points to a message that hasn't been inserted yet.
  *
- * Both insert and update share the same `chatId` and `assistantMessageId` —
- * they are intentionally sequential to avoid a race where the leaf points to
- * a message that hasn't been inserted yet.
- *
- * @returns true if the message was inserted and chat updated, false if skipped
- *          due to existing partial response, conflict, or concurrent chat deletion.
+ * @param params - Target params
+ * @returns true if the message was inserted and chat updated, false if skipped due to existing partial response, conflict, or concurrent chat deletion.
+ * @author Maruf Bepary
  */
 export async function persistAssistantResponse(
   params: PersistAssistantResponseParams,

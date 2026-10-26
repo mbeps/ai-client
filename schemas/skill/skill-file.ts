@@ -28,6 +28,10 @@ const RESERVED_SEGMENTS = new Set(
  *
  * Written as a code-point scan rather than a regex because the range literal is
  * flagged by lint, and a path is short enough that the scan costs nothing.
+ *
+ * @param raw - Candidate string to inspect for control characters
+ * @returns True if raw string contains any ASCII control characters
+ * @author Maruf Bepary
  */
 function hasControlCharacter(raw: string): boolean {
   for (let index = 0; index < raw.length; index += 1) {
@@ -57,11 +61,22 @@ export class SkillBundleBudgetError extends Error {
  *
  * The body lives in the `content` column rather than in `files`, so callers must
  * route a write to the right place using this predicate.
+ *
+ * @param path - File path to inspect
+ * @returns True if path points to root SKILL.md body file
+ * @author Maruf Bepary
  */
 export function isSkillBodyPath(path: string): boolean {
   return cleanPath(path).toLowerCase() === "skill.md";
 }
 
+/**
+ * Validates a skill file path candidate against structure, depth, and character constraints.
+ *
+ * @param raw - Raw file path candidate to validate
+ * @returns True if path conforms to depth, character, and naming rules
+ * @author Maruf Bepary
+ */
 function isPathValid(raw: string): boolean {
   if (raw.length === 0) return false;
 
@@ -100,6 +115,10 @@ function isPathValid(raw: string): boolean {
 /**
  * Normalises the body path to a single canonical casing, so a model writing
  * `skill.md` and a human writing `SKILL.md` address the same stored column.
+ *
+ * @param raw - Path to normalize
+ * @returns Normalized path with canonical SKILL.md casing if applicable
+ * @author Maruf Bepary
  */
 function normalisePath(raw: string): string {
   const cleaned = cleanPath(raw);
@@ -122,6 +141,10 @@ export const skillFilePathSchema = z
  *
  * Runs against the proposed set, before any write, so a refusal leaves the
  * stored skill untouched.
+ *
+ * @param files - Array of bundled skill files to validate against limits
+ * @throws {SkillBundleBudgetError} When file count, file size, or total bundle bytes exceed limits
+ * @author Maruf Bepary
  */
 export function assertSkillBundleWithinBudget(files: SkillBundledFile[]): void {
   if (files.length > SKILL_FILE_MAX_COUNT) {
@@ -149,6 +172,10 @@ export function assertSkillBundleWithinBudget(files: SkillBundledFile[]): void {
 
 /**
  * Refuses a SKILL.md body that would blow the prompt budget.
+ *
+ * @param content - Content string of primary SKILL.md file
+ * @throws {SkillBundleBudgetError} When content length exceeds SKILL_BODY_MAX_BYTES
+ * @author Maruf Bepary
  */
 export function assertSkillBodyWithinBudget(content: string): void {
   if (content.length > SKILL_BODY_MAX_BYTES) {

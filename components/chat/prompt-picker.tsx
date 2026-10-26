@@ -21,6 +21,11 @@ import { cn } from "@/lib/utils";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { Prompt } from "@/types/prompt/prompt";
 
+/**
+ * Represents prompt picker props.
+ *
+ * @author Maruf Bepary
+ */
 interface PromptPickerProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
@@ -33,6 +38,11 @@ interface PromptPickerProps {
   defaultExpanded?: boolean;
 }
 
+/**
+ * Represents prompt group.
+ *
+ * @author Maruf Bepary
+ */
 interface PromptGroup {
   id: string;
   name: string;
@@ -479,6 +489,11 @@ export function PromptPicker({
   );
 }
 
+/**
+ * Represents prompt picker dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface PromptPickerDialogProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];

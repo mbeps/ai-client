@@ -6,6 +6,12 @@ import {
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
 
+/**
+ * PostgreSQL table definition for multi-step transformation agent workflows.
+ * Stores configuration, models, enabled tools, and sequence of transformation steps.
+ *
+ * @author Maruf Bepary
+ */
 export const transformAgent = pgTable(
   "transform_agent",
   {
@@ -31,6 +37,12 @@ export const transformAgent = pgTable(
   (table) => [index("transform_agent_user_id_idx").on(table.userId)],
 );
 
+/**
+ * PostgreSQL table definition for recorded transformation execution runs.
+ * Tracks step status, approval requests, active step indices, and artifact outputs.
+ *
+ * @author Maruf Bepary
+ */
 export const transformRun = pgTable(
   "transform_run",
   {

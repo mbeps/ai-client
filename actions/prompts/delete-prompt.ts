@@ -8,8 +8,8 @@ import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
  * No cascading deletes to messages or chats that may have referenced these prompts.
  *
  * @param idOrIds - UUID or array of UUIDs of the prompts to delete; must be owned by the authenticated user.
- * @returns { deletedCount: number } - The number of prompts successfully deleted.
- * @throws Error with message "Not Found" when prompt does not exist or is not owned by user
+ * @returns Object with the number of prompts successfully deleted.
+ * @throws {Error} with message "Not Found" when prompt does not exist or is not owned by user
  * @see listPrompts for viewing all prompts
  * @author Maruf Bepary
  */

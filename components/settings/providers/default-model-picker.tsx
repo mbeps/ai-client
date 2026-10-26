@@ -23,12 +23,22 @@ import type { UserModelOption } from "@/hooks/use-user-models";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
+/**
+ * Represents model item.
+ *
+ * @author Maruf Bepary
+ */
 type ModelItem = {
   id: string;
   label: string;
   providerName: string;
 };
 
+/**
+ * Represents default model picker props.
+ *
+ * @author Maruf Bepary
+ */
 type DefaultModelPickerProps = {
   settings: UserSettingsRow | null;
   chatModels: UserModelOption[];
@@ -36,6 +46,13 @@ type DefaultModelPickerProps = {
   onRefresh: () => Promise<void>;
 };
 
+/**
+ * Performs to item.
+ *
+ * @param model - Target model
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function toItem(model: UserModelOption): ModelItem {
   return {
     id: model.id,

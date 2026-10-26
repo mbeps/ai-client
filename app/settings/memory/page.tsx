@@ -29,6 +29,11 @@ import {
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Memory } from "@/types/memory/memory";
 
+/**
+ * Represents memory selection toolbar props.
+ *
+ * @author Maruf Bepary
+ */
 type MemorySelectionToolbarProps = {
   isAllSelected: boolean;
   selectedCount: number;
@@ -36,6 +41,13 @@ type MemorySelectionToolbarProps = {
   onBulkDelete: () => void;
 };
 
+/**
+ * Renders the memory selection toolbar component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function MemorySelectionToolbar(props: MemorySelectionToolbarProps) {
   return (
     <div className="flex items-center gap-2">
@@ -76,6 +88,11 @@ function MemorySelectionToolbar(props: MemorySelectionToolbarProps) {
   );
 }
 
+/**
+ * Represents memory header actions props.
+ *
+ * @author Maruf Bepary
+ */
 type MemoryHeaderActionsProps = {
   isMemoryEnabled: boolean;
   isToggling: boolean;
@@ -83,6 +100,13 @@ type MemoryHeaderActionsProps = {
   onOpenAdd: () => void;
 };
 
+/**
+ * Renders the memory header actions component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function MemoryHeaderActions(props: MemoryHeaderActionsProps) {
   return (
     <div className="flex items-center gap-3">
@@ -120,6 +144,11 @@ function MemoryHeaderActions(props: MemoryHeaderActionsProps) {
   );
 }
 
+/**
+ * Represents delete memories alert dialog props.
+ *
+ * @author Maruf Bepary
+ */
 type DeleteMemoriesAlertDialogProps = {
   targetDeleteIds: string[] | null;
   isDeleting: boolean;
@@ -127,6 +156,13 @@ type DeleteMemoriesAlertDialogProps = {
   onConfirmDelete: () => void;
 };
 
+/**
+ * Renders the delete memories alert dialog component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function DeleteMemoriesAlertDialog(props: DeleteMemoriesAlertDialogProps) {
   const isMultiple = Boolean(
     props.targetDeleteIds && props.targetDeleteIds.length > 1,
@@ -173,6 +209,14 @@ function DeleteMemoriesAlertDialog(props: DeleteMemoriesAlertDialogProps) {
   );
 }
 
+/**
+ * Custom hook that provides use memory selection functionality.
+ *
+ * @param memories - Target memories
+ * @param removeMemoriesFromStore - Target remove memories from store
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useMemorySelection(
   memories: Memory[],
   removeMemoriesFromStore: (ids: string[]) => void,

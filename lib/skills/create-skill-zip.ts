@@ -12,6 +12,13 @@ for (let i = 0; i < 256; i++) {
   crc32Table[i] = c;
 }
 
+/**
+ * Calculates crc32.
+ *
+ * @param data - Target data
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function calculateCrc32(data: Buffer): number {
   let crc = 0 ^ -1;
   for (let i = 0; i < data.length; i++) {

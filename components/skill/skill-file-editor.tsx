@@ -5,6 +5,11 @@ import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Represents skill file editor props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillFileEditorProps {
   filePath: string;
   content: string;

@@ -7,6 +7,10 @@ import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Aggregates platform services, models, stores, and responsiveness queries for ChatInput.
+ *
+ * @param initialModelId - The initial model id parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatInputServices(initialModelId?: string) {
   const { models: chatModels, isLoading: isModelsLoading } =

@@ -19,6 +19,11 @@ import { Label } from "@/components/ui/label";
 import { logger } from "@/lib/logger";
 import { renameSchema } from "@/schemas/shared-fields";
 
+/**
+ * Represents rename form data.
+ *
+ * @author Maruf Bepary
+ */
 type RenameFormData = z.infer<typeof renameSchema>;
 
 /**

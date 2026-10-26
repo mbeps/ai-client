@@ -3,6 +3,11 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Represents entity detail header props.
+ *
+ * @author Maruf Bepary
+ */
 export interface EntityDetailHeaderProps {
   /** Icon displayed inside the avatar circle */
   icon: ReactNode;

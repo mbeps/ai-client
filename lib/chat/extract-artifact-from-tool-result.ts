@@ -7,10 +7,19 @@ const VALID_ARTIFACT_TYPES = new Set([
   "mermaid",
 ] as const);
 
+/**
+ * Represents artifact type.
+ *
+ * @author Maruf Bepary
+ */
 type ArtifactType = "markdown" | "spreadsheet" | "html" | "mermaid";
 
 /**
  * Parses tool output payload if stringified JSON or validates object shape.
+ *
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function parseToolResultObject(raw: unknown): Record<string, unknown> | null {
   if (typeof raw === "string") {
@@ -30,6 +39,10 @@ function parseToolResultObject(raw: unknown): Record<string, unknown> | null {
 
 /**
  * Resolves valid artifact type from raw artifact properties.
+ *
+ * @param rawArtifact - Target raw artifact
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveArtifactType(
   rawArtifact: Record<string, unknown>,
@@ -49,6 +62,10 @@ function resolveArtifactType(
 
 /**
  * Normalizes content string from string content, sheets array, or serialized object.
+ *
+ * @param rawArtifact - Target raw artifact
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveArtifactContent(rawArtifact: Record<string, unknown>): string {
   if (typeof rawArtifact.content === "string") {
@@ -65,6 +82,10 @@ function resolveArtifactContent(rawArtifact: Record<string, unknown>): string {
 
 /**
  * Extracts unwrapped artifact record if wrapped in { artifact: ... }.
+ *
+ * @param parsedRecord - Target parsed record
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveRawArtifact(
   parsedRecord: Record<string, unknown>,
@@ -81,6 +102,10 @@ function resolveRawArtifact(
 
 /**
  * Resolves artifact title with default fallback.
+ *
+ * @param rawArtifact - Target raw artifact
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveArtifactTitle(rawArtifact: Record<string, unknown>): string {
   if (typeof rawArtifact.title === "string" && rawArtifact.title.trim()) {
@@ -91,6 +116,11 @@ function resolveArtifactTitle(rawArtifact: Record<string, unknown>): string {
 
 /**
  * Resolves artifact ID with toolCallId fallback or default.
+ *
+ * @param rawArtifact - Target raw artifact
+ * @param toolCallId - Target tool call id
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveArtifactId(
   rawArtifact: Record<string, unknown>,

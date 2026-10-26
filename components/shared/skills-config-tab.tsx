@@ -7,6 +7,11 @@ import { cn } from "@/lib/utils";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents skills config tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillsConfigTabProps {
   skillMode: SkillMode;
   onSkillModeChange: (mode: SkillMode) => void;
@@ -21,6 +26,11 @@ export interface SkillsConfigTabProps {
   className?: string;
 }
 
+/**
+ * Represents mode option.
+ *
+ * @author Maruf Bepary
+ */
 interface ModeOption {
   value: SkillMode;
   title: string;

@@ -25,6 +25,11 @@ import {
 import { ROUTES } from "@/config/routes";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents provider card props.
+ *
+ * @author Maruf Bepary
+ */
 interface ProviderCardProps {
   provider: AiProviderRow;
   isBusy: boolean;

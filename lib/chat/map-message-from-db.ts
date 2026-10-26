@@ -5,21 +5,11 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
 
 /**
- * Maps a message row from the database to a store-compatible Message object.
- * Reconstructs the tree-based message structure by parsing metadata and associating attachments.
- * Children IDs are populated during subsequent tree reconstruction pass.
+ * Maps a message row from the database to a store-compatible Message object. Reconstructs the tree-based message structure by parsing metadata and associating attachments. Children IDs are populated during subsequent tree reconstruction pass.
  *
- * @param {Object} m - Message row from database, includes schema fields plus createdAt and chatId
- * @param {string} m.id - Message identifier
- * @param {string} m.role - Message role ("user" | "assistant" | "system")
- * @param {string} m.content - Message text content
- * @param {Date} m.createdAt - Message creation timestamp
- * @param {string} m.parentId - Parent message ID for tree linking (null for root messages)
- * @param {string | null} m.metadata - JSON metadata containing prompt, tools, model, reasoning
- * @param {string} m.chatId - Associated chat ID
- * @param {Attachment[]} [attachments=[]] - Array of file attachments for this message
- * @returns {Message} Fully mapped Message object with reasoning extracted, ready for store hydration
- * @see {@link parseMessageMetadata} which extracts the reasoning field
+ * @param m - Message row from database, includes schema fields plus createdAt and chatId
+ * @param attachments - Target attachments
+ * @returns Fully mapped Message object with reasoning extracted, ready for store hydration
  * @author Maruf Bepary
  */
 export function mapMessageFromDb(

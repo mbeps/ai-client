@@ -32,6 +32,11 @@ import type { Skill } from "@/types/skill/skill";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 import type { TransformStep } from "@/types/transform/transform-step";
 
+/**
+ * Represents agent editor tabs props.
+ *
+ * @author Maruf Bepary
+ */
 export interface AgentEditorTabsProps {
   activeTab: string;
   onActiveTabChange: (tab: string) => void;

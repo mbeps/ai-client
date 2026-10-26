@@ -16,6 +16,11 @@ import {
 import { buildSkillTree } from "@/lib/skills/build-skill-tree";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
+/**
+ * Represents skill directory sidebar props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillDirectorySidebarProps {
   files: SkillBundledFile[];
   selectedPath: string;

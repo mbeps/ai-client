@@ -9,6 +9,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+/**
+ * Represents translation target pane props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TranslationTargetPaneProps {
   translatedText: string;
   isLoading: boolean;

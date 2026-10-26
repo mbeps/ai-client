@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents thinking display props.
+ *
+ * @author Maruf Bepary
+ */
 interface ThinkingDisplayProps {
   reasoning: string;
   isStreaming?: boolean;

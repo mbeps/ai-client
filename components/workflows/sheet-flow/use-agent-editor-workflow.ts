@@ -13,6 +13,11 @@ import { useAgentRuns } from "@/components/workflows/sheet-flow/use-agent-runs";
 import { ROUTES } from "@/config/routes";
 import { useUserModels } from "@/hooks/use-user-models";
 
+/**
+ * Represents use agent editor workflow params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseAgentEditorWorkflowParams {
   id: string;
   isNew: boolean;
@@ -21,6 +26,10 @@ export interface UseAgentEditorWorkflowParams {
 
 /**
  * Orchestrates transform agent editor form state, runs history, run execution, and saving.
+ *
+ * @param params - Target params
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
   const { id, isNew, handleApiError } = params;

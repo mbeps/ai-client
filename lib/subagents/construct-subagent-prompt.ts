@@ -1,7 +1,17 @@
 import type { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 
+/**
+ * Represents subagent role.
+ *
+ * @author Maruf Bepary
+ */
 type SubagentRole = (typeof SUBAGENT_ROLES)[number];
 
+/**
+ * Represents subagent execution metadata.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentExecutionMetadata {
   isSubagent: true;
   agentRole: SubagentRole;
@@ -10,6 +20,13 @@ interface SubagentExecutionMetadata {
   allocatedModel: string;
 }
 
+/**
+ * Performs construct subagent prompt.
+ *
+ * @param metadata - Message metadata object or serialized string
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function constructSubagentPrompt(
   metadata: SubagentExecutionMetadata,
 ): string {

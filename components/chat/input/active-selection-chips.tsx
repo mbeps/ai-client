@@ -7,6 +7,11 @@ import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents active selection chips props.
+ *
+ * @author Maruf Bepary
+ */
 interface ActiveSelectionChipsProps {
   selectedAssistant: { name: string } | null;
   selectedPrompts?: MentionPromptItem[];

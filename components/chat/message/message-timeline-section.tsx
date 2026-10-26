@@ -4,6 +4,11 @@ import { ResponseTimeline } from "@/components/chat/message/response-timeline";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
+/**
+ * Represents message timeline section props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageTimelineSectionProps {
   isUser: boolean;
   reasoning?: string;
@@ -15,6 +20,13 @@ interface MessageTimelineSectionProps {
   chatId?: string;
 }
 
+/**
+ * Renders the message timeline section component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function MessageTimelineSection({
   isUser,
   reasoning,

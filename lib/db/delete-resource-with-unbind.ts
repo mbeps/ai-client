@@ -4,6 +4,11 @@ import { whereOwner } from "@/lib/db/where-owner";
 
 /**
  * Searches an object's properties for a property matching the given field.
+ *
+ * @param source - Target source
+ * @param field - Target field
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function findMatchingColumnKey(
   source: Record<string, unknown>,
@@ -24,6 +29,11 @@ function findMatchingColumnKey(
 
 /**
  * Searches a table object or its Drizzle columns for a property matching the field.
+ *
+ * @param tableObj - Target table obj
+ * @param field - Target field
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function searchTableForField(tableObj: unknown, field: unknown): string | null {
   if (!tableObj || typeof tableObj !== "object") {

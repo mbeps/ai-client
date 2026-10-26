@@ -5,6 +5,11 @@ import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { Button } from "@/components/ui/button";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
+/**
+ * Represents project knowledgebase tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ProjectKnowledgebaseTabProps {
   knowledgebases: Knowledgebase[];
   selectedKbId: string | null;

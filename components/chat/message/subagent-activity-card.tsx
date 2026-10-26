@@ -25,6 +25,11 @@ import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-toke
 import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents subagent activity card props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SubagentActivityCardProps {
   chatId?: string;
   role?: string;
@@ -67,6 +72,13 @@ const ROLE_STYLES: Record<
   },
 };
 
+/**
+ * Extracts parts text.
+ *
+ * @param parts - Target parts
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractPartsText(parts: unknown[]): string | null {
   const textParts = (parts as Array<{ type?: string; text?: string }>)
     .filter((p) => p?.type === "text" && typeof p?.text === "string")
@@ -74,6 +86,13 @@ function extractPartsText(parts: unknown[]): string | null {
   return textParts.length > 0 ? textParts.join("\n\n") : null;
 }
 
+/**
+ * Extracts subagent output text.
+ *
+ * @param result - Target result
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractSubagentOutputText(result: unknown): string {
   if (typeof result === "string") return result;
   if (!result || typeof result !== "object") return "";
@@ -88,12 +107,24 @@ function extractSubagentOutputText(result: unknown): string {
   return typeof fallback === "string" ? fallback : "Task completed.";
 }
 
+/**
+ * Represents subagent status badge props.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentStatusBadgeProps {
   status: "pending" | "complete" | "error";
   isError: boolean;
   outputText: string;
 }
 
+/**
+ * Renders the subagent status badge component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentStatusBadge({
   status,
   isError,
@@ -143,6 +174,13 @@ function SubagentStatusBadge({
   );
 }
 
+/**
+ * Renders the subagent context usage component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentContextUsage({
   taskBrief,
   inputData,
@@ -169,6 +207,11 @@ function SubagentContextUsage({
   );
 }
 
+/**
+ * Represents subagent card details props.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentCardDetailsProps {
   taskBrief: string;
   inputData?: string;
@@ -176,6 +219,13 @@ interface SubagentCardDetailsProps {
   result: unknown;
 }
 
+/**
+ * Renders the subagent card details component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentCardDetails({
   taskBrief,
   inputData,
@@ -231,6 +281,14 @@ function SubagentCardDetails({
   );
 }
 
+/**
+ * Determines whether subagent error.
+ *
+ * @param status - Current status value
+ * @param result - Target result
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isSubagentError(status: string, result: unknown): boolean {
   if (status === "error") return true;
   return Boolean(
@@ -238,6 +296,13 @@ function isSubagentError(status: string, result: unknown): boolean {
   );
 }
 
+/**
+ * Renders the scratchpad button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ScratchpadButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
@@ -256,6 +321,11 @@ function ScratchpadButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+/**
+ * Represents subagent card header props.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentCardHeaderProps {
   roleStyle: { label: string; bg: string; text: string; border: string };
   status: "pending" | "complete" | "error";
@@ -265,6 +335,13 @@ interface SubagentCardHeaderProps {
   onOpenScratchpad: () => void;
 }
 
+/**
+ * Renders the subagent card header component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentCardHeader({
   roleStyle,
   status,
@@ -315,6 +392,13 @@ function SubagentCardHeader({
   );
 }
 
+/**
+ * Renders the subagent accordion wrapper component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentAccordionWrapper({
   accordionValue,
   initialOpen,

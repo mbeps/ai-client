@@ -12,6 +12,9 @@ import { transformRunChannel } from "@/lib/inngest/transform-run-channel";
  * Server action to mint a short-lived subscription token for the transform run Realtime channel.
  * Authorizes user access before returning the token.
  *
+ * @param runId - UUID of the transformation run to subscribe to
+ * @returns Realtime channel subscription token string
+ * @throws {Error} When transform run is not found or access denied
  * @author Maruf Bepary
  */
 export async function getTransformRunRealtimeToken(runId: string) {

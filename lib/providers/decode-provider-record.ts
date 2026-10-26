@@ -9,47 +9,10 @@ import type { ProviderRecord } from "@/types/provider/provider-record";
 const log = getLogger(["app", "providers"]);
 
 /**
- * Decrypts a provider database row and returns a usable ProviderRecord.
+ * Decrypts a provider database row and returns a usable ProviderRecord. Decrypts the `apiKey` and `headers` fields from the database row using AES-256-GCM. Handles both encrypted and null values gracefully. If decryption fails, logs error and throws ProviderKeyCorruptedError. Decryption flow: 1. If apiKey is set, decrypt it; throw if decryption fails 2. If headers is set, decrypt and parse; throw if decryption fails 3. Return ProviderRecord with decrypted credentials in memory.
  *
- * Decrypts the `apiKey` and `headers` fields from the database row using AES-256-GCM.
- * Handles both encrypted and null values gracefully. If decryption fails, logs error
- * and throws ProviderKeyCorruptedError.
- *
- * Decryption flow:
- *   1. If apiKey is set, decrypt it; throw if decryption fails
- *   2. If headers is set, decrypt and parse; throw if decryption fails
- *   3. Return ProviderRecord with decrypted credentials in memory
- *
- * @param {AiProviderRow} row - The database row to decode
- *
- * @returns {ProviderRecord}
- *   Complete provider record with decrypted credentials
- *   - `apiKey`: decrypted string or null
- *   - `headers`: decrypted parsed object or empty object
- *
- * @throws {ProviderKeyCorruptedError}
- *   If decryption of API key fails. Error message indicates which field failed
- *   ("apiKey" or "headers") and includes the provider name.
- *
- * @security
- *   - Server-side only (decryption happens in trusted environment)
- *   - Credentials are decrypted in memory only when needed
- *   - Errors are logged with redacted sensitive data (no credentials in logs)
- *   - If key is corrupted, operation fails fast rather than returning stale data
- *
- * @example
- * try {
- *   const record = decodeProviderRecord(dbRow);
- *   const key = record.apiKey; // decrypted string
- *   const headers = record.headers; // decrypted headers
- * } catch (err) {
- *   if (err instanceof ProviderKeyCorruptedError) {
- *     // Handle corrupted provider
- *   }
- * }
- *
- * @see {@link toEncryptedProviderValues} for encryption
- * @see {@link ProviderKeyCorruptedError} for error handling
+ * @param row - The database row to decode
+ * @returns Complete provider record with decrypted credentials - `apiKey`: decrypted string or null - `headers`: decrypted parsed object or empty object
  * @author Maruf Bepary
  */
 export function decodeProviderRecord(row: AiProviderRow): ProviderRecord {

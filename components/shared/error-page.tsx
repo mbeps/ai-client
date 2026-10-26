@@ -6,6 +6,11 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
 
+/**
+ * Represents error page props.
+ *
+ * @author Maruf Bepary
+ */
 interface ErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;

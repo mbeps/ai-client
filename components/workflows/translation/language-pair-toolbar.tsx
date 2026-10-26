@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/tooltip";
 import { LANGUAGES } from "@/config/languages";
 
+/**
+ * Represents language pair toolbar props.
+ *
+ * @author Maruf Bepary
+ */
 export interface LanguagePairToolbarProps {
   sourceLang: (typeof LANGUAGES)[0];
   targetLang: (typeof LANGUAGES)[0];

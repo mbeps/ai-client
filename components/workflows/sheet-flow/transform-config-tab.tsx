@@ -6,6 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
+/**
+ * Represents transform config tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformConfigTabProps {
   name: string;
   onNameChange: (value: string) => void;

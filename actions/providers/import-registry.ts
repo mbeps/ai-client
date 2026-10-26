@@ -17,31 +17,11 @@ import {
 } from "@/schemas/providers/provider-registry";
 
 /**
- * Imports provider registry: upserts providers by (userId, name, baseUrl), inserts models.
- * Throws ModelDuplicateImportError if duplicate models found. API keys/headers encrypted before storage.
- *
- * @param input - Registry data to import (validated against schema)
- * @returns {providersCreated, providersUpdated, modelsCreated, modelsSkipped} summary
- * @throws ModelDuplicateImportError if models duplicated within provider
- * @throws If input validation or session fails
- * @security Credentials encrypted at rest, scoped to authenticated user
- * @see {@link exportProviderRegistry} for exporting registries
- * @see {@link toEncryptedProviderValues} for credential encryption
- * @see {@link ModelDuplicateImportError} for handling duplicate errors
- * @author Maruf Bepary
- */
-/**
  * Result summary from importing a provider registry.
  *
  * Tracks the counts of created, updated, and skipped entities during a registry import.
  * All counts are non-negative integers. If any duplicate model IDs are detected,
  * ModelDuplicateImportError is thrown instead of returning a result.
- *
- * @typedef {Object} ImportRegistryResult
- * @property {number} providersCreated - Number of new providers inserted
- * @property {number} providersUpdated - Number of existing providers updated
- * @property {number} modelsCreated - Number of new models inserted
- * @property {number} modelsSkipped - Number of duplicate models skipped
  *
  * @example
  * const result: ImportRegistryResult = {
@@ -61,6 +41,14 @@ export type ImportRegistryResult = {
   modelsSkipped: number;
 };
 
+/**
+ * Imports a provider registry export payload, creating or updating providers and nested models.
+ *
+ * @param input - Validated registry export structure containing providers and models
+ * @returns Summary counts of created/updated providers and models
+ * @throws {Error} When user is not authenticated or schema validation fails
+ * @author Maruf Bepary
+ */
 export async function importProviderRegistry(
   input: ImportProviderRegistryInput,
 ): Promise<ImportRegistryResult> {

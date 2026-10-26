@@ -3,6 +3,12 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Moves a file from sourcePath to targetFolderPath (empty string or '/' for root).
+ *
+ * @param files - Target files
+ * @param sourcePath - Target source path
+ * @param targetFolderPath - Target target folder path
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function moveFile(
   files: SkillBundledFile[],

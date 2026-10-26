@@ -17,6 +17,11 @@
 const STALE_MS = 30 * 60 * 1000; // 30 minutes
 const GC_MS = 2 * 60 * 60 * 1000; // 2 hours
 
+/**
+ * Represents cache entry.
+ *
+ * @author Maruf Bepary
+ */
 type CacheEntry<T> = {
   data: T | null;
   fetchedAt: number;
@@ -26,6 +31,12 @@ type CacheEntry<T> = {
   listeners: Set<() => void>;
 };
 
+/**
+ * Performs now.
+ *
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 const now = () => Date.now();
 
 const cache: {
@@ -50,10 +61,24 @@ const cache: {
   },
 };
 
+/**
+ * Performs entry for.
+ *
+ * @param key - Target key
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function entryFor<T>(key: "providers" | "models"): CacheEntry<T> {
   return cache[key] as CacheEntry<T>;
 }
 
+/**
+ * Performs emit.
+ *
+ * @param key - Target key
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function emit(key: "providers" | "models"): void {
   const entry = cache[key];
   for (const listener of entry.listeners) {
@@ -61,6 +86,12 @@ function emit(key: "providers" | "models"): void {
   }
 }
 
+/**
+ * Performs sweep.
+ *
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function sweep(): void {
   const ts = now();
   for (const key of ["providers", "models"] as const) {
@@ -74,6 +105,13 @@ function sweep(): void {
   }
 }
 
+/**
+ * Determines whether fresh.
+ *
+ * @param key - Target key
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isFresh(key: "providers" | "models"): boolean {
   const entry = cache[key];
   if (!entry.data) return false;

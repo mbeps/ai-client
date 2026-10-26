@@ -1,8 +1,11 @@
 import { normaliseToolPayload } from "@/lib/transform/normalise-tool-payload";
 
 /**
- * Extracts `fileContent` + `filename` from a download_file tool result.
- * Probes nested shapes: direct fields, `structuredContent`, and `content[].text`.
+ * Extracts `fileContent` + `filename` from a download_file tool result. Probes nested shapes: direct fields, `structuredContent`, and `content[].text`.
+ *
+ * @param payload - Target payload
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function extractDownloadFilePayload(payload: unknown): {
   fileContent: string;

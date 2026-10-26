@@ -25,15 +25,11 @@ export interface RenameEntityConfig {
 }
 
 /**
- * Creates a Server Action that renames an owned row after verifying ownership.
+ * Creates a Server Action that renames an owned row after verifying ownership. The returned function is intended to be re-exported as a named export from a `"use server"` file.  Example: ```ts "use server"; export const renameProject = renameEntityFactory({ table: project }); ```.
  *
- * The returned function is intended to be re-exported as a named export from a
- * `"use server"` file.  Example:
- *
- * ```ts
- * "use server";
- * export const renameProject = renameEntityFactory({ table: project });
- * ```
+ * @param config - Target config
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function renameEntityFactory<TResult>(config: RenameEntityConfig) {
   const nameField = config.nameField ?? "name";

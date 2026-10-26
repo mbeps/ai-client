@@ -13,6 +13,11 @@ import {
   type SupportedOAuthProvider,
 } from "@/lib/auth/o-auth-providers";
 
+/**
+ * Represents account.
+ *
+ * @author Maruf Bepary
+ */
 type Account = Awaited<ReturnType<typeof auth.api.listUserAccounts>>[number];
 
 /**

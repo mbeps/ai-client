@@ -3,12 +3,24 @@
 import { Bot, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+/**
+ * Represents message avatar props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageAvatarProps {
   isUser: boolean;
   image?: string | null;
   name?: string | null;
 }
 
+/**
+ * Renders the message avatar component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function MessageAvatar({ isUser, image, name }: MessageAvatarProps) {
   return (
     <Avatar className="h-6 w-6">

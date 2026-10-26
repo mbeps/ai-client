@@ -4,6 +4,11 @@ import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import { LANGUAGES } from "@/config/languages";
 import type { Attachment } from "@/types/attachment/attachment";
 
+/**
+ * Represents realtime translation event.
+ *
+ * @author Maruf Bepary
+ */
 export interface RealtimeTranslationEvent {
   type: string;
   text?: string;
@@ -11,10 +16,20 @@ export interface RealtimeTranslationEvent {
   message?: string;
 }
 
+/**
+ * Represents latest translation.
+ *
+ * @author Maruf Bepary
+ */
 export type LatestTranslation = NonNullable<
   Awaited<ReturnType<typeof getLatestTranslationAction>>
 >;
 
+/**
+ * Represents translation hydration setters.
+ *
+ * @author Maruf Bepary
+ */
 export interface TranslationHydrationSetters {
   setActiveTranslationId: (id: string | null) => void;
   setSourceText: React.Dispatch<React.SetStateAction<string>>;
@@ -25,6 +40,11 @@ export interface TranslationHydrationSetters {
   setModelId: (val: string) => void;
 }
 
+/**
+ * Represents translation language swap setters.
+ *
+ * @author Maruf Bepary
+ */
 export interface TranslationLanguageSwapSetters {
   setSourceLangValue: (val: string) => void;
   setTargetLangValue: (val: string) => void;
@@ -34,6 +54,12 @@ export interface TranslationLanguageSwapSetters {
 
 /**
  * Handles incoming realtime SSE events for an active translation stream.
+ *
+ * @param event - Target event
+ * @param setTranslatedText - Target set translated text
+ * @param setIsLoading - Target set is loading
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyTranslationRealtimeEvent(
   event: RealtimeTranslationEvent,
@@ -64,6 +90,11 @@ export function applyTranslationRealtimeEvent(
 
 /**
  * Synchronizes selected language pairs and modelId from a persisted translation record.
+ *
+ * @param latest - Target latest
+ * @param setters - Target setters
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function syncLanguagesAndModel(
   latest: LatestTranslation,
@@ -78,6 +109,11 @@ function syncLanguagesAndModel(
 
 /**
  * Applies rehydrated translation state upon initial page mount.
+ *
+ * @param latest - Target latest
+ * @param setters - Target setters
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyHydratedTranslation(
   latest: LatestTranslation,
@@ -107,6 +143,10 @@ export function applyHydratedTranslation(
 
 /**
  * Maps an uploaded attachment to the translation action payload format.
+ *
+ * @param attachment - Target attachment
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function toTranslationAttachmentPayload(attachment: Attachment | null) {
   if (!attachment) return undefined;
@@ -121,6 +161,11 @@ export function toTranslationAttachmentPayload(attachment: Attachment | null) {
 
 /**
  * Updates text state based on an extracted document attachment.
+ *
+ * @param processed - Target processed
+ * @param setSourceText - Target set source text
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function handleProcessedAttachment(
   processed: Attachment,
@@ -137,6 +182,10 @@ export function handleProcessedAttachment(
 
 /**
  * Triggers background translation request and handles error reporting.
+ *
+ * @param params - Target params
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function executeTranslationRequest(params: {
   sourceText: string;
@@ -170,6 +219,14 @@ export async function executeTranslationRequest(params: {
 
 /**
  * Swaps source and target language and text states.
+ *
+ * @param sourceVal - Target source val
+ * @param targetVal - Target target val
+ * @param sourceText - Target source text
+ * @param translatedText - Target translated text
+ * @param setters - Target setters
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function swapLanguageState(
   sourceVal: string,

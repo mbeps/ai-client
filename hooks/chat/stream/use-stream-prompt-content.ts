@@ -7,6 +7,9 @@ import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Builds the metadata object for the user message, tracking model, tools, and prompt info.
+ *
+ * @param options - Message metadata options including models, assistants, and tools
+ * @returns Metadata record for the turn message
  * @author Maruf Bepary
  */
 export function buildMetadata(
@@ -42,6 +45,10 @@ export function buildMetadata(
 
 /**
  * Resolves a single prompt chunk from MCP server or local store.
+ *
+ * @param promptId - Prompt ID (either UUID or 'mcp:<server>:<prompt>' format)
+ * @param prompts - Local store prompts
+ * @returns Resolved prompt content string or undefined
  * @author Maruf Bepary
  */
 async function resolveSinglePromptChunk(
@@ -66,6 +73,11 @@ async function resolveSinglePromptChunk(
 
 /**
  * Resolves the final message content by handling MCP prompts and slash-command prompts.
+ *
+ * @param content - User's typed message content
+ * @param selectedPromptIds - Array of active prompt IDs to prepend/inject
+ * @param metadataObj - Mutable metadata object where prompt names are recorded
+ * @returns Object with fullContent string
  * @author Maruf Bepary
  */
 export async function resolveContent(

@@ -8,11 +8,23 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { JobFilterTab } from "@/types/jobs";
 
+/**
+ * Represents jobs search bar props.
+ *
+ * @author Maruf Bepary
+ */
 interface JobsSearchBarProps {
   value: string;
   onChange: (value: string) => void;
 }
 
+/**
+ * Renders the jobs search bar component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function JobsSearchBar({ value, onChange }: JobsSearchBarProps) {
   return (
     <div className="relative flex-1 sm:max-w-md">
@@ -27,6 +39,11 @@ function JobsSearchBar({ value, onChange }: JobsSearchBarProps) {
   );
 }
 
+/**
+ * Represents jobs controls bar props.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobsControlsBarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;

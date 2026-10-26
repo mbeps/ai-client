@@ -5,6 +5,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
+/**
+ * Configuration options for entity management operations (rename, delete, redirection).
+ *
+ * @author Maruf Bepary
+ */
 interface UseEntityOptionsProps {
   id: string;
   type: string;

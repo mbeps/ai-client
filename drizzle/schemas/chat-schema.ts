@@ -83,5 +83,16 @@ export const attachment = pgTable(
   ],
 );
 
+/**
+ * Inferred select model for an attachment record stored in PostgreSQL.
+ *
+ * @author Maruf Bepary
+ */
 export type Attachment = typeof attachment.$inferSelect;
+
+/**
+ * Inferred insert model for creating a new attachment record in PostgreSQL.
+ *
+ * @author Maruf Bepary
+ */
 export type NewAttachment = typeof attachment.$inferInsert;

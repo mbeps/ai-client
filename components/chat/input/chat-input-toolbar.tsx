@@ -24,12 +24,24 @@ import type { Message } from "@/types/message/message";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents chat input attachments trigger props.
+ *
+ * @author Maruf Bepary
+ */
 interface ChatInputAttachmentsTriggerProps {
   isMobile: boolean;
   hasNoModels: boolean;
   children: React.ReactNode;
 }
 
+/**
+ * Renders the chat input attachments trigger component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ChatInputAttachmentsTrigger({
   isMobile,
   hasNoModels,
@@ -84,6 +96,13 @@ function ChatInputAttachmentsTrigger({
   );
 }
 
+/**
+ * Renders the subagents badge button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentsBadgeButton({ onOpen }: { onOpen: () => void }) {
   return (
     <Tooltip>
@@ -105,6 +124,13 @@ function SubagentsBadgeButton({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+/**
+ * Renders the send stop button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SendStopButton({
   isLoading,
   onStop,
@@ -148,6 +174,13 @@ function SendStopButton({
   );
 }
 
+/**
+ * Renders the cancel button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function CancelButton({ onCancel }: { onCancel: () => void }) {
   return (
     <Button
@@ -161,6 +194,13 @@ function CancelButton({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+/**
+ * Renders the voice input button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function VoiceInputButton({ disabled }: { disabled: boolean }) {
   return (
     <Button
@@ -175,6 +215,11 @@ function VoiceInputButton({ disabled }: { disabled: boolean }) {
   );
 }
 
+/**
+ * Represents chat input action buttons props.
+ *
+ * @author Maruf Bepary
+ */
 interface ChatInputActionButtonsProps {
   subagentsEnabled: boolean;
   onOpenSubagents: () => void;
@@ -195,6 +240,13 @@ interface ChatInputActionButtonsProps {
   isSendDisabled: boolean;
 }
 
+/**
+ * Renders the chat input action buttons component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
   return (
     <div className="flex items-center gap-1.5">
@@ -226,6 +278,11 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
 
 const EMPTY_STRING_ARRAY: string[] = [];
 
+/**
+ * Represents chat input toolbar props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ChatInputToolbarProps {
   isMobile: boolean;
   hasNoModels: boolean;
@@ -270,6 +327,13 @@ export interface ChatInputToolbarProps {
   isSendDisabled: boolean;
 }
 
+/**
+ * Renders the chat input toolbar component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ChatInputToolbar(props: ChatInputToolbarProps) {
   const activeToolNames = props.supportsTools
     ? Array.from(props.selectedTools)

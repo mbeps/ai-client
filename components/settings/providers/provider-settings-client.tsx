@@ -18,6 +18,11 @@ import { useProviders } from "@/hooks/use-providers";
 import { useUserModels } from "@/hooks/use-user-models";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
+/**
+ * Represents provider settings client props.
+ *
+ * @author Maruf Bepary
+ */
 type ProviderSettingsClientProps = {
   initialSettings: UserSettingsRow | null;
 };

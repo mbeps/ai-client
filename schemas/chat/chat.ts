@@ -175,6 +175,10 @@ const manageArtifactBaseFields = {
  * Normalises input for manage_artifact tool.
  * Tolerates JSON strings and nested { artifact: ... } wrappers from various AI models,
  * allowing the advertised JSON Schema to remain a clean, single-object schema.
+ *
+ * @param val - Raw input parameter passed from model invocation
+ * @returns Normalised unnested input object or original value
+ * @author Maruf Bepary
  */
 function normaliseManageArtifactInput(val: unknown): unknown {
   let target = val;
@@ -198,6 +202,12 @@ function normaliseManageArtifactInput(val: unknown): unknown {
   return target;
 }
 
+/**
+ * Base Zod object schema for manage_artifact tool parameters before preprocessing.
+ * Defines the strict shape of artifact modifications and creation payloads.
+ *
+ * @author Maruf Bepary
+ */
 const manageArtifactBaseSchema = z.object(manageArtifactBaseFields);
 
 /**
@@ -210,6 +220,12 @@ export const manageArtifactSchema = Object.assign(
   { shape: manageArtifactBaseSchema.shape },
 );
 
+/**
+ * Base Zod schema defining the query payload for searching knowledge bases.
+ * Enforces string trimming and length bounds for vector search.
+ *
+ * @author Maruf Bepary
+ */
 const searchKnowledgeBaseBaseSchema = z.object({
   query: z
     .string()
@@ -225,6 +241,10 @@ const searchKnowledgeBaseBaseSchema = z.object({
  * Normalises input for search_knowledge_base tool.
  * Tolerates JSON strings and nested { search_knowledge_base: ... } wrappers,
  * allowing the advertised JSON Schema to remain a clean, single-object schema.
+ *
+ * @param val - Raw input parameter passed from model tool call
+ * @returns Normalised query object or raw value
+ * @author Maruf Bepary
  */
 function normaliseSearchKnowledgeBaseInput(val: unknown): unknown {
   let target = val;

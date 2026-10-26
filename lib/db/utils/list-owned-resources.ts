@@ -2,6 +2,11 @@ import { desc, eq, type SQL } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
 
+/**
+ * Represents list owned resources options.
+ *
+ * @author Maruf Bepary
+ */
 export interface ListOwnedResourcesOptions<TTable> {
   /**
    * Custom order by logic. Defaults to [desc(table.updatedAt)] if available.

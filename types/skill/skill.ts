@@ -1,6 +1,11 @@
 import type { z } from "zod";
 import type { skillFileSchema, skillSchema } from "@/schemas/skill/skill";
 
+/**
+ * Represents a reference or helper file bundled alongside a skill's SKILL.md body.
+ *
+ * @author Maruf Bepary
+ */
 export type SkillBundledFile = z.infer<typeof skillFileSchema>;
 
 /**

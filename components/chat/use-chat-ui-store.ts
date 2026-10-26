@@ -2,6 +2,13 @@
 
 import { useAppStore } from "@/lib/store/use-app-store";
 
+/**
+ * Custom hook that provides use chat store functionality.
+ *
+ * @param chatId - The chat id parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useChatStore(chatId: string) {
   const storeChat = useAppStore((state) => state.chats[chatId]);
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);

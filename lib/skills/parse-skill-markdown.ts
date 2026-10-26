@@ -1,6 +1,11 @@
 import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
+/**
+ * Represents parsed skill.
+ *
+ * @author Maruf Bepary
+ */
 export interface ParsedSkill {
   name: string;
   displayName: string;
@@ -9,6 +14,11 @@ export interface ParsedSkill {
   files: SkillBundledFile[];
 }
 
+/**
+ * Represents frontmatter meta.
+ *
+ * @author Maruf Bepary
+ */
 interface FrontmatterMeta {
   name: string;
   displayName: string;
@@ -17,6 +27,10 @@ interface FrontmatterMeta {
 
 /**
  * Parses a YAML frontmatter block into structured name, displayName, and description.
+ *
+ * @param yamlText - Target yaml text
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function parseFrontmatterBlock(yamlText: string): FrontmatterMeta {
   let name = "";
@@ -62,8 +76,12 @@ function parseFrontmatterBlock(yamlText: string): FrontmatterMeta {
 }
 
 /**
- * Simple, robust YAML frontmatter parser for SKILL.md files.
- * Extracts `name`, `description`, `displayName`/`title`, and strips frontmatter to return the markdown body.
+ * Simple, robust YAML frontmatter parser for SKILL.md files. Extracts `name`, `description`, `displayName`/`title`, and strips frontmatter to return the markdown body.
+ *
+ * @param rawMarkdown - Target raw markdown
+ * @param fallbackName - Target fallback name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function parseSkillMarkdown(
   rawMarkdown: string,

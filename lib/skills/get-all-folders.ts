@@ -3,6 +3,11 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Extracts all unique folder paths from files and emptyFolders.
+ *
+ * @param files - Target files
+ * @param emptyFolders - Target empty folders
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function getAllFolders(
   files: SkillBundledFile[],

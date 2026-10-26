@@ -8,6 +8,12 @@ import { logger } from "@/lib/logger";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
+/**
+ * Custom hook that provides use model table filters functionality.
+ *
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useModelTableFilters() {
   const [search, setSearch] = useState("");
   const [providerFilter, setProviderFilter] = useState("all");
@@ -28,6 +34,12 @@ export function useModelTableFilters() {
   };
 }
 
+/**
+ * Custom hook that provides use model table modals functionality.
+ *
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useModelTableModals() {
   const [editingModel, setEditingModel] = useState<AiModelRow | null>(null);
   const [modelToDelete, setModelToDelete] = useState<AiModelRow | null>(null);
@@ -46,6 +58,16 @@ export function useModelTableModals() {
   };
 }
 
+/**
+ * Custom hook that provides use model table actions functionality.
+ *
+ * @param onRefresh - The on refresh parameter.
+ * @param selectedIds - The selected ids parameter.
+ * @param setSelectedIds - The set selected ids parameter.
+ * @param setIsBulkDeleteConfirmOpen - The set is bulk delete confirm open parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useModelTableActions(
   onRefresh: () => Promise<void>,
   selectedIds: Set<string>,

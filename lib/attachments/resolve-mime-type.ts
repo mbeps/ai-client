@@ -18,6 +18,13 @@ const SIGNATURES: Array<{ bytes: number[]; offset: number; mime: string }> = [
   { bytes: [0x47, 0x49, 0x46, 0x38], offset: 0, mime: "image/gif" }, // GIF8
 ];
 
+/**
+ * Performs sniff mime.
+ *
+ * @param bytes - Target bytes
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function sniffMime(bytes: Uint8Array): string | undefined {
   if (
     bytes.length >= 12 &&

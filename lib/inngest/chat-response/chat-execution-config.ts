@@ -20,6 +20,10 @@ const log = getLogger(["inngest", "chat", "response"]);
 
 /**
  * Determines if error represents an abort condition.
+ *
+ * @param error - Target error
+ * @param abortSignal - Target abort signal
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function isAbortError(error: unknown, abortSignal: AbortSignal): boolean {
@@ -31,6 +35,9 @@ function isAbortError(error: unknown, abortSignal: AbortSignal): boolean {
 
 /**
  * Determines if error represents a chat not found condition.
+ *
+ * @param error - Target error
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function isChatNotFoundError(error: unknown): boolean {
@@ -42,6 +49,9 @@ function isChatNotFoundError(error: unknown): boolean {
 
 /**
  * Validates that model capabilities satisfy user and tool requirements.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function validateModelCapabilities(params: {
@@ -82,6 +92,9 @@ export function validateModelCapabilities(params: {
 
 /**
  * Extracts valid file attachment metadata with storage keys from chat history.
+ *
+ * @param thread - Array of chat messages in the conversation
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function extractFileAttachments(thread: any[]) {
@@ -93,6 +106,10 @@ export function extractFileAttachments(thread: any[]) {
 
 /**
  * Resolves model provider for main chat generation.
+ *
+ * @param userId - User identifier
+ * @param model - Target model
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function resolveChatProvider(userId: string, model?: string) {
@@ -103,6 +120,10 @@ function resolveChatProvider(userId: string, model?: string) {
 
 /**
  * Resolves model provider for subagent workers if configured.
+ *
+ * @param userId - User identifier
+ * @param subagentModelId - Target subagent model id
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function resolveWorkerChatProvider(userId: string, subagentModelId?: string) {
@@ -112,6 +133,11 @@ function resolveWorkerChatProvider(userId: string, subagentModelId?: string) {
   return resolveProvider(userId, subagentModelId).catch(() => null);
 }
 
+/**
+ * Represents chat execution resources params.
+ *
+ * @author Maruf Bepary
+ */
 export interface ChatExecutionResourcesParams {
   userId: string;
   chatId: string;
@@ -126,6 +152,9 @@ export interface ChatExecutionResourcesParams {
 
 /**
  * Concurrently loads user settings, model providers, chat context, and thread history.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function loadChatExecutionResources(
@@ -152,6 +181,9 @@ export async function loadChatExecutionResources(
 
 /**
  * Computes maximum tool step allowance for orchestrator.
+ *
+ * @param isSubagentDelegationEnabled - Target is subagent delegation enabled
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function resolveOrchestratorMaxSteps(
@@ -164,6 +196,9 @@ export function resolveOrchestratorMaxSteps(
 
 /**
  * Configures parameters for primary text streaming invocation.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function buildStreamExecutionConfig(params: {
@@ -228,6 +263,12 @@ export function buildAssistantMessageMetadata({
 
 /**
  * Handles errors during generation with clean abort/cancellation checking.
+ *
+ * @param error - Target error
+ * @param abortSignal - Target abort signal
+ * @param chatId - Chat session identifier
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function handleChatGenerationError(

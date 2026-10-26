@@ -14,9 +14,10 @@ import { whereOwner } from "@/lib/db/where-owner";
  * or uninstalls subscribed public MCP servers.
  *
  * @param idOrIds - UUID or array of UUIDs of the MCP servers / installs to delete.
- * @returns { deletedCount: number } - The number of MCP servers/subscriptions successfully deleted.
- * @throws Error if session is not authenticated.
- * @throws Error if server or install does not exist (returns "Not Found").
+ * @returns Object with the number of MCP servers/subscriptions successfully deleted.
+ * @throws {Error} if session is not authenticated.
+ * @throws {Error} if server or install does not exist (returns "Not Found").
+ * @author Maruf Bepary
  */
 export async function deleteMcpServer(
   idOrIds: string | string[],

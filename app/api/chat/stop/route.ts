@@ -8,18 +8,11 @@ const log = getLogger(["app", "api", "chat", "stop"]);
 
 /**
  * Cancels an in-progress AI chat response generation.
- * Immediately aborts the active stream via ChatAbortRegistry, publishes
- * a finish event to Inngest Realtime to close connected clients, and sends
- * a `chat/response.cancel` event to Inngest for dashboard bookkeeping.
+ * Immediately aborts the active stream via ChatAbortRegistry, publishes a finish event
+ * to Inngest Realtime to close connected clients, and sends a cancellation event.
  *
- * **HTTP Method:** DELETE
- *
- * **Request Format:** JSON with chatId
- *
- * **Response Format:** JSON { success: true, aborted: boolean }
- *
- * **Authentication:** Required (Better Auth session)
- *
+ * @param req - Incoming HTTP DELETE request containing the target chatId
+ * @returns JSON response indicating whether cancellation succeeded
  * @author Maruf Bepary
  */
 export async function DELETE(req: Request) {

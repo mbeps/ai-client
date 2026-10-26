@@ -17,6 +17,11 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
+/**
+ * Represents chats client props.
+ *
+ * @author Maruf Bepary
+ */
 interface ChatsClientProps {
   initialChats: Chat[];
 }

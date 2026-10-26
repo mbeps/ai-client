@@ -29,6 +29,13 @@ import {
 
 const PROVIDER_MODEL_TYPES = ["chat", "embedding", "both"] as const;
 
+/**
+ * Coerces nullable string value into a valid ProviderModelType enum member, defaulting to 'chat'.
+ *
+ * @param value - Raw database string value
+ * @returns Valid ProviderModelType
+ * @author Maruf Bepary
+ */
 function toProviderModelType(
   value: string | null | undefined,
 ): ProviderModelType {
@@ -38,8 +45,8 @@ function toProviderModelType(
 /**
  * Exports a provider registry for bulk provider and model management.
  *
- * @param {ExportProviderRegistryInput | undefined} [input] - Optional filter (providerIds)
- * @returns {Promise<RegistryExport>} Complete registry export with all provider and model metadata
+ * @param input - Optional filter with provider IDs
+ * @returns Complete registry export with all provider and model metadata
  * @throws {Error} If decryption fails or input validation fails
  *
  * @see {@link importProviderRegistry} for importing

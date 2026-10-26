@@ -2,6 +2,13 @@ import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 
+/**
+ * Extracts assistant id.
+ *
+ * @param metadata - Message metadata object or serialized string
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractAssistantId(
   metadata: string | null | undefined,
 ): string | undefined {
@@ -14,6 +21,13 @@ function extractAssistantId(
   }
 }
 
+/**
+ * Extracts legacy prompt ids.
+ *
+ * @param metadata - Message metadata object or serialized string
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractLegacyPromptIds(
   metadata: string | null | undefined,
 ): string[] | undefined {
@@ -30,6 +44,13 @@ function extractLegacyPromptIds(
   return undefined;
 }
 
+/**
+ * Extracts prompt info.
+ *
+ * @param parentMsg - Target parent msg
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractPromptInfo(parentMsg: Message) {
   const meta = parseMessageMetadata(parentMsg.metadata);
   const promptMeta = meta.promptMeta;
@@ -43,6 +64,13 @@ function extractPromptInfo(parentMsg: Message) {
   };
 }
 
+/**
+ * Extracts regenerate payload.
+ *
+ * @param parentMsg - Target parent msg
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractRegeneratePayload(parentMsg: Message) {
   const { userContent, promptIds, assistantId, meta } =
     extractPromptInfo(parentMsg);
@@ -61,6 +89,14 @@ function extractRegeneratePayload(parentMsg: Message) {
   };
 }
 
+/**
+ * Resolves regenerate payload.
+ *
+ * @param chat - Target chat
+ * @param assistantMessageId - Target assistant message id
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function resolveRegeneratePayload(
   chat?: Chat,
   assistantMessageId?: string,

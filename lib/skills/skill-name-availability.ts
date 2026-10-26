@@ -5,7 +5,11 @@ import { skill } from "@/drizzle/schemas/skill-schema";
 /**
  * Throws when the user already owns a skill with the given slug.
  *
+ * @param userId - User identifier
+ * @param name - Target name
  * @param excludeId - Skill id to ignore, used when renaming an existing skill
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function assertNameAvailable(
   userId: string,

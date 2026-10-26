@@ -12,6 +12,11 @@ import {
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
 
+/**
+ * Represents a reference file stored within a skill's bundled file tree.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillBundledFile {
   path: string;
   content: string;

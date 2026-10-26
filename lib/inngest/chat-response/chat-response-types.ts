@@ -1,6 +1,11 @@
 import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 
+/**
+ * Represents completed tool record.
+ *
+ * @author Maruf Bepary
+ */
 export interface CompletedToolRecord {
   toolCallId: string;
   toolName: string;
@@ -9,6 +14,11 @@ export interface CompletedToolRecord {
   serverName?: string;
 }
 
+/**
+ * Represents build orchestrator tool set params.
+ *
+ * @author Maruf Bepary
+ */
 export interface BuildOrchestratorToolSetParams {
   userId: string;
   chatId: string;
@@ -30,6 +40,11 @@ export interface BuildOrchestratorToolSetParams {
   workerResolved: any;
 }
 
+/**
+ * Represents orchestrator tool set result.
+ *
+ * @author Maruf Bepary
+ */
 export interface OrchestratorToolSetResult {
   orchestratorActiveTools: Record<string, any>;
   subagentDispatchTools: Record<string, any>;
@@ -41,6 +56,11 @@ export interface OrchestratorToolSetResult {
   isSubagentDelegationEnabled: boolean;
 }
 
+/**
+ * Represents synthesis fallback params.
+ *
+ * @author Maruf Bepary
+ */
 export interface SynthesisFallbackParams {
   chatId: string;
   finalMessages: ModelMessage[];
@@ -55,6 +75,11 @@ export interface SynthesisFallbackParams {
   toolSourceMap: Record<string, string>;
 }
 
+/**
+ * Represents consume model stream result.
+ *
+ * @author Maruf Bepary
+ */
 export interface ConsumeModelStreamResult {
   accumulatedText: string;
   accumulatedReasoning: string;

@@ -9,6 +9,14 @@ import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
  * Persists an explicit artifact produced by manage_artifact tool.
+ *
+ * @param artifact - Target artifact
+ * @param stepIndex - Target step index
+ * @param userId - User identifier
+ * @param runId - Workflow run identifier
+ * @param stepName - Target step name
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function persistExplicitStepArtifact(
@@ -47,6 +55,14 @@ async function persistExplicitStepArtifact(
 
 /**
  * Attempts to persist artifact if it has valid structure.
+ *
+ * @param artifact - Target artifact
+ * @param stepIndex - Target step index
+ * @param userId - User identifier
+ * @param runId - Workflow run identifier
+ * @param stepName - Target step name
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function tryPersistExplicitArtifact(
@@ -78,6 +94,10 @@ async function tryPersistExplicitArtifact(
 
 /**
  * Updates output attachment IDs and current rows with newly persisted output.
+ *
+ * @param persisted - Target persisted
+ * @param currentOutputIds - Target current output ids
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function applyPersistedOutput(
@@ -99,6 +119,11 @@ function applyPersistedOutput(
 
 /**
  * Marks run as failed when workbook mutations occurred without persistence.
+ *
+ * @param stepName - Target step name
+ * @param runId - Workflow run identifier
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function failOnUnpersistedMutations(
@@ -116,6 +141,11 @@ async function failOnUnpersistedMutations(
   emit({ type: "error", message: errorMessage });
 }
 
+/**
+ * Represents handle step artifact output params.
+ *
+ * @author Maruf Bepary
+ */
 export interface HandleStepArtifactOutputParams {
   step: TransformStep;
   stepIndex: number;
@@ -132,6 +162,11 @@ export interface HandleStepArtifactOutputParams {
   emit: (data: any) => void;
 }
 
+/**
+ * Represents handle step artifact output result.
+ *
+ * @author Maruf Bepary
+ */
 export interface HandleStepArtifactOutputResult {
   success: boolean;
   stepArtifact: Record<string, unknown> | null;
@@ -142,8 +177,10 @@ export interface HandleStepArtifactOutputResult {
 }
 
 /**
- * Persists artifacts produced during a step, triggers fallback file downloads if mutations occurred,
- * and enforces the fail-safe guard against unpersisted workbook mutations.
+ * Persists artifacts produced during a step, triggers fallback file downloads if mutations occurred, and enforces the fail-safe guard against unpersisted workbook mutations.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function handleStepArtifactOutput(

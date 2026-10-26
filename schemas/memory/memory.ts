@@ -46,6 +46,23 @@ export const saveMemoryToolSchema = z.object({
     ),
 });
 
+/**
+ * Input payload shape for creating a new persistent memory item.
+ *
+ * @author Maruf Bepary
+ */
 export type CreateMemoryInput = z.infer<typeof createMemorySchema>;
+
+/**
+ * Input payload shape for updating an existing persistent memory item.
+ *
+ * @author Maruf Bepary
+ */
 export type UpdateMemoryInput = z.infer<typeof updateMemorySchema>;
+
+/**
+ * Input payload shape for batch deleting persistent memory items.
+ *
+ * @author Maruf Bepary
+ */
 export type DeleteMemoriesInput = z.infer<typeof deleteMemoriesSchema>;

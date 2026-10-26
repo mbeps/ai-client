@@ -32,6 +32,11 @@ const SEPARATORS = ["\n\n", "\n", ". ", " ", ""];
  */
 const RRF_K = 60;
 
+/**
+ * Aggregated text chunking and hybrid RAG rank fusion configuration constants.
+ *
+ * @author Maruf Bepary
+ */
 export const CHUNK_CONSTANTS = {
   DEFAULT_CHARS,
   DEFAULT_OVERLAP,

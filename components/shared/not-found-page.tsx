@@ -2,6 +2,11 @@ import { ArrowLeft, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Represents not found page props.
+ *
+ * @author Maruf Bepary
+ */
 interface NotFoundPageProps {
   title: string;
   description: string;

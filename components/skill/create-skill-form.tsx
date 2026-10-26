@@ -20,6 +20,11 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Switch } from "@/components/ui/switch";
 import { createSkillSchema } from "@/schemas/skill/skill";
 
+/**
+ * Validation schema for create skill form schema.
+ *
+ * @author Maruf Bepary
+ */
 const createSkillFormSchema = createSkillSchema.pick({
   name: true,
   displayName: true,
@@ -28,9 +33,24 @@ const createSkillFormSchema = createSkillSchema.pick({
   enabled: true,
 });
 
+/**
+ * Represents create skill form values.
+ *
+ * @author Maruf Bepary
+ */
 export type CreateSkillFormValues = z.infer<typeof createSkillFormSchema>;
+/**
+ * Represents create skill form input values.
+ *
+ * @author Maruf Bepary
+ */
 type CreateSkillFormInputValues = z.input<typeof createSkillFormSchema>;
 
+/**
+ * Represents create skill form props.
+ *
+ * @author Maruf Bepary
+ */
 export interface CreateSkillFormProps {
   /** Callback fired when the valid form is submitted */
   onSubmit: (values: CreateSkillFormValues) => Promise<void> | void;

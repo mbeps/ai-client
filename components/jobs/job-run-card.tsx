@@ -148,6 +148,11 @@ function JobDeletedBadge() {
 
 /**
  * Formats job timing text safely with relative time.
+ *
+ * @param startedAt - Target started at
+ * @param queuedAt - Target queued at
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function formatJobTiming(
   startedAt?: string | null,
@@ -163,6 +168,11 @@ function formatJobTiming(
   }
 }
 
+/**
+ * Represents job card title props.
+ *
+ * @author Maruf Bepary
+ */
 interface JobCardTitleProps {
   url?: string;
   entityDeleted?: boolean;
@@ -170,6 +180,13 @@ interface JobCardTitleProps {
   subtitle?: string;
 }
 
+/**
+ * Renders the job card title component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function JobCardTitle({
   url,
   entityDeleted,
@@ -201,6 +218,11 @@ function JobCardTitle({
   );
 }
 
+/**
+ * Represents job card meta details props.
+ *
+ * @author Maruf Bepary
+ */
 interface JobCardMetaDetailsProps {
   errorMessage?: string;
   timingText: string;
@@ -208,6 +230,13 @@ interface JobCardMetaDetailsProps {
   functionName?: string;
 }
 
+/**
+ * Renders the job card meta details component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function JobCardMetaDetails({
   errorMessage,
   timingText,
@@ -240,6 +269,11 @@ function JobCardMetaDetails({
   );
 }
 
+/**
+ * Represents job card actions props.
+ *
+ * @author Maruf Bepary
+ */
 interface JobCardActionsProps {
   url?: string;
   entityDeleted?: boolean;
@@ -248,6 +282,13 @@ interface JobCardActionsProps {
   job: JobItem;
 }
 
+/**
+ * Renders the job card actions component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function JobCardActions({
   url,
   entityDeleted,
@@ -289,6 +330,11 @@ function JobCardActions({
   );
 }
 
+/**
+ * Represents job run card props.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobRunCardProps {
   job: JobItem;
   onCancel: (job: JobItem) => void;

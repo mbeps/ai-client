@@ -111,6 +111,13 @@ export interface ChatInputProps {
 
 const EMPTY_MESSAGES: Message[] = [];
 
+/**
+ * Resolves input defaults.
+ *
+ * @param props - Target props
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveInputDefaults(props: ChatInputProps) {
   return {
     initialValue: props.initialValue ?? "",
@@ -119,18 +126,39 @@ function resolveInputDefaults(props: ChatInputProps) {
   };
 }
 
+/**
+ * Resolves container class name.
+ *
+ * @param isDragging - Target is dragging
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveContainerClassName(isDragging: boolean): string {
   const base =
     "relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30";
   return isDragging ? `${base} bg-primary/5 ring-2 ring-primary` : base;
 }
 
+/**
+ * Resolves input placeholder.
+ *
+ * @param hasNoModels - Target has no models
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveInputPlaceholder(hasNoModels: boolean): string {
   return hasNoModels
     ? "Set up a provider to start chatting..."
     : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases";
 }
 
+/**
+ * Renders the chat input mention commands component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ChatInputMentionCommands(props: {
   openTrigger: MentionTrigger | null;
   filteredItems: MentionItem[];

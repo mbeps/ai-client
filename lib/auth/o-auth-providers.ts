@@ -13,6 +13,11 @@ export const SUPPORTED_OAUTH_PROVIDERS = [
   "github",
   "discord",
 ] as const;
+/**
+ * Represents supported oauth provider.
+ *
+ * @author Maruf Bepary
+ */
 export type SupportedOAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
 
 /**

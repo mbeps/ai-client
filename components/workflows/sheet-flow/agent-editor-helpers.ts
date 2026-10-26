@@ -3,10 +3,20 @@ import { uploadRunInput } from "@/actions/transform-runs/upload-run-input";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformStep } from "@/types/transform/transform-step";
 
+/**
+ * Represents transform agent data.
+ *
+ * @author Maruf Bepary
+ */
 export type TransformAgentData = NonNullable<
   Awaited<ReturnType<typeof getTransformAgent>>
 >;
 
+/**
+ * Represents raw step like.
+ *
+ * @author Maruf Bepary
+ */
 interface RawStepLike {
   id?: string;
   name?: string;
@@ -17,6 +27,11 @@ interface RawStepLike {
   requiresReview?: boolean;
 }
 
+/**
+ * Represents agent form setters.
+ *
+ * @author Maruf Bepary
+ */
 export interface AgentFormSetters {
   setName: (name: string) => void;
   setDescription: (desc: string) => void;
@@ -30,6 +45,11 @@ export interface AgentFormSetters {
   setSteps: (steps: TransformStep[]) => void;
 }
 
+/**
+ * Represents agent payload input.
+ *
+ * @author Maruf Bepary
+ */
 export interface AgentPayloadInput {
   name: string;
   description: string;
@@ -43,6 +63,13 @@ export interface AgentPayloadInput {
   steps: TransformStep[];
 }
 
+/**
+ * Parses raw steps.
+ *
+ * @param rawSteps - Target raw steps
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseRawSteps(rawSteps: unknown): unknown {
   if (typeof rawSteps === "string") {
     try {
@@ -56,6 +83,10 @@ function parseRawSteps(rawSteps: unknown): unknown {
 
 /**
  * Normalizes raw step objects or JSON string into typed TransformStep array.
+ *
+ * @param rawSteps - Target raw steps
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function normalizeAgentSteps(rawSteps: unknown): TransformStep[] {
   const parsed = parseRawSteps(rawSteps);
@@ -73,6 +104,11 @@ export function normalizeAgentSteps(rawSteps: unknown): TransformStep[] {
 
 /**
  * Hydrates agent form states from loaded entity record.
+ *
+ * @param agent - Target agent
+ * @param setters - Target setters
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function hydrateAgentFormState(
   agent: TransformAgentData,
@@ -92,6 +128,10 @@ export function hydrateAgentFormState(
 
 /**
  * Creates a new blank transform step.
+ *
+ * @param order - Target order
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function createNewStep(order: number): TransformStep {
   return {
@@ -107,6 +147,10 @@ export function createNewStep(order: number): TransformStep {
 
 /**
  * Builds the payload for create/update transform agent server actions.
+ *
+ * @param state - Target state
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function buildAgentPayload(state: AgentPayloadInput) {
   return {
@@ -133,6 +177,10 @@ export function buildAgentPayload(state: AgentPayloadInput) {
 
 /**
  * Uploads selected input files for a transform run and returns their attachment IDs.
+ *
+ * @param files - Target files
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function uploadRunInputFiles(files: File[]): Promise<string[]> {
   if (files.length === 0) return [];

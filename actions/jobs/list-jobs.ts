@@ -25,6 +25,11 @@ export interface ListJobsOptions {
   limit?: number;
 }
 
+/**
+ * Buckets of collected entity identifiers partitioned by entity type.
+ *
+ * @author Maruf Bepary
+ */
 interface EntityIdBuckets {
   chatIds: Set<string>;
   transformRunIds: Set<string>;
@@ -33,35 +38,65 @@ interface EntityIdBuckets {
   kbIds: Set<string>;
 }
 
+/**
+ * Chat entity summary projected from database for job display.
+ *
+ * @author Maruf Bepary
+ */
 interface ChatEntity {
   id: string;
   title: string;
   projectId: string | null;
 }
 
+/**
+ * Transformation entity summary projected from database for job display.
+ *
+ * @author Maruf Bepary
+ */
 interface TransformEntity {
   id: string;
   agentId: string;
   agentName: string | null;
 }
 
+/**
+ * Translation workflow entity summary projected from database for job display.
+ *
+ * @author Maruf Bepary
+ */
 interface TranslationEntity {
   id: string;
   sourceLanguage: string;
   targetLanguage: string;
 }
 
+/**
+ * Knowledge base document summary projected from database for job display.
+ *
+ * @author Maruf Bepary
+ */
 interface KbDocEntity {
   id: string;
   name: string;
   kbId: string;
 }
 
+/**
+ * Knowledge base collection summary projected from database for job display.
+ *
+ * @author Maruf Bepary
+ */
 interface KbEntity {
   id: string;
   name: string;
 }
 
+/**
+ * Pre-fetched lookup maps for enriching job items with entity names and URLs.
+ *
+ * @author Maruf Bepary
+ */
 interface EntityMaps {
   chatMap: Map<string, ChatEntity>;
   transformMap: Map<string, TransformEntity>;
@@ -72,6 +107,10 @@ interface EntityMaps {
 
 /**
  * Collects unique entity IDs per job type for batched database queries.
+ *
+ * @param jobs - List of raw job items to extract entity IDs from
+ * @returns Bucket map containing ID sets for each entity category
+ * @author Maruf Bepary
  */
 function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
   const buckets: EntityIdBuckets = {
@@ -110,6 +149,11 @@ function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
 
 /**
  * Batches parallel database queries for associated entities.
+ *
+ * @param userId - ID of current authenticated user to scope queries
+ * @param buckets - Bucket sets containing IDs to look up
+ * @returns Pre-populated entity lookup maps
+ * @author Maruf Bepary
  */
 async function fetchEntityMaps(
   userId: string,
@@ -210,6 +254,14 @@ async function fetchEntityMaps(
   };
 }
 
+/**
+ * Enriches a chat job item with chat title and navigation URL.
+ *
+ * @param job - Raw job item
+ * @param entity - Pre-fetched chat entity if still existing
+ * @returns Enriched job item
+ * @author Maruf Bepary
+ */
 function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
   if (!entity) {
     return {
@@ -229,6 +281,14 @@ function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
   };
 }
 
+/**
+ * Enriches a transformation job item with agent name and run history URL.
+ *
+ * @param job - Raw job item
+ * @param entity - Pre-fetched transformation entity if still existing
+ * @returns Enriched job item
+ * @author Maruf Bepary
+ */
 function enrichTransformJob(job: JobItem, entity?: TransformEntity): JobItem {
   if (!entity) {
     return {
@@ -246,6 +306,14 @@ function enrichTransformJob(job: JobItem, entity?: TransformEntity): JobItem {
   };
 }
 
+/**
+ * Enriches a translation job item with source/target language pair subtitles.
+ *
+ * @param job - Raw job item
+ * @param entity - Pre-fetched translation entity if still existing
+ * @returns Enriched job item
+ * @author Maruf Bepary
+ */
 function enrichTranslationJob(
   job: JobItem,
   entity?: TranslationEntity,
@@ -266,6 +334,14 @@ function enrichTranslationJob(
   };
 }
 
+/**
+ * Enriches a knowledge base document ingestion job item with document name.
+ *
+ * @param job - Raw job item
+ * @param entity - Pre-fetched document entity if still existing
+ * @returns Enriched job item
+ * @author Maruf Bepary
+ */
 function enrichKbIngestJob(job: JobItem, entity?: KbDocEntity): JobItem {
   if (!entity) {
     return {
@@ -283,6 +359,14 @@ function enrichKbIngestJob(job: JobItem, entity?: KbDocEntity): JobItem {
   };
 }
 
+/**
+ * Enriches a knowledge base reindexing job item with knowledge base collection name.
+ *
+ * @param job - Raw job item
+ * @param entity - Pre-fetched knowledge base entity if still existing
+ * @returns Enriched job item
+ * @author Maruf Bepary
+ */
 function enrichKbReindexJob(job: JobItem, entity?: KbEntity): JobItem {
   if (!entity) {
     return {
@@ -300,6 +384,14 @@ function enrichKbReindexJob(job: JobItem, entity?: KbEntity): JobItem {
   };
 }
 
+/**
+ * Enriches an individual job item by looking up its associated entity in pre-fetched maps.
+ *
+ * @param job - Raw job item
+ * @param maps - Pre-populated entity lookup maps
+ * @returns Enriched job item with navigation URLs and display titles
+ * @author Maruf Bepary
+ */
 function enrichJobItem(job: JobItem, maps: EntityMaps): JobItem {
   if (!job.entityId) {
     return { ...job };

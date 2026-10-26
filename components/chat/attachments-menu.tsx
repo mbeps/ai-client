@@ -22,6 +22,11 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents attachments menu props.
+ *
+ * @author Maruf Bepary
+ */
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -56,14 +61,35 @@ const EMPTY_MCP_PROMPTS: DiscoveredPrompt[] = [];
 const EMPTY_KNOWLEDGEBASES: Knowledgebase[] = [];
 const EMPTY_SET = new Set<string>();
 
+/**
+ * Performs count selected prompts.
+ *
+ * @param selectedPromptIds - Target selected prompt ids
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function countSelectedPrompts(selectedPromptIds?: Set<string>): number {
   return selectedPromptIds?.size ?? 0;
 }
 
+/**
+ * Formats count badge.
+ *
+ * @param count - Target count
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function formatCountBadge(count: number): string {
   return count > 0 ? ` (${count})` : "";
 }
 
+/**
+ * Renders the skills menu option component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SkillsMenuOption(props: {
   skills?: Skill[];
   selectedSkills?: Set<string>;
@@ -88,6 +114,13 @@ function SkillsMenuOption(props: {
   );
 }
 
+/**
+ * Renders the prompts menu option component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function PromptsMenuOption(props: {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
@@ -118,6 +151,13 @@ function PromptsMenuOption(props: {
   );
 }
 
+/**
+ * Renders the knowledgebase menu option component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function KnowledgebaseMenuOption(props: {
   knowledgebases?: Knowledgebase[];
   selectedKbs: Set<string>;
@@ -139,6 +179,13 @@ function KnowledgebaseMenuOption(props: {
   );
 }
 
+/**
+ * Renders the tools menu option component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolsMenuOption(props: {
   servers?: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
@@ -176,6 +223,13 @@ function ToolsMenuOption(props: {
   );
 }
 
+/**
+ * Renders the subagents menu option component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentsMenuOption(props: { onOpenSubagents?: () => void }) {
   if (!props.onOpenSubagents) return null;
 

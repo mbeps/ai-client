@@ -7,6 +7,13 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 
+/**
+ * Parses artifact result payload.
+ *
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseArtifactResultPayload(raw: unknown): {
   parsed: any;
   isString: boolean;
@@ -24,6 +31,14 @@ function parseArtifactResultPayload(raw: unknown): {
   return { parsed, isString };
 }
 
+/**
+ * Writes updated artifact content back into a tool result payload in-place, preserving string or object formatting.
+ *
+ * @param tr - Mutable tool result entry containing result or output fields
+ * @param parsed - Updated parsed payload object containing the artifact
+ * @param isString - Whether the original tool result was serialized as a JSON string
+ * @author Maruf Bepary
+ */
 function applyArtifactContent(tr: any, parsed: any, isString: boolean): void {
   if (isString) {
     tr.result = JSON.stringify(parsed);
@@ -38,6 +53,15 @@ function applyArtifactContent(tr: any, parsed: any, isString: boolean): void {
   }
 }
 
+/**
+ * Searches a tool result for an artifact matching the given ID and mutates its content in-place.
+ *
+ * @param tr - Mutable tool result entry containing result or output fields
+ * @param artifactId - Unique identifier of the artifact to locate and update
+ * @param newContent - Replacement body content for the artifact
+ * @returns True if a matching artifact was found and updated, otherwise false
+ * @author Maruf Bepary
+ */
 function updateToolResultArtifact(
   tr: any,
   artifactId: string,
@@ -55,6 +79,15 @@ function updateToolResultArtifact(
   return true;
 }
 
+/**
+ * Performs mutate artifact content in metadata.
+ *
+ * @param rawMetadata - Target raw metadata
+ * @param artifactId - Target artifact id
+ * @param newContent - Target new content
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function mutateArtifactContentInMetadata(
   rawMetadata: string,
   artifactId: string,
@@ -77,6 +110,15 @@ function mutateArtifactContentInMetadata(
   }
 }
 
+/**
+ * Checks can update artifact.
+ *
+ * @param allArtifactsLength - Target all artifacts length
+ * @param artifactIndex - Target artifact index
+ * @param activeArtifact - Target active artifact
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function checkCanUpdateArtifact(
   allArtifactsLength: number,
   artifactIndex: number,
@@ -88,6 +130,13 @@ function checkCanUpdateArtifact(
   return Boolean(activeArtifact?.messageId && activeArtifact?.id);
 }
 
+/**
+ * Performs collect message artifacts.
+ *
+ * @param thread - Array of chat messages in the conversation
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function collectMessageArtifacts(thread: Message[]): {
   artifacts: ArtifactData[];
   seenIds: Set<string>;
@@ -107,6 +156,16 @@ function collectMessageArtifacts(thread: Message[]): {
   return { artifacts, seenIds };
 }
 
+/**
+ * Performs collect streaming artifacts.
+ *
+ * @param activeToolCalls - Target active tool calls
+ * @param streamingContent - Target streaming content
+ * @param artifacts - Target artifacts
+ * @param seenIds - Target seen ids
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function collectStreamingArtifacts(
   activeToolCalls: any[] | undefined,
   streamingContent: string | null,
@@ -133,6 +192,15 @@ function collectStreamingArtifacts(
   }
 }
 
+/**
+ * Extracts thread artifacts.
+ *
+ * @param thread - Array of chat messages in the conversation
+ * @param activeToolCalls - Target active tool calls
+ * @param streamingContent - Target streaming content
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractThreadArtifacts(
   thread: Message[],
   activeToolCalls: any[],
@@ -148,6 +216,14 @@ function extractThreadArtifacts(
   return artifacts;
 }
 
+/**
+ * Finds artifact index.
+ *
+ * @param artifacts - Target artifacts
+ * @param target - Target target
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function findArtifactIndex(
   artifacts: ArtifactData[],
   target: ArtifactData,
@@ -159,6 +235,15 @@ function findArtifactIndex(
   );
 }
 
+/**
+ * Applies next artifact state.
+ *
+ * @param next - Target next
+ * @param setArtifactIndex - Target set artifact index
+ * @param setIsArtifactOpen - Target set is artifact open
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function applyNextArtifactState(
   next: { nextIndex: number; shouldOpen?: boolean } | null,
   setArtifactIndex: (idx: number) => void,
@@ -171,6 +256,14 @@ function applyNextArtifactState(
   }
 }
 
+/**
+ * Resolves reopen index.
+ *
+ * @param currentIndex - Target current index
+ * @param totalArtifacts - Target total artifacts
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveReopenIndex(
   currentIndex: number,
   totalArtifacts: number,
@@ -181,6 +274,15 @@ function resolveReopenIndex(
   return currentIndex;
 }
 
+/**
+ * Resolves next artifact state.
+ *
+ * @param currentLength - Target current length
+ * @param prevLength - Target prev length
+ * @param currentIndex - Target current index
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveNextArtifactState(
   currentLength: number,
   prevLength: number,
@@ -199,6 +301,17 @@ function resolveNextArtifactState(
   return null;
 }
 
+/**
+ * Updates artifact metadata.
+ *
+ * @param chat - Target chat
+ * @param chatId - Chat session identifier
+ * @param activeArtifact - Target active artifact
+ * @param newContent - Target new content
+ * @param updateMessageMetadataDb - Target update message metadata db
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function updateArtifactMetadata(
   chat: Chat | undefined,
   chatId: string,
@@ -226,6 +339,15 @@ function updateArtifactMetadata(
 
 /**
  * Manages artifact panel display, active index, chat switch resets, and updates.
+ *
+ * @param chatId - Chat session identifier
+ * @param chat - Target chat
+ * @param thread - Array of chat messages in the conversation
+ * @param activeToolCalls - Target active tool calls
+ * @param streamingContent - Target streaming content
+ * @param updateMessageMetadataDb - Target update message metadata db
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatArtifactPanel(
   chatId: string,

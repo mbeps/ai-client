@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { Attachment } from "@/types/attachment/attachment";
 
+/**
+ * Represents translation source pane props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TranslationSourcePaneProps {
   sourceText: string;
   onSourceTextChange: (text: string) => void;

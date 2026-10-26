@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { JobItem } from "@/types/jobs";
 
+/**
+ * Represents cancel job dialog props.
+ *
+ * @author Maruf Bepary
+ */
 export interface CancelJobDialogProps {
   cancelTarget: JobItem | null;
   isPending: boolean;

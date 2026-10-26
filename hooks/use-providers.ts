@@ -11,6 +11,11 @@ import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const RETRY_COUNT = 1;
 
+/**
+ * Return shape of the useProviders hook including provider list and cache refresh operations.
+ *
+ * @author Maruf Bepary
+ */
 export type UseProvidersResult = {
   providers: AiProviderRow[];
   isLoading: boolean;

@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+/**
+ * Represents assistant settings tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface AssistantSettingsTabProps {
   name: string;
   onNameChange: (value: string) => void;

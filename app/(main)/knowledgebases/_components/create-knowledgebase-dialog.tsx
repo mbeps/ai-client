@@ -30,8 +30,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { useUserModels } from "@/hooks/use-user-models";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 
+/**
+ * Represents form values.
+ *
+ * @author Maruf Bepary
+ */
 type FormValues = z.infer<typeof createKnowledgebaseSchema>;
 
+/**
+ * Represents create knowledgebase dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface CreateKnowledgebaseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

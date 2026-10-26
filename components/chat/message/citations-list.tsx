@@ -11,6 +11,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Citation } from "@/types/chat/citation";
 
+/**
+ * Represents citations list props.
+ *
+ * @author Maruf Bepary
+ */
 interface CitationsListProps {
   citations: Citation[];
 }

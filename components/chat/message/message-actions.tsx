@@ -22,6 +22,11 @@ import { useUserModels } from "@/hooks/use-user-models";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
+/**
+ * Represents message actions props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageActionsProps {
   message: Message;
   isUser: boolean;

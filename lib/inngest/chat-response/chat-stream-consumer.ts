@@ -12,6 +12,9 @@ const log = getLogger(["inngest", "chat", "response"]);
 
 /**
  * Formats tool error payload into a reliable error string.
+ *
+ * @param rawErr - Target raw err
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function formatToolErrorMessage(rawErr: unknown): string {
@@ -26,6 +29,10 @@ function formatToolErrorMessage(rawErr: unknown): string {
 
 /**
  * Creates a bound emitter function publishing events to Inngest Realtime.
+ *
+ * @param abortSignal - Target abort signal
+ * @param stream - Target stream
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function createStreamEmitter(
@@ -47,6 +54,12 @@ export function createStreamEmitter(
 
 /**
  * Handles a tool-call chunk by updating completedTools and emitting event.
+ *
+ * @param chunk - Target chunk
+ * @param completedTools - Target completed tools
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function handleToolCallChunk(
@@ -74,6 +87,12 @@ async function handleToolCallChunk(
 
 /**
  * Handles a tool-result chunk by sanitizing output and emitting event.
+ *
+ * @param chunk - Target chunk
+ * @param completedTools - Target completed tools
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function handleToolResultChunk(
@@ -108,6 +127,12 @@ async function handleToolResultChunk(
 
 /**
  * Handles a tool-error chunk by formatting error message and emitting event.
+ *
+ * @param chunk - Target chunk
+ * @param completedTools - Target completed tools
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function handleToolErrorChunk(
@@ -133,6 +158,13 @@ async function handleToolErrorChunk(
 
 /**
  * Consumes chunks from a model stream, emits realtime events, and tracks completed tools.
+ *
+ * @param fullStream - Target full stream
+ * @param abortSignal - Target abort signal
+ * @param emit - Target emit
+ * @param toolSourceMap - Target tool source map
+ * @param completedTools - Target completed tools
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function consumeModelStream(

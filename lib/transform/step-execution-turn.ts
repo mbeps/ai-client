@@ -18,6 +18,22 @@ import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 
 const log = getLogger(["app", "transform", "steps"]);
 
+/**
+ * Processes an individual tool execution result during a workflow step turn.
+ *
+ * Emits realtime tool-call telemetry events, checks whether the tool performed
+ * a spreadsheet mutation, captures newly uploaded workbook filepaths, and extracts
+ * produced artifacts.
+ *
+ * @param tr - Raw tool execution result object
+ * @param toolSourceMap - Mapping of tool names to their providing MCP server names
+ * @param emit - Realtime event dispatcher callback for step streaming updates
+ * @param runId - Workflow run identifier
+ * @param stepIndex - Zero-based index of the currently executing workflow step
+ * @param userId - ID of the authenticated user owning the run
+ * @returns Metadata describing mutation status, active workbook filepath, and extracted artifact
+ * @author Maruf Bepary
+ */
 function handleSingleToolResult(
   tr: any,
   toolSourceMap: Record<string, string>,
@@ -85,6 +101,15 @@ function handleSingleToolResult(
   return { isMutation, uploadedWorkbookPath, artifact };
 }
 
+/**
+ * Performs emit step tool calls.
+ *
+ * @param toolCalls - List of tool call definitions and arguments
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function emitStepToolCalls(
   toolCalls: any[],
   toolSourceMap: Record<string, string>,
@@ -102,6 +127,19 @@ function emitStepToolCalls(
   }
 }
 
+/**
+ * Performs process step execution turn.
+ *
+ * @param steps - Target steps
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @param runId - Workflow run identifier
+ * @param stepIndex - Target step index
+ * @param userId - User identifier
+ * @param initialWorkbookFilePath - Target initial workbook file path
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function processStepExecutionTurn(
   steps: any[],
   toolSourceMap: Record<string, string>,
@@ -147,6 +185,11 @@ function processStepExecutionTurn(
   };
 }
 
+/**
+ * Represents execute step model turn params.
+ *
+ * @author Maruf Bepary
+ */
 export interface ExecuteStepModelTurnParams {
   resolvedProvider: ResolvedProvider;
   filteredTools: Record<string, any>;
@@ -160,6 +203,11 @@ export interface ExecuteStepModelTurnParams {
   emit: (data: any) => void;
 }
 
+/**
+ * Represents step model turn result.
+ *
+ * @author Maruf Bepary
+ */
 export interface StepModelTurnResult {
   stepSummary: string;
   stepArtifact: Record<string, unknown> | null;
@@ -167,6 +215,13 @@ export interface StepModelTurnResult {
   stepHasSpreadsheetMutations: boolean;
 }
 
+/**
+ * Performs execute step model turn.
+ *
+ * @param props - Target props
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function executeStepModelTurn({
   resolvedProvider,
   filteredTools,
@@ -213,6 +268,16 @@ export async function executeStepModelTurn({
   };
 }
 
+/**
+ * Performs handle step execution error.
+ *
+ * @param stepErr - Target step err
+ * @param stepName - Target step name
+ * @param runId - Workflow run identifier
+ * @param emit - Target emit
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function handleStepExecutionError(
   stepErr: unknown,
   stepName: string,

@@ -14,6 +14,11 @@ import { cn } from "@/lib/utils";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
+/**
+ * Represents tool picker list props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ToolPickerListProps {
   servers?: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;
@@ -27,12 +32,27 @@ export interface ToolPickerListProps {
   maxHeight?: string;
 }
 
+/**
+ * Performs matches internal tools search.
+ *
+ * @param search - Target search
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function matchesInternalToolsSearch(search: string): boolean {
   return "artifacts canvas manage_artifact memory save_memory".includes(
     search.toLowerCase(),
   );
 }
 
+/**
+ * Performs should show no tools found.
+ *
+ * @param filteredServersLength - Target filtered servers length
+ * @param search - Target search
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function shouldShowNoToolsFound(
   filteredServersLength: number,
   search: string,
@@ -44,6 +64,13 @@ function shouldShowNoToolsFound(
   );
 }
 
+/**
+ * Renders the tool picker list header component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolPickerListHeader({
   isAllSelected,
   selectedCount,

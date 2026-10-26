@@ -18,6 +18,16 @@ import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
 import type { StepState } from "@/types/workflows/transform-run";
 
+/**
+ * Performs handle step start event.
+ *
+ * @param event - Target event
+ * @param activeStepIndexRef - Target active step index ref
+ * @param setStepStates - Target set step states
+ * @param setRun - Target set run
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleStepStartEvent(
   event: Record<string, unknown>,
   activeStepIndexRef: React.MutableRefObject<number | null>,
@@ -32,6 +42,15 @@ function handleStepStartEvent(
   setRun((prev) => (prev ? { ...prev, currentStepIndex: stepIndex } : prev));
 }
 
+/**
+ * Performs handle review required event.
+ *
+ * @param event - Target event
+ * @param setStepStates - Target set step states
+ * @param setRun - Target set run
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleReviewRequiredEvent(
   event: Record<string, unknown>,
   setStepStates: React.Dispatch<
@@ -52,6 +71,15 @@ function handleReviewRequiredEvent(
   );
 }
 
+/**
+ * Performs handle tool call event.
+ *
+ * @param event - Target event
+ * @param activeStepIndex - Target active step index
+ * @param setStepStates - Target set step states
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleToolCallEvent(
   event: Record<string, unknown>,
   activeStepIndex: number | null,
@@ -70,6 +98,15 @@ function handleToolCallEvent(
   );
 }
 
+/**
+ * Performs handle tool result event.
+ *
+ * @param event - Target event
+ * @param activeStepIndex - Target active step index
+ * @param setStepStates - Target set step states
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleToolResultEvent(
   event: Record<string, unknown>,
   activeStepIndex: number | null,
@@ -88,6 +125,15 @@ function handleToolResultEvent(
   );
 }
 
+/**
+ * Performs handle transform complete event.
+ *
+ * @param event - Target event
+ * @param setRun - Target set run
+ * @param loadAttachmentUrls - Target load attachment urls
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleTransformCompleteEvent(
   event: Record<string, unknown>,
   setRun: React.Dispatch<React.SetStateAction<TransformRun | null>>,
@@ -105,6 +151,16 @@ function handleTransformCompleteEvent(
   }
 }
 
+/**
+ * Performs handle transform error event.
+ *
+ * @param event - Target event
+ * @param setStreamError - Target set stream error
+ * @param setRun - Target set run
+ * @param handleApiError - Target handle api error
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function handleTransformErrorEvent(
   event: Record<string, unknown>,
   setStreamError: (msg: string) => void,
@@ -119,6 +175,11 @@ function handleTransformErrorEvent(
   }
 }
 
+/**
+ * Represents sse dispatch context.
+ *
+ * @author Maruf Bepary
+ */
 interface SseDispatchContext {
   setRun: React.Dispatch<React.SetStateAction<TransformRun | null>>;
   setStepStates: React.Dispatch<
@@ -131,6 +192,14 @@ interface SseDispatchContext {
   handleApiError: (err: unknown) => boolean;
 }
 
+/**
+ * Performs dispatch sse event.
+ *
+ * @param event - Target event
+ * @param ctx - Target ctx
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function dispatchSseEvent(
   event: Record<string, unknown>,
   ctx: SseDispatchContext,
@@ -181,6 +250,15 @@ function dispatchSseEvent(
   }
 }
 
+/**
+ * Performs process new realtime messages.
+ *
+ * @param all - Target all
+ * @param lastProcessedIndex - Target last processed index
+ * @param onEvent - Target on event
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function processNewRealtimeMessages(
   all: readonly { data?: unknown }[],
   lastProcessedIndex: number,
@@ -196,6 +274,15 @@ function processNewRealtimeMessages(
   return all.length;
 }
 
+/**
+ * Custom hook that provides use realtime run messages functionality.
+ *
+ * @param runId - Workflow run identifier
+ * @param isExecutionActive - Target is execution active
+ * @param handleSseEvent - Target handle sse event
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useRealtimeRunMessages(
   runId: string,
   isExecutionActive: boolean,
@@ -236,6 +323,15 @@ function useRealtimeRunMessages(
   }, [messages.all, handleSseEvent]);
 }
 
+/**
+ * Custom hook that provides use pending run auto starter functionality.
+ *
+ * @param run - Target run
+ * @param agent - Target agent
+ * @param onError - Target on error
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function usePendingRunAutoStarter(
   run: TransformRun | null,
   agent: TransformAgent | null,
@@ -261,6 +357,11 @@ function usePendingRunAutoStarter(
   }, [run, agent, onError]);
 }
 
+/**
+ * Represents use transform run stream params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseTransformRunStreamParams {
   runId: string;
   run: TransformRun | null;
@@ -276,6 +377,10 @@ export interface UseTransformRunStreamParams {
 
 /**
  * Handles real-time SSE execution stream, tool events, and automatic start of pending runs.
+ *
+ * @param params - Target params
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useTransformRunStream(params: UseTransformRunStreamParams) {
   const {

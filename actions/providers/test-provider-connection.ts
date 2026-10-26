@@ -10,6 +10,11 @@ import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
 
 const log = getLogger(["app", "actions", "provider"]);
 
+/**
+ * Result returned by provider connection testing action.
+ *
+ * @author Maruf Bepary
+ */
 export type ProviderConnectionResult = {
   ok: boolean;
   error?: string;

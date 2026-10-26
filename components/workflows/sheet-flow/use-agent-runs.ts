@@ -6,6 +6,12 @@ import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 /**
  * Loads and caches past transform runs for the specified agent.
+ *
+ * @param id - Target id
+ * @param isNew - Target is new
+ * @param handleApiError - Target handle api error
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useAgentRuns(
   id: string,

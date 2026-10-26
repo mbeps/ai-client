@@ -8,6 +8,13 @@ const log = getLogger(["app", "transform", "steps"]);
 
 /**
  * Builds spreadsheet artifact structure from base64 workbook content.
+ *
+ * @param fileContent - Target file content
+ * @param stepIndex - Target step index
+ * @param stepName - Target step name
+ * @param attachmentName - Target attachment name
+ * @param runId - Workflow run identifier
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function buildWorkbookFallbackArtifact(
@@ -46,6 +53,16 @@ function buildWorkbookFallbackArtifact(
   }
 }
 
+/**
+ * Determines whether step tool executable.
+ *
+ * @param name - Target name
+ * @param runToolSourceMap - Target run tool source map
+ * @param stepServerNames - Target step server names
+ * @param runMcpTools - Target run mcp tools
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isStepToolExecutable(
   name: string,
   runToolSourceMap: Record<string, string>,
@@ -62,6 +79,11 @@ function isStepToolExecutable(
 
 /**
  * Finds the first allowed and callable MCP download tool matching preferred names or regex.
+ *
+ * @param runToolSourceMap - Target run tool source map
+ * @param stepServerNames - Target step server names
+ * @param runMcpTools - Target run mcp tools
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function resolveStepDownloadToolName(
@@ -101,6 +123,17 @@ function resolveStepDownloadToolName(
 
 /**
  * Invokes download MCP tool and persists returned workbook file.
+ *
+ * @param currentWorkbookPath - Target current workbook path
+ * @param stepIndex - Target step index
+ * @param stepName - Target step name
+ * @param userId - User identifier
+ * @param runId - Workflow run identifier
+ * @param defaultFilename - Target default filename
+ * @param runMcpTools - Target run mcp tools
+ * @param runToolSourceMap - Target run tool source map
+ * @param stepServerNames - Target step server names
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function executeWorkbookDownloadFallback(
@@ -181,6 +214,17 @@ async function executeWorkbookDownloadFallback(
 
 /**
  * Invokes download fallback when active workbook path exists.
+ *
+ * @param currentWorkbookPath - Target current workbook path
+ * @param stepIndex - Target step index
+ * @param stepName - Target step name
+ * @param userId - User identifier
+ * @param runId - Workflow run identifier
+ * @param defaultFilename - Target default filename
+ * @param runMcpTools - Target run mcp tools
+ * @param runToolSourceMap - Target run tool source map
+ * @param stepServerNames - Target step server names
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 async function tryDownloadFallback(
@@ -211,6 +255,11 @@ async function tryDownloadFallback(
   );
 }
 
+/**
+ * Represents apply download fallback params.
+ *
+ * @author Maruf Bepary
+ */
 export interface ApplyDownloadFallbackParams {
   shouldTry: boolean;
   currentWorkbookPath: string | null;
@@ -236,6 +285,9 @@ export interface ApplyDownloadFallbackParams {
 
 /**
  * Executes fallback download when mutations occurred without explicit manage_artifact persistence.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function applyDownloadFallbackIfMutated(

@@ -29,6 +29,11 @@ import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents skill card props.
+ *
+ * @author Maruf Bepary
+ */
 interface SkillCardProps {
   skill: Skill;
 }

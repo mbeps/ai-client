@@ -1,5 +1,10 @@
 import { channel, staticSchema } from "inngest/realtime";
 
+/**
+ * Represents chat stream event.
+ *
+ * @author Maruf Bepary
+ */
 export type ChatStreamEvent =
   | { type: "start"; messageId: string }
   | { type: "text-delta"; text: string }

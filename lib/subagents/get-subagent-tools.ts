@@ -1,9 +1,11 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 
 /**
- * Filter tools to guarantee the 2-layer architectural boundary:
- * 1. `delegate_task` is strictly omitted to prevent subagents from calling subagents.
- * 2. `manage_artifact` is strictly omitted to protect the user canvas from partial worker drafts.
+ * Filter tools to guarantee the 2-layer architectural boundary: 1. `delegate_task` is strictly omitted to prevent subagents from calling subagents. 2. `manage_artifact` is strictly omitted to protect the user canvas from partial worker drafts.
+ *
+ * @param availableTools - Target available tools
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function getSubagentTools(
   availableTools: Record<string, any>,

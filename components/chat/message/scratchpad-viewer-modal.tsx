@@ -24,6 +24,11 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents scratchpad file.
+ *
+ * @author Maruf Bepary
+ */
 interface ScratchpadFile {
   id: string;
   filePath: string;
@@ -34,6 +39,11 @@ interface ScratchpadFile {
   updatedAt: Date;
 }
 
+/**
+ * Represents scratchpad viewer modal props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ScratchpadViewerModalProps {
   chatId?: string;
   messageId: string;

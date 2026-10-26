@@ -60,9 +60,11 @@ export async function isBlockedUrl(rawUrl: string): Promise<boolean> {
 }
 
 /**
- * Resolves a hostname via DNS with a 5-second timeout.
- * Tries both IPv4 and IPv6 records and returns all resolved addresses.
- * Throws if no addresses could be resolved.
+ * Resolves a hostname via DNS with a 5-second timeout. Tries both IPv4 and IPv6 records and returns all resolved addresses. Throws if no addresses could be resolved.
+ *
+ * @param hostname - Target hostname
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function resolveHostnameWithTimeout(hostname: string): Promise<string[]> {
   return Promise.race([

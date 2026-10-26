@@ -53,6 +53,10 @@ export function getCollectionName(dimensions: number): string {
 
 /**
  * Maps a Qdrant query result point with payload into a ScoredChunk.
+ *
+ * @param point - Target point
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function pointToScoredChunk(point: {
   id: string | number;

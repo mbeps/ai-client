@@ -16,6 +16,11 @@ interface SkillConfig {
   skillIds: string[];
 }
 
+/**
+ * Represents resolve context skills args.
+ *
+ * @author Maruf Bepary
+ */
 interface ResolveContextSkillsArgs extends SkillConfig {
   /** The user's enabled skills, already scoped by user. */
   userSkills: SkillRow[];
@@ -23,6 +28,14 @@ interface ResolveContextSkillsArgs extends SkillConfig {
   chatSkillIds?: string[];
 }
 
+/**
+ * Determines whether selected.
+ *
+ * @param skill - Target skill
+ * @param ids - Target ids
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isSelected(skill: SkillRow, ids: string[]): boolean {
   return ids.includes(skill.id) || ids.includes(skill.name);
 }

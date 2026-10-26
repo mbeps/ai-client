@@ -38,22 +38,44 @@ export type SyncProviderModelsResult = {
   totalDiscovered?: number;
 };
 
+/**
+ * Raw OpenAI-compatible models API response payload.
+ *
+ * @author Maruf Bepary
+ */
 type ProviderModelsResponse = {
   data?: Array<{
     id?: string;
   }>;
 };
 
+/**
+ * Model candidate discovered during provider API querying.
+ *
+ * @author Maruf Bepary
+ */
 type DiscoveredModel = {
   id: string;
   types: Set<"chat" | "embedding">;
 };
 
+/**
+ * Log record for invalid or empty model entries encountered during sync.
+ *
+ * @author Maruf Bepary
+ */
 type InvalidModel = {
   endpoint: string;
   source: string;
 };
 
+/**
+ * Checks whether a model identifier suggests embedding capabilities.
+ *
+ * @param modelId - Model ID string to test
+ * @returns True if modelId contains embedding keywords
+ * @author Maruf Bepary
+ */
 function isEmbeddingModelId(modelId: string): boolean {
   const lower = modelId.toLowerCase();
   return (
@@ -65,6 +87,12 @@ function isEmbeddingModelId(modelId: string): boolean {
 
 /**
  * Fetches models from a specific provider endpoint, logging errors and returning empty array on failure.
+ *
+ * @param url - Provider endpoint URL to fetch models from
+ * @param headers - HTTP headers with authorization credentials
+ * @param userId - ID of current user for log context
+ * @returns Array of raw model items returned by the endpoint
+ * @author Maruf Bepary
  */
 async function fetchProviderEndpointModels(
   url: string,
@@ -103,6 +131,14 @@ async function fetchProviderEndpointModels(
 
 /**
  * Iterates through raw model entries and records valid models or invalid malformed items.
+ *
+ * @param list - Raw model entries from provider endpoint
+ * @param endpoint - Endpoint name or path
+ * @param sourcePrefix - Description of source endpoint
+ * @param resolveType - Callback determining if model is chat or embedding
+ * @param modelsMap - Map tracking unique discovered models and their resolved types
+ * @param invalidModels - Accumulator array for unparseable models
+ * @author Maruf Bepary
  */
 function collectDiscoveredModels(
   list: Array<{ id?: string }>,
@@ -131,6 +167,10 @@ function collectDiscoveredModels(
 
 /**
  * Resolves aggregated model types into DB schema modelType enum.
+ *
+ * @param types - Set of detected model capabilities
+ * @returns Combined model type: 'chat', 'embedding', or 'both'
+ * @author Maruf Bepary
  */
 function resolveDiscoveredModelType(
   types: Set<"chat" | "embedding">,
@@ -144,6 +184,12 @@ function resolveDiscoveredModelType(
 
 /**
  * Inserts a new model or refreshes existing model type without overwriting user customizations.
+ *
+ * @param providerId - ID of provider owning the model
+ * @param userId - ID of authenticated user
+ * @param discovered - Model record discovered from provider API
+ * @returns Status string: 'added' or 'unchanged'
+ * @author Maruf Bepary
  */
 async function upsertDiscoveredModel(
   providerId: string,
@@ -198,6 +244,12 @@ async function upsertDiscoveredModel(
 
 /**
  * Loads provider for the current user and verifies URL is not blocked by SSRF guard.
+ *
+ * @param providerId - ID of provider to query
+ * @param userId - ID of authenticated user
+ * @returns Provider database record
+ * @throws {Error} When provider is not found or blocked by SSRF rules
+ * @author Maruf Bepary
  */
 async function loadValidatedProvider(providerId: string, userId: string) {
   const [provider] = await db
@@ -218,6 +270,10 @@ async function loadValidatedProvider(providerId: string, userId: string) {
 
 /**
  * Builds HTTP headers including bearer auth if apiKey is present.
+ *
+ * @param decoded - Decrypted provider credentials and configuration
+ * @returns Header dictionary
+ * @author Maruf Bepary
  */
 function buildProviderHeaders(
   decoded: ReturnType<typeof decodeProviderRecord>,
@@ -230,6 +286,12 @@ function buildProviderHeaders(
 
 /**
  * Removes synced models that are no longer returned by the provider API.
+ *
+ * @param providerId - ID of provider being synchronized
+ * @param userId - ID of authenticated user
+ * @param discoveredModelIds - Set of model identifiers discovered in latest sync
+ * @returns Number of removed stale models
+ * @author Maruf Bepary
  */
 async function deleteStaleSyncedModels(
   providerId: string,
@@ -259,6 +321,14 @@ async function deleteStaleSyncedModels(
   return deleteRes.deletedCount;
 }
 
+/**
+ * Synchronizes models from an external OpenAI-compatible provider endpoint into the local database.
+ * Discovers models, detects capabilities, updates existing records, and deletes stale synced models.
+ *
+ * @param providerId - ID of provider to synchronize
+ * @returns Sync summary with added, unchanged, and deleted counts
+ * @author Maruf Bepary
+ */
 export async function syncProviderModels(
   providerId: string,
 ): Promise<SyncProviderModelsResult> {

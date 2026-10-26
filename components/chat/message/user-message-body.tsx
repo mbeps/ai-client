@@ -7,6 +7,11 @@ import { UserMessageContextChips } from "@/components/chat/message/user-message-
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Represents user message editor props.
+ *
+ * @author Maruf Bepary
+ */
 interface UserMessageEditorProps {
   editContent: string;
   onEditContentChange: (val: string) => void;
@@ -15,6 +20,13 @@ interface UserMessageEditorProps {
   isSaveDisabled: boolean;
 }
 
+/**
+ * Renders the user message editor component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function UserMessageEditor({
   editContent,
   onEditContentChange,
@@ -56,6 +68,11 @@ function UserMessageEditor({
   );
 }
 
+/**
+ * Represents user message body props.
+ *
+ * @author Maruf Bepary
+ */
 export interface UserMessageBodyProps {
   promptIds: string[];
   prompts: Array<{ id: string; title?: string; shortcut?: string }>;
@@ -72,6 +89,13 @@ export interface UserMessageBodyProps {
   displayContent: string;
 }
 
+/**
+ * Renders the user message body component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function UserMessageBody({
   promptIds,
   prompts,

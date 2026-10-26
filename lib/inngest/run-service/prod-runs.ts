@@ -11,6 +11,13 @@ import {
 } from "@/lib/inngest/run-service/run-metadata";
 import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";
 
+/**
+ * Extracts prod payload data.
+ *
+ * @param run - Target run
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractProdPayloadData(
   run: Record<string, any>,
 ): Record<string, any> | undefined {
@@ -19,6 +26,13 @@ function extractProdPayloadData(
   return run.data;
 }
 
+/**
+ * Extracts prod event name.
+ *
+ * @param run - Target run
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractProdEventName(run: Record<string, any>): string {
   if (run.event_name) return run.event_name;
   if (run.eventName) return run.eventName;
@@ -26,6 +40,11 @@ function extractProdEventName(run: Record<string, any>): string {
   return "";
 }
 
+/**
+ * Represents normalized prod run.
+ *
+ * @author Maruf Bepary
+ */
 interface NormalizedProdRun {
   payloadData?: Record<string, any>;
   eventName: string;
@@ -38,6 +57,13 @@ interface NormalizedProdRun {
   output: unknown;
 }
 
+/**
+ * Performs normalize prod run fields.
+ *
+ * @param run - Target run
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function normalizeProdRunFields(run: Record<string, any>): NormalizedProdRun {
   const functionId =
     firstNonEmpty<string>(run.function_id, run.functionId) ?? "";
@@ -64,6 +90,14 @@ function normalizeProdRunFields(run: Record<string, any>): NormalizedProdRun {
   };
 }
 
+/**
+ * Constructs prod job item.
+ *
+ * @param run - Target run
+ * @param userId - User identifier
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildProdJobItem(
   run: Record<string, any>,
   userId: string,
@@ -101,6 +135,14 @@ function buildProdJobItem(
   };
 }
 
+/**
+ * Constructs prod runs url.
+ *
+ * @param userId - User identifier
+ * @param options - Target options
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildProdRunsUrl(
   userId: string,
   options?: { status?: JobStatus[]; limit?: number },
@@ -118,6 +160,14 @@ function buildProdRunsUrl(
   return url;
 }
 
+/**
+ * Performs fetch prod user runs.
+ *
+ * @param userId - User identifier
+ * @param options - Target options
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function fetchProdUserRuns(
   userId: string,
   options?: { status?: JobStatus[]; limit?: number },
@@ -149,6 +199,14 @@ export async function fetchProdUserRuns(
   return { jobs };
 }
 
+/**
+ * Performs cancel prod run.
+ *
+ * @param runId - Workflow run identifier
+ * @param signal - Target signal
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function cancelProdRun(
   runId: string,
   signal: AbortSignal,

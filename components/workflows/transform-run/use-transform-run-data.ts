@@ -13,6 +13,13 @@ import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";
 import type { StepState } from "@/types/workflows/transform-run";
 
+/**
+ * Parses agent steps.
+ *
+ * @param rawSteps - Target raw steps
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseAgentSteps(rawSteps?: string | null) {
   if (!rawSteps) return [];
   try {
@@ -22,6 +29,13 @@ function parseAgentSteps(rawSteps?: string | null) {
   }
 }
 
+/**
+ * Performs map agent row to agent.
+ *
+ * @param agentRow - Target agent row
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function mapAgentRowToAgent(
   agentRow: NonNullable<Awaited<ReturnType<typeof getTransformAgent>>>,
 ): TransformAgent {
@@ -44,6 +58,10 @@ function mapAgentRowToAgent(
 
 /**
  * Manages run and agent database data, initial state hydration, and approval actions.
+ *
+ * @param runId - Workflow run identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useTransformRunData(runId: string) {
   const [run, setRun] = useState<TransformRun | null>(null);

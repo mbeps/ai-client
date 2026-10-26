@@ -8,6 +8,9 @@ import type { SkillRow } from "@/types/skill/skill-row";
 /**
  * Fetches a single Agent Skill by ID for the authenticated user.
  *
+ * @param id - UUID of the skill to fetch
+ * @returns Skill database record
+ * @throws {Error} When user is unauthenticated or skill is not found
  * @decision Delegates to the skill service so the ownership rule has one
  * owner, shared with the AI tools.
  * @author Maruf Bepary

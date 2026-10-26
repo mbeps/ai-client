@@ -10,10 +10,10 @@ import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
  * Runs on server only — never call from client components.
  *
  * @param idOrIds - UUID or array of UUIDs of the projects to delete; must be owned by the authenticated user.
- * @returns { deletedCount: number } - The number of projects successfully deleted.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if project is not found or user does not own it (ownership check enforced via session).
- * @throws Error if database transaction fails or rolls back due to constraints.
+ * @returns Object with the number of projects successfully deleted.
+ * @throws {Error} if session is not authenticated (requireSession call fails).
+ * @throws {Error} if project is not found or user does not own it (ownership check enforced via session).
+ * @throws {Error} if database transaction fails or rolls back due to constraints.
  * @see createProject to create a new project.
  * @see updateProject to modify an existing project.
  * @author Maruf Bepary

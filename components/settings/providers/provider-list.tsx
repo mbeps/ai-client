@@ -23,6 +23,11 @@ import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-prov
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents provider list props.
+ *
+ * @author Maruf Bepary
+ */
 type ProviderListProps = {
   providers: AiProviderRow[];
   models: AiModelRow[];

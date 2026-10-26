@@ -8,6 +8,11 @@ import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
+/**
+ * Represents knowledgebase card props.
+ *
+ * @author Maruf Bepary
+ */
 interface KnowledgebaseCardProps {
   knowledgebase: Knowledgebase;
   onAfterMutation?: () => void;

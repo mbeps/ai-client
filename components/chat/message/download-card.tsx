@@ -51,6 +51,10 @@ const TYPE_LABELS: Record<DownloadItemType, string> = {
 
 /**
  * Formats byte size into human-readable string (KB, MB).
+ *
+ * @param bytes - Target bytes
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function formatFileSize(bytes?: number): string | null {
   if (!bytes || bytes <= 0) return null;

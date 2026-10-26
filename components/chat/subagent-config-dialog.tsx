@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 
+/**
+ * Represents subagent config dialog props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SubagentConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

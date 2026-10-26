@@ -45,6 +45,11 @@ import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 
+/**
+ * Represents project form state.
+ *
+ * @author Maruf Bepary
+ */
 type ProjectFormState = {
   name: string;
   description: string;
@@ -55,14 +60,35 @@ type ProjectFormState = {
   selectedKbId: string | null;
 };
 
+/**
+ * Resolves string field.
+ *
+ * @param val - Value to evaluate or resolve
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveStringField(val?: string | null): string {
   return val ? val : "";
 }
 
+/**
+ * Resolves set field.
+ *
+ * @param arr - Array of items to process
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveSetField(arr?: string[] | null): Set<string> {
   return new Set(arr ? arr : []);
 }
 
+/**
+ * Constructs initial project form.
+ *
+ * @param project - Target project
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildInitialProjectForm(project?: any): ProjectFormState {
   if (!project) {
     return {
@@ -87,6 +113,14 @@ function buildInitialProjectForm(project?: any): ProjectFormState {
   };
 }
 
+/**
+ * Custom hook that provides use project editor functionality.
+ *
+ * @param projectId - Project identifier
+ * @param project - Target project
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useProjectEditor(projectId: string, project?: any) {
   const router = useRouter();
   const loadProjects = useAppStore((state) => state.loadProjects);
@@ -198,6 +232,13 @@ function useProjectEditor(projectId: string, project?: any) {
   };
 }
 
+/**
+ * Custom hook that provides use project deletion functionality.
+ *
+ * @param projectId - Project identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useProjectDeletion(projectId: string) {
   const router = useRouter();
   const loadProjects = useAppStore((state) => state.loadProjects);
@@ -226,6 +267,13 @@ function useProjectDeletion(projectId: string) {
   };
 }
 
+/**
+ * Custom hook that provides use project chats functionality.
+ *
+ * @param projectId - Project identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useProjectChats(projectId: string) {
   const allChats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
@@ -261,6 +309,11 @@ function useProjectChats(projectId: string) {
   };
 }
 
+/**
+ * Represents project page tabs props.
+ *
+ * @author Maruf Bepary
+ */
 type ProjectPageTabsProps = {
   tab: string;
   onTabChange: (tab: string) => void;
@@ -272,6 +325,13 @@ type ProjectPageTabsProps = {
   deletion: ReturnType<typeof useProjectDeletion>;
 };
 
+/**
+ * Renders the project page tabs component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ProjectPageTabs(props: ProjectPageTabsProps) {
   const {
     tab,
@@ -410,6 +470,13 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
   );
 }
 
+/**
+ * Custom hook that provides use project page resources functionality.
+ *
+ * @param projectId - Project identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useProjectPageResources(projectId: string) {
   const projects = useAppStore((state) => state.projects);
   const mcpServers = useAppStore((state) => state.mcpServers);

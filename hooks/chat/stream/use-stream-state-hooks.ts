@@ -16,6 +16,9 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
  * Accesses chat slice actions and selectors from global AppStore.
+ *
+ * @param chatId - Active chat ID
+ * @returns Store message actions and current chat object
  * @author Maruf Bepary
  */
 export function useStreamStore(chatId: string) {
@@ -32,6 +35,7 @@ export function useStreamStore(chatId: string) {
 
 /**
  * Encapsulates reactive streaming state (text, reasoning, tool calls, IDs, errors).
+ *
  * @author Maruf Bepary
  */
 export function useStreamState() {
@@ -73,6 +77,7 @@ export function useStreamState() {
 
 /**
  * Manages mutable refs holding fast-updating stream values without causing rerenders.
+ *
  * @author Maruf Bepary
  */
 export function useStreamRefs(): StreamRefsObject {
@@ -108,6 +113,8 @@ export function useStreamRefs(): StreamRefsObject {
 
 /**
  * Checks if the chat is actively generating on the server upon component mount.
+ *
+ * @param params - Mount check parameters including chat ID, leaf message ID, refs, and setters
  * @author Maruf Bepary
  */
 async function executeMountRejoinCheck(params: {
@@ -139,6 +146,14 @@ async function executeMountRejoinCheck(params: {
 
 /**
  * Effect checking whether an uncompleted user turn is still generating on page load / navigation.
+ *
+ * @param chatId - Active chat identifier
+ * @param currentChat - Chat object from local store
+ * @param activeLeaf - Latest message node in active thread
+ * @param isStreaming - Flag indicating active streaming
+ * @param syncFromDb - Function to sync chat from database
+ * @param refs - Mutable stream refs bundle
+ * @param setters - Stream state setters
  * @author Maruf Bepary
  */
 export function useStreamMountRejoin(

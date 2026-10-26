@@ -1,8 +1,9 @@
 /**
- * Duck-types an error by message pattern. Providers express failures
- * inconsistently (no shared status codes), so matching relies on well-known
- * message fragments, matched case-insensitively.
+ * Duck-types an error by message pattern. Providers express failures inconsistently (no shared status codes), so matching relies on well-known message fragments, matched case-insensitively.
  *
+ * @param error - Target error
+ * @param patterns - Target patterns
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function matchesErrorPatterns(

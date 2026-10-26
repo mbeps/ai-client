@@ -21,6 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/**
+ * Represents menu item.
+ *
+ * @author Maruf Bepary
+ */
 export interface MenuItem {
   /** Display label shown to the user. */
   label: string;
@@ -38,6 +43,11 @@ export interface MenuItem {
   separator?: boolean;
 }
 
+/**
+ * Represents responsive menu props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ResponsiveMenuProps {
   /** Optional custom trigger button; defaults to three-dot icon button if omitted. */
   trigger?: React.ReactNode;

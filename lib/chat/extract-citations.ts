@@ -2,13 +2,10 @@ import type { Citation } from "@/types/chat/citation";
 import type { ToolResult } from "@/types/chat/tool-result";
 
 /**
- * Extracts RAG citations from tool results by identifying search_knowledge_base outputs.
- * Flattens citations from all matching tool results into a single array for message rendering.
- * Used to display document sources and relevance scores to the user.
+ * Extracts RAG citations from tool results by identifying search_knowledge_base outputs. Flattens citations from all matching tool results into a single array for message rendering. Used to display document sources and relevance scores to the user.
  *
- * @param {ToolResult[]} toolResults - Array of tool execution results from message metadata
- * @returns {Citation[]} Array of extracted citations; empty array if no search results found
- * @see {@link Citation} for citation type structure
+ * @param toolResults - Array of tool execution results from message metadata
+ * @returns Array of extracted citations; empty array if no search results found
  * @author Maruf Bepary
  */
 export function extractCitations(toolResults: ToolResult[]): Citation[] {

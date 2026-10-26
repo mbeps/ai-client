@@ -6,6 +6,11 @@ import {
 } from "@/schemas/shared-fields";
 import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 
+/**
+ * Validates renaming input for a transformation agent.
+ *
+ * @author Maruf Bepary
+ */
 export const renameTransformAgentSchema = renameSchema;
 
 /**
@@ -26,10 +31,15 @@ export const transformStepSchema = z.object({
   requiresReview: z.boolean(),
 });
 
+/**
+ * Inferred type representation of a transformation step definition.
+ *
+ * @author Maruf Bepary
+ */
 export type TransformStepInput = z.infer<typeof transformStepSchema>;
 
 /**
- * TypeScript type inferred from transformStepSchema for type-safe step handling.
+ * Validates creation of a multi-step transformation agent workflow.
  *
  * @author Maruf Bepary
  */
@@ -46,6 +56,11 @@ export const createTransformAgentSchema = z.object({
   steps: z.array(transformStepSchema).optional().default([]),
 });
 
+/**
+ * Validates partial updates to an existing transformation agent workflow definition.
+ *
+ * @author Maruf Bepary
+ */
 export const updateTransformAgentSchema = createTransformAgentSchema
   .omit({
     tools: true,

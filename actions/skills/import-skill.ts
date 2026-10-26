@@ -16,6 +16,9 @@ import type { SkillRow } from "@/types/skill/skill-row";
  * Imports an Agent Skill from an uploaded .md or .zip file.
  * Handles YAML frontmatter extraction, bundle packaging, and slug generation.
  *
+ * @param formData - Form data containing the uploaded "file" field (.md or .zip)
+ * @returns Imported skill database record
+ * @throws {Error} When file is missing, invalid, or budget exceeded
  * @author Maruf Bepary
  */
 export async function importSkillFile(formData: FormData): Promise<SkillRow> {

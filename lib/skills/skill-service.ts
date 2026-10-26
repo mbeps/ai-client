@@ -7,10 +7,12 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Resolves a skill by uuid or slug, always scoped to the owner.
+ * Resolves a skill by uuid or slug, always scoped to the owner. Returns `null` for both a missing skill and a skill owned by someone else, so a caller cannot probe for another user's skills by comparing the two cases.
  *
- * Returns `null` for both a missing skill and a skill owned by someone else, so
- * a caller cannot probe for another user's skills by comparing the two cases.
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function resolveSkillRow(
   userId: string,

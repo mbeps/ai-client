@@ -1,3 +1,8 @@
+/**
+ * Represents chunk accumulator.
+ *
+ * @author Maruf Bepary
+ */
 interface ChunkAccumulator {
   chunks: string[];
   current: string;
@@ -5,6 +10,12 @@ interface ChunkAccumulator {
 
 /**
  * Force-splits an indivisible piece into chunk-sized slices at character level.
+ *
+ * @param piece - Target piece
+ * @param chunkSize - Target chunk size
+ * @param overlap - Target overlap
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function forceSplitByLength(
   piece: string,
@@ -22,6 +33,13 @@ function forceSplitByLength(
 
 /**
  * Splits a piece that exceeds chunkSize either via remaining separators or forced length splitting.
+ *
+ * @param piece - Target piece
+ * @param remainingSeps - Target remaining seps
+ * @param chunkSize - Target chunk size
+ * @param overlap - Target overlap
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function splitOversizedPiece(
   piece: string,
@@ -37,6 +55,15 @@ function splitOversizedPiece(
 
 /**
  * Appends a split piece into accumulator, handling overflow and overlap preservation.
+ *
+ * @param piece - Target piece
+ * @param acc - Target acc
+ * @param sep - Target sep
+ * @param nextSeps - Target next seps
+ * @param chunkSize - Target chunk size
+ * @param overlap - Target overlap
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function appendPieceToChunks(
   piece: string,

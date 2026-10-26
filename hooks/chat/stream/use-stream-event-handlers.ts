@@ -33,6 +33,10 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
  * Applies incoming streaming delta chunks (text, reasoning, tool-call, tool-result) to state.
+ *
+ * @param event - SSE streaming chunk event
+ * @param refs - Mutable stream tracking refs
+ * @param setters - State dispatch setters
  * @author Maruf Bepary
  */
 function applyStreamDelta(
@@ -88,6 +92,12 @@ function applyStreamDelta(
 
 /**
  * Refetches complete chat from DB when rejoining client receives finish event.
+ *
+ * @param chatId - Chat identifier
+ * @param upsertChat - Store action to update chat
+ * @param userMsgId - Initiating user message ID
+ * @param assistantId - Generated assistant message ID
+ * @param onDone - Optional completion callback
  * @author Maruf Bepary
  */
 async function executeRejoinFinish(
@@ -123,6 +133,8 @@ async function executeRejoinFinish(
 
 /**
  * Builds assistant message with metadata, adds to store, and calls onDone callback.
+ *
+ * @param params - Finish execution properties including text, reasoning, tool calls, and callbacks
  * @author Maruf Bepary
  */
 function executeStandardFinish(params: {
@@ -177,6 +189,9 @@ function executeStandardFinish(params: {
 
 /**
  * Hook providing handleStreamEvent callback dispatching stream deltas, finish, and error events.
+ *
+ * @param params - Configuration parameters containing chatId, stores, refs, and setters
+ * @returns Object with handleStreamEvent callback
  * @author Maruf Bepary
  */
 export function useStreamEventHandlers(params: {

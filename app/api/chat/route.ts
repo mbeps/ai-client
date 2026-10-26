@@ -11,21 +11,19 @@ import { chatRequestSchema } from "@/schemas/chat/chat";
 
 const log = getLogger(["app", "api", "chat"]);
 
+/**
+ * Maximum execution timeout in seconds for chat request dispatch.
+ *
+ * @author Maruf Bepary
+ */
 export const maxDuration = 60;
 
 /**
  * Dispatches AI chat response generation as an Inngest background job.
- * Checks authentication, rate limiting, and request payload schema before dispatching.
+ * Checks authentication, validates payload schema, and publishes chat execution event.
  *
- * **HTTP Method:** POST
- *
- * **Request Format:** JSON with chatId, userMessageId, model?, selectedServerIds?,
- * selectedTools?, selectedAssistantId?, selectedKbIds?
- *
- * **Response Format:** JSON { success: true, chatId, userMessageId }
- *
- * **Authentication:** Required (Better Auth session)
- *
+ * @param req - Incoming HTTP request with chat request payload
+ * @returns JSON response with dispatch status and identifiers, or error response
  * @author Maruf Bepary
  */
 export async function POST(req: Request) {

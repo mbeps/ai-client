@@ -9,6 +9,11 @@ import {
 import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents context usage pill props.
+ *
+ * @author Maruf Bepary
+ */
 interface ContextUsagePillProps extends CalculateContextParams {
   className?: string;
 }

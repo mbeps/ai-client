@@ -10,6 +10,10 @@ import type { SkillRow } from "@/types/skill/skill-row";
 /**
  * Toggles the enabled status of an Agent Skill.
  *
+ * @param id - UUID of the skill to toggle
+ * @param enabled - Target boolean enabled state
+ * @returns Updated skill database record
+ * @throws {Error} When skill is not found or not owned by user
  * @author Maruf Bepary
  */
 export async function toggleSkillEnabled(

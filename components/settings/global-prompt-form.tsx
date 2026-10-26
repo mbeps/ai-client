@@ -20,6 +20,11 @@ import {
   userSettingsSchema,
 } from "@/schemas/user/user-settings";
 
+/**
+ * Represents global prompt form props.
+ *
+ * @author Maruf Bepary
+ */
 interface GlobalPromptFormProps {
   initialSettings: Partial<UserSettings>;
 }

@@ -31,15 +31,11 @@ export interface DeleteEntityConfig {
 }
 
 /**
- * Creates a Server Action that deletes an owned row after verifying ownership.
+ * Creates a Server Action that deletes an owned row after verifying ownership. The returned function is intended to be re-exported as a named export from a `"use server"` file.  Example: ```ts "use server"; export const deleteProject = deleteEntityFactory({ table: project, unbind: { table: chat, field: chat.projectId } }); ```.
  *
- * The returned function is intended to be re-exported as a named export from a
- * `"use server"` file.  Example:
- *
- * ```ts
- * "use server";
- * export const deleteProject = deleteEntityFactory({ table: project, unbind: { table: chat, field: chat.projectId } });
- * ```
+ * @param config - Target config
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function deleteEntityFactory(config: DeleteEntityConfig) {
   return async function remove(

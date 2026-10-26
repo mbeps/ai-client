@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { JobsView } from "@/components/jobs/jobs-view";
 import { PageContainer } from "@/components/shared/page-container";
 
+/**
+ * Static metadata configuration for the Running Jobs dashboard page.
+ *
+ * @author Maruf Bepary
+ */
 export const metadata: Metadata = {
   title: "Running Jobs | AI Client",
   description: "Monitor and manage background jobs tracked by Inngest.",
