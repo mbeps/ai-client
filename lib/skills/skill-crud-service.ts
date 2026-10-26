@@ -8,6 +8,10 @@ import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * Fetches every skill owned by the user, most recently updated first.
+ *
+ * @param userId - User identifier
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function listSkillsForUser(userId: string): Promise<SkillRow[]> {
   return db
@@ -19,6 +23,11 @@ export async function listSkillsForUser(userId: string): Promise<SkillRow[]> {
 
 /**
  * Fetches a single skill owned by the user, or `null`.
+ *
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function getSkillForUser(
   userId: string,
@@ -29,6 +38,11 @@ export async function getSkillForUser(
 
 /**
  * Creates a skill for the user, rejecting a slug the user already holds.
+ *
+ * @param userId - User identifier
+ * @param data - Target data
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function createSkillForUser(
   userId: string,
@@ -53,9 +67,13 @@ export async function createSkillForUser(
 }
 
 /**
- * Applies a partial update to a skill owned by the user.
+ * Applies a partial update to a skill owned by the user. Returns `null` when the skill is missing or owned by someone else.
  *
- * Returns `null` when the skill is missing or owned by someone else.
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @param data - Target data
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function updateSkillForUser(
   userId: string,
@@ -88,6 +106,11 @@ export async function updateSkillForUser(
 
 /**
  * Deletes a skill owned by the user and reports how many rows went.
+ *
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function deleteSkillForUser(
   userId: string,

@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { TransformRunDialog } from "@/components/workflows/sheet-flow/transform-run-dialog";
 import { ROUTES } from "@/config/routes";
 
+/**
+ * Represents agent editor header props.
+ *
+ * @author Maruf Bepary
+ */
 export interface AgentEditorHeaderProps {
   isNew: boolean;
   name: string;

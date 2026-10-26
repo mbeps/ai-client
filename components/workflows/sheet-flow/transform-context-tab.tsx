@@ -3,6 +3,11 @@
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Represents transform context tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformContextTabProps {
   globalContext: string;
   onGlobalContextChange: (value: string) => void;

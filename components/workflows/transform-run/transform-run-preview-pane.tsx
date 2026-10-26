@@ -3,6 +3,12 @@ import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 
+/**
+ * Renders the preview loading state component.
+ *
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function PreviewLoadingState() {
   return (
     <div className="bg-muted/5 text-muted-foreground flex h-full flex-col items-center justify-center gap-4 p-12 text-center">
@@ -12,6 +18,13 @@ function PreviewLoadingState() {
   );
 }
 
+/**
+ * Renders the preview empty state component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function PreviewEmptyState({
   selectedStepIndex,
 }: {
@@ -40,6 +53,11 @@ function PreviewEmptyState({
   );
 }
 
+/**
+ * Represents transform run preview pane props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformRunPreviewPaneProps {
   isLoadingArtifact: boolean;
   currentArtifact: ArtifactData | null;

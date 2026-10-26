@@ -1,3 +1,8 @@
+/**
+ * Central registry of system instructions, tool prompts, and orchestrator directives.
+ *
+ * @author Maruf Bepary
+ */
 export const PROMPTS = {
   SYSTEM: {
     KNOWLEDGE_BASE_TOOL_INSTRUCTION:

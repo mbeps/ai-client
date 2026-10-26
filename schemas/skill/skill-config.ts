@@ -15,4 +15,9 @@ export const skillModeSchema = z
  */
 export const skillIdsSchema = z.array(z.string()).default([]);
 
+/**
+ * Supported execution mode for agent skills: 'dynamic' (on-demand), 'none' (disabled), or 'specific' (pre-loaded).
+ *
+ * @author Maruf Bepary
+ */
 export type SkillMode = z.infer<typeof skillModeSchema>;

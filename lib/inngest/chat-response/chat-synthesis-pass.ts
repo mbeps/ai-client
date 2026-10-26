@@ -7,6 +7,11 @@ const log = getLogger(["inngest", "chat", "response"]);
 
 /**
  * Evaluates whether fallback synthesis pass should run.
+ *
+ * @param aborted - Target aborted
+ * @param accumulatedText - Target accumulated text
+ * @param completedToolsCount - Target completed tools count
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function needsFallbackSynthesis(
@@ -21,6 +26,9 @@ export function needsFallbackSynthesis(
 
 /**
  * Runs a fallback synthesis pass when tool execution yielded no text.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function runSynthesisFallbackPass(

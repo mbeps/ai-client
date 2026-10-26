@@ -28,6 +28,11 @@ import {
 import type { SkillTreeNode } from "@/lib/skills/skill-tree-node";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents skill directory tree item props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillDirectoryTreeItemProps {
   node: SkillTreeNode;
   selectedPath: string;
@@ -43,6 +48,14 @@ export interface SkillDirectoryTreeItemProps {
   level?: number;
 }
 
+/**
+ * Retrieves file icon.
+ *
+ * @param name - Target name
+ * @param isRootSkillMd - Target is root skill md
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function getFileIcon(name: string, isRootSkillMd?: boolean) {
   if (isRootSkillMd) {
     return <FileText className="text-primary h-4 w-4 shrink-0" />;

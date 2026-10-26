@@ -27,6 +27,11 @@ import {
   twoFactorAuthSchema,
 } from "@/schemas/auth/two-factor-auth";
 
+/**
+ * Represents two factor data.
+ *
+ * @author Maruf Bepary
+ */
 type TwoFactorData = {
   totpURI: string;
   backupCodes: string[];

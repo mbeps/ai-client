@@ -11,19 +11,22 @@ import { writeSkillFileForUser } from "@/lib/skills/write-skill-file";
 import { skillSlugSchema } from "@/schemas/skill/skill";
 
 /**
- * Models wrap arguments in quotes and brackets often enough to make it a
- * standing failure mode. Strip them before anything else looks at the value.
- * Copied from the file-url tool so both tools normalise the same way.
+ * Models wrap arguments in quotes and brackets often enough to make it a standing failure mode. Strip them before anything else looks at the value. Copied from the file-url tool so both tools normalise the same way.
+ *
+ * @param value - Target value
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function normalise(value: string): string {
   return value.replace(/^["'[\]]+|["'[\]]+$/g, "").trim();
 }
 
 /**
- * Resolves a model-supplied skill slug, or returns the reason it is unusable.
+ * Resolves a model-supplied skill slug, or returns the reason it is unusable. Checking here means an unusable name never reaches the database, and the model gets a message it can act on rather than a generic not-found.
  *
- * Checking here means an unusable name never reaches the database, and the
- * model gets a message it can act on rather than a generic not-found.
+ * @param value - Target value
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveSlug(value: string): { name: string } | { error: string } {
   const candidate = normalise(value).toLowerCase();

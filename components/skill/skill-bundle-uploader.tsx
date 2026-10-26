@@ -14,6 +14,11 @@ import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents skill bundle uploader props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillBundleUploaderProps {
   /** Callback fired when the selected skill file is submitted for import */
   onUpload: (file: File) => Promise<void> | void;

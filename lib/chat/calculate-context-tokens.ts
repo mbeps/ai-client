@@ -6,6 +6,11 @@ import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
 
+/**
+ * Represents context category breakdown.
+ *
+ * @author Maruf Bepary
+ */
 export interface ContextCategoryBreakdown {
   systemInstructions: number;
   toolDefinitions: number;
@@ -16,6 +21,11 @@ export interface ContextCategoryBreakdown {
   draft: number;
 }
 
+/**
+ * Represents context usage result.
+ *
+ * @author Maruf Bepary
+ */
 export interface ContextUsageResult {
   totalTokens: number;
   maxTokens: number;
@@ -26,6 +36,11 @@ export interface ContextUsageResult {
   isExceeded: boolean;
 }
 
+/**
+ * Represents calculate context params.
+ *
+ * @author Maruf Bepary
+ */
 export interface CalculateContextParams {
   thread?: Message[];
   selectedModel?: UserModelOption;
@@ -41,10 +56,13 @@ export interface CalculateContextParams {
 }
 
 /**
- * Calculates the total context window usage and category breakdown for the active chat session.
+ * Estimates token consumption for an individual tool execution result.
  *
- * @param params - Input parameters including thread, model, draft input, and attachments
- * @returns Aggregated context usage statistics and category breakdowns
+ * Handles special-casing for subagent output (sanitized and capped) and
+ * artifact management tools, while applying a length bound on generic tool output.
+ *
+ * @param tr - Tool result object containing the tool name and execution result payload
+ * @returns Estimated number of tokens for the tool result
  * @author Maruf Bepary
  */
 function estimateSingleToolResultTokens(tr: {
@@ -66,6 +84,13 @@ function estimateSingleToolResultTokens(tr: {
   return estimateTokens(rawStr.slice(0, 8000));
 }
 
+/**
+ * Estimates token consumption for an array of tool call requests and their arguments.
+ *
+ * @param toolCalls - List of tool call definitions and arguments
+ * @returns Total estimated tokens across all tool calls
+ * @author Maruf Bepary
+ */
 function estimateToolCallsTokens(toolCalls?: Array<{ args: unknown }>): number {
   if (!toolCalls) return 0;
   let tokens = 0;
@@ -77,6 +102,13 @@ function estimateToolCallsTokens(toolCalls?: Array<{ args: unknown }>): number {
   return tokens;
 }
 
+/**
+ * Estimates token consumption for an array of tool execution results.
+ *
+ * @param toolResults - List of tool execution results
+ * @returns Total estimated tokens across all tool results
+ * @author Maruf Bepary
+ */
 function estimateToolResultsTokens(
   toolResults?: Array<{ toolName?: string; result?: unknown }>,
 ): number {
@@ -88,6 +120,13 @@ function estimateToolResultsTokens(
   return tokens;
 }
 
+/**
+ * Extracts and calculates token usage for reasoning content and tool data within message metadata.
+ *
+ * @param metadata - Raw or serialized message metadata
+ * @returns Breakdown of reasoning tokens and tool execution tokens
+ * @author Maruf Bepary
+ */
 function estimateMessageMetadataTokens(metadata: string | null | undefined): {
   reasoningTokens: number;
   toolResultsTokens: number;
@@ -107,6 +146,13 @@ function estimateMessageMetadataTokens(metadata: string | null | undefined): {
   return { reasoningTokens, toolResultsTokens };
 }
 
+/**
+ * Calculates aggregated tokens for messages, file attachments, and tool results across a thread.
+ *
+ * @param thread - Array of chat messages in the conversation
+ * @returns Categorized token counts for thread messages, files, and tool results
+ * @author Maruf Bepary
+ */
 function estimateMessageThreadTokens(thread: Message[]): {
   messagesTokens: number;
   filesTokens: number;

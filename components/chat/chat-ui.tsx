@@ -36,6 +36,11 @@ import type { Chat } from "@/types/chat/chat";
 
 export { resolveActiveChat } from "@/components/chat/use-chat-initial-state";
 
+/**
+ * Represents chat uiprops.
+ *
+ * @author Maruf Bepary
+ */
 interface ChatUIProps {
   /** Unique identifier for the active chat session. */
   chatId: string;

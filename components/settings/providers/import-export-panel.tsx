@@ -9,11 +9,24 @@ import { Button } from "@/components/ui/button";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents import export panel props.
+ *
+ * @author Maruf Bepary
+ */
 type ImportExportPanelProps = {
   providers: AiProviderRow[];
   onRefresh: () => Promise<void>;
 };
 
+/**
+ * Performs download json.
+ *
+ * @param filename - Target filename
+ * @param content - Text content
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function downloadJson(filename: string, content: object): void {
   const blob = new Blob([JSON.stringify(content, null, 2)], {
     type: "application/json",

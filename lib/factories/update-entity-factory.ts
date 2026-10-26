@@ -6,6 +6,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "actions", "factory"]);
 
+/**
+ * Represents update entity config.
+ *
+ * @author Maruf Bepary
+ */
 export interface UpdateEntityConfig<TSchema, _TResult> {
   /** Drizzle table object (must have .id and .userId columns). */
   table: any;

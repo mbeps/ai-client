@@ -2,12 +2,24 @@ import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+/**
+ * Represents attachment file card props.
+ *
+ * @author Maruf Bepary
+ */
 interface AttachmentFileCardProps {
   meta: { url: string; name: string };
   subtitle: string;
   variant: "output" | "input";
 }
 
+/**
+ * Renders the attachment file card component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function AttachmentFileCard({
   meta,
   subtitle,
@@ -61,6 +73,12 @@ function AttachmentFileCard({
   );
 }
 
+/**
+ * Renders the storage notice component.
+ *
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StorageNotice() {
   return (
     <div className="rounded-xl border border-blue-100/50 bg-blue-50/50 p-4 backdrop-blur-sm">
@@ -81,6 +99,11 @@ function StorageNotice() {
   );
 }
 
+/**
+ * Represents transform run files section props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformRunFilesSectionProps {
   outputAttachmentIds?: string[];
   inputAttachmentIds?: string[];

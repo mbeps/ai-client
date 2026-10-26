@@ -3,6 +3,11 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Deletes an entire folder and all nested files within it.
+ *
+ * @param files - Target files
+ * @param folderPath - Target folder path
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function deleteFolderPath(
   files: SkillBundledFile[],

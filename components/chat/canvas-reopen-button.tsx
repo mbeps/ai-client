@@ -9,6 +9,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+/**
+ * Represents canvas reopen button props.
+ *
+ * @author Maruf Bepary
+ */
 interface CanvasReopenButtonProps {
   onReopen: () => void;
 }

@@ -6,6 +6,11 @@ import { useMemo } from "react";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
+/**
+ * Represents message details props.
+ *
+ * @author Maruf Bepary
+ */
 interface MessageDetailsProps {
   /** Timestamp when the message was created. */
   createdAt: Date;
@@ -14,8 +19,11 @@ interface MessageDetailsProps {
 }
 
 /**
- * Formats milliseconds into a human-readable duration string.
- * e.g. 1234 → "1.2s", 450 → "450ms", 65000 → "1m 5.0s"
+ * Formats milliseconds into a human-readable duration string. e.g. 1234 → "1.2s", 450 → "450ms", 65000 → "1m 5.0s".
+ *
+ * @param ms - Target ms
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;

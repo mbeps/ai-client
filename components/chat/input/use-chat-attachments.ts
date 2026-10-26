@@ -3,6 +3,11 @@ import { toast } from "sonner";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import type { Attachment } from "@/types/attachment/attachment";
 
+/**
+ * Represents use chat attachments options.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseChatAttachmentsOptions {
   initialAttachments?: Attachment[];
   supportsVision: boolean;
@@ -11,6 +16,16 @@ export interface UseChatAttachmentsOptions {
 
 const EMPTY_ATTACHMENTS: Attachment[] = [];
 
+/**
+ * Performs process files to add.
+ *
+ * @param files - Target files
+ * @param existingAttachments - Target existing attachments
+ * @param supportsVision - Target supports vision
+ * @param onVisionUnsupported - Target on vision unsupported
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function processFilesToAdd(
   files: File[],
   existingAttachments: Attachment[],
@@ -41,6 +56,10 @@ async function processFilesToAdd(
 
 /**
  * Manages chat input attachment state, file validation, and drag-and-drop interactions.
+ *
+ * @param options - Target options
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatAttachments(options: UseChatAttachmentsOptions) {
   const { supportsVision, onVisionUnsupported } = options;

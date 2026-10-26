@@ -7,6 +7,11 @@ import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
+/**
+ * Represents response timeline props.
+ *
+ * @author Maruf Bepary
+ */
 interface ResponseTimelineProps {
   reasoning?: string;
   isStreamingReasoning?: boolean;

@@ -3,6 +3,11 @@ import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 
+/**
+ * Represents chat input selections options.
+ *
+ * @author Maruf Bepary
+ */
 export interface ChatInputSelectionsOptions {
   initialSelectedServerIds?: string[];
   initialSelectedTools?: readonly string[] | string[];
@@ -16,6 +21,14 @@ export interface ChatInputSelectionsOptions {
 const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_SET = new Set<string>();
 
+/**
+ * Custom hook that provides use tool selections functionality.
+ *
+ * @param initialServerIds - The initial server ids parameter.
+ * @param initialTools - The initial tools parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useToolSelections(
   initialServerIds?: string[],
   initialTools?: readonly string[] | string[],
@@ -58,6 +71,14 @@ function useToolSelections(
   };
 }
 
+/**
+ * Custom hook that provides use knowledgebase selections functionality.
+ *
+ * @param initialKbs - The initial kbs parameter.
+ * @param onKnowledgebaseChange - The on knowledgebase change parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useKnowledgebaseSelections(
   initialKbs?: string[],
   onKnowledgebaseChange?: (kbIds: string[]) => void,
@@ -112,6 +133,13 @@ function useKnowledgebaseSelections(
   };
 }
 
+/**
+ * Custom hook that provides use skill selections functionality.
+ *
+ * @param initialSkillIds - The initial skill ids parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useSkillSelections(initialSkillIds?: string[]) {
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(
     () => new Set(initialSkillIds),
@@ -160,6 +188,14 @@ function useSkillSelections(initialSkillIds?: string[]) {
   };
 }
 
+/**
+ * Custom hook that provides use subagent selections functionality.
+ *
+ * @param initialSubagentsEnabled - The initial subagents enabled parameter.
+ * @param initialSubagentModelId - The initial subagent model id parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useSubagentSelections(
   initialSubagentsEnabled?: boolean,
   initialSubagentModelId?: string,

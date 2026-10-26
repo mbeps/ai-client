@@ -31,8 +31,18 @@ import { PROMPTS } from "@/config/prompts";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
 
+/**
+ * Represents form values.
+ *
+ * @author Maruf Bepary
+ */
 type FormValues = z.infer<typeof createAssistantSchema>;
 
+/**
+ * Represents create assistant dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface CreateAssistantDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

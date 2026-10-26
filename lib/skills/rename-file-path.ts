@@ -3,6 +3,12 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Renames an individual file path within the bundled files array.
+ *
+ * @param files - Target files
+ * @param oldPath - Target old path
+ * @param newPath - Target new path
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function renameFilePath(
   files: SkillBundledFile[],

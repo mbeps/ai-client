@@ -31,6 +31,11 @@ import {
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents model table props.
+ *
+ * @author Maruf Bepary
+ */
 type ModelTableProps = {
   models: AiModelRow[];
   providers: AiProviderRow[];

@@ -17,12 +17,22 @@ import type { Assistant } from "@/types/assistant/assistant";
 import type { Chat } from "@/types/chat/chat";
 import type { Project } from "@/types/project/project";
 
+/**
+ * Represents search client props.
+ *
+ * @author Maruf Bepary
+ */
 interface SearchClientProps {
   initialChats: Chat[];
   initialProjects: Project[];
   initialAssistants: Assistant[];
 }
 
+/**
+ * Represents search item.
+ *
+ * @author Maruf Bepary
+ */
 type SearchItem =
   | { type: "chat"; data: Chat; id: string; updatedAt: Date }
   | { type: "project"; data: Project; id: string; updatedAt: Date }

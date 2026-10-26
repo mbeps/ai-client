@@ -19,6 +19,11 @@ import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
+/**
+ * Represents knowledgebase picker props.
+ *
+ * @author Maruf Bepary
+ */
 interface KnowledgebasePickerProps {
   knowledgebases: Knowledgebase[];
   mode?: "single" | "multiple";
@@ -258,6 +263,11 @@ export function KnowledgebasePicker({
   );
 }
 
+/**
+ * Represents knowledgebase picker dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface KnowledgebasePickerDialogProps {
   knowledgebases: Knowledgebase[];
   selectedKbs: Set<string>;

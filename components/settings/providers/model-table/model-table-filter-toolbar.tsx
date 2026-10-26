@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/select";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents model table filter toolbar props.
+ *
+ * @author Maruf Bepary
+ */
 export type ModelTableFilterToolbarProps = {
   search: string;
   onSearchChange: (val: string) => void;
@@ -22,6 +27,13 @@ export type ModelTableFilterToolbarProps = {
   providers: AiProviderRow[];
 };
 
+/**
+ * Renders the model table filter toolbar component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">

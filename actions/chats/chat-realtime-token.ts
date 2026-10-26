@@ -12,6 +12,9 @@ import { inngest } from "@/lib/inngest/client";
  * Server action to mint an authorized subscription token for the chat Inngest Realtime channel.
  * Validates chat ownership before generating the token.
  *
+ * @param chatId - UUID of the chat channel to generate a realtime subscription token for
+ * @returns Client subscription token string for Inngest Realtime channel subscription
+ * @throws {Error} When chat is not found or user lacks ownership
  * @author Maruf Bepary
  */
 export async function getChatRealtimeToken(chatId: string) {

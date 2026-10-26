@@ -53,6 +53,11 @@ const ROUTE_LABELS: Record<string, string> = {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Represents store lookup entities.
+ *
+ * @author Maruf Bepary
+ */
 interface StoreLookupEntities {
   projects: Array<{ id: string }>;
   assistants: Array<{ id: string }>;
@@ -62,6 +67,11 @@ interface StoreLookupEntities {
   transformAgents: Array<{ id: string }>;
 }
 
+/**
+ * Represents breadcrumb label context.
+ *
+ * @author Maruf Bepary
+ */
 interface BreadcrumbLabelContext {
   isChatSegment: boolean;
   currentChatData?: {

@@ -5,6 +5,11 @@ import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
+/**
+ * Represents model table modals props.
+ *
+ * @author Maruf Bepary
+ */
 export type ModelTableModalsProps = {
   dialogOpen: boolean;
   onDialogOpenChange: (open: boolean) => void;
@@ -22,6 +27,13 @@ export type ModelTableModalsProps = {
   onConfirmBulkDelete: () => Promise<void>;
 };
 
+/**
+ * Renders the model table modals component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ModelTableModals(props: ModelTableModalsProps) {
   return (
     <>

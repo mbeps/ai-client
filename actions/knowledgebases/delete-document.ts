@@ -23,13 +23,12 @@ const log = getLogger(["app", "actions", "knowledgebases"]);
  * Does not change `indexStatus`; re-indexing is handled elsewhere.
  * Runs on server only — invoked from client via Server Action.
  *
- * @param kbId - UUID of the knowledge base containing the document; must be owned by the authenticated user.
- * @param documentId - UUID of the document to delete.
- * @returns void (no return value).
- * @throws Error if session is not authenticated.
- * @throws Error if knowledge base is not found or user does not own it (returns "Not Found").
- * @throws Error if document is not found or does not belong to the knowledge base.
- * @throws Error if database deletion fails due to constraints or connection issues.
+ * @param data - Object containing kbId and documentId of the document to delete
+ * @returns Resolves when document row and underlying S3 object are removed
+ * @throws {Error} if session is not authenticated.
+ * @throws {Error} if knowledge base is not found or user does not own it (returns "Not Found").
+ * @throws {Error} if document is not found or does not belong to the knowledge base.
+ * @throws {Error} if database deletion fails due to constraints or connection issues.
  * @see listDocuments to view documents in a knowledge base.
  * @see uploadKbDocument to add a new document.
  * @author Maruf Bepary

@@ -71,6 +71,10 @@ const EXTENSION_TYPE_MAP: Record<string, DownloadItemType> = {
 
 /**
  * Derives extension from a filename or URL path.
+ *
+ * @param nameOrUrl - Target name or url
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function getExtension(nameOrUrl: string): string | undefined {
   try {
@@ -126,6 +130,10 @@ const MIME_TYPE_PATTERNS: Array<{
 
 /**
  * Infers categorized DownloadItemType from MIME type string.
+ *
+ * @param mimeType - Target mime type
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function inferTypeFromMime(mimeType: string): DownloadItemType {
   const mime = mimeType.toLowerCase();
@@ -139,6 +147,11 @@ function inferTypeFromMime(mimeType: string): DownloadItemType {
 
 /**
  * Infers categorized DownloadItemType from an extension or MIME type.
+ *
+ * @param extension - Target extension
+ * @param mimeType - Target mime type
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function inferDownloadType(
   extension?: string,
@@ -182,6 +195,10 @@ const EXTENSION_MIME_MAP: Record<string, string> = {
 
 /**
  * Checks if a string looks like base64-encoded binary content.
+ *
+ * @param str - Target str
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isBase64String(str: string): boolean {
   if (str.length < 20) return false;
@@ -200,6 +217,13 @@ const TITLE_DIRECT_KEYS = [
 ] as const;
 const TITLE_PATH_KEYS = ["file_path", "filePath", "path"] as const;
 
+/**
+ * Finds title in record.
+ *
+ * @param rec - Target rec
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function findTitleInRecord(rec?: Record<string, unknown>): string | undefined {
   if (!rec) return undefined;
   for (const k of TITLE_DIRECT_KEYS) {
@@ -217,6 +241,11 @@ function findTitleInRecord(rec?: Record<string, unknown>): string | undefined {
 
 /**
  * Extracts candidate filename from record or toolArgs.
+ *
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractTitleCandidate(
   record: Record<string, unknown>,
@@ -242,6 +271,11 @@ const SIZE_KEYS = [
 
 /**
  * Extracts candidate size in bytes.
+ *
+ * @param record - Target record
+ * @param base64Data - Target base64 data
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractSizeCandidate(
   record: Record<string, unknown>,
@@ -261,6 +295,11 @@ function extractSizeCandidate(
 
 /**
  * Extracts or infers MIME type.
+ *
+ * @param record - Target record
+ * @param extension - Target extension
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractMimeCandidate(
   record: Record<string, unknown>,
@@ -291,6 +330,10 @@ const STORAGE_URL_SUBSTRINGS = [
 
 /**
  * Checks if a URL points to a storage bucket (S3, MinIO, presigned URLs).
+ *
+ * @param url - Target url
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isStorageUrl(url: string): boolean {
   return STORAGE_URL_SUBSTRINGS.some((sub) => url.includes(sub));
@@ -298,6 +341,10 @@ function isStorageUrl(url: string): boolean {
 
 /**
  * Checks if a string is a valid HTTP/HTTPS, blob, or data URL.
+ *
+ * @param str - Target str
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isValidDownloadUrl(str: string): boolean {
   const trimmed = str.trim();
@@ -311,6 +358,11 @@ function isValidDownloadUrl(str: string): boolean {
 
 /**
  * Canonicalizes a URL for deduplication.
+ *
+ * @param url - Target url
+ * @param rawTitle - Target raw title
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function canonicalizeUrl(url: string, rawTitle?: string): string {
   if (url.startsWith("data:")) {
@@ -324,6 +376,11 @@ function canonicalizeUrl(url: string, rawTitle?: string): string {
   }
 }
 
+/**
+ * Represents extracted payload item.
+ *
+ * @author Maruf Bepary
+ */
 type ExtractedPayloadItem = {
   url: string;
   title?: string;
@@ -342,6 +399,14 @@ const DIRECT_URL_KEYS = [
   "uri",
 ];
 
+/**
+ * Extracts direct url item.
+ *
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractDirectUrlItem(
   record: Record<string, unknown>,
   toolArgs?: unknown,
@@ -373,6 +438,14 @@ const BASE64_KEYS = [
   "blob",
 ];
 
+/**
+ * Checks whether object has base64 file indications.
+ *
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function hasBase64FileIndications(
   record: Record<string, unknown>,
   toolArgs?: unknown,
@@ -387,6 +460,14 @@ function hasBase64FileIndications(
   );
 }
 
+/**
+ * Finds base64 content.
+ *
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function findBase64Content(
   record: Record<string, unknown>,
   toolArgs?: unknown,
@@ -407,6 +488,14 @@ function findBase64Content(
   return undefined;
 }
 
+/**
+ * Extracts base64 data item.
+ *
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractBase64DataItem(
   record: Record<string, unknown>,
   toolArgs?: unknown,
@@ -429,6 +518,15 @@ function extractBase64DataItem(
   };
 }
 
+/**
+ * Extracts mcp text content.
+ *
+ * @param cItem - Target c item
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractMcpTextContent(
   cItem: Record<string, unknown>,
   toolName: string,
@@ -443,6 +541,15 @@ function extractMcpTextContent(
   }
 }
 
+/**
+ * Extracts mcp image content.
+ *
+ * @param cItem - Target c item
+ * @param record - Target record
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractMcpImageContent(
   cItem: Record<string, unknown>,
   record: Record<string, unknown>,
@@ -462,6 +569,15 @@ function extractMcpImageContent(
   ];
 }
 
+/**
+ * Extracts mcp resource content.
+ *
+ * @param cItem - Target c item
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractMcpResourceContent(
   cItem: Record<string, unknown>,
   toolName: string,
@@ -477,6 +593,16 @@ function extractMcpResourceContent(
   return [];
 }
 
+/**
+ * Extracts single mcp content item.
+ *
+ * @param cItem - Target c item
+ * @param record - Target record
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractSingleMcpContentItem(
   cItem: Record<string, unknown>,
   record: Record<string, unknown>,
@@ -490,6 +616,15 @@ function extractSingleMcpContentItem(
   ];
 }
 
+/**
+ * Extracts mcp content items.
+ *
+ * @param record - Target record
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractMcpContentItems(
   record: Record<string, unknown>,
   toolName: string,
@@ -509,6 +644,15 @@ function extractMcpContentItems(
   return discovered;
 }
 
+/**
+ * Extracts nested container items.
+ *
+ * @param record - Target record
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractNestedContainerItems(
   record: Record<string, unknown>,
   toolName: string,
@@ -537,6 +681,13 @@ function extractNestedContainerItems(
   return discovered;
 }
 
+/**
+ * Extracts urls from plain text.
+ *
+ * @param text - Target text
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractUrlsFromPlainText(text: string): ExtractedPayloadItem[] {
   const discovered: ExtractedPayloadItem[] = [];
   const urlMatches = text.matchAll(/https?:\/\/[^\s"')]+/g);
@@ -552,6 +703,12 @@ function extractUrlsFromPlainText(text: string): ExtractedPayloadItem[] {
 
 /**
  * Inspects any tool result payload and discovers downloadable items.
+ *
+ * @param payload - Target payload
+ * @param toolName - Target tool name
+ * @param toolArgs - Target tool args
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractFromPayload(
   payload: unknown,
@@ -593,6 +750,11 @@ function extractFromPayload(
   return [];
 }
 
+/**
+ * Represents register download fn.
+ *
+ * @author Maruf Bepary
+ */
 type RegisterDownloadFn = (
   url: string,
   rawTitle?: string,
@@ -601,6 +763,15 @@ type RegisterDownloadFn = (
   mimeType?: string,
 ) => void;
 
+/**
+ * Resolves the display source name for a download extracted from tool output, prioritizing MCP server identity over tool name.
+ *
+ * @param tr - Raw tool result entry containing optional serverName
+ * @param raw - Parsed or raw payload inspected for MCP server metadata
+ * @param toolName - Fallback tool name if no server information is present
+ * @returns Human-readable source identifier
+ * @author Maruf Bepary
+ */
 function resolveSourceName(tr: any, raw: any, toolName: string): string {
   const mcpServerName =
     raw?._meta?.["io.modelcontextprotocol/serverInfo"]?.name ||
@@ -608,6 +779,17 @@ function resolveSourceName(tr: any, raw: any, toolName: string): string {
   return tr?.serverName || mcpServerName || toolName;
 }
 
+/**
+ * Extracts and registers downloadable artifacts from an individual persisted tool result entry.
+ *
+ * Correlates the tool result with its originating tool call to inspect arguments,
+ * extracts download links or data payloads, and registers valid items.
+ *
+ * @param tr - Tool result object from message metadata
+ * @param toolCallsList - List of recorded tool calls used to resolve invocation arguments
+ * @param registerItem - Callback function to add discovered download items to the result set
+ * @author Maruf Bepary
+ */
 function processSinglePersistedToolResult(
   tr: unknown,
   toolCallsList: any[],
@@ -630,6 +812,13 @@ function processSinglePersistedToolResult(
   }
 }
 
+/**
+ * Parses metadata object.
+ *
+ * @param metadata - Message metadata object or serialized string
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseMetadataObject(
   metadata: unknown,
 ): Record<string, unknown> | null {
@@ -644,6 +833,14 @@ function parseMetadataObject(
   }
 }
 
+/**
+ * Extracts downloads from persisted metadata.
+ *
+ * @param metadata - Message metadata object or serialized string
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractDownloadsFromPersistedMetadata(
   metadata: unknown,
   registerItem: RegisterDownloadFn,
@@ -657,6 +854,14 @@ function extractDownloadsFromPersistedMetadata(
   }
 }
 
+/**
+ * Extracts downloads from active tools.
+ *
+ * @param activeToolCalls - Target active tool calls
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractDownloadsFromActiveTools(
   activeToolCalls: ToolCallState[] | undefined,
   registerItem: RegisterDownloadFn,
@@ -680,6 +885,15 @@ function extractDownloadsFromActiveTools(
   }
 }
 
+/**
+ * Performs register markdown url if eligible.
+ *
+ * @param url - Target url
+ * @param label - Target label
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function registerMarkdownUrlIfEligible(
   url: string,
   label: string | undefined,
@@ -691,6 +905,14 @@ function registerMarkdownUrlIfEligible(
   }
 }
 
+/**
+ * Extracts markdown links.
+ *
+ * @param content - Text content
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractMarkdownLinks(
   content: string,
   registerItem: RegisterDownloadFn,
@@ -701,6 +923,14 @@ function extractMarkdownLinks(
   }
 }
 
+/**
+ * Extracts bare urls.
+ *
+ * @param content - Text content
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractBareUrls(
   content: string,
   registerItem: RegisterDownloadFn,
@@ -711,6 +941,14 @@ function extractBareUrls(
   }
 }
 
+/**
+ * Extracts downloads from markdown.
+ *
+ * @param content - Text content
+ * @param registerItem - Target register item
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractDownloadsFromMarkdown(
   content: string | undefined,
   registerItem: RegisterDownloadFn,

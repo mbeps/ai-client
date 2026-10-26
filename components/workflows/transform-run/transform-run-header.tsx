@@ -14,11 +14,23 @@ const STATUS_COLORS: Record<string, string> = {
   awaiting_review: "bg-amber-500",
 };
 
+/**
+ * Represents final download button props.
+ *
+ * @author Maruf Bepary
+ */
 interface FinalDownloadButtonProps {
   outputAttachmentIds?: string[];
   attachmentMeta: Record<string, { url: string; name: string }>;
 }
 
+/**
+ * Renders the final download button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function FinalDownloadButton({
   outputAttachmentIds,
   attachmentMeta,
@@ -45,11 +57,23 @@ function FinalDownloadButton({
   );
 }
 
+/**
+ * Represents approve button props.
+ *
+ * @author Maruf Bepary
+ */
 interface ApproveButtonProps {
   onApprove: () => void;
   isApproving: boolean;
 }
 
+/**
+ * Renders the approve button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ApproveButton({ onApprove, isApproving }: ApproveButtonProps) {
   return (
     <>
@@ -71,6 +95,13 @@ function ApproveButton({ onApprove, isApproving }: ApproveButtonProps) {
   );
 }
 
+/**
+ * Renders the status badge component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StatusBadge({ status }: { status: TransformRunStatus }) {
   const statusColor = STATUS_COLORS[status] ?? "bg-gray-500";
   return (
@@ -89,6 +120,13 @@ function StatusBadge({ status }: { status: TransformRunStatus }) {
   );
 }
 
+/**
+ * Renders the progress indicator component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ProgressIndicator({ progress }: { progress: number }) {
   return (
     <div className="flex min-w-[120px] shrink-0 flex-col gap-1 lg:min-w-40">
@@ -105,6 +143,11 @@ function ProgressIndicator({ progress }: { progress: number }) {
   );
 }
 
+/**
+ * Represents transform run header props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformRunHeaderProps {
   agentName: string;
   createdAt: Date;

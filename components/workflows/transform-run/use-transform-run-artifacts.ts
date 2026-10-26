@@ -10,6 +10,15 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformStep } from "@/types/transform/transform-step";
 import type { StepState } from "@/types/workflows/transform-run";
 
+/**
+ * Formats step artifact.
+ *
+ * @param res - HTTP response
+ * @param selectedStepIndex - Target selected step index
+ * @param stepName - Target step name
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function formatStepArtifact(
   res: ArtifactData,
   selectedStepIndex: number | null,
@@ -24,6 +33,15 @@ function formatStepArtifact(
   };
 }
 
+/**
+ * Performs fetch preview artifact.
+ *
+ * @param attachmentId - Target attachment id
+ * @param selectedStepIndex - Target selected step index
+ * @param stepName - Target step name
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function fetchPreviewArtifact(
   attachmentId: string,
   selectedStepIndex: number | null,
@@ -38,6 +56,11 @@ async function fetchPreviewArtifact(
   }
 }
 
+/**
+ * Represents use transform run artifacts params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseTransformRunArtifactsParams {
   selectedStepIndex: number | null;
   stepStates: Record<number, StepState>;

@@ -28,6 +28,11 @@ const TAB_VALUES = {
   FORGOT_PASSWORD: "forgot-password", // invisible
 } as const;
 
+/**
+ * Represents tab.
+ *
+ * @author Maruf Bepary
+ */
 type Tab = (typeof TAB_VALUES)[keyof typeof TAB_VALUES];
 
 /**

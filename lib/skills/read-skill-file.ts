@@ -9,6 +9,12 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Reads one file out of a skill, or `null` when the skill or path is missing.
+ *
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @param path - Target path
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export async function readSkillFileForUser(
   userId: string,

@@ -15,6 +15,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 
+/**
+ * Represents skill detail header props.
+ *
+ * @author Maruf Bepary
+ */
 export interface SkillDetailHeaderProps {
   displayName: string;
   onDisplayNameChange: (value: string) => void;

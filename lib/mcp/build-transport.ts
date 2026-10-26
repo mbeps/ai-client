@@ -3,8 +3,18 @@ import { z } from "zod";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
+/**
+ * Represents mcptransport.
+ *
+ * @author Maruf Bepary
+ */
 type MCPTransport = Parameters<typeof createMCPClient>[0]["transport"];
 
+/**
+ * Validation schema for headers schema.
+ *
+ * @author Maruf Bepary
+ */
 const headersSchema = z.record(z.string(), z.string());
 
 /**

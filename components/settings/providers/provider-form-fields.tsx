@@ -6,8 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+/**
+ * Represents header row.
+ *
+ * @author Maruf Bepary
+ */
 type HeaderRow = { key: string; value: string };
 
+/**
+ * Represents provider form fields props.
+ *
+ * @author Maruf Bepary
+ */
 type ProviderFormFieldsProps = {
   name: string;
   baseUrl: string;

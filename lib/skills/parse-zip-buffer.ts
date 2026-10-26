@@ -3,6 +3,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "skills", "parser"]);
 
+/**
+ * Represents zip entry.
+ *
+ * @author Maruf Bepary
+ */
 export interface ZipEntry {
   path: string;
   data: Buffer;
@@ -11,6 +16,12 @@ export interface ZipEntry {
 
 /**
  * Decompresses raw entry data from a ZIP slice, falling back to raw data if decompression fails.
+ *
+ * @param rawData - Target raw data
+ * @param compressionMethod - Target compression method
+ * @param fileName - Target file name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function decompressZipSlice(
   rawData: Buffer,
@@ -42,6 +53,10 @@ function decompressZipSlice(
 
 /**
  * Scans backward from the end of the buffer to locate the End of Central Directory (EOCD) signature.
+ *
+ * @param buf - Target buf
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function locateEocdOffset(buf: Buffer): number {
   const minEocdOffset = Math.max(0, buf.length - 65557);
@@ -55,6 +70,11 @@ function locateEocdOffset(buf: Buffer): number {
 
 /**
  * Reads ZIP entries using Central Directory records.
+ *
+ * @param buf - Target buf
+ * @param eocdOffset - Target eocd offset
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function readCentralDirectoryEntries(
   buf: Buffer,
@@ -120,6 +140,10 @@ function readCentralDirectoryEntries(
 
 /**
  * Fallback parser that iterates sequentially over local file headers.
+ *
+ * @param buf - Target buf
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function readLocalHeaderEntriesFallback(buf: Buffer): ZipEntry[] {
   const entries: ZipEntry[] = [];

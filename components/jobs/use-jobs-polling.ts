@@ -4,6 +4,11 @@ import { useEffect, useRef } from "react";
 
 /**
  * Handles automatic polling and browser visibility pausing for the jobs dashboard.
+ *
+ * @param loadJobs - The load jobs parameter.
+ * @param autoRefresh - The auto refresh parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useJobsPolling(
   loadJobs: (isManual: boolean) => Promise<void>,

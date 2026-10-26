@@ -7,6 +7,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
+/**
+ * Represents complete assistant response params.
+ *
+ * @author Maruf Bepary
+ */
 export interface CompleteAssistantResponseParams {
   chatId: string;
   assistantMessageId: string;
@@ -25,6 +30,9 @@ export interface CompleteAssistantResponseParams {
 
 /**
  * Executes download fallback, builds metadata, persists assistant message, and emits finish event.
+ *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function completeAssistantResponse(

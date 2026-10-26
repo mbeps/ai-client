@@ -3,6 +3,13 @@
 import { CircleSlash, Loader2, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Renders the model table bulk actions component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ModelTableBulkActions({
   isBusy,
   onBulkAction,

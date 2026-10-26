@@ -31,6 +31,14 @@ const CODE_OR_JSON_EXTS = new Set([
   ".sql",
 ]);
 
+/**
+ * Checks if the file extension or MIME type represents a spreadsheet or CSV.
+ *
+ * @param ext - Normalized file extension including leading dot
+ * @param mime - MIME type string
+ * @returns True if the file is a tabular/spreadsheet format
+ * @author Maruf Bepary
+ */
 function isSpreadsheetFile(ext: string, mime: string): boolean {
   if (SPREADSHEET_EXTS.has(ext)) {
     return true;
@@ -42,6 +50,13 @@ function isSpreadsheetFile(ext: string, mime: string): boolean {
   );
 }
 
+/**
+ * Parses binary spreadsheet buffer into JSON artifact representation.
+ *
+ * @param buffer - File content buffer
+ * @returns Serialized JSON string containing sheet data
+ * @author Maruf Bepary
+ */
 function parseSpreadsheetContent(buffer: Buffer): string {
   const wb = xlsx.read(buffer, { type: "buffer" });
   const sheets: ArtifactSheet[] = wb.SheetNames.map((name) => {
@@ -54,18 +69,50 @@ function parseSpreadsheetContent(buffer: Buffer): string {
   return JSON.stringify({ sheets });
 }
 
+/**
+ * Determines whether a file represents HTML content based on extension or MIME type.
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @returns True if HTML
+ * @author Maruf Bepary
+ */
 function isHtmlFile(ext: string, mime: string): boolean {
   return HTML_EXTS.has(ext) || mime.includes("html");
 }
 
+/**
+ * Determines whether a file represents Mermaid diagram markup.
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @returns True if Mermaid diagram
+ * @author Maruf Bepary
+ */
 function isMermaidFile(ext: string, mime: string): boolean {
   return ext === ".mmd" || mime.includes("mermaid");
 }
 
+/**
+ * Determines whether a file is an image based on MIME type prefix or extension.
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @returns True if image
+ * @author Maruf Bepary
+ */
 function isImageFile(ext: string, mime: string): boolean {
   return mime.startsWith("image/") || IMAGE_EXTS.has(ext);
 }
 
+/**
+ * Resolves a normalized image MIME type.
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @returns Valid image MIME string
+ * @author Maruf Bepary
+ */
 function resolveImageMime(ext: string, mime: string): string {
   if (mime.startsWith("image/")) {
     return mime;
@@ -76,6 +123,16 @@ function resolveImageMime(ext: string, mime: string): string {
   return `image/${ext.replace(".", "")}`;
 }
 
+/**
+ * Formats image buffer into an inline base64 markdown preview.
+ *
+ * @param name - Display name of the image
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @param buffer - Raw image buffer
+ * @returns Markdown image data URL string
+ * @author Maruf Bepary
+ */
 function formatImageArtifactContent(
   name: string,
   ext: string,
@@ -86,6 +143,14 @@ function formatImageArtifactContent(
   return `![${name}](data:${effectiveMime};base64,${buffer.toString("base64")})`;
 }
 
+/**
+ * Checks if a file is an un-renderable binary file (PDF, archive, audio, video).
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @returns True if binary
+ * @author Maruf Bepary
+ */
 function isBinaryFile(ext: string, mime: string): boolean {
   if (BINARY_EXTS.has(ext) || mime === "application/pdf") {
     return true;
@@ -96,11 +161,28 @@ function isBinaryFile(ext: string, mime: string): boolean {
   return mime.includes("archive") || mime.includes("zip");
 }
 
+/**
+ * Formats fallback markdown notice for binary files.
+ *
+ * @param name - File display name
+ * @param ext - Normalized file extension
+ * @returns Markdown advisory message
+ * @author Maruf Bepary
+ */
 function formatBinaryArtifactContent(name: string, ext: string): string {
   const fileType = ext.replace(".", "").toUpperCase() || "binary";
   return `### ${name}\n\n*Binary preview is not supported for this file type (${fileType}). Please use the download link in the Files section below.*`;
 }
 
+/**
+ * Formats text buffer into code block or raw text artifact content.
+ *
+ * @param ext - Normalized file extension
+ * @param mime - MIME type string
+ * @param buffer - Raw text buffer
+ * @returns Formatted markdown string
+ * @author Maruf Bepary
+ */
 function formatTextArtifactContent(
   ext: string,
   mime: string,

@@ -14,6 +14,11 @@ type McpServerParam = Parameters<typeof getMcpTools>[0][number];
 
 /**
  * Filters MCP tools based on selectedTools list or includes all by default.
+ *
+ * @param result - Target result
+ * @param selectedTools - Target selected tools
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function filterSelectedMcpTools(
   result: Awaited<ReturnType<typeof getMcpTools>>,
@@ -54,6 +59,11 @@ function filterSelectedMcpTools(
 
 /**
  * Resolves active knowledgebase IDs from either array or singular ID.
+ *
+ * @param activeKbIds - Target active kb ids
+ * @param activeKbId - Target active kb id
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveTargetKbIds(
   activeKbIds?: string[],

@@ -16,12 +16,22 @@ import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
+/**
+ * Represents server content state.
+ *
+ * @author Maruf Bepary
+ */
 export type ServerContentState = {
   tools: DiscoveredTool[];
   loading: boolean;
   error: string | null;
 };
 
+/**
+ * Represents server tools section props.
+ *
+ * @author Maruf Bepary
+ */
 interface ServerToolsSectionProps {
   server: McpServer | PublicMcpServer;
   content?: ServerContentState;
@@ -38,6 +48,13 @@ interface ServerToolsSectionProps {
   ) => void;
 }
 
+/**
+ * Renders the server tools error component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ServerToolsError({
   error,
   onRetry,
@@ -58,6 +75,13 @@ function ServerToolsError({
   );
 }
 
+/**
+ * Renders the server tools list component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ServerToolsList({
   server,
   serverTools,
@@ -103,6 +127,13 @@ function ServerToolsList({
   );
 }
 
+/**
+ * Renders the server tools body component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ServerToolsBody({
   content,
   server,

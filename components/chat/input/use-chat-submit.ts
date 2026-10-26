@@ -3,6 +3,11 @@ import { resolvePromptPayload } from "@/components/chat/input/resolve-prompt-pay
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Attachment } from "@/types/attachment/attachment";
 
+/**
+ * Represents use chat submit options.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseChatSubmitOptions {
   onSend: (
     content: string,
@@ -41,6 +46,10 @@ export interface UseChatSubmitOptions {
 
 /**
  * Handles enter key presses and submission dispatching for the chat input form.
+ *
+ * @param options - Target options
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatSubmit(options: UseChatSubmitOptions) {
   const {

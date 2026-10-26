@@ -6,6 +6,9 @@ import { logger } from "@/lib/logger";
 
 /**
  * Evaluates whether stream conditions warrant triggering a database sync.
+ *
+ * @param params - Health evaluation metrics including error flags, rejoin state, and timeouts
+ * @returns True if database sync should be attempted
  * @author Maruf Bepary
  */
 function shouldTriggerWatchdogSync(params: {
@@ -32,6 +35,9 @@ function shouldTriggerWatchdogSync(params: {
 
 /**
  * Determines whether to abort a stalled stream after excessive attempts.
+ *
+ * @param params - Failure evaluation state
+ * @returns True if stalled stream should be aborted
  * @author Maruf Bepary
  */
 function shouldAbortStalledWatchdog(params: {
@@ -45,6 +51,8 @@ function shouldAbortStalledWatchdog(params: {
 
 /**
  * Executes a single watchdog interval tick, attempting recovery or halting stalled generation.
+ *
+ * @param params - Watchdog tick context including interval timer, sync handlers, and counters
  * @author Maruf Bepary
  */
 async function executeWatchdogTick(params: {
@@ -86,6 +94,12 @@ async function executeWatchdogTick(params: {
 
 /**
  * Computes watchdog health status from refs and connection flags.
+ *
+ * @param refs - Mutable stream refs bundle
+ * @param connectionStatus - Realtime connection status string
+ * @param realtimeError - Error thrown by Realtime subscription
+ * @param attempts - Elapsed polling tick count
+ * @returns Watchdog tick health indicators
  * @author Maruf Bepary
  */
 function createWatchdogTickStatus(
@@ -116,6 +130,15 @@ function createWatchdogTickStatus(
 
 /**
  * Watchdog hook polling connection and generation health during streaming.
+ *
+ * @param chatId - Active chat ID
+ * @param isStreaming - Flag indicating active generation
+ * @param chatNotFound - Flag indicating chat was deleted
+ * @param connectionStatus - Inngest Realtime subscription status
+ * @param realtimeError - Error thrown by Realtime subscription
+ * @param syncFromDb - Function to sync latest chat messages from DB
+ * @param setIsStreaming - Setter controlling active streaming state
+ * @param refs - Mutable stream refs bundle
  * @author Maruf Bepary
  */
 export function useStreamWatchdog(

@@ -2,6 +2,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "abort-registry"]);
 
+/**
+ * Represents registered chat abort handle.
+ *
+ * @author Maruf Bepary
+ */
 interface RegisteredChatAbortHandle {
   controller: AbortController;
   release: () => void;
@@ -74,4 +79,9 @@ class ChatAbortRegistry {
   }
 }
 
+/**
+ * Performs chat abort registry.
+ *
+ * @author Maruf Bepary
+ */
 export const chatAbortRegistry = new ChatAbortRegistry();

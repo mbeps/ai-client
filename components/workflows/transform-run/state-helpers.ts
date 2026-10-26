@@ -10,6 +10,10 @@ import type {
 
 /**
  * Maps database transform run row to typed domain model.
+ *
+ * @param row - Target row
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function mapRunRowToRun(row: TransformRunRow): TransformRun {
   return {
@@ -27,6 +31,15 @@ export function mapRunRowToRun(row: TransformRunRow): TransformRun {
   };
 }
 
+/**
+ * Resolves initial step status.
+ *
+ * @param index - Target index
+ * @param status - Current status value
+ * @param currentStepIndex - Target current step index
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveInitialStepStatus(
   index: number,
   status: TransformRunStatus,
@@ -42,6 +55,13 @@ function resolveInitialStepStatus(
 
 /**
  * Constructs initial step states map based on run execution status.
+ *
+ * @param stepsCount - Total number of workflow steps
+ * @param status - Current status value
+ * @param currentStepIndex - Target current step index
+ * @param outputAttachmentIds - Target output attachment ids
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function buildInitialStepStates(
   stepsCount: number,
@@ -63,6 +83,12 @@ export function buildInitialStepStates(
 
 /**
  * Resolves default selected step index on initial page load.
+ *
+ * @param stepsCount - Total number of workflow steps
+ * @param status - Current status value
+ * @param currentStepIndex - Target current step index
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function resolveInitialSelectedStep(
   stepsCount: number,
@@ -77,6 +103,11 @@ export function resolveInitialSelectedStep(
 
 /**
  * Transitions steps on transform-step-start SSE event.
+ *
+ * @param prev - Target prev
+ * @param stepIndex - Target step index
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyStepStartEvent(
   prev: Record<number, StepState>,
@@ -98,6 +129,12 @@ export function applyStepStartEvent(
 
 /**
  * Appends a tool call event to the target step state.
+ *
+ * @param prev - Target prev
+ * @param stepIndex - Target step index
+ * @param call - Target call
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyToolCallToStep(
   prev: Record<number, StepState>,
@@ -116,6 +153,12 @@ export function applyToolCallToStep(
 
 /**
  * Appends a tool result event to the target step state.
+ *
+ * @param prev - Target prev
+ * @param stepIndex - Target step index
+ * @param result - Target result
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyToolResultToStep(
   prev: Record<number, StepState>,
@@ -134,6 +177,12 @@ export function applyToolResultToStep(
 
 /**
  * Updates step state with completion payload.
+ *
+ * @param prev - Target prev
+ * @param stepIndex - Target step index
+ * @param data - Target data
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyStepCompleteToStep(
   prev: Record<number, StepState>,
@@ -160,6 +209,11 @@ export function applyStepCompleteToStep(
 
 /**
  * Marks target step as awaiting review.
+ *
+ * @param prev - Target prev
+ * @param stepIndex - Target step index
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function applyReviewRequiredToStep(
   prev: Record<number, StepState>,
@@ -174,6 +228,14 @@ export function applyReviewRequiredToStep(
   };
 }
 
+/**
+ * Finds latest output attachment.
+ *
+ * @param startIndex - Target start index
+ * @param stepStates - Execution state mapping for workflow steps
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function findLatestOutputAttachment(
   startIndex: number,
   stepStates: Record<number, StepState>,
@@ -187,6 +249,12 @@ function findLatestOutputAttachment(
 
 /**
  * Resolves attachment id corresponding to selected step preview.
+ *
+ * @param selectedStepIndex - Target selected step index
+ * @param stepStates - Execution state mapping for workflow steps
+ * @param inputAttachmentIds - Target input attachment ids
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function resolveTargetAttachmentId(
   selectedStepIndex: number | null,
@@ -202,6 +270,15 @@ export function resolveTargetAttachmentId(
   return null;
 }
 
+/**
+ * Resolves step data spreadsheet.
+ *
+ * @param stepData - Target step data
+ * @param stepName - Target step name
+ * @param stepIndex - Target step index
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveStepDataSpreadsheet(
   stepData: Record<string, any[]>,
   stepName: string,
@@ -218,6 +295,14 @@ function resolveStepDataSpreadsheet(
   };
 }
 
+/**
+ * Resolves cached artifact.
+ *
+ * @param targetAttachmentId - Target target attachment id
+ * @param artifactCache - Target artifact cache
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveCachedArtifact(
   targetAttachmentId: string | null | undefined,
   artifactCache: Record<string, ArtifactData> | undefined,
@@ -228,6 +313,14 @@ function resolveCachedArtifact(
 
 /**
  * Resolves preview artifact data from in-memory state or cache.
+ *
+ * @param selectedStepIndex - Target selected step index
+ * @param stepStates - Execution state mapping for workflow steps
+ * @param stepName - Target step name
+ * @param targetAttachmentId - Target target attachment id
+ * @param artifactCache - Target artifact cache
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function resolveStepPreviewArtifact(
   selectedStepIndex: number | null,
@@ -256,6 +349,12 @@ export function resolveStepPreviewArtifact(
 
 /**
  * Evaluates whether any artifacts or previewable attachments exist for the run.
+ *
+ * @param artifactCache - Target artifact cache
+ * @param targetAttachmentId - Target target attachment id
+ * @param stepStates - Execution state mapping for workflow steps
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function checkHasAnyArtifact(
   artifactCache: Record<string, ArtifactData>,

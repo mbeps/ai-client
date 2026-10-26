@@ -11,6 +11,11 @@ import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents skills picker props.
+ *
+ * @author Maruf Bepary
+ */
 interface SkillsPickerProps {
   skills: Skill[];
   selectedIds: Set<string>;
@@ -189,6 +194,11 @@ export function SkillsPicker({
   );
 }
 
+/**
+ * Represents skills picker dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface SkillsPickerDialogProps {
   skills: Skill[];
   selectedSkills: Set<string>;

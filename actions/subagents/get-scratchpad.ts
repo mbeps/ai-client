@@ -10,6 +10,10 @@ import { requireSession } from "@/lib/auth/require-session";
  * Server action to fetch all scratchpad files for a specific assistant message.
  * Enforces authenticated session and user ownership of the parent chat.
  *
+ * @param chatIdOrMessageId - Either the chatId (when messageId is supplied) or the messageId alone
+ * @param messageId - Optional assistant message UUID if chatId was provided as first argument
+ * @returns Array of scratchpad records associated with the message
+ * @throws {Error} When user is not authenticated or access is denied
  * @author Maruf Bepary
  */
 export async function getScratchpadFilesAction(

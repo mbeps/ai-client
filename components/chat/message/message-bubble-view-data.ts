@@ -4,6 +4,11 @@ import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
+/**
+ * Represents message edit args.
+ *
+ * @author Maruf Bepary
+ */
 export interface MessageEditArgs {
   message: Message;
   editContent: string;
@@ -12,10 +17,25 @@ export interface MessageEditArgs {
   assistantId?: string | null;
 }
 
+/**
+ * Performs fallback list.
+ *
+ * @param list - Target list
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function fallbackList(list: string[] | null | undefined): string[] {
   return list ?? [];
 }
 
+/**
+ * Resolves prompt id for edit.
+ *
+ * @param promptIds - Target prompt ids
+ * @param promptMeta - Target prompt meta
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolvePromptIdForEdit(
   promptIds: string[],
   promptMeta: ParsedMessageMetadata["promptMeta"],
@@ -24,6 +44,13 @@ function resolvePromptIdForEdit(
   return promptMeta?.promptId;
 }
 
+/**
+ * Resolves message edit params.
+ *
+ * @param props - Target props
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function resolveMessageEditParams({
   message,
   editContent,
@@ -49,6 +76,14 @@ export function resolveMessageEditParams({
   ] as const;
 }
 
+/**
+ * Performs derive user view data.
+ *
+ * @param message - Target message
+ * @param parsedMetadata - Target parsed metadata
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function deriveUserViewData(
   message: Message,
   parsedMetadata: ParsedMessageMetadata,
@@ -64,6 +99,14 @@ function deriveUserViewData(
   };
 }
 
+/**
+ * Performs derive assistant view data.
+ *
+ * @param message - Target message
+ * @param parsedMetadata - Target parsed metadata
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function deriveAssistantViewData(
   message: Message,
   parsedMetadata: ParsedMessageMetadata,
@@ -78,6 +121,11 @@ function deriveAssistantViewData(
   };
 }
 
+/**
+ * Represents message bubble view data.
+ *
+ * @author Maruf Bepary
+ */
 export interface MessageBubbleViewData {
   parsedMetadata: ParsedMessageMetadata;
   promptMeta: ParsedMessageMetadata["promptMeta"];
@@ -90,6 +138,13 @@ export interface MessageBubbleViewData {
   displayContent: string;
 }
 
+/**
+ * Resolves prompt ids.
+ *
+ * @param promptMeta - Target prompt meta
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolvePromptIds(
   promptMeta: ParsedMessageMetadata["promptMeta"],
 ): string[] {
@@ -100,6 +155,14 @@ function resolvePromptIds(
   return promptMeta.promptId ? [promptMeta.promptId] : [];
 }
 
+/**
+ * Resolves citations.
+ *
+ * @param streamingCitations - Target streaming citations
+ * @param rawToolData - Target raw tool data
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveCitations(
   streamingCitations: Citation[] | undefined,
   rawToolData: ParsedMessageMetadata["toolData"],
@@ -111,6 +174,15 @@ function resolveCitations(
   return extractCitations(rawToolData.toolResults);
 }
 
+/**
+ * Performs derive message bubble view data.
+ *
+ * @param message - Target message
+ * @param isUser - Target is user
+ * @param streamingCitations - Target streaming citations
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function deriveMessageBubbleViewData(
   message: Message,
   isUser: boolean,

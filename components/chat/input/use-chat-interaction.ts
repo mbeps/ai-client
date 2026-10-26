@@ -12,6 +12,11 @@ import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Represents chat interaction props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ChatInteractionProps {
   onSend: (
     content: string,
@@ -41,6 +46,15 @@ export interface ChatInteractionProps {
   initialSubagentModelId?: string;
 }
 
+/**
+ * Calculates skill tokens.
+ *
+ * @param skills - Target skills
+ * @param selectedSkills - Target selected skills
+ * @param supportsTools - Target supports tools
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function calculateSkillTokens(
   skills: Skill[],
   selectedSkills: Set<string>,
@@ -61,6 +75,19 @@ function calculateSkillTokens(
   return { selectedSkillTokens: injected, availableSkillCount: catalog };
 }
 
+/**
+ * Checks is send disabled.
+ *
+ * @param hasNoModels - Target has no models
+ * @param input - Target input
+ * @param attachmentsCount - Target attachments count
+ * @param hasPrompts - Target has prompts
+ * @param hasAssistant - Target has assistant
+ * @param skillsCount - Target skills count
+ * @param kbsCount - Target kbs count
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function checkIsSendDisabled(
   hasNoModels: boolean,
   input: string,
@@ -81,6 +108,11 @@ function checkIsSendDisabled(
   );
 }
 
+/**
+ * Represents use chat interaction options.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseChatInteractionOptions {
   props: ChatInteractionProps;
   services: ReturnType<typeof useChatInputServices>;
@@ -92,6 +124,10 @@ export interface UseChatInteractionOptions {
 
 /**
  * Manages attachments, tool selections, mention commands, and send dispatching for ChatInput.
+ *
+ * @param options - Target options
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatInteraction(options: UseChatInteractionOptions) {
   const { props, services, input, setInput, textareaRef, canMentionAssistant } =

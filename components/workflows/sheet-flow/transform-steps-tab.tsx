@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { TransformStepCard } from "@/components/workflows/sheet-flow/transform-step-card";
 import type { TransformStep } from "@/types/transform/transform-step";
 
+/**
+ * Represents transform steps tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformStepsTabProps {
   steps: TransformStep[];
   onAddStep: () => void;

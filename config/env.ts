@@ -130,7 +130,19 @@ export const serverEnvSchema = clientEnvSchema.extend({
   QDRANT_URL: z.string().url().default("http://localhost:6333"),
   QDRANT_API_KEY: z.string().optional(),
 });
+
+/**
+ * Inferred type of validated server-side environment variables.
+ *
+ * @author Maruf Bepary
+ */
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+
+/**
+ * Global validated environment configuration type covering all application secrets and URLs.
+ *
+ * @author Maruf Bepary
+ */
 export type Env = ServerEnv;
 
 /**

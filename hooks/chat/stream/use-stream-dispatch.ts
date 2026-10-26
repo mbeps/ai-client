@@ -15,6 +15,9 @@ import { logger } from "@/lib/logger";
 
 /**
  * Extracts error message string safely from Error or Error-like objects.
+ *
+ * @param err - Unknown error or payload
+ * @returns Extracted string message
  * @author Maruf Bepary
  */
 function extractErrorMessage(err: unknown): string {
@@ -27,6 +30,10 @@ function extractErrorMessage(err: unknown): string {
 
 /**
  * Dispatches stream generation request to /api/chat.
+ *
+ * @param body - Request payload with chat, model, and tool parameters
+ * @param handleApiError - Global API error handler
+ * @returns True if request was successfully accepted
  * @author Maruf Bepary
  */
 async function dispatchChatStreamRequest(
@@ -59,6 +66,13 @@ async function dispatchChatStreamRequest(
 
 /**
  * Persists the user message to the database before initiating generation.
+ *
+ * @param chatId - Chat identifier
+ * @param userMsgId - Unique message ID of the user turn
+ * @param fullContent - Formatted text content including prompt injections
+ * @param parentId - Parent message ID in conversation tree
+ * @param metadata - Serialized JSON metadata string
+ * @returns Object indicating persistence success and not-found status
  * @author Maruf Bepary
  */
 async function persistUserTurnMessage(
@@ -88,6 +102,11 @@ async function persistUserTurnMessage(
 
 /**
  * Halts execution and cleans up refs when message persistence fails.
+ *
+ * @param refs - Mutable stream refs bundle
+ * @param resetStreamingState - Callback resetting local streaming UI
+ * @param setChatNotFound - Setter to mark chat as missing
+ * @param isNotFound - Flag whether failure was due to deleted chat
  * @author Maruf Bepary
  */
 function handlePersistFailure(
@@ -113,6 +132,12 @@ function handlePersistFailure(
 
 /**
  * Initializes refs and state before dispatching generation request.
+ *
+ * @param refs - Mutable stream refs bundle
+ * @param resetStreamingState - Callback resetting local streaming UI
+ * @param setIsStreaming - Setter indicating active streaming state
+ * @param userMsgId - Initiating user message ID
+ * @param model - Selected model identifier
  * @author Maruf Bepary
  */
 function setupStreamResponseStart(
@@ -140,6 +165,9 @@ function setupStreamResponseStart(
 
 /**
  * Prepares user message, optimistically adds to store, and persists to DB.
+ *
+ * @param params - Turn execution parameters
+ * @returns Result object containing user message metadata string and persistence flags
  * @author Maruf Bepary
  */
 async function prepareAndPersistUserMessage(
@@ -183,6 +211,9 @@ async function prepareAndPersistUserMessage(
 
 /**
  * Orchestrates full stream response dispatch flow: init -> persist -> process attachments -> fetch /api/chat.
+ *
+ * @param params - Turn execution parameters
+ * @returns Promise resolving to empty string upon completion
  * @author Maruf Bepary
  */
 export async function executeStreamResponse(

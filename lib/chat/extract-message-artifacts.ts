@@ -5,6 +5,13 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
  * Appends an artifact if its ID has not been encountered yet.
+ *
+ * @param artifacts - Target artifacts
+ * @param seenIds - Target seen ids
+ * @param art - Target art
+ * @param messageId - Target message id
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function appendArtifact(
   artifacts: ArtifactData[],
@@ -24,6 +31,12 @@ function appendArtifact(
 
 /**
  * Collects artifacts stored within persisted message metadata toolResults.
+ *
+ * @param message - Target message
+ * @param artifacts - Target artifacts
+ * @param seenIds - Target seen ids
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function collectPersistedArtifacts(
   message: Message,
@@ -53,6 +66,13 @@ function collectPersistedArtifacts(
 
 /**
  * Collects artifacts from in-flight streaming manage_artifact tool calls.
+ *
+ * @param message - Target message
+ * @param activeToolCalls - Target active tool calls
+ * @param artifacts - Target artifacts
+ * @param seenIds - Target seen ids
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function collectStreamingArtifacts(
   message: Message,
@@ -78,6 +98,12 @@ function collectStreamingArtifacts(
 
 /**
  * Collects standalone Mermaid diagrams from message markdown content.
+ *
+ * @param message - Target message
+ * @param artifacts - Target artifacts
+ * @param seenIds - Target seen ids
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function collectMermaidArtifacts(
   message: Message,

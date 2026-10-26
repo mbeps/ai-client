@@ -8,6 +8,13 @@ const FILE_PATH_KEYS = [
   "path",
 ] as const;
 
+/**
+ * Finds file path in object.
+ *
+ * @param obj - Target obj
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function findFilePathInObject(obj: Record<string, unknown>): string | null {
   for (const k of FILE_PATH_KEYS) {
     const val = obj[k];
@@ -26,11 +33,11 @@ function findFilePathInObject(obj: Record<string, unknown>): string | null {
 }
 
 /**
- * Extracts a file path string from a tool result or payload, supporting multiple shapes:
- * - Direct `{ file_path: "..." }` or `{ filePath: "..." }` object
- * - Nested in `structuredContent`
- * - JSON-encoded string
- * - `{ content: [{ text: "..." }] }` where text is JSON with a file path
+ * Extracts a file path string from a tool result or payload, supporting multiple shapes: - Direct `{ file_path: "..." }` or `{ filePath: "..." }` object - Nested in `structuredContent` - JSON-encoded string - `{ content: [{ text: "..." }] }` where text is JSON with a file path.
+ *
+ * @param result - Target result
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function extractUploadedFilePath(result: unknown): string | null {
   if (!result) return null;

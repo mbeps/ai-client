@@ -7,6 +7,10 @@ import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 
 /**
  * Processes a batch of incoming realtime messages, deduplicating against the processed set.
+ *
+ * @param batch - Array of raw realtime message payloads
+ * @param processedSet - WeakSet tracking already handled message objects
+ * @param onEvent - Event dispatcher callback
  * @author Maruf Bepary
  */
 function processIncomingRealtimeBatch(
@@ -27,6 +31,10 @@ function processIncomingRealtimeBatch(
 
 /**
  * Hook subscribing to Inngest Realtime message batches and routing events to handler.
+ *
+ * @param chatId - Active chat ID
+ * @param messages - Realtime message stream object from useRealtime
+ * @param handleStreamEvent - Callback invoked per stream event
  * @author Maruf Bepary
  */
 function useStreamRealtimeIngestion(
@@ -74,6 +82,13 @@ function useStreamRealtimeIngestion(
 
 /**
  * Sets up Inngest Realtime channel subscription with token fetching and error handling.
+ *
+ * @param chatId - Active chat ID
+ * @param chatNotFound - Flag indicating if chat is not found
+ * @param setChatNotFound - Setter to mark chat as missing
+ * @param resetStreamingState - Callback to reset active streaming state
+ * @param handleStreamEvent - Stream event callback
+ * @returns Realtime connection status and error
  * @author Maruf Bepary
  */
 export function useStreamRealtimeChannel(

@@ -5,11 +5,23 @@ import Link from "next/link";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
 import { ROUTES } from "@/config/routes";
 
+/**
+ * Represents prompt chip props.
+ *
+ * @author Maruf Bepary
+ */
 interface PromptChipProps {
   pid: string;
   promptEntry?: { title?: string; shortcut?: string };
 }
 
+/**
+ * Renders the prompt chip component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function PromptChip({ pid, promptEntry }: PromptChipProps) {
   const isMcp = pid.startsWith("mcp:");
   if (isMcp) {
@@ -30,6 +42,11 @@ function PromptChip({ pid, promptEntry }: PromptChipProps) {
   );
 }
 
+/**
+ * Represents user message context chips props.
+ *
+ * @author Maruf Bepary
+ */
 export interface UserMessageContextChipsProps {
   promptIds: string[];
   prompts: Array<{ id: string; title?: string; shortcut?: string }>;
@@ -39,6 +56,13 @@ export interface UserMessageContextChipsProps {
   knowledgebases: KnowledgebaseWithCount[];
 }
 
+/**
+ * Renders the user message context chips component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function UserMessageContextChips({
   promptIds,
   prompts,

@@ -8,6 +8,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "actions", "attachments"]);
 
+/**
+ * Result record representation of an attachment duplicated during turn branching.
+ *
+ * @author Maruf Bepary
+ */
 export type CloneAttachmentResult = {
   id: string;
   key: string;

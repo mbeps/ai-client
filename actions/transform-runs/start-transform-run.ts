@@ -10,6 +10,9 @@ import { inngest } from "@/lib/inngest/client";
  * Server action to start executing a transform run via Inngest background job.
  * Validates ownership and dispatches the execution event.
  *
+ * @param runId - UUID of the transformation run to start
+ * @returns Resolves when the Inngest execution event is dispatched
+ * @throws {Error} When transform run is not found or access denied
  * @author Maruf Bepary
  */
 export async function startTransformRunAction(runId: string) {

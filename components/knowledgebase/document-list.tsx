@@ -38,6 +38,11 @@ const STATUS_CONFIG = {
   },
 };
 
+/**
+ * Represents document list props.
+ *
+ * @author Maruf Bepary
+ */
 interface DocumentListProps {
   documents: KbDocumentRow[];
   onDeleted: (documentId: string) => void;

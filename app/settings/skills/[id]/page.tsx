@@ -24,6 +24,15 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
+/**
+ * Validates skill draft.
+ *
+ * @param name - Target name
+ * @param content - Text content
+ * @param description - Target description
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function validateSkillDraft(
   name: string,
   content: string,
@@ -45,6 +54,14 @@ function validateSkillDraft(
   return null;
 }
 
+/**
+ * Performs download base64 zip.
+ *
+ * @param filename - Target filename
+ * @param base64 - Target base64
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function downloadBase64Zip(filename: string, base64: string): void {
   const byteCharacters = atob(base64);
   const byteArray = new Uint8Array(byteCharacters.length);
@@ -62,6 +79,15 @@ function downloadBase64Zip(filename: string, base64: string): void {
   document.body.removeChild(a);
 }
 
+/**
+ * Custom hook that provides use skill directory state functionality.
+ *
+ * @param initialFiles - Initial collection of skill files
+ * @param content - Text content
+ * @param setContent - State setter callback for content
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useSkillDirectoryState(
   initialFiles: SkillBundledFile[],
   content: string,
@@ -184,6 +210,11 @@ function useSkillDirectoryState(
   };
 }
 
+/**
+ * Represents skill form state.
+ *
+ * @author Maruf Bepary
+ */
 type SkillFormState = {
   displayName: string;
   name: string;
@@ -192,6 +223,13 @@ type SkillFormState = {
   enabled: boolean;
 };
 
+/**
+ * Constructs initial skill form.
+ *
+ * @param skill - Target skill
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildInitialSkillForm(skill?: any): SkillFormState {
   if (!skill) {
     return {
@@ -211,6 +249,14 @@ function buildInitialSkillForm(skill?: any): SkillFormState {
   };
 }
 
+/**
+ * Constructs skill update payload.
+ *
+ * @param form - Form state values
+ * @param filesToSave - Collection of files to be persisted
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildSkillUpdatePayload(
   form: SkillFormState,
   filesToSave: SkillBundledFile[],
@@ -227,6 +273,14 @@ function buildSkillUpdatePayload(
   };
 }
 
+/**
+ * Custom hook that provides use skill editor state functionality.
+ *
+ * @param skillId - Target skill id
+ * @param initialSkill - Target initial skill
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useSkillEditorState(skillId: string, initialSkill: any) {
   const router = useRouter();
   const loadSkills = useAppStore((state) => state.loadSkills);
@@ -326,6 +380,13 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
   };
 }
 
+/**
+ * Renders the skill detail page content component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SkillDetailPageContent({
   skillId,
   skill,

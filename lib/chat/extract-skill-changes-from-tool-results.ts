@@ -45,8 +45,11 @@ export function extractSkillChangesFromToolResults(
 }
 
 /**
- * Tool results are sometimes persisted as a JSON string. A parse failure means
- * there is no skill id to read, so it is treated as no match.
+ * Tool results are sometimes persisted as a JSON string. A parse failure means there is no skill id to read, so it is treated as no match.
+ *
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function readPayload(raw: unknown): Record<string, unknown> | null {
   if (typeof raw === "string") {

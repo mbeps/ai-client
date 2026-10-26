@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import type { Attachment } from "@/types/attachment/attachment";
 
+/**
+ * Represents attachment gallery props.
+ *
+ * @author Maruf Bepary
+ */
 interface AttachmentGalleryProps {
   attachments: Attachment[];
 }

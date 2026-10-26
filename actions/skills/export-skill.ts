@@ -7,6 +7,9 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 /**
  * Generates and returns a base64-encoded ZIP archive of an Agent Skill and its bundled subfiles.
  *
+ * @param skillId - UUID of the skill to export
+ * @returns Object containing the suggested ZIP filename and base64-encoded archive buffer
+ * @throws {Error} When skill is not found or not owned by user
  * @author Maruf Bepary
  */
 export async function exportSkillZip(

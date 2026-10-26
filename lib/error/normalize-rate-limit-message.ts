@@ -1,6 +1,9 @@
 /**
- * Normalizes rate limit messages from various providers into a user-friendly format.
- * Includes specific handling for OpenRouter free models and general fallback.
+ * Normalizes rate limit messages from various providers into a user-friendly format. Includes specific handling for OpenRouter free models and general fallback.
+ *
+ * @param error - Target error
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function normalizeRateLimitMessage(error: unknown): string {
   const err = error as any;

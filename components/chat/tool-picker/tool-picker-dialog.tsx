@@ -8,6 +8,11 @@ import { ROUTES } from "@/config/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 
+/**
+ * Represents tool picker dialog props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ToolPickerDialogProps {
   servers?: (McpServer | PublicMcpServer)[];
   selectedTools: Set<string>;

@@ -21,6 +21,11 @@ import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-toke
 import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents tool call.
+ *
+ * @author Maruf Bepary
+ */
 type ToolCall = {
   toolCallId: string;
   toolName: string;
@@ -28,6 +33,11 @@ type ToolCall = {
   args: unknown;
 };
 
+/**
+ * Represents tool result.
+ *
+ * @author Maruf Bepary
+ */
 type ToolResult = {
   toolCallId: string;
   toolName: string;
@@ -35,6 +45,11 @@ type ToolResult = {
   result: unknown;
 };
 
+/**
+ * Represents tool call display props.
+ *
+ * @author Maruf Bepary
+ */
 interface ToolCallDisplayProps {
   toolCalls: ToolCall[];
   toolResults: ToolResult[];
@@ -43,10 +58,22 @@ interface ToolCallDisplayProps {
   chatId?: string;
 }
 
+/**
+ * Represents render chunk.
+ *
+ * @author Maruf Bepary
+ */
 type RenderChunk =
   | { type: "subagents"; items: ToolCall[] }
   | { type: "standard"; item: ToolCall };
 
+/**
+ * Determines whether subagent call.
+ *
+ * @param tc - Target tc
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isSubagentCall(tc: ToolCall): boolean {
   return (
     tc.toolName === "delegate_task" ||
@@ -54,6 +81,13 @@ function isSubagentCall(tc: ToolCall): boolean {
   );
 }
 
+/**
+ * Performs group tool calls into chunks.
+ *
+ * @param toolCalls - List of tool call definitions and arguments
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function groupToolCallsIntoChunks(toolCalls: ToolCall[]): RenderChunk[] {
   const chunks: RenderChunk[] = [];
   for (const tc of toolCalls) {
@@ -71,6 +105,15 @@ function groupToolCallsIntoChunks(toolCalls: ToolCall[]): RenderChunk[] {
   return chunks;
 }
 
+/**
+ * Resolves subagent default open.
+ *
+ * @param items - Target items
+ * @param toolResults - List of tool execution results
+ * @param initialOpen - Target initial open
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveSubagentDefaultOpen(
   items: ToolCall[],
   toolResults: ToolResult[],
@@ -84,6 +127,11 @@ function resolveSubagentDefaultOpen(
   return defaultOpenId ? [defaultOpenId] : [];
 }
 
+/**
+ * Represents subagent chunk accordion props.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentChunkAccordionProps {
   chunk: { type: "subagents"; items: ToolCall[] };
   chunkIdx: number;
@@ -93,6 +141,13 @@ interface SubagentChunkAccordionProps {
   chatId?: string;
 }
 
+/**
+ * Renders the subagent chunk accordion component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function SubagentChunkAccordion({
   chunk,
   chunkIdx,
@@ -146,6 +201,13 @@ function SubagentChunkAccordion({
   );
 }
 
+/**
+ * Renders the tool call header title component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallHeaderTitle({
   toolName,
   serverName,
@@ -167,6 +229,13 @@ function ToolCallHeaderTitle({
   return <span className="font-mono text-xs">{toolName}</span>;
 }
 
+/**
+ * Renders the tool call status badge component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallStatusBadge({ isError }: { isError: boolean }) {
   return (
     <div className="ml-2 flex items-center gap-1.5">
@@ -187,6 +256,13 @@ function ToolCallStatusBadge({ isError }: { isError: boolean }) {
   );
 }
 
+/**
+ * Renders the tool call context usage component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallContextUsage({ tokens }: { tokens: number }) {
   return (
     <div className="border-border/40 bg-muted/30 flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs">
@@ -201,6 +277,13 @@ function ToolCallContextUsage({ tokens }: { tokens: number }) {
   );
 }
 
+/**
+ * Renders the tool call arguments display component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallArgumentsDisplay({ args }: { args: unknown }) {
   return (
     <div>
@@ -221,6 +304,13 @@ function ToolCallArgumentsDisplay({ args }: { args: unknown }) {
   );
 }
 
+/**
+ * Renders the tool call result display component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallResultDisplay({
   result,
   isError,
@@ -256,6 +346,11 @@ function ToolCallResultDisplay({
   );
 }
 
+/**
+ * Represents standard tool call collapsible props.
+ *
+ * @author Maruf Bepary
+ */
 interface StandardToolCallCollapsibleProps {
   toolCall: ToolCall;
   chunkIdx: number;
@@ -263,11 +358,26 @@ interface StandardToolCallCollapsibleProps {
   initialOpen: boolean;
 }
 
+/**
+ * Determines whether mcp server.
+ *
+ * @param name - Target name
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isMcpServer(name?: string): boolean {
   if (!name) return false;
   return name !== "Internal" && name !== "System";
 }
 
+/**
+ * Performs derive tool call view state.
+ *
+ * @param toolCall - Target tool call
+ * @param toolResults - List of tool execution results
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function deriveToolCallViewState(
   toolCall: ToolCall,
   toolResults: ToolResult[],
@@ -297,6 +407,13 @@ function deriveToolCallViewState(
   };
 }
 
+/**
+ * Renders the tool call trigger content component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallTriggerContent({
   isCompleted,
   toolName,
@@ -330,6 +447,13 @@ function ToolCallTriggerContent({
   );
 }
 
+/**
+ * Renders the tool call collapsible body component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ToolCallCollapsibleBody({
   estimatedTokens,
   args,
@@ -358,6 +482,13 @@ function ToolCallCollapsibleBody({
   );
 }
 
+/**
+ * Renders the standard tool call collapsible component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StandardToolCallCollapsible({
   toolCall,
   chunkIdx,

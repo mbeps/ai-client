@@ -29,13 +29,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store/use-app-store";
 
+/**
+ * Validation schema for schema.
+ *
+ * @author Maruf Bepary
+ */
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
 });
 
+/**
+ * Represents form values.
+ *
+ * @author Maruf Bepary
+ */
 type FormValues = z.infer<typeof schema>;
 
+/**
+ * Represents create project dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

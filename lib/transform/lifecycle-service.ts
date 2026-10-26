@@ -5,9 +5,11 @@
  */
 
 /**
- * Validates that step order values form a contiguous 0-based integer sequence.
- * Throws if orders have gaps, duplicates, or don't start at 0.
- * Required so resume logic (`currentStepIndex + 1`) maps correctly to array indices.
+ * Validates that step order values form a contiguous 0-based integer sequence. Throws if orders have gaps, duplicates, or don't start at 0. Required so resume logic (`currentStepIndex + 1`) maps correctly to array indices.
+ *
+ * @param orders - Target orders
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function validateStepOrders(orders: number[]): void {
   if (orders.length === 0) return;

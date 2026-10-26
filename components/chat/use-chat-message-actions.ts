@@ -6,6 +6,13 @@ import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 
+/**
+ * Performs scroll element to bottom.
+ *
+ * @param container - Target container
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function scrollElementToBottom(container: HTMLElement | null): void {
   if (!container) return;
   const viewport = container.querySelector("[data-radix-scroll-area-viewport]");
@@ -16,6 +23,12 @@ export function scrollElementToBottom(container: HTMLElement | null): void {
   }
 }
 
+/**
+ * Performs clear msg query param from url.
+ *
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function clearMsgQueryParamFromUrl(): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
@@ -24,6 +37,16 @@ function clearMsgQueryParamFromUrl(): void {
   window.history.replaceState({}, "", url.pathname + (url.search || ""));
 }
 
+/**
+ * Performs navigate to sibling leaf.
+ *
+ * @param chat - Target chat
+ * @param chatId - Chat session identifier
+ * @param siblingId - Target sibling id
+ * @param setCurrentLeafDb - Target set current leaf db
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function navigateToSiblingLeaf(
   chat: Chat | undefined,
   chatId: string,
@@ -34,8 +57,18 @@ function navigateToSiblingLeaf(
   setCurrentLeafDb(chatId, getDeepestLeaf(chat.messages, siblingId));
 }
 
+/**
+ * Represents stream response fn.
+ *
+ * @author Maruf Bepary
+ */
 type StreamResponseFn = ReturnType<typeof useStreamResponse>["streamResponse"];
 
+/**
+ * Represents use chat message actions params.
+ *
+ * @author Maruf Bepary
+ */
 interface UseChatMessageActionsParams {
   chatId: string;
   chat?: Chat;
@@ -44,6 +77,13 @@ interface UseChatMessageActionsParams {
   setCurrentLeafDb: (chatId: string, leafId: string) => void;
 }
 
+/**
+ * Custom hook that provides use chat message actions functionality.
+ *
+ * @param props - Target props
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useChatMessageActions({
   chatId,
   chat,
@@ -168,6 +208,20 @@ export function useChatMessageActions({
   };
 }
 
+/**
+ * Custom hook that provides use initial chat auto send functionality.
+ *
+ * @param chat - Target chat
+ * @param initialMessage - Target initial message
+ * @param onInitialMessageSent - Target on initial message sent
+ * @param handleSend - Target handle send
+ * @param initialModelId - Target initial model id
+ * @param initialServerIds - Target initial server ids
+ * @param initialSelectedTools - Target initial selected tools
+ * @param initialKbIds - Target initial kb ids
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useInitialChatAutoSend(
   chat: Chat | undefined,
   initialMessage: string | undefined,
@@ -221,6 +275,13 @@ export function useInitialChatAutoSend(
   ]);
 }
 
+/**
+ * Extracts active streaming citations.
+ *
+ * @param activeToolCalls - Target active tool calls
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function extractActiveStreamingCitations(activeToolCalls: any[]) {
   if (activeToolCalls.length === 0) return [];
   const completedSearchToolResults = activeToolCalls

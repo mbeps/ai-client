@@ -19,15 +19,13 @@ import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 const log = getLogger(["app", "rag", "pipeline"]);
 
 /**
- * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready.
- * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
+ * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready. Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
  *
- * @async
  * @param doc - Fetched kbDocument row
  * @param buffer - File content fetched from S3 by the caller
  * @param userId - User ID for per-user embedding provider
+ * @param providedKbName - The provided kb name parameter.
  * @returns Chunk and token counts of the newly inserted chunks
- * @throws RagExtractionEmptyError if extraction yields no readable text
  * @author Maruf Bepary
  */
 export async function ingestDocumentPipeline(

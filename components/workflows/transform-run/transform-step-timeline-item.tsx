@@ -23,6 +23,13 @@ const STEP_DEFAULT_SUMMARIES: Record<StepState["status"], string> = {
   pending: "Scheduled for execution.",
 };
 
+/**
+ * Renders the step timeline icon component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StepTimelineIcon({ status }: { status: StepState["status"] }) {
   switch (status) {
     case "completed":
@@ -36,6 +43,14 @@ function StepTimelineIcon({ status }: { status: StepState["status"] }) {
   }
 }
 
+/**
+ * Resolves icon container class.
+ *
+ * @param status - Current status value
+ * @param isSelected - Target is selected
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveIconContainerClass(
   status: StepState["status"],
   isSelected: boolean,
@@ -48,6 +63,14 @@ function resolveIconContainerClass(
   return `${base} ${statusClass} ${selectedClass}`.trim();
 }
 
+/**
+ * Resolves step summary.
+ *
+ * @param status - Current status value
+ * @param summary - Target summary
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveStepSummary(
   status: StepState["status"],
   summary?: string,
@@ -58,6 +81,13 @@ function resolveStepSummary(
   return STEP_DEFAULT_SUMMARIES[status] ?? "Scheduled for execution.";
 }
 
+/**
+ * Renders the step tool calls component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StepToolCalls({
   toolCalls,
   toolResults,
@@ -74,6 +104,11 @@ function StepToolCalls({
   );
 }
 
+/**
+ * Represents step timeline content props.
+ *
+ * @author Maruf Bepary
+ */
 interface StepTimelineContentProps {
   name: string;
   isCompleted: boolean;
@@ -83,6 +118,13 @@ interface StepTimelineContentProps {
   toolResults?: ToolResult[];
 }
 
+/**
+ * Renders the step timeline content component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StepTimelineContent({
   name,
   isCompleted,
@@ -120,6 +162,11 @@ function StepTimelineContent({
   );
 }
 
+/**
+ * Represents transform step timeline item props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformStepTimelineItemProps {
   step: TransformStep;
   index: number;

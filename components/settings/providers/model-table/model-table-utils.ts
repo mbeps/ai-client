@@ -1,5 +1,10 @@
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
+/**
+ * Represents model filters.
+ *
+ * @author Maruf Bepary
+ */
 export type ModelFilters = {
   search: string;
   providerFilter: string;
@@ -7,6 +12,14 @@ export type ModelFilters = {
   typeFilter: "all" | "chat" | "embedding" | "both";
 };
 
+/**
+ * Performs matches model type.
+ *
+ * @param modelType - Target model type
+ * @param typeFilter - Target type filter
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function matchesModelType(
   modelType: string,
   typeFilter: "all" | "chat" | "embedding" | "both",
@@ -16,6 +29,14 @@ function matchesModelType(
   return modelType === typeFilter || modelType === "both";
 }
 
+/**
+ * Performs matches status filter.
+ *
+ * @param isEnabled - Target is enabled
+ * @param statusFilter - Target status filter
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function matchesStatusFilter(
   isEnabled: boolean,
   statusFilter: string,
@@ -24,6 +45,15 @@ function matchesStatusFilter(
   return statusFilter === "enabled" ? isEnabled : !isEnabled;
 }
 
+/**
+ * Performs matches search query.
+ *
+ * @param model - Target model
+ * @param query - Target query
+ * @param providerName - Target provider name
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function matchesSearchQuery(
   model: AiModelRow,
   query: string,
@@ -38,6 +68,15 @@ function matchesSearchQuery(
   );
 }
 
+/**
+ * Performs matches model filters.
+ *
+ * @param model - Target model
+ * @param filters - Target filters
+ * @param providerName - Target provider name
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function matchesModelFilters(
   model: AiModelRow,
   filters: ModelFilters,

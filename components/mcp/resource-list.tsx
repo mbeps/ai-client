@@ -20,18 +20,46 @@ export interface ResourceListProps {
   server: McpServer;
 }
 
+/**
+ * Performs fetch resources.
+ *
+ * @param result - Target result
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function fetchResources(result: DiscoveryResult): DiscoveredResource[] {
   return result.resources;
 }
 
+/**
+ * Retrieves resource key.
+ *
+ * @param res - HTTP response
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function getResourceKey(res: DiscoveredResource): string {
   return res.uri;
 }
 
+/**
+ * Retrieves resource label.
+ *
+ * @param res - HTTP response
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function getResourceLabel(res: DiscoveredResource): string {
   return res.name;
 }
 
+/**
+ * Performs render resource content.
+ *
+ * @param res - HTTP response
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function renderResourceContent(res: DiscoveredResource) {
   return (
     <>

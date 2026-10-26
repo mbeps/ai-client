@@ -3,6 +3,11 @@ import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 
 /**
  * Manages selection and toggle state for multiple prompt items.
+ *
+ * @param selectedPrompts - The selected prompts parameter.
+ * @param setSelectedPrompts - The set selected prompts parameter.
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatPromptSelection(
   selectedPrompts: MentionPromptItem[] | undefined,

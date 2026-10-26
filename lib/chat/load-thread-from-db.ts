@@ -18,6 +18,11 @@ export type ThreadAttachment = {
   extractedText?: string | null;
 };
 
+/**
+ * Represents thread message.
+ *
+ * @author Maruf Bepary
+ */
 export type ThreadMessage = {
   id: string;
   role: "user" | "assistant" | "system";
@@ -141,6 +146,9 @@ export async function loadThreadFromDb(
 
 /**
  * Maps a stored MIME type to the coarse attachment type used by the UI.
+ *
+ * @param mimeType - Target mime type
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 function typeFromMime(mimeType: string): string {

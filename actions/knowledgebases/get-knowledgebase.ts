@@ -12,11 +12,11 @@ import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
  * Use this to retrieve current indexing status or knowledge base details.
  * Runs on server only — invoked from client via Server Action.
  *
- * @param kbId - UUID of the knowledge base to retrieve; must be owned by the authenticated user.
+ * @param id - UUID of the knowledge base to retrieve; must be owned by the authenticated user.
  * @returns The knowledge base record with name, description, and index status.
- * @throws Error if session is not authenticated.
- * @throws Error if knowledge base is not found or user does not own it (returns "Not Found").
- * @throws Error if database query fails due to connection issues.
+ * @throws {Error} if session is not authenticated.
+ * @throws {Error} if knowledge base is not found or user does not own it (returns "Not Found").
+ * @throws {Error} if database query fails due to connection issues.
  * @see listKnowledgebases to fetch all knowledge bases.
  * @see listDocuments to fetch documents in this knowledge base.
  * @author Maruf Bepary

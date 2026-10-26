@@ -97,6 +97,13 @@ export function ModelDetailsHoverCard({
   );
 }
 
+/**
+ * Renders the model badge component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ModelBadge({ children }: { children: React.ReactNode }) {
   return (
     <Badge variant="secondary" className="h-4 px-1 py-0 text-[10px] capitalize">

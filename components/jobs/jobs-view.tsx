@@ -36,6 +36,11 @@ function JobsHeader() {
   );
 }
 
+/**
+ * Represents jobs list props.
+ *
+ * @author Maruf Bepary
+ */
 interface JobsListProps {
   jobs: JobItem[];
   onCancel: (job: JobItem) => void;

@@ -4,6 +4,11 @@ import { Activity, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { JobFilterTab } from "@/types/jobs";
 
+/**
+ * Represents stat card config.
+ *
+ * @author Maruf Bepary
+ */
 interface StatCardConfig {
   id: JobFilterTab;
   label: string;
@@ -76,6 +81,11 @@ const STAT_CONFIGS: readonly StatCardConfig[] = [
   },
 ];
 
+/**
+ * Represents jobs stat counts.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobsStatCounts {
   running: number;
   queued: number;
@@ -84,12 +94,22 @@ export interface JobsStatCounts {
   all?: number;
 }
 
+/**
+ * Represents jobs stat cards props.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobsStatCardsProps {
   counts: JobsStatCounts;
   activeTab: JobFilterTab;
   onTabChange: (tab: JobFilterTab) => void;
 }
 
+/**
+ * Represents stat card button props.
+ *
+ * @author Maruf Bepary
+ */
 interface StatCardButtonProps {
   card: StatCardConfig;
   isActive: boolean;
@@ -97,6 +117,13 @@ interface StatCardButtonProps {
   onClick: () => void;
 }
 
+/**
+ * Renders the stat card button component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StatCardButton({
   card,
   isActive,

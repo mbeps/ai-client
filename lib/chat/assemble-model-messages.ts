@@ -47,6 +47,10 @@ const LARGE_OUTPUT_NOTICE =
 
 /**
  * Builds text parts for document and non-image file attachments.
+ *
+ * @param attachments - Target attachments
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildDocumentAndFileParts(
   attachments: NonNullable<HistoryMessage["attachments"]>,
@@ -70,6 +74,10 @@ function buildDocumentAndFileParts(
 
 /**
  * Builds image file parts with presigned URLs.
+ *
+ * @param attachments - Target attachments
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildImageParts(
   attachments: NonNullable<HistoryMessage["attachments"]>,
@@ -89,6 +97,10 @@ function buildImageParts(
 
 /**
  * Assembles a user message containing attachments into a ModelMessage.
+ *
+ * @param m - Target m
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function assembleUserMessageWithAttachments(m: HistoryMessage): ModelMessage {
   const attachments = m.attachments!;
@@ -111,6 +123,10 @@ function assembleUserMessageWithAttachments(m: HistoryMessage): ModelMessage {
 
 /**
  * Normalizes tool call args/input from string or object.
+ *
+ * @param tc - Target tc
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function parseToolCallInput(tc: any): unknown {
   let parsedInput = tc.args ?? tc.input;
@@ -126,6 +142,10 @@ function parseToolCallInput(tc: any): unknown {
 
 /**
  * Parses raw tool output into value and JSON flag.
+ *
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function parseRawOutput(raw: unknown): {
   outputValue: unknown;
@@ -146,6 +166,12 @@ function parseRawOutput(raw: unknown): {
 
 /**
  * Truncates oversized tool result outputs to protect context window.
+ *
+ * @param outputValue - Target output value
+ * @param isJson - Target is json
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function truncateLargeOutput(
   outputValue: unknown,
@@ -167,6 +193,11 @@ function truncateLargeOutput(
 
 /**
  * Formats a generic tool result payload with size limits and JSON/text handling.
+ *
+ * @param tc - Target tc
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function formatGenericToolResult(tc: any, raw: unknown): any {
   const { outputValue, isJson } = parseRawOutput(raw);
@@ -192,7 +223,11 @@ function formatGenericToolResult(tc: any, raw: unknown): any {
 }
 
 /**
- * Resolves raw result value from toolResult object.
+ * Resolves raw result value from toolResult object, checking both result and output properties.
+ *
+ * @param tr - Tool result object containing potential execution payloads
+ * @returns Extracted payload or a fallback error object if empty
+ * @author Maruf Bepary
  */
 function resolveRawToolResult(tr: any): unknown {
   if (!tr) return { error: "Tool execution did not return a result" };
@@ -202,7 +237,12 @@ function resolveRawToolResult(tr: any): unknown {
 }
 
 /**
- * Formats subagent delegation tool output.
+ * Formats subagent delegation tool output with sanitized and capped character limits for model consumption.
+ *
+ * @param tc - Originating tool call object providing toolCallId and toolName
+ * @param raw - Raw delegation output payload to sanitize
+ * @returns AI SDK compliant tool-result part
+ * @author Maruf Bepary
  */
 function formatSubagentResult(tc: any, raw: unknown): any {
   const summary = sanitizeSubagentOutput(raw, 8000);
@@ -215,7 +255,12 @@ function formatSubagentResult(tc: any, raw: unknown): any {
 }
 
 /**
- * Formats manage_artifact tool output.
+ * Formats manage_artifact tool output into a lightweight confirmation message to conserve context tokens.
+ *
+ * @param tc - Originating tool call object providing toolCallId and toolName
+ * @param raw - Raw artifact payload containing metadata such as title and type
+ * @returns AI SDK compliant tool-result part
+ * @author Maruf Bepary
  */
 function formatArtifactResult(tc: any, raw: unknown): any {
   const art = (raw as any)?.artifact;
@@ -234,6 +279,11 @@ function formatArtifactResult(tc: any, raw: unknown): any {
 
 /**
  * Formats an individual tool result part for a given tool call.
+ *
+ * @param tc - Target tc
+ * @param toolResultsList - Target tool results list
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function formatToolResultPart(tc: any, toolResultsList: any[]): any {
   const tr = toolResultsList.find((r: any) => r.toolCallId === tc.toolCallId);
@@ -252,6 +302,10 @@ function formatToolResultPart(tc: any, toolResultsList: any[]): any {
 
 /**
  * Builds optional text part for assistant message content.
+ *
+ * @param content - Text content
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildAssistantTextPart(content: unknown): TextPart | null {
   if (typeof content === "string" && content.trim()) {
@@ -262,6 +316,10 @@ function buildAssistantTextPart(content: unknown): TextPart | null {
 
 /**
  * Builds tool call parts for assistant message.
+ *
+ * @param toolCalls - List of tool call definitions and arguments
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function buildAssistantToolCallParts(toolCalls: any[]): any[] {
   const parts: any[] = [];
@@ -280,6 +338,10 @@ function buildAssistantToolCallParts(toolCalls: any[]): any[] {
 
 /**
  * Reconstructs assistant tool calls and corresponding tool response messages from metadata.
+ *
+ * @param m - Target m
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function assembleAssistantToolMessages(
   m: HistoryMessage,

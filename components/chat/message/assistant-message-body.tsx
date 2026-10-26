@@ -7,6 +7,11 @@ import { downloadArtifact } from "@/lib/artifacts/download-artifact";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { DownloadItem } from "@/types/download/download-item";
 
+/**
+ * Represents assistant message body props.
+ *
+ * @author Maruf Bepary
+ */
 export interface AssistantMessageBodyProps {
   messageArtifacts: ArtifactData[];
   messageDownloads: DownloadItem[];
@@ -17,6 +22,13 @@ export interface AssistantMessageBodyProps {
   createdAt?: string | Date;
 }
 
+/**
+ * Renders the assistant message body component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function AssistantMessageBody({
   messageArtifacts,
   messageDownloads,

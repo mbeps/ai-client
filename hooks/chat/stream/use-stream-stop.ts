@@ -6,6 +6,10 @@ import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Resolves the parent user message ID when stopping an in-flight stream.
+ *
+ * @param pendingUserMsgId - Currently tracked user message ID
+ * @param currentChat - Chat model with active leaf pointer
+ * @returns Resolved message ID or null
  * @author Maruf Bepary
  */
 function resolveUserMessageIdForStop(
@@ -25,6 +29,11 @@ function resolveUserMessageIdForStop(
 
 /**
  * Handles user cancellation of in-flight stream generation.
+ *
+ * @param chatId - Active chat ID
+ * @param addMessage - Store callback to commit partial message
+ * @param resetStreamingState - State reset callback
+ * @param refs - Mutable stream refs bundle
  * @author Maruf Bepary
  */
 export function executeStopStream(

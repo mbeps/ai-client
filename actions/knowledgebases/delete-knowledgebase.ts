@@ -14,6 +14,11 @@ import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 const log = getLogger(["app", "actions", "knowledgebase"]);
 
+/**
+ * Shared entity deletion factory configured for the knowledgebase table.
+ *
+ * @author Maruf Bepary
+ */
 const deleteKbRow = deleteEntityFactory({ table: knowledgebase });
 
 /**
@@ -24,9 +29,9 @@ const deleteKbRow = deleteEntityFactory({ table: knowledgebase });
  * (orphaned objects are acceptable; blocking the user is not).
  *
  * @param idOrIds - UUID or array of UUIDs of the knowledge bases to delete; must be owned by the authenticated user.
- * @returns { deletedCount: number } - The number of knowledge bases successfully deleted.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if knowledge base is not found or user does not own it (ownership check enforced via session).
+ * @returns Object with the number of knowledge bases successfully deleted.
+ * @throws {Error} if session is not authenticated (requireSession call fails).
+ * @throws {Error} if knowledge base is not found or user does not own it (ownership check enforced via session).
  * @see createKnowledgebase to create a new knowledge base.
  * @see updateKnowledgebase to modify knowledge base settings.
  * @author Maruf Bepary

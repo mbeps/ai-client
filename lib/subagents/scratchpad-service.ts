@@ -6,6 +6,11 @@ import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-pa
 
 const log = getLogger(["subagents", "scratchpad"]);
 
+/**
+ * Represents upsert scratchpad params.
+ *
+ * @author Maruf Bepary
+ */
 interface UpsertScratchpadParams {
   chatId: string;
   messageId: string;
@@ -15,9 +20,10 @@ interface UpsertScratchpadParams {
 }
 
 /**
- * Inserts or updates an intermediate file in the subagent scratchpad atomically.
- * Automatically increments version if the file already exists for this message.
+ * Inserts or updates an intermediate file in the subagent scratchpad atomically. Automatically increments version if the file already exists for this message.
  *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function upsertScratchpadFile(

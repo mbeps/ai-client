@@ -6,6 +6,11 @@ import { logger } from "@/lib/logger";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
 import { useAppStore } from "@/lib/store/use-app-store";
 
+/**
+ * Resource names eligible for lazy hydration into the central Zustand store.
+ *
+ * @author Maruf Bepary
+ */
 type HydratableResource =
   | "projects"
   | "assistants"

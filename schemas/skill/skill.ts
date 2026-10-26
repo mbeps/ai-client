@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { dateField, idField, nameField } from "@/schemas/shared-fields";
 
+/**
+ * Maximum character length allowed for skill descriptions across schemas and database records.
+ *
+ * @author Maruf Bepary
+ */
 export const SKILL_DESCRIPTION_MAX_LENGTH = 500;
 
+/**
+ * Validates a skill slug/identifier conforming to lowercase alphanumeric and hyphen format.
+ *
+ * @author Maruf Bepary
+ */
 export const skillSlugSchema = z
   .string()
   .min(1, "Skill name/slug is required")
@@ -20,6 +30,11 @@ const skillDescriptionSchema = z
     `Description must be at most ${SKILL_DESCRIPTION_MAX_LENGTH} characters`,
   );
 
+/**
+ * Validates an individual bundled file within an agent skill directory structure.
+ *
+ * @author Maruf Bepary
+ */
 export const skillFileSchema = z.object({
   path: z.string().min(1, "File path is required"),
   content: z.string(),
@@ -71,5 +86,16 @@ export const skillSchema = z.object({
   updatedAt: dateField,
 });
 
+/**
+ * Input payload shape for creating a new custom agent skill.
+ *
+ * @author Maruf Bepary
+ */
 export type CreateSkillInput = z.infer<typeof createSkillSchema>;
+
+/**
+ * Input payload shape for updating an existing agent skill.
+ *
+ * @author Maruf Bepary
+ */
 export type UpdateSkillInput = z.infer<typeof updateSkillSchema>;

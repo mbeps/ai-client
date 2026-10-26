@@ -14,6 +14,11 @@ import { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 
 const log = getLogger(["subagents", "dispatch"]);
 
+/**
+ * Represents create subagent dispatch tool params.
+ *
+ * @author Maruf Bepary
+ */
 interface CreateSubagentDispatchToolParams {
   defaultModel: any;
   customWorkerModel?: any;
@@ -22,11 +27,10 @@ interface CreateSubagentDispatchToolParams {
 }
 
 /**
- * Creates the `delegate_task` tool for the orchestrator agent.
+ * Creates the `delegate_task` tool for the orchestrator agent. Streams incremental worker updates to the UI via generator yielding (`readUIMessageStream`) and returns a concise, structured summary to the orchestrator model via `toModelOutput`.
  *
- * Streams incremental worker updates to the UI via generator yielding (`readUIMessageStream`)
- * and returns a concise, structured summary to the orchestrator model via `toModelOutput`.
- *
+ * @param params - Target params
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function createSubagentDispatchTool(

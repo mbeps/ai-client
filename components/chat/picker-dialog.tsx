@@ -14,6 +14,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+/**
+ * Represents picker dialog props.
+ *
+ * @author Maruf Bepary
+ */
 export interface PickerDialogProps {
   /** Controlled open state */
   open?: boolean;

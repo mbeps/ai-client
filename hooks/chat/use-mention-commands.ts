@@ -14,8 +14,18 @@ import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
+/**
+ * Trigger character currently active for mention popovers: '/' (prompts/skills), '@' (assistants), '#' (knowledgebases), or null.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionTrigger = "/" | "@" | "#" | null;
 
+/**
+ * Prompt mention item, distinguishing between local database prompts and discovered MCP prompts.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionPromptItem =
   | (Prompt & { isMcp: false; isSkill?: false })
   | (DiscoveredPrompt & {
@@ -27,21 +37,41 @@ export type MentionPromptItem =
       isSkill?: false;
     });
 
+/**
+ * Skill mention item flagged with isSkill discriminator.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionSkillItem = Skill & {
   isSkill: true;
   isMcp: false;
 };
 
+/**
+ * Assistant persona mention item.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionAssistantItem = Assistant & {
   isMcp: false;
   isSkill?: false;
 };
 
+/**
+ * Knowledge base mention item.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionKnowledgebaseItem = Knowledgebase & {
   isMcp: false;
   isSkill?: false;
 };
 
+/**
+ * Discriminated union of all supported mention candidates in the chat composer.
+ *
+ * @author Maruf Bepary
+ */
 export type MentionItem =
   | MentionPromptItem
   | MentionAssistantItem
@@ -53,6 +83,18 @@ export type MentionItem =
  * Supports two triggers: '/' for prompts and skills, and '@' for assistants.
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
  *
+ * @param input - Current textarea string content
+ * @param setInput - Callback to update textarea content
+ * @param textareaRef - React ref to underlying textarea DOM element
+ * @param activeChatAssistantId - ID of assistant already assigned to current chat
+ * @param initialSelectedPromptId - Pre-selected prompt ID or list of IDs
+ * @param initialSelectedAssistantId - Pre-selected assistant ID
+ * @param canMentionAssistant - Flag whether assistant tagging is permitted
+ * @param selectedServerIds - Set of active MCP server IDs for filtering MCP prompts
+ * @param onSelectSkill - Callback fired when a skill item is selected
+ * @param onSelectKnowledgebase - Callback fired when a knowledge base is selected
+ * @param knowledgebases - List of available knowledge bases
+ * @returns Mention popover state, filtered items, selection handlers, and key handlers
  * @author Maruf Bepary
  */
 export function useMentionCommands(

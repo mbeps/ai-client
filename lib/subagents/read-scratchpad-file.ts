@@ -3,6 +3,11 @@ import { db } from "@/drizzle/db";
 import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-path";
 
+/**
+ * Represents scratchpad entry.
+ *
+ * @author Maruf Bepary
+ */
 interface ScratchpadEntry {
   id: string;
   filePath: string;
@@ -16,6 +21,9 @@ interface ScratchpadEntry {
 /**
  * Reads a single file from the scratchpad for a given message turn.
  *
+ * @param messageId - Target message id
+ * @param rawPath - Target raw path
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function readScratchpadFile(

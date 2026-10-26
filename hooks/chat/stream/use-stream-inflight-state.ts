@@ -6,6 +6,9 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
  * Saves in-flight streaming state to sessionStorage for reconnection resiliency.
+ *
+ * @param chatId - Chat identifier
+ * @param state - Current text, reasoning, and tool call state
  * @author Maruf Bepary
  */
 export function saveInflightState(
@@ -24,6 +27,9 @@ export function saveInflightState(
 
 /**
  * Retrieves in-flight streaming state from sessionStorage.
+ *
+ * @param chatId - Chat identifier
+ * @returns Cached state object or null
  * @author Maruf Bepary
  */
 function loadInflightState(chatId: string) {
@@ -37,6 +43,8 @@ function loadInflightState(chatId: string) {
 
 /**
  * Clears in-flight streaming state from sessionStorage when stream finishes or stops.
+ *
+ * @param chatId - Chat identifier
  * @author Maruf Bepary
  */
 export function clearInflightState(chatId: string) {
@@ -47,6 +55,10 @@ export function clearInflightState(chatId: string) {
 
 /**
  * Restores in-flight state from sessionStorage when rejoining an active chat stream.
+ *
+ * @param chatId - Chat identifier
+ * @param refs - Mutable stream refs bundle
+ * @param setters - State setters for restoring UI text and tool calls
  * @author Maruf Bepary
  */
 export function restoreCachedStreamState(

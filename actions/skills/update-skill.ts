@@ -10,6 +10,10 @@ import type { SkillRow } from "@/types/skill/skill-row";
  * Updates an existing Agent Skill for the authenticated user.
  * Validates slug uniqueness if name is modified.
  *
+ * @param id - UUID of the skill to update
+ * @param data - Partial skill update payload
+ * @returns Updated skill database record
+ * @throws {Error} When skill is not found or validation fails
  * @decision Delegates to the skill service so the ownership and uniqueness
  * rules have one owner, shared with the AI tools.
  * @author Maruf Bepary

@@ -4,6 +4,11 @@ import { Loader2 } from "lucide-react";
 import { TransformRunCard } from "@/components/workflows/sheet-flow/transform-run-card";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
+/**
+ * Represents transform runs tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface TransformRunsTabProps {
   runs: TransformRunRow[];
   agentId: string;

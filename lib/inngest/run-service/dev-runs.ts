@@ -57,6 +57,15 @@ const CANCEL_RUN_MUTATION = `
   }
 `;
 
+/**
+ * Performs fetch dev run trigger.
+ *
+ * @param gqlEndpoint - Target gql endpoint
+ * @param runId - Workflow run identifier
+ * @param signal - Target signal
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function fetchDevRunTrigger(
   gqlEndpoint: string,
   runId: string,
@@ -85,6 +94,14 @@ async function fetchDevRunTrigger(
   }
 }
 
+/**
+ * Resolves dev event name.
+ *
+ * @param trigger - Target trigger
+ * @param node - Target node
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveDevEventName(
   trigger: { eventName?: string } | null,
   node: Record<string, any>,
@@ -93,6 +110,13 @@ function resolveDevEventName(
   return node.eventName ?? "";
 }
 
+/**
+ * Extracts dev function info.
+ *
+ * @param node - Target node
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractDevFunctionInfo(node: Record<string, any>): {
   name: string;
   slug: string;
@@ -105,6 +129,16 @@ function extractDevFunctionInfo(node: Record<string, any>): {
   };
 }
 
+/**
+ * Constructs dev job item.
+ *
+ * @param node - Target node
+ * @param gqlEndpoint - Target gql endpoint
+ * @param userId - User identifier
+ * @param signal - Target signal
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function buildDevJobItem(
   node: Record<string, any>,
   gqlEndpoint: string,
@@ -148,6 +182,14 @@ async function buildDevJobItem(
   };
 }
 
+/**
+ * Constructs dev runs query variables.
+ *
+ * @param userId - User identifier
+ * @param options - Target options
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildDevRunsQueryVariables(
   userId: string,
   options?: { status?: JobStatus[]; limit?: number },
@@ -168,11 +210,26 @@ function buildDevRunsQueryVariables(
   };
 }
 
+/**
+ * Extracts run edges.
+ *
+ * @param body - Target body
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractRunEdges(body: any): any[] {
   const runs = body?.data?.runs;
   return Array.isArray(runs?.edges) ? runs.edges : [];
 }
 
+/**
+ * Performs fetch dev user runs.
+ *
+ * @param userId - User identifier
+ * @param options - Target options
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function fetchDevUserRuns(
   userId: string,
   options?: { status?: JobStatus[]; limit?: number },
@@ -209,6 +266,14 @@ export async function fetchDevUserRuns(
   return { jobs };
 }
 
+/**
+ * Performs cancel dev run.
+ *
+ * @param runId - Workflow run identifier
+ * @param signal - Target signal
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function cancelDevRun(
   runId: string,
   signal: AbortSignal,

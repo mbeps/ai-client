@@ -19,6 +19,14 @@ const TAB_EMPTY_DESCRIPTIONS: Record<JobFilterTab, string> = {
   all: "There are no background jobs tracked by Inngest.",
 };
 
+/**
+ * Resolves empty state content.
+ *
+ * @param activeTab - Target active tab
+ * @param searchQuery - Target search query
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveEmptyStateContent(
   activeTab: JobFilterTab,
   searchQuery: string,
@@ -35,6 +43,11 @@ function resolveEmptyStateContent(
   };
 }
 
+/**
+ * Represents jobs empty state props.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobsEmptyStateProps {
   activeTab: JobFilterTab;
   searchQuery: string;

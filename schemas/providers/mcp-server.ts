@@ -68,5 +68,16 @@ export const mcpServerSchema = z
   })
   .and(mcpServerBaseSchema);
 
+/**
+ * Input payload shape for creating a new Model Context Protocol (MCP) server integration.
+ *
+ * @author Maruf Bepary
+ */
 export type CreateMcpServer = z.infer<typeof createMcpServerSchema>;
+
+/**
+ * Input payload shape for updating an existing MCP server configuration.
+ *
+ * @author Maruf Bepary
+ */
 export type UpdateMcpServer = z.infer<typeof updateMcpServerSchema>;

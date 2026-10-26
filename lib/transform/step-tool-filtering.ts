@@ -10,6 +10,15 @@ import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { TransformStep } from "@/types/transform/transform-step";
 
+/**
+ * Asserts step model capabilities.
+ *
+ * @param resolvedProvider - Target resolved provider
+ * @param filteredTools - Target filtered tools
+ * @param currentAttachmentRows - Target current attachment rows
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function assertStepModelCapabilities(
   resolvedProvider: ResolvedProvider,
   filteredTools: Record<string, any>,
@@ -42,6 +51,14 @@ export function assertStepModelCapabilities(
   }
 }
 
+/**
+ * Resolves step server names.
+ *
+ * @param step - Target step
+ * @param allServers - Target all servers
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveStepServerNames(
   step: TransformStep,
   allServers: any[],
@@ -53,6 +70,16 @@ function resolveStepServerNames(
   return new Set(stepServers.map((s) => s.name));
 }
 
+/**
+ * Determines whether tool allowed.
+ *
+ * @param toolName - Target tool name
+ * @param source - Target source
+ * @param stepServerNames - Target step server names
+ * @param allowedToolIds - Target allowed tool ids
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isToolAllowed(
   toolName: string,
   source: string,
@@ -71,6 +98,17 @@ function isToolAllowed(
   });
 }
 
+/**
+ * Prunes upload file tool if loaded.
+ *
+ * @param filteredTools - Target filtered tools
+ * @param toolSourceMap - Target tool source map
+ * @param requiresFileUpload - Target requires file upload
+ * @param activeWorkbookFilePath - Target active workbook file path
+ * @param attachmentCount - Target attachment count
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function pruneUploadFileToolIfLoaded(
   filteredTools: Record<string, any>,
   toolSourceMap: Record<string, string>,
@@ -90,6 +128,11 @@ function pruneUploadFileToolIfLoaded(
   }
 }
 
+/**
+ * Represents filter step tools params.
+ *
+ * @author Maruf Bepary
+ */
 export interface FilterStepToolsParams {
   step: TransformStep;
   agentRow: {
@@ -105,6 +148,13 @@ export interface FilterStepToolsParams {
   currentAttachmentRows: AttachmentRow[];
 }
 
+/**
+ * Filters step tools.
+ *
+ * @param params - Target params
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function filterStepTools(params: FilterStepToolsParams): {
   filteredTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -165,6 +215,15 @@ export function filterStepTools(params: FilterStepToolsParams): {
   return { filteredTools, toolSourceMap, stepServerNames };
 }
 
+/**
+ * Resolves step file context.
+ *
+ * @param activeWorkbookFilePath - Target active workbook file path
+ * @param currentAttachmentRows - Target current attachment rows
+ * @param userId - User identifier
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export async function resolveStepFileContext(
   activeWorkbookFilePath: string | null,
   currentAttachmentRows: AttachmentRow[],

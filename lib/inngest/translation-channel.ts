@@ -1,5 +1,10 @@
 import { channel, staticSchema } from "inngest/realtime";
 
+/**
+ * Represents translation stream event.
+ *
+ * @author Maruf Bepary
+ */
 export type TranslationStreamEvent =
   | { type: "start"; translationId: string }
   | { type: "text-delta"; text: string }

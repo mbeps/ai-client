@@ -18,6 +18,11 @@ import type { SkillRow } from "@/types/skill/skill-row";
 
 const log = getLogger(["app", "transform", "context"]);
 
+/**
+ * Represents load transform context args.
+ *
+ * @author Maruf Bepary
+ */
 interface LoadTransformContextArgs {
   userId: string;
   agentRow: {

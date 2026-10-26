@@ -1,5 +1,10 @@
 import { channel, staticSchema } from "inngest/realtime";
 
+/**
+ * Represents transform run stream event.
+ *
+ * @author Maruf Bepary
+ */
 type TransformRunStreamEvent =
   | { type: "transform-start"; runId: string }
   | {

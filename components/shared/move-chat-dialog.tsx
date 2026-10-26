@@ -14,6 +14,11 @@ import {
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store/use-app-store";
 
+/**
+ * Represents move chat dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface MoveChatDialogProps {
   /** Whether the dialog is currently open. */
   isOpen: boolean;

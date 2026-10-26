@@ -1,3 +1,8 @@
+/**
+ * Performs subagent  roles.
+ *
+ * @author Maruf Bepary
+ */
 export const SUBAGENT_ROLES = [
   "researcher",
   "planner",

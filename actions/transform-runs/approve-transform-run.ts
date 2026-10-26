@@ -10,6 +10,9 @@ import { inngest } from "@/lib/inngest/client";
  * Server action to approve a paused transform run review gate via Inngest.
  * Validates ownership and dispatches the approval event.
  *
+ * @param runId - UUID of the transformation run to approve
+ * @returns Resolves when the Inngest approval event is dispatched
+ * @throws {Error} When run is not found or not owned by user
  * @author Maruf Bepary
  */
 export async function approveTransformRunAction(runId: string) {

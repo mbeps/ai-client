@@ -4,11 +4,23 @@ import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents no models alert banner props.
+ *
+ * @author Maruf Bepary
+ */
 interface NoModelsAlertBannerProps {
   message: string;
   className?: string;
 }
 
+/**
+ * Renders the no models alert banner component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function NoModelsAlertBanner({
   message,
   className,

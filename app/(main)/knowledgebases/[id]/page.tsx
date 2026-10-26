@@ -34,6 +34,12 @@ import { logger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
+/**
+ * Resolves embedding model label.
+ *
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function resolveEmbeddingModelLabel(): Promise<string> {
   const [settings, embeddingModels] = await Promise.all([
     getUserSettings(),
@@ -51,6 +57,13 @@ async function resolveEmbeddingModelLabel(): Promise<string> {
   return activeEmbedding.label;
 }
 
+/**
+ * Custom hook that provides use knowledgebase detail functionality.
+ *
+ * @param kbId - Knowledge base unique identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useKnowledgebaseDetail(kbId: string) {
   const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
   const [embeddingModelLabel, setEmbeddingModelLabel] =
@@ -116,6 +129,14 @@ function useKnowledgebaseDetail(kbId: string) {
   };
 }
 
+/**
+ * Custom hook that provides use knowledgebase documents functionality.
+ *
+ * @param kbId - Knowledge base unique identifier
+ * @param indexStatus - Target index status
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useKnowledgebaseDocuments(kbId: string, indexStatus?: string) {
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
@@ -157,6 +178,14 @@ function useKnowledgebaseDocuments(kbId: string, indexStatus?: string) {
   };
 }
 
+/**
+ * Custom hook that provides use knowledgebase settings functionality.
+ *
+ * @param kb - Target kb
+ * @param onSaved - Target on saved
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useKnowledgebaseSettings(
   kb: KnowledgebaseRow | null,
   onSaved: () => void,
@@ -199,6 +228,13 @@ function useKnowledgebaseSettings(
   };
 }
 
+/**
+ * Custom hook that provides use knowledgebase page state functionality.
+ *
+ * @param kbId - Knowledge base unique identifier
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useKnowledgebasePageState(kbId: string) {
   const detail = useKnowledgebaseDetail(kbId);
   const docs = useKnowledgebaseDocuments(kbId, detail.kb?.indexStatus);
@@ -224,6 +260,11 @@ function useKnowledgebasePageState(kbId: string) {
   };
 }
 
+/**
+ * Represents knowledgebase page tabs props.
+ *
+ * @author Maruf Bepary
+ */
 type KnowledgebasePageTabsProps = {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -239,6 +280,13 @@ type KnowledgebasePageTabsProps = {
   isDeleting: boolean;
 };
 
+/**
+ * Renders the knowledgebase page tabs component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
   const {
     activeTab,
@@ -324,6 +372,13 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
   );
 }
 
+/**
+ * Renders the knowledgebase header component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function KnowledgebaseHeader({ kb }: { kb: KnowledgebaseRow }) {
   return (
     <div className="flex flex-col gap-1">

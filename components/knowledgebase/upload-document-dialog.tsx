@@ -18,6 +18,11 @@ import { KB_CONFIG } from "@/config/knowledgebase";
 import { useUserModels } from "@/hooks/use-user-models";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
+/**
+ * Represents phase.
+ *
+ * @author Maruf Bepary
+ */
 type Phase = "idle" | "uploading" | "ingesting" | "error";
 
 const PHASE_LABELS: Record<Phase, string | null> = {
@@ -27,6 +32,11 @@ const PHASE_LABELS: Record<Phase, string | null> = {
   error: null,
 };
 
+/**
+ * Represents upload document dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface UploadDocumentDialogProps {
   kbId: string;
   open: boolean;

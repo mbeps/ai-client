@@ -6,6 +6,11 @@ import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import type { Chat } from "@/types/chat/chat";
 
+/**
+ * Represents assistant chats tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface AssistantChatsTabProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;

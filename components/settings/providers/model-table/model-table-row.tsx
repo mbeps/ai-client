@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
+/**
+ * Represents model table row props.
+ *
+ * @author Maruf Bepary
+ */
 export type ModelTableRowProps = {
   model: AiModelRow;
   providerName: string;
@@ -26,6 +31,13 @@ export type ModelTableRowProps = {
   onDelete: (model: AiModelRow) => void;
 };
 
+/**
+ * Renders the model table row component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export function ModelTableRow({
   model,
   providerName,

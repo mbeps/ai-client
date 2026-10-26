@@ -222,18 +222,12 @@ function populateMessagesAndTree(
 }
 
 /**
- * Creates the chat slice of the Zustand store.
- * Manages in-memory chat state, message trees, and branching conversations.
- * Implements optimistic UI patterns with database sync via server actions.
+ * Creates the chat slice of the Zustand store. Manages in-memory chat state, message trees, and branching conversations. Implements optimistic UI patterns with database sync via server actions. Implementation details: - Messages form a tree with parentId and childrenIds for branching - currentLeafId tracks the active message branch for rendering - Recursive deletion handles entire subtrees (message + all descendants) - Tree traversal uses getDeepestLeaf to find terminal nodes.
  *
- * Implementation details:
- * - Messages form a tree with parentId and childrenIds for branching
- * - currentLeafId tracks the active message branch for rendering
- * - Recursive deletion handles entire subtrees (message + all descendants)
- * - Tree traversal uses getDeepestLeaf to find terminal nodes
- *
- * @see ChatSlice for the slice type
- * @see Message for message tree structure
+ * @param set - Target set
+ * @param get - Target get
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   set,

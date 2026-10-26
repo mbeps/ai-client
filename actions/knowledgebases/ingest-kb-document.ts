@@ -13,10 +13,20 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "actions", "knowledgebase"]);
 
+/**
+ * Validates document ID payload for initiating document ingestion.
+ *
+ * @author Maruf Bepary
+ */
 const ingestKbDocumentSchema = z.object({
   documentId: z.string().uuid("Invalid document ID format"),
 });
 
+/**
+ * Result returned by the document ingestion server action.
+ *
+ * @author Maruf Bepary
+ */
 export type IngestKbDocumentResult = {
   success: boolean;
   error?: string;
@@ -26,6 +36,10 @@ export type IngestKbDocumentResult = {
 /**
  * Next.js Server Action to trigger the ingestion process (extraction, chunking, embedding) for a document.
  * Follows the Result Object Pattern to safely handle errors in the frontend.
+ *
+ * @param documentId - UUID of the uploaded document to ingest
+ * @returns Result object indicating dispatch success or failure error message
+ * @author Maruf Bepary
  */
 export async function ingestKbDocument(
   documentId: string,

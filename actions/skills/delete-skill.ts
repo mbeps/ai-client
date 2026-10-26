@@ -6,6 +6,9 @@ import { deleteSkillForUser } from "@/lib/skills/skill-crud-service";
 /**
  * Deletes one or more Agent Skills, verifying ownership by the authenticated user.
  *
+ * @param idOrIds - Single UUID or array of skill UUIDs to delete
+ * @returns Object with the number of skills deleted
+ * @throws {Error} When user is unauthenticated or skill is not found
  * @decision Delegates to the skill service so the ownership rule has one
  * owner, shared with the AI tools. The empty-input short circuit and the
  * `Not Found` throw match the behaviour the entity delete factory had.

@@ -14,18 +14,33 @@ import { UNAUTHORIZED_ERROR_CODE } from "@/lib/error/unauthorized-error-code";
 import { UNAUTHORIZED_ERROR_MESSAGE } from "@/lib/error/unauthorized-error-message";
 import { VISION_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/vision-not-supported-error-code";
 
+/**
+ * Extracted normalized error representation.
+ *
+ * @author Maruf Bepary
+ */
 interface ExtractedErrorInfo {
   code?: string;
   message: string;
   raw: Record<string, any> | null;
 }
 
+/**
+ * Toast notification configuration for static error codes.
+ *
+ * @author Maruf Bepary
+ */
 interface StaticToastConfig {
   type: "error" | "warning";
   title: string;
   description: string;
 }
 
+/**
+ * Handler for dynamic error codes requiring route transitions or interpolated messages.
+ *
+ * @author Maruf Bepary
+ */
 type DynamicToastHandler = (
   router: { push: (href: string) => void },
   message: string,
@@ -55,6 +70,10 @@ const STATIC_CODE_TOASTS: Record<string, StaticToastConfig | undefined> = {
 
 /**
  * Displays error toast for rate limit or credit exhaustion with a provider settings action.
+ *
+ * @param router - Next.js router instance for action button navigation
+ * @param message - Raw error message to inspect for credits or rate limit phrasing
+ * @author Maruf Bepary
  */
 function handleRateLimitToast(
   router: { push: (href: string) => void },
@@ -114,6 +133,11 @@ const DYNAMIC_CODE_HANDLERS: Record<string, DynamicToastHandler | undefined> = {
 
 /**
  * Resolves message text from a plain error object.
+ *
+ * @param raw - Error object containing potential error/message fields
+ * @param fallback - Fallback message string if fields are missing
+ * @returns Resolved error message text
+ * @author Maruf Bepary
  */
 function resolveObjectErrorMessage(
   raw: Record<string, any>,
@@ -124,6 +148,11 @@ function resolveObjectErrorMessage(
 
 /**
  * Normalizes error code, message, and original payload from an unknown error value.
+ *
+ * @param error - Unknown error thrown or rejected
+ * @param fallbackMessage - Optional default message
+ * @returns Normalized error structure
+ * @author Maruf Bepary
  */
 function extractErrorInfo(
   error: unknown,
@@ -157,6 +186,13 @@ function extractErrorInfo(
 
 /**
  * Handles parameterized error codes requiring dynamic messages, counts, or router actions.
+ *
+ * @param code - Error code identifier
+ * @param message - Extracted error message
+ * @param raw - Original raw error record
+ * @param router - Next.js router instance
+ * @returns True if a dynamic handler successfully handled the error
+ * @author Maruf Bepary
  */
 function handleDynamicCodeToast(
   code: string,

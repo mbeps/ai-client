@@ -11,6 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+/**
+ * Represents danger zone card props.
+ *
+ * @author Maruf Bepary
+ */
 export interface DangerZoneCardProps {
   /** Title for the danger zone section. Defaults to "Danger Zone" */
   title?: string;

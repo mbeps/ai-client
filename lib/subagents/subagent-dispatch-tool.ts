@@ -1,6 +1,9 @@
 /**
- * Extracts a concise text summary from a subagent's execution output.
- * Handles strings, UIMessage objects, structured results, and text parts.
+ * Extracts a concise text summary from a subagent's execution output. Handles strings, UIMessage objects, structured results, and text parts.
+ *
+ * @param output - Target output
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function extractSubagentSummary(output: unknown): string {
   if (typeof output === "string") {
@@ -42,6 +45,11 @@ function extractSubagentSummary(output: unknown): string {
 
 /**
  * Bounds subagent output to avoid context window bloat (default: 8,000 chars / ~2,000 tokens).
+ *
+ * @param output - Target output
+ * @param maxChars - Target max chars
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function sanitizeSubagentOutput(
   output: unknown,

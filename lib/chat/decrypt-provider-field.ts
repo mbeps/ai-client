@@ -5,17 +5,14 @@ import { getLogger } from "@/lib/logger";
 const log = getLogger(["app", "chat", "provider"]);
 
 /**
- * Decrypts an encrypted provider field (API key, headers) with error handling.
- * Returns fallback value if field is empty. Logs decryption errors with context.
- * Throws ProviderKeyCorruptedError if decryption fails, indicating data corruption.
+ * Decrypts an encrypted provider field (API key, headers) with error handling. Returns fallback value if field is empty. Logs decryption errors with context. Throws ProviderKeyCorruptedError if decryption fails, indicating data corruption.
  *
  * @param value - Encrypted field value from database
  * @param fallback - Default value to return if field is empty (e.g., "{}" for headers)
  * @param field - Field name for error logging context
  * @param providerId - Provider ID for error context
- * @param userId - User ID for audit logging
+ * @param _userId - The user id parameter.
  * @returns Decrypted field value or fallback
- * @throws {ProviderKeyCorruptedError} When decryption fails, indicating corrupted data
  * @author Maruf Bepary
  */
 export function decryptProviderField(

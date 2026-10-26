@@ -5,6 +5,11 @@ import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
 import { PROMPTS } from "@/config/prompts";
 
+/**
+ * Represents project prompt tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ProjectPromptTabProps {
   globalPrompt: string;
   onGlobalPromptChange: (value: string) => void;

@@ -15,6 +15,13 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 
+/**
+ * Determines whether translate action disabled.
+ *
+ * @param state - Target state
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isTranslateActionDisabled(state: {
   isLoading: boolean;
   isExtracting: boolean;

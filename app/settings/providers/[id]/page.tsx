@@ -34,7 +34,13 @@ import { ROUTES } from "@/config/routes";
 import { useProviders } from "@/hooks/use-providers";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 
-/** Converts a stored JSON headers string into key-value rows. */
+/**
+ * Converts a stored JSON headers string into key-value rows.
+ *
+ * @param raw - Raw input data to process
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseHeaderRows(raw: string | null): { key: string; value: string }[] {
   if (!raw) return [{ key: "", value: "" }];
   try {

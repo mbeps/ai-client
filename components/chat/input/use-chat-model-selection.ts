@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
+/**
+ * Represents model capability item.
+ *
+ * @author Maruf Bepary
+ */
 export interface ModelCapabilityItem {
   id?: string;
   modelId: string;
@@ -8,6 +13,15 @@ export interface ModelCapabilityItem {
   capTools?: boolean;
 }
 
+/**
+ * Resolves initial model selection.
+ *
+ * @param chatModels - Target chat models
+ * @param currentModelId - Target current model id
+ * @param initialModelId - Target initial model id
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveInitialModelSelection(
   chatModels: Array<{ id?: string; modelId: string }>,
   currentModelId: string,
@@ -27,6 +41,12 @@ function resolveInitialModelSelection(
 
 /**
  * Manages model selection, model resolution on load, and vision/tools capability flags.
+ *
+ * @param chatModels - Target chat models
+ * @param isModelsLoading - Target is models loading
+ * @param initialModelId - Target initial model id
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useChatModelSelection(
   chatModels: ModelCapabilityItem[],

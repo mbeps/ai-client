@@ -20,6 +20,11 @@ import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PROMPTS } from "@/config/prompts";
 
+/**
+ * Validation schema for prompt form schema.
+ *
+ * @author Maruf Bepary
+ */
 const promptFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   shortcut: z
@@ -32,8 +37,18 @@ const promptFormSchema = z.object({
   content: z.string().min(1, "Content is required"),
 });
 
+/**
+ * Represents prompt form values.
+ *
+ * @author Maruf Bepary
+ */
 export type PromptFormValues = z.infer<typeof promptFormSchema>;
 
+/**
+ * Represents prompt form props.
+ *
+ * @author Maruf Bepary
+ */
 export interface PromptFormProps {
   /** Initial or existing values for form fields */
   defaultValues?: Partial<PromptFormValues>;

@@ -62,9 +62,7 @@ type ChatContext = {
 };
 
 /**
- * Loads all database context needed for a chat request in minimal queries.
- * **Query pattern**: Chat lookup runs first (sequential dependency).
- * All remaining queries (project, assistant, servers, KB, skills) run in parallel after.
+ * Loads all database context needed for a chat request in minimal queries. **Query pattern**: Chat lookup runs first (sequential dependency). All remaining queries (project, assistant, servers, KB, skills) run in parallel after.
  *
  * @param chatId - Chat UUID
  * @param userId - Authenticated user ID for authorization
@@ -72,8 +70,8 @@ type ChatContext = {
  * @param selectedKbIds - Optional knowledge base override from request body
  * @param selectedAssistantId - Optional assistant override from request body
  * @param selectedSkillIds - Optional skill IDs to manually inject
+ * @param latestQuery - The latest query parameter.
  * @returns All context needed for streaming: prompts, KB readiness, servers, skills
- * @throws {Error} "Chat not found" when chat doesn't exist or doesn't belong to user
  * @author Maruf Bepary
  */
 export async function loadChatContext(
@@ -279,6 +277,11 @@ export async function loadChatContext(
   };
 }
 
+/**
+ * Provides chat not found error service implementation.
+ *
+ * @author Maruf Bepary
+ */
 export class ChatNotFoundError extends Error {
   // fallow-ignore-next-line unused-class-member
   readonly code = "CHAT_NOT_FOUND" as const;

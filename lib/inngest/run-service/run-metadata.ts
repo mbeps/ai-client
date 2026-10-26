@@ -21,6 +21,10 @@ export function isDevMode(): boolean {
 
 /**
  * Resolves job category type based on triggering event name.
+ *
+ * @param eventName - Target event name
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function resolveJobType(eventName?: string | null): JobType {
   switch (eventName) {
@@ -41,6 +45,10 @@ export function resolveJobType(eventName?: string | null): JobType {
 
 /**
  * Extracts the first truthy value among candidate items.
+ *
+ * @param candidates - Target candidates
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function firstNonEmpty<T>(
   ...candidates: (T | undefined | null)[]
@@ -53,6 +61,10 @@ export function firstNonEmpty<T>(
 
 /**
  * Parses a JSON string and extracts its data property if present.
+ *
+ * @param str - Target str
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function parsePayloadString(str: string): Record<string, any> | undefined {
   try {
@@ -66,6 +78,10 @@ function parsePayloadString(str: string): Record<string, any> | undefined {
 
 /**
  * Extracts payload data and entity identifiers from trigger event payloads.
+ *
+ * @param payloads - Target payloads
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function parseTriggerPayloadData(
   payloads?: unknown[],
@@ -87,6 +103,13 @@ const ENTITY_ID_KEYS = [
   "kbId",
 ] as const;
 
+/**
+ * Extracts payload entity id.
+ *
+ * @param payloadData - Target payload data
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function extractPayloadEntityId(
   payloadData?: Record<string, any>,
 ): string | undefined {
@@ -99,6 +122,14 @@ function extractPayloadEntityId(
   return undefined;
 }
 
+/**
+ * Resolves transform url.
+ *
+ * @param payloadData - Target payload data
+ * @param entityId - Target entity id
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveTransformUrl(
   payloadData?: Record<string, any>,
   entityId?: string,
@@ -112,12 +143,22 @@ function resolveTransformUrl(
   return "/workflows/transform";
 }
 
+/**
+ * Represents metadata result.
+ *
+ * @author Maruf Bepary
+ */
 type MetadataResult = {
   title: string;
   subtitle?: string;
   url?: string;
 };
 
+/**
+ * Represents metadata builder.
+ *
+ * @author Maruf Bepary
+ */
 type MetadataBuilder = (
   payloadData: Record<string, any> | undefined,
   entityId: string | undefined,
@@ -168,6 +209,16 @@ const JOB_METADATA_BUILDERS: Record<JobType, MetadataBuilder> = {
   }),
 };
 
+/**
+ * Resolves job metadata.
+ *
+ * @param jobType - Target job type
+ * @param eventName - Target event name
+ * @param functionName - Target function name
+ * @param payloadData - Target payload data
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function resolveJobMetadata(
   jobType: JobType,
   eventName: string,
@@ -192,6 +243,14 @@ export function resolveJobMetadata(
   };
 }
 
+/**
+ * Performs compute duration ms.
+ *
+ * @param startedAt - Target started at
+ * @param endedAt - Target ended at
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function computeDurationMs(
   startedAt?: string | null,
   endedAt?: string | null,
@@ -205,6 +264,13 @@ export function computeDurationMs(
   return Math.max(0, Date.now() - start);
 }
 
+/**
+ * Parses object error.
+ *
+ * @param obj - Target obj
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseObjectError(obj: Record<string, any>): string | undefined {
   if (obj.error) {
     if (typeof obj.error === "string") return obj.error;
@@ -216,6 +282,14 @@ function parseObjectError(obj: Record<string, any>): string | undefined {
   return undefined;
 }
 
+/**
+ * Extracts error message.
+ *
+ * @param status - Current status value
+ * @param output - Target output
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function extractErrorMessage(
   status: JobStatus,
   output: unknown,
@@ -230,6 +304,14 @@ export function extractErrorMessage(
   return "Job execution failed";
 }
 
+/**
+ * Determines whether mismatched user.
+ *
+ * @param payloadData - Target payload data
+ * @param userId - User identifier
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function isMismatchedUser(
   payloadData: Record<string, any> | undefined,
   userId: string,
@@ -246,6 +328,13 @@ const ALREADY_ENDED_PHRASES = [
   "not active",
 ] as const;
 
+/**
+ * Determines whether already ended error.
+ *
+ * @param message - Target message
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 export function isAlreadyEndedError(message?: string): boolean {
   if (!message) return false;
   const lower = message.toLowerCase();

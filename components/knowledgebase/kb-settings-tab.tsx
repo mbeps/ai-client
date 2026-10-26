@@ -12,6 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
+/**
+ * Represents kb settings tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface KbSettingsTabProps {
   name: string;
   onNameChange: (value: string) => void;

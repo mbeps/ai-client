@@ -3,6 +3,11 @@ import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
  * Adds or updates a file in the bundled files list.
+ *
+ * @param files - Target files
+ * @param newFile - Target new file
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function addOrUpdateFile(
   files: SkillBundledFile[],

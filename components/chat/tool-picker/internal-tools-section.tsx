@@ -5,6 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 
+/**
+ * Represents internal tools section props.
+ *
+ * @author Maruf Bepary
+ */
 interface InternalToolsSectionProps {
   search: string;
   isExpanded: boolean;
@@ -18,6 +23,13 @@ interface InternalToolsSectionProps {
   ) => void;
 }
 
+/**
+ * Renders the internal tool item component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function InternalToolItem({
   checked,
   onToggle,

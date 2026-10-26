@@ -21,6 +21,10 @@ const PUBLIC_PREFIXES = [
  *
  * The (main)/layout.tsx client-side guard is preserved as a secondary UX layer
  * (loading state, client navigation) — this proxy is the first line of defence.
+ *
+ * @param request - Incoming Next.js HTTP request to check for valid session cookies
+ * @returns Next response forwarding or redirecting to login
+ * @author Maruf Bepary
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

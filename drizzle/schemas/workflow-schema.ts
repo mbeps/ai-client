@@ -34,5 +34,16 @@ export const workflowTranslation = pgTable(
   (table) => [index("workflow_translation_user_id_idx").on(table.userId)],
 );
 
+/**
+ * Inferred select model for an automated workflow translation record.
+ *
+ * @author Maruf Bepary
+ */
 export type WorkflowTranslation = typeof workflowTranslation.$inferSelect;
+
+/**
+ * Inferred insert model for creating a new workflow translation record.
+ *
+ * @author Maruf Bepary
+ */
 export type NewWorkflowTranslation = typeof workflowTranslation.$inferInsert;

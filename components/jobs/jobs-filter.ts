@@ -11,6 +11,11 @@ const TAB_MAP: Record<string, JobFilterTab> = {
 
 /**
  * Resolves the currently active tab from status or tab query parameters.
+ *
+ * @param statusParam - Target status param
+ * @param tabParam - Target tab param
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function resolveActiveTab(
   statusParam?: string | null,
@@ -30,6 +35,11 @@ const TAB_STATUS_MATCH: Record<JobFilterTab, (s: JobStatus) => boolean> = {
 
 /**
  * Checks whether a job's status matches the given active tab category.
+ *
+ * @param status - Current status value
+ * @param activeTab - Target active tab
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function matchesJobTab(
   status: JobStatus,
@@ -40,6 +50,11 @@ export function matchesJobTab(
 
 /**
  * Checks whether a job matches search keywords across title, type, function name, and subtitle.
+ *
+ * @param job - Target job
+ * @param normalizedQuery - Target normalized query
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function matchesJobSearch(
   job: JobItem,
@@ -54,6 +69,12 @@ export function matchesJobSearch(
 
 /**
  * Filters a job based on the active tab and search query.
+ *
+ * @param job - Target job
+ * @param activeTab - Target active tab
+ * @param searchQuery - Target search query
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function matchesJobFilter(
   job: JobItem,
@@ -76,6 +97,10 @@ const STATUS_FIELD_MAP: Partial<Record<JobStatus, keyof JobsStatCounts>> = {
 
 /**
  * Aggregates count summaries across lifecycle states for stat cards.
+ *
+ * @param jobs - Target jobs
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function computeStatCounts(jobs: readonly JobItem[]): JobsStatCounts {
   const counts: JobsStatCounts = {

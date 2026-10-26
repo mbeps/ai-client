@@ -5,6 +5,11 @@ import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { Button } from "@/components/ui/button";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
+/**
+ * Represents project tools tab props.
+ *
+ * @author Maruf Bepary
+ */
 export interface ProjectToolsTabProps {
   mcpServers: McpServer[];
   selectedTools: Set<string>;

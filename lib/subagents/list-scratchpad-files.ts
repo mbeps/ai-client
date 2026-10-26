@@ -5,6 +5,8 @@ import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 /**
  * Lists all scratchpad files recorded for a message turn.
  *
+ * @param messageId - Target message id
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function listScratchpadFiles(messageId: string): Promise<

@@ -33,16 +33,11 @@ export interface CreateEntityConfig<TSchema> {
 }
 
 /**
- * Creates a Server Action that inserts a new row into the given table with
- * ownership bound to the authenticated user.
+ * Creates a Server Action that inserts a new row into the given table with ownership bound to the authenticated user. The returned function is intended to be re-exported as a named export from a `"use server"` file.  Example: ```ts "use server"; export const createProject = createEntityFactory({ table: project, schema: createProjectSchema }); ```.
  *
- * The returned function is intended to be re-exported as a named export from a
- * `"use server"` file.  Example:
- *
- * ```ts
- * "use server";
- * export const createProject = createEntityFactory({ table: project, schema: createProjectSchema });
- * ```
+ * @param config - Target config
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function createEntityFactory<TSchema, TResult>(
   config: CreateEntityConfig<TSchema>,

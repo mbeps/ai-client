@@ -1,9 +1,11 @@
 import { normaliseToolPayload } from "@/lib/transform/normalise-tool-payload";
 
 /**
- * Extracts a structured artifact from a tool payload if one is present.
- * Handles both `{ artifact: ... }` and flat shapes, normalises type/content fields.
- * Returns `null` when no valid structured artifact is found.
+ * Extracts a structured artifact from a tool payload if one is present. Handles both `{ artifact: ... }` and flat shapes, normalises type/content fields. Returns `null` when no valid structured artifact is found.
+ *
+ * @param payload - Target payload
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function extractArtifactFromToolPayload(
   payload: unknown,

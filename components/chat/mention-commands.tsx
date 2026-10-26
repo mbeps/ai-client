@@ -23,6 +23,11 @@ import type {
 import { cn } from "@/lib/utils";
 import type { Assistant } from "@/types/assistant/assistant";
 
+/**
+ * Represents mention commands props.
+ *
+ * @author Maruf Bepary
+ */
 interface MentionCommandsProps {
   items: MentionItem[];
   trigger: MentionTrigger;

@@ -7,6 +7,11 @@ import { upsertScratchpadFile } from "@/lib/subagents/scratchpad-service";
 
 const log = getLogger(["subagents", "tools"]);
 
+/**
+ * Represents scratchpad tool context.
+ *
+ * @author Maruf Bepary
+ */
 export interface ScratchpadToolContext {
   chatId: string;
   messageId: string;
@@ -14,9 +19,10 @@ export interface ScratchpadToolContext {
 }
 
 /**
- * Registers internal scratchpad tools that allow subagents and the orchestrator
- * to read, write, and list shared files during a turn.
+ * Registers internal scratchpad tools that allow subagents and the orchestrator to read, write, and list shared files during a turn.
  *
+ * @param context - Target context
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export function registerScratchpadTools(context: ScratchpadToolContext) {

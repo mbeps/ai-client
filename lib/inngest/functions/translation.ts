@@ -15,6 +15,11 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["inngest", "workflow", "translation"]);
 
+/**
+ * Represents translation workflow event data.
+ *
+ * @author Maruf Bepary
+ */
 interface TranslationWorkflowEventData {
   translationId: string;
   userId: string;

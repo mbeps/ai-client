@@ -16,6 +16,12 @@ import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { TransformStep } from "@/types/transform/transform-step";
 import type { StepState } from "@/types/workflows/transform-run";
 
+/**
+ * Custom hook that provides use is lg mobile functionality.
+ *
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useIsLgMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -27,6 +33,15 @@ function useIsLgMobile() {
   return isMobile;
 }
 
+/**
+ * Calculates run progress.
+ *
+ * @param status - Current status value
+ * @param stepStates - Execution state mapping for workflow steps
+ * @param stepsCount - Total number of workflow steps
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function calculateRunProgress(
   status: string,
   stepStates: Record<number, StepState>,
@@ -40,6 +55,15 @@ function calculateRunProgress(
   return (completedSteps / stepsCount) * 100;
 }
 
+/**
+ * Checks show preview pane.
+ *
+ * @param tools - Available tool configurations
+ * @param hasAnyArtifact - Target has any artifact
+ * @param selectedStepIndex - Target selected step index
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function checkShowPreviewPane(
   tools?: string[],
   hasAnyArtifact?: boolean,
@@ -53,6 +77,13 @@ function checkShowPreviewPane(
   );
 }
 
+/**
+ * Renders the stream error alert component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function StreamErrorAlert({ error }: { error: string | null }) {
   if (!error) return null;
   return (
@@ -63,6 +94,11 @@ function StreamErrorAlert({ error }: { error: string | null }) {
   );
 }
 
+/**
+ * Represents transform run timeline props.
+ *
+ * @author Maruf Bepary
+ */
 interface TransformRunTimelineProps {
   steps: TransformStep[];
   stepStates: Record<number, StepState>;
@@ -70,6 +106,13 @@ interface TransformRunTimelineProps {
   onSelectStep: (index: number) => void;
 }
 
+/**
+ * Renders the transform run timeline component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function TransformRunTimeline({
   steps,
   stepStates,

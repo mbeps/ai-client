@@ -10,6 +10,11 @@ import {
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import { translationChannel } from "@/lib/inngest/translation-channel";
 
+/**
+ * Represents use translation realtime stream params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseTranslationRealtimeStreamParams {
   activeTranslationId: string | null;
   isLoading: boolean;
@@ -17,6 +22,16 @@ export interface UseTranslationRealtimeStreamParams {
   setIsLoading: (loading: boolean) => void;
 }
 
+/**
+ * Performs process new realtime messages.
+ *
+ * @param allMessages - Target all messages
+ * @param lastIndex - Target last index
+ * @param setTranslatedText - Target set translated text
+ * @param setIsLoading - Target set is loading
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function processNewRealtimeMessages(
   allMessages: readonly unknown[],
   lastIndex: number,
@@ -37,6 +52,10 @@ function processNewRealtimeMessages(
 
 /**
  * Manages the Inngest SSE realtime stream for background translation.
+ *
+ * @param params - Target params
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useTranslationRealtimeStream(
   params: UseTranslationRealtimeStreamParams,

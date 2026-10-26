@@ -11,6 +11,11 @@ import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provide
 
 const RETRY_COUNT = 1;
 
+/**
+ * Normalized model option formatted for selection menus and forms.
+ *
+ * @author Maruf Bepary
+ */
 export type UserModelOption = {
   id: string;
   modelId: string;
@@ -28,6 +33,11 @@ export type UserModelOption = {
   providerIsEnabled: boolean;
 };
 
+/**
+ * Return shape of the useUserModels hook containing filtered options and raw models.
+ *
+ * @author Maruf Bepary
+ */
 export type UseUserModelsResult = {
   models: UserModelOption[];
   rawModels: AiModelWithProvider[];

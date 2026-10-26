@@ -5,6 +5,13 @@ import {
 import { parseZipBuffer, type ZipEntry } from "@/lib/skills/parse-zip-buffer";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
+/**
+ * Determines whether os artifact.
+ *
+ * @param cleanPath - Target clean path
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function isOsArtifact(cleanPath: string): boolean {
   return (
     cleanPath.startsWith("__MACOSX") ||
@@ -15,6 +22,11 @@ function isOsArtifact(cleanPath: string): boolean {
 
 /**
  * Determines whether all non-OS files share the common root folder prefix of SKILL.md.
+ *
+ * @param entries - Target entries
+ * @param skillEntry - Target skill entry
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function determineRootPrefix(
   entries: ZipEntry[],
@@ -33,6 +45,14 @@ function determineRootPrefix(
   return nonOsEntries.every((e) => e.path.startsWith(prefix)) ? prefix : "";
 }
 
+/**
+ * Resolves entry relative path.
+ *
+ * @param cleanPath - Target clean path
+ * @param rootPrefix - Target root prefix
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveEntryRelativePath(
   cleanPath: string,
   rootPrefix: string,
@@ -49,6 +69,11 @@ function resolveEntryRelativePath(
 
 /**
  * Filters out OS noise and extracts bundled reference files relative to the skill root.
+ *
+ * @param entries - Target entries
+ * @param skillEntry - Target skill entry
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function resolveBundledFiles(
   entries: ZipEntry[],

@@ -18,6 +18,11 @@ import { cn } from "@/lib/utils";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
+/**
+ * Represents kb stats cards props.
+ *
+ * @author Maruf Bepary
+ */
 export interface KbStatsCardsProps {
   kb: KnowledgebaseRow;
   documents: KbDocumentRow[];

@@ -11,6 +11,11 @@ import { idField, nameField } from "@/schemas/shared-fields";
  */
 export const providerModelTypeSchema = z.enum(["chat", "embedding", "both"]);
 
+/**
+ * Validates custom HTTP headers as key-value pairs for provider endpoints.
+ *
+ * @author Maruf Bepary
+ */
 const providerHeadersSchema = z.record(z.string(), z.string());
 
 /**
@@ -152,12 +157,29 @@ export const registryExportSchema = z.object({
   providers: z.array(registryProviderSchema).max(100),
 });
 
+/**
+ * Validates input parameters for exporting provider registries.
+ * Optionally limits export to a subset of provider IDs.
+ *
+ * @author Maruf Bepary
+ */
 export const exportProviderRegistryInputSchema = z.object({
   providerIds: z.array(idField).max(100).optional(),
 });
 
+/**
+ * Validates input payload for importing full provider registries.
+ * Alias for the versioned registry export schema.
+ *
+ * @author Maruf Bepary
+ */
 export const importProviderRegistryInputSchema = registryExportSchema;
 
+/**
+ * Union type representing the supported capabilities of a provider model: chat, embedding, or both.
+ *
+ * @author Maruf Bepary
+ */
 export type ProviderModelType = z.infer<typeof providerModelTypeSchema>;
 
 /**

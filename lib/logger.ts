@@ -90,6 +90,10 @@ export async function configureLogging(): Promise<void> {
 
 /**
  * Export getLogger from LogTape, guaranteeing the logging system is configured.
+ *
+ * @param args - Target args
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 export function getLogger(
   ...args: Parameters<typeof getLogTapeLogger>

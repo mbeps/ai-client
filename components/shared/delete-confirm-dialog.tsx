@@ -12,6 +12,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+/**
+ * Represents delete confirm dialog props.
+ *
+ * @author Maruf Bepary
+ */
 interface DeleteConfirmDialogProps {
   /** Whether the dialog is currently visible. */
   isOpen: boolean;

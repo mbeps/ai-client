@@ -13,6 +13,11 @@ import {
 import { type UserModelOption, useUserModels } from "@/hooks/use-user-models";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents subagent model select props.
+ *
+ * @author Maruf Bepary
+ */
 interface SubagentModelSelectProps {
   value?: string;
   onValueChange: (value: string | undefined) => void;
@@ -20,6 +25,11 @@ interface SubagentModelSelectProps {
   className?: string;
 }
 
+/**
+ * Represents model group.
+ *
+ * @author Maruf Bepary
+ */
 type ModelGroup = {
   provider: string;
   items: UserModelOption[];

@@ -4,6 +4,11 @@ import ResetPasswordForm from "@/app/auth/reset-password/_components/reset-passw
 import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 
+/**
+ * Metadata configuration for the password reset page.
+ *
+ * @author Maruf Bepary
+ */
 export const metadata = {
   title: "Reset Password",
 };

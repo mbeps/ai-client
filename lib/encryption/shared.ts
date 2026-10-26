@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import { env } from "@/config/env";
 
+/**
+ * Performs algorithm.
+ *
+ * @author Maruf Bepary
+ */
 export const ALGORITHM = "aes-256-gcm";
 
 /**

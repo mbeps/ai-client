@@ -10,6 +10,12 @@
 import { NotFoundPage } from "@/components/shared/not-found-page";
 import { ROUTES } from "@/config/routes";
 
+/**
+ * Renders the project not found component.
+ *
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 export default function ProjectNotFound() {
   return (
     <NotFoundPage

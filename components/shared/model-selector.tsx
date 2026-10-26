@@ -34,6 +34,11 @@ interface ModelSelectorProps {
   type?: "chat" | "embedding" | "both";
 }
 
+/**
+ * Represents model group.
+ *
+ * @author Maruf Bepary
+ */
 type ModelGroup = {
   provider: string;
   items: UserModelOption[];

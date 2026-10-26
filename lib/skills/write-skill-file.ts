@@ -16,14 +16,23 @@ import {
 import type { SkillBundledFile } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
+/**
+ * Renders the not  found  error component.
+ *
+ * @param name - Target name
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 const NOT_FOUND_ERROR = (name: string) => `Skill "${name}" not found.`;
 
 /**
  * Writes one file inside a skill, creating the skill's reference bundle.
  *
- * @decision The body and the reference bundle are written through this one
- * function so a single set of path and budget guards covers both. Two write
- * paths means two places for the rules to diverge.
+ * @param userId - User identifier
+ * @param idOrName - Target id or name
+ * @param path - Target path
+ * @param content - Text content
+ * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function writeSkillFileForUser(

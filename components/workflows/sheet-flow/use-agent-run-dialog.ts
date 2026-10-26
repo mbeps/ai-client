@@ -7,6 +7,11 @@ import { createTransformRun } from "@/actions/transform-runs/create-transform-ru
 import { uploadRunInputFiles } from "@/components/workflows/sheet-flow/agent-editor-helpers";
 import { ROUTES } from "@/config/routes";
 
+/**
+ * Represents use agent run dialog params.
+ *
+ * @author Maruf Bepary
+ */
 export interface UseAgentRunDialogParams {
   id: string;
   requiresFileUpload: boolean;
@@ -15,6 +20,10 @@ export interface UseAgentRunDialogParams {
 
 /**
  * Manages run execution dialog, input files, and run creation action.
+ *
+ * @param params - Target params
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
  */
 export function useAgentRunDialog(params: UseAgentRunDialogParams) {
   const { id, requiresFileUpload, handleApiError } = params;

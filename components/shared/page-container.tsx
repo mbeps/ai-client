@@ -1,6 +1,11 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents page container variant.
+ *
+ * @author Maruf Bepary
+ */
 export type PageContainerVariant =
   | "default"
   | "narrow"
@@ -8,8 +13,18 @@ export type PageContainerVariant =
   | "full"
   | "prose";
 
+/**
+ * Represents page container padding.
+ *
+ * @author Maruf Bepary
+ */
 export type PageContainerPadding = "none" | "sm" | "default" | "lg";
 
+/**
+ * Represents page container props.
+ *
+ * @author Maruf Bepary
+ */
 export interface PageContainerProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   /**

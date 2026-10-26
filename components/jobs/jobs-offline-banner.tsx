@@ -5,6 +5,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * Represents jobs offline banner props.
+ *
+ * @author Maruf Bepary
+ */
 export interface JobsOfflineBannerProps {
   offline: boolean;
   loading: boolean;

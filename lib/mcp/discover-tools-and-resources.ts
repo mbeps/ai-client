@@ -12,6 +12,11 @@ import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
 /**
  * Checks if an error from the MCP client indicates an unsupported capability or missing method.
+ *
+ * @param err - Target err
+ * @param capabilityPhrase - Target capability phrase
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function isUnsupportedMcpCapabilityError(
   err: unknown,
@@ -27,6 +32,10 @@ function isUnsupportedMcpCapabilityError(
 
 /**
  * Extracts a readable error string from any error value.
+ *
+ * @param err - Target err
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function getErrorMessage(err: unknown): string {
   return (err as { message?: string })?.message ?? String(err);
@@ -34,6 +43,10 @@ function getErrorMessage(err: unknown): string {
 
 /**
  * Maps a raw tool object into DiscoveredTool.
+ *
+ * @param tool - Target tool
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function mapTool(tool: any): DiscoveredTool {
   return {
@@ -45,6 +58,10 @@ function mapTool(tool: any): DiscoveredTool {
 
 /**
  * Maps a raw resource object into DiscoveredResource.
+ *
+ * @param res - HTTP response
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function mapResource(res: any): DiscoveredResource {
   return {
@@ -57,6 +74,10 @@ function mapResource(res: any): DiscoveredResource {
 
 /**
  * Maps a raw resource template object into DiscoveredResource.
+ *
+ * @param tmpl - Target tmpl
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function mapResourceTemplate(tmpl: any): DiscoveredResource {
   return {
@@ -69,6 +90,11 @@ function mapResourceTemplate(tmpl: any): DiscoveredResource {
 
 /**
  * Maps a raw prompt object into DiscoveredPrompt.
+ *
+ * @param prompt - Target prompt
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 function mapPrompt(prompt: any, server: McpServerConfig): DiscoveredPrompt {
   return {
@@ -86,6 +112,11 @@ function mapPrompt(prompt: any, server: McpServerConfig): DiscoveredPrompt {
 
 /**
  * Fetches all tools exposed by an MCP server, handling pagination.
+ *
+ * @param client - Target client
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function discoverServerTools(
   client: any,
@@ -122,6 +153,11 @@ async function discoverServerTools(
 
 /**
  * Fetches direct resources exposed by an MCP server, handling pagination.
+ *
+ * @param client - Target client
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function fetchDirectResources(
   client: any,
@@ -160,6 +196,11 @@ async function fetchDirectResources(
 
 /**
  * Fetches resource templates exposed by an MCP server.
+ *
+ * @param client - Target client
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function fetchResourceTemplates(
   client: any,
@@ -195,6 +236,11 @@ async function fetchResourceTemplates(
 
 /**
  * Fetches all resources (direct and templates) from an MCP server sequentially.
+ *
+ * @param client - Target client
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function discoverServerResources(
   client: any,
@@ -207,6 +253,11 @@ async function discoverServerResources(
 
 /**
  * Fetches prompts exposed by an MCP server, handling pagination.
+ *
+ * @param client - Target client
+ * @param server - Target server
+ * @returns The resolved result
+ * @author Maruf Bepary
  */
 async function discoverServerPrompts(
   client: any,

@@ -29,8 +29,20 @@ import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const MODEL_TYPES = ["chat", "embedding", "both"] as const;
+/**
+ * Represents model type.
+ *
+ * @author Maruf Bepary
+ */
 type ModelType = (typeof MODEL_TYPES)[number];
 
+/**
+ * Performs to model type.
+ *
+ * @param value - Target value
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function toModelType(value: string | null | undefined): ModelType {
   if (value && MODEL_TYPES.includes(value as ModelType)) {
     return value as ModelType;
@@ -39,6 +51,11 @@ function toModelType(value: string | null | undefined): ModelType {
   return "chat";
 }
 
+/**
+ * Represents model form initial state.
+ *
+ * @author Maruf Bepary
+ */
 type ModelFormInitialState = {
   providerId: string;
   modelId: string;
@@ -53,6 +70,14 @@ type ModelFormInitialState = {
   isEnabled: boolean;
 };
 
+/**
+ * Constructs initial model form state.
+ *
+ * @param model - Target model
+ * @param providers - Target providers
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function buildInitialModelFormState(
   model: AiModelRow | null | undefined,
   providers: AiProviderRow[],
@@ -91,6 +116,11 @@ function buildInitialModelFormState(
   };
 }
 
+/**
+ * Represents model capability switches props.
+ *
+ * @author Maruf Bepary
+ */
 type ModelCapabilitySwitchesProps = {
   capTools: boolean;
   onCapToolsChange: (val: boolean) => void;
@@ -104,6 +134,13 @@ type ModelCapabilitySwitchesProps = {
   onIsEnabledChange: (val: boolean) => void;
 };
 
+/**
+ * Renders the model capability switches component.
+ *
+ * @param props - Component properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
 function ModelCapabilitySwitches(props: ModelCapabilitySwitchesProps) {
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -146,6 +183,11 @@ function ModelCapabilitySwitches(props: ModelCapabilitySwitchesProps) {
   );
 }
 
+/**
+ * Represents model form dialog props.
+ *
+ * @author Maruf Bepary
+ */
 type ModelFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -154,6 +196,11 @@ type ModelFormDialogProps = {
   onSaved?: () => void;
 };
 
+/**
+ * Represents model save payload.
+ *
+ * @author Maruf Bepary
+ */
 type ModelSavePayload = {
   providerId: string;
   modelId: string;
@@ -168,6 +215,15 @@ type ModelSavePayload = {
   isEnabled: boolean;
 };
 
+/**
+ * Saves model record.
+ *
+ * @param isEdit - Target is edit
+ * @param model - Target model
+ * @param payload - Target payload
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 async function saveModelRecord(
   isEdit: boolean,
   model: AiModelRow | null | undefined,
@@ -192,6 +248,17 @@ async function saveModelRecord(
   toast.success("Model created");
 }
 
+/**
+ * Custom hook that provides use model form functionality.
+ *
+ * @param open - Target open
+ * @param model - Target model
+ * @param providers - Target providers
+ * @param onOpenChange - Target on open change
+ * @param onSaved - Target on saved
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 function useModelForm(
   open: boolean,
   model: AiModelRow | null | undefined,

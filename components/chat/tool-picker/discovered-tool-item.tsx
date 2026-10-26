@@ -3,6 +3,11 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 
+/**
+ * Represents discovered tool item props.
+ *
+ * @author Maruf Bepary
+ */
 interface DiscoveredToolItemProps {
   serverId: string;
   tool: DiscoveredTool;

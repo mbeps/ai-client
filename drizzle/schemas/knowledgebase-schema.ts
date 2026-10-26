@@ -6,6 +6,12 @@ import {
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
 
+/**
+ * PostgreSQL table definition for user-owned knowledge bases.
+ * Stores RAG collections, document references, and vector indexing status.
+ *
+ * @author Maruf Bepary
+ */
 export const knowledgebase = pgTable(
   "knowledgebase",
   {

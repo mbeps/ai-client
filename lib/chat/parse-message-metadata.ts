@@ -9,11 +9,25 @@ import type {
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
 
+/**
+ * Parses string array.
+ *
+ * @param val - Value to evaluate or resolve
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseStringArray(val: unknown): string[] | null {
   if (!Array.isArray(val)) return null;
   return val as string[];
 }
 
+/**
+ * Parses prompt meta.
+ *
+ * @param parsed - Parsed data payload
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parsePromptMeta(
   parsed: Record<string, unknown>,
 ): ParsedMessageMetadata["promptMeta"] {
@@ -41,6 +55,13 @@ function parsePromptMeta(
   };
 }
 
+/**
+ * Parses tool data.
+ *
+ * @param parsed - Parsed data payload
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseToolData(
   parsed: Record<string, unknown>,
 ): ParsedMessageMetadata["toolData"] {
@@ -56,6 +77,14 @@ function parseToolData(
   };
 }
 
+/**
+ * Resolves token count.
+ *
+ * @param primary - Target primary
+ * @param fallback - Target fallback
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveTokenCount(
   primary: unknown,
   fallback: unknown,
@@ -65,6 +94,15 @@ function resolveTokenCount(
   return undefined;
 }
 
+/**
+ * Resolves total tokens.
+ *
+ * @param explicitTotal - Target explicit total
+ * @param prompt - Target prompt
+ * @param completion - Target completion
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function resolveTotalTokens(
   explicitTotal: unknown,
   prompt: number | undefined,
@@ -75,6 +113,13 @@ function resolveTotalTokens(
   return (prompt ?? 0) + (completion ?? 0);
 }
 
+/**
+ * Parses usage.
+ *
+ * @param usageRaw - Target usage raw
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
 function parseUsage(usageRaw: unknown): MessageUsage | null {
   if (!usageRaw || typeof usageRaw !== "object") {
     return null;
@@ -98,8 +143,8 @@ function parseUsage(usageRaw: unknown): MessageUsage | null {
 /**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
  *
- * @param {string | null | undefined} metadata - Raw JSON string from database or null
- * @returns {ParsedMessageMetadata} Typed metadata object; never throws
+ * @param metadata - Raw JSON string from database or null
+ * @returns Typed metadata object; never throws
  * @author Maruf Bepary
  */
 export function parseMessageMetadata(

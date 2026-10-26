@@ -10,6 +10,11 @@ import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
 import type { SortableResource } from "@/lib/sortable-resource";
 import { useAppStore } from "@/lib/store/use-app-store";
 
+/**
+ * Represents resource list page props.
+ *
+ * @author Maruf Bepary
+ */
 interface ResourceListPageProps<T extends SortableResource> {
   /** Leading icon for the page type. */
   icon: React.ReactNode;

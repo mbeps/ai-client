@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 
+/**
+ * Represents use message editing props.
+ *
+ * @author Maruf Bepary
+ */
 interface UseMessageEditingProps {
   displayContent: string;
   hasAttachments: boolean;
   onSaveMessage: (content: string) => void;
 }
 
+/**
+ * Custom hook that provides use message editing functionality.
+ *
+ * @param props - Target props
+ * @returns Hook state and control handlers.
+ * @author Maruf Bepary
+ */
 export function useMessageEditing({
   displayContent,
   hasAttachments,

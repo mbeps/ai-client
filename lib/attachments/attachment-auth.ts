@@ -4,6 +4,11 @@ import { db } from "@/drizzle/db";
 import { type Attachment, attachment } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
+/**
+ * Represents authorized attachment context.
+ *
+ * @author Maruf Bepary
+ */
 export interface AuthorizedAttachmentContext {
   userId: string;
   attachment: Attachment;
