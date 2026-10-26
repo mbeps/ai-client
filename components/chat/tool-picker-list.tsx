@@ -27,6 +27,62 @@ export interface ToolPickerListProps {
   maxHeight?: string;
 }
 
+function matchesInternalToolsSearch(search: string): boolean {
+  return "artifacts canvas manage_artifact memory save_memory".includes(
+    search.toLowerCase(),
+  );
+}
+
+function shouldShowNoToolsFound(
+  filteredServersLength: number,
+  search: string,
+): boolean {
+  return (
+    filteredServersLength === 0 &&
+    search.length > 0 &&
+    !matchesInternalToolsSearch(search)
+  );
+}
+
+function ToolPickerListHeader({
+  isAllSelected,
+  selectedCount,
+  totalCount,
+  onToggleAll,
+  disabled,
+}: {
+  isAllSelected: boolean;
+  selectedCount: number;
+  totalCount: number;
+  onToggleAll: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
+        onClick={onToggleAll}
+        disabled={disabled}
+      >
+        {isAllSelected ? (
+          <Square className="h-3.5 w-3.5" />
+        ) : (
+          <CheckSquare className="h-3.5 w-3.5" />
+        )}
+        <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
+      </Button>
+      <span>
+        {selectedCount > 0
+          ? `${selectedCount}/${totalCount} selected ${totalCount === 1 ? "tool" : "tools"}`
+          : `${totalCount} ${totalCount === 1 ? "tool" : "tools"} available`}
+      </span>
+    </div>
+  );
+}
+
 /**
  * List component for discovering and selecting MCP tools from multiple servers.
  * Dynamically fetches tools on server expansion, displays loading states and errors.
@@ -183,28 +239,13 @@ export function ToolPickerList({
         />
       </div>
 
-      <div className="text-muted-foreground flex shrink-0 items-center justify-between px-0.5 text-xs">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
-          onClick={toggleAll}
-          disabled={allDiscoveredTools.length === 0}
-        >
-          {isAllSelected ? (
-            <Square className="h-3.5 w-3.5" />
-          ) : (
-            <CheckSquare className="h-3.5 w-3.5" />
-          )}
-          <span>{isAllSelected ? "Deselect All" : "Select All"}</span>
-        </Button>
-        <span>
-          {selectedCount > 0
-            ? `${selectedCount}/${allDiscoveredTools.length} selected ${allDiscoveredTools.length === 1 ? "tool" : "tools"}`
-            : `${allDiscoveredTools.length} ${allDiscoveredTools.length === 1 ? "tool" : "tools"} available`}
-        </span>
-      </div>
+      <ToolPickerListHeader
+        isAllSelected={isAllSelected}
+        selectedCount={selectedCount}
+        totalCount={allDiscoveredTools.length}
+        onToggleAll={toggleAll}
+        disabled={allDiscoveredTools.length === 0}
+      />
 
       <div
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
@@ -220,15 +261,11 @@ export function ToolPickerList({
             onBulkSelect={onBulkSelect}
           />
 
-          {filteredServers.length === 0 &&
-            search.length > 0 &&
-            !"artifacts canvas manage_artifact memory save_memory".includes(
-              search.toLowerCase(),
-            ) && (
-              <div className="text-muted-foreground py-8 text-center">
-                No tools found matching &quot;{search}&quot;
-              </div>
-            )}
+          {shouldShowNoToolsFound(filteredServers.length, search) && (
+            <div className="text-muted-foreground py-8 text-center">
+              No tools found matching &quot;{search}&quot;
+            </div>
+          )}
 
           {filteredServers.map((server) => (
             <ServerToolsSection

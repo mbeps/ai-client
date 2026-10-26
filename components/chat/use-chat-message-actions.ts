@@ -16,7 +16,7 @@ export function scrollElementToBottom(container: HTMLElement | null): void {
   }
 }
 
-export function clearMsgQueryParamFromUrl(): void {
+function clearMsgQueryParamFromUrl(): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   if (!url.searchParams.has("msg")) return;
@@ -24,7 +24,7 @@ export function clearMsgQueryParamFromUrl(): void {
   window.history.replaceState({}, "", url.pathname + (url.search || ""));
 }
 
-export function navigateToSiblingLeaf(
+function navigateToSiblingLeaf(
   chat: Chat | undefined,
   chatId: string,
   siblingId: string,

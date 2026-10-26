@@ -43,7 +43,7 @@ function extractPromptInfo(parentMsg: Message) {
   };
 }
 
-export function extractRegeneratePayload(parentMsg: Message) {
+function extractRegeneratePayload(parentMsg: Message) {
   const { userContent, promptIds, assistantId, meta } =
     extractPromptInfo(parentMsg);
 

@@ -42,7 +42,7 @@ export function assertStepModelCapabilities(
   }
 }
 
-export function resolveStepServerNames(
+function resolveStepServerNames(
   step: TransformStep,
   allServers: any[],
 ): Set<string> {
@@ -53,7 +53,7 @@ export function resolveStepServerNames(
   return new Set(stepServers.map((s) => s.name));
 }
 
-export function isToolAllowed(
+function isToolAllowed(
   toolName: string,
   source: string,
   stepServerNames: Set<string>,
@@ -71,7 +71,7 @@ export function isToolAllowed(
   });
 }
 
-export function pruneUploadFileToolIfLoaded(
+function pruneUploadFileToolIfLoaded(
   filteredTools: Record<string, any>,
   toolSourceMap: Record<string, string>,
   requiresFileUpload: boolean,

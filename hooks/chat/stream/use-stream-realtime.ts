@@ -9,7 +9,7 @@ import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
  * Processes a batch of incoming realtime messages, deduplicating against the processed set.
  * @author Maruf Bepary
  */
-export function processIncomingRealtimeBatch(
+function processIncomingRealtimeBatch(
   batch: Array<{ data?: unknown } | unknown>,
   processedSet: WeakSet<object>,
   onEvent: (event: ChatStreamEvent) => void,
@@ -29,7 +29,7 @@ export function processIncomingRealtimeBatch(
  * Hook subscribing to Inngest Realtime message batches and routing events to handler.
  * @author Maruf Bepary
  */
-export function useStreamRealtimeIngestion(
+function useStreamRealtimeIngestion(
   chatId: string,
   messages: {
     all?: Array<{ data?: unknown }>;

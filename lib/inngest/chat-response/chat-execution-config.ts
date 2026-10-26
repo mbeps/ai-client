@@ -22,10 +22,7 @@ const log = getLogger(["inngest", "chat", "response"]);
  * Determines if error represents an abort condition.
  * @author Maruf Bepary
  */
-export function isAbortError(
-  error: unknown,
-  abortSignal: AbortSignal,
-): boolean {
+function isAbortError(error: unknown, abortSignal: AbortSignal): boolean {
   return (
     abortSignal.aborted ||
     (error instanceof Error && error.name === "AbortError")
@@ -36,7 +33,7 @@ export function isAbortError(
  * Determines if error represents a chat not found condition.
  * @author Maruf Bepary
  */
-export function isChatNotFoundError(error: unknown): boolean {
+function isChatNotFoundError(error: unknown): boolean {
   return (
     error instanceof ChatNotFoundError ||
     (error as Record<string, unknown> | null)?.code === "CHAT_NOT_FOUND"
@@ -98,7 +95,7 @@ export function extractFileAttachments(thread: any[]) {
  * Resolves model provider for main chat generation.
  * @author Maruf Bepary
  */
-export function resolveChatProvider(userId: string, model?: string) {
+function resolveChatProvider(userId: string, model?: string) {
   return model
     ? resolveProvider(userId, model)
     : resolveDefaultChatProvider(userId);
@@ -108,10 +105,7 @@ export function resolveChatProvider(userId: string, model?: string) {
  * Resolves model provider for subagent workers if configured.
  * @author Maruf Bepary
  */
-export function resolveWorkerChatProvider(
-  userId: string,
-  subagentModelId?: string,
-) {
+function resolveWorkerChatProvider(userId: string, subagentModelId?: string) {
   if (!subagentModelId) {
     return Promise.resolve(null);
   }

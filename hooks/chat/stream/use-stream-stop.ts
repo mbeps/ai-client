@@ -8,7 +8,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
  * Resolves the parent user message ID when stopping an in-flight stream.
  * @author Maruf Bepary
  */
-export function resolveUserMessageIdForStop(
+function resolveUserMessageIdForStop(
   pendingUserMsgId: string | null,
   currentChat?: {
     currentLeafId?: string | null;

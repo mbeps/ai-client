@@ -7,6 +7,7 @@ const INVALID_ARTIFACT_FORMAT_ERROR_CODE = "INVALID_ARTIFACT_FORMAT";
  */
 export class InvalidArtifactFormatError extends Error {
   readonly code = INVALID_ARTIFACT_FORMAT_ERROR_CODE;
+  // fallow-ignore-next-line unused-class-member
   readonly status = 400;
 
   constructor(

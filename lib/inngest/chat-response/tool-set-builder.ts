@@ -17,7 +17,7 @@ import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools
  * Determines active target knowledge base IDs from context.
  * @author Maruf Bepary
  */
-export function resolveTargetKbIds(ctx: {
+function resolveTargetKbIds(ctx: {
   activeKbIds?: string[];
   activeKbId?: string | null;
 }): string[] {
@@ -31,7 +31,7 @@ export function resolveTargetKbIds(ctx: {
  * Checks whether a specific internal tool is permitted by selectedTools.
  * @author Maruf Bepary
  */
-export function isInternalToolAllowed(
+function isInternalToolAllowed(
   toolId: string,
   selectedTools?: string[],
 ): boolean {
@@ -42,7 +42,7 @@ export function isInternalToolAllowed(
  * Determines whether subagent task delegation is enabled.
  * @author Maruf Bepary
  */
-export function isSubagentEnabled(
+function isSubagentEnabled(
   subagentsEnabled?: boolean,
   selectedTools?: string[],
 ): boolean {
@@ -56,7 +56,7 @@ export function isSubagentEnabled(
  * Builds scratchpad tools if subagent delegation is active.
  * @author Maruf Bepary
  */
-export function buildScratchpadTools(
+function buildScratchpadTools(
   enabled: boolean,
   chatId: string,
   messageId: string,
@@ -73,7 +73,7 @@ export function buildScratchpadTools(
  * Builds subagent dispatch tools if delegation is enabled.
  * @author Maruf Bepary
  */
-export function buildSubagentDispatchTools(params: {
+function buildSubagentDispatchTools(params: {
   isSubagentDelegationEnabled: boolean;
   orchestratorActiveTools: Record<string, any>;
   resolved: any;

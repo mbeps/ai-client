@@ -17,7 +17,7 @@ import { logger } from "@/lib/logger";
  * Extracts error message string safely from Error or Error-like objects.
  * @author Maruf Bepary
  */
-export function extractErrorMessage(err: unknown): string {
+function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "object" && err !== null && "message" in err) {
     return String((err as { message: unknown }).message);
@@ -29,7 +29,7 @@ export function extractErrorMessage(err: unknown): string {
  * Dispatches stream generation request to /api/chat.
  * @author Maruf Bepary
  */
-export async function dispatchChatStreamRequest(
+async function dispatchChatStreamRequest(
   body: StreamRequestOptions,
   handleApiError: (err: unknown) => boolean,
 ): Promise<boolean> {
@@ -61,7 +61,7 @@ export async function dispatchChatStreamRequest(
  * Persists the user message to the database before initiating generation.
  * @author Maruf Bepary
  */
-export async function persistUserTurnMessage(
+async function persistUserTurnMessage(
   chatId: string,
   userMsgId: string,
   fullContent: string,
@@ -90,7 +90,7 @@ export async function persistUserTurnMessage(
  * Halts execution and cleans up refs when message persistence fails.
  * @author Maruf Bepary
  */
-export function handlePersistFailure(
+function handlePersistFailure(
   refs: StreamRefsObject,
   resetStreamingState: () => void,
   setChatNotFound: (v: boolean) => void,
@@ -115,7 +115,7 @@ export function handlePersistFailure(
  * Initializes refs and state before dispatching generation request.
  * @author Maruf Bepary
  */
-export function setupStreamResponseStart(
+function setupStreamResponseStart(
   refs: StreamRefsObject,
   resetStreamingState: () => void,
   setIsStreaming: (is: boolean) => void,
@@ -142,7 +142,7 @@ export function setupStreamResponseStart(
  * Prepares user message, optimistically adds to store, and persists to DB.
  * @author Maruf Bepary
  */
-export async function prepareAndPersistUserMessage(
+async function prepareAndPersistUserMessage(
   params: StreamResponseExecutionParams,
 ): Promise<{
   userMsgMetadata: string;

@@ -35,7 +35,7 @@ import type { ToolCallState } from "@/types/tool/tool-call";
  * Applies incoming streaming delta chunks (text, reasoning, tool-call, tool-result) to state.
  * @author Maruf Bepary
  */
-export function applyStreamDelta(
+function applyStreamDelta(
   event: Extract<
     ChatStreamEvent,
     | { type: "start" }
@@ -90,7 +90,7 @@ export function applyStreamDelta(
  * Refetches complete chat from DB when rejoining client receives finish event.
  * @author Maruf Bepary
  */
-export async function executeRejoinFinish(
+async function executeRejoinFinish(
   chatId: string,
   upsertChat: (chat: Chat) => void,
   userMsgId: string | null,
@@ -125,7 +125,7 @@ export async function executeRejoinFinish(
  * Builds assistant message with metadata, adds to store, and calls onDone callback.
  * @author Maruf Bepary
  */
-export function executeStandardFinish(params: {
+function executeStandardFinish(params: {
   chatId: string;
   event: Extract<ChatStreamEvent, { type: "finish" }>;
   text: string;

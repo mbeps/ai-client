@@ -18,6 +18,34 @@ interface InternalToolsSectionProps {
   ) => void;
 }
 
+function InternalToolItem({
+  checked,
+  onToggle,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={onToggle}
+        className="mt-0.5"
+      />
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-xs font-medium">{title}</span>
+        <span className="text-muted-foreground line-clamp-2 text-[10px]">
+          {description}
+        </span>
+      </div>
+    </label>
+  );
+}
+
 /**
  * Collapsible section for toggling internal platform tools (artifacts, memory).
  *
@@ -92,42 +120,18 @@ export function InternalToolsSection({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex flex-col gap-1">
-                <label className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors">
-                  <Checkbox
-                    checked={isArtifactSelected}
-                    onCheckedChange={() =>
-                      onToggleTool("internal", "manage_artifact")
-                    }
-                    className="mt-0.5"
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-xs font-medium">
-                      Artifacts / Canvas
-                    </span>
-                    <span className="text-muted-foreground line-clamp-2 text-[10px]">
-                      Allows the AI to generate interactive Markdown,
-                      Spreadsheets, HTML UI, and Mermaid diagrams in a side
-                      panel.
-                    </span>
-                  </div>
-                </label>
-
-                <label className="group hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors">
-                  <Checkbox
-                    checked={isMemorySelected}
-                    onCheckedChange={() =>
-                      onToggleTool("internal", "manage_memory")
-                    }
-                    className="mt-0.5"
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-xs font-medium">Memory</span>
-                    <span className="text-muted-foreground line-clamp-2 text-[10px]">
-                      Allows the AI to remember your preferences and facts
-                      across conversations.
-                    </span>
-                  </div>
-                </label>
+                <InternalToolItem
+                  checked={isArtifactSelected}
+                  onToggle={() => onToggleTool("internal", "manage_artifact")}
+                  title="Artifacts / Canvas"
+                  description="Allows the AI to generate interactive Markdown, Spreadsheets, HTML UI, and Mermaid diagrams in a side panel."
+                />
+                <InternalToolItem
+                  checked={isMemorySelected}
+                  onToggle={() => onToggleTool("internal", "manage_memory")}
+                  title="Memory"
+                  description="Allows the AI to remember your preferences and facts across conversations."
+                />
               </div>
             </div>
           </div>

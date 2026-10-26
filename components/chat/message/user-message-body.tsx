@@ -15,7 +15,7 @@ interface UserMessageEditorProps {
   isSaveDisabled: boolean;
 }
 
-export function UserMessageEditor({
+function UserMessageEditor({
   editContent,
   onEditContentChange,
   onCancel,

@@ -44,7 +44,7 @@ export function buildMetadata(
  * Resolves a single prompt chunk from MCP server or local store.
  * @author Maruf Bepary
  */
-export async function resolveSinglePromptChunk(
+async function resolveSinglePromptChunk(
   promptId: string,
   prompts: Array<{ id: string; content?: string }>,
 ): Promise<string | undefined> {

@@ -11,7 +11,7 @@ import type { TransformStep } from "@/types/transform/transform-step";
  * Persists an explicit artifact produced by manage_artifact tool.
  * @author Maruf Bepary
  */
-export async function persistExplicitStepArtifact(
+async function persistExplicitStepArtifact(
   artifact: Record<string, unknown>,
   stepIndex: number,
   userId: string,
@@ -49,7 +49,7 @@ export async function persistExplicitStepArtifact(
  * Attempts to persist artifact if it has valid structure.
  * @author Maruf Bepary
  */
-export async function tryPersistExplicitArtifact(
+async function tryPersistExplicitArtifact(
   artifact: Record<string, unknown> | null,
   stepIndex: number,
   userId: string,
@@ -80,7 +80,7 @@ export async function tryPersistExplicitArtifact(
  * Updates output attachment IDs and current rows with newly persisted output.
  * @author Maruf Bepary
  */
-export function applyPersistedOutput(
+function applyPersistedOutput(
   persisted: { attachmentRow: AttachmentRow; outputAttachmentIds: string[] },
   currentOutputIds: string[],
 ): {
@@ -101,7 +101,7 @@ export function applyPersistedOutput(
  * Marks run as failed when workbook mutations occurred without persistence.
  * @author Maruf Bepary
  */
-export async function failOnUnpersistedMutations(
+async function failOnUnpersistedMutations(
   stepName: string,
   runId: string,
   emit: (data: any) => void,

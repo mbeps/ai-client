@@ -54,9 +54,7 @@ export function firstNonEmpty<T>(
 /**
  * Parses a JSON string and extracts its data property if present.
  */
-export function parsePayloadString(
-  str: string,
-): Record<string, any> | undefined {
+function parsePayloadString(str: string): Record<string, any> | undefined {
   try {
     const parsed = JSON.parse(str);
     if (!parsed || typeof parsed !== "object") return undefined;
@@ -89,7 +87,7 @@ const ENTITY_ID_KEYS = [
   "kbId",
 ] as const;
 
-export function extractPayloadEntityId(
+function extractPayloadEntityId(
   payloadData?: Record<string, any>,
 ): string | undefined {
   if (!payloadData) return undefined;
@@ -101,7 +99,7 @@ export function extractPayloadEntityId(
   return undefined;
 }
 
-export function resolveTransformUrl(
+function resolveTransformUrl(
   payloadData?: Record<string, any>,
   entityId?: string,
 ): string {

@@ -10,7 +10,7 @@ const log = getLogger(["app", "transform", "steps"]);
  * Builds spreadsheet artifact structure from base64 workbook content.
  * @author Maruf Bepary
  */
-export function buildWorkbookFallbackArtifact(
+function buildWorkbookFallbackArtifact(
   fileContent: string,
   stepIndex: number,
   stepName: string,
@@ -46,11 +46,25 @@ export function buildWorkbookFallbackArtifact(
   }
 }
 
+function isStepToolExecutable(
+  name: string,
+  runToolSourceMap: Record<string, string>,
+  stepServerNames: Set<string>,
+  runMcpTools: Record<string, any>,
+): boolean {
+  const src = runToolSourceMap[name];
+  return Boolean(
+    src &&
+      stepServerNames.has(src) &&
+      typeof runMcpTools[name]?.execute === "function",
+  );
+}
+
 /**
  * Finds the first allowed and callable MCP download tool matching preferred names or regex.
  * @author Maruf Bepary
  */
-export function resolveStepDownloadToolName(
+function resolveStepDownloadToolName(
   runToolSourceMap: Record<string, string>,
   stepServerNames: Set<string>,
   runMcpTools: Record<string, any>,
@@ -66,23 +80,17 @@ export function resolveStepDownloadToolName(
   ];
 
   for (const name of preferred) {
-    const src = runToolSourceMap[name];
     if (
-      src &&
-      stepServerNames.has(src) &&
-      typeof runMcpTools[name]?.execute === "function"
+      isStepToolExecutable(name, runToolSourceMap, stepServerNames, runMcpTools)
     ) {
       return name;
     }
   }
 
-  for (const [name, tool] of Object.entries(runMcpTools)) {
-    const src = runToolSourceMap[name];
+  for (const name of Object.keys(runMcpTools)) {
     if (
-      src &&
-      stepServerNames.has(src) &&
       /download|export|get_file/i.test(name) &&
-      typeof (tool as any)?.execute === "function"
+      isStepToolExecutable(name, runToolSourceMap, stepServerNames, runMcpTools)
     ) {
       return name;
     }
@@ -95,7 +103,7 @@ export function resolveStepDownloadToolName(
  * Invokes download MCP tool and persists returned workbook file.
  * @author Maruf Bepary
  */
-export async function executeWorkbookDownloadFallback(
+async function executeWorkbookDownloadFallback(
   currentWorkbookPath: string,
   stepIndex: number,
   stepName: string,
@@ -175,7 +183,7 @@ export async function executeWorkbookDownloadFallback(
  * Invokes download fallback when active workbook path exists.
  * @author Maruf Bepary
  */
-export async function tryDownloadFallback(
+async function tryDownloadFallback(
   currentWorkbookPath: string | null,
   stepIndex: number,
   stepName: string,

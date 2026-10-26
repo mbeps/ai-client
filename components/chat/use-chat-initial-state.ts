@@ -6,7 +6,7 @@ import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
-export function getThreadLastModelId(thread: Message[]): string | undefined {
+function getThreadLastModelId(thread: Message[]): string | undefined {
   for (let i = thread.length - 1; i >= 0; i--) {
     const msg = thread[i];
     if (msg.role === "user" && msg.metadata) {
@@ -17,7 +17,7 @@ export function getThreadLastModelId(thread: Message[]): string | undefined {
   return undefined;
 }
 
-export function resolveInitialModelId(
+function resolveInitialModelId(
   thread: Message[],
   currentProject: Project | undefined,
   currentAssistant: Assistant | undefined,
@@ -35,7 +35,7 @@ export function resolveInitialModelId(
   return userSettings?.defaultChatModelId || undefined;
 }
 
-export function resolveInitialSubagents(thread: Message[]): {
+function resolveInitialSubagents(thread: Message[]): {
   initialSubagentsEnabled: boolean;
   initialSubagentModelId: string | undefined;
 } {
@@ -55,7 +55,7 @@ export function resolveInitialSubagents(thread: Message[]): {
   };
 }
 
-export function resolveInitialTools(
+function resolveInitialTools(
   currentProject?: Project,
   currentAssistant?: Assistant,
 ): {
@@ -86,15 +86,12 @@ export function resolveInitialTools(
   };
 }
 
-export function resolveInitialKbIds(
-  chat?: Chat,
-  currentProject?: Project,
-): string[] {
+function resolveInitialKbIds(chat?: Chat, currentProject?: Project): string[] {
   const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
   return kbId ? [kbId] : [];
 }
 
-export function resolveInitialSkillIds(
+function resolveInitialSkillIds(
   currentAssistant?: Assistant,
   currentProject?: Project,
 ): string[] {

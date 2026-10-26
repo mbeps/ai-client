@@ -7,7 +7,7 @@ export type ModelFilters = {
   typeFilter: "all" | "chat" | "embedding" | "both";
 };
 
-export function matchesModelType(
+function matchesModelType(
   modelType: string,
   typeFilter: "all" | "chat" | "embedding" | "both",
 ): boolean {
@@ -16,7 +16,7 @@ export function matchesModelType(
   return modelType === typeFilter || modelType === "both";
 }
 
-export function matchesStatusFilter(
+function matchesStatusFilter(
   isEnabled: boolean,
   statusFilter: string,
 ): boolean {
@@ -24,7 +24,7 @@ export function matchesStatusFilter(
   return statusFilter === "enabled" ? isEnabled : !isEnabled;
 }
 
-export function matchesSearchQuery(
+function matchesSearchQuery(
   model: AiModelRow,
   query: string,
   providerName: string,

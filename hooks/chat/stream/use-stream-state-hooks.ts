@@ -110,7 +110,7 @@ export function useStreamRefs(): StreamRefsObject {
  * Checks if the chat is actively generating on the server upon component mount.
  * @author Maruf Bepary
  */
-export async function executeMountRejoinCheck(params: {
+async function executeMountRejoinCheck(params: {
   chatId: string;
   leafId: string;
   refs: StreamRefsObject;

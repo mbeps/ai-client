@@ -14,7 +14,7 @@ const log = getLogger(["inngest", "chat", "response"]);
  * Formats tool error payload into a reliable error string.
  * @author Maruf Bepary
  */
-export function formatToolErrorMessage(rawErr: unknown): string {
+function formatToolErrorMessage(rawErr: unknown): string {
   if (rawErr instanceof Error) {
     return rawErr.message;
   }
@@ -49,7 +49,7 @@ export function createStreamEmitter(
  * Handles a tool-call chunk by updating completedTools and emitting event.
  * @author Maruf Bepary
  */
-export async function handleToolCallChunk(
+async function handleToolCallChunk(
   chunk: any,
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
@@ -76,7 +76,7 @@ export async function handleToolCallChunk(
  * Handles a tool-result chunk by sanitizing output and emitting event.
  * @author Maruf Bepary
  */
-export async function handleToolResultChunk(
+async function handleToolResultChunk(
   chunk: any,
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
@@ -110,7 +110,7 @@ export async function handleToolResultChunk(
  * Handles a tool-error chunk by formatting error message and emitting event.
  * @author Maruf Bepary
  */
-export async function handleToolErrorChunk(
+async function handleToolErrorChunk(
   chunk: any,
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,

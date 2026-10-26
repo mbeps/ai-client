@@ -26,7 +26,7 @@ export function saveInflightState(
  * Retrieves in-flight streaming state from sessionStorage.
  * @author Maruf Bepary
  */
-export function loadInflightState(chatId: string) {
+function loadInflightState(chatId: string) {
   try {
     const raw = sessionStorage.getItem(`chat_inflight_${chatId}`);
     return raw ? JSON.parse(raw) : null;

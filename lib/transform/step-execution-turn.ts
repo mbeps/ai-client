@@ -18,7 +18,7 @@ import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 
 const log = getLogger(["app", "transform", "steps"]);
 
-export function handleSingleToolResult(
+function handleSingleToolResult(
   tr: any,
   toolSourceMap: Record<string, string>,
   emit: (data: any) => void,
@@ -85,7 +85,7 @@ export function handleSingleToolResult(
   return { isMutation, uploadedWorkbookPath, artifact };
 }
 
-export function emitStepToolCalls(
+function emitStepToolCalls(
   toolCalls: any[],
   toolSourceMap: Record<string, string>,
   emit: (data: any) => void,
@@ -102,7 +102,7 @@ export function emitStepToolCalls(
   }
 }
 
-export function processStepExecutionTurn(
+function processStepExecutionTurn(
   steps: any[],
   toolSourceMap: Record<string, string>,
   emit: (data: any) => void,

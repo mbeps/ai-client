@@ -38,6 +38,114 @@ interface ServerToolsSectionProps {
   ) => void;
 }
 
+function ServerToolsError({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="text-destructive flex items-center justify-between py-2 text-sm">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="h-4 w-4" />
+        <span>{error}</span>
+      </div>
+      <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={onRetry}>
+        <RefreshCw className="h-3 w-3" /> Retry
+      </Button>
+    </div>
+  );
+}
+
+function ServerToolsList({
+  server,
+  serverTools,
+  filteredTools,
+  selectedTools,
+  onToggleTool,
+}: {
+  server: McpServer | PublicMcpServer;
+  serverTools: DiscoveredTool[];
+  filteredTools: DiscoveredTool[];
+  selectedTools: Set<string>;
+  onToggleTool: (serverId: string, toolName: string) => void;
+}) {
+  if (serverTools.length === 0) {
+    return (
+      <div className="text-muted-foreground py-2 text-center text-xs">
+        No tools available
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <h4 className="bg-background/95 text-muted-foreground sticky top-0 z-10 flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase backdrop-blur">
+        <Wrench className="h-3 w-3" /> Tools
+      </h4>
+      <div className="flex flex-col gap-1">
+        {filteredTools.map((tool) => {
+          const toolId = `${server.id}:tool:${tool.name}`;
+          const isChecked = selectedTools.has(toolId);
+          return (
+            <DiscoveredToolItem
+              key={tool.name}
+              serverId={server.id}
+              tool={tool}
+              isChecked={isChecked}
+              onToggle={onToggleTool}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ServerToolsBody({
+  content,
+  server,
+  serverTools,
+  filteredTools,
+  selectedTools,
+  onRetry,
+  onToggleTool,
+}: {
+  content?: ServerContentState;
+  server: McpServer | PublicMcpServer;
+  serverTools: DiscoveredTool[];
+  filteredTools: DiscoveredTool[];
+  selectedTools: Set<string>;
+  onRetry: () => void;
+  onToggleTool: (serverId: string, toolName: string) => void;
+}) {
+  if (content?.loading) {
+    return (
+      <div className="text-muted-foreground flex items-center justify-center gap-2 py-4 text-sm">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Discovering tools...
+      </div>
+    );
+  }
+
+  if (content?.error) {
+    return <ServerToolsError error={content.error} onRetry={onRetry} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      <ServerToolsList
+        server={server}
+        serverTools={serverTools}
+        filteredTools={filteredTools}
+        selectedTools={selectedTools}
+        onToggleTool={onToggleTool}
+      />
+    </div>
+  );
+}
+
 /**
  * Collapsible section for discovering and selecting tools from an MCP server.
  *
@@ -119,58 +227,15 @@ export function ServerToolsSection({
 
       {(isExpanded || search.length > 0) && (
         <div className="bg-card/50 space-y-4 border-t p-3">
-          {content?.loading ? (
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-4 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Discovering tools...
-            </div>
-          ) : content?.error ? (
-            <div className="text-destructive flex items-center justify-between py-2 text-sm">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                <span>{content.error}</span>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1"
-                onClick={onRetry}
-              >
-                <RefreshCw className="h-3 w-3" /> Retry
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {serverTools.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="bg-background/95 text-muted-foreground sticky top-0 z-10 flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase backdrop-blur">
-                    <Wrench className="h-3 w-3" /> Tools
-                  </h4>
-                  <div className="flex flex-col gap-1">
-                    {filteredTools.map((tool) => {
-                      const toolId = `${server.id}:tool:${tool.name}`;
-                      const isChecked = selectedTools.has(toolId);
-                      return (
-                        <DiscoveredToolItem
-                          key={tool.name}
-                          serverId={server.id}
-                          tool={tool}
-                          isChecked={isChecked}
-                          onToggle={onToggleTool}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {serverTools.length === 0 && (
-                <div className="text-muted-foreground py-2 text-center text-xs">
-                  No tools available
-                </div>
-              )}
-            </div>
-          )}
+          <ServerToolsBody
+            content={content}
+            server={server}
+            serverTools={serverTools}
+            filteredTools={filteredTools}
+            selectedTools={selectedTools}
+            onRetry={onRetry}
+            onToggleTool={onToggleTool}
+          />
         </div>
       )}
     </div>

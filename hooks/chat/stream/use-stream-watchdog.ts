@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
  * Evaluates whether stream conditions warrant triggering a database sync.
  * @author Maruf Bepary
  */
-export function shouldTriggerWatchdogSync(params: {
+function shouldTriggerWatchdogSync(params: {
   isConnectionError: boolean;
   isRejoined: boolean;
   attempts: number;
@@ -34,7 +34,7 @@ export function shouldTriggerWatchdogSync(params: {
  * Determines whether to abort a stalled stream after excessive attempts.
  * @author Maruf Bepary
  */
-export function shouldAbortStalledWatchdog(params: {
+function shouldAbortStalledWatchdog(params: {
   isConnectionError: boolean;
   hasActiveCallingTools: boolean;
   attempts: number;
@@ -47,7 +47,7 @@ export function shouldAbortStalledWatchdog(params: {
  * Executes a single watchdog interval tick, attempting recovery or halting stalled generation.
  * @author Maruf Bepary
  */
-export async function executeWatchdogTick(params: {
+async function executeWatchdogTick(params: {
   chatId: string;
   interval: ReturnType<typeof setInterval>;
   syncFromDb: () => Promise<boolean>;
@@ -88,7 +88,7 @@ export async function executeWatchdogTick(params: {
  * Computes watchdog health status from refs and connection flags.
  * @author Maruf Bepary
  */
-export function createWatchdogTickStatus(
+function createWatchdogTickStatus(
   refs: StreamRefsObject,
   connectionStatus: string,
   realtimeError: unknown,
