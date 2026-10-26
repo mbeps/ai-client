@@ -33,7 +33,7 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
+import { requireUserAttachment } from "@/lib/attachments/attachment-auth";
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 

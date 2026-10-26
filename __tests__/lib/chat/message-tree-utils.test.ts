@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatFromRows } from "@/actions/chats/build-chat";
+import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
 
 describe("buildChatFromRows", () => {
   it("builds chat object with zero messages", () => {

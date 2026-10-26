@@ -1,8 +1,8 @@
 "use server";
 
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { project } from "@/drizzle/schemas/project-schema";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 
 /**
  * Deletes one or more projects and unbinds them from all chats for the authenticated user.

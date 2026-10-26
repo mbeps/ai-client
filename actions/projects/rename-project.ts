@@ -1,7 +1,7 @@
 "use server";
 
-import { renameEntityFactory } from "@/actions/shared/rename-entity-factory";
 import { project } from "@/drizzle/schemas/project-schema";
+import { renameEntityFactory } from "@/lib/factories/rename-entity-factory";
 import { renameProjectSchema } from "@/schemas/project/project";
 import type { ProjectRow } from "@/types/project/project-row";
 

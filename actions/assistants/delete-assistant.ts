@@ -1,8 +1,8 @@
 "use server";
 
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
 import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { chat } from "@/drizzle/schemas/chat-schema";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 
 /**
  * Deletes one or more AI assistant personas and unbinds them from all chats for the authenticated user.

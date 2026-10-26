@@ -52,7 +52,7 @@ vi.mock("@/actions/chats/get-chat", () => ({
 }));
 
 const mockBuildChatFromRows = vi.hoisted(() => vi.fn());
-vi.mock("@/actions/chats/build-chat", () => ({
+vi.mock("@/lib/chat/message-tree-utils", () => ({
   buildChatFromRows: mockBuildChatFromRows,
 }));
 

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { z } from "zod";
-import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
-import { renameEntityFactory } from "@/actions/shared/rename-entity-factory";
-import { updateEntityFactory } from "@/actions/shared/update-entity-factory";
+import { createEntityFactory } from "@/lib/factories/create-entity-factory";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
+import { renameEntityFactory } from "@/lib/factories/rename-entity-factory";
+import { updateEntityFactory } from "@/lib/factories/update-entity-factory";
 
 const requireSessionMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth/require-session", () => ({

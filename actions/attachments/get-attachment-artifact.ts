@@ -1,7 +1,7 @@
 "use server";
 
 import * as xlsx from "xlsx";
-import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
+import { requireUserAttachment } from "@/lib/attachments/attachment-auth";
 import { getExtension } from "@/lib/attachments/get-extension";
 import { downloadObject } from "@/lib/storage/download-object";
 import type { ArtifactData } from "@/types/artifact/artifact-data";

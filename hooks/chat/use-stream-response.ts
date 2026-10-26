@@ -3,7 +3,6 @@
 import { useRealtime } from "inngest/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { buildChatFromRows } from "@/actions/chats/build-chat";
 import { getChatRealtimeToken } from "@/actions/chats/chat-realtime-token";
 import { getChat } from "@/actions/chats/get-chat";
 import { isChatGenerating } from "@/actions/chats/is-chat-generating";
@@ -12,6 +11,7 @@ import { PROMPTS } from "@/config/prompts";
 import { useApiError } from "@/hooks/use-api-error";
 import { processAttachments } from "@/lib/chat/attachments/process-attachments";
 import { extractSkillChangesFromToolResults } from "@/lib/chat/extract-skill-changes-from-tool-results";
+import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
 import { resolveMcpPrompt } from "@/lib/chat/resolve-mcp-prompt";
 import {
   accumulateReasoningDelta,
