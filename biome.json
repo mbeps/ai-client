@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -25,7 +25,8 @@
       "!tests",
       "!.vscode",
       "!wiki",
-      "!.agents"
+      "!.agents",
+      "!pnpm-lock.yaml"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true

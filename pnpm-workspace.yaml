@@ -1,0 +1,10 @@
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+permissions:
+  "@logtape/logtape":
+    skills: true
+  "@tanstack/react-table":
+    skills: true
+  fallow:
+    skills: true

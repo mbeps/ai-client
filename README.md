@@ -64,7 +64,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 # Requirements
 
 - Node.js 22 or higher
-- npm 9 or higher
+- pnpm 10 or higher
 - PostgreSQL 17
 - Qdrant (via Docker or Podman)
 - MinIO or AWS S3
@@ -139,7 +139,7 @@ cd ai-client
 Install all required Node.js dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## 3. Configure Environment Variables
@@ -262,7 +262,7 @@ You should see `postgres`, `minio`, and `inngest` containers. MinIO console is a
 Run database migrations:
 
 ```bash
-npm run db:migrate
+pnpm run db:migrate
 ```
 
 # Run Application
@@ -270,14 +270,14 @@ npm run db:migrate
 Start the development server:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Alternatively, you can build the whole app and run it using the following commands:
 
 ```bash
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
 
 The application should now be running at http://localhost:3000.
