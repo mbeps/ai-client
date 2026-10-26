@@ -96,7 +96,7 @@ function InnerBlockNoteEditor({
               latestMarkdownRef.current = markdown;
               onChange(markdown);
             } catch (err) {
-              console.error(
+              logger.error(
                 "Failed to serialize BlockNote blocks to markdown",
                 err,
               );

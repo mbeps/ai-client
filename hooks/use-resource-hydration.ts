@@ -23,7 +23,7 @@ type HydratableResource =
  * Maps resource names to store loader functions (e.g. 'projects' -> loadProjects).
  * Supports ephemeral resources like mcpPrompts (discovery-based, not persistent).
  *
- * Side effects: Calls store loader functions, updates store state, logs errors to console.
+ * Side effects: Calls store loader functions, updates store state, logs errors to application logger.
  * Use case: Layout pages initialising multiple stores, detail pages hydrating related resources.
  * Constraint: Loaders are called unconditionally if resource empty; no selective refresh. Uses ref to prevent re-runs in StrictMode.
  *
