@@ -9,4 +9,3 @@ export function resolvePromptPayload(
 ): string[] | undefined {
   return promptIds.length > 0 ? promptIds : undefined;
 }
-
