@@ -43,12 +43,12 @@ export function ModelTableRow({
           checked={isSelected}
           disabled={isBusy}
           onCheckedChange={() => onToggleSelect(model.id)}
-          aria-label={`Select model ${model.label}`}
+          aria-label={`Select ${model.label}`}
         />
       </TableCell>
-      <TableCell className="font-medium">
-        <div>
-          <div>{model.label}</div>
+      <TableCell>
+        <div className="space-y-0.5">
+          <div className="font-medium">{model.label}</div>
           <div className="text-muted-foreground text-xs">{model.modelId}</div>
         </div>
       </TableCell>

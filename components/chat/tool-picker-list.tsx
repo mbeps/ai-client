@@ -228,12 +228,12 @@ export function ToolPickerList({
   };
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
-      <div className="relative">
-        <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+    <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
+      <div className="relative shrink-0">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           placeholder="Search tools and resources..."
-          className="pl-8"
+          className="pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
