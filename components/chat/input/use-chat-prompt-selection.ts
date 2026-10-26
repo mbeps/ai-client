@@ -1,12 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 
-export function resolvePromptPayload(
-  promptIds: string[],
-): string[] | undefined {
-  return promptIds.length > 0 ? promptIds : undefined;
-}
-
 /**
  * Manages selection and toggle state for multiple prompt items.
  */
