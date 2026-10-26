@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
 // ─── Safety-net mocks: prevent env/db/auth from loading ───────────────────

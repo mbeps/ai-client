@@ -6,7 +6,7 @@ import { ServerCard } from "@/components/mcp/server-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Connectors (MCP servers) listing page — client component displaying all configured MCP servers.

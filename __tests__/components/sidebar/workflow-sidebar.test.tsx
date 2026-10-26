@@ -28,7 +28,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
   },
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: {
     getState: () => ({
       resetEntityState: vi.fn(),

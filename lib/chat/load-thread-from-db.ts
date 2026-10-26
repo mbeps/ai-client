@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { attachment, chat, message } from "@/drizzle/schema";
+import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 

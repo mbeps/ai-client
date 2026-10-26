@@ -1,12 +1,12 @@
 import { LifeBuoy, Smartphone } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { BackupCodeTab } from "@/app/auth/2fa/_components/backup-code-tab";
+import { TotpForm } from "@/app/auth/2fa/_components/totp-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { BackupCodeTab } from "./_components/backup-code-tab";
-import { TotpForm } from "./_components/totp-form";
 
 const TAB_VALUES = {
   TOTP: "totp",

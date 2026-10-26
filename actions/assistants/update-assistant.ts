@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { updateEntityFactory } from "@/actions/shared/update-entity-factory";
-import { assistant } from "@/drizzle/schema";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { updateAssistantSchema } from "@/schemas/assistant/assistant";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 

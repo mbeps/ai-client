@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 
 /**
  * Throws when the user already owns a skill with the given slug.

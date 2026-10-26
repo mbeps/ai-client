@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHUNK_CONSTANTS } from "@/config/chunk";
-import { chunkText } from "../../../lib/rag/chunk-text";
+import { chunkText } from "@/lib/rag/chunk-text";
 
 describe("chunkText", () => {
   it("returns empty array for empty string", () => {

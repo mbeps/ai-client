@@ -2,7 +2,8 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { chat, message, subagentScratchpad } from "@/drizzle/schema";
+import { chat, message } from "@/drizzle/schemas/chat-schema";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**

@@ -1,6 +1,6 @@
 "use server";
 
-import { assistant } from "@/drizzle/schema";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 

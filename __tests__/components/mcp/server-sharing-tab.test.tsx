@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toggleMcpServerPublic } from "@/actions/mcp-servers/toggle-mcp-server-public";
 import { ServerSharingTab } from "@/components/mcp/server-sharing-tab";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 vi.mock("@/actions/mcp-servers/toggle-mcp-server-public", () => ({

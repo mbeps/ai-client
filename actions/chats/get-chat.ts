@@ -2,13 +2,9 @@
 
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import {
-  assistant,
-  attachment,
-  chat,
-  message,
-  project,
-} from "@/drizzle/schema";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 

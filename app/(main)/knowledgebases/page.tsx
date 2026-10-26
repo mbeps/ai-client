@@ -6,13 +6,13 @@ import {
   type KnowledgebaseWithCount,
   listKnowledgebases,
 } from "@/actions/knowledgebases/list-knowledgebases";
+import { CreateKnowledgebaseDialog } from "@/app/(main)/knowledgebases/_components/create-knowledgebase-dialog";
 import { KnowledgebaseCard } from "@/components/knowledgebase/knowledgebase-card";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { useUserModels } from "@/hooks/use-user-models";
 import { logger } from "@/lib/logger";
-import { CreateKnowledgebaseDialog } from "./_components/create-knowledgebase-dialog";
 
 /**
  * Knowledgebases page: Manage RAG document collections.

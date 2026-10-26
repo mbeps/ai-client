@@ -50,7 +50,7 @@ vi.mock("@/actions/memories/delete-memories", () => ({
   deleteMemories: (input: any) => mockDeleteMemories(input),
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) =>
     selector({
       memories: mockMemories,

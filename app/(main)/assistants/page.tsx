@@ -2,11 +2,11 @@
 
 import { Bot, Plus } from "lucide-react";
 import { useState } from "react";
+import { CreateAssistantDialog } from "@/app/(main)/assistants/_components/create-assistant-dialog";
 import { AssistantCard } from "@/components/assistant/assistant-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/lib/store";
-import { CreateAssistantDialog } from "./_components/create-assistant-dialog";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Assistants list page for browsing and managing AI personas.

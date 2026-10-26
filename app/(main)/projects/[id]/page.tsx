@@ -40,7 +40,7 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";

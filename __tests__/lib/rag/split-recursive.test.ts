@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitRecursive } from "../../../lib/rag/split-recursive";
+import { splitRecursive } from "@/lib/rag/split-recursive";
 
 describe("splitRecursive", () => {
   it("returns empty array for empty text", () => {

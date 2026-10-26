@@ -1,8 +1,8 @@
+import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
+import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { getLogger } from "@/lib/logger";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { sanitiseToolNames } from "@/lib/mcp/sanitise-tool-names";
-import { registerArtifactTool } from "./register-artifact-tool";
-import { registerKnowledgebaseTool } from "./register-knowledgebase-tool";
 
 const log = getLogger(["app", "chat", "tools"]);
 

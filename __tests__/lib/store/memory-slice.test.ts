@@ -8,7 +8,7 @@ vi.mock("@/actions/memories/list-memories", () => ({
   listMemories: () => mockListMemories(),
 }));
 
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 describe("EntitySlice Memory State", () => {
   beforeEach(() => {

@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ProfileUpdateForm } from "@/app/profile/_components/profile/profile-update-form";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { ProfileUpdateForm } from "../_components/profile/profile-update-form";
 
 /**
  * General profile settings page for updating user name and viewing email address.

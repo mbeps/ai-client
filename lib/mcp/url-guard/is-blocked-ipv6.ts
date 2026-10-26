@@ -1,4 +1,4 @@
-import { isBlockedIPv4 } from "./is-blocked-ipv4";
+import { isBlockedIPv4 } from "@/lib/mcp/url-guard/is-blocked-ipv4";
 
 /**
  * Checks whether an IPv6 address is in a blocked/private range.

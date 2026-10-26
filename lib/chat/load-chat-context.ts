@@ -1,14 +1,14 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
-  assistant,
-  chat,
-  knowledgebase,
   mcpServer,
-  project,
-  skill,
   userMcpServerInstall,
-} from "@/drizzle/schema";
+} from "@/drizzle/schemas/mcp-server-schema";
+import { project } from "@/drizzle/schemas/project-schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";

@@ -48,7 +48,7 @@ vi.mock("@/hooks/use-api-error", () => ({
   useApiError: () => ({ handleApiError: vi.fn() }),
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: () => [],
 }));
 

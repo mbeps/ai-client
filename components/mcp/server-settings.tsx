@@ -9,7 +9,7 @@ import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Props for ServerSettings component.

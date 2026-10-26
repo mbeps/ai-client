@@ -41,7 +41,7 @@ vi.mock("@/lib/transform/persist-artifact", () => ({
   persistTransformArtifact: vi.fn(),
 }));
 
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 
 describe("runTransformSteps heartbeat", () => {

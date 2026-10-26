@@ -1,10 +1,10 @@
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { estimateAttachmentTokens } from "@/lib/chat/estimate-attachment-tokens";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
-import { parseMessageMetadata } from "./parse-message-metadata";
 
 export interface ContextCategoryBreakdown {
   systemInstructions: number;

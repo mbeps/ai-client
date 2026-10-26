@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
-import { transformAgent, transformRun } from "@/drizzle/schema";
+import {
+  transformAgent,
+  transformRun,
+} from "@/drizzle/schemas/transform-agent-schema";
 import { inngest } from "@/lib/inngest/client";
 import { transformRunChannel } from "@/lib/inngest/transform-run-channel";
 import { getLogger } from "@/lib/logger";

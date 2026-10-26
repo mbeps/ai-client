@@ -8,7 +8,7 @@ import { togglePinProject } from "@/actions/projects/toggle-pin-project";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Project } from "@/types/project/project";
 
 /**

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { subagentScratchpad } from "@/drizzle/schema";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 
 /**
  * Lists all scratchpad files recorded for a message turn.

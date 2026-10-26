@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { subagentScratchpad } from "@/drizzle/schema";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 import { getLogger } from "@/lib/logger";
-import { normaliseScratchpadPath } from "./normalise-scratchpad-path";
+import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-path";
 
 const log = getLogger(["subagents", "scratchpad"]);
 

@@ -11,7 +11,7 @@ import { ROUTES } from "@/config/routes";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useUserModels } from "@/hooks/use-user-models";
 import { authClient } from "@/lib/auth/auth-client";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.

@@ -2,7 +2,7 @@ import { embedMany } from "ai";
 import { env } from "@/config/env";
 import { getLogger } from "@/lib/logger";
 import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
-import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
+import { PREFIXED_EMBEDDING_MODELS } from "@/lib/rag/prefixed-embedding-models";
 
 const log = getLogger(["app", "rag", "embeddings"]);
 

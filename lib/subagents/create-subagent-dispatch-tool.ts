@@ -7,10 +7,10 @@ import {
 } from "ai";
 import { z } from "zod";
 import { getLogger } from "@/lib/logger";
-import { constructSubagentPrompt } from "./construct-subagent-prompt";
-import { getSubagentTools } from "./get-subagent-tools";
-import { sanitizeSubagentOutput } from "./subagent-dispatch-tool";
-import { SUBAGENT_ROLES } from "./subagent-role";
+import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
+import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
+import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
+import { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 
 const log = getLogger(["subagents", "dispatch"]);
 

@@ -13,6 +13,13 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
+import { AttachmentGallery } from "@/components/chat/message/attachment-gallery";
+import { CanvasCard } from "@/components/chat/message/canvas-card";
+import { CitationsList } from "@/components/chat/message/citations-list";
+import { DownloadCard } from "@/components/chat/message/download-card";
+import { MessageActions } from "@/components/chat/message/message-actions";
+import { ResponseTimeline } from "@/components/chat/message/response-timeline";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -23,7 +30,7 @@ import { extractCitations } from "@/lib/chat/extract-citations";
 import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
@@ -31,13 +38,6 @@ import type { DownloadItem } from "@/types/download/download-item";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import { MarkdownRenderer } from "./markdown-renderer";
-import { AttachmentGallery } from "./message/attachment-gallery";
-import { CanvasCard } from "./message/canvas-card";
-import { CitationsList } from "./message/citations-list";
-import { DownloadCard } from "./message/download-card";
-import { MessageActions } from "./message/message-actions";
-import { ResponseTimeline } from "./message/response-timeline";
 
 interface UserMessageContextChipsProps {
   promptIds: string[];

@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { prompt } from "@/drizzle/schema";
+import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { updatePromptSchema } from "@/schemas/prompt/prompt";
 import type { PromptRow } from "@/types/prompt/prompt-row";

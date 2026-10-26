@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 type HydratableResource =
   | "projects"

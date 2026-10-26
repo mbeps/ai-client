@@ -1,19 +1,20 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { kbDocument, knowledgebase } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
 import { getLogger } from "@/lib/logger";
+import { chunkText } from "@/lib/rag/chunk-text";
+import { embedDocuments } from "@/lib/rag/embed-documents";
+import {
+  extractTextFromBuffer,
+  MAX_DOCUMENT_CHARS_LIMIT,
+} from "@/lib/rag/extract-text-server";
 import {
   deletePointsByDocumentId,
   upsertChunkPoints,
 } from "@/lib/rag/qdrant-client";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
-import { chunkText } from "./chunk-text";
-import { embedDocuments } from "./embed-documents";
-import {
-  extractTextFromBuffer,
-  MAX_DOCUMENT_CHARS_LIMIT,
-} from "./extract-text-server";
 
 const log = getLogger(["app", "rag", "pipeline"]);
 

@@ -7,7 +7,7 @@ import {
   isPromptItem,
   isSkillItem,
 } from "@/hooks/chat/mention-item-guards";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";

@@ -2,11 +2,11 @@
 
 import { AlertTriangle, Database, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-options";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
-import { KnowledgebaseOptions } from "./knowledgebase-options";
 
 interface KnowledgebaseCardProps {
   knowledgebase: Knowledgebase;

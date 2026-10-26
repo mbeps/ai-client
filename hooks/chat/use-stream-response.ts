@@ -24,7 +24,7 @@ import { applyToolCallEvent } from "@/lib/chat/stream/handle-stream-tool-calls";
 import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/chat-channel";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";

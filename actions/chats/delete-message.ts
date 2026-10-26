@@ -3,12 +3,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import {
-  attachment,
-  chat,
-  message,
-  subagentScratchpad,
-} from "@/drizzle/schema";
+import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";

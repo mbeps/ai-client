@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { fenceBlock } from "@/lib/skills/fence-block";
 import type { SkillBundledFile } from "@/types/skill/skill";
 

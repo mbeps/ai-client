@@ -3,14 +3,14 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
+import { chat } from "@/drizzle/schemas/chat-schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
-  chat,
-  kbDocument,
-  knowledgebase,
   transformAgent,
   transformRun,
-  workflowTranslation,
-} from "@/drizzle/schema";
+} from "@/drizzle/schemas/transform-agent-schema";
+import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { fetchUserInngestRuns } from "@/lib/inngest/run-service";
 import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";

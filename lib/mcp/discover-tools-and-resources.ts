@@ -4,11 +4,11 @@ import { withTimeout } from "@/lib/mcp/with-timeout";
 
 const log = getLogger(["app", "mcp", "discover"]);
 
+import { withMcpServer } from "@/lib/mcp/with-mcp-server";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import { withMcpServer } from "./with-mcp-server";
 
 /**
  * Checks if an error from the MCP client indicates an unsupported capability or missing method.

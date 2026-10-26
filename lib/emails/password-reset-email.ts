@@ -1,4 +1,4 @@
-import { sendEmail } from "./send-email";
+import { sendEmail } from "@/lib/emails/send-email";
 
 /**
  * Sends a password-reset email with a time-bound confirmation link.

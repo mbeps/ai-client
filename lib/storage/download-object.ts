@@ -1,5 +1,5 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { S3_BUCKET, s3Client } from "./s3-instance";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 /**
  * Downloads a complete file object from S3 into memory.

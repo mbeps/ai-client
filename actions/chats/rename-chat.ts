@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { renameChatSchema } from "@/schemas/chat/chat";
 import type { ChatRow } from "@/types/chat/chat-row";

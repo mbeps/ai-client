@@ -1,6 +1,6 @@
+import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 /**
  * Universal resolver that tries to find a model by record ID (UUID) first,

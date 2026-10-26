@@ -25,7 +25,7 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: hybridSearchMock,
 }));
 
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
 const SKILL_ONE = {

@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { SessionsTab } from "@/app/profile/_components/session/sessions-tab";
+import { LoadingSuspense } from "@/app/profile/_components/shared/loading-suspense";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { SessionsTab } from "../_components/session/sessions-tab";
-import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
 /**
  * Active sessions management page. Displays devices and browser sessions with revocation controls.

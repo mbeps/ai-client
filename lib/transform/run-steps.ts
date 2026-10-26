@@ -4,7 +4,7 @@ import * as xlsx from "xlsx";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";

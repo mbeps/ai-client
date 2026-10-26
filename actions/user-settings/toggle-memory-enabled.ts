@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
-import { userSettings } from "@/drizzle/schema";
+import { userSettings } from "@/drizzle/schemas/user-settings-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getLogger } from "@/lib/logger";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";

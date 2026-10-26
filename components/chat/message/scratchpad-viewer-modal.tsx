@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getScratchpadFilesAction } from "@/actions/subagents/get-scratchpad";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { MarkdownRenderer } from "../markdown-renderer";
 
 interface ScratchpadFile {
   id: string;

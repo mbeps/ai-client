@@ -1,4 +1,4 @@
-import type { aiProvider } from "@/drizzle/schema";
+import type { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { encrypt } from "@/lib/encryption/encrypt";
 import { normaliseProviderApiKey } from "@/lib/providers/normalise-provider-api-key";
 import { serialiseProviderHeaders } from "@/lib/providers/serialise-provider-headers";

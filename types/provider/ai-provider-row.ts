@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { aiProvider } from "@/drizzle/schema";
+import type { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import type { TimedResource } from "@/types/shared/resource";
 
 /**

@@ -40,7 +40,7 @@ import {
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 
 /**

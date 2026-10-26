@@ -3,7 +3,10 @@
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
-import { transformAgent, transformRun } from "@/drizzle/schema";
+import {
+  transformAgent,
+  transformRun,
+} from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { createTransformRunSchema } from "@/schemas/workflows/transform-agent";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";

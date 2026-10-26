@@ -89,7 +89,7 @@ vi.mock("@/components/mcp/server-sharing-tab", () => ({
 import React from "react";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import McpServerPage from "@/app/settings/connectors/[id]/page";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 class TestErrorBoundary extends React.Component<

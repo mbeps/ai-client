@@ -4,10 +4,10 @@ import { format } from "date-fns";
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { ChatOptions } from "@/components/chat/chat-options";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
 import type { Chat } from "@/types/chat/chat";
-import { ChatOptions } from "./chat-options";
 
 /**
  * Props for the ChatCard component.

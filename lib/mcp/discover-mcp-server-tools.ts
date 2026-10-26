@@ -2,13 +2,16 @@
 
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
+import {
+  mcpServer,
+  userMcpServerInstall,
+} from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
+import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
-import { discoverToolsAndResources } from "./discover-tools-and-resources";
-import { mcpServerRowToConfig } from "./mappers";
 
 /**
  * Discovers available tools, resources, and prompts exposed by an MCP server.

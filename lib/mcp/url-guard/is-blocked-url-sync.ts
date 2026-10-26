@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
-import { isBlockedIPv4 } from "./is-blocked-ipv4";
-import { isBlockedIPv6 } from "./is-blocked-ipv6";
+import { isBlockedIPv4 } from "@/lib/mcp/url-guard/is-blocked-ipv4";
+import { isBlockedIPv6 } from "@/lib/mcp/url-guard/is-blocked-ipv6";
 
 /**
  * Sync-only SSRF guard for use in contexts that cannot await (e.g., Zod refinements).

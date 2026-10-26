@@ -8,7 +8,7 @@ import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-o
 import { ProjectOptions } from "@/components/project/project-options";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { getPathSegments } from "@/lib/get-path-segments";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Global component rendered in the main header that contextually provides

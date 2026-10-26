@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { transformRun } from "@/drizzle/schema";
+import type { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import type { TimedResource } from "@/types/shared/resource";
 
 /**

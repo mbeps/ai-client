@@ -2,7 +2,7 @@
 
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiModel } from "@/drizzle/schema";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getLogger } from "@/lib/logger";
 

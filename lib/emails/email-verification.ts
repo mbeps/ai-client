@@ -3,7 +3,7 @@
  * Dispatched via the Better Auth `sendVerificationEmail` hook.
  */
 
-import { sendEmail } from "./send-email";
+import { sendEmail } from "@/lib/emails/send-email";
 
 /**
  * Payload shape supplied by Better Auth's email-verification hook.

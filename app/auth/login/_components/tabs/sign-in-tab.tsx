@@ -5,6 +5,7 @@ import { HelpCircle, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { PasskeyButton } from "@/app/auth/login/_components/buttons/passkey-button";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,7 +22,6 @@ import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 import { type SignInForm, signInSchema } from "@/schemas/auth/sign-in";
-import { PasskeyButton } from "../buttons/passkey-button";
 
 /**
  * Email/password sign-in form with integrated passkey button and password recovery link.

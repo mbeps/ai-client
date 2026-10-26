@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
-import {
-  chat,
-  kbDocument,
-  knowledgebase,
-  transformAgent,
-  transformRun,
-  workflowTranslation,
-} from "@/drizzle/schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
+import { transformAgent, transformRun } from "@/drizzle/schemas/transform-agent-schema";
+import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import type { JobItem } from "@/types/jobs";
 
 // Mock auth session

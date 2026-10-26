@@ -1,8 +1,8 @@
 "use client";
 
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
-import { useAppStore } from "@/lib/store";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Resets all in-memory client state across stores and caches upon user sign-out.

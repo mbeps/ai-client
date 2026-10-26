@@ -1,4 +1,4 @@
-import { normaliseToolPayload } from "./normalise-tool-payload";
+import { normaliseToolPayload } from "@/lib/transform/normalise-tool-payload";
 
 /**
  * Extracts a structured artifact from a tool payload if one is present.

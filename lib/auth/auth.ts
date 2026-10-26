@@ -7,11 +7,11 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 import { env } from "@/config/env";
 import { SITE_CONFIG } from "@/config/site";
 import { db } from "@/drizzle/db";
+import { sendDeleteAccountVerificationEmail } from "@/lib/emails/delete-account-verification";
+import { sendEmailVerificationEmail } from "@/lib/emails/email-verification";
+import { sendPasswordResetEmail } from "@/lib/emails/password-reset-email";
+import { sendWelcomeEmail } from "@/lib/emails/welcome-email";
 import { getLogger } from "@/lib/logger";
-import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
-import { sendEmailVerificationEmail } from "../emails/email-verification";
-import { sendPasswordResetEmail } from "../emails/password-reset-email";
-import { sendWelcomeEmail } from "../emails/welcome-email";
 
 const log = getLogger(["lib", "auth"]);
 

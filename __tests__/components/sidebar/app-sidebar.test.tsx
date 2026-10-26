@@ -11,7 +11,7 @@ const mockStoreState = {
   loadChats: vi.fn(),
 };
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) => selector(mockStoreState),
 }));
 

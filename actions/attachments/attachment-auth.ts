@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { type Attachment, attachment } from "@/drizzle/schema";
+import { type Attachment, attachment } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 export interface AuthorizedAttachmentContext {

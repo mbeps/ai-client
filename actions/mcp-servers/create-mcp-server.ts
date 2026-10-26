@@ -1,7 +1,7 @@
 "use server";
 
 import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { mcpServer } from "@/drizzle/schema";
+import { mcpServer } from "@/drizzle/schemas/mcp-server-schema";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
 import {
   type CreateMcpServer,

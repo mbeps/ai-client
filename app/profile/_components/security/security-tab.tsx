@@ -1,12 +1,12 @@
 import { headers } from "next/headers";
+import { ChangePasswordForm } from "@/app/profile/_components/security/change-password-form";
+import { PasskeyManagement } from "@/app/profile/_components/security/passkey-management";
+import { SetPasswordButton } from "@/app/profile/_components/security/set-password-button";
+import { TwoFactorAuth } from "@/app/profile/_components/security/two-factor-auth";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { env } from "@/config/env";
 import { auth } from "@/lib/auth/auth";
-import { ChangePasswordForm } from "./change-password-form";
-import { PasskeyManagement } from "./passkey-management";
-import { SetPasswordButton } from "./set-password-button";
-import { TwoFactorAuth } from "./two-factor-auth";
 
 /**
  * Server component aggregating password, two-factor authentication, and passkey management.

@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { LinkedAccountsTab } from "@/app/profile/_components/account/linked-accounts-tab";
+import { LoadingSuspense } from "@/app/profile/_components/shared/loading-suspense";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { LinkedAccountsTab } from "../_components/account/linked-accounts-tab";
-import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
 /**
  * Profile page for managing linked OAuth accounts. Displays supported providers

@@ -2,7 +2,7 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 

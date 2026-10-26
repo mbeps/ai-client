@@ -1,6 +1,6 @@
 "use server";
 
-import { transformAgent } from "@/drizzle/schema";
+import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getOwnedResource } from "@/lib/db/get-owned-resource";
 import type { TransformAgentRow } from "@/types/transform/transform-agent-row";

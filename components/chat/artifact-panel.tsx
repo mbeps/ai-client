@@ -12,6 +12,7 @@ import {
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/tooltip";
 import { downloadArtifact } from "@/lib/artifacts/download-artifact";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
-import { MarkdownRenderer } from "./markdown-renderer";
 
 const MarkdownView = dynamic(
   () => import("./artifacts/markdown-view").then((mod) => mod.MarkdownView),

@@ -1,10 +1,10 @@
 "use client";
 
+import { StreamingPlaceholder } from "@/components/chat/message/streaming-placeholder";
+import { MessageBubble } from "@/components/chat/message-bubble";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Citation } from "@/types/chat/citation";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import { StreamingPlaceholder } from "./message/streaming-placeholder";
-import { MessageBubble } from "./message-bubble";
 
 /**
  * Props for the StreamingSection component.

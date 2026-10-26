@@ -3,7 +3,8 @@
 import { and, eq } from "drizzle-orm";
 import { deleteModel } from "@/actions/models/delete-model";
 import { db } from "@/drizzle/db";
-import { aiModel, aiProvider } from "@/drizzle/schema";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { ModelMalformedIdError } from "@/lib/error/model-malformed-id-error";
 import { getLogger } from "@/lib/logger";

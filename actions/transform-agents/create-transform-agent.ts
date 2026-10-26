@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
-import { transformAgent } from "@/drizzle/schema";
+import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { createTransformAgentSchema } from "@/schemas/workflows/transform-agent";
 import type { TransformAgentRow } from "@/types/transform/transform-agent-row";

@@ -3,7 +3,7 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useUserModels } from "@/hooks/use-user-models";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Aggregates platform services, models, stores, and responsiveness queries for ChatInput.

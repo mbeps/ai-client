@@ -1,4 +1,4 @@
-import { normaliseToolPayload } from "./normalise-tool-payload";
+import { normaliseToolPayload } from "@/lib/transform/normalise-tool-payload";
 
 /**
  * Extracts `fileContent` + `filename` from a download_file tool result.

@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { getClientSubscriptionToken } from "inngest/react";
 import { db } from "@/drizzle/db";
-import { workflowTranslation } from "@/drizzle/schema";
+import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { inngest } from "@/lib/inngest/client";
 import { translationChannel } from "@/lib/inngest/translation-channel";

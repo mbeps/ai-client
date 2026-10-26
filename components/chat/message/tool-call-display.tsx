@@ -9,6 +9,7 @@ import {
   Terminal,
   XCircle,
 } from "lucide-react";
+import { SubagentActivityCard } from "@/components/chat/message/subagent-activity-card";
 import { Accordion } from "@/components/ui/accordion";
 import {
   Collapsible,
@@ -19,7 +20,6 @@ import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-tokens";
 import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
-import { SubagentActivityCard } from "./subagent-activity-card";
 
 type ToolCall = {
   toolCallId: string;

@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { whereOwner } from "./where-owner";
+import { whereOwner } from "@/lib/db/where-owner";
 
 /**
  * Searches an object's properties for a property matching the given field.

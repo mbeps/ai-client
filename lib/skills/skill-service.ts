@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 const UUID_PATTERN =

@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { chat } from "@/drizzle/schema";
+import type { chat } from "@/drizzle/schemas/chat-schema";
 import type { TimedResource } from "@/types/shared/resource";
 
 /**

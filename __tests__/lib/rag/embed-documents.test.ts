@@ -15,7 +15,7 @@ vi.mock("@/lib/rag/prefixed-embedding-models", () => ({
 }));
 
 import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
-import { embedDocuments } from "../../../lib/rag/embed-documents";
+import { embedDocuments } from "@/lib/rag/embed-documents";
 
 describe("embedDocuments batching", () => {
   beforeEach(() => {

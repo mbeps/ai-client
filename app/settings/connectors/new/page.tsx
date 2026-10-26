@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import {
   type CreateMcpServer,
   createMcpServerSchema,

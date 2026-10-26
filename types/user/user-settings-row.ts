@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { userSettings } from "@/drizzle/schema";
+import type { userSettings } from "@/drizzle/schemas/user-settings-schema";
 import type { TimedResource } from "@/types/shared/resource";
 
 /**

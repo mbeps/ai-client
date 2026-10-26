@@ -1,6 +1,6 @@
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getLogger } from "@/lib/logger";
-import { S3_BUCKET, s3Client } from "./s3-instance";
+import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 
 const log = getLogger(["app", "storage", "s3"]);
 

@@ -1,5 +1,5 @@
+import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
 import type { SkillBundledFile } from "@/types/skill/skill";
-import { sanitizeSkillSlug } from "./sanitize-skill-slug";
 
 export interface ParsedSkill {
   name: string;

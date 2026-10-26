@@ -1,7 +1,7 @@
 "use server";
 
 import { desc } from "drizzle-orm";
-import { project } from "@/drizzle/schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { ProjectRow } from "@/types/project/project-row";
 

@@ -8,8 +8,8 @@ import {
   MAX_IMAGES_PER_MESSAGE,
   MAX_SPREADSHEET_SIZE_BYTES,
 } from "@/config/attachments";
+import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import type { Attachment } from "@/types/attachment/attachment";
-import { resolveMimeType } from "./resolve-mime-type";
 
 /**
  * Result object indicating whether file validation passed or failed with reason.

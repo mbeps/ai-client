@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { knowledgebase } from "@/drizzle/schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";

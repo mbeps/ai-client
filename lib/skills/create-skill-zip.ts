@@ -1,6 +1,6 @@
 import { deflateRawSync } from "node:zlib";
+import { formatSkillMarkdown } from "@/lib/skills/format-skill-markdown";
 import type { SkillBundledFile } from "@/types/skill/skill";
-import { formatSkillMarkdown } from "./format-skill-markdown";
 
 // Precomputed CRC32 table
 const crc32Table = new Uint32Array(256);

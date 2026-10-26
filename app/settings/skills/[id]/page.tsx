@@ -20,7 +20,7 @@ import { moveFile } from "@/lib/skills/move-file";
 import { renameFilePath } from "@/lib/skills/rename-file-path";
 import { renameFolderPath } from "@/lib/skills/rename-folder-path";
 import { cleanPath } from "@/lib/skills/skill-tree-utils";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 import type { SkillBundledFile } from "@/types/skill/skill";
 

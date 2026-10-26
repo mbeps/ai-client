@@ -87,7 +87,7 @@ const mockStoreState = vi.hoisted(() => ({
   chats: {} as Record<string, any>,
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: Object.assign(
     (selector: (s: any) => any) => selector(mockStoreState),
     { getState: () => mockStoreState },

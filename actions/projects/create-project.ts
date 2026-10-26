@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { project } from "@/drizzle/schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { createProjectSchema } from "@/schemas/project/project";
 import type { ProjectRow } from "@/types/project/project-row";
 

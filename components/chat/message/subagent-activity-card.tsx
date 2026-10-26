@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
+import { ScratchpadViewerModal } from "@/components/chat/message/scratchpad-viewer-modal";
 import {
   Accordion,
   AccordionContent,
@@ -23,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-tokens";
 import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
-import { ScratchpadViewerModal } from "./scratchpad-viewer-modal";
 
 export interface SubagentActivityCardProps {
   chatId?: string;

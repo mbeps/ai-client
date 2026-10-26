@@ -32,7 +32,9 @@ import {
   deleteResourceWithUnbind,
   resolveFieldKey,
 } from "@/lib/db/delete-resource-with-unbind";
-import { assistant, chat, project } from "@/drizzle/schema";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
+import { project } from "@/drizzle/schemas/project-schema";
 
 describe("deleteResourceWithUnbind", () => {
   const mockResourceTable = {

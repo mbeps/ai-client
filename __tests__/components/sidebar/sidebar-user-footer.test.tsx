@@ -24,7 +24,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
 const mockResetEntityState = vi.fn();
 const mockResetChatState = vi.fn();
 const mockResetClientState = vi.fn();
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: {
     getState: () => ({
       resetEntityState: mockResetEntityState,

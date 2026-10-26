@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { kbDocument } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";

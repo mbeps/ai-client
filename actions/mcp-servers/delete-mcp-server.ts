@@ -2,7 +2,10 @@
 
 import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
+import {
+  mcpServer,
+  userMcpServerInstall,
+} from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
 

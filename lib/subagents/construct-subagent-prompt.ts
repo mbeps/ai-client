@@ -1,4 +1,4 @@
-import type { SUBAGENT_ROLES } from "./subagent-role";
+import type { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 
 type SubagentRole = (typeof SUBAGENT_ROLES)[number];
 

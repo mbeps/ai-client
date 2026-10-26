@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { subagentScratchpad } from "@/drizzle/schema";
-import { normaliseScratchpadPath } from "./normalise-scratchpad-path";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
+import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-path";
 
 interface ScratchpadEntry {
   id: string;

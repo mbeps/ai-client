@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
+import { MessageBubble } from "@/components/chat/message-bubble";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
-import { MessageBubble } from "./message-bubble";
 
 /**
  * Props for the MessageThread component.

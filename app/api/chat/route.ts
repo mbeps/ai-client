@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
 import { auth } from "@/lib/auth/auth";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";

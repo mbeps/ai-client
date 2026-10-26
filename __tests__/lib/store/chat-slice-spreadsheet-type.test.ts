@@ -44,7 +44,7 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
   listMcpServers: vi.fn(),
 }));
 
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { AttachmentRow } from "@/types/attachment/attachment-row";
 import type { ChatRow } from "@/types/chat/chat-row";
 import type { MessageRow } from "@/types/message/message-row";

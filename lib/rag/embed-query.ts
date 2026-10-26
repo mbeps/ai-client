@@ -1,6 +1,6 @@
 import { embed } from "ai";
 import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
-import { PREFIXED_EMBEDDING_MODELS } from "./prefixed-embedding-models";
+import { PREFIXED_EMBEDDING_MODELS } from "@/lib/rag/prefixed-embedding-models";
 
 /**
  * Embeds a search query using per-user provider with optional model-specific prefixes.

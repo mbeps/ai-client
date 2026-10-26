@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { deleteFile } from "@/lib/skills/delete-file";
 import { resolveSkillRow } from "@/lib/skills/skill-service";
 import {

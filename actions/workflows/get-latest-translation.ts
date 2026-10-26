@@ -2,7 +2,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { workflowTranslation } from "@/drizzle/schema";
+import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**

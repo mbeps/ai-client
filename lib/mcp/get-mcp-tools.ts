@@ -1,7 +1,7 @@
 import { getLogger } from "@/lib/logger";
+import { connectServer } from "@/lib/mcp/connect-server";
 import type { McpConnection } from "@/types/mcp/mcp-connection";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import { connectServer } from "./connect-server";
 
 const log = getLogger(["app", "mcp", "tools"]);
 

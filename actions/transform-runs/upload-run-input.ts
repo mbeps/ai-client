@@ -7,7 +7,7 @@ import {
 } from "@/config/attachments";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
+import { attachment } from "@/drizzle/schemas/chat-schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import { requireSession } from "@/lib/auth/require-session";
 import { checkRateLimit } from "@/lib/rate-limit";

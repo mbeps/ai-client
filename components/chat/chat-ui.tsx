@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { ArtifactPanel } from "@/components/chat/artifact-panel";
+import { AssistantBar } from "@/components/chat/assistant-bar";
+import { CanvasReopenButton } from "@/components/chat/canvas-reopen-button";
+import { ChatInput } from "@/components/chat/chat-input";
+import { MessageThread } from "@/components/chat/message-thread";
+import { StreamingSection } from "@/components/chat/streaming-section";
+import { useChatArtifactPanel } from "@/components/chat/use-chat-artifact-panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
@@ -9,20 +16,13 @@ import { extractCitations } from "@/lib/chat/extract-citations";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
-import { ArtifactPanel } from "./artifact-panel";
-import { AssistantBar } from "./assistant-bar";
-import { CanvasReopenButton } from "./canvas-reopen-button";
-import { ChatInput } from "./chat-input";
-import { MessageThread } from "./message-thread";
-import { StreamingSection } from "./streaming-section";
-import { useChatArtifactPanel } from "./use-chat-artifact-panel";
 
 function getThreadLastModelId(thread: Message[]): string | undefined {
   for (let i = thread.length - 1; i >= 0; i--) {

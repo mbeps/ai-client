@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { assertNameAvailable } from "@/lib/skills/skill-name-availability";
 import { resolveSkillRow } from "@/lib/skills/skill-service";
 import type { CreateSkillInput, UpdateSkillInput } from "@/schemas/skill/skill";
