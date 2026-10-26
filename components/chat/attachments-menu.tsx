@@ -11,7 +11,7 @@ import {
 import { KnowledgebasePickerDialog } from "@/components/chat/knowledgebase-picker";
 import { PromptPickerDialog } from "@/components/chat/prompt-picker";
 import { SkillsPickerDialog } from "@/components/chat/skills-picker";
-import { ToolPickerDialog } from "@/components/chat/tool-picker-list";
+import { ToolPickerDialog } from "@/components/chat/tool-picker/tool-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";

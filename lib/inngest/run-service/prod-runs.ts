@@ -1,0 +1,178 @@
+import { env } from "@/config/env";
+import {
+  computeDurationMs,
+  extractErrorMessage,
+  firstNonEmpty,
+  HTTP_TIMEOUT_MS,
+  isAlreadyEndedError,
+  isMismatchedUser,
+  resolveJobMetadata,
+  resolveJobType,
+} from "@/lib/inngest/run-service/run-metadata";
+import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";
+
+function extractProdPayloadData(
+  run: Record<string, any>,
+): Record<string, any> | undefined {
+  if (run.trigger?.data) return run.trigger.data;
+  if (run.event?.data) return run.event.data;
+  return run.data;
+}
+
+function extractProdEventName(run: Record<string, any>): string {
+  if (run.event_name) return run.event_name;
+  if (run.eventName) return run.eventName;
+  if (run.trigger?.name) return run.trigger.name;
+  return "";
+}
+
+interface NormalizedProdRun {
+  payloadData?: Record<string, any>;
+  eventName: string;
+  functionName: string;
+  functionId: string;
+  status: JobStatus;
+  queuedAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  output: unknown;
+}
+
+function normalizeProdRunFields(run: Record<string, any>): NormalizedProdRun {
+  const functionId =
+    firstNonEmpty<string>(run.function_id, run.functionId) ?? "";
+  const functionName =
+    firstNonEmpty<string>(run.function_name, run.functionName, functionId) ??
+    "";
+  const queuedAt =
+    firstNonEmpty<string>(run.queued_at, run.queuedAt) ??
+    new Date().toISOString();
+  const startedAt =
+    firstNonEmpty<string>(run.started_at, run.startedAt) ?? null;
+  const endedAt = firstNonEmpty<string>(run.ended_at, run.endedAt) ?? null;
+
+  return {
+    payloadData: extractProdPayloadData(run),
+    eventName: extractProdEventName(run),
+    functionId,
+    functionName,
+    status: (run.status as JobStatus) || "QUEUED",
+    queuedAt,
+    startedAt,
+    endedAt,
+    output: firstNonEmpty(run.output, run.error),
+  };
+}
+
+function buildProdJobItem(
+  run: Record<string, any>,
+  userId: string,
+): JobItem | null {
+  const norm = normalizeProdRunFields(run);
+
+  if (isMismatchedUser(norm.payloadData, userId)) {
+    return null;
+  }
+
+  const jobType = resolveJobType(norm.eventName);
+  const metadata = resolveJobMetadata(
+    jobType,
+    norm.eventName,
+    norm.functionName,
+    norm.payloadData,
+  );
+
+  return {
+    id: run.id,
+    functionId: norm.functionId,
+    functionName: norm.functionName,
+    eventName: norm.eventName,
+    type: jobType,
+    title: metadata.title,
+    subtitle: metadata.subtitle,
+    status: norm.status,
+    queuedAt: norm.queuedAt,
+    startedAt: norm.startedAt,
+    endedAt: norm.endedAt,
+    durationMs: computeDurationMs(norm.startedAt, norm.endedAt),
+    url: metadata.url,
+    errorMessage: extractErrorMessage(norm.status, norm.output),
+    entityId: metadata.entityId,
+  };
+}
+
+function buildProdRunsUrl(
+  userId: string,
+  options?: { status?: JobStatus[]; limit?: number },
+): URL {
+  const url = new URL("https://api.inngest.com/v1/runs");
+  url.searchParams.set("query", `event.data.userId == "${userId}"`);
+  url.searchParams.set("limit", String(options?.limit ?? 20));
+
+  if (options?.status && options.status.length > 0) {
+    for (const s of options.status) {
+      url.searchParams.append("status", s);
+    }
+  }
+
+  return url;
+}
+
+export async function fetchProdUserRuns(
+  userId: string,
+  options?: { status?: JobStatus[]; limit?: number },
+): Promise<ListJobsResult> {
+  const url = buildProdRunsUrl(userId, options);
+  const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${env.INNGEST_SIGNING_KEY}`,
+      "Content-Type": "application/json",
+    },
+    signal,
+  });
+
+  if (!res.ok) {
+    return {
+      jobs: [],
+      error: `Inngest API request failed with HTTP ${res.status}`,
+    };
+  }
+
+  const body = await res.json();
+  const runs: any[] = Array.isArray(body?.data) ? body.data : [];
+
+  const jobs: JobItem[] = runs
+    .map((run) => buildProdJobItem(run, userId))
+    .filter((job): job is JobItem => job !== null);
+
+  return { jobs };
+}
+
+export async function cancelProdRun(
+  runId: string,
+  signal: AbortSignal,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`https://api.inngest.com/v1/runs/${runId}/cancel`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.INNGEST_SIGNING_KEY}`,
+      "Content-Type": "application/json",
+    },
+    signal,
+  });
+
+  if (res.ok || res.status === 409) {
+    return { success: true };
+  }
+
+  const errText = await res.text();
+  if (isAlreadyEndedError(errText)) {
+    return { success: true };
+  }
+
+  return {
+    success: false,
+    error: errText || `Failed with status ${res.status}`,
+  };
+}

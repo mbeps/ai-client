@@ -1,9 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import {
-  ToolPickerList,
-  ToolPickerDialog,
-} from "@/components/chat/tool-picker-list";
+import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { ToolPickerDialog } from "@/components/chat/tool-picker/tool-picker-dialog";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 // Mock env
