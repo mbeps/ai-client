@@ -91,6 +91,19 @@ describe("env configuration and validation", () => {
       expect(parsed.INNGEST_SERVE_ORIGIN).toBe("http://host.docker.internal:3000");
     });
 
+    it("parses NEXT_RUNTIME and VITEST when provided on server", () => {
+      const parsed = validateEnv(
+        {
+          ...baseRequiredServerEnv,
+          NEXT_RUNTIME: "nodejs",
+          VITEST: "true",
+        },
+        true,
+      );
+      expect(parsed.NEXT_RUNTIME).toBe("nodejs");
+      expect(parsed.VITEST).toBe("true");
+    });
+
     it("throws error when critical server variables are missing", () => {
       expect(() =>
         validateEnv(
@@ -108,6 +121,17 @@ describe("env configuration and validation", () => {
     it("validates client variables with defaults when isServerEnv is false", () => {
       const parsed = validateEnv({}, false);
       expect(parsed.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(true);
+      expect(parsed.NODE_ENV).toBe("development");
+      expect(parsed.VITEST).toBeUndefined();
+    });
+
+    it("parses client NODE_ENV and VITEST when provided", () => {
+      const parsed = validateEnv(
+        { NODE_ENV: "production", VITEST: "true" },
+        false,
+      );
+      expect(parsed.NODE_ENV).toBe("production");
+      expect(parsed.VITEST).toBe("true");
     });
 
     it("parses NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=false correctly", () => {

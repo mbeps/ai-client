@@ -2,7 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { configureLogging, configureLoggingSync, getLogger, logger } from "@/lib/logger";
 
 vi.mock("@/config/env", () => ({
-  env: { LOG_LEVEL: "debug" },
+  env: {
+    LOG_LEVEL: "debug",
+    get NODE_ENV() {
+      return process.env.NODE_ENV ?? "test";
+    },
+    get VITEST() {
+      return process.env.VITEST;
+    },
+  },
 }));
 
 /**
@@ -106,7 +114,7 @@ describe("lib/logger", () => {
 
   it("detects the test environment from VITEST alone, without NODE_ENV=test", async () => {
     // Vitest sets NODE_ENV=test, which short-circuits the first operand of the
-    // isTest check, so Boolean(process.env.VITEST) is never evaluated there.
+    // isTest check, so Boolean(env.VITEST) is never evaluated there.
     // Clearing NODE_ENV forces evaluation of that second operand, and the
     // resulting isTest=true must reach the sink as nonBlocking: false.
     vi.resetModules();

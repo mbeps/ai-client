@@ -44,7 +44,7 @@ export function configureLoggingSync(): void {
 
   const isTest =
     typeof process !== "undefined" &&
-    (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST));
+    ((env as any)?.NODE_ENV === "test" || Boolean((env as any)?.VITEST));
 
   const logLevel =
     typeof process !== "undefined" && (env as any)?.LOG_LEVEL
