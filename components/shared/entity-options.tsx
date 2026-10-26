@@ -7,8 +7,8 @@ import { ChatOptions } from "@/components/chat/chat-options";
 import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-options";
 import { ProjectOptions } from "@/components/project/project-options";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { useAppStore } from "@/lib/store";
-import { getPathSegments } from "@/lib/utils";
+import { getPathSegments } from "@/lib/get-path-segments";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Global component rendered in the main header that contextually provides

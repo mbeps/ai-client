@@ -36,7 +36,7 @@ vi.mock("@/hooks/chat/use-create-chat", () => ({
   useCreateChat: () => vi.fn(),
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: () => vi.fn(),
 }));
 

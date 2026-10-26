@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { ALGORITHM, getSecret } from "./shared";
+import { ALGORITHM, getSecret } from "@/lib/encryption/shared";
 
 /**
  * Decrypts a hex-encoded hash back into plaintext.

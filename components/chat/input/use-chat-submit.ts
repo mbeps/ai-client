@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { resolvePromptPayload } from "@/components/chat/input/use-chat-prompt-selection";
+import { resolvePromptPayload } from "@/components/chat/input/resolve-prompt-payload";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { Attachment } from "@/types/attachment/attachment";
 

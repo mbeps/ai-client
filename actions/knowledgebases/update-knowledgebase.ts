@@ -1,8 +1,8 @@
 "use server";
 
 import type { z } from "zod";
-import { updateEntityFactory } from "@/actions/shared/update-entity-factory";
-import { knowledgebase } from "@/drizzle/schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
+import { updateEntityFactory } from "@/lib/factories/update-entity-factory";
 import { updateKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 

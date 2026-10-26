@@ -2,7 +2,10 @@
 
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { transformAgent, transformRun } from "@/drizzle/schema";
+import {
+  transformAgent,
+  transformRun,
+} from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { inngest } from "@/lib/inngest/client";
 

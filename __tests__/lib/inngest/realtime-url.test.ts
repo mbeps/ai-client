@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { env } from "@/config/env";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 
 describe("getRealtimeApiBaseUrl", () => {
-  const originalEnv = process.env.NODE_ENV;
-
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -15,7 +14,7 @@ describe("getRealtimeApiBaseUrl", () => {
   });
 
   it("returns port 8288 URL in development when window is defined", () => {
-    process.env.NODE_ENV = "development";
+    vi.spyOn(env, "NODE_ENV", "get").mockReturnValue("development");
     vi.stubGlobal("window", {
       location: {
         protocol: "http:",
@@ -27,7 +26,7 @@ describe("getRealtimeApiBaseUrl", () => {
   });
 
   it("returns undefined in production even if window is defined", () => {
-    process.env.NODE_ENV = "production";
+    vi.spyOn(env, "NODE_ENV", "get").mockReturnValue("production");
     vi.stubGlobal("window", {
       location: {
         protocol: "https:",

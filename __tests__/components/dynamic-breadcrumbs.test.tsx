@@ -45,7 +45,7 @@ vi.mock("@/actions/providers/list-providers", () => ({
 }));
 
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 describe("DynamicBreadcrumbs", () => {
   beforeEach(() => {

@@ -4,7 +4,7 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
-import { kbDocument } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";

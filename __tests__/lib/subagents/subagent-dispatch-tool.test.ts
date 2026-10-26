@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import {
-  constructSubagentPrompt,
-  createSubagentDispatchTool,
-  getSubagentTools,
-} from "@/lib/subagents/subagent-dispatch-tool";
+import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
+import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
+import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
 import * as aiModule from "ai";
 
 vi.mock("ai", async (importOriginal) => {

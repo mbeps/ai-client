@@ -2,10 +2,11 @@ import { inArray } from "drizzle-orm";
 import { env } from "@/config/env";
 import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
-import { knowledgebase } from "@/drizzle/schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { KnowledgebaseNotReadyError } from "@/lib/error/knowledgebase-not-ready-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { getLogger } from "@/lib/logger";
 import {
   searchKeywordChunks,
@@ -14,9 +15,9 @@ import {
 
 const log = getLogger(["app", "rag", "search"]);
 
+import { applyRRF } from "@/lib/rag/apply-rrf";
+import { embedQuery } from "@/lib/rag/embed-query";
 import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
-import { applyRRF } from "./apply-rrf";
-import { embedQuery } from "./embed-query";
 
 /**
  * Performs hybrid retrieval over one or more knowledge bases using vector + full-text search in Qdrant.

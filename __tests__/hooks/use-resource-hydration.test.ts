@@ -1,10 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  hydratedResources,
-  useResourceHydration,
-} from "@/hooks/use-resource-hydration";
-import { useAppStore } from "@/lib/store";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 // Safety-net mocks
 vi.mock("@/config/env", () => ({

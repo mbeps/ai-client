@@ -2,7 +2,7 @@
 
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { userMcpServerInstall } from "@/drizzle/schema";
+import { userMcpServerInstall } from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**

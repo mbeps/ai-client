@@ -1,5 +1,5 @@
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
-import { chatChannel } from "@/lib/inngest/channels";
+import { chatChannel } from "@/lib/inngest/chat-channel";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 

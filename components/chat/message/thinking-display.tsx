@@ -2,13 +2,13 @@
 
 import { Brain, ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { MarkdownRenderer } from "../markdown-renderer";
 
 interface ThinkingDisplayProps {
   reasoning: string;

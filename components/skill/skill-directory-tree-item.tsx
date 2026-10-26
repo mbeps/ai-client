@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { SkillTreeNode } from "@/lib/skills/skill-tree-utils";
+import type { SkillTreeNode } from "@/lib/skills/skill-tree-node";
 import { cn } from "@/lib/utils";
 
 export interface SkillDirectoryTreeItemProps {

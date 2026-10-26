@@ -7,7 +7,7 @@ import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Assistant } from "@/types/assistant/assistant";
 
 /**

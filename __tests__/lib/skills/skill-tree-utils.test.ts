@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
-import {
-  addOrUpdateFile,
-  buildSkillTree,
-  cleanPath,
-  deleteFile,
-  deleteFolderPath,
-  getAllFolders,
-  moveFile,
-  renameFilePath,
-  renameFolderPath,
-} from "@/lib/skills/skill-tree-utils";
+import { cleanPath } from "@/lib/skills/skill-tree-utils";
+import { buildSkillTree } from "@/lib/skills/build-skill-tree";
+import { addOrUpdateFile } from "@/lib/skills/add-or-update-file";
+import { deleteFile } from "@/lib/skills/delete-file";
+import { deleteFolderPath } from "@/lib/skills/delete-folder-path";
+import { getAllFolders } from "@/lib/skills/get-all-folders";
+import { moveFile } from "@/lib/skills/move-file";
+import { renameFilePath } from "@/lib/skills/rename-file-path";
+import { renameFolderPath } from "@/lib/skills/rename-folder-path";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 describe("skill-tree-utils", () => {

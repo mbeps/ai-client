@@ -1,7 +1,7 @@
 "use server";
 
-import { renameEntityFactory } from "@/actions/shared/rename-entity-factory";
-import { transformAgent } from "@/drizzle/schema";
+import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { renameEntityFactory } from "@/lib/factories/rename-entity-factory";
 import { renameTransformAgentSchema } from "@/schemas/workflows/transform-agent";
 
 /**

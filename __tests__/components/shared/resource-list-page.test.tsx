@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
-import type { SortableResource } from "@/lib/utils";
+import type { SortableResource } from "@/lib/sortable-resource";
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: (state: { loadError: string | null }) => unknown) =>
     selector({ loadError: null }),
 }));

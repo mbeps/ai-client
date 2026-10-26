@@ -1,7 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { updateMemoryForUser } from "@/lib/memory/memory-service";
+import { updateMemoryForUser } from "@/lib/memory/update-memory-for-user";
 import {
   type UpdateMemoryInput,
   updateMemorySchema,

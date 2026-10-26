@@ -1,7 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { listSkillsForUser } from "@/lib/skills/skill-service";
+import { listSkillsForUser } from "@/lib/skills/skill-crud-service";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**

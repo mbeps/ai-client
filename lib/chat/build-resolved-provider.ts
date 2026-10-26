@@ -1,10 +1,10 @@
+import { buildSdkProvider } from "@/lib/chat/build-sdk-provider";
+import { decryptProviderField } from "@/lib/chat/decrypt-provider-field";
 import { getLogger } from "@/lib/logger";
-import { parseProviderHeaders } from "@/lib/providers/provider-utils";
+import { parseProviderHeaders } from "@/lib/providers/parse-provider-headers";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { buildSdkProvider } from "./build-sdk-provider";
-import { decryptProviderField } from "./decrypt-provider-field";
 
 const log = getLogger(["app", "chat", "provider"]);
 

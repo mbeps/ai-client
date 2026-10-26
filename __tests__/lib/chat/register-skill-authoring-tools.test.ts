@@ -8,11 +8,17 @@ const serviceMock = vi.hoisted(() => ({
   listSkillFilesForUser: vi.fn(),
   deleteSkillFileForUser: vi.fn(),
 }));
-vi.mock("@/lib/skills/skill-service", () => serviceMock);
-vi.mock("@/lib/skills/skill-file-service", () => ({
+vi.mock("@/lib/skills/skill-crud-service", () => serviceMock);
+vi.mock("@/lib/skills/write-skill-file", () => ({
   writeSkillFileForUser: serviceMock.writeSkillFileForUser,
+}));
+vi.mock("@/lib/skills/read-skill-file", () => ({
   readSkillFileForUser: serviceMock.readSkillFileForUser,
+}));
+vi.mock("@/lib/skills/list-skill-files", () => ({
   listSkillFilesForUser: serviceMock.listSkillFilesForUser,
+}));
+vi.mock("@/lib/skills/delete-skill-file", () => ({
   deleteSkillFileForUser: serviceMock.deleteSkillFileForUser,
 }));
 

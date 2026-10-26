@@ -1,10 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import {
-  resolvePromptPayload,
-  useChatPromptSelection,
-} from "@/components/chat/input/use-chat-prompt-selection";
+import { useChatPromptSelection } from "@/components/chat/input/use-chat-prompt-selection";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 
 const mockPrompt1: MentionPromptItem = {
@@ -28,16 +25,6 @@ const mockPrompt2: MentionPromptItem = {
   createdAt: new Date(),
   updatedAt: new Date(),
 };
-
-describe("resolvePromptPayload", () => {
-  it("returns prompt IDs when non-empty", () => {
-    expect(resolvePromptPayload(["p1", "p2"])).toEqual(["p1", "p2"]);
-  });
-
-  it("returns undefined when array is empty", () => {
-    expect(resolvePromptPayload([])).toBeUndefined();
-  });
-});
 
 describe("useChatPromptSelection", () => {
   it("initializes with empty set when selectedPrompts is undefined", () => {

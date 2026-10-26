@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { mcpServer } from "@/drizzle/schema";
+import type { mcpServer } from "@/drizzle/schemas/mcp-server-schema";
 import type { TimedResource } from "@/types/shared/resource";
 
 /**

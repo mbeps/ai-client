@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { chat, message } from "@/drizzle/schema";
+import { chat, message } from "@/drizzle/schemas/chat-schema";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["chat", "persist"]);

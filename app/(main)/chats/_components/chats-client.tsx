@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
 interface ChatsClientProps {

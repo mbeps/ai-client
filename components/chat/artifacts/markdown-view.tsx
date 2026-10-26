@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
  *
  * @author Maruf Bepary
  */
-export interface MarkdownViewProps {
+interface MarkdownViewProps {
   /** Optional unique identifier for the artifact; changes trigger re-parsing. */
   id?: string;
   /** Markdown content string to render and edit in BlockNote editor. */
@@ -91,11 +91,7 @@ function BlockNoteEditor({
  * @returns BlockNote editor UI or loading spinner while parsing
  * @author Maruf Bepary
  */
-export default function MarkdownView({
-  id,
-  content,
-  onUpdate,
-}: MarkdownViewProps) {
+export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
   const [parsedBlocks, setParsedBlocks] = useState<Block[] | null>(null);
 
   // We only want to parse the initial content when the id changes,

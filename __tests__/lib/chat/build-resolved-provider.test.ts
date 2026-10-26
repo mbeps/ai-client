@@ -5,7 +5,7 @@ vi.mock("@/lib/chat/decrypt-provider-field", () => ({
   decryptProviderField: vi.fn((val) => (val ? "decrypted" : null)),
 }));
 
-vi.mock("@/lib/providers/provider-utils", () => ({
+vi.mock("@/lib/providers/parse-provider-headers", () => ({
   parseProviderHeaders: vi.fn(() => ({ "X-Custom": "header" })),
 }));
 

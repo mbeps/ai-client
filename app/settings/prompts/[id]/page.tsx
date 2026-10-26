@@ -23,7 +23,7 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { PROMPTS } from "@/config/prompts";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Prompt editor page — client component for viewing and editing a single prompt.

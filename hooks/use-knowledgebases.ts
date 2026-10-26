@@ -13,7 +13,7 @@ import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
  * Replaces the removed knowledgebases store slice. Automatically loads on mount.
  * Provides both raw (with metadata counts) and normalized representations.
  *
- * Side effects: Fetches knowledge bases on mount, logs errors to console.
+ * Side effects: Fetches knowledge bases on mount, logs errors to application logger.
  * Use case: KnowledgeBase selection components, KB availability detection.
  * Constraint: Normalized form applies undefined to missing descriptions.
  *

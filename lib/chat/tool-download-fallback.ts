@@ -3,14 +3,14 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "download-fallback"]);
 
-export interface CompletedToolRecord {
+interface CompletedToolRecord {
   toolCallId: string;
   toolName: string;
   args?: unknown;
   result?: unknown;
 }
 
-export interface ExecuteToolDownloadFallbackParams {
+interface ExecuteToolDownloadFallbackParams {
   completedTools: CompletedToolRecord[];
   activeTools: Record<string, any>;
   toolSourceMap: Record<string, string>;

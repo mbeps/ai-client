@@ -1,6 +1,9 @@
+import {
+  type ParsedSkill,
+  parseSkillMarkdown,
+} from "@/lib/skills/parse-skill-markdown";
+import { parseZipBuffer, type ZipEntry } from "@/lib/skills/parse-zip-buffer";
 import type { SkillBundledFile } from "@/types/skill/skill";
-import { type ParsedSkill, parseSkillMarkdown } from "./parse-skill-markdown";
-import { parseZipBuffer, type ZipEntry } from "./parse-zip-buffer";
 
 function isOsArtifact(cleanPath: string): boolean {
   return (

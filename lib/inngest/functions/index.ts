@@ -1,8 +1,8 @@
-import { generateChatResponse } from "./chat-response";
-import { ingestKbDocumentFunction } from "./kb-ingest";
-import { reindexKbFunction } from "./kb-reindex";
-import { executeTransformRun } from "./transform-run";
-import { executeTranslationWorkflow } from "./translation";
+import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
+import { ingestKbDocumentFunction } from "@/lib/inngest/functions/kb-ingest";
+import { reindexKbFunction } from "@/lib/inngest/functions/kb-reindex";
+import { executeTransformRun } from "@/lib/inngest/functions/transform-run";
+import { executeTranslationWorkflow } from "@/lib/inngest/functions/translation";
 
 /**
  * Array of all Inngest functions registered in the application.

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Creates new chat sessions and navigates to chat detail page.

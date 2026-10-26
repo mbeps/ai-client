@@ -2,9 +2,9 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiProvider } from "@/drizzle/schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { toEncryptedProviderValues } from "@/lib/providers/provider-utils";
+import { toEncryptedProviderValues } from "@/lib/providers/to-encrypted-provider-values";
 import {
   type UpdateProviderInput,
   updateProviderSchema,

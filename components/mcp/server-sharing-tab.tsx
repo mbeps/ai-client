@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import { toggleMcpServerPublic } from "@/actions/mcp-servers/toggle-mcp-server-public";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Props for ServerSharingTab component.

@@ -25,7 +25,7 @@ vi.mock("@/actions/chats/get-chat", () => ({
   getChat: mockGetChat,
 }));
 
-vi.mock("@/actions/chats/build-chat", () => ({
+vi.mock("@/lib/chat/message-tree-utils", () => ({
   buildChatFromRows: mockBuildChatFromRows,
 }));
 

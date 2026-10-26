@@ -1,7 +1,7 @@
 "use server";
 
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
-import { prompt } from "@/drizzle/schema";
+import { prompt } from "@/drizzle/schemas/prompt-schema";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 
 /**
  * Deletes one or more slash-command shortcuts (prompts) by ID, verifying ownership by the authenticated user.

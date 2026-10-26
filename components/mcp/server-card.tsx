@@ -26,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 import type { McpServer } from "@/types/mcp/mcp-server";
 

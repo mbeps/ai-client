@@ -5,7 +5,7 @@ import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { MoveChatDialog } from "@/components/shared/move-chat-dialog";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
 /**

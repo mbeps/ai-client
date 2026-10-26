@@ -10,9 +10,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TransformAgentOptions } from "@/components/workflows/sheet-flow/transform-agent-options";
 import { ROUTES } from "@/config/routes";
 import type { TransformAgent } from "@/types/transform/transform-agent";
-import { TransformAgentOptions } from "./transform-agent-options";
 
 /**
  * Props for TransformAgentCard component.

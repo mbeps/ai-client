@@ -32,7 +32,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
 }));
 
 // Mock store
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) =>
     selector({
       prompts: [],

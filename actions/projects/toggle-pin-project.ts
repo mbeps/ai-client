@@ -2,7 +2,7 @@
 
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { project } from "@/drizzle/schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { ProjectRow } from "@/types/project/project-row";
 

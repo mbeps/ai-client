@@ -1,4 +1,4 @@
-import { tryParseJson } from "./try-parse-json";
+import { tryParseJson } from "@/lib/transform/try-parse-json";
 
 /**
  * Ensures a tool payload is in normalised (object) form: if it is a string,

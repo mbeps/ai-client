@@ -8,8 +8,9 @@ import {
   hydrateAgentFormState,
 } from "@/components/workflows/sheet-flow/agent-editor-helpers";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
-import { useAppStore } from "@/lib/store";
-import { toggleSetItem, updateBulkToolSelection } from "@/lib/utils";
+import { useAppStore } from "@/lib/store/use-app-store";
+import { toggleSetItem } from "@/lib/toggle-set-item";
+import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformStep } from "@/types/transform/transform-step";
 

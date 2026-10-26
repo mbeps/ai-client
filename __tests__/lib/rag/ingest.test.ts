@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { RateLimitError } from "@/lib/errors";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { ingestDocument } from "@/lib/rag/ingest";
 
 const dbMock = vi.hoisted(() => ({

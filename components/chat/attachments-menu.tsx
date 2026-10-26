@@ -8,6 +8,10 @@ import {
   SquareTerminal,
   Wrench,
 } from "lucide-react";
+import { KnowledgebasePickerDialog } from "@/components/chat/knowledgebase-picker";
+import { PromptPickerDialog } from "@/components/chat/prompt-picker";
+import { SkillsPickerDialog } from "@/components/chat/skills-picker";
+import { ToolPickerDialog } from "@/components/chat/tool-picker/tool-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
@@ -17,10 +21,6 @@ import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
-import { KnowledgebasePickerDialog } from "./knowledgebase-picker";
-import { PromptPickerDialog } from "./prompt-picker";
-import { SkillsPickerDialog } from "./skills-picker";
-import { ToolPickerDialog } from "./tool-picker-list";
 
 interface AttachmentsMenuProps {
   servers?: (McpServer | PublicMcpServer)[];

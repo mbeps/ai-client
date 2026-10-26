@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 // ─── Safety-net mocks (same pattern as chat-slice.test.ts) ─────────────────
 vi.mock("@/config/env", () => ({

@@ -1,8 +1,8 @@
 "use server";
 
 import type { z } from "zod";
-import { updateEntityFactory } from "@/actions/shared/update-entity-factory";
-import { project } from "@/drizzle/schema";
+import { project } from "@/drizzle/schemas/project-schema";
+import { updateEntityFactory } from "@/lib/factories/update-entity-factory";
 import { updateProjectSchema } from "@/schemas/project/project";
 import type { ProjectRow } from "@/types/project/project-row";
 

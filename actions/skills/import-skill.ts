@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { skill } from "@/drizzle/schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { extractSkillFromZip } from "@/lib/skills/extract-skill-from-zip";
 import {

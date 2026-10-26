@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
-import {
-  cn,
-  getPathSegments,
-  sortByUpdatedAt,
-  toggleSetItem,
-  updateBulkToolSelection,
-} from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getPathSegments } from "@/lib/get-path-segments";
+import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
+import { toggleSetItem } from "@/lib/toggle-set-item";
+import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 
 describe("cn", () => {
   it("returns a single class name unchanged", () => {

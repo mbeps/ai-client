@@ -1,4 +1,6 @@
 import { ArrowRight, Bot, Mic, Plus, Save, Square, X } from "lucide-react";
+import { AttachmentsMenu } from "@/components/chat/attachments-menu";
+import { ContextUsagePill } from "@/components/chat/context-usage-pill";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
@@ -21,8 +23,6 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
-import { AttachmentsMenu } from "../attachments-menu";
-import { ContextUsagePill } from "../context-usage-pill";
 
 interface ChatInputAttachmentsTriggerProps {
   isMobile: boolean;

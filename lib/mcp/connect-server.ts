@@ -4,9 +4,9 @@ import type { McpConnection } from "@/types/mcp/mcp-connection";
 
 const log = getLogger(["app", "mcp", "connect"]);
 
+import { createConnectedClient } from "@/lib/mcp/create-connected-client";
+import { withTimeout } from "@/lib/mcp/with-timeout";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import { createConnectedClient } from "./create-connected-client";
-import { withTimeout } from "./with-timeout";
 
 /**
  * Connects to a single MCP server and retrieves its tools.

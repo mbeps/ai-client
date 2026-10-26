@@ -3,7 +3,7 @@
  * Dispatched via the Better Auth `deleteUser` verification hook.
  */
 
-import { sendEmail } from "./send-email";
+import { sendEmail } from "@/lib/emails/send-email";
 
 /**
  * Payload shape supplied by Better Auth's account-deletion hook.

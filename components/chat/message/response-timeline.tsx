@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { ThinkingDisplay } from "@/components/chat/message/thinking-display";
+import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type { ToolCallState } from "@/types/tool/tool-call";
-import { ThinkingDisplay } from "./thinking-display";
-import { ToolCallDisplay } from "./tool-call-display";
 
 interface ResponseTimelineProps {
   reasoning?: string;

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireUserAttachment } from "@/actions/attachments/attachment-auth";
+import { requireUserAttachment } from "@/lib/attachments/attachment-auth";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /**

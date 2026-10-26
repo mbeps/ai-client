@@ -4,7 +4,7 @@ const { mockSaveMemoryForUser } = vi.hoisted(() => ({
   mockSaveMemoryForUser: vi.fn(),
 }));
 
-vi.mock("@/lib/memory/memory-service", () => ({
+vi.mock("@/lib/memory/save-memory-for-user", () => ({
   saveMemoryForUser: (...args: any[]) => mockSaveMemoryForUser(...args),
 }));
 

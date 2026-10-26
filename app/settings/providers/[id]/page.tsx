@@ -32,7 +32,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
 import { useProviders } from "@/hooks/use-providers";
-import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 
 /** Converts a stored JSON headers string into key-value rows. */
 function parseHeaderRows(raw: string | null): { key: string; value: string }[] {

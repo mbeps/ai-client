@@ -1,8 +1,8 @@
 import { inArray, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { attachment } from "@/drizzle/schema";
+import { attachment } from "@/drizzle/schemas/chat-schema";
 import { getLogger } from "@/lib/logger";
-import { deleteObject } from "./delete-object";
+import { deleteObject } from "@/lib/storage/delete-object";
 
 const log = getLogger(["app", "storage", "sweep"]);
 

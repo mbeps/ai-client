@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { userSettings } from "@/drizzle/schema";
+import { userSettings } from "@/drizzle/schemas/user-settings-schema";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**

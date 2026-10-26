@@ -1,8 +1,6 @@
 import { toast } from "sonner";
-import {
-  type getLatestTranslationAction,
-  triggerTranslation,
-} from "@/actions/workflows/translate";
+import type { getLatestTranslationAction } from "@/actions/workflows/get-latest-translation";
+import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import { LANGUAGES } from "@/config/languages";
 import type { Attachment } from "@/types/attachment/attachment";
 

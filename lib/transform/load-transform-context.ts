@@ -2,7 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
-import { mcpServer, skill, userMcpServerInstall } from "@/drizzle/schema";
+import {
+  mcpServer,
+  userMcpServerInstall,
+} from "@/drizzle/schemas/mcp-server-schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { kbDocument, knowledgebase } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 

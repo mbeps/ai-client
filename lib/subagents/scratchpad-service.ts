@@ -1,39 +1,17 @@
-import { and, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { subagentScratchpad } from "@/drizzle/schema";
+import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 import { getLogger } from "@/lib/logger";
+import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-path";
 
 const log = getLogger(["subagents", "scratchpad"]);
 
-export interface UpsertScratchpadParams {
+interface UpsertScratchpadParams {
   chatId: string;
   messageId: string;
   filePath: string;
   content: string;
   writtenByRole: string;
-}
-
-export interface ScratchpadEntry {
-  id: string;
-  filePath: string;
-  content: string;
-  writtenByRole: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/**
- * Normalises a file path to prevent directory traversal or relative path escapes.
- */
-export function normaliseScratchpadPath(rawPath: string): string {
-  const cleaned = rawPath
-    .trim()
-    .replace(/\\/g, "/")
-    .replace(/\.\.+/g, "")
-    .replace(/\/+/g, "/")
-    .replace(/^\/+/, "");
-  return cleaned || "note.txt";
 }
 
 /**
@@ -82,69 +60,4 @@ export async function upsertScratchpadFile(
   );
 
   return row;
-}
-
-/**
- * Reads a single file from the scratchpad for a given message turn.
- *
- * @author Maruf Bepary
- */
-export async function readScratchpadFile(
-  messageId: string,
-  rawPath: string,
-): Promise<ScratchpadEntry | null> {
-  const filePath = normaliseScratchpadPath(rawPath);
-
-  const [row] = await db
-    .select({
-      id: subagentScratchpad.id,
-      filePath: subagentScratchpad.filePath,
-      content: subagentScratchpad.content,
-      writtenByRole: subagentScratchpad.writtenByRole,
-      version: subagentScratchpad.version,
-      createdAt: subagentScratchpad.createdAt,
-      updatedAt: subagentScratchpad.updatedAt,
-    })
-    .from(subagentScratchpad)
-    .where(
-      and(
-        eq(subagentScratchpad.messageId, messageId),
-        eq(subagentScratchpad.filePath, filePath),
-      ),
-    )
-    .limit(1);
-
-  return row ?? null;
-}
-
-/**
- * Lists all scratchpad files recorded for a message turn.
- *
- * @author Maruf Bepary
- */
-export async function listScratchpadFiles(
-  messageId: string,
-): Promise<Array<Omit<ScratchpadEntry, "content"> & { sizeBytes: number }>> {
-  const rows = await db
-    .select({
-      id: subagentScratchpad.id,
-      filePath: subagentScratchpad.filePath,
-      content: subagentScratchpad.content,
-      writtenByRole: subagentScratchpad.writtenByRole,
-      version: subagentScratchpad.version,
-      createdAt: subagentScratchpad.createdAt,
-      updatedAt: subagentScratchpad.updatedAt,
-    })
-    .from(subagentScratchpad)
-    .where(eq(subagentScratchpad.messageId, messageId));
-
-  return rows.map((r) => ({
-    id: r.id,
-    filePath: r.filePath,
-    writtenByRole: r.writtenByRole,
-    version: r.version,
-    sizeBytes: Buffer.byteLength(r.content, "utf8"),
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-  }));
 }

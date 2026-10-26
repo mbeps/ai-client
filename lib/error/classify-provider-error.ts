@@ -1,59 +1,9 @@
-import {
-  ContentFilterError,
-  ContextWindowExceededError,
-  InvalidApiKeyError,
-} from "@/lib/errors";
-
-/**
- * Duck-types provider errors by message pattern. Providers express these
- * failures inconsistently (no shared status codes), so classification relies
- * on well-known message fragments, matched case-insensitively.
- *
- * @author Maruf Bepary
- */
-
-function matches(error: unknown, patterns: string[]): boolean {
-  const message = String((error as Error | null)?.message ?? "").toLowerCase();
-  if (!message) return false;
-  return patterns.some((p) => message.includes(p));
-}
-
-/** True when the error indicates the model's context window was exceeded. */
-export function isContextWindowExceeded(error: unknown): boolean {
-  return matches(error, [
-    "context length",
-    "maximum context",
-    "context_length_exceeded",
-    "context window",
-    "too long", // ponytail: broad heuristic — may over-match; upgrade path: per-provider typed errors
-  ]);
-}
-
-/** True when the error indicates a content filter rejection. */
-export function isContentFilter(error: unknown): boolean {
-  return matches(error, ["content filter", "content_filter"]);
-}
-
-/** True when the error indicates an invalid/rejected API key. */
-export function isInvalidApiKey(error: unknown): boolean {
-  const err = error as any;
-  if (
-    err?.statusCode === 401 ||
-    err?.status === 401 ||
-    err?.lastError?.statusCode === 401 ||
-    err?.response?.status === 401
-  ) {
-    return true;
-  }
-  return matches(error, [
-    "invalid api key",
-    "incorrect api key",
-    "invalidapikey",
-    "invalid_api_key",
-    "unauthorized credentials",
-    "unauthorized",
-  ]);
-}
+import { ContentFilterError } from "@/lib/error/content-filter-error";
+import { ContextWindowExceededError } from "@/lib/error/context-window-exceeded-error";
+import { InvalidApiKeyError } from "@/lib/error/invalid-api-key-error";
+import { isContentFilter } from "@/lib/error/is-content-filter";
+import { isContextWindowExceeded } from "@/lib/error/is-context-window-exceeded";
+import { isInvalidApiKey } from "@/lib/error/is-invalid-api-key";
 
 /**
  * Classifies an unrecognised provider error into a known application error

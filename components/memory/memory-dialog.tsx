@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Memory } from "@/types/memory/memory";
 
 /**

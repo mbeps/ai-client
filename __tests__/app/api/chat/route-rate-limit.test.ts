@@ -32,7 +32,9 @@ const mockDbSelect = vi.hoisted(() => {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: mockDbSelect }));
-vi.mock("@/drizzle/schema", () => ({ chat: { id: "id", userId: "userId" } }));
+vi.mock("@/drizzle/schemas/chat-schema", () => ({
+  chat: { id: "id", userId: "userId" },
+}));
 
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),

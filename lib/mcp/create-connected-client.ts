@@ -1,9 +1,9 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { MCP_SETTINGS } from "@/config/mcp";
 import { getLogger } from "@/lib/logger";
+import { buildTransport } from "@/lib/mcp/build-transport";
 import { withTimeout } from "@/lib/mcp/with-timeout";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import { buildTransport } from "./build-transport";
 
 const log = getLogger(["app", "mcp", "client"]);
 

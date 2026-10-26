@@ -74,7 +74,7 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { kbDocument } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
 import { inngest } from "@/lib/inngest/client";
 import { requireSession } from "@/lib/auth/require-session";

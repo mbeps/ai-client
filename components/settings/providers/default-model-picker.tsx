@@ -20,7 +20,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import type { UserModelOption } from "@/hooks/use-user-models";
-import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 type ModelItem = {

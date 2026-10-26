@@ -1,7 +1,7 @@
 "use server";
 
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
-import { aiModel } from "@/drizzle/schema";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "actions", "model"]);

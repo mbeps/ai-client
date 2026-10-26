@@ -2,7 +2,8 @@
 
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiModel, aiProvider } from "@/drizzle/schema";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provider";

@@ -2,11 +2,11 @@
 
 import { FolderOpen, Plus } from "lucide-react";
 import { useState } from "react";
+import { CreateProjectDialog } from "@/app/(main)/projects/_components/create-project-dialog";
 import { ProjectCard } from "@/components/project/project-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/lib/store";
-import { CreateProjectDialog } from "./_components/create-project-dialog";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Projects list page for managing workspaces and context boundaries.

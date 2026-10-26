@@ -36,12 +36,10 @@ import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
-import { useAppStore } from "@/lib/store";
-import {
-  sortByUpdatedAt,
-  toggleSetItem,
-  updateBulkToolSelection,
-} from "@/lib/utils";
+import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
+import { useAppStore } from "@/lib/store/use-app-store";
+import { toggleSetItem } from "@/lib/toggle-set-item";
+import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 
 function resolveStringField(val?: string | null): string {

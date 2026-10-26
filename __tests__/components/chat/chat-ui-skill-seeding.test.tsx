@@ -64,7 +64,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
 
 let mockStoreState: Record<string, any> = {};
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) => selector(mockStoreState),
 }));
 

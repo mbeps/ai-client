@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ShieldCheck, X } from "lucide-react";
+import { SubagentModelSelect } from "@/components/chat/subagent-model-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { SubagentModelSelect } from "./subagent-model-select";
 
 export interface SubagentConfigDialogProps {
   open: boolean;

@@ -6,7 +6,7 @@ import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { SkillCard } from "@/components/skill/skill-card";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Agent Skills listing page.

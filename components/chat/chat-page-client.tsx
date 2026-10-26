@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChatUI } from "@/components/chat/chat-ui";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
 /**

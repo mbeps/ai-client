@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { ALGORITHM, getSecret } from "./shared";
+import { ALGORITHM, getSecret } from "@/lib/encryption/shared";
 
 /**
  * Encrypts a plaintext string using AES-256-GCM.

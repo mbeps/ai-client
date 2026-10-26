@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
-import { toggleSetItem, updateBulkToolSelection } from "@/lib/utils";
+import { toggleSetItem } from "@/lib/toggle-set-item";
+import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 
 export interface ChatInputSelectionsOptions {
   initialSelectedServerIds?: string[];

@@ -1,8 +1,8 @@
 "use server";
 
 import type { z } from "zod";
-import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { prompt } from "@/drizzle/schema";
+import { prompt } from "@/drizzle/schemas/prompt-schema";
+import { createEntityFactory } from "@/lib/factories/create-entity-factory";
 import { createPromptSchema } from "@/schemas/prompt/prompt";
 import type { PromptRow } from "@/types/prompt/prompt-row";
 

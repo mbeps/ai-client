@@ -1,6 +1,6 @@
+import { cloneAttachments } from "@/lib/chat/attachments/clone-attachments";
+import { uploadSingleAttachment } from "@/lib/chat/attachments/upload-single-attachment";
 import type { Attachment } from "@/types/attachment/attachment";
-import { cloneAttachments } from "./clone-attachments";
-import { uploadSingleAttachment } from "./upload-single-attachment";
 
 /**
  * Processes attachments for a message, cloning existing ones and uploading new ones.

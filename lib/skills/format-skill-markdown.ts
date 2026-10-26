@@ -1,4 +1,4 @@
-import { sanitizeSkillSlug } from "./sanitize-skill-slug";
+import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
 
 /**
  * Formats skill data as a complete SKILL.md string with YAML frontmatter.

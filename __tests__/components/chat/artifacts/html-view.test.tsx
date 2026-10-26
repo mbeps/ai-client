@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import HtmlView from "@/components/chat/artifacts/html-view";
+import { HtmlView } from "@/components/chat/artifacts/html-view";
 
 describe("HtmlView — iframe sandbox (ART-01)", () => {
   it("does not grant same-origin access to sandboxed content", () => {

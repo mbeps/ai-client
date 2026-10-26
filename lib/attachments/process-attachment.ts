@@ -1,9 +1,12 @@
 import { ALLOWED_IMAGE_TYPES } from "@/config/attachments";
+import {
+  extractPdf,
+  extractPlainText,
+} from "@/lib/attachments/extract-document";
 import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
+import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
+import { validateFile } from "@/lib/attachments/validate-file";
 import type { Attachment } from "@/types/attachment/attachment";
-import { extractPdf, extractPlainText } from "./extract-document";
-import { resolveMimeType } from "./resolve-mime-type";
-import { validateFile } from "./validate-file";
 
 /**
  * Converts a browser File to a structured Attachment object.

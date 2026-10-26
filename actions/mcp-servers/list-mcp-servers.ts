@@ -2,7 +2,10 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { mcpServer, userMcpServerInstall } from "@/drizzle/schema";
+import {
+  mcpServer,
+  userMcpServerInstall,
+} from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 

@@ -23,7 +23,7 @@ import {
 import { SkillBundleUploader } from "@/components/skill/skill-bundle-uploader";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { createSkillSchema } from "@/schemas/skill/skill";
 
 /**

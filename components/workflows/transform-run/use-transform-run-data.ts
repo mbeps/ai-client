@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
+import { approveTransformRunAction } from "@/actions/transform-runs/approve-transform-run";
 import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
-import { approveTransformRunAction } from "@/actions/transform-runs/inngest-actions";
 import {
   buildInitialStepStates,
   mapRunRowToRun,

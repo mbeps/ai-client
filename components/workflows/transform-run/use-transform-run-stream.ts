@@ -1,10 +1,8 @@
 import { useRealtime } from "inngest/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  getTransformRunRealtimeToken,
-  startTransformRunAction,
-} from "@/actions/transform-runs/inngest-actions";
+import { getTransformRunRealtimeToken } from "@/actions/transform-runs/get-transform-run-realtime-token";
+import { startTransformRunAction } from "@/actions/transform-runs/start-transform-run";
 import {
   applyReviewRequiredToStep,
   applyStepCompleteToStep,
@@ -13,8 +11,8 @@ import {
   applyToolResultToStep,
 } from "@/components/workflows/transform-run/state-helpers";
 import { useApiError } from "@/hooks/use-api-error";
-import { transformRunChannel } from "@/lib/inngest/channels";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
+import { transformRunChannel } from "@/lib/inngest/transform-run-channel";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { TransformRun } from "@/types/transform/transform-run";

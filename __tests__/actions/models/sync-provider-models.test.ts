@@ -46,7 +46,7 @@ vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
 }));
 
 const decodeProviderRecordMock = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/providers/provider-utils", () => ({
+vi.mock("@/lib/providers/decode-provider-record", () => ({
   decodeProviderRecord: decodeProviderRecordMock,
 }));
 
@@ -59,7 +59,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ModelMalformedIdError } from "@/lib/errors";
+import { ModelMalformedIdError } from "@/lib/error/model-malformed-id-error";
 import { syncProviderModels } from "@/actions/models/sync-provider-models";
 
 describe("syncProviderModels action", () => {

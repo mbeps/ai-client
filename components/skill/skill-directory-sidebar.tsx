@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { buildSkillTree } from "@/lib/skills/skill-tree-utils";
+import { buildSkillTree } from "@/lib/skills/build-skill-tree";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface SkillDirectorySidebarProps {

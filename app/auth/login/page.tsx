@@ -3,6 +3,11 @@
 import { LogIn, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SocialAuthButtons } from "@/app/auth/login/_components/buttons/social-auth-buttons";
+import { EmailVerification } from "@/app/auth/login/_components/forms/email-verification";
+import { ForgotPassword } from "@/app/auth/login/_components/forms/forgot-password";
+import { SignInTab } from "@/app/auth/login/_components/tabs/sign-in-tab";
+import { SignUpTab } from "@/app/auth/login/_components/tabs/sign-up-tab";
 import {
   Card,
   CardContent,
@@ -15,11 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { SocialAuthButtons } from "./_components/buttons/social-auth-buttons";
-import { EmailVerification } from "./_components/forms/email-verification";
-import { ForgotPassword } from "./_components/forms/forgot-password";
-import { SignInTab } from "./_components/tabs/sign-in-tab";
-import { SignUpTab } from "./_components/tabs/sign-up-tab";
 
 const TAB_VALUES = {
   SIGN_IN: "signin",

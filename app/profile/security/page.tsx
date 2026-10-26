@@ -1,10 +1,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { SecurityTab } from "@/app/profile/_components/security/security-tab";
+import { LoadingSuspense } from "@/app/profile/_components/shared/loading-suspense";
 import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth";
-import { SecurityTab } from "../_components/security/security-tab";
-import { LoadingSuspense } from "../_components/shared/loading-suspense";
 
 /**
  * Security settings page for password management, two-factor authentication, and passkeys.

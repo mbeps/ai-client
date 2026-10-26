@@ -39,11 +39,9 @@ vi.mock("inngest/react", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  getLatestTranslationAction,
-  getTranslationRealtimeToken,
-  triggerTranslation,
-} from "@/actions/workflows/translate";
+import { getLatestTranslationAction } from "@/actions/workflows/get-latest-translation";
+import { getTranslationRealtimeToken } from "@/actions/workflows/get-translation-realtime-token";
+import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import { inngest } from "@/lib/inngest/client";
 
 describe("empty source text guard", () => {

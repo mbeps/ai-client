@@ -63,7 +63,7 @@ vi.mock("@/actions/transform-runs/upload-run-input", () => ({
 }));
 
 // Mock hooks & store
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: () => ({
     mcpServers: [],
     loadMcpServers: vi.fn(),

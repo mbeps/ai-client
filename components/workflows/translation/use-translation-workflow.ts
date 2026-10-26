@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { getLatestTranslationAction } from "@/actions/workflows/translate";
+import { getLatestTranslationAction } from "@/actions/workflows/get-latest-translation";
 import {
   applyHydratedTranslation,
   executeTranslationRequest,

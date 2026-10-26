@@ -15,8 +15,10 @@ import {
   isKnowledgebaseItem,
   isPromptItem,
   isSkillItem,
-  type MentionItem,
-  type MentionTrigger,
+} from "@/hooks/chat/mention-item-guards";
+import type {
+  MentionItem,
+  MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
 import { cn } from "@/lib/utils";
 import type { Assistant } from "@/types/assistant/assistant";

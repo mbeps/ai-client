@@ -1,10 +1,12 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiModel, aiProvider, userSettings } from "@/drizzle/schema";
-import { ProviderNotConfiguredError } from "@/lib/errors";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
+import { userSettings } from "@/drizzle/schemas/user-settings-schema";
+import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
+import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import { getLogger } from "@/lib/logger";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 const log = getLogger(["app", "chat", "provider"]);
 

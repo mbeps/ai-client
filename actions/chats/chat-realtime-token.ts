@@ -3,9 +3,9 @@
 import { and, eq } from "drizzle-orm";
 import { getClientSubscriptionToken } from "inngest/react";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { chatChannel } from "@/lib/inngest/channels";
+import { chatChannel } from "@/lib/inngest/chat-channel";
 import { inngest } from "@/lib/inngest/client";
 
 /**

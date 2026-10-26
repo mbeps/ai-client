@@ -8,7 +8,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import type { UserModelOption } from "@/hooks/use-user-models";
-import { formatTokens } from "@/lib/chat/calculate-context-tokens";
+import { formatTokens } from "@/lib/chat/format-tokens";
 
 /**
  * Props for the ModelDetailsHoverCard component.

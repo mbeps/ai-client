@@ -12,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { cleanPath, getAllFolders } from "@/lib/skills/skill-tree-utils";
+import { getAllFolders } from "@/lib/skills/get-all-folders";
+import { cleanPath } from "@/lib/skills/skill-tree-utils";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 export interface SkillDirectoryModalsProps {

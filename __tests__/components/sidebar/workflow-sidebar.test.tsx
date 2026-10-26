@@ -28,7 +28,7 @@ vi.mock("@/lib/auth/auth-client", () => ({
   },
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: {
     getState: () => ({
       resetEntityState: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock("@/lib/store", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-resource-hydration", () => ({
+vi.mock("@/lib/store/hydrated-resources", () => ({
   hydratedResources: {
     clear: vi.fn(),
   },

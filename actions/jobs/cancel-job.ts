@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { abortChatStream } from "@/lib/chat/abort-chat-stream";
 import { cancelInngestRun } from "@/lib/inngest/run-service";

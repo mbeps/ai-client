@@ -1,6 +1,6 @@
 import type { createMCPClient } from "@ai-sdk/mcp";
+import { createConnectedClient } from "@/lib/mcp/create-connected-client";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
-import { createConnectedClient } from "./create-connected-client";
 
 type Client = Awaited<ReturnType<typeof createMCPClient>>;
 

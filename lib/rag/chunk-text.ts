@@ -1,5 +1,5 @@
 import { CHUNK_CONSTANTS } from "@/config/chunk";
-import { splitRecursive } from "./split-recursive";
+import { splitRecursive } from "@/lib/rag/split-recursive";
 
 /**
  * Splits a document into semantic chunks with overlap.

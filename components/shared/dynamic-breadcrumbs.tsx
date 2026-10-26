@@ -19,9 +19,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { ROUTES } from "@/config/routes";
+import { getPathSegments } from "@/lib/get-path-segments";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
-import { getPathSegments } from "@/lib/utils";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Friendly labels for known route segments.

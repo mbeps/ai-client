@@ -1,10 +1,11 @@
 import { and, eq, type SQL } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiModel, aiProvider } from "@/drizzle/schema";
-import { ProviderNotConfiguredError } from "@/lib/errors";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
+import { buildResolvedProvider } from "@/lib/chat/build-resolved-provider";
+import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { buildResolvedProvider } from "./build-resolved-provider";
 
 /**
  * Internal helper to fetch a provider and model pair, validate status and security,

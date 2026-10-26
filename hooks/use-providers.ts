@@ -2,13 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { listProviders } from "@/actions/providers/list-providers";
-import {
-  fetchProviderRegistryWithCache,
-  getProviderRegistryCachedData,
-  invalidateProviderCache,
-  isProviderRegistryCacheFresh,
-  subscribeProviderRegistryCache,
-} from "@/lib/providers/provider-registry-cache";
+import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-registry-with-cache";
+import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
+import { invalidateProviderCache } from "@/lib/providers/invalidate-provider-cache";
+import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
+import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 const RETRY_COUNT = 1;

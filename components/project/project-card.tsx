@@ -1,10 +1,10 @@
 "use client";
 
 import { FolderOpen, Pin } from "lucide-react";
+import { ProjectOptions } from "@/components/project/project-options";
 import { EntityCard } from "@/components/shared/entity-card";
 import { ROUTES } from "@/config/routes";
 import type { Project } from "@/types/project/project";
-import { ProjectOptions } from "./project-options";
 
 /**
  * Props for the ProjectCard component.

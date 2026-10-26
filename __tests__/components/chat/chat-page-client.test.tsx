@@ -24,7 +24,7 @@ vi.mock("@/components/chat/chat-ui", () => ({
 }));
 
 const mockUpsertChat = vi.fn();
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) => selector({ upsertChat: mockUpsertChat }),
 }));
 

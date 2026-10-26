@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  applyToolCallEvent,
-  applyToolResultEvent,
-  buildAssistantFinishMetadata,
-  extractCompletedToolResults,
-} from "@/lib/chat/stream/handle-stream-tool-calls";
+import { applyToolResultEvent } from "@/lib/chat/stream/apply-tool-result-event";
+import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
+import { extractCompletedToolResults } from "@/lib/chat/stream/extract-completed-tool-results";
+import { applyToolCallEvent } from "@/lib/chat/stream/handle-stream-tool-calls";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 describe("handle-stream-tool-calls", () => {

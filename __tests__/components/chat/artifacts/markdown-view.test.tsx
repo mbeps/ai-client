@@ -36,7 +36,7 @@ vi.mock("next-themes", () => ({
   useTheme: () => mockUseTheme(),
 }));
 
-import MarkdownView from "@/components/chat/artifacts/markdown-view";
+import { MarkdownView } from "@/components/chat/artifacts/markdown-view";
 
 beforeAll(() => {
   global.ResizeObserver = class {

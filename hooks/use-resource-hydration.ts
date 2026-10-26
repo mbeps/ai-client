@@ -3,13 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
+import { useAppStore } from "@/lib/store/use-app-store";
 
-// Module-level: tracks resources that have been successfully hydrated this session.
-// Exported for test teardown only — do not mutate outside this module.
-export const hydratedResources = new Set<string>();
-
-export type HydratableResource =
+type HydratableResource =
   | "projects"
   | "assistants"
   | "prompts"
@@ -26,7 +23,7 @@ export type HydratableResource =
  * Maps resource names to store loader functions (e.g. 'projects' -> loadProjects).
  * Supports ephemeral resources like mcpPrompts (discovery-based, not persistent).
  *
- * Side effects: Calls store loader functions, updates store state, logs errors to console.
+ * Side effects: Calls store loader functions, updates store state, logs errors to application logger.
  * Use case: Layout pages initialising multiple stores, detail pages hydrating related resources.
  * Constraint: Loaders are called unconditionally if resource empty; no selective refresh. Uses ref to prevent re-runs in StrictMode.
  *

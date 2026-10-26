@@ -52,7 +52,7 @@ vi.mock("@/actions/chats/get-chat", () => ({
 }));
 
 const mockBuildChatFromRows = vi.hoisted(() => vi.fn());
-vi.mock("@/actions/chats/build-chat", () => ({
+vi.mock("@/lib/chat/message-tree-utils", () => ({
   buildChatFromRows: mockBuildChatFromRows,
 }));
 
@@ -87,7 +87,7 @@ const mockStoreState = vi.hoisted(() => ({
   chats: {} as Record<string, any>,
 }));
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: Object.assign(
     (selector: (s: any) => any) => selector(mockStoreState),
     { getState: () => mockStoreState },

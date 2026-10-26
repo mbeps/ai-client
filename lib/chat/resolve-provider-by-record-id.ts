@@ -1,5 +1,5 @@
+import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
-import { fetchProviderWithModel } from "./fetch-provider-with-model";
 
 /**
  * Resolves a provider and model using the internal UUID (aiModel.id).

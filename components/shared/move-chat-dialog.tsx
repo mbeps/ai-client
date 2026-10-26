@@ -12,7 +12,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { logger } from "@/lib/logger";
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 interface MoveChatDialogProps {
   /** Whether the dialog is currently open. */

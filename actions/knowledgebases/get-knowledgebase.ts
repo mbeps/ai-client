@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { knowledgebase } from "@/drizzle/schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 

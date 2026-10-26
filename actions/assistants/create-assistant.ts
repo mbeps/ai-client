@@ -1,8 +1,8 @@
 "use server";
 
 import type { z } from "zod";
-import { createEntityFactory } from "@/actions/shared/create-entity-factory";
-import { assistant } from "@/drizzle/schema";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { createEntityFactory } from "@/lib/factories/create-entity-factory";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
 import type { AssistantRow } from "@/types/assistant/assistant-row";
 

@@ -14,15 +14,25 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
   qdrantClient: mockQdrantClient,
 }));
 
+import { clearMemoryCollectionCache } from "@/lib/memory/clear-memory-collection-cache";
 import {
-  clearMemoryCollectionCache,
   deleteMemoryPoints,
+} from "@/lib/memory/delete-memory-points";
+import {
   ensureMemoryCollection,
+} from "@/lib/memory/ensure-memory-collection";
+import {
   getMemoryCollectionName,
+} from "@/lib/memory/get-memory-collection-name";
+import {
   searchKeywordMemories,
+} from "@/lib/memory/search-keyword-memories";
+import {
   searchSemanticMemories,
+} from "@/lib/memory/search-semantic-memories";
+import {
   upsertMemoryPoint,
-} from "@/lib/memory/qdrant-memory-client";
+} from "@/lib/memory/upsert-memory-point";
 
 describe("qdrant-memory-client", () => {
   beforeEach(() => {

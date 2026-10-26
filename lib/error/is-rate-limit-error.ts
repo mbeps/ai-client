@@ -1,4 +1,4 @@
-import { RateLimitError } from "@/lib/errors";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
 
 /**
  * Checks if a given error is a rate limit error (429).

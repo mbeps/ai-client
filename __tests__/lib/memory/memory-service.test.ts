@@ -64,21 +64,34 @@ vi.mock("@/lib/rag/embed-query", () => ({
   embedQuery: (...args: any[]) => mockEmbedQuery(...args),
 }));
 
-vi.mock("@/lib/memory/qdrant-memory-client", () => ({
+vi.mock("@/lib/memory/upsert-memory-point", () => ({
   upsertMemoryPoint: (...args: any[]) => mockUpsertMemoryPoint(...args),
+}));
+
+vi.mock("@/lib/memory/delete-memory-points", () => ({
   deleteMemoryPoints: (...args: any[]) => mockDeleteMemoryPoints(...args),
+}));
+
+vi.mock("@/lib/memory/search-semantic-memories", () => ({
   searchSemanticMemories: (...args: any[]) =>
     mockSearchSemanticMemories(...args),
+}));
+
+vi.mock("@/lib/memory/search-keyword-memories", () => ({
   searchKeywordMemories: (...args: any[]) =>
     mockSearchKeywordMemories(...args),
 }));
 
 import {
   deleteMemoriesForUser,
+} from "@/lib/memory/delete-memories-for-user";
+import {
   retrieveRelevantMemories,
-  saveMemoryForUser,
+} from "@/lib/memory/retrieve-relevant-memories";
+import { saveMemoryForUser } from "@/lib/memory/save-memory-for-user";
+import {
   updateMemoryForUser,
-} from "@/lib/memory/memory-service";
+} from "@/lib/memory/update-memory-for-user";
 
 describe("memory-service", () => {
   beforeEach(() => {

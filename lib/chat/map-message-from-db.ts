@@ -1,8 +1,8 @@
 import type { z } from "zod";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { persistMessageSchema } from "@/schemas/chat/chat";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
-import { parseMessageMetadata } from "./parse-message-metadata";
 
 /**
  * Maps a message row from the database to a store-compatible Message object.

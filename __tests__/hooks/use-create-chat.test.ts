@@ -55,7 +55,7 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
 }));
 
 // ─── createChatDb mock via the store action ────────────────────────────────
-import { useAppStore } from "@/lib/store";
+import { useAppStore } from "@/lib/store/use-app-store";
 
 const _NOW = new Date().toISOString();
 

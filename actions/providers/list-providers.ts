@@ -2,7 +2,7 @@
 
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
-import { aiProvider } from "@/drizzle/schema";
+import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

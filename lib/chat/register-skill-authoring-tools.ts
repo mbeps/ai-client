@@ -1,15 +1,13 @@
 import { tool } from "ai";
 import { z } from "zod";
-import {
-  deleteSkillFileForUser,
-  listSkillFilesForUser,
-  readSkillFileForUser,
-  writeSkillFileForUser,
-} from "@/lib/skills/skill-file-service";
+import { deleteSkillFileForUser } from "@/lib/skills/delete-skill-file";
+import { listSkillFilesForUser } from "@/lib/skills/list-skill-files";
+import { readSkillFileForUser } from "@/lib/skills/read-skill-file";
 import {
   createSkillForUser,
   updateSkillForUser,
-} from "@/lib/skills/skill-service";
+} from "@/lib/skills/skill-crud-service";
+import { writeSkillFileForUser } from "@/lib/skills/write-skill-file";
 import { skillSlugSchema } from "@/schemas/skill/skill";
 
 /**

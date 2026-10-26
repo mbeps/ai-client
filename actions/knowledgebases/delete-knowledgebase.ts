@@ -2,10 +2,11 @@
 
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { and, eq, inArray } from "drizzle-orm";
-import { deleteEntityFactory } from "@/actions/shared/delete-entity-factory";
 import { db } from "@/drizzle/db";
-import { kbDocument, knowledgebase } from "@/drizzle/schema";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deletePointsByKbIds } from "@/lib/rag/qdrant-client";

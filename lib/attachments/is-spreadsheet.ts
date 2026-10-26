@@ -2,7 +2,7 @@ import {
   ALLOWED_SPREADSHEET_TYPES,
   SPREADSHEET_EXTENSIONS,
 } from "@/config/attachments";
-import { getExtension } from "./get-extension";
+import { getExtension } from "@/lib/attachments/get-extension";
 
 /**
  * Validates whether a file is a spreadsheet by checking extension and MIME type.

@@ -21,11 +21,9 @@ vi.mock("inngest/react", () => ({
   getClientSubscriptionToken: vi.fn().mockResolvedValue("mock-client-token"),
 }));
 
-import {
-  approveTransformRunAction,
-  getTransformRunRealtimeToken,
-  startTransformRunAction,
-} from "@/actions/transform-runs/inngest-actions";
+import { approveTransformRunAction } from "@/actions/transform-runs/approve-transform-run";
+import { getTransformRunRealtimeToken } from "@/actions/transform-runs/get-transform-run-realtime-token";
+import { startTransformRunAction } from "@/actions/transform-runs/start-transform-run";
 import { inngest } from "@/lib/inngest/client";
 
 describe("Transform Run Inngest Actions", () => {

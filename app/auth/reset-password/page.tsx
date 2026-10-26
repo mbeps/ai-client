@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import ResetPasswordForm from "@/app/auth/reset-password/_components/reset-password-form";
 import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
-import ResetPasswordForm from "./_components/reset-password-form";
 
 export const metadata = {
   title: "Reset Password",

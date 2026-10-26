@@ -1,9 +1,10 @@
-import { millify } from "millify";
 import type { UserModelOption } from "@/hooks/use-user-models";
+import { estimateAttachmentTokens } from "@/lib/chat/estimate-attachment-tokens";
+import { estimateTokens } from "@/lib/chat/estimate-tokens";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
-import { parseMessageMetadata } from "./parse-message-metadata";
 
 export interface ContextCategoryBreakdown {
   systemInstructions: number;
@@ -37,77 +38,6 @@ export interface CalculateContextParams {
   selectedSkillTokens?: number;
   /** Number of available skills listed in the catalog (lightweight progressive disclosure). */
   availableSkillCount?: number;
-}
-
-/**
- * Estimates token count for a text string using standard ~3.8 chars/token rule of thumb.
- *
- * @param text - The string to estimate tokens for
- * @returns Estimated token count (minimum 0)
- */
-export function estimateTokens(text: string | null | undefined): number {
-  if (!text || text.length === 0) return 0;
-  return Math.ceil(text.length / 3.8);
-}
-
-/**
- * Estimates token count for an attachment.
- * Text files use string length estimation; images/binary use fixed vision tile estimates (~800 tokens).
- *
- * @param attachment - The attachment to estimate
- * @returns Estimated token count
- */
-export function estimateAttachmentTokens(attachment: Attachment): number {
-  if (attachment.type === "image") {
-    return 800;
-  }
-  if (attachment.extractedText) {
-    return estimateTokens(attachment.extractedText);
-  }
-  if (attachment.sizeBytes) {
-    // Approx 1 token per 4 bytes of raw text
-    return Math.ceil(attachment.sizeBytes / 4);
-  }
-  return 100;
-}
-
-/**
- * Estimates token count for a tool call (arguments + result).
- * Used when displaying context usage for individual tool calls.
- *
- * @param args - Tool call input arguments
- * @param result - Tool execution output result (optional)
- * @returns Estimated token count
- * @author Maruf Bepary
- */
-export function estimateToolContextTokens(
-  args: unknown,
-  result?: unknown,
-): number {
-  let tokens = 0;
-  if (args !== undefined && args !== null) {
-    const argsStr = typeof args === "string" ? args : JSON.stringify(args);
-    tokens += estimateTokens(argsStr);
-  }
-  if (result !== undefined && result !== null) {
-    const resStr = typeof result === "string" ? result : JSON.stringify(result);
-    tokens += estimateTokens(resStr);
-  }
-  return tokens;
-}
-
-/**
- * Formats a token count into a human-friendly string (e.g. 850, 12.4K, 371.5K, 1M, 2B).
- * Uses `millify` for consistent unit abbreviations and precision.
- *
- * @param tokens - The raw token number
- * @returns Formatted token string
- */
-export function formatTokens(tokens: number): string {
-  if (tokens < 1000) {
-    return tokens.toLocaleString();
-  }
-  return millify(tokens, { precision: 1 });
 }
 
 /**

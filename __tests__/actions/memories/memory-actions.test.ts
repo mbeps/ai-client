@@ -22,10 +22,15 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("@/lib/memory/memory-service", () => ({
+vi.mock("@/lib/memory/save-memory-for-user", () => ({
   saveMemoryForUser: (...args: any[]) => mockSaveMemoryForUser(...args),
+}));
+
+vi.mock("@/lib/memory/update-memory-for-user", () => ({
   updateMemoryForUser: (...args: any[]) => mockUpdateMemoryForUser(...args),
-  deleteMemoryForUser: (...args: any[]) => mockDeleteMemoryForUser(...args),
+}));
+
+vi.mock("@/lib/memory/delete-memories-for-user", () => ({
   deleteMemoriesForUser: (...args: any[]) => mockDeleteMemoryForUser(...args),
 }));
 

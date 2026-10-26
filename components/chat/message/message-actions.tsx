@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { MessageDetails } from "@/components/chat/message/message-details";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -20,7 +21,6 @@ import {
 import { useUserModels } from "@/hooks/use-user-models";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
-import { MessageDetails } from "./message-details";
 
 interface MessageActionsProps {
   message: Message;

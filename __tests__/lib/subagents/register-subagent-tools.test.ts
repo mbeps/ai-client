@@ -1,10 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
-import * as scratchpadService from "@/lib/subagents/scratchpad-service";
+import { upsertScratchpadFile } from "@/lib/subagents/scratchpad-service";
+import { readScratchpadFile } from "@/lib/subagents/read-scratchpad-file";
+import { listScratchpadFiles } from "@/lib/subagents/list-scratchpad-files";
 
 vi.mock("@/lib/subagents/scratchpad-service", () => ({
   upsertScratchpadFile: vi.fn(),
+}));
+
+vi.mock("@/lib/subagents/read-scratchpad-file", () => ({
   readScratchpadFile: vi.fn(),
+}));
+
+vi.mock("@/lib/subagents/list-scratchpad-files", () => ({
   listScratchpadFiles: vi.fn(),
 }));
 
@@ -17,7 +25,7 @@ describe("registerScratchpadTools", () => {
 
   describe("scratchpad_write", () => {
     it("successfully writes file to scratchpad", async () => {
-      vi.mocked(scratchpadService.upsertScratchpadFile).mockResolvedValueOnce({
+      vi.mocked(upsertScratchpadFile).mockResolvedValueOnce({
         id: "file-1",
         chatId: context.chatId,
         messageId: context.messageId,
@@ -36,7 +44,7 @@ describe("registerScratchpadTools", () => {
         { messages: [], toolCallId: "call-1" } as any,
       );
 
-      expect(scratchpadService.upsertScratchpadFile).toHaveBeenCalledWith({
+      expect(upsertScratchpadFile).toHaveBeenCalledWith({
         chatId: "chat-123",
         messageId: "msg-456",
         filePath: "findings.md",
@@ -52,7 +60,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles error during write", async () => {
-      vi.mocked(scratchpadService.upsertScratchpadFile).mockRejectedValueOnce(
+      vi.mocked(upsertScratchpadFile).mockRejectedValueOnce(
         new Error("Disk error"),
       );
 
@@ -69,7 +77,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles non-Error thrown object during write", async () => {
-      vi.mocked(scratchpadService.upsertScratchpadFile).mockRejectedValueOnce(
+      vi.mocked(upsertScratchpadFile).mockRejectedValueOnce(
         "String error",
       );
 
@@ -88,7 +96,7 @@ describe("registerScratchpadTools", () => {
 
   describe("scratchpad_read", () => {
     it("returns content when file exists", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+      vi.mocked(readScratchpadFile).mockResolvedValueOnce({
         id: "file-1",
         chatId: context.chatId,
         messageId: context.messageId,
@@ -107,7 +115,7 @@ describe("registerScratchpadTools", () => {
         { messages: [], toolCallId: "call-4" } as any,
       );
 
-      expect(scratchpadService.readScratchpadFile).toHaveBeenCalledWith(
+      expect(readScratchpadFile).toHaveBeenCalledWith(
         "msg-456",
         "spec.json",
       );
@@ -122,7 +130,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("returns paginated content when startLine and lineCount are provided", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+      vi.mocked(readScratchpadFile).mockResolvedValueOnce({
         id: "file-123",
         chatId: "chat-123",
         messageId: "msg-456",
@@ -151,7 +159,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("defaults lineCount to 200 when only startLine is provided", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+      vi.mocked(readScratchpadFile).mockResolvedValueOnce({
         id: "file-123",
         chatId: "chat-123",
         messageId: "msg-456",
@@ -181,7 +189,7 @@ describe("registerScratchpadTools", () => {
 
     it("truncates content exceeding 15,000 characters without pagination", async () => {
       const largeContent = "line\n".repeat(4000); // ~20,000 chars
-      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce({
+      vi.mocked(readScratchpadFile).mockResolvedValueOnce({
         id: "file-large",
         chatId: "chat-123",
         messageId: "msg-456",
@@ -207,7 +215,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("returns not found when file does not exist", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockResolvedValueOnce(null);
+      vi.mocked(readScratchpadFile).mockResolvedValueOnce(null);
 
       const tools = registerScratchpadTools(context);
       const result = await tools.scratchpad_read.execute(
@@ -222,7 +230,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles error during read", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockRejectedValueOnce(
+      vi.mocked(readScratchpadFile).mockRejectedValueOnce(
         new Error("DB read failed"),
       );
 
@@ -239,7 +247,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles non-Error thrown during read", async () => {
-      vi.mocked(scratchpadService.readScratchpadFile).mockRejectedValueOnce("unknown");
+      vi.mocked(readScratchpadFile).mockRejectedValueOnce("unknown");
 
       const tools = registerScratchpadTools(context);
       const result = await tools.scratchpad_read.execute(
@@ -256,7 +264,7 @@ describe("registerScratchpadTools", () => {
 
   describe("scratchpad_list", () => {
     it("returns list of files", async () => {
-      vi.mocked(scratchpadService.listScratchpadFiles).mockResolvedValueOnce([
+      vi.mocked(listScratchpadFiles).mockResolvedValueOnce([
         {
           id: "file-1",
           chatId: context.chatId,
@@ -277,7 +285,7 @@ describe("registerScratchpadTools", () => {
         { messages: [], toolCallId: "call-8" } as any,
       );
 
-      expect(scratchpadService.listScratchpadFiles).toHaveBeenCalledWith("msg-456");
+      expect(listScratchpadFiles).toHaveBeenCalledWith("msg-456");
       expect(result).toEqual({
         success: true,
         files: [
@@ -292,7 +300,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles error during list", async () => {
-      vi.mocked(scratchpadService.listScratchpadFiles).mockRejectedValueOnce(
+      vi.mocked(listScratchpadFiles).mockRejectedValueOnce(
         new Error("List query failed"),
       );
 
@@ -309,7 +317,7 @@ describe("registerScratchpadTools", () => {
     });
 
     it("handles non-Error thrown during list", async () => {
-      vi.mocked(scratchpadService.listScratchpadFiles).mockRejectedValueOnce("list failure");
+      vi.mocked(listScratchpadFiles).mockRejectedValueOnce("list failure");
 
       const tools = registerScratchpadTools(context);
       const result = await tools.scratchpad_list.execute(

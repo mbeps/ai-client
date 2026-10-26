@@ -40,7 +40,7 @@ vi.mock("@/drizzle/db", () => ({
 }));
 
 import { cancelJob } from "@/actions/jobs/cancel-job";
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 
 describe("cancelJob Server Action", () => {
   const mockUser = { id: "user-123", email: "test@example.com" };

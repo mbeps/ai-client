@@ -11,6 +11,10 @@ export const clientEnvSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
+  VITEST: z.string().optional(),
 });
 
 /**
@@ -101,9 +105,7 @@ export const serverEnvSchema = clientEnvSchema.extend({
   S3_BUCKET: z.string(),
 
   // App
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
+  NEXT_RUNTIME: z.enum(["nodejs", "edge"]).optional(),
   LOG_LEVEL: z
     .enum(["debug", "info", "warn", "warning", "error", "fatal"])
     .default("info")
@@ -178,6 +180,8 @@ export function validateEnv(
         S3_SECRET_KEY: process.env.S3_SECRET_KEY,
         S3_BUCKET: process.env.S3_BUCKET,
         NODE_ENV: process.env.NODE_ENV,
+        VITEST: process.env.VITEST,
+        NEXT_RUNTIME: process.env.NEXT_RUNTIME,
         LOG_LEVEL: process.env.LOG_LEVEL,
         ALLOW_PRIVATE_NETWORK_MCP: process.env.ALLOW_PRIVATE_NETWORK_MCP,
         PRESIGNED_URL_EXPIRY_SECONDS: process.env.PRESIGNED_URL_EXPIRY_SECONDS,
@@ -192,6 +196,8 @@ export function validateEnv(
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
           process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
+        NODE_ENV: process.env.NODE_ENV,
+        VITEST: process.env.VITEST,
       };
 
   const schema = isServerEnv ? serverEnvSchema : clientEnvSchema;

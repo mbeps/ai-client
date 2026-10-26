@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
-import { verifyOwnership } from "./verify-ownership";
-import { whereOwner } from "./where-owner";
+import { verifyOwnership } from "@/lib/db/verify-ownership";
+import { whereOwner } from "@/lib/db/where-owner";
 
 /**
  * Fetches an owned resource and verifies ownership in a single step.

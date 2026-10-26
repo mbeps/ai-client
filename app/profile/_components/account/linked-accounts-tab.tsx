@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
+import { AccountLinking } from "@/app/profile/_components/account/account-linking";
 import { auth } from "@/lib/auth/auth";
-import { AccountLinking } from "./account-linking";
 
 /**
  * Server component that fetches and displays linked OAuth accounts, excluding credential provider.

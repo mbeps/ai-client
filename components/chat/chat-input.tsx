@@ -7,6 +7,8 @@ import { ChatInputToolbar } from "@/components/chat/input/chat-input-toolbar";
 import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-banner";
 import { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
 import { useChatInteraction } from "@/components/chat/input/use-chat-interaction";
+import { MentionCommands } from "@/components/chat/mention-commands";
+import { SubagentConfigDialog } from "@/components/chat/subagent-config-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   MentionItem,
@@ -16,8 +18,6 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
-import { MentionCommands } from "./mention-commands";
-import { SubagentConfigDialog } from "./subagent-config-dialog";
 
 /**
  * Props for the ChatInput component.

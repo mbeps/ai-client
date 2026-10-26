@@ -12,7 +12,7 @@ import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { ROUTES } from "@/config/routes";
-import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 
 /**
  * Dedicated page for creating a new AI provider configuration.

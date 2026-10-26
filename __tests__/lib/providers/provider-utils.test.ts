@@ -19,14 +19,12 @@ vi.mock("@/lib/encryption/decrypt", () => ({
   decrypt: decryptMock,
 }));
 
-import { ProviderKeyCorruptedError } from "@/lib/errors";
-import {
-  decodeProviderRecord,
-  normaliseProviderApiKey,
-  parseProviderHeaders,
-  serialiseProviderHeaders,
-  toEncryptedProviderValues,
-} from "@/lib/providers/provider-utils";
+import { ProviderKeyCorruptedError } from "@/lib/error/provider-key-corrupted-error";
+import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
+import { normaliseProviderApiKey } from "@/lib/providers/normalise-provider-api-key";
+import { parseProviderHeaders } from "@/lib/providers/parse-provider-headers";
+import { serialiseProviderHeaders } from "@/lib/providers/serialise-provider-headers";
+import { toEncryptedProviderValues } from "@/lib/providers/to-encrypted-provider-values";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 describe("lib/providers/provider-utils", () => {

@@ -2,13 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listProviders } from "@/actions/providers/list-providers";
 import { useProviders } from "@/hooks/use-providers";
-import {
-  fetchProviderRegistryWithCache,
-  getProviderRegistryCachedData,
-  invalidateProviderCache,
-  isProviderRegistryCacheFresh,
-  subscribeProviderRegistryCache,
-} from "@/lib/providers/provider-registry-cache";
+import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-registry-with-cache";
+import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
+import { invalidateProviderCache } from "@/lib/providers/invalidate-provider-cache";
+import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
+import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 
 vi.mock("@/actions/providers/list-providers", () => ({
   listProviders: vi.fn().mockResolvedValue([
@@ -17,12 +15,20 @@ vi.mock("@/actions/providers/list-providers", () => ({
   ]),
 }));
 
-vi.mock("@/lib/providers/provider-registry-cache", () => ({
-  getProviderRegistryCachedData: vi.fn(),
-  isProviderRegistryCacheFresh: vi.fn(),
+vi.mock("@/lib/providers/fetch-provider-registry-with-cache", () => ({
   fetchProviderRegistryWithCache: vi.fn(),
-  subscribeProviderRegistryCache: vi.fn(),
+}));
+vi.mock("@/lib/providers/get-provider-registry-cached-data", () => ({
+  getProviderRegistryCachedData: vi.fn(),
+}));
+vi.mock("@/lib/providers/invalidate-provider-cache", () => ({
   invalidateProviderCache: vi.fn(),
+}));
+vi.mock("@/lib/providers/is-provider-registry-cache-fresh", () => ({
+  isProviderRegistryCacheFresh: vi.fn(),
+}));
+vi.mock("@/lib/providers/subscribe-provider-registry-cache", () => ({
+  subscribeProviderRegistryCache: vi.fn(),
 }));
 
 describe("useProviders hook", () => {

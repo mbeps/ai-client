@@ -1,36 +1,34 @@
 import { describe, expect, it } from "vitest";
-import {
-  ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE,
-  AttachmentVisionUnsupportedError,
-  CONTENT_FILTER_ERROR_CODE,
-  CONTEXT_WINDOW_EXCEEDED_ERROR_CODE,
-  ContentFilterError,
-  ContextWindowExceededError,
-  INVALID_API_KEY_ERROR_CODE,
-  InvalidApiKeyError,
-  KB_NOT_READY_ERROR_CODE,
-  KnowledgebaseNotReadyError,
-  MISSING_API_KEY_ERROR,
-  MODEL_CAPABILITY_ERROR_CODE,
-  MODEL_DUPLICATE_IMPORT_ERROR_CODE,
-  MODEL_MALFORMED_ID_ERROR_CODE,
-  ModelCapabilityError,
-  ModelDuplicateImportError,
-  ModelMalformedIdError,
-  PROVIDER_KEY_CORRUPTED_ERROR_CODE,
-  PROVIDER_NOT_CONFIGURED_ERROR_CODE,
-  ProviderKeyCorruptedError,
-  ProviderNotConfiguredError,
-  RAG_EXTRACTION_EMPTY_ERROR_CODE,
-  RATE_LIMIT_ERROR_CODE,
-  TOOLS_NOT_SUPPORTED_ERROR_CODE,
-  VISION_NOT_SUPPORTED_ERROR_CODE,
-  RagExtractionEmptyError,
-  RateLimitError,
-  ToolsNotSupportedError,
-  VisionNotSupportedError,
-  isApiKeyError,
-} from "@/lib/errors";
+import { ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE } from "@/lib/error/attachment-vision-unsupported-error-code";
+import { AttachmentVisionUnsupportedError } from "@/lib/error/attachment-vision-unsupported-error";
+import { CONTENT_FILTER_ERROR_CODE } from "@/lib/error/content-filter-error-code";
+import { CONTEXT_WINDOW_EXCEEDED_ERROR_CODE } from "@/lib/error/context-window-exceeded-error-code";
+import { ContentFilterError } from "@/lib/error/content-filter-error";
+import { ContextWindowExceededError } from "@/lib/error/context-window-exceeded-error";
+import { INVALID_API_KEY_ERROR_CODE } from "@/lib/error/invalid-api-key-error-code";
+import { InvalidApiKeyError } from "@/lib/error/invalid-api-key-error";
+import { KB_NOT_READY_ERROR_CODE } from "@/lib/error/kb-not-ready-error-code";
+import { KnowledgebaseNotReadyError } from "@/lib/error/knowledgebase-not-ready-error";
+import { MISSING_API_KEY_ERROR } from "@/lib/error/missing-api-key-error";
+import { MODEL_CAPABILITY_ERROR_CODE } from "@/lib/error/model-capability-error-code";
+import { MODEL_DUPLICATE_IMPORT_ERROR_CODE } from "@/lib/error/model-duplicate-import-error-code";
+import { MODEL_MALFORMED_ID_ERROR_CODE } from "@/lib/error/model-malformed-id-error-code";
+import { ModelCapabilityError } from "@/lib/error/model-capability-error";
+import { ModelDuplicateImportError } from "@/lib/error/model-duplicate-import-error";
+import { ModelMalformedIdError } from "@/lib/error/model-malformed-id-error";
+import { PROVIDER_KEY_CORRUPTED_ERROR_CODE } from "@/lib/error/provider-key-corrupted-error-code";
+import { PROVIDER_NOT_CONFIGURED_ERROR_CODE } from "@/lib/error/provider-not-configured-error-code";
+import { ProviderKeyCorruptedError } from "@/lib/error/provider-key-corrupted-error";
+import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
+import { RAG_EXTRACTION_EMPTY_ERROR_CODE } from "@/lib/error/rag-extraction-empty-error-code";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/error/rate-limit-error-code";
+import { TOOLS_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/tools-not-supported-error-code";
+import { VISION_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/vision-not-supported-error-code";
+import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
+import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
+import { isApiKeyError } from "@/lib/error/is-api-key-error";
 
 describe("lib/errors", () => {
   it("RateLimitError has correct properties", () => {

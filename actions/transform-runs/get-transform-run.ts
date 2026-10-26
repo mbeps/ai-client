@@ -1,6 +1,6 @@
 "use server";
 
-import { transformRun } from "@/drizzle/schema";
+import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getOwnedResource } from "@/lib/db/get-owned-resource";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";

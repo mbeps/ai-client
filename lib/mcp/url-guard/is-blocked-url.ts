@@ -1,9 +1,9 @@
 import { env } from "@/config/env";
-import { resolveHostname } from "../dns-resolver";
-import { isBlockedIPv4 } from "./is-blocked-ipv4";
-import { isBlockedIPv6 } from "./is-blocked-ipv6";
-import { isBlockedUrlSync } from "./is-blocked-url-sync";
-import { isIpLiteral } from "./is-ip-literal";
+import { resolveHostname } from "@/lib/mcp/dns-resolver";
+import { isBlockedIPv4 } from "@/lib/mcp/url-guard/is-blocked-ipv4";
+import { isBlockedIPv6 } from "@/lib/mcp/url-guard/is-blocked-ipv6";
+import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
+import { isIpLiteral } from "@/lib/mcp/url-guard/is-ip-literal";
 
 /**
  * SSRF protection: validates whether a URL should be blocked due to pointing to internal/private addresses.

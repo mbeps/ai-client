@@ -1,6 +1,6 @@
 "use server";
 
-import { chat } from "@/drizzle/schema";
+import { chat } from "@/drizzle/schemas/chat-schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
 import type { ChatRow } from "@/types/chat/chat-row";
 

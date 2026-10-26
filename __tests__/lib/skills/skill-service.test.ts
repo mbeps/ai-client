@@ -34,13 +34,19 @@ import {
   getSkillForUser,
   listSkillsForUser,
   updateSkillForUser,
-} from "@/lib/skills/skill-service";
+} from "@/lib/skills/skill-crud-service";
 import {
   deleteSkillFileForUser,
+} from "@/lib/skills/delete-skill-file";
+import {
   listSkillFilesForUser,
+} from "@/lib/skills/list-skill-files";
+import {
   readSkillFileForUser,
+} from "@/lib/skills/read-skill-file";
+import {
   writeSkillFileForUser,
-} from "@/lib/skills/skill-file-service";
+} from "@/lib/skills/write-skill-file";
 
 const row = {
   id: "11111111-1111-4111-8111-111111111111",
