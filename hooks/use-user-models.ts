@@ -2,12 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listModels } from "@/actions/models/list-models";
-import {
-  fetchProviderRegistryWithCache,
-  getProviderRegistryCachedData,
-  isProviderRegistryCacheFresh,
-  subscribeProviderRegistryCache,
-} from "@/lib/providers/provider-registry-cache";
+import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-registry-with-cache";
+import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
+import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
+import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 import type { ProviderModelType } from "@/schemas/providers/provider-registry";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provider";
 

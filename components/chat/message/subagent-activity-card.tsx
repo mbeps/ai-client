@@ -20,10 +20,8 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  estimateToolContextTokens,
-  formatTokens,
-} from "@/lib/chat/calculate-context-tokens";
+import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-tokens";
+import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 import { ScratchpadViewerModal } from "./scratchpad-viewer-modal";
 

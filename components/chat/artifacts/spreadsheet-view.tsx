@@ -41,7 +41,7 @@ import type { CellStyle } from "@/types/artifact/cell-style";
  *
  * @author Maruf Bepary
  */
-export interface SpreadsheetViewProps {
+interface SpreadsheetViewProps {
   /** Display title for the spreadsheet artifact. */
   title: string;
   /** XLSX or CSV-formatted spreadsheet content to render and make searchable. */
@@ -428,5 +428,3 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
     </div>
   );
 }
-
-export default SpreadsheetView;

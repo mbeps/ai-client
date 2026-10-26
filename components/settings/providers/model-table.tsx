@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { logger } from "@/lib/logger";
-import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 

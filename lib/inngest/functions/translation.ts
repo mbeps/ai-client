@@ -6,11 +6,11 @@ import { workflowTranslation } from "@/drizzle/schema";
 import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { inngest } from "@/lib/inngest/client";
 import {
   type TranslationStreamEvent,
   translationChannel,
-} from "@/lib/inngest/channels";
-import { inngest } from "@/lib/inngest/client";
+} from "@/lib/inngest/translation-channel";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["inngest", "workflow", "translation"]);

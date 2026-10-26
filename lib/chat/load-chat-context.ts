@@ -9,7 +9,7 @@ import {
   skill,
   userMcpServerInstall,
 } from "@/drizzle/schema";
-import { retrieveRelevantMemories } from "@/lib/memory/memory-service";
+import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { SkillSummary } from "@/types/skill/skill";

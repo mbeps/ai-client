@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  ContentFilterError,
-  ContextWindowExceededError,
-  InvalidApiKeyError,
-} from "@/lib/errors";
-import {
-  classifyProviderError,
-  isContentFilter,
-  isContextWindowExceeded,
-  isInvalidApiKey,
-} from "@/lib/error/classify-provider-error";
+import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { ContentFilterError } from "@/lib/error/content-filter-error";
+import { ContextWindowExceededError } from "@/lib/error/context-window-exceeded-error";
+import { isContentFilter } from "@/lib/error/is-content-filter";
+import { isContextWindowExceeded } from "@/lib/error/is-context-window-exceeded";
+import { InvalidApiKeyError } from "@/lib/error/invalid-api-key-error";
+import { isInvalidApiKey } from "@/lib/error/is-invalid-api-key";
 
 describe("provider error predicates (T4A.7)", () => {
   describe("isContextWindowExceeded", () => {

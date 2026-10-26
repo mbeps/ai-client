@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  listScratchpadFiles,
-  normaliseScratchpadPath,
-  readScratchpadFile,
-  upsertScratchpadFile,
-} from "@/lib/subagents/scratchpad-service";
+import { listScratchpadFiles } from "@/lib/subagents/list-scratchpad-files";
+import { normaliseScratchpadPath } from "@/lib/subagents/normalise-scratchpad-path";
+import { readScratchpadFile } from "@/lib/subagents/read-scratchpad-file";
+import { upsertScratchpadFile } from "@/lib/subagents/scratchpad-service";
 
 const mockDb = vi.hoisted(() => {
   return {

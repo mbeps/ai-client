@@ -59,7 +59,7 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { RagExtractionEmptyError } from "@/lib/errors";
+import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";

@@ -2,13 +2,13 @@
 
 import { useRealtime } from "inngest/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { getTranslationRealtimeToken } from "@/actions/workflows/translate";
+import { getTranslationRealtimeToken } from "@/actions/workflows/get-translation-realtime-token";
 import {
   applyTranslationRealtimeEvent,
   type RealtimeTranslationEvent,
 } from "@/components/workflows/translation/translation-helpers";
-import { translationChannel } from "@/lib/inngest/channels";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
+import { translationChannel } from "@/lib/inngest/translation-channel";
 
 export interface UseTranslationRealtimeStreamParams {
   activeTranslationId: string | null;

@@ -50,11 +50,9 @@ vi.mock("@/lib/logger", () => ({
 
 import * as xlsx from "xlsx";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import {
-  InvalidArtifactFormatError,
-  ToolsNotSupportedError,
-  VisionNotSupportedError,
-} from "@/lib/errors";
+import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
+import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
 import { runTransformSteps } from "@/lib/transform/run-steps";
 
 const MOCK_PROVIDER = {

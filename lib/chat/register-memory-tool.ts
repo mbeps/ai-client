@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { PROMPTS } from "@/config/prompts";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import { saveMemoryForUser } from "@/lib/memory/memory-service";
+import { saveMemoryForUser } from "@/lib/memory/save-memory-for-user";
 import { saveMemoryToolSchema } from "@/schemas/memory/memory";
 
 /**

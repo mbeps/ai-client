@@ -37,7 +37,7 @@ vi.mock("@/lib/store", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-resource-hydration", () => ({
+vi.mock("@/lib/store/hydrated-resources", () => ({
   hydratedResources: {
     clear: vi.fn(),
   },

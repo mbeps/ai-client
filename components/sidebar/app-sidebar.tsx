@@ -39,8 +39,9 @@ import {
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
+import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
 import { useAppStore } from "@/lib/store";
-import { cn, sortByUpdatedAt } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 /**
  * Main application sidebar for authenticated routes.

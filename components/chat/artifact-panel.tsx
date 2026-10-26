@@ -23,13 +23,19 @@ import { downloadArtifact } from "@/lib/artifacts/download-artifact";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import { MarkdownRenderer } from "./markdown-renderer";
 
-const MarkdownView = dynamic(() => import("./artifacts/markdown-view"), {
-  ssr: false,
-});
-const SpreadsheetView = dynamic(() => import("./artifacts/spreadsheet-view"), {
-  ssr: false,
-});
-const HtmlView = dynamic(() => import("./artifacts/html-view"), { ssr: false });
+const MarkdownView = dynamic(
+  () => import("./artifacts/markdown-view").then((mod) => mod.MarkdownView),
+  { ssr: false },
+);
+const SpreadsheetView = dynamic(
+  () =>
+    import("./artifacts/spreadsheet-view").then((mod) => mod.SpreadsheetView),
+  { ssr: false },
+);
+const HtmlView = dynamic(
+  () => import("./artifacts/html-view").then((mod) => mod.HtmlView),
+  { ssr: false },
+);
 
 /**
  * Props for the ArtifactPanel component.

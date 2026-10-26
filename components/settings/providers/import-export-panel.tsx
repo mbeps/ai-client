@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { exportProviderRegistry } from "@/actions/providers/export-registry";
 import { importProviderRegistry } from "@/actions/providers/import-registry";
 import { Button } from "@/components/ui/button";
-import { invalidateProviderRegistryCache } from "@/lib/providers/provider-registry-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
 type ImportExportPanelProps = {

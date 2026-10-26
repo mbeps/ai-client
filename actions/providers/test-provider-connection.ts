@@ -6,7 +6,7 @@ import { aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getLogger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
-import { decodeProviderRecord } from "@/lib/providers/provider-utils";
+import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
 
 const log = getLogger(["app", "actions", "provider"]);
 

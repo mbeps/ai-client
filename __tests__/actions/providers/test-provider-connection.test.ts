@@ -31,7 +31,7 @@ vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
 }));
 
 const decodeProviderRecordMock = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/providers/provider-utils", () => ({
+vi.mock("@/lib/providers/decode-provider-record", () => ({
   decodeProviderRecord: decodeProviderRecordMock,
 }));
 

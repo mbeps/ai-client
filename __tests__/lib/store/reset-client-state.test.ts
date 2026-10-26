@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { hydratedResources } from "@/hooks/use-resource-hydration";
-import * as cacheModule from "@/lib/providers/provider-registry-cache";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
+import * as cacheModule from "@/lib/providers/invalidate-provider-registry-cache";
 import { useAppStore } from "@/lib/store";
 import { resetClientState } from "@/lib/store/reset-client-state";
 

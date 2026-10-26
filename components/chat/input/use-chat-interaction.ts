@@ -5,8 +5,8 @@ import type { useChatInputServices } from "@/components/chat/input/use-chat-inpu
 import { useChatPromptSelection } from "@/components/chat/input/use-chat-prompt-selection";
 import { useChatSubmit } from "@/components/chat/input/use-chat-submit";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
-import { estimateTokens } from "@/lib/chat/calculate-context-tokens";
-import { AttachmentVisionUnsupportedError } from "@/lib/errors";
+import { estimateTokens } from "@/lib/chat/estimate-tokens";
+import { AttachmentVisionUnsupportedError } from "@/lib/error/attachment-vision-unsupported-error";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";

@@ -22,15 +22,14 @@ import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { classifyProviderError } from "@/lib/error/classify-provider-error";
-import { ToolsNotSupportedError, VisionNotSupportedError } from "@/lib/errors";
-import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
+import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
+import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/chat-channel";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
-import {
-  createSubagentDispatchTool,
-  sanitizeSubagentOutput,
-} from "@/lib/subagents/subagent-dispatch-tool";
+import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
 const log = getLogger(["inngest", "chat", "response"]);

@@ -14,7 +14,7 @@ import { eq, sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { db } from "@/drizzle/db";
 import { attachment, transformRun } from "@/drizzle/schema";
-import { InvalidArtifactFormatError } from "@/lib/errors";
+import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
 import { getLogger } from "@/lib/logger";
 import { uploadObject } from "@/lib/storage/upload-object";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";

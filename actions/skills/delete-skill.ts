@@ -1,7 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
-import { deleteSkillForUser } from "@/lib/skills/skill-service";
+import { deleteSkillForUser } from "@/lib/skills/skill-crud-service";
 
 /**
  * Deletes one or more Agent Skills, verifying ownership by the authenticated user.

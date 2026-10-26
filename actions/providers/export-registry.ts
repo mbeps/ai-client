@@ -4,7 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel, aiProvider } from "@/drizzle/schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { decodeProviderRecord } from "@/lib/providers/provider-utils";
+import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
 import {
   type ExportProviderRegistryInput,
   exportProviderRegistryInputSchema,

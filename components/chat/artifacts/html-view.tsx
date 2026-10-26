@@ -2,7 +2,10 @@
 
 import { AlertCircle } from "lucide-react";
 
-export interface HtmlViewProps {
+/**
+ * Props for the HtmlView artifact component.
+ */
+interface HtmlViewProps {
   content: string;
 }
 
@@ -14,7 +17,7 @@ export interface HtmlViewProps {
  * @returns Iframe rendering the HTML content with restricted permissions.
  * @author Maruf Bepary
  */
-export default function HtmlView({ content }: HtmlViewProps) {
+export function HtmlView({ content }: HtmlViewProps) {
   if (!content) {
     return (
       <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-6 text-center">

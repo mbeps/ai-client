@@ -6,8 +6,9 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/shared/page-container";
 import { Input } from "@/components/ui/input";
+import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
+import type { SortableResource } from "@/lib/sortable-resource";
 import { useAppStore } from "@/lib/store";
-import { type SortableResource, sortByUpdatedAt } from "@/lib/utils";
 
 interface ResourceListPageProps<T extends SortableResource> {
   /** Leading icon for the page type. */

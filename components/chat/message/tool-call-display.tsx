@@ -16,10 +16,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import {
-  estimateToolContextTokens,
-  formatTokens,
-} from "@/lib/chat/calculate-context-tokens";
+import { estimateToolContextTokens } from "@/lib/chat/estimate-tool-context-tokens";
+import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 import { SubagentActivityCard } from "./subagent-activity-card";
 

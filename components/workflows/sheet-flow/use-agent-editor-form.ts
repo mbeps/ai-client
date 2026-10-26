@@ -9,7 +9,8 @@ import {
 } from "@/components/workflows/sheet-flow/agent-editor-helpers";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import { useAppStore } from "@/lib/store";
-import { toggleSetItem, updateBulkToolSelection } from "@/lib/utils";
+import { toggleSetItem } from "@/lib/toggle-set-item";
+import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { TransformStep } from "@/types/transform/transform-step";
 

@@ -37,7 +37,7 @@ vi.mock("@/lib/store/reset-client-state", () => ({
 }));
 
 const mockClearHydratedResources = vi.fn();
-vi.mock("@/hooks/use-resource-hydration", () => ({
+vi.mock("@/lib/store/hydrated-resources", () => ({
   hydratedResources: {
     clear: () => mockClearHydratedResources(),
   },

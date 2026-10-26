@@ -1,4 +1,4 @@
-import { ProviderNotConfiguredError } from "@/lib/errors";
+import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import { fetchProviderWithModel } from "./fetch-provider-with-model";
 

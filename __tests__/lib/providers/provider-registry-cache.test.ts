@@ -1,12 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  fetchProviderRegistryWithCache,
-  getProviderRegistryCachedData,
-  invalidateProviderCache,
-  invalidateProviderRegistryCache,
-  isProviderRegistryCacheFresh,
-  subscribeProviderRegistryCache,
-} from "@/lib/providers/provider-registry-cache";
+import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-registry-with-cache";
+import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
+import { invalidateProviderCache } from "@/lib/providers/invalidate-provider-cache";
+import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
+import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
+import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 
 describe("provider-registry-cache lib", () => {
   beforeEach(() => {

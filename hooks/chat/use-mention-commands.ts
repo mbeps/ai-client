@@ -1,6 +1,12 @@
 "use client";
 
 import { type RefObject, useCallback, useMemo, useState } from "react";
+import {
+  isAssistantItem,
+  isKnowledgebaseItem,
+  isPromptItem,
+  isSkillItem,
+} from "@/hooks/chat/mention-item-guards";
 import { useAppStore } from "@/lib/store";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -41,42 +47,6 @@ export type MentionItem =
   | MentionAssistantItem
   | MentionSkillItem
   | MentionKnowledgebaseItem;
-
-/**
- * Type guard for MentionPromptItem
- */
-export function isPromptItem(item: MentionItem): item is MentionPromptItem {
-  return "shortcut" in item && !("isSkill" in item && (item as any).isSkill);
-}
-
-/**
- * Type guard for MentionSkillItem
- */
-export function isSkillItem(item: MentionItem): item is MentionSkillItem {
-  return "isSkill" in item && (item as any).isSkill === true;
-}
-
-/**
- * Type guard for MentionAssistantItem
- */
-export function isAssistantItem(
-  item: MentionItem,
-): item is MentionAssistantItem {
-  return (
-    !("shortcut" in item) &&
-    !("documentCount" in item) &&
-    !(item as any).isSkill
-  );
-}
-
-/**
- * Type guard for MentionKnowledgebaseItem
- */
-export function isKnowledgebaseItem(
-  item: MentionItem,
-): item is MentionKnowledgebaseItem {
-  return "documentCount" in item && "indexStatus" in item;
-}
 
 /**
  * Manages mention/slash-command UI state and filtering for chat input.

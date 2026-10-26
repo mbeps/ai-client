@@ -46,9 +46,15 @@ vi.mock("@/actions/attachments/get-attachment-artifact", () => ({
   }),
 }));
 
-vi.mock("@/actions/transform-runs/inngest-actions", () => ({
+vi.mock("@/actions/transform-runs/approve-transform-run", () => ({
   approveTransformRunAction: vi.fn(),
+}));
+
+vi.mock("@/actions/transform-runs/get-transform-run-realtime-token", () => ({
   getTransformRunRealtimeToken: vi.fn().mockResolvedValue("token-123"),
+}));
+
+vi.mock("@/actions/transform-runs/start-transform-run", () => ({
   startTransformRunAction: vi.fn().mockResolvedValue(undefined),
 }));
 

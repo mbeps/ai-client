@@ -8,19 +8,15 @@ import { transformRun } from "@/drizzle/schema";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
+import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import {
-  InvalidArtifactFormatError,
-  RATE_LIMIT_ERROR_CODE,
-  ToolsNotSupportedError,
-  VisionNotSupportedError,
-} from "@/lib/errors";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/error/rate-limit-error-code";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
+import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
 import { getLogger } from "@/lib/logger";
-import {
-  formatActiveSkill,
-  formatSkillCatalog,
-} from "@/lib/skills/build-skill-prompt";
+import { formatActiveSkill } from "@/lib/skills/format-active-skill";
+import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";

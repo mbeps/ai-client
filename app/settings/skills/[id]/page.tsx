@@ -13,15 +13,13 @@ import { SkillDetailHeader } from "@/components/skill/skill-detail-header";
 import { SkillDirectorySidebar } from "@/components/skill/skill-directory-sidebar";
 import { SkillFileEditor } from "@/components/skill/skill-file-editor";
 import { ROUTES } from "@/config/routes";
-import {
-  addOrUpdateFile,
-  cleanPath,
-  deleteFile,
-  deleteFolderPath,
-  moveFile,
-  renameFilePath,
-  renameFolderPath,
-} from "@/lib/skills/skill-tree-utils";
+import { addOrUpdateFile } from "@/lib/skills/add-or-update-file";
+import { deleteFile } from "@/lib/skills/delete-file";
+import { deleteFolderPath } from "@/lib/skills/delete-folder-path";
+import { moveFile } from "@/lib/skills/move-file";
+import { renameFilePath } from "@/lib/skills/rename-file-path";
+import { renameFolderPath } from "@/lib/skills/rename-folder-path";
+import { cleanPath } from "@/lib/skills/skill-tree-utils";
 import { useAppStore } from "@/lib/store";
 import { SKILL_DESCRIPTION_MAX_LENGTH } from "@/schemas/skill/skill";
 import type { SkillBundledFile } from "@/types/skill/skill";

@@ -24,7 +24,7 @@ import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-
 import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
 import { TransformRunsTab } from "@/components/workflows/sheet-flow/transform-runs-tab";
 import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-steps-tab";
-import { toggleSetItem } from "@/lib/utils";
+import { toggleSetItem } from "@/lib/toggle-set-item";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";

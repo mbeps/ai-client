@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatActiveSkill,
-  formatSkillCatalog,
-} from "@/lib/skills/build-skill-prompt";
+import { formatActiveSkill } from "@/lib/skills/format-active-skill";
+import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
 import type { Skill, SkillSummary } from "@/types/skill/skill";
 
 const baseSkill = {

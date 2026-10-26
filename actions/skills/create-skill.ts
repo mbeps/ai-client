@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { requireSession } from "@/lib/auth/require-session";
-import { createSkillForUser } from "@/lib/skills/skill-service";
+import { createSkillForUser } from "@/lib/skills/skill-crud-service";
 import { createSkillSchema } from "@/schemas/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 

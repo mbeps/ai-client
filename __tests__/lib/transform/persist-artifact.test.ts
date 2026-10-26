@@ -76,7 +76,7 @@ vi.mock("xlsx", async (importOriginal) => {
 
 import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { InvalidArtifactFormatError } from "@/lib/errors";
+import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 
 describe("persistTransformArtifact (T2.5/T2.6)", () => {

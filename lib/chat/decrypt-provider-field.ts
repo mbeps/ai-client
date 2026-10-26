@@ -1,5 +1,5 @@
 import { decrypt } from "@/lib/encryption/decrypt";
-import { ProviderKeyCorruptedError } from "@/lib/errors";
+import { ProviderKeyCorruptedError } from "@/lib/error/provider-key-corrupted-error";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "provider"]);

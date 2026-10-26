@@ -1,11 +1,9 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getLogger } from "@/lib/logger";
-import {
-  listScratchpadFiles,
-  readScratchpadFile,
-  upsertScratchpadFile,
-} from "./scratchpad-service";
+import { listScratchpadFiles } from "./list-scratchpad-files";
+import { readScratchpadFile } from "./read-scratchpad-file";
+import { upsertScratchpadFile } from "./scratchpad-service";
 
 const log = getLogger(["subagents", "tools"]);
 

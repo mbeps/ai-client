@@ -2,23 +2,26 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listModels } from "@/actions/models/list-models";
 import { useUserModels } from "@/hooks/use-user-models";
-import {
-  fetchProviderRegistryWithCache,
-  getProviderRegistryCachedData,
-  isProviderRegistryCacheFresh,
-  subscribeProviderRegistryCache,
-} from "@/lib/providers/provider-registry-cache";
+import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-registry-with-cache";
+import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
+import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
+import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 
 vi.mock("@/actions/models/list-models", () => ({
   listModels: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("@/lib/providers/provider-registry-cache", () => ({
-  getProviderRegistryCachedData: vi.fn(),
-  isProviderRegistryCacheFresh: vi.fn(),
+vi.mock("@/lib/providers/fetch-provider-registry-with-cache", () => ({
   fetchProviderRegistryWithCache: vi.fn(),
+}));
+vi.mock("@/lib/providers/get-provider-registry-cached-data", () => ({
+  getProviderRegistryCachedData: vi.fn(),
+}));
+vi.mock("@/lib/providers/is-provider-registry-cache-fresh", () => ({
+  isProviderRegistryCacheFresh: vi.fn(),
+}));
+vi.mock("@/lib/providers/subscribe-provider-registry-cache", () => ({
   subscribeProviderRegistryCache: vi.fn(),
-  invalidateProviderCache: vi.fn(),
 }));
 
 describe("useUserModels hook", () => {

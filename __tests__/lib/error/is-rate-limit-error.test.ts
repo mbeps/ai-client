@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RateLimitError } from "@/lib/errors";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 
 describe("isRateLimitError", () => {

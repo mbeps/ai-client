@@ -4,8 +4,9 @@ import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
+import { KnowledgebaseNotReadyError } from "@/lib/error/knowledgebase-not-ready-error";
 import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
-import { KnowledgebaseNotReadyError, RateLimitError } from "@/lib/errors";
+import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { getLogger } from "@/lib/logger";
 import {
   searchKeywordChunks,

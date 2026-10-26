@@ -5,8 +5,8 @@ import { ResponsiveDetails } from "@/components/ui/responsive-details";
 import {
   type CalculateContextParams,
   calculateContextUsage,
-  formatTokens,
 } from "@/lib/chat/calculate-context-tokens";
+import { formatTokens } from "@/lib/chat/format-tokens";
 import { cn } from "@/lib/utils";
 
 interface ContextUsagePillProps extends CalculateContextParams {

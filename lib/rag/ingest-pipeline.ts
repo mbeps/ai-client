@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { kbDocument, knowledgebase } from "@/drizzle/schema";
-import { RagExtractionEmptyError } from "@/lib/errors";
+import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
 import { getLogger } from "@/lib/logger";
 import {
   deletePointsByDocumentId,

@@ -4,12 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
 
-// Module-level: tracks resources that have been successfully hydrated this session.
-// Exported for test teardown only — do not mutate outside this module.
-export const hydratedResources = new Set<string>();
-
-export type HydratableResource =
+type HydratableResource =
   | "projects"
   | "assistants"
   | "prompts"

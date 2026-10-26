@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderNotConfiguredError } from "@/lib/errors";
+import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 
 const dbMock = vi.hoisted(() => ({

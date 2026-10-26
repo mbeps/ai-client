@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/config/routes";
 import { requireSession } from "@/lib/auth/require-session";
-import { deleteMemoriesForUser } from "@/lib/memory/memory-service";
+import { deleteMemoriesForUser } from "@/lib/memory/delete-memories-for-user";
 import {
   type DeleteMemoriesInput,
   deleteMemoriesSchema,

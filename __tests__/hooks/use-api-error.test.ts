@@ -1,18 +1,16 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
-import {
-  ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE,
-  MISSING_API_KEY_ERROR,
-  MODEL_DUPLICATE_IMPORT_ERROR_CODE,
-  MODEL_MALFORMED_ID_ERROR_CODE,
-  PROVIDER_NOT_CONFIGURED_ERROR_CODE,
-  RAG_EXTRACTION_EMPTY_ERROR_CODE,
-  RATE_LIMIT_ERROR_CODE,
-  TOOLS_NOT_SUPPORTED_ERROR_CODE,
-  UNAUTHORIZED_ERROR_CODE,
-  VISION_NOT_SUPPORTED_ERROR_CODE,
-} from "@/lib/errors";
+import { ATTACHMENT_VISION_UNSUPPORTED_ERROR_CODE } from "@/lib/error/attachment-vision-unsupported-error-code";
+import { MISSING_API_KEY_ERROR } from "@/lib/error/missing-api-key-error";
+import { MODEL_DUPLICATE_IMPORT_ERROR_CODE } from "@/lib/error/model-duplicate-import-error-code";
+import { MODEL_MALFORMED_ID_ERROR_CODE } from "@/lib/error/model-malformed-id-error-code";
+import { PROVIDER_NOT_CONFIGURED_ERROR_CODE } from "@/lib/error/provider-not-configured-error-code";
+import { RAG_EXTRACTION_EMPTY_ERROR_CODE } from "@/lib/error/rag-extraction-empty-error-code";
+import { RATE_LIMIT_ERROR_CODE } from "@/lib/error/rate-limit-error-code";
+import { TOOLS_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/tools-not-supported-error-code";
+import { UNAUTHORIZED_ERROR_CODE } from "@/lib/error/unauthorized-error-code";
+import { VISION_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/vision-not-supported-error-code";
 import { useApiError } from "@/hooks/use-api-error";
 
 const mockPush = vi.fn();

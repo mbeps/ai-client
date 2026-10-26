@@ -17,13 +17,11 @@ import {
   accumulateReasoningDelta,
   accumulateTextDelta,
 } from "@/lib/chat/stream/accumulate-stream-chunks";
-import {
-  applyToolCallEvent,
-  applyToolResultEvent,
-  buildAssistantFinishMetadata,
-  extractCompletedToolResults,
-} from "@/lib/chat/stream/handle-stream-tool-calls";
-import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/channels";
+import { applyToolResultEvent } from "@/lib/chat/stream/apply-tool-result-event";
+import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
+import { extractCompletedToolResults } from "@/lib/chat/stream/extract-completed-tool-results";
+import { applyToolCallEvent } from "@/lib/chat/stream/handle-stream-tool-calls";
+import { type ChatStreamEvent, chatChannel } from "@/lib/inngest/chat-channel";
 import { getRealtimeApiBaseUrl } from "@/lib/inngest/realtime-url";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store";

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  fenceBlock,
-  formatActiveSkill,
-} from "@/lib/skills/build-skill-prompt";
+import { fenceBlock } from "@/lib/skills/fence-block";
+import { formatActiveSkill } from "@/lib/skills/format-active-skill";
 
 describe("fenceBlock", () => {
   it("wraps plain content in a triple backtick fence", () => {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { triggerTranslation } from "@/actions/workflows/translate";
+import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import {
   applyHydratedTranslation,
   applyTranslationRealtimeEvent,
@@ -19,7 +19,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@/actions/workflows/translate", () => ({
+vi.mock("@/actions/workflows/trigger-translation", () => ({
   triggerTranslation: vi.fn(),
 }));
 
