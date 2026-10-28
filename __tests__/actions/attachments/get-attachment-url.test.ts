@@ -34,8 +34,12 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 const getPresignedUrlMock = vi.hoisted(() => vi.fn());
+const downloadObjectMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/storage/get-presigned-url", () => ({
   getPresignedUrl: getPresignedUrlMock,
+}));
+vi.mock("@/lib/storage/download-object", () => ({
+  downloadObject: downloadObjectMock,
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,6 +73,50 @@ describe("getAttachmentUrl action", () => {
       mimeType: "text/plain",
     });
     expect(getPresignedUrlMock).toHaveBeenCalledWith("attachments/user-1/file.txt");
+  });
+
+  it("returns base64 data URL for image attachments to avoid client-side CORS/S3 issues", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/cover.png",
+        name: "cover.png",
+        mimeType: "image/png",
+      },
+    ]);
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("fake-png-bytes"));
+
+    const result = await getAttachmentUrl(VALID_UUID);
+
+    expect(result).toEqual({
+      url: `data:image/png;base64,${Buffer.from("fake-png-bytes").toString("base64")}`,
+      name: "cover.png",
+      mimeType: "image/png",
+    });
+    expect(downloadObjectMock).toHaveBeenCalledWith("attachments/user-1/cover.png");
+    expect(getPresignedUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to presigned URL if downloadObject fails for image attachment", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/cover.png",
+        name: "cover.png",
+        mimeType: "image/png",
+      },
+    ]);
+    downloadObjectMock.mockRejectedValueOnce(new Error("Storage unavailable"));
+    getPresignedUrlMock.mockResolvedValueOnce("https://s3.example.com/fallback-cover.png");
+
+    const result = await getAttachmentUrl(VALID_UUID);
+
+    expect(result).toEqual({
+      url: "https://s3.example.com/fallback-cover.png",
+      name: "cover.png",
+      mimeType: "image/png",
+    });
+    expect(getPresignedUrlMock).toHaveBeenCalledWith("attachments/user-1/cover.png");
   });
 
   it("throws error if id is not a valid UUID", async () => {

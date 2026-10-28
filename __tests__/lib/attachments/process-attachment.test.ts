@@ -16,6 +16,7 @@ describe("processAttachment lib", () => {
     expect(res.mimeType).toBe("image/png");
     expect(res.name).toBe("test.png");
     expect(res.dataUrl).toContain("data:image/png;base64,");
+    expect(res.rawFile).toBe(file);
   });
 
   it("throws error when file validation fails", async () => {
@@ -58,6 +59,7 @@ describe("processAttachment lib", () => {
     expect(res.type).toBe("document");
     expect(res.name).toBe("sample.pdf");
     expect(res.extractedText).toBe("PDF Extracted text");
+    expect(res.rawFile).toBe(file);
     expect(extractPdfSpy).toHaveBeenCalledWith(file);
     extractPdfSpy.mockRestore();
   });
@@ -70,6 +72,21 @@ describe("processAttachment lib", () => {
     expect(res.type).toBe("document");
     expect(res.name).toBe("notes.txt");
     expect(res.extractedText).toBe("Text file content");
+    expect(res.rawFile).toBe(file);
+    expect(extractTextSpy).toHaveBeenCalledWith(file);
+    extractTextSpy.mockRestore();
+  });
+
+  it("processes markdown document extracting text and preserving rawFile", async () => {
+    const extractTextSpy = vi.spyOn(extractDoc, "extractPlainText").mockResolvedValueOnce("# Markdown Title");
+    const file = new File(["# Markdown Title"], "doc.md", { type: "text/markdown" });
+
+    const res = await processAttachment(file, []);
+    expect(res.type).toBe("document");
+    expect(res.name).toBe("doc.md");
+    expect(res.extractedText).toBe("# Markdown Title");
+    expect(res.rawFile).toBe(file);
+    expect(res.dataUrl).toBe("");
     expect(extractTextSpy).toHaveBeenCalledWith(file);
     extractTextSpy.mockRestore();
   });

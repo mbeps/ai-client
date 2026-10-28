@@ -4,7 +4,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Processes attachments for a message, cloning existing ones and uploading new ones.
- * Existing attachments (with key) are cloned in batch; new ones are uploaded individually.
+ * Existing attachments (with key) are cloned in batch; new ones are uploaded concurrently via Promise.all.
  *
  * @param attachments - Array of attachments to process.
  * @param messageId - The message ID to associate attachments with.
@@ -23,9 +23,13 @@ export async function processAttachments(
     result.push(...cloned);
   }
 
-  for (const att of toUpload) {
-    const uploaded = await uploadSingleAttachment(att, messageId);
-    if (uploaded) result.push(uploaded);
+  if (toUpload.length > 0) {
+    const uploadedList = await Promise.all(
+      toUpload.map((att) => uploadSingleAttachment(att, messageId)),
+    );
+    for (const uploaded of uploadedList) {
+      if (uploaded) result.push(uploaded);
+    }
   }
 
   return result;

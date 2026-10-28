@@ -50,7 +50,9 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
       for (const r of results) {
         if (r) urls[r.id] = r.url;
       }
-      if (Object.keys(urls).length > 0) setResolvedUrls(urls);
+      if (Object.keys(urls).length > 0) {
+        setResolvedUrls((prev) => ({ ...prev, ...urls }));
+      }
     });
 
     return () => {

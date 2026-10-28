@@ -2,6 +2,17 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+function getS3Origin(): string {
+  if (!process.env.S3_ENDPOINT) return "";
+  try {
+    return new URL(process.env.S3_ENDPOINT).origin;
+  } catch {
+    return "";
+  }
+}
+
+const s3Origin = getS3Origin();
+
 /**
  * Content Security Policy for the application.
  * Permissive enough to allow Mermaid (inline scripts/styles), KaTeX (fonts),
@@ -12,9 +23,13 @@ const CSP = [
   `default-src 'self'`,
   `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: ${isDev ? "http://localhost:* http://127.0.0.1:*" : ""}`.trim(),
+  `img-src 'self' data: blob: https: ${s3Origin ? `${s3Origin} ` : ""}${isDev ? "http://localhost:* http://127.0.0.1:*" : ""}`
+    .trim()
+    .replace(/\s+/g, " "),
   `font-src 'self' data:`,
-  `connect-src 'self' https: ws: wss: ${isDev ? "http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
+  `connect-src 'self' https: ws: wss: ${s3Origin ? `${s3Origin} ` : ""}${isDev ? "http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*" : ""}`
+    .trim()
+    .replace(/\s+/g, " "),
   `frame-src 'self'`,
   `object-src 'none'`,
   `media-src 'self'`,
