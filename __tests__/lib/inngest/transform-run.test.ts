@@ -64,6 +64,7 @@ import { inngest } from "@/lib/inngest/client";
 describe("executeTransformRun Inngest Workflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRunSteps.mockReset();
   });
 
   it("initializes run, executes steps, and marks run completed", async () => {
@@ -185,13 +186,232 @@ describe("executeTransformRun Inngest Workflow", () => {
 
     expect(result).toEqual({ success: true, completed: true });
     expect(mockStep.waitForEvent).toHaveBeenCalledWith(
-      "wait-for-review-approval",
+      "wait-for-review-approval-0",
       expect.objectContaining({
         event: "workflows/transform.approved",
         match: "data.runId",
       }),
     );
     expect(mockRunSteps).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not re-execute Step 1 after approval when Step 0 (no review) is followed by Step 1 (requires review)", async () => {
+    const runRow = {
+      id: "run-no-reexec",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0, requiresReview: false },
+        { id: "s1", name: "Step 1", order: 1, requiresReview: true },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall % 2 === 0) return Promise.resolve([agentRow]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps
+      .mockResolvedValueOnce({
+        success: true,
+        paused: false,
+        currentOutputAttachmentIds: ["out-0"],
+        activeWorkbookFilePath: "/tmp/step0.xlsx",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        paused: true,
+        currentOutputAttachmentIds: ["out-1"],
+        activeWorkbookFilePath: "/tmp/step1.xlsx",
+      });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi
+        .fn()
+        .mockResolvedValue({ data: { runId: "run-no-reexec" } }),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-no-reexec",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockRunSteps).toHaveBeenCalledTimes(2);
+    expect(mockRunSteps).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ startFromStep: 0, singleStep: true }),
+    );
+    expect(mockRunSteps).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        startFromStep: 1,
+        singleStep: true,
+        initialWorkbookFilePath: "/tmp/step0.xlsx",
+      }),
+    );
+    expect(mockStep.waitForEvent).toHaveBeenCalledWith(
+      "wait-for-review-approval-1",
+      expect.objectContaining({
+        event: "workflows/transform.approved",
+        match: "data.runId",
+      }),
+    );
+  });
+
+  it("transitions run to failed and emits error when waitForEvent returns null on approval timeout", async () => {
+    const runRow = {
+      id: "run-timeout",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0, requiresReview: true },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall % 2 === 0) return Promise.resolve([agentRow]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: true,
+      currentOutputAttachmentIds: [],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn().mockResolvedValue(null),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-timeout",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: false });
+    expect(mockStep.run).toHaveBeenCalledWith(
+      "fail-review-timeout-0",
+      expect.any(Function),
+    );
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "Step review approval timed out",
+      }),
+    );
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "error",
+        message: "Step review approval timed out",
+      }),
+    );
+  });
+
+  it("handles multiple review steps using distinct step IDs for waitForEvent and resume", async () => {
+    const runRow = {
+      id: "run-multi-review",
+      agentId: "agent-1",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+    };
+    const agentRow = {
+      id: "agent-1",
+      requiresFileUpload: false,
+      steps: JSON.stringify([
+        { id: "s0", name: "Step 0", order: 0, requiresReview: true },
+        { id: "s1", name: "Step 1", order: 1, requiresReview: true },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall % 2 === 0) return Promise.resolve([agentRow]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps
+      .mockResolvedValueOnce({
+        success: true,
+        paused: true,
+        currentOutputAttachmentIds: ["out-0"],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        paused: true,
+        currentOutputAttachmentIds: ["out-1"],
+      });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi
+        .fn()
+        .mockResolvedValue({ data: { runId: "run-multi-review" } }),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-multi-review",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockStep.waitForEvent).toHaveBeenNthCalledWith(
+      1,
+      "wait-for-review-approval-0",
+      expect.anything(),
+    );
+    expect(mockStep.waitForEvent).toHaveBeenNthCalledWith(
+      2,
+      "wait-for-review-approval-1",
+      expect.anything(),
+    );
+    expect(mockStep.run).toHaveBeenCalledWith(
+      "resume-after-review-0",
+      expect.any(Function),
+    );
+    expect(mockStep.run).toHaveBeenCalledWith(
+      "resume-after-review-1",
+      expect.any(Function),
+    );
   });
 
   it("handles step execution failure and returns success: false", async () => {

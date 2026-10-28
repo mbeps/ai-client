@@ -49,6 +49,8 @@ export interface RunTransformStepsOptions {
   runToolSourceMap: Record<string, string>;
   initialAttachmentRows: AttachmentRow[];
   emit: (data: any) => void;
+  singleStep?: boolean;
+  initialWorkbookFilePath?: string | null;
 }
 
 /**
@@ -94,7 +96,6 @@ async function prepareStepExecution(
 ): Promise<StepExecutionPreparation> {
   const { filteredTools, toolSourceMap, stepServerNames } =
     filterStepTools(params);
-
   const fileContext = await resolveStepFileContext(
     params.activeWorkbookFilePath,
     params.currentAttachmentRows,
@@ -111,12 +112,7 @@ async function prepareStepExecution(
     fileContext,
   });
 
-  return {
-    filteredTools,
-    toolSourceMap,
-    stepServerNames,
-    systemPrompt,
-  };
+  return { filteredTools, toolSourceMap, stepServerNames, systemPrompt };
 }
 
 /**
@@ -146,11 +142,13 @@ export async function runTransformSteps({
   runToolSourceMap,
   initialAttachmentRows,
   emit,
+  singleStep,
+  initialWorkbookFilePath,
 }: RunTransformStepsOptions) {
   const skillCatalog = availableSkills ?? [];
   const preloadedSkills = selectedSkills ?? [];
   let currentAttachmentRows = initialAttachmentRows;
-  let activeWorkbookFilePath: string | null = null;
+  let activeWorkbookFilePath: string | null = initialWorkbookFilePath ?? null;
   let currentOutputAttachmentIds: string[] = [
     ...(runRow.outputAttachmentIds ?? []),
   ];
@@ -161,7 +159,7 @@ export async function runTransformSteps({
     try {
       await db
         .update(transformRun)
-        .set({ updatedAt: new Date() })
+        .set({ currentStepIndex: i, updatedAt: new Date() })
         .where(eq(transformRun.id, runRow.id));
     } catch {
       log.warn("Heartbeat update failed (runId: {runId})", {
@@ -169,11 +167,6 @@ export async function runTransformSteps({
         userId,
       });
     }
-
-    await db
-      .update(transformRun)
-      .set({ currentStepIndex: i })
-      .where(eq(transformRun.id, runRow.id));
 
     emit({
       type: "transform-step-start",
@@ -287,9 +280,21 @@ export async function runTransformSteps({
         { runId: runRow.id, stepIndex: i, userId },
       );
 
-      return { success: true, paused: true, currentOutputAttachmentIds };
+      return {
+        success: true,
+        paused: true,
+        currentOutputAttachmentIds,
+        activeWorkbookFilePath,
+      };
     }
+
+    if (singleStep) break;
   }
 
-  return { success: true, paused: false, currentOutputAttachmentIds };
+  return {
+    success: true,
+    paused: false,
+    currentOutputAttachmentIds,
+    activeWorkbookFilePath,
+  };
 }

@@ -160,6 +160,7 @@ export const executeTransformRun = inngest.createFunction(
 
     let currentStepIndex = event.data.startFromStep ?? 0;
     let finalOutputAttachmentIds: string[] = [];
+    let activeWorkbookFilePath: string | null = null;
 
     while (currentStepIndex < steps.length) {
       const stepIdx = currentStepIndex;
@@ -234,6 +235,8 @@ export const executeTransformRun = inngest.createFunction(
             const result = await runTransformSteps({
               steps,
               startFromStep: stepIdx,
+              singleStep: true,
+              initialWorkbookFilePath: activeWorkbookFilePath,
               runRow: currentRun,
               agentRow: currentAgent,
               userId,
@@ -270,9 +273,11 @@ export const executeTransformRun = inngest.createFunction(
         success: boolean;
         paused?: boolean;
         currentOutputAttachmentIds?: string[];
+        activeWorkbookFilePath?: string | null;
       };
 
       finalOutputAttachmentIds = resultData.currentOutputAttachmentIds ?? [];
+      activeWorkbookFilePath = resultData.activeWorkbookFilePath ?? null;
 
       if (resultData.paused) {
         // Step hit a human review gate. Wait for approval event.
@@ -281,11 +286,34 @@ export const executeTransformRun = inngest.createFunction(
           { runId, stepIdx },
         );
 
-        await step.waitForEvent("wait-for-review-approval", {
-          event: "workflows/transform.approved",
-          match: "data.runId",
-          timeout: "7d",
-        });
+        const approvalEvent = await step.waitForEvent(
+          `wait-for-review-approval-${stepIdx}`,
+          {
+            event: "workflows/transform.approved",
+            match: "data.runId",
+            timeout: "7d",
+          },
+        );
+
+        if (!approvalEvent) {
+          await step.run(`fail-review-timeout-${stepIdx}`, async () => {
+            await db
+              .update(transformRun)
+              .set({
+                status: "failed",
+                errorMessage: "Step review approval timed out",
+                updatedAt: new Date(),
+              })
+              .where(eq(transformRun.id, runId));
+
+            await emit({
+              type: "error",
+              message: "Step review approval timed out",
+            });
+          });
+
+          return { success: false };
+        }
 
         // Review approved: resume from next step
         currentStepIndex = stepIdx + 1;
@@ -297,8 +325,7 @@ export const executeTransformRun = inngest.createFunction(
             .where(eq(transformRun.id, runId));
         });
       } else {
-        // All steps finished
-        break;
+        currentStepIndex = stepIdx + 1;
       }
     }
 
