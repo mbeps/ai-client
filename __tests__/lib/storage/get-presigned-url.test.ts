@@ -55,4 +55,18 @@ describe("getPresignedUrl", () => {
       { expiresIn: 7200 },
     );
   });
+
+  it("passes ResponseContentDisposition when filename is provided", async () => {
+    await getPresignedUrl("test/key", undefined, "My Report (2026).xlsx");
+    const command = mockGetSignedUrl.mock.calls[0][1];
+    expect(command.input.ResponseContentDisposition).toBe(
+      'attachment; filename="My%20Report%20(2026).xlsx"',
+    );
+  });
+
+  it("leaves ResponseContentDisposition undefined when filename is omitted", async () => {
+    await getPresignedUrl("test/key");
+    const command = mockGetSignedUrl.mock.calls[0][1];
+    expect(command.input.ResponseContentDisposition).toBeUndefined();
+  });
 });

@@ -1,10 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Attachment } from "@/types/attachment/attachment";
 
 const mockGetAttachmentUrl = vi.hoisted(() => vi.fn());
+const mockDownloadFile = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("@/actions/attachments/get-attachment-url", () => ({
   getAttachmentUrl: mockGetAttachmentUrl,
+}));
+vi.mock("@/lib/utils/download-file", () => ({
+  downloadFile: mockDownloadFile,
 }));
 
 import { AttachmentGallery } from "@/components/chat/message/attachment-gallery";
@@ -118,6 +122,29 @@ describe("AttachmentGallery", () => {
       const link = screen.getByRole("link", { name: /data\.xlsx/i });
       expect(link).toHaveAttribute("href", "https://s3.example.com/data.xlsx");
     });
+  });
+
+  it("triggers downloadFile when document link is clicked", async () => {
+    const docAtt: Attachment = {
+      id: "att-doc-2",
+      type: "document",
+      name: "report.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 5000,
+      url: "https://s3.example.com/report.pdf",
+    };
+
+    render(<AttachmentGallery attachments={[docAtt]} />);
+
+    const link = screen.getByRole("link", { name: /report\.pdf/i });
+    await act(async () => {
+      fireEvent.click(link);
+    });
+
+    expect(mockDownloadFile).toHaveBeenCalledWith(
+      "https://s3.example.com/report.pdf",
+      "report.pdf",
+    );
   });
 });
 

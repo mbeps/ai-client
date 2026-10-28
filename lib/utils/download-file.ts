@@ -53,6 +53,7 @@ export async function downloadFile(
     const response = await fetch(url, {
       method: "GET",
       mode: "cors",
+      credentials: "omit",
     });
 
     if (!response.ok) {
@@ -63,9 +64,20 @@ export async function downloadFile(
     const objectUrl = window.URL.createObjectURL(blob);
     triggerAnchorDownload(objectUrl, targetFilename);
     window.URL.revokeObjectURL(objectUrl);
-  } catch {
+  } catch (error) {
     // Fallback for CORS restricted origins (e.g., direct S3/MinIO signed URLs without CORS)
-    triggerAnchorDownload(url, targetFilename, true);
+    const isStorageOrLocal =
+      url.includes(":9000") ||
+      url.includes("X-Amz-Signature") ||
+      url.includes("X-Amz-Credential") ||
+      url.includes("localhost") ||
+      url.includes("127.0.0.1") ||
+      url.includes("/ai-client-uploads/");
+    if (!isStorageOrLocal) {
+      triggerAnchorDownload(url, targetFilename, true);
+    } else {
+      throw error;
+    }
   }
 }
 

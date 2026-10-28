@@ -32,6 +32,6 @@ export async function getAttachmentUrl(id: string) {
     }
   }
 
-  const url = await getPresignedUrl(row.key);
+  const url = await getPresignedUrl(row.key, undefined, row.name);
   return { url, name: row.name, mimeType: row.mimeType };
 }

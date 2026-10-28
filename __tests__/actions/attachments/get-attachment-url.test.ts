@@ -72,7 +72,11 @@ describe("getAttachmentUrl action", () => {
       name: "file.txt",
       mimeType: "text/plain",
     });
-    expect(getPresignedUrlMock).toHaveBeenCalledWith("attachments/user-1/file.txt");
+    expect(getPresignedUrlMock).toHaveBeenCalledWith(
+      "attachments/user-1/file.txt",
+      undefined,
+      "file.txt",
+    );
   });
 
   it("returns base64 data URL for image attachments to avoid client-side CORS/S3 issues", async () => {
@@ -116,7 +120,11 @@ describe("getAttachmentUrl action", () => {
       name: "cover.png",
       mimeType: "image/png",
     });
-    expect(getPresignedUrlMock).toHaveBeenCalledWith("attachments/user-1/cover.png");
+    expect(getPresignedUrlMock).toHaveBeenCalledWith(
+      "attachments/user-1/cover.png",
+      undefined,
+      "cover.png",
+    );
   });
 
   it("throws error if id is not a valid UUID", async () => {

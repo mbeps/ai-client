@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 // KaTeX's CSS import breaks the Vitest PostCSS pipeline in jsdom; not needed for assertions
 vi.mock("katex/dist/katex.min.css", () => ({}));
 
+const mockDownloadFile = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("@/lib/utils/download-file", () => ({
+  downloadFile: mockDownloadFile,
+  extractFilenameFromUrl: (url: string) => url.split("/").pop() || "download",
+}));
+
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 
 describe("MarkdownRenderer XSS sanitisation", () => {
@@ -158,5 +164,29 @@ describe("MarkdownRenderer inline vs block code (react-markdown v10)", () => {
     );
     const p = container.querySelector("p");
     expect(p?.textContent).toContain("Run ls -la to list files.");
+  });
+});
+
+describe("MarkdownRenderer downloadable links", () => {
+  it("triggers downloadFile when clicking link ending in downloadable extension", () => {
+    render(
+      <MarkdownRenderer content="Download [financial report](https://example.com/report.xlsx)" />,
+    );
+    const link = screen.getByRole("link", { name: "financial report" });
+    fireEvent.click(link);
+    expect(mockDownloadFile).toHaveBeenCalledWith(
+      "https://example.com/report.xlsx",
+      "report.xlsx",
+    );
+  });
+
+  it("does not intercept clicks for regular web links", () => {
+    mockDownloadFile.mockClear();
+    render(
+      <MarkdownRenderer content="Visit [Google](https://google.com)" />,
+    );
+    const link = screen.getByRole("link", { name: "Google" });
+    fireEvent.click(link);
+    expect(mockDownloadFile).not.toHaveBeenCalled();
   });
 });

@@ -3,7 +3,9 @@
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
+import { downloadFile } from "@/lib/utils/download-file";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -97,6 +99,12 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
             href={displayUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault();
+              downloadFile(displayUrl, att.name).catch(() =>
+                toast.error("Failed to download file. Please try again."),
+              );
+            }}
             className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors"
           >
             <AttIcon className="text-muted-foreground h-4 w-4 shrink-0" />
