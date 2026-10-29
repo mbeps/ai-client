@@ -1,37 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  mockLog,
   mockSelect,
   mockInsert,
   mockUpdate,
   mockDelete,
-  mockResolveEmbeddingProvider,
-  mockEmbedQuery,
-  mockUpsertMemoryPoint,
-  mockDeleteMemoryPoints,
-  mockSearchSemanticMemories,
-  mockSearchKeywordMemories,
   mockGetUserSettingsByUserId,
 } = vi.hoisted(() => {
   return {
-    mockLog: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      audit: vi.fn(),
-    },
     mockSelect: vi.fn(),
     mockInsert: vi.fn(),
     mockUpdate: vi.fn(),
     mockDelete: vi.fn(),
-    mockResolveEmbeddingProvider: vi.fn(),
-    mockEmbedQuery: vi.fn(),
-    mockUpsertMemoryPoint: vi.fn(),
-    mockDeleteMemoryPoints: vi.fn(),
-    mockSearchSemanticMemories: vi.fn(),
-    mockSearchKeywordMemories: vi.fn(),
     mockGetUserSettingsByUserId: vi.fn(),
   };
 });
@@ -39,11 +19,6 @@ const {
 vi.mock("@/lib/user/get-user-settings-by-id", () => ({
   getUserSettingsByUserId: (userId: string) =>
     mockGetUserSettingsByUserId(userId),
-}));
-
-vi.mock("@/lib/logger", () => ({
-  getLogger: vi.fn(() => mockLog),
-  logger: mockLog,
 }));
 
 vi.mock("@/drizzle/db", () => ({
@@ -55,43 +30,10 @@ vi.mock("@/drizzle/db", () => ({
   },
 }));
 
-vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
-  resolveEmbeddingProvider: (...args: any[]) =>
-    mockResolveEmbeddingProvider(...args),
-}));
-
-vi.mock("@/lib/rag/embed-query", () => ({
-  embedQuery: (...args: any[]) => mockEmbedQuery(...args),
-}));
-
-vi.mock("@/lib/memory/upsert-memory-point", () => ({
-  upsertMemoryPoint: (...args: any[]) => mockUpsertMemoryPoint(...args),
-}));
-
-vi.mock("@/lib/memory/delete-memory-points", () => ({
-  deleteMemoryPoints: (...args: any[]) => mockDeleteMemoryPoints(...args),
-}));
-
-vi.mock("@/lib/memory/search-semantic-memories", () => ({
-  searchSemanticMemories: (...args: any[]) =>
-    mockSearchSemanticMemories(...args),
-}));
-
-vi.mock("@/lib/memory/search-keyword-memories", () => ({
-  searchKeywordMemories: (...args: any[]) =>
-    mockSearchKeywordMemories(...args),
-}));
-
-import {
-  deleteMemoriesForUser,
-} from "@/lib/memory/delete-memories-for-user";
-import {
-  retrieveRelevantMemories,
-} from "@/lib/memory/retrieve-relevant-memories";
+import { deleteMemoriesForUser } from "@/lib/memory/delete-memories-for-user";
+import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { saveMemoryForUser } from "@/lib/memory/save-memory-for-user";
-import {
-  updateMemoryForUser,
-} from "@/lib/memory/update-memory-for-user";
+import { updateMemoryForUser } from "@/lib/memory/update-memory-for-user";
 
 describe("memory-service", () => {
   beforeEach(() => {
@@ -109,7 +51,8 @@ describe("memory-service", () => {
 
       await expect(
         saveMemoryForUser("user-1", "Prefers TypeScript"),
-      ).rejects.toThrow("Memory is disabled");
+      ).rejects.toThrow("Memory is disabled for this user");
+      expect(mockSelect).not.toHaveBeenCalled();
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
@@ -124,25 +67,47 @@ describe("memory-service", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+
+      // Mock select checking for duplicates -> none found
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
       mockInsert.mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([mockInserted]),
         }),
       });
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2]);
 
       const result = await saveMemoryForUser("user-1", "Still saves");
-      expect(result).toEqual(mockInserted);
+      expect(result).toEqual({
+        ...mockInserted,
+        deduplicated: false,
+      });
+      expect(mockInsert).toHaveBeenCalled();
     });
 
-    it("inserts into postgres and indexes point into Qdrant when embedding available", async () => {
+    it("inserts into postgres when no duplicate memory exists", async () => {
+      const now = new Date();
       const mockInserted = {
         id: "mem-1",
         userId: "user-1",
         content: "Prefers TypeScript",
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
       };
+
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       mockInsert.mockReturnValue({
         values: vi.fn().mockReturnValue({
@@ -150,73 +115,107 @@ describe("memory-service", () => {
         }),
       });
 
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2, 0.3]);
+      const result = await saveMemoryForUser("user-1", "  Prefers TypeScript  ");
 
-      const result = await saveMemoryForUser("user-1", "Prefers TypeScript");
-
-      expect(result).toEqual(mockInserted);
-      expect(mockEmbedQuery).toHaveBeenCalledWith("Prefers TypeScript", "user-1");
-      expect(mockUpsertMemoryPoint).toHaveBeenCalledWith(3, {
+      expect(result).toEqual({
         id: "mem-1",
-        vector: [0.1, 0.2, 0.3],
         userId: "user-1",
         content: "Prefers TypeScript",
+        createdAt: now,
+        updatedAt: now,
+        deduplicated: false,
       });
+      expect(mockInsert).toHaveBeenCalled();
     });
 
-    it("persists in postgres even if embedding fails or is unconfigured", async () => {
-      const mockInserted = {
-        id: "mem-2",
+    it("deduplicates case-insensitive duplicate and updates updatedAt timestamp", async () => {
+      const createdAt = new Date("2026-01-01T00:00:00Z");
+      const oldUpdatedAt = new Date("2026-01-01T00:00:00Z");
+      const newUpdatedAt = new Date("2026-01-02T12:00:00Z");
+
+      const existingRecord = {
+        id: "mem-existing",
         userId: "user-1",
-        content: "Uses Bun runtime",
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        content: "Prefers TypeScript",
+        createdAt,
+        updatedAt: oldUpdatedAt,
       };
 
-      mockInsert.mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([mockInserted]),
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([existingRecord]),
+          }),
         }),
       });
 
-      mockEmbedQuery.mockRejectedValue(new Error("No provider configured"));
-
-      const result = await saveMemoryForUser("user-1", "Uses Bun runtime");
-
-      expect(result).toEqual(mockInserted);
-      expect(mockUpsertMemoryPoint).not.toHaveBeenCalled();
-      expect(mockLog.warn).toHaveBeenCalled();
-    });
-
-    it("handles non-Error thrown during embedding gracefully", async () => {
-      const mockInserted = {
-        id: "mem-string-err",
-        userId: "user-1",
-        content: "Uses Bun runtime",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockInsert.mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([mockInserted]),
+      mockUpdate.mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              { ...existingRecord, updatedAt: newUpdatedAt },
+            ]),
+          }),
         }),
       });
 
-      mockEmbedQuery.mockRejectedValue("raw string error");
+      const result = await saveMemoryForUser("user-1", "prefers typescript");
 
-      const result = await saveMemoryForUser("user-1", "Uses Bun runtime");
+      expect(result).toEqual({
+        id: "mem-existing",
+        userId: "user-1",
+        content: "Prefers TypeScript",
+        createdAt,
+        updatedAt: newUpdatedAt,
+        deduplicated: true,
+      });
+      expect(mockInsert).not.toHaveBeenCalled();
+      expect(mockUpdate).toHaveBeenCalled();
+    });
 
-      expect(result).toEqual(mockInserted);
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to index memory into Qdrant"),
-        expect.objectContaining({ error: "raw string error" }),
-      );
+    it("falls back to existing.updatedAt if update returning yields no row", async () => {
+      const createdAt = new Date("2026-01-01T00:00:00Z");
+      const oldUpdatedAt = new Date("2026-01-01T00:00:00Z");
+
+      const existingRecord = {
+        id: "mem-existing-2",
+        userId: "user-1",
+        content: "Uses PostgreSQL",
+        createdAt,
+        updatedAt: oldUpdatedAt,
+      };
+
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([existingRecord]),
+          }),
+        }),
+      });
+
+      mockUpdate.mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await saveMemoryForUser("user-1", "Uses PostgreSQL");
+
+      expect(result).toEqual({
+        id: "mem-existing-2",
+        userId: "user-1",
+        content: "Uses PostgreSQL",
+        createdAt,
+        updatedAt: oldUpdatedAt,
+        deduplicated: true,
+      });
     });
   });
 
   describe("updateMemoryForUser", () => {
-    it("updates postgres and re-indexes into Qdrant", async () => {
+    it("updates postgres and returns updated memory", async () => {
       const mockUpdated = {
         id: "mem-1",
         userId: "user-1",
@@ -233,8 +232,6 @@ describe("memory-service", () => {
         }),
       });
 
-      mockEmbedQuery.mockResolvedValue([0.5, 0.6]);
-
       const result = await updateMemoryForUser(
         "user-1",
         "mem-1",
@@ -242,12 +239,7 @@ describe("memory-service", () => {
       );
 
       expect(result).toEqual(mockUpdated);
-      expect(mockUpsertMemoryPoint).toHaveBeenCalledWith(2, {
-        id: "mem-1",
-        vector: [0.5, 0.6],
-        userId: "user-1",
-        content: "Updated preference",
-      });
+      expect(mockUpdate).toHaveBeenCalled();
     });
 
     it("throws error when memory to update is not found", async () => {
@@ -263,74 +255,10 @@ describe("memory-service", () => {
         updateMemoryForUser("user-1", "mem-missing", "Content"),
       ).rejects.toThrow("Memory not found");
     });
-
-    it("logs warning and still returns memory if re-indexing into Qdrant fails", async () => {
-      const mockUpdated = {
-        id: "mem-1",
-        userId: "user-1",
-        content: "Updated preference",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockUpdate.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockUpdated]),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockRejectedValue(new Error("Embedding offline"));
-
-      const result = await updateMemoryForUser(
-        "user-1",
-        "mem-1",
-        "Updated preference",
-      );
-
-      expect(result).toEqual(mockUpdated);
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to re-index memory in Qdrant"),
-        expect.objectContaining({ error: "Embedding offline" }),
-      );
-    });
-
-    it("handles non-Error thrown during re-indexing in Qdrant", async () => {
-      const mockUpdated = {
-        id: "mem-1",
-        userId: "user-1",
-        content: "Updated preference",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockUpdate.mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockUpdated]),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockRejectedValue("string rejection in update");
-
-      const result = await updateMemoryForUser(
-        "user-1",
-        "mem-1",
-        "Updated preference",
-      );
-
-      expect(result).toEqual(mockUpdated);
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to re-index memory in Qdrant"),
-        expect.objectContaining({ error: "string rejection in update" }),
-      );
-    });
   });
 
   describe("deleteMemoriesForUser", () => {
-    it("deletes multiple memories from postgres and deletes points in Qdrant", async () => {
+    it("deletes multiple memories from postgres", async () => {
       mockDelete.mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
@@ -338,46 +266,12 @@ describe("memory-service", () => {
       await deleteMemoriesForUser("user-1", ["mem-1", "mem-2"]);
 
       expect(mockDelete).toHaveBeenCalled();
-      expect(mockDeleteMemoryPoints).toHaveBeenCalledWith(["mem-1", "mem-2"]);
     });
 
     it("returns early if ids array is empty", async () => {
       await deleteMemoriesForUser("user-1", []);
 
       expect(mockDelete).not.toHaveBeenCalled();
-      expect(mockDeleteMemoryPoints).not.toHaveBeenCalled();
-    });
-
-    it("logs warning if Qdrant points deletion throws", async () => {
-      mockDelete.mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      });
-      mockDeleteMemoryPoints.mockRejectedValue(new Error("Qdrant unavailable"));
-
-      await expect(
-        deleteMemoriesForUser("user-1", ["mem-1"]),
-      ).resolves.toBeUndefined();
-
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to delete memory points from Qdrant"),
-        expect.objectContaining({ error: "Qdrant unavailable" }),
-      );
-    });
-
-    it("logs warning if Qdrant points deletion throws non-Error", async () => {
-      mockDelete.mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      });
-      mockDeleteMemoryPoints.mockRejectedValue("Qdrant raw string failure");
-
-      await expect(
-        deleteMemoriesForUser("user-1", ["mem-1"]),
-      ).resolves.toBeUndefined();
-
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to delete memory points from Qdrant"),
-        expect.objectContaining({ error: "Qdrant raw string failure" }),
-      );
     });
   });
 
@@ -392,7 +286,6 @@ describe("memory-service", () => {
       const memories = await retrieveRelevantMemories("user-1", "TypeScript");
       expect(memories).toEqual([]);
       expect(mockSelect).not.toHaveBeenCalled();
-      expect(mockSearchSemanticMemories).not.toHaveBeenCalled();
     });
 
     it("proceeds with retrieval if getUserSettingsByUserId rejects", async () => {
@@ -402,7 +295,9 @@ describe("memory-service", () => {
       mockSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue([{ content: "Fallback memory" }]),
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{ content: "Fallback memory" }]),
+            }),
           }),
         }),
       });
@@ -415,7 +310,9 @@ describe("memory-service", () => {
       mockSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue([]),
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
           }),
         }),
       });
@@ -424,176 +321,42 @@ describe("memory-service", () => {
       expect(memories).toEqual([]);
     });
 
-    it("returns all memories from Postgres when total count is <= 20", async () => {
+    it("returns memories ordered by updatedAt with limit from PostgreSQL", async () => {
       const rows = [{ content: "Memory 1" }, { content: "Memory 2" }];
 
       mockSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(rows),
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(rows),
+            }),
           }),
         }),
       });
 
-      const memories = await retrieveRelevantMemories("user-1", "any query");
+      const memories = await retrieveRelevantMemories("user-1", "any query", 10);
 
       expect(memories).toEqual(["Memory 1", "Memory 2"]);
-      expect(mockEmbedQuery).not.toHaveBeenCalled();
+      expect(mockSelect).toHaveBeenCalled();
     });
 
-    it("uses Qdrant hybrid search when count > 20 and query exists, combining distinct semantic and keyword results", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
+    it("uses default limit of 20 when limit parameter is omitted", async () => {
+      const mockLimitFn = vi.fn().mockResolvedValue([{ content: "Default limit memory" }]);
 
       mockSelect.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
+            orderBy: vi.fn().mockReturnValue({
+              limit: mockLimitFn,
+            }),
           }),
         }),
       });
 
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2]);
-      mockSearchSemanticMemories.mockResolvedValue([
-        { id: "1", content: "TypeScript rule", score: 0.9 },
-      ]);
-      mockSearchKeywordMemories.mockResolvedValue([
-        { id: "1", content: "TypeScript rule", score: 0.8 },
-        { id: "2", content: "Bun runtime rule", score: 0.7 },
-      ]);
+      const memories = await retrieveRelevantMemories("user-1");
 
-      const memories = await retrieveRelevantMemories(
-        "user-1",
-        "TypeScript preference",
-      );
-
-      expect(memories).toContain("TypeScript rule");
-      expect(memories).toContain("Bun runtime rule");
-      expect(memories[0]).toBe("TypeScript rule");
-      expect(mockSearchSemanticMemories).toHaveBeenCalled();
-      expect(mockSearchKeywordMemories).toHaveBeenCalled();
-    });
-
-    it("falls back to recent Postgres memories if hybrid search returns 0 matches in scoreMap", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
-
-      mockSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2]);
-      mockSearchSemanticMemories.mockResolvedValue([]);
-      mockSearchKeywordMemories.mockResolvedValue([]);
-
-      const memories = await retrieveRelevantMemories("user-1", "unmatched query");
-
-      expect(memories).toHaveLength(10);
-      expect(memories[0]).toBe("Memory 0");
-    });
-
-    it("catches semantic and keyword query failures individually and keeps remaining results", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
-
-      mockSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2]);
-      mockSearchSemanticMemories.mockRejectedValue(new Error("Qdrant error"));
-      mockSearchKeywordMemories.mockResolvedValue([
-        { id: "2", content: "Keyword found", score: 0.8 },
-      ]);
-
-      const memories = await retrieveRelevantMemories("user-1", "Query");
-
-      expect(memories).toEqual(["Keyword found"]);
-    });
-
-    it("catches keyword query failure individually and keeps semantic results", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
-
-      mockSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockResolvedValue([0.1, 0.2]);
-      mockSearchSemanticMemories.mockResolvedValue([
-        { id: "1", content: "Semantic found", score: 0.9 },
-      ]);
-      mockSearchKeywordMemories.mockRejectedValue(new Error("Keyword error"));
-
-      const memories = await retrieveRelevantMemories("user-1", "Query");
-
-      expect(memories).toEqual(["Semantic found"]);
-    });
-
-    it("falls back to recent Postgres memories if hybrid search fails with Error instance", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
-
-      mockSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockRejectedValue(new Error("Embedding API down"));
-
-      const memories = await retrieveRelevantMemories("user-1", "Query");
-
-      expect(memories.length).toBeLessThanOrEqual(10);
-      expect(memories[0]).toBe("Memory 0");
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Hybrid memory search failed"),
-        expect.objectContaining({ error: "Embedding API down" }),
-      );
-    });
-
-    it("falls back to recent Postgres memories if hybrid search fails with Error or non-Error", async () => {
-      const manyRows = Array.from({ length: 25 }, (_, i) => ({
-        content: `Memory ${i}`,
-      }));
-
-      mockSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(manyRows),
-          }),
-        }),
-      });
-
-      mockEmbedQuery.mockRejectedValue("String network crash");
-
-      const memories = await retrieveRelevantMemories("user-1", "Query");
-
-      expect(memories.length).toBeLessThanOrEqual(10);
-      expect(memories[0]).toBe("Memory 0");
-      expect(mockLog.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Hybrid memory search failed"),
-        expect.objectContaining({ error: "String network crash" }),
-      );
+      expect(memories).toEqual(["Default limit memory"]);
+      expect(mockLimitFn).toHaveBeenCalledWith(20);
     });
   });
 });

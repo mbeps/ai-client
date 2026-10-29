@@ -9,4 +9,5 @@ export interface Memory {
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  deduplicated?: boolean;
 }
