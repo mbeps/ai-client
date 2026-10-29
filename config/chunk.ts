@@ -8,7 +8,7 @@
  */
 import { env } from "@/config/env";
 
-const DEFAULT_CHARS = env.DEFAULT_CHUNK_SIZE ?? 1_600; // ~400 tokens
+const DEFAULT_CHARS = env.DEFAULT_CHUNK_SIZE ?? 1_000; // ~250-350 tokens (safe for 512-token models)
 
 /**
  * Overlap between adjacent chunks to preserve context across boundaries.

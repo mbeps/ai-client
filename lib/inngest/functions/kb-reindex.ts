@@ -18,6 +18,12 @@ export const reindexKbFunction = inngest.createFunction(
     id: "reindex-knowledgebase",
     singleton: { key: "event.data.kbId", mode: "skip" },
     retries: 1,
+    cancelOn: [
+      {
+        event: "knowledgebase/reindex.cancel",
+        if: "async.data.kbId == event.data.kbId",
+      },
+    ],
     triggers: [{ event: "knowledgebase/reindex" }],
   },
   async ({ event, step }) => {
@@ -45,7 +51,11 @@ export const reindexKbFunction = inngest.createFunction(
 
       await db
         .update(kbDocument)
-        .set({ statusMessage: null })
+        .set({
+          status: "pending",
+          statusMessage: null,
+          updatedAt: new Date(),
+        })
         .where(eq(kbDocument.kbId, kbId));
 
       const documentRows = await db

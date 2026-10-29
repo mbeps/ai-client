@@ -12,7 +12,7 @@ import { splitRecursive } from "@/lib/rag/split-recursive";
  *
  * Overlap preserves context across chunk boundaries for better retrieval.
  * @param text - Document text to chunk
- * @param options - Chunk size and overlap in characters (default: 1600 chars, 200 overlap)
+ * @param options - Chunk size and overlap in characters (default: 1000 chars, 200 overlap)
  * @returns Array of non-empty text chunks
  * @see {@link lib/rag/ingest.ts} for embedding chunks in knowledge base
  * @author Maruf Bepary

@@ -3,7 +3,7 @@
 import { Library, Loader2, Settings, Shield, Upload } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
 import { getKnowledgebase } from "@/actions/knowledgebases/get-knowledgebase";
@@ -114,8 +114,11 @@ function useKnowledgebaseDetail(kbId: string) {
     return () => clearInterval(interval);
   }, [kb?.indexStatus, fetchKb]);
 
+  const hasAutoTriggeredReindexRef = useRef(false);
+
   useEffect(() => {
-    if (kb?.indexStatus === "stale") {
+    if (kb?.indexStatus === "stale" && !hasAutoTriggeredReindexRef.current) {
+      hasAutoTriggeredReindexRef.current = true;
       handleReindex();
     }
   }, [kb?.indexStatus, handleReindex]);

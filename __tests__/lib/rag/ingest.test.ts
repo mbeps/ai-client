@@ -50,12 +50,12 @@ describe("ingestDocument", () => {
     );
   });
 
-  it("ingests document successfully and updates knowledgebase status to ready", async () => {
+  it("ingests document successfully and updates knowledgebase status to ready when no in-flight docs remain", async () => {
     const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
     const mockSelect = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([]), // stale documents check returns []
+      limit: vi.fn().mockResolvedValue([]), // no remaining in-flight docs
     };
     dbMock.select
       .mockReturnValueOnce({
@@ -81,15 +81,64 @@ describe("ingestDocument", () => {
     await ingestDocument("doc-1", "user-1");
 
     expect(ingestDocumentPipelineMock).toHaveBeenCalledOnce();
-    expect(dbMock.update).toHaveBeenCalled();
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "ready",
+      }),
+    );
   });
 
-  it("handles rate limit error during ingestion and rethrows RateLimitError", async () => {
+  it("ingests document successfully and keeps knowledgebase indexing when other in-flight docs remain", async () => {
     const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
-    dbMock.select.mockReturnValue({
+    const mockSelect = {
       from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([doc]),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([{ id: "doc-2" }]), // doc-2 still in-flight
+    };
+    dbMock.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([doc]),
+      })
+      .mockReturnValue(mockSelect);
+
+    const chainableUpdate = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(undefined),
+    };
+    dbMock.update.mockReturnValue(chainableUpdate);
+
+    s3ClientMock.send.mockResolvedValue({
+      Body: {
+        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+      },
     });
+
+    ingestDocumentPipelineMock.mockResolvedValue(undefined);
+
+    await ingestDocument("doc-1", "user-1");
+
+    expect(ingestDocumentPipelineMock).toHaveBeenCalledOnce();
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "indexing",
+      }),
+    );
+  });
+
+  it("handles rate limit error and keeps knowledgebase indexing when in-flight docs remain", async () => {
+    const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([{ id: "doc-2" }]),
+    };
+    dbMock.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([doc]),
+      })
+      .mockReturnValue(mockSelect);
 
     const chainableUpdate = {
       set: vi.fn().mockReturnThis(),
@@ -111,14 +160,32 @@ describe("ingestDocument", () => {
     await expect(ingestDocument("doc-1", "user-1")).rejects.toThrow(
       RateLimitError,
     );
+
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+      }),
+    );
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "indexing",
+      }),
+    );
   });
 
-  it("handles generic error during ingestion and rethrows original error", async () => {
+  it("handles generic error and transitions knowledgebase to ready when no in-flight docs remain", async () => {
     const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
-    dbMock.select.mockReturnValue({
+    const mockSelect = {
       from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([doc]),
-    });
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([doc]),
+      })
+      .mockReturnValue(mockSelect);
 
     const chainableUpdate = {
       set: vi.fn().mockReturnThis(),
@@ -138,6 +205,60 @@ describe("ingestDocument", () => {
 
     await expect(ingestDocument("doc-1", "user-1")).rejects.toThrow(
       "Pipeline corruption",
+    );
+
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+      }),
+    );
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexStatus: "ready",
+      }),
+    );
+  });
+
+  it("normalizes raw embedding token limit exceeded errors into user-friendly statusMessage", async () => {
+    const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([doc]),
+      })
+      .mockReturnValue(mockSelect);
+
+    const chainableUpdate = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(undefined),
+    };
+    dbMock.update.mockReturnValue(chainableUpdate);
+
+    s3ClientMock.send.mockResolvedValue({
+      Body: {
+        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array([1])),
+      },
+    });
+
+    const tokenErr = new Error(
+      'HTTP 400: {"message":"Embedding input has 531 tokens, exceeding the model maximum of 512.","type":"invalid_request_error","code":400,"param":null,"object":"error"}',
+    );
+    ingestDocumentPipelineMock.mockRejectedValue(tokenErr);
+    isRateLimitErrorMock.mockReturnValue(false);
+
+    await expect(ingestDocument("doc-1", "user-1")).rejects.toThrow();
+
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        statusMessage:
+          "Document chunk (531 tokens) exceeds the embedding model maximum of 512 tokens. Select an embedding model with a larger context window or configure a smaller chunk size in Settings.",
+      }),
     );
   });
 });

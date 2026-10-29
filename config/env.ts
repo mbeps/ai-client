@@ -67,7 +67,7 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .transform((v) => parseInt(v, 10)),
   DEFAULT_CHUNK_SIZE: z
     .string()
-    .default("1600")
+    .default("1000")
     .transform((v) => parseInt(v, 10)),
   DEFAULT_CHUNK_OVERLAP: z
     .string()

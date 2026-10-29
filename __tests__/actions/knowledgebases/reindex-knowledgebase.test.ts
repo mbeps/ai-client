@@ -76,6 +76,11 @@ describe("reindexKnowledgebase action", () => {
     expect(result).toEqual({ processedCount: 2, failedCount: 0 });
     expect(chainable.transaction).toHaveBeenCalledTimes(1);
     expect(chainable.update).toHaveBeenCalledTimes(2);
+    expect(chainable.set).toHaveBeenCalledWith({
+      status: "pending",
+      statusMessage: null,
+      updatedAt: expect.any(Date),
+    });
     expect(sendMock).toHaveBeenCalledWith({
       name: "knowledgebase/reindex",
       data: { kbId: KB_ID, userId: "user-1" },
