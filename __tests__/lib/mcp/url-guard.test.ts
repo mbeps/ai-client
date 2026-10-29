@@ -149,9 +149,18 @@ describe("isBlockedUrl", () => {
     });
   });
 
-  describe("unspecified address 0.0.0.0", () => {
+  describe("unspecified / current network 0.0.0.0/8", () => {
     it("blocks 0.0.0.0", async () => {
       expect(await isBlockedUrl("http://0.0.0.0")).toBe(true);
+    });
+
+    it("blocks 0.1.2.3 in 0.0.0.0/8 range", async () => {
+      expect(await isBlockedUrl("http://0.1.2.3")).toBe(true);
+    });
+
+    it("blocks 0.0.0.1 and 0.255.255.255", async () => {
+      expect(await isBlockedUrl("http://0.0.0.1")).toBe(true);
+      expect(await isBlockedUrl("http://0.255.255.255")).toBe(true);
     });
   });
 
@@ -265,6 +274,12 @@ describe("isBlockedUrl", () => {
       vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
       expect(await isBlockedUrl("not-a-url")).toBe(true);
     });
+
+    it("still blocks file:// URLs even when env is true (protocol ordering)", async () => {
+      vi.spyOn(env, "ALLOW_PRIVATE_NETWORK_MCP", "get").mockReturnValue(true);
+      expect(await isBlockedUrl("file:///etc/passwd")).toBe(true);
+      expect(isBlockedUrlSync("file:///etc/passwd")).toBe(true);
+    });
   });
 
   describe("safe public URLs", () => {
@@ -300,22 +315,19 @@ describe("isBlockedUrl", () => {
   });
 
   describe("non-HTTP schemes", () => {
-    it("allows ftp:// scheme (not an HTTP call, but parseable)", async () => {
-      // ftp to a public host is parseable and non-private
-      expect(await isBlockedUrl("ftp://ftp.example.com")).toBe(false);
+    it("blocks ftp:// scheme", async () => {
+      expect(await isBlockedUrl("ftp://ftp.example.com")).toBe(true);
+      expect(isBlockedUrlSync("ftp://ftp.example.com")).toBe(true);
     });
 
-    it("allows wss:// to public host", async () => {
-      expect(await isBlockedUrl("wss://events.example.com")).toBe(false);
+    it("blocks wss:// scheme", async () => {
+      expect(await isBlockedUrl("wss://events.example.com")).toBe(true);
+      expect(isBlockedUrlSync("wss://events.example.com")).toBe(true);
     });
 
-    it("blocks file:// scheme (results in empty/localhost hostname)", async () => {
-      // file:///etc/passwd — hostname is empty string → isBlockedIPv4 returns false for ""
-      // but the IP parts check will return false for empty string, so the URL is not blocked
-      // Document actual behavior:
-      const result = await isBlockedUrl("file:///etc/passwd");
-      // file:// has empty hostname — isBlockedIPv4("") returns false because parts.length !== 4
-      expect(typeof result).toBe("boolean");
+    it("blocks file:// scheme", async () => {
+      expect(await isBlockedUrl("file:///etc/passwd")).toBe(true);
+      expect(isBlockedUrlSync("file:///etc/passwd")).toBe(true);
     });
   });
 
@@ -411,6 +423,17 @@ describe("isBlockedUrl", () => {
       vi.useRealTimers();
     });
 
+    it("cleans up timeout timer when DNS resolution succeeds", async () => {
+      vi.useFakeTimers();
+      const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+      mockDnsResolver.mockResolvedValue(["93.184.216.34"]);
+      const promise = isBlockedUrl("http://cleantimer.example.com");
+      await promise;
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.useRealTimers();
+    });
+
     it("handles URL parse failure inside isBlockedUrl body defensively", async () => {
       const origURL = globalThis.URL;
       let count = 0;
@@ -482,6 +505,15 @@ describe("isBlockedUrlSync", () => {
 
   it("allows public IP (sync)", () => {
     expect(isBlockedUrlSync("http://8.8.8.8")).toBe(false);
+  });
+
+  it("blocks 0.0.0.0/8 (sync)", () => {
+    expect(isBlockedUrlSync("http://0.1.2.3")).toBe(true);
+  });
+
+  it("blocks non-HTTP protocols (sync)", () => {
+    expect(isBlockedUrlSync("ftp://ftp.example.com")).toBe(true);
+    expect(isBlockedUrlSync("file:///etc/passwd")).toBe(true);
   });
 
   it("allows hostname (sync, no DNS)", () => {

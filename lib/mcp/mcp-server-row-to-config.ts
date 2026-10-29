@@ -36,4 +36,3 @@ export function mcpServerRowToConfig(row: McpServerRow): McpServerConfig {
     headers: decryptHeaders(row.headers),
   };
 }
-
