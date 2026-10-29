@@ -9,9 +9,12 @@ import {
 } from "@/drizzle/schemas/mcp-server-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
+import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
@@ -47,12 +50,7 @@ type ChatContext = {
   /** Effective pre-configured skill IDs inherited from the assistant, else the project */
   skillIds: string[];
   /** Enabled MCP servers, optionally filtered by selectedServerIds */
-  servers: Array<{
-    id: string;
-    name: string;
-    url: string;
-    headers: string | null;
-  }>;
+  servers: McpServerConfig[];
   /** Available skills for progressive disclosure catalog */
   availableSkills: SkillSummary[];
   /** Pre-selected skills to inject directly */
@@ -185,7 +183,11 @@ export async function loadChatContext(
               eq(mcpServer.enabled, true),
             ),
           ),
-      ]).then(([personal, installed]) => [...personal, ...installed]),
+      ]).then(([personal, installed]) =>
+        [...personal, ...installed].map((r) =>
+          mcpServerRowToConfig(r as McpServerRow),
+        ),
+      ),
 
       // KB readiness check (if applicable)
       (() => {

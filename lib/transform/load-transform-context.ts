@@ -11,9 +11,11 @@ import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getLogger } from "@/lib/logger";
+import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 const log = getLogger(["app", "transform", "context"]);
@@ -81,7 +83,11 @@ export async function loadTransformContext({
           eq(mcpServer.enabled, true),
         ),
       ),
-  ]).then(([personal, installed]) => [...personal, ...installed]);
+  ]).then(([personal, installed]) =>
+    [...personal, ...installed].map((r) =>
+      mcpServerRowToConfig(r as McpServerRow),
+    ),
+  );
 
   // Resolve model ID
   const model = modelOverride ?? agentRow.modelId ?? null;
