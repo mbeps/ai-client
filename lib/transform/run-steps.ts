@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
+import type { TransformStreamEvent } from "@/lib/inngest/transform-run-channel";
 import { getLogger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { handleStepArtifactOutput } from "@/lib/transform/step-artifact-output";
@@ -21,11 +22,7 @@ import type { TransformStep } from "@/types/transform/transform-step";
 
 const log = getLogger(["app", "transform", "steps"]);
 
-/**
- * Represents run transform steps options.
- *
- * @author Maruf Bepary
- */
+/** Options for executing transform agent run steps. */
 export interface RunTransformStepsOptions {
   steps: TransformStep[];
   startFromStep: number;
@@ -48,14 +45,13 @@ export interface RunTransformStepsOptions {
   runMcpTools: Record<string, any>;
   runToolSourceMap: Record<string, string>;
   initialAttachmentRows: AttachmentRow[];
-  emit: (data: any) => void;
+  emit: (data: TransformStreamEvent) => Promise<void> | void;
+  singleStep?: boolean;
+  initialWorkbookFilePath?: string | null;
+  dryRun?: boolean;
 }
 
-/**
- * Represents prepare step execution params.
- *
- * @author Maruf Bepary
- */
+/** Parameters for step execution context preparation. */
 interface PrepareStepExecutionParams {
   step: TransformStep;
   agentRow: RunTransformStepsOptions["agentRow"];
@@ -68,13 +64,10 @@ interface PrepareStepExecutionParams {
   kbContext: string;
   activeWorkbookFilePath: string | null;
   currentAttachmentRows: AttachmentRow[];
+  dryRun?: boolean;
 }
 
-/**
- * Represents step execution preparation.
- *
- * @author Maruf Bepary
- */
+/** Resolved step preparation context. */
 interface StepExecutionPreparation {
   filteredTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -82,19 +75,12 @@ interface StepExecutionPreparation {
   systemPrompt: string;
 }
 
-/**
- * Performs prepare step execution.
- *
- * @param params - Target params
- * @returns The resolved result
- * @author Maruf Bepary
- */
+/** Prepares tool filtering, file context, and system prompt for a step. */
 async function prepareStepExecution(
   params: PrepareStepExecutionParams,
 ): Promise<StepExecutionPreparation> {
   const { filteredTools, toolSourceMap, stepServerNames } =
     filterStepTools(params);
-
   const fileContext = await resolveStepFileContext(
     params.activeWorkbookFilePath,
     params.currentAttachmentRows,
@@ -109,14 +95,10 @@ async function prepareStepExecution(
     preloadedSkills: params.preloadedSkills,
     kbContext: params.kbContext,
     fileContext,
+    dryRun: params.dryRun,
   });
 
-  return {
-    filteredTools,
-    toolSourceMap,
-    stepServerNames,
-    systemPrompt,
-  };
+  return { filteredTools, toolSourceMap, stepServerNames, systemPrompt };
 }
 
 /**
@@ -146,11 +128,14 @@ export async function runTransformSteps({
   runToolSourceMap,
   initialAttachmentRows,
   emit,
+  singleStep,
+  initialWorkbookFilePath,
+  dryRun,
 }: RunTransformStepsOptions) {
   const skillCatalog = availableSkills ?? [];
   const preloadedSkills = selectedSkills ?? [];
   let currentAttachmentRows = initialAttachmentRows;
-  let activeWorkbookFilePath: string | null = null;
+  let activeWorkbookFilePath: string | null = initialWorkbookFilePath ?? null;
   let currentOutputAttachmentIds: string[] = [
     ...(runRow.outputAttachmentIds ?? []),
   ];
@@ -161,7 +146,7 @@ export async function runTransformSteps({
     try {
       await db
         .update(transformRun)
-        .set({ updatedAt: new Date() })
+        .set({ currentStepIndex: i, updatedAt: new Date() })
         .where(eq(transformRun.id, runRow.id));
     } catch {
       log.warn("Heartbeat update failed (runId: {runId})", {
@@ -170,12 +155,7 @@ export async function runTransformSteps({
       });
     }
 
-    await db
-      .update(transformRun)
-      .set({ currentStepIndex: i })
-      .where(eq(transformRun.id, runRow.id));
-
-    emit({
+    await emit({
       type: "transform-step-start",
       runId: runRow.id,
       stepIndex: i,
@@ -206,6 +186,7 @@ export async function runTransformSteps({
         kbContext,
         activeWorkbookFilePath,
         currentAttachmentRows,
+        dryRun,
       });
 
     let turnResult: StepModelTurnResult;
@@ -253,7 +234,7 @@ export async function runTransformSteps({
     currentAttachmentRows = outputResult.currentAttachmentRows;
     activeWorkbookFilePath = outputResult.activeWorkbookFilePath;
 
-    emit({
+    await emit({
       type: "transform-step-complete",
       runId: runRow.id,
       stepIndex: i,
@@ -276,7 +257,7 @@ export async function runTransformSteps({
         .set({ status: "awaiting_review", currentStepIndex: i })
         .where(eq(transformRun.id, runRow.id));
 
-      emit({
+      await emit({
         type: "transform-review-required",
         runId: runRow.id,
         stepIndex: i,
@@ -287,9 +268,21 @@ export async function runTransformSteps({
         { runId: runRow.id, stepIndex: i, userId },
       );
 
-      return { success: true, paused: true, currentOutputAttachmentIds };
+      return {
+        success: true,
+        paused: true,
+        currentOutputAttachmentIds,
+        activeWorkbookFilePath,
+      };
     }
+
+    if (singleStep) break;
   }
 
-  return { success: true, paused: false, currentOutputAttachmentIds };
+  return {
+    success: true,
+    paused: false,
+    currentOutputAttachmentIds,
+    activeWorkbookFilePath,
+  };
 }

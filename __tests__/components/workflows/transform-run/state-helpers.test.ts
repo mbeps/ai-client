@@ -64,6 +64,32 @@ describe("state-helpers", () => {
       expect(states[0]).toEqual({ status: "pending" });
       expect(states[1]).toEqual({ status: "pending" });
     });
+
+    it("avoids misattributing outputAttachmentId when preceding steps produce no file (name-based mapping)", () => {
+      // Step 0 produces no attachment, Step 1 produces "out-1" named "step-2-output.xlsx"
+      const states = buildInitialStepStates(2, "completed", null, ["out-1"], [
+        { id: "out-1", name: "step-2-output.xlsx" },
+      ]);
+      expect(states[0]).toEqual({ status: "completed", outputAttachmentId: undefined });
+      expect(states[1]).toEqual({ status: "completed", outputAttachmentId: "out-1" });
+    });
+
+    it("avoids misattributing outputAttachmentId when preceding steps produce no file (record-based mapping)", () => {
+      const states = buildInitialStepStates(2, "completed", null, ["out-1"], {
+        1: "out-1",
+      });
+      expect(states[0]).toEqual({ status: "completed", outputAttachmentId: undefined });
+      expect(states[1]).toEqual({ status: "completed", outputAttachmentId: "out-1" });
+    });
+
+    it("maps outputAttachmentId accurately when stepIndex is explicitly specified", () => {
+      const states = buildInitialStepStates(3, "completed", null, ["out-2"], [
+        { id: "out-2", stepIndex: 2 },
+      ]);
+      expect(states[0]).toEqual({ status: "completed", outputAttachmentId: undefined });
+      expect(states[1]).toEqual({ status: "completed", outputAttachmentId: undefined });
+      expect(states[2]).toEqual({ status: "completed", outputAttachmentId: "out-2" });
+    });
   });
 
   describe("resolveInitialSelectedStep", () => {

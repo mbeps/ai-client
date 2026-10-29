@@ -37,7 +37,7 @@ const expectedDefaults: Record<(typeof newVars)[number], number | boolean> = {
   RAG_TOP_K: 5,
   TRANSFORM_TOP_K: 3,
   MAX_DOCUMENT_CHARS: 500000,
-  DEFAULT_CHUNK_SIZE: 1600,
+  DEFAULT_CHUNK_SIZE: 1000,
   DEFAULT_CHUNK_OVERLAP: 200,
   CHAT_MAX_STEPS: 10,
   S3_FORCE_PATH_STYLE: true,

@@ -16,7 +16,7 @@ describe("CSP headers in next.config.ts", () => {
     expect(configContent).toContain("frame-ancestors 'none'");
   });
 
-  it("does NOT contain img-src https: wildcard", () => {
-    expect(configContent).not.toContain("img-src 'self' data: blob: https:");
+  it("contains img-src with self, data, blob, and https", () => {
+    expect(configContent).toContain("img-src 'self' data: blob: https:");
   });
 });

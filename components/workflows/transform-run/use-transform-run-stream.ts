@@ -137,7 +137,7 @@ function handleToolResultEvent(
 function handleTransformCompleteEvent(
   event: Record<string, unknown>,
   setRun: React.Dispatch<React.SetStateAction<TransformRun | null>>,
-  loadAttachmentUrls: (ids: string[]) => Promise<void>,
+  loadAttachmentUrls: (ids: string[]) => Promise<unknown>,
 ) {
   const outputIds = (event.outputAttachmentIds as string[]) ?? [];
   setRun((prev) =>
@@ -187,7 +187,7 @@ interface SseDispatchContext {
   >;
   activeStepIndexRef: React.MutableRefObject<number | null>;
   handleStepCompleteEvent: (event: Record<string, unknown>) => void;
-  loadAttachmentUrls: (ids: string[]) => Promise<void>;
+  loadAttachmentUrls: (ids: string[]) => Promise<unknown>;
   setStreamError: (msg: string) => void;
   handleApiError: (err: unknown) => boolean;
 }
@@ -372,7 +372,7 @@ export interface UseTransformRunStreamParams {
   >;
   setSelectedStepIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setIsArtifactOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  loadAttachmentUrls: (ids: string[]) => Promise<void>;
+  loadAttachmentUrls: (ids: string[]) => Promise<unknown>;
 }
 
 /**

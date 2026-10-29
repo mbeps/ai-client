@@ -11,15 +11,26 @@ import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
  *
  * @param key - S3 object key to generate download URL for
  * @param expiresIn - URL expiry duration in seconds (default: 3600 = 1 hour)
+ * @param filename - Optional custom filename to set in ResponseContentDisposition
  * @returns Full presigned URL string that can be shared for temporary access
  * @throws {Error} When URL signing fails (invalid key, credentials, etc.)
  * @see {@link message-bubble.tsx} for presigned URL fetching on component mount
  */
-export async function getPresignedUrl(key: string, expiresIn?: number) {
+export async function getPresignedUrl(
+  key: string,
+  expiresIn?: number,
+  filename?: string,
+) {
   const expiry = expiresIn ?? env.PRESIGNED_URL_EXPIRY_SECONDS ?? 3600;
   return getSignedUrl(
     s3Client,
-    new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }),
+    new GetObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      ResponseContentDisposition: filename
+        ? `attachment; filename="${encodeURIComponent(filename)}"`
+        : undefined,
+    }),
     { expiresIn: expiry },
   );
 }

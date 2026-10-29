@@ -8,6 +8,7 @@ import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-mess
 import { RATE_LIMIT_ERROR_CODE } from "@/lib/error/rate-limit-error-code";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
+import type { TransformStreamEvent } from "@/lib/inngest/transform-run-channel";
 import { getLogger } from "@/lib/logger";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { extractArtifactFromToolPayload } from "@/lib/transform/extract-artifact-from-tool-payload";
@@ -20,32 +21,20 @@ const log = getLogger(["app", "transform", "steps"]);
 
 /**
  * Processes an individual tool execution result during a workflow step turn.
- *
- * Emits realtime tool-call telemetry events, checks whether the tool performed
- * a spreadsheet mutation, captures newly uploaded workbook filepaths, and extracts
- * produced artifacts.
- *
- * @param tr - Raw tool execution result object
- * @param toolSourceMap - Mapping of tool names to their providing MCP server names
- * @param emit - Realtime event dispatcher callback for step streaming updates
- * @param runId - Workflow run identifier
- * @param stepIndex - Zero-based index of the currently executing workflow step
- * @param userId - ID of the authenticated user owning the run
- * @returns Metadata describing mutation status, active workbook filepath, and extracted artifact
- * @author Maruf Bepary
+ * Emits realtime tool telemetry, captures workbook mutations, and extracts artifacts.
  */
-function handleSingleToolResult(
+async function handleSingleToolResult(
   tr: any,
   toolSourceMap: Record<string, string>,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
   runId: string,
   stepIndex: number,
   userId: string,
-): {
+): Promise<{
   isMutation: boolean;
   uploadedWorkbookPath: string | null;
   artifact: Record<string, unknown> | null;
-} {
+}> {
   const serverName = toolSourceMap[tr.toolName];
   const payload = (tr as any).result ?? (tr as any).output;
   const isMutation = isSpreadsheetMutationTool(tr.toolName);
@@ -90,7 +79,7 @@ function handleSingleToolResult(
       ? JSON.stringify(payload, null, 2)
       : payload;
 
-  emit({
+  await emit({
     type: "tool-result",
     toolCallId: tr.toolCallId,
     toolName: tr.toolName,
@@ -110,14 +99,14 @@ function handleSingleToolResult(
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function emitStepToolCalls(
+async function emitStepToolCalls(
   toolCalls: any[],
   toolSourceMap: Record<string, string>,
-  emit: (data: any) => void,
-): void {
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
+): Promise<void> {
   for (const tc of toolCalls) {
     const serverName = toolSourceMap[tc.toolName];
-    emit({
+    await emit({
       type: "tool-call",
       toolCallId: tc.toolCallId,
       toolName: tc.toolName,
@@ -140,29 +129,29 @@ function emitStepToolCalls(
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function processStepExecutionTurn(
+async function processStepExecutionTurn(
   steps: any[],
   toolSourceMap: Record<string, string>,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
   runId: string,
   stepIndex: number,
   userId: string,
   initialWorkbookFilePath: string | null,
-): {
+): Promise<{
   stepHasSpreadsheetMutations: boolean;
   activeWorkbookFilePath: string | null;
   stepArtifact: Record<string, unknown> | null;
-} {
+}> {
   let stepHasSpreadsheetMutations = false;
   let currentActiveWorkbookFilePath = initialWorkbookFilePath;
   let stepArtifact: Record<string, unknown> | null = null;
 
   for (const stepInfo of steps) {
-    emitStepToolCalls(stepInfo.toolCalls ?? [], toolSourceMap, emit);
+    await emitStepToolCalls(stepInfo.toolCalls ?? [], toolSourceMap, emit);
 
     for (const tr of stepInfo.toolResults ?? []) {
       const { isMutation, uploadedWorkbookPath, artifact } =
-        handleSingleToolResult(
+        await handleSingleToolResult(
           tr,
           toolSourceMap,
           emit,
@@ -200,7 +189,7 @@ export interface ExecuteStepModelTurnParams {
   runId: string;
   stepIndex: number;
   userId: string;
-  emit: (data: any) => void;
+  emit: (data: TransformStreamEvent) => Promise<void> | void;
 }
 
 /**
@@ -249,7 +238,7 @@ export async function executeStepModelTurn({
     maxRetries: 1,
   });
 
-  const turn = processStepExecutionTurn(
+  const turn = await processStepExecutionTurn(
     result.steps ?? [],
     toolSourceMap,
     emit,
@@ -282,7 +271,7 @@ export async function handleStepExecutionError(
   stepErr: unknown,
   stepName: string,
   runId: string,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
 ): Promise<void> {
   let msg = stepErr instanceof Error ? stepErr.message : "Step failed";
   let code = "ERROR";
@@ -301,7 +290,7 @@ export async function handleStepExecutionError(
     .set({ status: "failed", errorMessage: msg })
     .where(eq(transformRun.id, runId));
 
-  emit({
+  await emit({
     type: "error",
     message: `Step "${stepName}" failed: ${msg}`,
     code,

@@ -56,7 +56,7 @@ export async function ingestKbDocument(
 
     // 2. Validate Ownership
     const [doc] = await db
-      .select({ id: kbDocument.id })
+      .select({ id: kbDocument.id, kbId: kbDocument.kbId })
       .from(kbDocument)
       .where(
         and(
@@ -77,7 +77,11 @@ export async function ingestKbDocument(
 
     await inngest.send({
       name: "knowledgebase/document.ingest",
-      data: { documentId: validatedId, userId: session.user.id },
+      data: {
+        documentId: validatedId,
+        userId: session.user.id,
+        kbId: doc.kbId,
+      },
     });
 
     return { success: true };

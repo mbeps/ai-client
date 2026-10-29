@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ResizablePanelGroup } from "@/components/ui/resizable";
 import { TransformRunFilesSection } from "@/components/workflows/transform-run/transform-run-files-section";
@@ -7,6 +7,11 @@ import { TransformRunPreviewPane } from "@/components/workflows/transform-run/tr
 import { TransformStepTimelineItem } from "@/components/workflows/transform-run/transform-step-timeline-item";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { TransformStep } from "@/types/transform/transform-step";
+
+const mockDownloadFile = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("@/lib/utils/download-file", () => ({
+  downloadFile: mockDownloadFile,
+}));
 
 vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: ({ artifact }: { artifact: ArtifactData }) => (
@@ -78,6 +83,29 @@ describe("Transform Run Components", () => {
       const downloadLink = screen.getByRole("link", { name: /download final result/i });
       expect(downloadLink).toBeDefined();
       expect(downloadLink.getAttribute("href")).toBe("https://example.com/final.csv");
+    });
+
+    it("triggers downloadFile when Download Final Result button is clicked", async () => {
+      render(
+        <TransformRunHeader
+          agentName="Completed Agent"
+          createdAt={new Date()}
+          status="completed"
+          progress={100}
+          outputAttachmentIds={["out-final"]}
+          attachmentMeta={{
+            "out-final": { url: "https://example.com/final.csv", name: "final.csv" },
+          }}
+          onApprove={vi.fn()}
+          isApproving={false}
+        />,
+      );
+
+      const downloadLink = screen.getByRole("link", { name: /download final result/i });
+      await act(async () => {
+        fireEvent.click(downloadLink);
+      });
+      expect(mockDownloadFile).toHaveBeenCalledWith("https://example.com/final.csv", "final.csv");
     });
   });
 
@@ -167,6 +195,24 @@ describe("Transform Run Components", () => {
       expect(screen.getByText("in.csv")).toBeDefined();
       expect(screen.getByText("Input File")).toBeDefined();
       expect(screen.getByText("Storage Optimization")).toBeDefined();
+    });
+
+    it("triggers downloadFile when an attachment card is clicked", async () => {
+      render(
+        <TransformRunFilesSection
+          outputAttachmentIds={["out-1"]}
+          attachmentMeta={{
+            "out-1": { url: "https://example.com/out.csv", name: "out.csv" },
+          }}
+          isCompleted={true}
+        />,
+      );
+
+      const cardLink = screen.getByRole("link", { name: /out\.csv/i });
+      await act(async () => {
+        fireEvent.click(cardLink);
+      });
+      expect(mockDownloadFile).toHaveBeenCalledWith("https://example.com/out.csv", "out.csv");
     });
   });
 

@@ -18,21 +18,40 @@ import { inngest } from "@/lib/inngest/client";
 export async function startTransformRunAction(runId: string) {
   const session = await requireSession();
 
-  const [row] = await db
-    .select()
-    .from(transformRun)
+  const [claimed] = await db
+    .update(transformRun)
+    .set({ status: "running", updatedAt: new Date() })
     .where(
-      and(eq(transformRun.id, runId), eq(transformRun.userId, session.user.id)),
-    );
+      and(
+        eq(transformRun.id, runId),
+        eq(transformRun.userId, session.user.id),
+        eq(transformRun.status, "pending"),
+      ),
+    )
+    .returning();
 
-  if (!row) throw new Error("Transform run not found");
+  if (!claimed) {
+    const [existing] = await db
+      .select({ id: transformRun.id, status: transformRun.status })
+      .from(transformRun)
+      .where(
+        and(
+          eq(transformRun.id, runId),
+          eq(transformRun.userId, session.user.id),
+        ),
+      );
+
+    if (!existing) throw new Error("Transform run not found");
+
+    return { success: true };
+  }
 
   await inngest.send({
     name: "workflows/transform.execute",
     data: {
       runId,
       userId: session.user.id,
-      startFromStep: row.currentStepIndex ?? 0,
+      startFromStep: claimed.currentStepIndex ?? 0,
     },
   });
 

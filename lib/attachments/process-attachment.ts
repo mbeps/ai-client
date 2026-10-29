@@ -63,6 +63,7 @@ export async function processAttachment(
       mimeType,
       sizeBytes: file.size,
       dataUrl,
+      rawFile: file,
     };
   }
 
@@ -91,5 +92,6 @@ export async function processAttachment(
     sizeBytes: file.size,
     dataUrl: "",
     extractedText,
+    rawFile: file,
   };
 }

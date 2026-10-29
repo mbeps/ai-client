@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
+import { downloadObject } from "@/lib/storage/download-object";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 
 /**
@@ -120,9 +121,10 @@ export async function loadThreadFromDb(
     attRows.map(async (a) => {
       if (a.messageId === null) return;
       const type = typeFromMime(a.mimeType);
-      // Only images need eager presigned URLs (vision model messages);
-      // other types are resolved on demand via the get_file_url tool.
-      const url = type === "image" ? await getPresignedUrl(a.key) : "";
+      // Only images need eager URLs for vision model messages; convert localhost
+      // S3 endpoints to base64 so external cloud LLMs can view local images.
+      const url =
+        type === "image" ? await resolveImageUrl(a.key, a.mimeType) : "";
       const list = byMessage.get(a.messageId) ?? [];
       list.push({
         id: a.id,
@@ -161,4 +163,50 @@ function typeFromMime(mimeType: string): string {
     return "spreadsheet";
   }
   return "document";
+}
+
+/**
+ * Checks whether a URL targets a local or private address unreachable from cloud LLMs.
+ *
+ * @param urlStr - URL string to check
+ * @returns True if the URL points to localhost or private network address
+ */
+function isLocalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".localhost") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolves an image attachment URL for model consumption.
+ * When S3 is on a local/private endpoint (e.g. MinIO in development),
+ * inlines the image as a base64 data URL so cloud vision models can access it.
+ *
+ * @param key - S3 object key
+ * @param mimeType - Image MIME type
+ * @returns Base64 data URL or presigned remote URL
+ */
+async function resolveImageUrl(key: string, mimeType: string): Promise<string> {
+  const presigned = await getPresignedUrl(key);
+  if (isLocalUrl(presigned)) {
+    try {
+      const buffer = await downloadObject(key);
+      return `data:${mimeType};base64,${buffer.toString("base64")}`;
+    } catch {
+      return presigned;
+    }
+  }
+  return presigned;
 }

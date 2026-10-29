@@ -1,13 +1,42 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
-import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-message";
+import { normalizeIngestErrorMessage } from "@/lib/error/normalize-ingest-error";
 import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+
+/**
+ * Synchronizes the parent knowledgebase index status based on in-flight documents.
+ * Transitions to "indexing" if any document is pending/processing; otherwise "ready".
+ *
+ * @param kbId - Knowledge base identifier
+ */
+async function syncKnowledgebaseIndexStatus(kbId: string): Promise<void> {
+  const remaining = await db
+    .select({ id: kbDocument.id })
+    .from(kbDocument)
+    .where(
+      and(
+        eq(kbDocument.kbId, kbId),
+        inArray(kbDocument.status, ["pending", "processing"]),
+      ),
+    )
+    .limit(1);
+
+  const nextKbStatus = remaining.length > 0 ? "indexing" : "ready";
+  await db
+    .update(knowledgebase)
+    .set({
+      indexStatus: nextKbStatus,
+      lastIndexedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(knowledgebase.id, kbId));
+}
 
 /**
  * Extracts, chunks, and embeds a KB document. Updates status from pending→processing→ready/failed.
@@ -49,25 +78,10 @@ export async function ingestDocument(
 
     await ingestDocumentPipeline(doc, buffer, userId);
 
-    const staleDocuments = await db
-      .select({ id: kbDocument.id })
-      .from(kbDocument)
-      .where(and(eq(kbDocument.kbId, doc.kbId), ne(kbDocument.status, "ready")))
-      .limit(1);
-
-    await db
-      .update(knowledgebase)
-      .set({
-        indexStatus: staleDocuments.length === 0 ? "ready" : "stale",
-        lastIndexedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(knowledgebase.id, doc.kbId));
+    await syncKnowledgebaseIndexStatus(doc.kbId);
   } catch (err) {
     const isRateLimit = isRateLimitError(err);
-    const errorMessage = isRateLimit
-      ? normalizeRateLimitMessage(err)
-      : (err as Error).message;
+    const errorMessage = normalizeIngestErrorMessage(err);
 
     await db
       .update(kbDocument)
@@ -77,6 +91,8 @@ export async function ingestDocument(
         updatedAt: new Date(),
       })
       .where(eq(kbDocument.id, documentId));
+
+    await syncKnowledgebaseIndexStatus(doc.kbId);
 
     if (isRateLimit) {
       throw new RateLimitError(errorMessage);

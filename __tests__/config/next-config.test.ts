@@ -26,6 +26,8 @@ describe("next.config headers & CSP", () => {
     expect(connectSrcMatches).toHaveLength(1);
     const imgSrcMatches = cspValue.match(/\bimg-src\b/g);
     expect(imgSrcMatches).toHaveLength(1);
+    expect(cspValue).toContain("https:");
+    expect(cspValue).toContain("http://localhost:9000");
   });
 
   it("includes HSTS header when NODE_ENV is production", async () => {
@@ -59,6 +61,8 @@ describe("next.config headers & CSP", () => {
         (h: any) => h.key === "Content-Security-Policy",
       );
       expect(csp?.value).not.toContain("http://localhost:*");
+      expect(csp?.value).toContain("http://localhost:9000");
+      expect(csp?.value).toContain("img-src 'self' data: blob: https:");
     } finally {
       (process.env as any).NODE_ENV = originalEnv;
       vi.resetModules();

@@ -118,6 +118,7 @@ describe("download-file utility", () => {
       expect(mockFetch).toHaveBeenCalledWith("https://example.com/data.csv", {
         method: "GET",
         mode: "cors",
+        credentials: "omit",
       });
       expect(createObjectUrlSpy).toHaveBeenCalledWith(mockBlob);
       expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:download-blob-123");
@@ -170,6 +171,62 @@ describe("download-file utility", () => {
       expect(anchor.rel).toBe("noopener noreferrer");
       expect(anchor.href).toBe("https://s3.amazonaws.com/cors-blocked.pdf");
       expect(anchor.download).toBe("cors.pdf");
+    });
+
+    it("passes credentials: 'omit' to fetch to prevent sending ambient localhost cookies", async () => {
+      const mockBlob = new Blob(["sample content"], { type: "text/csv" });
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        blob: vi.fn().mockResolvedValue(mockBlob),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await downloadFile(
+        "http://localhost:9000/ai-client-uploads/test.xlsx",
+        "test.xlsx",
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:9000/ai-client-uploads/test.xlsx",
+        expect.objectContaining({
+          method: "GET",
+          mode: "cors",
+          credentials: "omit",
+        }),
+      );
+    });
+
+    it("rejects and does not fallback to anchor opening in new tab when fetch returns non-ok for storage/localhost URL", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: "MetadataTooLarge",
+      });
+      vi.stubGlobal("fetch", mockFetch);
+      const appendSpy = vi.spyOn(document.body, "appendChild");
+
+      await expect(
+        downloadFile(
+          "http://localhost:9000/ai-client-uploads/report.xlsx",
+          "report.xlsx",
+        ),
+      ).rejects.toThrow();
+
+      expect(appendSpy).not.toHaveBeenCalled();
+    });
+
+    it("rejects and does not fallback to anchor opening in new tab when fetch throws for presigned S3/MinIO URL with X-Amz-Signature", async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+      vi.stubGlobal("fetch", mockFetch);
+      const appendSpy = vi.spyOn(document.body, "appendChild");
+
+      await expect(
+        downloadFile(
+          "http://localhost:9000/ai-client-uploads/report.xlsx?X-Amz-Signature=fake-sig",
+          "report.xlsx",
+        ),
+      ).rejects.toThrow();
+
+      expect(appendSpy).not.toHaveBeenCalled();
     });
   });
 });

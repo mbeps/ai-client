@@ -47,10 +47,14 @@ export async function reindexKnowledgebase(kbId: string) {
       })
       .where(eq(knowledgebase.id, kbId));
 
-    // Reset status message for all documents being re-indexed
+    // Reset status to pending and clear status message for all documents being re-indexed
     await tx
       .update(kbDocument)
-      .set({ statusMessage: null })
+      .set({
+        status: "pending",
+        statusMessage: null,
+        updatedAt: new Date(),
+      })
       .where(eq(kbDocument.kbId, kbId));
 
     return tx

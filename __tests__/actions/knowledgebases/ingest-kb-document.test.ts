@@ -58,9 +58,12 @@ import { inngest } from "@/lib/inngest/client";
 describe("ingestKbDocument action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Ownership check finds the document.
+    // Ownership check finds the document with its kbId.
     chainable.where.mockResolvedValue([
-      { id: "00000000-0000-4000-8000-000000000001" },
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        kbId: "kb-123",
+      },
     ]);
   });
 
@@ -100,6 +103,7 @@ describe("ingestKbDocument action", () => {
       data: {
         documentId: "00000000-0000-4000-8000-000000000001",
         userId: "user-1",
+        kbId: "kb-123",
       },
     });
   });

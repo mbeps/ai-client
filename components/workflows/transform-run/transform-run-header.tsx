@@ -1,9 +1,14 @@
+"use client";
+
 import { Download, Loader2, Play, ThumbsUp } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { downloadFile } from "@/lib/utils/download-file";
 import type { TransformRunStatus } from "@/types/transform/transform-run-status";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -35,21 +40,45 @@ function FinalDownloadButton({
   outputAttachmentIds,
   attachmentMeta,
 }: FinalDownloadButtonProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!outputAttachmentIds || outputAttachmentIds.length === 0) return null;
   const finalId = outputAttachmentIds[outputAttachmentIds.length - 1];
   const finalMeta = attachmentMeta[finalId];
   if (!finalMeta) return null;
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await downloadFile(finalMeta.url, finalMeta.name);
+    } catch {
+      toast.error("Failed to download file. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <>
       <Separator orientation="vertical" className="mr-2 hidden h-8 lg:block" />
       <Button
         size="sm"
+        disabled={isDownloading}
         className="bg-primary hover:bg-primary/90 text-xs shadow-md"
         asChild
       >
-        <a href={finalMeta.url} download={finalMeta.name}>
-          <Download className="mr-1.5 h-3.5 w-3.5" />
+        <a
+          href={finalMeta.url}
+          download={finalMeta.name}
+          onClick={handleDownload}
+        >
+          {isDownloading ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+          )}
           Download Final Result
         </a>
       </Button>

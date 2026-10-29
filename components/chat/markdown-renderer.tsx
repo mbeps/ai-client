@@ -9,7 +9,12 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  downloadFile,
+  extractFilenameFromUrl,
+} from "@/lib/utils/download-file";
 
 /**
  * Sanitisation schema: defaultSchema already covers GFM task-list checkboxes
@@ -353,6 +358,21 @@ export function MarkdownRenderer({
                 href={href}
                 download={isDownloadable ? true : undefined}
                 {...props}
+                onClick={
+                  isDownloadable
+                    ? (e) => {
+                        e.preventDefault();
+                        downloadFile(
+                          String(href),
+                          extractFilenameFromUrl(String(href)),
+                        ).catch(() =>
+                          toast.error(
+                            "Failed to download file. Please try again.",
+                          ),
+                        );
+                      }
+                    : props.onClick
+                }
               />
             );
           },

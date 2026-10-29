@@ -85,6 +85,15 @@ describe("KB Inngest Functions", () => {
       });
     });
 
+    it("is configured with cancelOn triggers for reindex cancellation", () => {
+      expect((reindexKbFunction as any).opts.cancelOn).toEqual([
+        {
+          event: "knowledgebase/reindex.cancel",
+          if: "async.data.kbId == event.data.kbId",
+        },
+      ]);
+    });
+
     it("marks indexing, sets status, and fans out ingestion events for all documents with deterministic event IDs", async () => {
       // 1: select kb; 2: select docs
       let whereCall = 0;
@@ -116,6 +125,11 @@ describe("KB Inngest Functions", () => {
         "fan-out-doc-ingest",
         expect.any(Function),
       );
+      expect(chainable.set).toHaveBeenCalledWith({
+        status: "pending",
+        statusMessage: null,
+        updatedAt: expect.any(Date),
+      });
       expect(inngest.send).toHaveBeenCalledWith([
         {
           id: "reindex-evt-1:doc-1",

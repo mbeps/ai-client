@@ -1,6 +1,11 @@
-import { AlertCircle, Download } from "lucide-react";
+"use client";
+
+import { AlertCircle, Download, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { downloadFile } from "@/lib/utils/download-file";
 
 /**
  * Represents attachment file card props.
@@ -25,6 +30,7 @@ function AttachmentFileCard({
   subtitle,
   variant,
 }: AttachmentFileCardProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
   const isOutput = variant === "output";
   const cardBorderClass = isOutput
     ? "border-primary/10 bg-primary/5 hover:border-primary/30"
@@ -35,6 +41,19 @@ function AttachmentFileCard({
     : "border text-muted-foreground";
   const titleWeightClass = isOutput ? "font-bold" : "font-medium";
 
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await downloadFile(meta.url, meta.name);
+    } catch {
+      toast.error("Failed to download file. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <Card
       className={`group overflow-hidden py-0.5 transition-colors ${cardBorderClass}`}
@@ -43,13 +62,18 @@ function AttachmentFileCard({
         <a
           href={meta.url}
           download={meta.name}
+          onClick={handleDownload}
           className={`flex items-center justify-between p-3 transition-colors ${linkHoverClass}`}
         >
           <div className="flex items-center gap-3">
             <div
               className={`bg-background rounded-lg p-2 shadow-sm ${iconBorderClass}`}
             >
-              <Download className="h-4 w-4" />
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
             </div>
             <div className="space-y-0.5">
               <p
@@ -63,9 +87,14 @@ function AttachmentFileCard({
           <Button
             size="icon"
             variant="ghost"
+            disabled={isDownloading}
             className="h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
           >
-            <Download className="h-4 w-4" />
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
           </Button>
         </a>
       </CardContent>

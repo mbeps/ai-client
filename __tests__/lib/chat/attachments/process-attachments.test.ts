@@ -113,6 +113,41 @@ describe("processAttachments", () => {
       expect(result[0].id).toBe("att-2");
       expect(result[0].key).toBe("uploads/new.pdf");
     });
+
+    it("uploads multiple pending attachments concurrently via Promise.all", async () => {
+      let activeUploads = 0;
+      let maxConcurrentUploads = 0;
+
+      mockUploadAttachment.mockImplementation(async () => {
+        activeUploads++;
+        maxConcurrentUploads = Math.max(maxConcurrentUploads, activeUploads);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        activeUploads--;
+        return { key: "uploads/uploaded.pdf" };
+      });
+
+      const att1 = makeAttachment({
+        id: "att-concurrent-1",
+        key: undefined,
+        rawFile: new File(["content1"], "doc1.pdf", { type: "application/pdf" }),
+      });
+      const att2 = makeAttachment({
+        id: "att-concurrent-2",
+        key: undefined,
+        rawFile: new File(["content2"], "doc2.pdf", { type: "application/pdf" }),
+      });
+      const att3 = makeAttachment({
+        id: "att-concurrent-3",
+        key: undefined,
+        rawFile: new File(["content3"], "doc3.pdf", { type: "application/pdf" }),
+      });
+
+      const result = await processAttachments([att1, att2, att3], "msg-concurrent");
+
+      expect(result).toHaveLength(3);
+      expect(mockUploadAttachment).toHaveBeenCalledTimes(3);
+      expect(maxConcurrentUploads).toBe(3);
+    });
   });
 
   describe("mixed attachments", () => {

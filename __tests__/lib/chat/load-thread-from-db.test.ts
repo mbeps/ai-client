@@ -36,6 +36,11 @@ vi.mock("@/lib/storage/get-presigned-url", () => ({
   getPresignedUrl: mockGetPresignedUrl,
 }));
 
+const mockDownloadObject = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/storage/download-object", () => ({
+  downloadObject: mockDownloadObject,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
 import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
@@ -49,6 +54,7 @@ beforeEach(() => {
   chainable.__installWhere();
   chainable.__resetQueue();
   mockGetPresignedUrl.mockResolvedValue("https://example.com/presigned");
+  mockDownloadObject.mockResolvedValue(Buffer.from("fake-bytes"));
 });
 
 describe("loadThreadFromDb", () => {
@@ -208,5 +214,85 @@ describe("loadThreadFromDb", () => {
     // is always true and the attachment query always runs.
     expect(thread).toHaveLength(1);
     expect(chainable.where).toHaveBeenCalledTimes(3);
+  });
+
+  it("converts localhost presigned image URLs to base64 data URLs via downloadObject", async () => {
+    mockGetPresignedUrl.mockResolvedValueOnce(
+      "http://localhost:9000/bucket/cover.png?token=xyz",
+    );
+    mockDownloadObject.mockResolvedValueOnce(Buffer.from("fake-png-bytes"));
+
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "msg-1", role: "user", content: "Look at this", parentId: null },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-img",
+        messageId: "msg-1",
+        name: "cover.png",
+        mimeType: "image/png",
+        key: "attachments/user-1/att-img-cover.png",
+      },
+    ]);
+
+    const thread = await loadThreadFromDb("chat-1", "msg-1", "user-1");
+    expect(thread).toHaveLength(1);
+    expect(thread[0].attachments).toHaveLength(1);
+    expect(thread[0].attachments![0].url).toBe(
+      `data:image/png;base64,${Buffer.from("fake-png-bytes").toString("base64")}`,
+    );
+    expect(mockDownloadObject).toHaveBeenCalledWith(
+      "attachments/user-1/att-img-cover.png",
+    );
+  });
+
+  it("falls back to presigned URL if downloadObject throws", async () => {
+    mockGetPresignedUrl.mockResolvedValueOnce(
+      "http://localhost:9000/bucket/cover.png?token=xyz",
+    );
+    mockDownloadObject.mockRejectedValueOnce(new Error("S3 read error"));
+
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "msg-1", role: "user", content: "Look at this", parentId: null },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-img",
+        messageId: "msg-1",
+        name: "cover.png",
+        mimeType: "image/png",
+        key: "attachments/user-1/att-img-cover.png",
+      },
+    ]);
+
+    const thread = await loadThreadFromDb("chat-1", "msg-1", "user-1");
+    expect(thread).toHaveLength(1);
+    expect(thread[0].attachments![0].url).toBe(
+      "http://localhost:9000/bucket/cover.png?token=xyz",
+    );
+  });
+
+  it("falls back to presigned URL if URL is invalid string", async () => {
+    mockGetPresignedUrl.mockResolvedValueOnce("not-a-valid-url");
+
+    chainable.__queueWhere([{ id: "chat-1" }]);
+    chainable.__queueWhere([
+      { id: "msg-1", role: "user", content: "Look at this", parentId: null },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "att-img",
+        messageId: "msg-1",
+        name: "cover.png",
+        mimeType: "image/png",
+        key: "attachments/user-1/att-img-cover.png",
+      },
+    ]);
+
+    const thread = await loadThreadFromDb("chat-1", "msg-1", "user-1");
+    expect(thread).toHaveLength(1);
+    expect(thread[0].attachments![0].url).toBe("not-a-valid-url");
   });
 });
