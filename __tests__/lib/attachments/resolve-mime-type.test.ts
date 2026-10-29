@@ -53,6 +53,36 @@ describe("resolveMimeType — magic-byte sniffing (T9.8)", () => {
     expect(await resolveMimeType(file)).toBe("text/markdown");
   });
 
+  it("resolves .md as text/markdown even when file.type claims text/plain", async () => {
+    const file = new File([enc.encode("# Title")], "notes.md", {
+      type: "text/plain",
+    });
+    expect(await resolveMimeType(file)).toBe("text/markdown");
+  });
+
+  it("resolves .csv as text/csv even when file.type claims text/plain", async () => {
+    const file = new File([enc.encode("a,b,c")], "data.csv", {
+      type: "text/plain",
+    });
+    expect(await resolveMimeType(file)).toBe("text/csv");
+  });
+
+  it("rejects spoofed text/plain for explicit unrecognized extensions (.html, .svg, .exe)", async () => {
+    const htmlFile = new File([enc.encode("<html>bad</html>")], "evil.html", {
+      type: "text/plain",
+    });
+    const svgFile = new File([enc.encode("<svg></svg>")], "image.svg", {
+      type: "text/plain",
+    });
+    const exeFile = new File([enc.encode("binary-data")], "exploit.exe", {
+      type: "text/plain",
+    });
+
+    expect(await resolveMimeType(htmlFile)).toBe("");
+    expect(await resolveMimeType(svgFile)).toBe("");
+    expect(await resolveMimeType(exeFile)).toBe("");
+  });
+
   it("keeps declared text/plain when no signature matches", async () => {
     const file = new File([enc.encode("just text")], "doc.txt", {
       type: "text/plain",
@@ -64,5 +94,24 @@ describe("resolveMimeType — magic-byte sniffing (T9.8)", () => {
     const bin = new Uint8Array([0x00, 0x01, 0x02, 0x03]);
     const file = new File([bin], "data.xyz123", { type: "" });
     expect(await resolveMimeType(file)).toBe("");
+  });
+
+  it("handles files without extensions", async () => {
+    const fileWithType = new File([enc.encode("hello")], "README", {
+      type: "text/plain",
+    });
+    const fileWithoutType = new File([enc.encode("hello")], "README", {
+      type: "",
+    });
+
+    expect(await resolveMimeType(fileWithType)).toBe("text/plain");
+    expect(await resolveMimeType(fileWithoutType)).toBe("");
+  });
+
+  it("returns declared custom MIME type when not spoofing text/plain", async () => {
+    const file = new File([enc.encode("{}")], "config.custom", {
+      type: "application/json",
+    });
+    expect(await resolveMimeType(file)).toBe("application/json");
   });
 });

@@ -7,6 +7,7 @@ import {
   userMcpServerInstall,
 } from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { encrypt } from "@/lib/encryption/encrypt";
 
 /**
  * Installs/subscribes to a public MCP server for the current user.
@@ -71,7 +72,7 @@ export async function addPublicServer(
     .values({
       userId: session.user.id,
       serverId: publicServerId,
-      headers: headers?.trim() ? headers : null,
+      headers: headers?.trim() ? encrypt(headers.trim()) : null,
       enabled: true,
     })
     .returning({ id: userMcpServerInstall.id });

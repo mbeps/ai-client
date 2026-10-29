@@ -4,6 +4,7 @@ import { isBlockedIPv4 } from "@/lib/mcp/url-guard/is-blocked-ipv4";
 import { isBlockedIPv6 } from "@/lib/mcp/url-guard/is-blocked-ipv6";
 import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 import { isIpLiteral } from "@/lib/mcp/url-guard/is-ip-literal";
+import { withTimeout } from "@/lib/mcp/with-timeout";
 
 /**
  * SSRF protection: validates whether a URL should be blocked due to pointing to internal/private addresses.
@@ -60,17 +61,17 @@ export async function isBlockedUrl(rawUrl: string): Promise<boolean> {
 }
 
 /**
- * Resolves a hostname via DNS with a 5-second timeout. Tries both IPv4 and IPv6 records and returns all resolved addresses. Throws if no addresses could be resolved.
+ * Resolves a hostname via DNS with a 5-second timeout and automatic timer cleanup.
+ * Tries both IPv4 and IPv6 records and returns all resolved addresses. Throws if no addresses could be resolved.
  *
  * @param hostname - Target hostname
  * @returns The resolved result
  * @author Maruf Bepary
  */
 async function resolveHostnameWithTimeout(hostname: string): Promise<string[]> {
-  return Promise.race([
+  return withTimeout(
     resolveHostname(hostname),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("DNS resolution timed out")), 5000),
-    ),
-  ]);
+    5000,
+    "DNS resolution timed out",
+  );
 }

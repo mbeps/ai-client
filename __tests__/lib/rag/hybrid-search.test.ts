@@ -98,12 +98,42 @@ describe("hybridSearch", () => {
     expect(searchKeywordChunksMock).toHaveBeenCalledWith(1, "test query", ["kb-1"], 20);
   });
 
-  it("throws Error when knowledge base is not found", async () => {
+  it("throws Error when knowledge base is not found or belongs to another tenant", async () => {
     setupKbMock([]);
 
     await expect(hybridSearch("kb-1", "test query", "user-1")).rejects.toThrow(
       "Knowledge base not found",
     );
+  });
+
+  it("filters knowledge base query by both kbId and userId for tenant isolation", async () => {
+    let capturedCondition: any = null;
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockImplementation((condition) => {
+        capturedCondition = condition;
+        return Promise.resolve([{ id: "kb-1", indexStatus: "ready" }]);
+      }),
+    };
+    dbMock.select.mockReturnValue(mockSelect);
+    embedQueryMock.mockResolvedValue([0.1]);
+    searchSemanticVectorsMock.mockResolvedValue([]);
+    searchKeywordChunksMock.mockResolvedValue([]);
+    applyRRFMock.mockReturnValue([]);
+
+    await hybridSearch("kb-1", "test query", "user-42");
+
+    expect(capturedCondition).toBeDefined();
+    const hasValue = (obj: any, target: string): boolean => {
+      if (obj === target) return true;
+      if (!obj || typeof obj !== "object") return false;
+      if (obj.value === target) return true;
+      if (Array.isArray(obj)) return obj.some((item) => hasValue(item, target));
+      if (obj.queryChunks) return hasValue(obj.queryChunks, target);
+      return false;
+    };
+    expect(hasValue(capturedCondition, "user-42")).toBe(true);
+    expect(hasValue(capturedCondition, "kb-1")).toBe(true);
   });
 
   it("throws KnowledgebaseNotReadyError when KB indexStatus is not ready", async () => {

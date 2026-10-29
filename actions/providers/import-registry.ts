@@ -61,101 +61,128 @@ export async function importProviderRegistry(
   let modelsSkipped = 0;
   const duplicateModelIds: string[] = [];
 
-  for (const incomingProvider of parsed.providers) {
-    const [existingProvider] = await db
-      .select()
-      .from(aiProvider)
-      .where(
-        and(
-          eq(aiProvider.userId, session.user.id),
-          eq(aiProvider.name, incomingProvider.name),
-          eq(aiProvider.baseUrl, incomingProvider.baseUrl),
-        ),
-      );
+  await db.transaction(async (tx) => {
+    const touchedProviderIds = new Set<string>();
+    const incomingNames = new Set(parsed.providers.map((p) => p.name));
 
-    const encrypted = toEncryptedProviderValues({
-      apiKey: incomingProvider.apiKey ?? null,
-      headers: incomingProvider.headers,
-    });
-
-    const provider = existingProvider
-      ? (
-          await db
-            .update(aiProvider)
-            .set({
-              requiresKey: incomingProvider.requiresKey,
-              isEnabled: incomingProvider.isEnabled ?? true,
-              apiKey: encrypted.apiKey ?? existingProvider.apiKey,
-              headers: encrypted.headers,
-              updatedAt: new Date(),
-            })
-            .where(eq(aiProvider.id, existingProvider.id))
-            .returning()
-        )[0]
-      : (
-          await db
-            .insert(aiProvider)
-            .values({
-              userId: session.user.id,
-              name: incomingProvider.name,
-              baseUrl: incomingProvider.baseUrl,
-              requiresKey: incomingProvider.requiresKey,
-              isEnabled: incomingProvider.isEnabled ?? true,
-              apiKey: encrypted.apiKey,
-              headers: encrypted.headers,
-            })
-            .returning()
-        )[0];
-
-    if (existingProvider) {
-      providersUpdated += 1;
-    } else {
-      providersCreated += 1;
-    }
-
-    for (const incomingModel of incomingProvider.models) {
-      const [existingModel] = await db
-        .select({ id: aiModel.id })
-        .from(aiModel)
+    for (const incomingProvider of parsed.providers) {
+      let existingProvider: typeof aiProvider.$inferSelect | undefined;
+      const [matchedByName] = await tx
+        .select()
+        .from(aiProvider)
         .where(
           and(
-            eq(aiModel.providerId, provider.id),
-            eq(aiModel.modelId, incomingModel.modelId),
+            eq(aiProvider.userId, session.user.id),
+            eq(aiProvider.name, incomingProvider.name),
           ),
         );
+      existingProvider = matchedByName;
 
-      if (existingModel) {
-        modelsSkipped += 1;
-        duplicateModelIds.push(incomingModel.modelId);
-        continue;
+      if (!existingProvider) {
+        const urlCandidates = await tx
+          .select()
+          .from(aiProvider)
+          .where(
+            and(
+              eq(aiProvider.userId, session.user.id),
+              eq(aiProvider.baseUrl, incomingProvider.baseUrl),
+            ),
+          );
+        existingProvider = urlCandidates.find(
+          (c) => !touchedProviderIds.has(c.id) && !incomingNames.has(c.name),
+        );
       }
 
-      await db.insert(aiModel).values({
-        providerId: provider.id,
-        userId: session.user.id,
-        modelId: incomingModel.modelId,
-        label: incomingModel.label,
-        modelType: incomingModel.modelType,
-        contextWindow: incomingModel.contextWindow,
-        embeddingDimensions: incomingModel.embeddingDimensions,
-        capTools: incomingModel.capabilities.tools,
-        capVision: incomingModel.capabilities.vision,
-        capReasoning: incomingModel.capabilities.reasoning,
-        capStructuredOutput: incomingModel.capabilities.structuredOutput,
-        isManuallyAdded: incomingModel.isManuallyAdded,
-        isEnabled: incomingModel.isEnabled ?? true,
+      const encrypted = toEncryptedProviderValues({
+        apiKey: incomingProvider.apiKey ?? null,
+        headers: incomingProvider.headers,
       });
 
-      modelsCreated += 1;
-    }
-  }
+      const provider = existingProvider
+        ? (
+            await tx
+              .update(aiProvider)
+              .set({
+                name: incomingProvider.name,
+                baseUrl: incomingProvider.baseUrl,
+                requiresKey: incomingProvider.requiresKey,
+                isEnabled: incomingProvider.isEnabled ?? true,
+                apiKey: encrypted.apiKey ?? existingProvider.apiKey,
+                headers: encrypted.headers ?? existingProvider.headers,
+                updatedAt: new Date(),
+              })
+              .where(eq(aiProvider.id, existingProvider.id))
+              .returning()
+          )[0]
+        : (
+            await tx
+              .insert(aiProvider)
+              .values({
+                userId: session.user.id,
+                name: incomingProvider.name,
+                baseUrl: incomingProvider.baseUrl,
+                requiresKey: incomingProvider.requiresKey,
+                isEnabled: incomingProvider.isEnabled ?? true,
+                apiKey: encrypted.apiKey,
+                headers: encrypted.headers,
+              })
+              .returning()
+          )[0];
 
-  if (duplicateModelIds.length > 0) {
-    throw new ModelDuplicateImportError(
-      duplicateModelIds.length,
-      duplicateModelIds,
-    );
-  }
+      if (provider?.id) {
+        touchedProviderIds.add(provider.id);
+      }
+
+      if (existingProvider) {
+        providersUpdated += 1;
+      } else {
+        providersCreated += 1;
+      }
+
+      for (const incomingModel of incomingProvider.models) {
+        const [existingModel] = await tx
+          .select({ id: aiModel.id })
+          .from(aiModel)
+          .where(
+            and(
+              eq(aiModel.providerId, provider.id),
+              eq(aiModel.modelId, incomingModel.modelId),
+            ),
+          );
+
+        if (existingModel) {
+          modelsSkipped += 1;
+          duplicateModelIds.push(incomingModel.modelId);
+          continue;
+        }
+
+        await tx.insert(aiModel).values({
+          providerId: provider.id,
+          userId: session.user.id,
+          modelId: incomingModel.modelId,
+          label: incomingModel.label,
+          modelType: incomingModel.modelType,
+          contextWindow: incomingModel.contextWindow,
+          embeddingDimensions: incomingModel.embeddingDimensions,
+          capTools: incomingModel.capabilities.tools,
+          capVision: incomingModel.capabilities.vision,
+          capReasoning: incomingModel.capabilities.reasoning,
+          capStructuredOutput: incomingModel.capabilities.structuredOutput,
+          isManuallyAdded: incomingModel.isManuallyAdded,
+          isEnabled: incomingModel.isEnabled ?? true,
+        });
+
+        modelsCreated += 1;
+      }
+    }
+
+    if (duplicateModelIds.length > 0) {
+      throw new ModelDuplicateImportError(
+        duplicateModelIds.length,
+        duplicateModelIds,
+      );
+    }
+  });
 
   log.info(
     "Provider registry imported (providers: {providersCreated}, models: {modelsCreated})",

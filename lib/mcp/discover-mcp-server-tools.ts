@@ -8,7 +8,7 @@ import {
 } from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
-import { mcpServerRowToConfig } from "@/lib/mcp/mappers";
+import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { DiscoveredResource } from "@/types/mcp/discovered-resource";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
@@ -62,7 +62,9 @@ export async function discoverMcpServerTools(serverId: string): Promise<{
 
   const effectiveRow = {
     ...row,
-    headers: installRow?.headers ?? row.headers,
+    headers:
+      installRow?.headers ??
+      (row.userId === session.user.id ? row.headers : null),
   };
 
   return discoverToolsAndResources(mcpServerRowToConfig(effectiveRow));

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { decrypt } from "@/lib/encryption/decrypt";
 
 // Mock env
 vi.mock("@/config/env", () => ({
@@ -7,6 +8,7 @@ vi.mock("@/config/env", () => ({
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:3000",
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+    ENCRYPTION_SECRET: "test-encryption-secret-12345678",
     NODE_ENV: "test",
   },
 }));
@@ -83,7 +85,7 @@ describe("mcp server personal actions", () => {
         id: "srv-new",
         name: "My Server",
         url: "https://example.com/mcp",
-        headers: '{"auth":"token"}',
+        headers: 'encrypted-headers',
         isPublic: false,
         userId,
       };
@@ -98,6 +100,8 @@ describe("mcp server personal actions", () => {
 
       expect(result).toEqual(inserted);
       expect(chainable.insert).toHaveBeenCalled();
+      const passedValues = chainable.values.mock.calls[0][0];
+      expect(decrypt(passedValues.headers)).toBe('{"auth":"token"}');
     });
   });
 
@@ -199,12 +203,12 @@ describe("mcp server personal actions", () => {
   });
 
   describe("updateMcpServer", () => {
-    it("updates MCP server with new config", async () => {
+    it("updates MCP server with new config and encrypts headers", async () => {
       const updated = {
         id: "srv-1",
         name: "Updated",
         url: "https://example.com/new",
-        headers: '{"auth":"new"}',
+        headers: 'encrypted-headers',
         isPublic: true,
       };
       chainable.returning.mockResolvedValueOnce([updated]);
@@ -217,6 +221,8 @@ describe("mcp server personal actions", () => {
       });
 
       expect(result).toEqual(updated);
+      const passedSet = chainable.set.mock.calls[0][0];
+      expect(decrypt(passedSet.headers)).toBe('{"auth":"new"}');
     });
 
     it("preserves headers when headers is empty string", async () => {

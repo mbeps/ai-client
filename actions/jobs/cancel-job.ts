@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -42,6 +43,7 @@ export async function cancelJob(
     throw new Error("Unauthorized");
   }
 
+  const validatedId = z.string().min(1).parse(runId);
   const userId = session.user.id;
 
   // 1. If this is a chat job, abort the active stream gracefully via abortChatStream.
@@ -73,7 +75,7 @@ export async function cancelJob(
 
   // 3. For non-chat jobs (e.g. transform, translation, or generic Inngest runs),
   // cancel via Inngest run cancellation API.
-  const cancelResult = await cancelInngestRun(runId, userId);
+  const cancelResult = await cancelInngestRun(validatedId, userId);
   if (!cancelResult.success) {
     return { success: false, error: cancelResult.error };
   }

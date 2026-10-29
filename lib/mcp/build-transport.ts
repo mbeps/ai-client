@@ -1,5 +1,6 @@
 import type { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
+import { decrypt } from "@/lib/encryption/decrypt";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
@@ -42,8 +43,14 @@ export async function buildTransport(
 
   let headers: Record<string, string> | undefined;
   if (server.headers) {
+    let rawHeaders = server.headers;
     try {
-      headers = headersSchema.parse(JSON.parse(server.headers));
+      rawHeaders = decrypt(server.headers);
+    } catch {
+      rawHeaders = server.headers;
+    }
+    try {
+      headers = headersSchema.parse(JSON.parse(rawHeaders));
     } catch {
       throw new Error(`Invalid headers JSON for "${label}"`);
     }

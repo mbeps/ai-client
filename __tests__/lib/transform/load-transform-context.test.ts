@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { encrypt } from "@/lib/encryption/encrypt";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
 const dbMock = vi.hoisted(() => ({
@@ -76,6 +77,78 @@ describe("loadTransformContext", () => {
     expect(ctx.allServers).toHaveLength(2);
     expect(ctx.allServers[0].name).toBe("Personal MCP");
     expect(ctx.allServers[1].name).toBe("Installed Public MCP");
+  });
+
+  it("decrypts encrypted MCP server headers for personal and installed servers", async () => {
+    const encryptedPersonal = encrypt(
+      JSON.stringify({ "X-Personal": "p-secret" }),
+    );
+    const encryptedInstalled = encrypt(
+      JSON.stringify({ "X-Installed": "i-secret" }),
+    );
+
+    let callCount = 0;
+    dbMock.select.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createMockQuery([
+          {
+            id: "srv-1",
+            name: "Personal MCP",
+            url: "https://personal.example.com/mcp",
+            headers: encryptedPersonal,
+            enabled: true,
+          },
+        ]);
+      }
+      if (callCount === 2) {
+        return createMockQuery([
+          {
+            id: "srv-pub-1",
+            name: "Installed Public MCP",
+            url: "https://installed.example.com/mcp",
+            headers: encryptedInstalled,
+            enabled: true,
+          },
+        ]);
+      }
+      return createMockQuery([]);
+    });
+
+    resolveProviderMock.mockResolvedValue({ modelId: "gpt-4" });
+    registerMcpToolsMock.mockResolvedValue({
+      mcpTools: {},
+      toolSourceMap: new Map(),
+      mcpCleanup: vi.fn(),
+    });
+
+    const agentRow = {
+      id: "agent-1",
+      name: "Test Agent",
+      modelId: "openai/gpt-4",
+      knowledgeBaseIds: [],
+      steps: JSON.stringify([{ toolIds: [] }]),
+    };
+
+    const ctx = await loadTransformContext({
+      userId: "user-1",
+      agentRow,
+    });
+
+    expect(ctx.allServers).toEqual([
+      {
+        id: "srv-1",
+        name: "Personal MCP",
+        url: "https://personal.example.com/mcp",
+        headers: JSON.stringify({ "X-Personal": "p-secret" }),
+      },
+      {
+        id: "srv-pub-1",
+        name: "Installed Public MCP",
+        url: "https://installed.example.com/mcp",
+        headers: JSON.stringify({ "X-Installed": "i-secret" }),
+      },
+    ]);
   });
 
   it("retrieves KB context when knowledgeBaseIds are present", async () => {

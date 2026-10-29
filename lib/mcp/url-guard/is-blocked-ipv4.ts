@@ -35,9 +35,8 @@ export function isBlockedIPv4(ip: string): boolean {
     return true;
   // 169.254.0.0/16 — link-local / cloud metadata (AWS: 169.254.169.254)
   if (octets[0] === 169 && octets[1] === 254) return true;
-  // 0.0.0.0 — unspecified address
-  if (octets[0] === 0 && octets[1] === 0 && octets[2] === 0 && octets[3] === 0)
-    return true;
+  // 0.0.0.0/8 — current network / unspecified address (RFC 1122/RFC 6890)
+  if (octets[0] === 0) return true;
 
   return false;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { encrypt } from "@/lib/encryption/encrypt";
 
 const isBlockedUrlMock = vi.hoisted(() => vi.fn().mockResolvedValue(false));
 vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
@@ -8,6 +9,25 @@ vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
 import { buildTransport } from "@/lib/mcp/build-transport";
 
 describe("buildTransport — SSRF redirect hardening (T9.5)", () => {
+  it("decrypts AES-256-GCM encrypted headers before parsing JSON", async () => {
+    isBlockedUrlMock.mockResolvedValueOnce(false);
+    const encryptedHeaders = encrypt(
+      JSON.stringify({ Authorization: "Bearer encrypted-tok" }),
+    );
+    const transport = await buildTransport({
+      id: "srv-enc",
+      name: "enc-test",
+      url: "https://example.com/mcp",
+      headers: encryptedHeaders,
+    });
+
+    expect(transport).toMatchObject({
+      type: "http",
+      url: "https://example.com/mcp",
+      headers: { Authorization: "Bearer encrypted-tok" },
+    });
+  });
+
   it("configures redirect: 'error' so redirects are never followed", async () => {
     isBlockedUrlMock.mockResolvedValueOnce(false);
     const transport = await buildTransport({

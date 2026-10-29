@@ -32,6 +32,7 @@ const chainable = vi.hoisted(() => {
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { encrypt } from "@/lib/encryption/encrypt";
 import { loadChatContext } from "@/lib/chat/load-chat-context";
 
 beforeEach(() => {
@@ -90,6 +91,61 @@ describe("loadChatContext KB ownership", () => {
     const ctx = await loadChatContext("chat-1", "user-1");
 
     expect(ctx.kbIsReady).toBe(false);
+  });
+
+  it("decrypts encrypted MCP server headers for personal and installed servers", async () => {
+    const encryptedPersonal = encrypt(
+      JSON.stringify({ "X-Personal": "p-secret" }),
+    );
+    const encryptedInstalled = encrypt(
+      JSON.stringify({ "X-Installed": "i-secret" }),
+    );
+
+    chainable.__queueWhere([
+      {
+        id: "chat-1",
+        projectId: null,
+        assistantId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+      },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "srv-1",
+        name: "Personal Server",
+        url: "https://personal.example.com/mcp",
+        headers: encryptedPersonal,
+      },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "srv-2",
+        name: "Installed Server",
+        url: "https://installed.example.com/mcp",
+        headers: encryptedInstalled,
+      },
+    ]);
+    chainable.__queueWhere([]); // user skills
+
+    const ctx = await loadChatContext("chat-1", "user-1");
+
+    expect(ctx.servers).toEqual([
+      {
+        id: "srv-1",
+        name: "Personal Server",
+        url: "https://personal.example.com/mcp",
+        headers: JSON.stringify({ "X-Personal": "p-secret" }),
+      },
+      {
+        id: "srv-2",
+        name: "Installed Server",
+        url: "https://installed.example.com/mcp",
+        headers: JSON.stringify({ "X-Installed": "i-secret" }),
+      },
+    ]);
   });
 
   it("throws ChatNotFoundError when chat row does not exist", async () => {

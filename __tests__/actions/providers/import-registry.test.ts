@@ -14,9 +14,10 @@ const selectWhereMock = vi.hoisted(() => vi.fn());
 const updateReturningMock = vi.hoisted(() => vi.fn());
 const insertReturningMock = vi.hoisted(() => vi.fn());
 const insertValuesMock = vi.hoisted(() => vi.fn());
+const transactionMock = vi.hoisted(() => vi.fn());
 
-vi.mock("@/drizzle/db", () => ({
-  db: {
+const mockDb = vi.hoisted(() => {
+  const dbObj = {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: selectWhereMock,
@@ -38,7 +39,15 @@ vi.mock("@/drizzle/db", () => ({
         };
       }),
     })),
-  },
+    transaction: transactionMock,
+  };
+  return dbObj;
+});
+
+transactionMock.mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockDb));
+
+vi.mock("@/drizzle/db", () => ({
+  db: mockDb,
 }));
 
 vi.mock("@/lib/auth/require-session", () => ({
@@ -488,5 +497,237 @@ describe("importProviderRegistry action", () => {
     await expect(importProviderRegistry(payload)).rejects.toThrow(
       ModelDuplicateImportError,
     );
+  });
+
+  it("executes the entire import inside a db transaction", async () => {
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([{ id: "prov-1" }]);
+    selectWhereMock.mockResolvedValueOnce([]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "TxProvider",
+          baseUrl: "https://api.tx.com/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    await importProviderRegistry(payload);
+    expect(transactionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches existing provider by (userId, name) and updates baseUrl and preserves headers", async () => {
+    let capturedUpdateValues: any = null;
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn((vals: any) => {
+        capturedUpdateValues = vals;
+        return {
+          where: vi.fn(() => ({
+            returning: updateReturningMock,
+          })),
+        };
+      }),
+    })) as any;
+
+    // 1st select by (userId, name) -> matches existing provider with old baseUrl & existing encrypted headers
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-exist-1",
+        userId: "user-1",
+        name: "CustomAI",
+        baseUrl: "https://old.custom.com/v1",
+        apiKey: "old-key",
+        headers: "enc-existing-headers",
+      },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([{ id: "prov-exist-1" }]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "CustomAI",
+          baseUrl: "https://new.custom.com/v1",
+          requiresKey: true,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersUpdated).toBe(1);
+    expect(capturedUpdateValues).toBeDefined();
+    expect(capturedUpdateValues.baseUrl).toBe("https://new.custom.com/v1");
+    expect(capturedUpdateValues.headers).toBe("enc-existing-headers");
+  });
+
+  it("matches existing provider by fallback (userId, baseUrl) when name differs", async () => {
+    let capturedUpdateValues: any = null;
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn((vals: any) => {
+        capturedUpdateValues = vals;
+        return {
+          where: vi.fn(() => ({
+            returning: updateReturningMock,
+          })),
+        };
+      }),
+    })) as any;
+
+    // 1st select by (userId, name) -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 2nd select by (userId, baseUrl) -> found
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-exist-2",
+        userId: "user-1",
+        name: "OldName",
+        baseUrl: "https://api.sameurl.com/v1",
+        apiKey: "old-key",
+        headers: "enc-headers",
+      },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([{ id: "prov-exist-2" }]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "NewName",
+          baseUrl: "https://api.sameurl.com/v1",
+          requiresKey: true,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersUpdated).toBe(1);
+    expect(capturedUpdateValues.name).toBe("NewName");
+  });
+
+  it("does not overwrite an earlier provider in the same batch when two providers share a baseUrl", async () => {
+    // Provider 1 ("Ollama A"):
+    // 1st select by (userId, name="Ollama A") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 2nd select by (userId, baseUrl) -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    // Provider 2 ("Ollama B"):
+    // 3rd select by (userId, name="Ollama B") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 4th select by (userId, baseUrl) -> returns the just-inserted "Ollama A"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "Ollama A",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+        {
+          name: "Ollama B",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersCreated).toBe(2);
+    expect(res.providersUpdated).toBe(0);
+  });
+
+  it("does not match by baseUrl if the candidate DB provider name is claimed by another incoming provider", async () => {
+    // When processing "Ollama A":
+    // 1st select by (userId, name="Ollama A") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 2nd select by (userId, baseUrl) -> returns DB row "Ollama B"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    // When processing "Ollama B":
+    // 3rd select by (userId, name="Ollama B") -> finds "Ollama B"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "Ollama A",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+        {
+          name: "Ollama B",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersCreated).toBe(1);
+    expect(res.providersUpdated).toBe(1);
   });
 });

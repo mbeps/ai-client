@@ -158,7 +158,7 @@ function StatusBadge({ status }: { status: TransformRunStatus }) {
  */
 function ProgressIndicator({ progress }: { progress: number }) {
   return (
-    <div className="flex min-w-[120px] shrink-0 flex-col gap-1 lg:min-w-40">
+    <div className="flex min-w-30 shrink-0 flex-col gap-1 lg:min-w-40">
       <span className="text-muted-foreground/70 text-[10px] font-bold tracking-wider uppercase">
         Progress
       </span>

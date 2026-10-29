@@ -18,7 +18,7 @@ vi.mock("@/config/env", () => ({
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of ["select", "from", "where"]) {
+  for (const m of ["select", "from", "where", "innerJoin"]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
   return c;
@@ -38,8 +38,11 @@ vi.mock("@/lib/mcp/discover-tools-and-resources", () => ({
   discoverToolsAndResources: discoverToolsMock,
 }));
 
-vi.mock("@/lib/mcp/mappers", () => ({
-  mcpServerRowToConfig: vi.fn((row) => ({ id: row.id, name: row.name })),
+const mcpServerRowToConfigMock = vi.hoisted(() =>
+  vi.fn((row) => ({ id: row.id, name: row.name, headers: row.headers })),
+);
+vi.mock("@/lib/mcp/mcp-server-row-to-config", () => ({
+  mcpServerRowToConfig: mcpServerRowToConfigMock,
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,12 +53,32 @@ describe("discoverAllPrompts action", () => {
     vi.clearAllMocks();
     chainable.select.mockReturnValue(chainable);
     chainable.from.mockReturnValue(chainable);
+    chainable.innerJoin.mockReturnValue(chainable);
   });
 
-  it("successfully discovers and aggregates prompts from enabled servers", async () => {
+  it("successfully discovers prompts from owned servers and installed public servers with subscriber headers", async () => {
+    // 1. Personal servers owned by user
     chainable.where.mockResolvedValueOnce([
-      { id: "server-1", name: "Server One", enabled: true, userId: "user-1" },
-      { id: "server-2", name: "Server Two", enabled: true, isPublic: true },
+      {
+        id: "server-1",
+        name: "Personal Server",
+        enabled: true,
+        userId: "user-1",
+        headers: "personal-headers",
+      },
+    ]);
+    // 2. Installed public servers
+    chainable.where.mockResolvedValueOnce([
+      {
+        server: {
+          id: "server-2",
+          name: "Installed Public Server",
+          enabled: true,
+          userId: "other-user",
+          headers: "author-secret-headers",
+        },
+        installHeaders: "subscriber-headers",
+      },
     ]);
 
     discoverToolsMock.mockResolvedValueOnce({
@@ -71,28 +94,40 @@ describe("discoverAllPrompts action", () => {
       { name: "prompt-1", description: "Desc 1" },
       { name: "prompt-2", description: "Desc 2" },
     ]);
+
+    // Check mapper calls
+    expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "server-1",
+        headers: "personal-headers",
+      }),
+    );
+    expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "server-2",
+        headers: "subscriber-headers",
+      }),
+    );
   });
 
   it("handles per-server discovery failure gracefully without failing all", async () => {
     chainable.where.mockResolvedValueOnce([
-      { id: "server-1", name: "Server One", enabled: true, userId: "user-1" },
-      { id: "server-2", name: "Server Two", enabled: true, isPublic: true },
+      { id: "server-1", name: "Server One", enabled: true, userId: "user-1", headers: null },
     ]);
+    chainable.where.mockResolvedValueOnce([]);
 
     discoverToolsMock.mockRejectedValueOnce(new Error("Server timeout"));
-    discoverToolsMock.mockResolvedValueOnce({
-      prompts: [{ name: "prompt-2", description: "Desc 2" }],
-    });
 
     const result = await discoverAllPrompts();
 
-    expect(result).toEqual([{ name: "prompt-2", description: "Desc 2" }]);
+    expect(result).toEqual([]);
   });
 
   it("handles non-Error server rejection gracefully", async () => {
     chainable.where.mockResolvedValueOnce([
-      { id: "server-1", name: "Server One", enabled: true, userId: "user-1" },
+      { id: "server-1", name: "Server One", enabled: true, userId: "user-1", headers: null },
     ]);
+    chainable.where.mockResolvedValueOnce([]);
 
     discoverToolsMock.mockRejectedValueOnce("Non-error string rejection");
 
@@ -101,6 +136,7 @@ describe("discoverAllPrompts action", () => {
   });
 
   it("returns empty array if no servers are enabled", async () => {
+    chainable.where.mockResolvedValueOnce([]);
     chainable.where.mockResolvedValueOnce([]);
 
     const result = await discoverAllPrompts();

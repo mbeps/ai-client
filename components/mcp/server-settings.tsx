@@ -42,23 +42,30 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const { server } = useAppStore(
+  const { server, loadMcpServers } = useAppStore(
     useShallow((state) => ({
       server: state.mcpServers.find((s) => s.id === serverId),
+      loadMcpServers: state.loadMcpServers,
     })),
   );
 
   if (!server) return null;
 
   async function handleDelete() {
+    const isInstalled = Boolean(server?.isInstalled);
     setDeleting(true);
     try {
       await deleteMcpServer(serverId);
-      toast.success("MCP server deleted");
+      await loadMcpServers();
+      toast.success(isInstalled ? "Tool uninstalled" : "MCP server deleted");
       router.refresh();
       router.push(ROUTES.CONNECTORS.path);
     } catch {
-      toast.error("Failed to delete MCP server");
+      toast.error(
+        isInstalled
+          ? "Failed to uninstall tool"
+          : "Failed to delete MCP server",
+      );
       setDeleting(false);
     }
   }

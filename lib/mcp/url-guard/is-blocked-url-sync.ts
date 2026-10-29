@@ -20,6 +20,11 @@ export function isBlockedUrlSync(rawUrl: string): boolean {
     return true; // unparseable URLs are blocked
   }
 
+  // Only http: and https: protocols are permitted for MCP transport
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return true;
+  }
+
   // If internal access is allowed via environment config, bypass guard checks
   // SECURITY: this module runs on the server only; config comes from @/config/env.
   if (env.ALLOW_PRIVATE_NETWORK_MCP === true) {

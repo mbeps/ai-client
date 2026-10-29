@@ -242,6 +242,25 @@ describe("EntitySlice — MCP Servers", () => {
       await useAppStore.getState().loadMcpServers();
       expect(useAppStore.getState().mcpServers[0].name).toBe("My MCP");
     });
+
+    it("preserves isInstalled and installId for installed community servers", async () => {
+      vi.mocked(listMcpServersAction).mockResolvedValueOnce([
+        { ...makeMcpRow("m1", "Personal MCP"), isInstalled: false },
+        {
+          ...makeMcpRow("m2", "Community MCP"),
+          headers: "[REDACTED]",
+          isInstalled: true,
+          installId: "inst-123",
+        },
+      ]);
+      await useAppStore.getState().loadMcpServers();
+      const servers = useAppStore.getState().mcpServers;
+      expect(servers[0].isInstalled).toBe(false);
+      expect(servers[0].installId).toBeUndefined();
+      expect(servers[1].isInstalled).toBe(true);
+      expect(servers[1].installId).toBe("inst-123");
+      expect(servers[1].headers).toBe("[REDACTED]");
+    });
   });
 });
 
