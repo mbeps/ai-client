@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { env } from "@/config/env";
 import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
@@ -59,7 +59,9 @@ export async function hybridSearch(
   const kbs = await db
     .select({ id: knowledgebase.id, indexStatus: knowledgebase.indexStatus })
     .from(knowledgebase)
-    .where(inArray(knowledgebase.id, kbIds));
+    .where(
+      and(inArray(knowledgebase.id, kbIds), eq(knowledgebase.userId, userId)),
+    );
 
   if (kbs.length !== kbIds.length) {
     throw new Error("Knowledge base not found");

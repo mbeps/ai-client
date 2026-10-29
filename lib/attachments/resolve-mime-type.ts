@@ -58,8 +58,19 @@ export async function resolveMimeType(file: File): Promise<string> {
   const sniffed = sniffMime(head);
   if (sniffed) return sniffed;
 
-  if (file.type) return file.type;
   const lowerName = file.name.toLowerCase();
   if (lowerName.endsWith(".md")) return "text/markdown";
-  return MIME_BY_EXT[getExtension(file.name)] ?? "";
+
+  const ext = getExtension(file.name);
+  const mapped = MIME_BY_EXT[ext];
+  if (mapped) return mapped;
+
+  if (ext === ".txt") return "text/plain";
+
+  if (ext && file.type === "text/plain") {
+    return "";
+  }
+
+  if (file.type) return file.type;
+  return "";
 }
