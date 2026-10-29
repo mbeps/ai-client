@@ -54,12 +54,93 @@ function resolveInitialStepStatus(
 }
 
 /**
+ * Supported output mapping representations for step-to-attachment attribution.
+ */
+export type StepOutputMapping =
+  | Record<number, string>
+  | Array<{ id: string; name?: string; stepIndex?: number }>;
+
+/**
+ * Parses zero-based step index from artifact name (e.g. step-1-output.xlsx).
+ */
+function parseStepIndexFromName(name?: string, stepsCount = 0): number | null {
+  if (!name) return null;
+  const match = name.match(/^step-(\d+)-/i);
+  if (!match) return null;
+  const idx = parseInt(match[1], 10) - 1;
+  return idx >= 0 && idx < stepsCount ? idx : null;
+}
+
+/**
+ * Resolves step outputs from array format.
+ */
+function resolveArrayStepOutputs(
+  items: Array<{ id: string; name?: string; stepIndex?: number }>,
+  stepsCount: number,
+  map: Map<number, string>,
+): void {
+  for (const item of items) {
+    if (
+      typeof item.stepIndex === "number" &&
+      item.stepIndex >= 0 &&
+      item.stepIndex < stepsCount
+    ) {
+      map.set(item.stepIndex, item.id);
+      continue;
+    }
+    const idx = parseStepIndexFromName(item.name, stepsCount);
+    if (idx !== null) {
+      map.set(idx, item.id);
+    }
+  }
+}
+
+/**
+ * Resolves step outputs from record mapping format.
+ */
+function resolveRecordStepOutputs(
+  record: Record<number, string>,
+  stepsCount: number,
+  map: Map<number, string>,
+): void {
+  for (const [key, id] of Object.entries(record)) {
+    const idx = Number(key);
+    if (!Number.isNaN(idx) && idx >= 0 && idx < stepsCount) {
+      map.set(idx, id);
+    }
+  }
+}
+
+/**
+ * Builds step-to-output-attachment-id index map from explicit step outputs.
+ *
+ * @param stepsCount - Total number of workflow steps
+ * @param stepOutputs - Target step output mapping
+ * @returns The resolved result
+ * @author Maruf Bepary
+ */
+function resolveStepOutputMap(
+  stepsCount: number,
+  stepOutputs?: StepOutputMapping,
+): Map<number, string> | null {
+  if (!stepOutputs) return null;
+  const map = new Map<number, string>();
+  if (Array.isArray(stepOutputs)) {
+    resolveArrayStepOutputs(stepOutputs, stepsCount, map);
+  } else {
+    resolveRecordStepOutputs(stepOutputs, stepsCount, map);
+  }
+  return map;
+}
+
+/**
  * Constructs initial step states map based on run execution status.
  *
  * @param stepsCount - Total number of workflow steps
  * @param status - Current status value
  * @param currentStepIndex - Target current step index
  * @param outputAttachmentIds - Target output attachment ids
+ * @param stepOutputs - Optional step-to-attachment mapping to avoid index shifting
  * @returns The resolved result
  * @author Maruf Bepary
  */
@@ -68,11 +149,13 @@ export function buildInitialStepStates(
   status: TransformRunStatus,
   currentStepIndex: number | null,
   outputAttachmentIds: string[],
+  stepOutputs?: StepOutputMapping,
 ): Record<number, StepState> {
   const initial: Record<number, StepState> = {};
+  const outputMap = resolveStepOutputMap(stepsCount, stepOutputs);
   for (let i = 0; i < stepsCount; i++) {
     const stepStatus = resolveInitialStepStatus(i, status, currentStepIndex);
-    const stepOutputId = outputAttachmentIds[i];
+    const stepOutputId = outputMap ? outputMap.get(i) : outputAttachmentIds[i];
     initial[i] =
       stepStatus === "pending"
         ? { status: "pending" }

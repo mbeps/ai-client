@@ -6,7 +6,10 @@ import {
   transformRun,
 } from "@/drizzle/schemas/transform-agent-schema";
 import { inngest } from "@/lib/inngest/client";
-import { transformRunChannel } from "@/lib/inngest/transform-run-channel";
+import {
+  type TransformStreamEvent,
+  transformRunChannel,
+} from "@/lib/inngest/transform-run-channel";
 import { getLogger } from "@/lib/logger";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { validateStepOrders } from "@/lib/transform/lifecycle-service";
@@ -28,6 +31,7 @@ export const executeTransformRun = inngest.createFunction(
   {
     id: "run-transform-workflow",
     retries: 0,
+    concurrency: [{ key: "event.data.runId", limit: 1 }],
     triggers: [{ event: "workflows/transform.execute" }],
     cancelOn: [
       {
@@ -40,7 +44,7 @@ export const executeTransformRun = inngest.createFunction(
     const { runId, userId } = event.data;
     const trCh = transformRunChannel({ runId });
 
-    const emit = async (data: any) => {
+    const emit = async (data: TransformStreamEvent) => {
       try {
         await inngest.realtime.publish(trCh.progress, data);
       } catch (err) {
@@ -238,6 +242,7 @@ export const executeTransformRun = inngest.createFunction(
               singleStep: true,
               initialWorkbookFilePath: activeWorkbookFilePath,
               runRow: currentRun,
+              dryRun: currentRun.dryRun,
               agentRow: currentAgent,
               userId,
               allServers,

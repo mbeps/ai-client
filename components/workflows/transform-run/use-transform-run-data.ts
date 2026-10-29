@@ -78,7 +78,7 @@ export function useTransformRunData(runId: string) {
   >({});
 
   const loadAttachmentUrls = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) return;
+    if (ids.length === 0) return {};
     const results = await Promise.allSettled(
       ids.map((id) => getAttachmentUrl(id)),
     );
@@ -89,6 +89,7 @@ export function useTransformRunData(runId: string) {
       }
     });
     setAttachmentMeta((prev) => ({ ...prev, ...meta }));
+    return meta;
   }, []);
 
   useEffect(() => {
@@ -101,9 +102,10 @@ export function useTransformRunData(runId: string) {
       const mapped = mapRunRowToRun(runRow);
       setRun(mapped);
 
+      let mappedAgent: TransformAgent | null = null;
       const agentRow = await getTransformAgent(runRow.agentId);
       if (agentRow) {
-        const mappedAgent = mapAgentRowToAgent(agentRow);
+        mappedAgent = mapAgentRowToAgent(agentRow);
         setAgent(mappedAgent);
         setStepStates(
           buildInitialStepStates(
@@ -125,10 +127,25 @@ export function useTransformRunData(runId: string) {
       }
       setIsLoading(false);
 
-      await loadAttachmentUrls([
+      const meta = await loadAttachmentUrls([
         ...mapped.inputAttachmentIds,
         ...mapped.outputAttachmentIds,
       ]);
+
+      if (mappedAgent && mapped.outputAttachmentIds.length > 0) {
+        setStepStates(
+          buildInitialStepStates(
+            mappedAgent.steps.length,
+            mapped.status,
+            mapped.currentStepIndex,
+            mapped.outputAttachmentIds,
+            mapped.outputAttachmentIds.map((id) => ({
+              id,
+              name: meta[id]?.name,
+            })),
+          ),
+        );
+      }
     }
     load();
   }, [runId, loadAttachmentUrls]);

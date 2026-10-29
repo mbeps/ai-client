@@ -48,7 +48,11 @@ export interface BuildStepSystemPromptParams {
   preloadedSkills: SkillRow[];
   kbContext: string;
   fileContext: string;
+  dryRun?: boolean;
 }
+
+const DRY_RUN_INSTRUCTION =
+  "DRY RUN MODE: This is a dry run simulation. Do NOT perform any destructive or permanent mutations. Analyze and describe what actions would be taken without modifying persistent state.";
 
 /**
  * Constructs step system prompt.
@@ -68,6 +72,7 @@ export function buildStepSystemPrompt(
     preloadedSkills,
     kbContext,
     fileContext,
+    dryRun,
   } = params;
 
   const hasManageArtifact = checkManageArtifactEnabled(
@@ -77,6 +82,7 @@ export function buildStepSystemPrompt(
   );
 
   const sections: Array<string | null | undefined> = [
+    dryRun ? DRY_RUN_INSTRUCTION : null,
     agentRow.globalContext ? `Context:\n${agentRow.globalContext}` : null,
     kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
     ...preloadedSkills.map((s) => formatActiveSkill(s)),

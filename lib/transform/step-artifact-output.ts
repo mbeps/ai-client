@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
+import type { TransformStreamEvent } from "@/lib/inngest/transform-run-channel";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { persistTransformArtifact } from "@/lib/transform/persist-artifact";
 import { applyDownloadFallbackIfMutated } from "@/lib/transform/step-workbook-fallback";
@@ -25,7 +26,7 @@ async function persistExplicitStepArtifact(
   userId: string,
   runId: string,
   stepName: string,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
 ) {
   try {
     const persisted = await persistTransformArtifact(
@@ -42,7 +43,7 @@ async function persistExplicitStepArtifact(
         .set({ status: "failed", errorMessage: msg })
         .where(eq(transformRun.id, runId));
 
-      emit({
+      await emit({
         type: "error",
         message: msg,
         code: err.code,
@@ -71,7 +72,7 @@ async function tryPersistExplicitArtifact(
   userId: string,
   runId: string,
   stepName: string,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
 ) {
   const hasValidArtifact =
     artifact !== null &&
@@ -129,7 +130,7 @@ function applyPersistedOutput(
 async function failOnUnpersistedMutations(
   stepName: string,
   runId: string,
-  emit: (data: any) => void,
+  emit: (data: TransformStreamEvent) => Promise<void> | void,
 ): Promise<void> {
   const errorMessage = `Step "${stepName}" changed workbook data, but no spreadsheet artifact output was persisted. Refusing to complete with stale output.`;
 
@@ -138,7 +139,7 @@ async function failOnUnpersistedMutations(
     .set({ status: "failed", errorMessage })
     .where(eq(transformRun.id, runId));
 
-  emit({ type: "error", message: errorMessage });
+  await emit({ type: "error", message: errorMessage });
 }
 
 /**
@@ -159,7 +160,7 @@ export interface HandleStepArtifactOutputParams {
   runMcpTools: Record<string, any>;
   runToolSourceMap: Record<string, string>;
   stepServerNames: Set<string>;
-  emit: (data: any) => void;
+  emit: (data: TransformStreamEvent) => Promise<void> | void;
 }
 
 /**

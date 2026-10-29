@@ -1235,4 +1235,68 @@ describe("executeTransformRun Inngest Workflow", () => {
       }),
     ).rejects.toThrow(/Invalid transform steps/);
   });
+
+  it("configures concurrency limit of 1 per runId on executeTransformRun", () => {
+    const opts = (executeTransformRun as any).opts;
+    expect(opts.concurrency).toEqual([
+      { key: "event.data.runId", limit: 1 },
+    ]);
+  });
+
+  it("threads dryRun from transformRun row into runTransformSteps", async () => {
+    const runRow = {
+      id: "run-dry",
+      agentId: "agent-dry",
+      currentStepIndex: 0,
+      outputAttachmentIds: [],
+      dryRun: true,
+    };
+    const agentRow = {
+      id: "agent-dry",
+      requiresFileUpload: false,
+      steps: JSON.stringify([
+        { id: "s1", name: "Step 1", order: 0, prompt: "test" },
+      ]),
+    };
+
+    let selectCall = 0;
+    chainable.where.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return Promise.resolve([runRow]);
+      if (selectCall === 2) return Promise.resolve([agentRow]);
+      if (selectCall === 3) return Promise.resolve([runRow]);
+      if (selectCall === 4) return Promise.resolve([agentRow]);
+      return Promise.resolve([runRow]);
+    });
+
+    mockRunSteps.mockResolvedValueOnce({
+      success: true,
+      paused: false,
+      currentOutputAttachmentIds: [],
+    });
+
+    const mockStep = {
+      run: vi.fn(async (_name: string, fn: () => any) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const fn = (executeTransformRun as any).fn;
+    const result = await fn({
+      event: {
+        data: {
+          runId: "run-dry",
+          userId: "user-1",
+          startFromStep: 0,
+        },
+      },
+      step: mockStep,
+    });
+
+    expect(result).toEqual({ success: true, completed: true });
+    expect(mockRunSteps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dryRun: true,
+      }),
+    );
+  });
 });

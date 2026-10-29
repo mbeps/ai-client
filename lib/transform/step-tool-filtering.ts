@@ -6,6 +6,7 @@ import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
+import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { TransformStep } from "@/types/transform/transform-step";
@@ -146,6 +147,7 @@ export interface FilterStepToolsParams {
   skillCatalog: SkillSummary[];
   activeWorkbookFilePath: string | null;
   currentAttachmentRows: AttachmentRow[];
+  dryRun?: boolean;
 }
 
 /**
@@ -170,6 +172,7 @@ export function filterStepTools(params: FilterStepToolsParams): {
     skillCatalog,
     activeWorkbookFilePath,
     currentAttachmentRows,
+    dryRun,
   } = params;
 
   const stepServerNames = resolveStepServerNames(step, allServers);
@@ -179,14 +182,17 @@ export function filterStepTools(params: FilterStepToolsParams): {
     ...(step.toolIds || []),
   ]);
 
-  const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) =>
-    isToolAllowed(
+  const filteredEntries = Object.entries(runMcpTools).filter(([toolName]) => {
+    if (dryRun && isSpreadsheetMutationTool(toolName)) {
+      return false;
+    }
+    return isToolAllowed(
       toolName,
       runToolSourceMap[toolName],
       stepServerNames,
       allowedToolIds,
-    ),
-  );
+    );
+  });
 
   const filteredTools = Object.fromEntries(filteredEntries);
   if (skillCatalog.length > 0) {

@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of ["select", "from", "where"]) {
+  const c: any = {};
+  for (const m of ["select", "from", "where", "update", "set"]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
+  c.returning = vi.fn().mockResolvedValue([]);
+  c.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
   return c;
 });
 
@@ -29,11 +31,17 @@ import { inngest } from "@/lib/inngest/client";
 describe("Transform Run Inngest Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    for (const m of ["select", "from", "where", "update", "set"]) {
+      chainable[m].mockImplementation(() => chainable);
+    }
+    chainable.returning.mockResolvedValue([]);
+    chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
   });
 
   describe("startTransformRunAction", () => {
     it("throws an error when transform run is not found or not owned by user", async () => {
-      chainable.where.mockResolvedValueOnce([]);
+      chainable.returning.mockResolvedValueOnce([]);
+      chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
       await expect(startTransformRunAction("run-123")).rejects.toThrow(
         "Transform run not found",
@@ -41,7 +49,7 @@ describe("Transform Run Inngest Actions", () => {
     });
 
     it("dispatches workflows/transform.execute event when valid", async () => {
-      chainable.where.mockResolvedValueOnce([
+      chainable.returning.mockResolvedValueOnce([
         { id: "run-123", currentStepIndex: 2 },
       ]);
 
@@ -59,7 +67,7 @@ describe("Transform Run Inngest Actions", () => {
     });
 
     it("falls back startFromStep to 0 when currentStepIndex is null", async () => {
-      chainable.where.mockResolvedValueOnce([
+      chainable.returning.mockResolvedValueOnce([
         { id: "run-123", currentStepIndex: null },
       ]);
 
@@ -79,7 +87,7 @@ describe("Transform Run Inngest Actions", () => {
 
   describe("approveTransformRunAction", () => {
     it("throws an error when transform run is not found", async () => {
-      chainable.where.mockResolvedValueOnce([]);
+      chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
       await expect(approveTransformRunAction("run-123")).rejects.toThrow(
         "Transform run not found",
@@ -87,7 +95,8 @@ describe("Transform Run Inngest Actions", () => {
     });
 
     it("dispatches workflows/transform.approved event when valid", async () => {
-      chainable.where.mockResolvedValueOnce([{ id: "run-123" }]);
+      chainable.then = (onFulfilled: any) =>
+        Promise.resolve([{ id: "run-123" }]).then(onFulfilled);
 
       const result = await approveTransformRunAction("run-123");
 
@@ -101,7 +110,7 @@ describe("Transform Run Inngest Actions", () => {
 
   describe("getTransformRunRealtimeToken", () => {
     it("throws an error when unauthorized", async () => {
-      chainable.where.mockResolvedValueOnce([]);
+      chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
       await expect(getTransformRunRealtimeToken("run-123")).rejects.toThrow(
         "Unauthorized",
@@ -109,7 +118,8 @@ describe("Transform Run Inngest Actions", () => {
     });
 
     it("returns client subscription token for authorized user", async () => {
-      chainable.where.mockResolvedValueOnce([{ id: "run-123" }]);
+      chainable.then = (onFulfilled: any) =>
+        Promise.resolve([{ id: "run-123" }]).then(onFulfilled);
 
       const token = await getTransformRunRealtimeToken("run-123");
       expect(token).toBe("mock-client-token");

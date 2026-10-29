@@ -5,7 +5,7 @@ import { channel, staticSchema } from "inngest/realtime";
  *
  * @author Maruf Bepary
  */
-type TransformRunStreamEvent =
+export type TransformStreamEvent =
   | { type: "transform-start"; runId: string }
   | {
       type: "transform-step-start";
@@ -51,7 +51,10 @@ type TransformRunStreamEvent =
   | {
       type: "error";
       message: string;
+      code?: string;
     };
+
+type TransformRunStreamEvent = TransformStreamEvent;
 
 /**
  * Realtime channel for streaming transform agent workflow progress.
