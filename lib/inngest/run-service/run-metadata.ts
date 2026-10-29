@@ -86,11 +86,15 @@ function parsePayloadString(str: string): Record<string, any> | undefined {
 export function parseTriggerPayloadData(
   payloads?: unknown[],
 ): Record<string, any> | undefined {
-  const first = payloads?.[0];
-  if (typeof first === "string") return parsePayloadString(first);
-  if (first && typeof first === "object") {
-    const rec = first as Record<string, any>;
-    return rec.data ?? rec;
+  if (!Array.isArray(payloads)) return undefined;
+  for (const item of payloads) {
+    if (typeof item === "string") {
+      const parsed = parsePayloadString(item);
+      if (parsed) return parsed;
+    } else if (item && typeof item === "object") {
+      const rec = item as Record<string, any>;
+      return rec.data ?? rec;
+    }
   }
   return undefined;
 }
@@ -305,18 +309,21 @@ export function extractErrorMessage(
 }
 
 /**
- * Determines whether mismatched user.
+ * Determines whether the trigger payload belongs to a different user, or lacks user attribution.
+ * Fails closed: if userId is specified, any missing payload, missing userId, or mismatched userId
+ * is treated as mismatched to prevent cross-tenant leakage.
  *
  * @param payloadData - Target payload data
- * @param userId - User identifier
- * @returns The resolved result
+ * @param userId - Optional user identifier to verify against
+ * @returns True if the payload does not belong to the user; false if it matches or if no userId was specified
  * @author Maruf Bepary
  */
 export function isMismatchedUser(
-  payloadData: Record<string, any> | undefined,
-  userId: string,
+  payloadData?: Record<string, any> | null,
+  userId?: string,
 ): boolean {
-  return Boolean(payloadData?.userId && payloadData.userId !== userId);
+  if (!userId) return false;
+  return !payloadData?.userId || payloadData.userId !== userId;
 }
 
 const ALREADY_ENDED_PHRASES = [

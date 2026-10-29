@@ -54,7 +54,7 @@ describe("cancelJob Server Action", () => {
     mockCancelInngestRun.mockResolvedValue({ success: true });
   });
 
-  describe("Authentication", () => {
+  describe("Authentication and Input Validation", () => {
     it("throws unauthorized error when session is missing", async () => {
       mockRequireSession.mockRejectedValueOnce(new Error("Unauthorized"));
 
@@ -65,6 +65,10 @@ describe("cancelJob Server Action", () => {
       mockRequireSession.mockResolvedValueOnce({ session: { id: "session-abc" } });
 
       await expect(cancelJob("run-123")).rejects.toThrow("Unauthorized");
+    });
+
+    it("rejects when runId is empty or not provided", async () => {
+      await expect(cancelJob("")).rejects.toThrow();
     });
   });
 

@@ -64,20 +64,20 @@ export async function fetchUserInngestRuns(
  * When Inngest is offline or unreachable, returns `{ success: false, error: ... }` without throwing.
  *
  * @param runId Inngest run ID.
- * @param userId Authenticated user ID requesting the cancellation.
+ * @param userId Optional authenticated user ID requesting the cancellation.
  * @returns Success flag and optional error message.
  * @author Maruf Bepary
  */
 export async function cancelInngestRun(
   runId: string,
-  userId: string,
+  userId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
     if (isDevMode()) {
-      return await cancelDevRun(runId, signal);
+      return await cancelDevRun(runId, signal, userId);
     }
-    return await cancelProdRun(runId, signal);
+    return await cancelProdRun(runId, signal, userId);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     log.warn("Failed to cancel Inngest run: {error}", {

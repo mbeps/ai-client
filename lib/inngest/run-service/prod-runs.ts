@@ -200,17 +200,48 @@ export async function fetchProdUserRuns(
 }
 
 /**
- * Performs cancel prod run.
+ * Cancels a workflow run in the Inngest production cloud API.
+ * When `userId` is provided, verifies that the run belongs to the user before cancelling.
  *
  * @param runId - Workflow run identifier
  * @param signal - Target signal
+ * @param userId - Optional user identifier to verify ownership
  * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function cancelProdRun(
   runId: string,
   signal: AbortSignal,
+  userId?: string,
 ): Promise<{ success: boolean; error?: string }> {
+  if (userId) {
+    const runRes = await fetch(`https://api.inngest.com/v1/runs/${runId}`, {
+      headers: {
+        Authorization: `Bearer ${env.INNGEST_SIGNING_KEY}`,
+        "Content-Type": "application/json",
+      },
+      signal,
+    });
+
+    if (!runRes.ok) {
+      return {
+        success: false,
+        error: `Failed to verify run ownership: HTTP ${runRes.status}`,
+      };
+    }
+
+    const runBody = await runRes.json();
+    const run = runBody?.data ?? runBody;
+    const payloadData = extractProdPayloadData(run);
+
+    if (isMismatchedUser(payloadData, userId)) {
+      return {
+        success: false,
+        error: "Run does not belong to user or trigger payload is missing",
+      };
+    }
+  }
+
   const res = await fetch(`https://api.inngest.com/v1/runs/${runId}/cancel`, {
     method: "POST",
     headers: {

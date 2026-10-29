@@ -71,27 +71,19 @@ async function fetchDevRunTrigger(
   runId: string,
   signal: AbortSignal,
 ): Promise<{ eventName?: string; payloads?: unknown[] } | null> {
-  try {
-    const res = await fetch(gqlEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: TRIGGER_QUERY,
-        variables: { runID: runId },
-      }),
-      signal,
-    });
+  const res = await fetch(gqlEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: TRIGGER_QUERY,
+      variables: { runID: runId },
+    }),
+    signal,
+  });
 
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body?.data?.runTrigger ?? null;
-  } catch (err) {
-    log.debug("Failed to fetch run trigger for run {runId}: {error}", {
-      runId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
-  }
+  if (!res.ok) return null;
+  const body = await res.json();
+  return body?.data?.runTrigger ?? null;
 }
 
 /**
@@ -145,7 +137,15 @@ async function buildDevJobItem(
   userId: string,
   signal: AbortSignal,
 ): Promise<JobItem | null> {
-  const trigger = await fetchDevRunTrigger(gqlEndpoint, node.id, signal);
+  let trigger: { eventName?: string; payloads?: unknown[] } | null = null;
+  try {
+    trigger = await fetchDevRunTrigger(gqlEndpoint, node.id, signal);
+  } catch (err) {
+    log.debug("Failed to fetch run trigger for run {runId}: {error}", {
+      runId: node.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
   const payloadData = parseTriggerPayloadData(trigger?.payloads);
 
   if (isMismatchedUser(payloadData, userId)) {
@@ -267,19 +267,33 @@ export async function fetchDevUserRuns(
 }
 
 /**
- * Performs cancel dev run.
+ * Cancels a workflow run in the Inngest local development server.
+ * When `userId` is provided, verifies that the run belongs to the user before cancelling.
  *
  * @param runId - Workflow run identifier
  * @param signal - Target signal
+ * @param userId - Optional user identifier to verify ownership
  * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function cancelDevRun(
   runId: string,
   signal: AbortSignal,
+  userId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   const baseUrl = env.INNGEST_BASE_URL || "http://127.0.0.1:8288";
   const gqlEndpoint = `${baseUrl}/v0/gql`;
+
+  if (userId) {
+    const trigger = await fetchDevRunTrigger(gqlEndpoint, runId, signal);
+    const payloadData = parseTriggerPayloadData(trigger?.payloads);
+    if (isMismatchedUser(payloadData, userId)) {
+      return {
+        success: false,
+        error: "Run does not belong to user or trigger payload is missing",
+      };
+    }
+  }
 
   const res = await fetch(gqlEndpoint, {
     method: "POST",

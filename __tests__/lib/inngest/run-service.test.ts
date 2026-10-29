@@ -442,7 +442,22 @@ describe("Inngest Run Service", () => {
       let capturedBody: any = null;
 
       globalThis.fetch = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
-        capturedBody = JSON.parse((init?.body as string) || "{}");
+        const body = JSON.parse((init?.body as string) || "{}");
+        if (body.query?.includes("runTrigger(")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                runTrigger: {
+                  eventName: "chat/response.generate",
+                  payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+                },
+              },
+            }),
+          };
+        }
+        capturedBody = body;
         return {
           ok: true,
           status: 200,
@@ -466,7 +481,22 @@ describe("Inngest Run Service", () => {
     });
 
     it("gracefully handles already completed or cancelled runs returning success: true", async () => {
-      globalThis.fetch = vi.fn().mockImplementation(async () => {
+      globalThis.fetch = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse((init?.body as string) || "{}");
+        if (body.query?.includes("runTrigger(")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                runTrigger: {
+                  eventName: "chat/response.generate",
+                  payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+                },
+              },
+            }),
+          };
+        }
         return {
           ok: true,
           status: 200,
@@ -508,7 +538,21 @@ describe("Inngest Run Service", () => {
       let capturedAuth: string | null = null;
 
       globalThis.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-        capturedUrl = url.toString();
+        const urlStr = url.toString();
+        if (urlStr === "https://api.inngest.com/v1/runs/prod-run-cancel") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                trigger: {
+                  data: { userId: "user-123" },
+                },
+              },
+            }),
+          };
+        }
+        capturedUrl = urlStr;
         capturedMethod = init?.method || "GET";
         capturedAuth = (init?.headers as Record<string, string>)?.["Authorization"] || null;
 
@@ -533,7 +577,21 @@ describe("Inngest Run Service", () => {
       mockEnv.INNGEST_SIGNING_KEY = "signkey-prod-123";
       mockEnv.NODE_ENV = "production";
 
-      globalThis.fetch = vi.fn().mockImplementation(async () => {
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        const urlStr = url.toString();
+        if (urlStr === "https://api.inngest.com/v1/runs/prod-run-ended") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                trigger: {
+                  data: { userId: "user-123" },
+                },
+              },
+            }),
+          };
+        }
         return {
           ok: false,
           status: 409,
@@ -549,65 +607,81 @@ describe("Inngest Run Service", () => {
   });
 
   describe("parseTriggerPayloadData", () => {
-    /** Drive parseTriggerPayloadData through fetchUserInngestRuns via a single run. */
-    async function payloadOf(payloads: unknown, runOverrides: RunNode = {}) {
-      globalThis.fetch = devFetch([devNode(runOverrides)], () =>
-        triggerJson({ eventName: "chat/response.generate", payloads }),
-      );
-      const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
-      const result = await fetchUserInngestRuns("user-123");
-      return result.jobs[0];
-    }
-
     it("returns undefined when payloads is missing entirely", async () => {
-      const job = await payloadOf(undefined);
-      expect(job.entityId).toBeUndefined();
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(parseTriggerPayloadData(undefined)).toBeUndefined();
     });
 
     it("returns undefined when payloads is an empty array", async () => {
-      const job = await payloadOf([]);
-      expect(job.entityId).toBeUndefined();
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(parseTriggerPayloadData([])).toBeUndefined();
     });
 
     it("unwraps the data property of a JSON string payload", async () => {
-      const job = await payloadOf([
-        JSON.stringify({ data: { chatId: "chat-in-data", userId: "user-123" } }),
-      ]);
-      expect(job.entityId).toBe("chat-in-data");
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(
+        parseTriggerPayloadData([
+          JSON.stringify({ data: { chatId: "chat-in-data", userId: "user-123" } }),
+        ]),
+      ).toEqual({ chatId: "chat-in-data", userId: "user-123" });
     });
 
     it("uses the parsed object directly when the payload has no data property", async () => {
-      const job = await payloadOf([
-        JSON.stringify({ chatId: "chat-bare", userId: "user-123" }),
-      ]);
-      expect(job.entityId).toBe("chat-bare");
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(
+        parseTriggerPayloadData([
+          JSON.stringify({ chatId: "chat-bare", userId: "user-123" }),
+        ]),
+      ).toEqual({ chatId: "chat-bare", userId: "user-123" });
     });
 
     it("returns undefined when the payload string is not valid JSON", async () => {
-      const job = await payloadOf(["{not valid json"]);
-      expect(job.entityId).toBeUndefined();
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(parseTriggerPayloadData(["{not valid json"])).toBeUndefined();
     });
 
     it("accepts a payload that is already an object", async () => {
-      const job = await payloadOf([
-        { data: { chatId: "chat-obj", userId: "user-123" } },
-      ]);
-      expect(job.entityId).toBe("chat-obj");
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(
+        parseTriggerPayloadData([
+          { data: { chatId: "chat-obj", userId: "user-123" } },
+        ]),
+      ).toEqual({ chatId: "chat-obj", userId: "user-123" });
     });
 
     it("accepts a payload object that has no data property", async () => {
-      const job = await payloadOf([{ chatId: "chat-obj-bare", userId: "user-123" }]);
-      expect(job.entityId).toBe("chat-obj-bare");
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(
+        parseTriggerPayloadData([{ chatId: "chat-obj-bare", userId: "user-123" }]),
+      ).toEqual({ chatId: "chat-obj-bare", userId: "user-123" });
     });
 
     it("returns undefined when the first payload is neither string nor object", async () => {
-      const job = await payloadOf([42]);
-      expect(job.entityId).toBeUndefined();
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(parseTriggerPayloadData([42])).toBeUndefined();
     });
 
     it("returns undefined when the first payload is null", async () => {
-      const job = await payloadOf([null]);
-      expect(job.entityId).toBeUndefined();
+      const { parseTriggerPayloadData } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(parseTriggerPayloadData([null])).toBeUndefined();
     });
   });
 
@@ -623,7 +697,11 @@ describe("Inngest Run Service", () => {
         () =>
           triggerJson({
             eventName,
-            payloads: data === undefined ? undefined : [JSON.stringify({ data })],
+            payloads: [
+              JSON.stringify({
+                data: { userId: "user-123", ...(data ?? {}) },
+              }),
+            ],
           }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
@@ -824,7 +902,11 @@ describe("Inngest Run Service", () => {
     async function errorOf(output: unknown) {
       globalThis.fetch = devFetch(
         [devNode({ id: "run-err", status: "FAILED", output })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
@@ -834,7 +916,11 @@ describe("Inngest Run Service", () => {
     it("returns undefined for a non-FAILED status", async () => {
       globalThis.fetch = devFetch(
         [devNode({ status: "COMPLETED", output: { error: "ignored" } })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
@@ -908,7 +994,11 @@ describe("Inngest Run Service", () => {
     it("returns undefined when the run has not started", async () => {
       globalThis.fetch = devFetch(
         [devNode({ startedAt: null, endedAt: "2026-09-28T09:00:10Z" })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
@@ -918,7 +1008,11 @@ describe("Inngest Run Service", () => {
     it("returns the elapsed time so far when the run has not ended", async () => {
       globalThis.fetch = devFetch(
         [devNode({ startedAt: "2026-09-28T09:00:00Z", endedAt: null })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
@@ -933,7 +1027,11 @@ describe("Inngest Run Service", () => {
             endedAt: "2026-09-28T09:00:00Z",
           }),
         ],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
@@ -968,7 +1066,9 @@ describe("Inngest Run Service", () => {
 
     it("falls back to the node event name when the trigger has none", async () => {
       globalThis.fetch = devFetch([devNode({ id: "run-no-trigger-name" })], () =>
-        triggerJson({ payloads: [] }),
+        triggerJson({
+          payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+        }),
       );
 
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
@@ -980,7 +1080,11 @@ describe("Inngest Run Service", () => {
     it("falls back to the functionID when the node has no function object", async () => {
       globalThis.fetch = devFetch(
         [devNode({ id: "run-no-fn", function: undefined, functionID: "fn-only" })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
 
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
@@ -993,7 +1097,11 @@ describe("Inngest Run Service", () => {
     it("returns empty strings when neither a function object nor a functionID exist", async () => {
       globalThis.fetch = devFetch(
         [devNode({ id: "run-no-fn-at-all", function: undefined, functionID: undefined })],
-        () => triggerJson({ eventName: "chat/response.generate", payloads: [] }),
+        () =>
+          triggerJson({
+            eventName: "chat/response.generate",
+            payloads: [JSON.stringify({ data: { userId: "user-123" } })],
+          }),
       );
 
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
@@ -1003,7 +1111,7 @@ describe("Inngest Run Service", () => {
       expect(result.jobs[0].functionId).toBe("");
     });
 
-    it("returns null from the trigger fetch when the response is not ok", async () => {
+    it("filters out run from list when the trigger response is not ok", async () => {
       globalThis.fetch = devFetch([devNode({ id: "run-trigger-500" })], () => ({
         ok: false,
         status: 500,
@@ -1013,11 +1121,10 @@ describe("Inngest Run Service", () => {
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
 
-      expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].id).toBe("run-trigger-500");
+      expect(result.jobs).toHaveLength(0);
     });
 
-    it("returns null from the trigger fetch when data is missing", async () => {
+    it("filters out run from list when trigger data is missing", async () => {
       globalThis.fetch = devFetch([devNode({ id: "run-trigger-nodata" })], () => ({
         ok: true,
         status: 200,
@@ -1027,7 +1134,7 @@ describe("Inngest Run Service", () => {
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
 
-      expect(result.jobs[0].eventName).toBe("chat/response.generate");
+      expect(result.jobs).toHaveLength(0);
     });
 
     it("logs and swallows an Error thrown by the trigger fetch", async () => {
@@ -1038,7 +1145,7 @@ describe("Inngest Run Service", () => {
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
 
-      expect(result.jobs).toHaveLength(1);
+      expect(result.jobs).toHaveLength(0);
       expect(mockLog.debug).toHaveBeenCalledWith(
         "Failed to fetch run trigger for run {runId}: {error}",
         expect.objectContaining({ runId: "run-trigger-throw", error: "trigger blew up" }),
@@ -1053,7 +1160,7 @@ describe("Inngest Run Service", () => {
       const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
       const result = await fetchUserInngestRuns("user-123");
 
-      expect(result.jobs).toHaveLength(1);
+      expect(result.jobs).toHaveLength(0);
       expect(mockLog.debug).toHaveBeenCalledWith(
         "Failed to fetch run trigger for run {runId}: {error}",
         expect.objectContaining({ error: "plain string failure" }),
@@ -1167,7 +1274,7 @@ describe("Inngest Run Service", () => {
       expect(job.entityId).toBe("c-flat");
     });
 
-    it("treats a run with no payload data at all as belonging to the user", async () => {
+    it("filters out a production run with no payload data at all (fail-closed)", async () => {
       const job = await prodJob({
         id: "p-3",
         function_id: "f-3",
@@ -1175,8 +1282,7 @@ describe("Inngest Run Service", () => {
         event_name: "chat/response.generate",
         status: "COMPLETED",
       });
-      expect(job).toBeDefined();
-      expect(job.entityId).toBeUndefined();
+      expect(job).toBeUndefined();
     });
 
     it("filters out a production run belonging to another user", async () => {
@@ -1233,6 +1339,7 @@ describe("Inngest Run Service", () => {
         function_id: "f-6",
         function_name: "fn",
         status: "COMPLETED",
+        trigger: { data: { userId: "user-123" } },
       });
       expect(job.eventName).toBe("");
       expect(job.type).toBe("other");
@@ -1367,7 +1474,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(hitDevEndpoint).toBe(true);
       expect(res.success).toBe(true);
@@ -1450,7 +1557,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      await cancelInngestRun("run-1", "user-123");
+      await cancelInngestRun("run-1");
 
       expect(capturedUrl).toBe("http://127.0.0.1:8288/v0/gql");
     });
@@ -1489,7 +1596,7 @@ describe("Inngest Run Service", () => {
       globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 502 });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(false);
       expect(res.error).toBe("Cancel request failed with HTTP 502");
@@ -1504,7 +1611,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(false);
       expect(res.error).toBe("run is locked");
@@ -1519,7 +1626,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(false);
       expect(res.error).toBe("");
@@ -1544,7 +1651,7 @@ describe("Inngest Run Service", () => {
         });
 
         const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-        const res = await cancelInngestRun("run-1", "user-123");
+        const res = await cancelInngestRun("run-1");
 
         expect(res.success).toBe(true);
       }
@@ -1559,7 +1666,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(false);
       expect(res.error).toBe("Failed with status 500");
@@ -1574,7 +1681,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(false);
       expect(res.error).toBe("invalid run identifier");
@@ -1589,7 +1696,7 @@ describe("Inngest Run Service", () => {
       });
 
       const { cancelInngestRun } = await import("@/lib/inngest/run-service");
-      const res = await cancelInngestRun("run-1", "user-123");
+      const res = await cancelInngestRun("run-1");
 
       expect(res.success).toBe(true);
     });
@@ -1638,6 +1745,226 @@ describe("Inngest Run Service", () => {
 
       expect(result.jobs).toHaveLength(1);
       expect(result.jobs[0].title).toBe("fn-name-x");
+    });
+  });
+
+  describe("isMismatchedUser", () => {
+    it("returns false when userId is undefined (no tenant filter requested)", async () => {
+      const { isMismatchedUser } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(isMismatchedUser(undefined, undefined)).toBe(false);
+      expect(isMismatchedUser({ userId: "user-123" }, undefined)).toBe(false);
+    });
+
+    it("fails closed (returns true) when userId is provided but payloadData is undefined or null", async () => {
+      const { isMismatchedUser } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(isMismatchedUser(undefined, "user-123")).toBe(true);
+      expect(isMismatchedUser(null, "user-123")).toBe(true);
+    });
+
+    it("fails closed (returns true) when userId is provided but payloadData has no userId", async () => {
+      const { isMismatchedUser } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(isMismatchedUser({}, "user-123")).toBe(true);
+      expect(isMismatchedUser({ otherField: "abc" }, "user-123")).toBe(true);
+      expect(isMismatchedUser({ userId: "" }, "user-123")).toBe(true);
+    });
+
+    it("returns true when payloadData has a different userId", async () => {
+      const { isMismatchedUser } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(isMismatchedUser({ userId: "other-user" }, "user-123")).toBe(true);
+    });
+
+    it("returns false when payloadData has matching userId", async () => {
+      const { isMismatchedUser } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      expect(isMismatchedUser({ userId: "user-123" }, "user-123")).toBe(false);
+    });
+  });
+
+  describe("cancelInngestRun cross-tenant isolation and ownership guard", () => {
+    it("rejects dev cancellation when run belongs to a different user without calling cancelRun mutation", async () => {
+      useDevMode();
+      let cancelRunCalled = false;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (_url: string, options?: RequestInit) => {
+        const body = JSON.parse((options?.body as string) || "{}");
+        if (body.query?.includes("runTrigger(")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                runTrigger: {
+                  eventName: "workflows/transform.execute",
+                  payloads: [JSON.stringify({ data: { userId: "victim-user-456" } })],
+                },
+              },
+            }),
+          };
+        }
+        if (body.query?.includes("cancelRun(")) {
+          cancelRunCalled = true;
+          return { ok: true, status: 200, json: async () => ({ data: { cancelRun: { id: "run-target", status: "CANCELLED" } } }) };
+        }
+        throw new Error(`Unexpected query: ${body.query}`);
+      });
+
+      const { cancelInngestRun } = await import("@/lib/inngest/run-service");
+      const res = await cancelInngestRun("run-target", "attacker-user-123");
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Run does not belong to user");
+      expect(cancelRunCalled).toBe(false);
+    });
+
+    it("rejects dev cancellation when run trigger has missing userId without calling cancelRun mutation", async () => {
+      useDevMode();
+      let cancelRunCalled = false;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (_url: string, options?: RequestInit) => {
+        const body = JSON.parse((options?.body as string) || "{}");
+        if (body.query?.includes("runTrigger(")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                runTrigger: {
+                  eventName: "workflows/transform.execute",
+                  payloads: [JSON.stringify({ data: {} })],
+                },
+              },
+            }),
+          };
+        }
+        if (body.query?.includes("cancelRun(")) {
+          cancelRunCalled = true;
+          return { ok: true, status: 200, json: async () => ({ data: { cancelRun: { id: "run-target", status: "CANCELLED" } } }) };
+        }
+        throw new Error(`Unexpected query: ${body.query}`);
+      });
+
+      const { cancelInngestRun } = await import("@/lib/inngest/run-service");
+      const res = await cancelInngestRun("run-target", "user-123");
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Run does not belong to user");
+      expect(cancelRunCalled).toBe(false);
+    });
+
+    it("rejects prod cancellation when run belongs to a different user without calling cancel endpoint", async () => {
+      useProdMode();
+      let cancelEndpointCalled = false;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
+        const urlStr = url.toString();
+        if (urlStr === "https://api.inngest.com/v1/runs/prod-run-777") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                trigger: {
+                  data: {
+                    userId: "other-user-999",
+                  },
+                },
+              },
+            }),
+          };
+        }
+        if (urlStr.includes("/cancel")) {
+          cancelEndpointCalled = true;
+          return { ok: true, status: 200, json: async () => ({ success: true }) };
+        }
+        throw new Error(`Unexpected url: ${urlStr}`);
+      });
+
+      const { cancelInngestRun } = await import("@/lib/inngest/run-service");
+      const res = await cancelInngestRun("prod-run-777", "user-123");
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Run does not belong to user");
+      expect(cancelEndpointCalled).toBe(false);
+    });
+
+    it("returns metadata with undefined entityId when payloadData is undefined", async () => {
+      const { resolveJobMetadata } = await import(
+        "@/lib/inngest/run-service/run-metadata"
+      );
+      const meta = resolveJobMetadata(
+        "chat",
+        "chat/response.generate",
+        "fn",
+        undefined,
+      );
+      expect(meta.entityId).toBeUndefined();
+    });
+
+    it("handles prod run response with top-level payload without data wrapper", async () => {
+      useProdMode();
+      let capturedCancel = false;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        const urlStr = url.toString();
+        if (urlStr === "https://api.inngest.com/v1/runs/prod-run-top-level") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              trigger: {
+                data: { userId: "user-123" },
+              },
+            }),
+          };
+        }
+        if (urlStr.includes("/cancel")) {
+          capturedCancel = true;
+          return { ok: true, status: 200, json: async () => ({ success: true }) };
+        }
+        throw new Error(`Unexpected url: ${urlStr}`);
+      });
+
+      const { cancelInngestRun } = await import("@/lib/inngest/run-service");
+      const res = await cancelInngestRun("prod-run-top-level", "user-123");
+
+      expect(res.success).toBe(true);
+      expect(capturedCancel).toBe(true);
+    });
+
+    it("rejects prod cancellation when run ownership verification returns non-ok", async () => {
+      useProdMode();
+      let cancelEndpointCalled = false;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        const urlStr = url.toString();
+        if (urlStr === "https://api.inngest.com/v1/runs/prod-run-404") {
+          return {
+            ok: false,
+            status: 404,
+          };
+        }
+        if (urlStr.includes("/cancel")) {
+          cancelEndpointCalled = true;
+          return { ok: true, status: 200, json: async () => ({ success: true }) };
+        }
+        throw new Error(`Unexpected url: ${urlStr}`);
+      });
+
+      const { cancelInngestRun } = await import("@/lib/inngest/run-service");
+      const res = await cancelInngestRun("prod-run-404", "user-123");
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Failed to verify run ownership: HTTP 404");
+      expect(cancelEndpointCalled).toBe(false);
     });
   });
 });
