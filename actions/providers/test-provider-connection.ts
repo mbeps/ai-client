@@ -71,6 +71,8 @@ export async function testProviderConnection(
             : {}),
           ...decoded.headers,
         },
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
       },
     );
 

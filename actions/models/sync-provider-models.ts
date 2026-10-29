@@ -86,23 +86,40 @@ function isEmbeddingModelId(modelId: string): boolean {
 }
 
 /**
+ * Database record for existing provider models loaded during batch synchronization.
+ *
+ * @author Maruf Bepary
+ */
+type ExistingModelRecord = {
+  id: string;
+  modelId: string;
+  modelType: string;
+  isManuallyAdded: boolean;
+};
+
+/**
  * Fetches models from a specific provider endpoint, logging errors and returning empty array on failure.
  *
  * @param url - Provider endpoint URL to fetch models from
  * @param headers - HTTP headers with authorization credentials
  * @param userId - ID of current user for log context
+ * @param isRequired - Whether this endpoint is required to succeed (throws on failure)
  * @returns Array of raw model items returned by the endpoint
+ * @throws Error if isRequired is true and the request fails or returns non-ok status
  * @author Maruf Bepary
  */
 async function fetchProviderEndpointModels(
   url: string,
   headers: Record<string, string>,
   userId: string,
+  isRequired = false,
 ): Promise<Array<{ id?: string }>> {
   try {
     const response = await fetch(url, {
       method: "GET",
       headers,
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
@@ -114,12 +131,22 @@ async function fetchProviderEndpointModels(
           userId,
         },
       );
+      if (isRequired) {
+        throw new Error(
+          `Failed to fetch models from provider (HTTP ${response.status})`,
+        );
+      }
       return [];
     }
 
     const payload = (await response.json()) as ProviderModelsResponse;
     return payload.data ?? [];
   } catch (err) {
+    if (isRequired) {
+      throw err instanceof Error
+        ? err
+        : new Error(`Failed to fetch models from provider: ${String(err)}`);
+    }
     log.error("Failed to fetch models from endpoint: {error}", {
       error: err instanceof Error ? err.message : String(err),
       url,
@@ -183,63 +210,72 @@ function resolveDiscoveredModelType(
 }
 
 /**
- * Inserts a new model or refreshes existing model type without overwriting user customizations.
+ * Synchronizes discovered models to the database using batch operations.
+ * Inserts new models in a single batch insert, updates models whose type changed,
+ * and counts added and unchanged models.
  *
- * @param providerId - ID of provider owning the model
+ * @param providerId - ID of provider owning the models
  * @param userId - ID of authenticated user
- * @param discovered - Model record discovered from provider API
- * @returns Status string: 'added' or 'unchanged'
+ * @param models - Discovered models to synchronize
+ * @param existingModels - Existing models loaded from DB
+ * @returns Added and unchanged model counts
  * @author Maruf Bepary
  */
-async function upsertDiscoveredModel(
+async function batchSyncDiscoveredModels(
   providerId: string,
   userId: string,
-  discovered: DiscoveredModel,
-): Promise<"added" | "unchanged"> {
-  const modelType = resolveDiscoveredModelType(discovered.types);
-  const [existing] = await db
-    .select({ id: aiModel.id, isManuallyAdded: aiModel.isManuallyAdded })
-    .from(aiModel)
-    .where(
-      and(
-        eq(aiModel.providerId, providerId),
-        eq(aiModel.modelId, discovered.id),
-      ),
-    );
+  models: DiscoveredModel[],
+  existingModels: ExistingModelRecord[],
+): Promise<{ added: number; unchanged: number }> {
+  const existingMap = new Map(existingModels.map((m) => [m.modelId, m]));
+  const toInsert: Array<typeof aiModel.$inferInsert> = [];
+  let added = 0;
+  let unchanged = 0;
 
-  if (existing?.isManuallyAdded) {
-    return "unchanged";
-  }
+  for (const discovered of models) {
+    const modelType = resolveDiscoveredModelType(discovered.types);
+    const existing = existingMap.get(discovered.id);
 
-  if (existing) {
-    // Preserve existing user configs (label, contextWindow, capabilities, isEnabled).
-    // Only refresh modelType and touch updatedAt.
-    await db
-      .update(aiModel)
-      .set({
+    if (!existing) {
+      toInsert.push({
+        providerId,
+        userId,
+        modelId: discovered.id,
+        label: discovered.id,
         modelType,
-        updatedAt: new Date(),
-      })
-      .where(eq(aiModel.id, existing.id));
-    return "unchanged";
+        contextWindow: 4096,
+        capTools: false,
+        capVision: false,
+        capReasoning: false,
+        capStructuredOutput: false,
+        isManuallyAdded: false,
+        isEnabled: false,
+      });
+      added += 1;
+      continue;
+    }
+
+    unchanged += 1;
+    if (existing.isManuallyAdded) {
+      continue;
+    }
+
+    if (existing.modelType !== modelType) {
+      await db
+        .update(aiModel)
+        .set({
+          modelType,
+          updatedAt: new Date(),
+        })
+        .where(eq(aiModel.id, existing.id));
+    }
   }
 
-  await db.insert(aiModel).values({
-    providerId,
-    userId,
-    modelId: discovered.id,
-    label: discovered.id,
-    modelType,
-    contextWindow: 4096,
-    capTools: false,
-    capVision: false,
-    capReasoning: false,
-    capStructuredOutput: false,
-    isManuallyAdded: false,
-    isEnabled: false,
-  });
+  if (toInsert.length > 0) {
+    await db.insert(aiModel).values(toInsert);
+  }
 
-  return "added";
+  return { added, unchanged };
 }
 
 /**
@@ -287,30 +323,20 @@ function buildProviderHeaders(
 /**
  * Removes synced models that are no longer returned by the provider API.
  *
- * @param providerId - ID of provider being synchronized
- * @param userId - ID of authenticated user
+ * @param existingModels - Existing models loaded for the provider
  * @param discoveredModelIds - Set of model identifiers discovered in latest sync
  * @returns Number of removed stale models
  * @author Maruf Bepary
  */
 async function deleteStaleSyncedModels(
-  providerId: string,
-  userId: string,
+  existingModels: ExistingModelRecord[],
   discoveredModelIds: Set<string>,
 ): Promise<number> {
-  const existingSyncedModels = await db
-    .select({ id: aiModel.id, modelId: aiModel.modelId })
-    .from(aiModel)
-    .where(
-      and(
-        eq(aiModel.providerId, providerId),
-        eq(aiModel.userId, userId),
-        eq(aiModel.isManuallyAdded, false),
-      ),
-    );
-
-  const staleModelIdsToDelete = existingSyncedModels
-    .filter((model) => !discoveredModelIds.has(model.modelId))
+  const staleModelIdsToDelete = existingModels
+    .filter(
+      (model) =>
+        !model.isManuallyAdded && !discoveredModelIds.has(model.modelId),
+    )
     .map((model) => model.id);
 
   if (staleModelIdsToDelete.length === 0) {
@@ -350,11 +376,13 @@ export async function syncProviderModels(
       `${baseUrl}/models`,
       commonHeaders,
       session.user.id,
+      true,
     ),
     fetchProviderEndpointModels(
       `${baseUrl}/embeddings/models`,
       commonHeaders,
       session.user.id,
+      false,
     ),
   ]);
 
@@ -392,34 +420,38 @@ export async function syncProviderModels(
     throw new ModelMalformedIdError(invalidModels.length);
   }
 
-  let added = 0;
-  let unchanged = 0;
-
   // Check if model count exceeds 1000-model limit
   const totalDiscovered = modelsMap.size;
   const limitExceeded = totalDiscovered > 1000;
 
   // Process discovered models (limit to 1000 to prevent OOM)
   const allModels = Array.from(modelsMap.values()).slice(0, 1000);
-  const discoveredModelIds = new Set<string>();
+  const discoveredModelIds = new Set(allModels.map((m) => m.id));
 
-  for (const discovered of allModels) {
-    discoveredModelIds.add(discovered.id);
-    const status = await upsertDiscoveredModel(
-      provider.id,
-      session.user.id,
-      discovered,
+  const existingModels = await db
+    .select({
+      id: aiModel.id,
+      modelId: aiModel.modelId,
+      modelType: aiModel.modelType,
+      isManuallyAdded: aiModel.isManuallyAdded,
+    })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, provider.id),
+        eq(aiModel.userId, session.user.id),
+      ),
     );
-    if (status === "added") {
-      added += 1;
-    } else {
-      unchanged += 1;
-    }
-  }
 
-  const deleted = await deleteStaleSyncedModels(
+  const { added, unchanged } = await batchSyncDiscoveredModels(
     provider.id,
     session.user.id,
+    allModels,
+    existingModels,
+  );
+
+  const deleted = await deleteStaleSyncedModels(
+    existingModels,
     discoveredModelIds,
   );
 

@@ -100,6 +100,8 @@ describe("testProviderConnection action", () => {
           Authorization: "Bearer sk-test",
           "X-Custom-Header": "custom-val",
         },
+        redirect: "error",
+        signal: expect.any(AbortSignal),
       }),
     );
     vi.unstubAllGlobals();

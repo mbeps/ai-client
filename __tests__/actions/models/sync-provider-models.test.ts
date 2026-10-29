@@ -103,13 +103,11 @@ describe("syncProviderModels action", () => {
     );
   });
 
-  it("handles fetch endpoint errors, exceptions, and non-error throws gracefully", async () => {
+  it("throws when primary /models endpoint returns HTTP error and does not wipe models", async () => {
     // 1st where: provider
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
     ]);
-    // 2nd where: existingSyncedModels lookup
-    chainable.where.mockResolvedValueOnce([]);
 
     const fetchMock = vi
       .fn()
@@ -117,7 +115,111 @@ describe("syncProviderModels action", () => {
         ok: false,
         status: 500,
       })
-      .mockRejectedValueOnce(new Error("Network timeout"));
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(syncProviderModels("prov-1")).rejects.toThrow(
+      "Failed to fetch models from provider (HTTP 500)",
+    );
+
+    expect(deleteModelMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("throws when primary /models endpoint throws network error and does not wipe models", async () => {
+    // 1st where: provider
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
+    ]);
+
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Network timeout"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(syncProviderModels("prov-1")).rejects.toThrow(
+      "Network timeout",
+    );
+
+    expect(deleteModelMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("continues sync when optional /embeddings/models fails but primary /models succeeds", async () => {
+    const providerRow = {
+      id: "prov-1",
+      baseUrl: "https://api.openai.com/v1/",
+    };
+
+    // 1st where: provider lookup
+    // 2nd where: existing models lookup
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([]);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [{ id: "gpt-4o" }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result).toEqual({
+      added: 1,
+      unchanged: 0,
+      deleted: 0,
+      limitExceeded: false,
+      totalDiscovered: 1,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.openai.com/v1/models",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "error",
+        signal: expect.any(AbortSignal),
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles Error thrown during optional endpoint fetch", async () => {
+    // 1st where: provider
+    // 2nd where: existing models
+    chainable.where
+      .mockResolvedValueOnce([
+        { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      })
+      .mockRejectedValueOnce(new Error("Optional network fail"));
 
     vi.stubGlobal("fetch", fetchMock);
 
@@ -133,21 +235,22 @@ describe("syncProviderModels action", () => {
     vi.unstubAllGlobals();
   });
 
-  it("handles non-Error thrown during fetch and missing payload data", async () => {
+  it("handles non-Error thrown during optional endpoint fetch and missing payload data", async () => {
     // 1st where: provider
-    chainable.where.mockResolvedValueOnce([
-      { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
-    ]);
-    // 2nd where: existingSyncedModels lookup
-    chainable.where.mockResolvedValueOnce([]);
+    // 2nd where: existing models
+    chainable.where
+      .mockResolvedValueOnce([
+        { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
+      ])
+      .mockResolvedValueOnce([]);
 
     const fetchMock = vi
       .fn()
-      .mockRejectedValueOnce("Plain string error")
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: undefined }),
-      });
+      })
+      .mockRejectedValueOnce("Plain string error");
 
     vi.stubGlobal("fetch", fetchMock);
 
@@ -192,40 +295,61 @@ describe("syncProviderModels action", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fetches and synchronizes models with chat, embedding, both types, existing updates, and manual skips", async () => {
+  it("throws when primary /models endpoint throws non-Error and does not wipe models", async () => {
+    // 1st where: provider
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
+    ]);
+
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce("Connection refused")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(syncProviderModels("prov-1")).rejects.toThrow(
+      "Failed to fetch models from provider: Connection refused",
+    );
+
+    expect(deleteModelMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("fetches and synchronizes models with chat, embedding, both types, existing updates, and manual skips using batch operations", async () => {
     const providerRow = {
       id: "prov-1",
       baseUrl: "https://api.openai.com/v1/",
     };
 
-    const modelResponses: Record<string, any[]> = {
-      "prov-1": [providerRow],
-      "gpt-4o": [],
-      "text-embedding-3-small": [
-        { id: "m-embed-manual", isManuallyAdded: true },
-      ],
-      "bge-large-en": [{ id: "m-bge-synced", isManuallyAdded: false }],
-      "dual-model": [],
-      "custom-embed": [],
-    };
-
-    let queryCount = 0;
-    chainable.where.mockImplementation(async () => {
-      queryCount++;
-      if (queryCount === 1) return [providerRow];
-      if (queryCount === 2) return []; // gpt-4o
-      if (queryCount === 3)
-        return [{ id: "m-embed-manual", isManuallyAdded: true }];
-      if (queryCount === 4)
-        return [{ id: "m-bge-synced", isManuallyAdded: false }];
-      if (queryCount === 5) return []; // dual-model
-      if (queryCount === 6) return []; // custom-embed
-      if (queryCount === 7) return []; // update return or existingSyncedModels
-      if (queryCount === 8) {
-        return [{ id: "m-bge-synced", modelId: "bge-large-en" }];
-      }
-      return [];
-    });
+    // 1st where: provider lookup
+    // 2nd where: existing models in DB for this provider
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([
+        {
+          id: "m-embed-manual",
+          modelId: "text-embedding-3-small",
+          modelType: "embedding",
+          isManuallyAdded: true,
+        },
+        {
+          id: "m-bge-synced",
+          modelId: "bge-large-en",
+          modelType: "chat", // Will update because discovered is embedding
+          isManuallyAdded: false,
+        },
+        {
+          id: "m-custom-synced",
+          modelId: "custom-embed",
+          modelType: "embedding", // Already embedding -> no update needed!
+          isManuallyAdded: false,
+        },
+      ]);
 
     decodeProviderRecordMock.mockReturnValueOnce({
       apiKey: null,
@@ -263,23 +387,33 @@ describe("syncProviderModels action", () => {
     const result = await syncProviderModels("prov-1");
 
     expect(result).toEqual({
-      added: 3,
-      unchanged: 2,
+      added: 2,
+      unchanged: 3,
       deleted: 0,
       limitExceeded: false,
       totalDiscovered: 5,
     });
 
-    // Check newly added models are disabled by default (isEnabled: false)
-    expect(chainable.insert).toHaveBeenCalledTimes(3);
+    // Check newly added models are batched in a single insert call and disabled by default (isEnabled: false)
+    expect(chainable.insert).toHaveBeenCalledTimes(1);
     const insertValues = chainable.values.mock.calls[0][0];
-    expect(insertValues).toMatchObject({
-      isEnabled: false,
-      contextWindow: 4096,
-      capTools: false,
-    });
+    expect(insertValues).toHaveLength(2);
+    expect(insertValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "gpt-4o",
+          isEnabled: false,
+          contextWindow: 4096,
+          capTools: false,
+        }),
+        expect.objectContaining({
+          modelId: "dual-model",
+          isEnabled: false,
+        }),
+      ]),
+    );
 
-    // Check existing models update only modelType and updatedAt (preserving user config like label, isEnabled, contextWindow)
+    // Check existing models update only when modelType changed, preserving user configs
     expect(chainable.update).toHaveBeenCalledTimes(1);
     const setValues = chainable.set.mock.calls[0][0];
     expect(setValues).toMatchObject({
@@ -300,14 +434,29 @@ describe("syncProviderModels action", () => {
     };
 
     // 1st: provider lookup
-    chainable.where.mockResolvedValueOnce([providerRow]);
-    // 2nd: gpt-4o -> new
-    chainable.where.mockResolvedValueOnce([]);
-    // 3rd: existingSyncedModels lookup -> contains old-removed-model and gpt-4o
-    chainable.where.mockResolvedValueOnce([
-      { id: "m-old", modelId: "old-removed-model" },
-      { id: "m-gpt-4o", modelId: "gpt-4o" },
-    ]);
+    // 2nd: existing models lookup (contains old-removed-model, manual-model, and gpt-4o)
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([
+        {
+          id: "m-old",
+          modelId: "old-removed-model",
+          modelType: "chat",
+          isManuallyAdded: false,
+        },
+        {
+          id: "m-manual",
+          modelId: "manual-model",
+          modelType: "chat",
+          isManuallyAdded: true,
+        },
+        {
+          id: "m-gpt-4o",
+          modelId: "gpt-4o",
+          modelType: "chat",
+          isManuallyAdded: false,
+        },
+      ]);
 
     deleteModelMock.mockResolvedValueOnce({ deletedCount: 1 });
 
@@ -329,8 +478,8 @@ describe("syncProviderModels action", () => {
     const result = await syncProviderModels("prov-1");
 
     expect(result).toEqual({
-      added: 1,
-      unchanged: 0,
+      added: 0,
+      unchanged: 1,
       deleted: 1,
       limitExceeded: false,
       totalDiscovered: 1,
@@ -347,12 +496,11 @@ describe("syncProviderModels action", () => {
       baseUrl: "https://api.openai.com/v1",
     };
 
-    chainable.where.mockResolvedValueOnce([providerRow]);
-    for (let i = 0; i < 1000; i++) {
-      chainable.where.mockResolvedValueOnce([]);
-    }
-    // existingSyncedModels lookup
-    chainable.where.mockResolvedValueOnce([]);
+    // 1st: provider lookup
+    // 2nd: existing models lookup
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([]);
 
     const largeModelList = Array.from({ length: 1005 }, (_, i) => ({
       id: `model-${i}`,
@@ -381,7 +529,9 @@ describe("syncProviderModels action", () => {
       totalDiscovered: 1005,
     });
 
-    expect(chainable.insert).toHaveBeenCalledTimes(1000);
+    // Single batch insert of 1000 models, not 1000 individual insert calls
+    expect(chainable.insert).toHaveBeenCalledTimes(1);
+    expect(chainable.values.mock.calls[0][0]).toHaveLength(1000);
 
     vi.unstubAllGlobals();
   });
