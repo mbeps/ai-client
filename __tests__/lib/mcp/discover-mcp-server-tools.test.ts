@@ -125,4 +125,44 @@ describe("discoverMcpServerTools", () => {
       }),
     );
   });
+
+  it("does not leak publisher headers when non-owner accesses public server without install", async () => {
+    const serverRow = {
+      id: "srv-pub-publisher-headers",
+      userId: "other-user",
+      name: "Public Server With Publisher Secret",
+      url: "http://localhost:8080/sse",
+      type: "sse",
+      headers: JSON.stringify({ Authorization: "Bearer publisher-secret-key" }),
+      enabled: true,
+      isPublic: true,
+    };
+
+    const mockSelectServer = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([serverRow]),
+    };
+    const mockSelectInstall = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+
+    dbMock.select
+      .mockReturnValueOnce(mockSelectServer)
+      .mockReturnValueOnce(mockSelectInstall);
+
+    const mockDiscovered = {
+      tools: [],
+      resources: [],
+      prompts: [],
+    };
+    discoverToolsAndResourcesMock.mockResolvedValue(mockDiscovered);
+
+    await discoverMcpServerTools("srv-pub-publisher-headers");
+    expect(discoverToolsAndResourcesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: null,
+      }),
+    );
+  });
 });

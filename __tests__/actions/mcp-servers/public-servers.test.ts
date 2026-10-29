@@ -7,6 +7,7 @@ vi.mock("@/config/env", () => ({
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:3000",
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+    ENCRYPTION_SECRET: "test-encryption-secret-12345678",
     NODE_ENV: "test",
   },
 }));
@@ -63,6 +64,7 @@ vi.mock("@/lib/auth/require-session", () => ({
   }),
 }));
 
+import { decrypt } from "@/lib/encryption/decrypt";
 import { addPublicServer } from "@/actions/mcp-servers/add-public-server";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
@@ -112,7 +114,7 @@ beforeEach(() => {
 });
 
 describe("addPublicServer", () => {
-  it("installs a public MCP server referencing userMcpServerInstall without cloning mcpServer", async () => {
+  it("installs a public MCP server referencing userMcpServerInstall without cloning mcpServer and encrypts headers", async () => {
     // 1. Return public server
     chainable.where
       .mockImplementationOnce(() => Promise.resolve([MOCK_PUBLIC_SERVER]))
@@ -125,14 +127,11 @@ describe("addPublicServer", () => {
 
     expect(result).toBe("install-123");
     expect(chainable.insert).toHaveBeenCalledTimes(1);
-    expect(chainable.values).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: "user-1",
-        serverId: "srv-pub-1",
-        headers: '{"Auth": "sub-key"}',
-        enabled: true,
-      }),
-    );
+    const passedValues = chainable.values.mock.calls[0][0];
+    expect(passedValues.userId).toBe("user-1");
+    expect(passedValues.serverId).toBe("srv-pub-1");
+    expect(decrypt(passedValues.headers)).toBe('{"Auth": "sub-key"}');
+    expect(passedValues.enabled).toBe(true);
   });
 
   it("throws error if user attempts to install their own public server", async () => {
@@ -180,14 +179,11 @@ describe("addPublicServer", () => {
 });
 
 describe("updateInstalledServerHeaders", () => {
-  it("updates subscriber headers for user_mcp_server_install", async () => {
+  it("updates subscriber headers for user_mcp_server_install and encrypts them", async () => {
     await updateInstalledServerHeaders("srv-pub-1", '{"token": "xyz"}');
     expect(chainable.update).toHaveBeenCalledTimes(1);
-    expect(chainable.set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        headers: '{"token": "xyz"}',
-      }),
-    );
+    const passedSet = chainable.set.mock.calls[0][0];
+    expect(decrypt(passedSet.headers)).toBe('{"token": "xyz"}');
   });
 
   it("sets headers to null when empty or whitespace", async () => {
@@ -216,7 +212,7 @@ describe("toggleMcpServerPublic", () => {
 });
 
 describe("listMcpServers", () => {
-  it("lists personal and installed servers merged and sorted by updatedAt descending", async () => {
+  it("lists personal and installed servers merged and sorted by updatedAt descending with masked headers", async () => {
     const personalDate = new Date("2026-02-01");
     const installedDate = new Date("2026-03-01");
 
@@ -225,7 +221,7 @@ describe("listMcpServers", () => {
       userId: "user-1",
       name: "Personal MCP",
       url: "http://localhost:8000",
-      headers: null,
+      headers: "iv:auth:ciphertext-personal",
       enabled: true,
       isPublic: false,
       createdAt: new Date("2026-01-01"),
@@ -237,7 +233,7 @@ describe("listMcpServers", () => {
       userId: "author-user-2",
       name: "Installed MCP",
       url: "https://mcp.com",
-      headers: '{"key": "sub"}',
+      headers: "iv:auth:ciphertext-subscriber",
       enabled: true,
       isPublic: true,
       createdAt: new Date("2026-01-01"),
@@ -254,8 +250,46 @@ describe("listMcpServers", () => {
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe("inst-srv-1");
     expect(result[0].isInstalled).toBe(true);
+    expect(result[0].headers).toBe("[REDACTED]");
     expect(result[1].id).toBe("pers-1");
     expect(result[1].isInstalled).toBe(false);
+    expect(result[1].headers).toBe("[REDACTED]");
+  });
+
+  it("preserves null headers when server has no headers configured", async () => {
+    const personalServer = {
+      id: "pers-2",
+      userId: "user-1",
+      name: "No Headers MCP",
+      url: "http://localhost:8000",
+      headers: null,
+      enabled: true,
+      isPublic: false,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+    };
+
+    const installedServer = {
+      id: "inst-srv-2",
+      userId: "author-user-3",
+      name: "Installed MCP No Headers",
+      url: "https://mcp.com",
+      headers: null,
+      enabled: true,
+      isPublic: true,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-02"),
+      installId: "install-rec-2",
+    };
+
+    chainable.orderBy
+      .mockResolvedValueOnce([personalServer])
+      .mockResolvedValueOnce([installedServer]);
+
+    const result = await listMcpServers();
+    expect(result).toHaveLength(2);
+    expect(result[0].headers).toBeNull();
+    expect(result[1].headers).toBeNull();
   });
 });
 

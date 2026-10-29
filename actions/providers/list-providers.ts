@@ -22,9 +22,15 @@ import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 export async function listProviders(): Promise<AiProviderRow[]> {
   const session = await requireSession();
 
-  return db
+  const rows = await db
     .select()
     .from(aiProvider)
     .where(eq(aiProvider.userId, session.user.id))
     .orderBy(asc(aiProvider.name));
+
+  return rows.map((r) => ({
+    ...r,
+    apiKey: r.apiKey ? "[REDACTED]" : null,
+    headers: r.headers ? "[REDACTED]" : null,
+  }));
 }

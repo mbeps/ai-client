@@ -31,6 +31,7 @@ export async function listMcpServers(): Promise<McpServerRow[]> {
 
   const personal: McpServerRow[] = personalRows.map((r) => ({
     ...r,
+    headers: r.headers ? "[REDACTED]" : null,
     isInstalled: false,
   }));
 
@@ -64,7 +65,7 @@ export async function listMcpServers(): Promise<McpServerRow[]> {
     userId: r.userId,
     name: r.name,
     url: r.url,
-    headers: r.headers,
+    headers: r.headers ? "[REDACTED]" : null,
     enabled: r.enabled,
     isPublic: false, // Subscriber cannot publish someone else's public tool
     createdAt: r.createdAt,

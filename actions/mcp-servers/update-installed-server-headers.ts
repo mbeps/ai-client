@@ -4,6 +4,7 @@ import { and, eq, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { userMcpServerInstall } from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { encrypt } from "@/lib/encryption/encrypt";
 
 /**
  * Updates the custom headers for an installed public MCP server.
@@ -22,7 +23,7 @@ export async function updateInstalledServerHeaders(
   await db
     .update(userMcpServerInstall)
     .set({
-      headers: headers?.trim() ? headers.trim() : null,
+      headers: headers?.trim() ? encrypt(headers.trim()) : null,
       updatedAt: new Date(),
     })
     .where(

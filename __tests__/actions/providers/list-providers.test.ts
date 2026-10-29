@@ -37,11 +37,37 @@ describe("listProviders action", () => {
     chainable.orderBy.mockResolvedValue([]);
   });
 
-  it("returns all providers for authenticated user", async () => {
-    const provs = [{ id: "prov-1", name: "OpenAI" }];
+  it("returns all providers for authenticated user with masked apiKey and headers", async () => {
+    const provs = [
+      {
+        id: "prov-1",
+        name: "OpenAI",
+        apiKey: "iv:tag:ciphertext-api-key",
+        headers: "iv:tag:ciphertext-headers",
+      },
+      {
+        id: "prov-2",
+        name: "Ollama",
+        apiKey: null,
+        headers: null,
+      },
+    ];
     chainable.orderBy.mockResolvedValueOnce(provs);
 
     const res = await listProviders();
-    expect(res).toEqual(provs);
+    expect(res).toEqual([
+      {
+        id: "prov-1",
+        name: "OpenAI",
+        apiKey: "[REDACTED]",
+        headers: "[REDACTED]",
+      },
+      {
+        id: "prov-2",
+        name: "Ollama",
+        apiKey: null,
+        headers: null,
+      },
+    ]);
   });
 });
