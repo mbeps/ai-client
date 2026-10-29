@@ -27,6 +27,8 @@ type ProviderFormFieldsProps = {
   headerRows: HeaderRow[];
   /** True when editing an existing provider; affects API key placeholder text. */
   isEdit: boolean;
+  /** True when editing an existing provider that has custom headers saved. */
+  hasSavedHeaders?: boolean;
   onNameChange: (value: string) => void;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
@@ -50,6 +52,7 @@ export function ProviderFormFields({
   isEnabled,
   headerRows,
   isEdit,
+  hasSavedHeaders = false,
   onNameChange,
   onBaseUrlChange,
   onApiKeyChange,
@@ -139,6 +142,12 @@ export function ProviderFormFields({
             Add Header
           </Button>
         </div>
+        {isEdit && hasSavedHeaders && (
+          <p className="text-muted-foreground text-xs">
+            Custom headers are encrypted and cannot be read back. Leave empty to
+            keep current headers, or enter new key-value pairs to replace them.
+          </p>
+        )}
         <div className="space-y-2">
           {headerRows.map((row, index) => (
             <div
@@ -154,7 +163,11 @@ export function ProviderFormFields({
               <Input
                 value={row.value}
                 onChange={(e) => updateRow(index, { value: e.target.value })}
-                placeholder="Header value"
+                placeholder={
+                  isEdit && hasSavedHeaders
+                    ? "Saved — enter new value to replace"
+                    : "Header value"
+                }
               />
               <Button
                 type="button"

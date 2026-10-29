@@ -227,6 +227,7 @@ export default function ProviderDetailPage() {
             isEnabled={isEnabled}
             headerRows={headerRows}
             isEdit
+            hasSavedHeaders={Boolean(provider.headers)}
             onNameChange={setName}
             onBaseUrlChange={setBaseUrl}
             onApiKeyChange={setApiKey}
