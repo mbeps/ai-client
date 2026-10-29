@@ -62,8 +62,12 @@ export async function importProviderRegistry(
   const duplicateModelIds: string[] = [];
 
   await db.transaction(async (tx) => {
+    const touchedProviderIds = new Set<string>();
+    const incomingNames = new Set(parsed.providers.map((p) => p.name));
+
     for (const incomingProvider of parsed.providers) {
-      let [existingProvider] = await tx
+      let existingProvider: typeof aiProvider.$inferSelect | undefined;
+      const [matchedByName] = await tx
         .select()
         .from(aiProvider)
         .where(
@@ -72,9 +76,10 @@ export async function importProviderRegistry(
             eq(aiProvider.name, incomingProvider.name),
           ),
         );
+      existingProvider = matchedByName;
 
       if (!existingProvider) {
-        [existingProvider] = await tx
+        const urlCandidates = await tx
           .select()
           .from(aiProvider)
           .where(
@@ -83,6 +88,9 @@ export async function importProviderRegistry(
               eq(aiProvider.baseUrl, incomingProvider.baseUrl),
             ),
           );
+        existingProvider = urlCandidates.find(
+          (c) => !touchedProviderIds.has(c.id) && !incomingNames.has(c.name),
+        );
       }
 
       const encrypted = toEncryptedProviderValues({
@@ -120,6 +128,10 @@ export async function importProviderRegistry(
               })
               .returning()
           )[0];
+
+      if (provider?.id) {
+        touchedProviderIds.add(provider.id);
+      }
 
       if (existingProvider) {
         providersUpdated += 1;

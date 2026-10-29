@@ -101,9 +101,11 @@ export function ImportExportPanel({
       invalidateProviderRegistryCache();
       await onRefresh();
 
-      toast.success(
-        `Imported: ${result.providersCreated} providers, ${result.modelsCreated} models`,
-      );
+      const message =
+        result.providersUpdated > 0
+          ? `Imported: ${result.providersCreated} created, ${result.providersUpdated} updated, ${result.modelsCreated} models`
+          : `Imported: ${result.providersCreated} providers, ${result.modelsCreated} models`;
+      toast.success(message);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to import registry",

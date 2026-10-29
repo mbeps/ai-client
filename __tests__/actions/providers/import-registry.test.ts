@@ -612,4 +612,122 @@ describe("importProviderRegistry action", () => {
     expect(res.providersUpdated).toBe(1);
     expect(capturedUpdateValues.name).toBe("NewName");
   });
+
+  it("does not overwrite an earlier provider in the same batch when two providers share a baseUrl", async () => {
+    // Provider 1 ("Ollama A"):
+    // 1st select by (userId, name="Ollama A") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 2nd select by (userId, baseUrl) -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    // Provider 2 ("Ollama B"):
+    // 3rd select by (userId, name="Ollama B") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 4th select by (userId, baseUrl) -> returns the just-inserted "Ollama A"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "Ollama A",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+        {
+          name: "Ollama B",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersCreated).toBe(2);
+    expect(res.providersUpdated).toBe(0);
+  });
+
+  it("does not match by baseUrl if the candidate DB provider name is claimed by another incoming provider", async () => {
+    // When processing "Ollama A":
+    // 1st select by (userId, name="Ollama A") -> not found
+    selectWhereMock.mockResolvedValueOnce([]);
+    // 2nd select by (userId, baseUrl) -> returns DB row "Ollama B"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    insertReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-a",
+        name: "Ollama A",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    // When processing "Ollama B":
+    // 3rd select by (userId, name="Ollama B") -> finds "Ollama B"
+    selectWhereMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([
+      {
+        id: "prov-ollama-b",
+        name: "Ollama B",
+        baseUrl: "http://localhost:11434/v1",
+      },
+    ]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "Ollama A",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+        {
+          name: "Ollama B",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.providersCreated).toBe(1);
+    expect(res.providersUpdated).toBe(1);
+  });
 });
