@@ -43,6 +43,9 @@ describe("Transform Run Components", () => {
       expect(screen.getByText("Run: Sales Analyzer")).toBeDefined();
       expect(screen.getByText("50%")).toBeDefined();
       expect(screen.getByText("running")).toBeDefined();
+      expect(
+        screen.getByText("Progress").closest("div"),
+      ).toHaveClass("min-w-30");
     });
 
     it("renders Approve button when status is awaiting_review and triggers callback", () => {
