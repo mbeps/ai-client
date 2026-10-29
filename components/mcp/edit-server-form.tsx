@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { useAppStore } from "@/lib/store/use-app-store";
 import {
   type UpdateMcpServer,
   updateMcpServerSchema,
@@ -44,6 +45,7 @@ export interface EditServerFormProps {
  */
 export function EditServerForm({ server }: EditServerFormProps) {
   const router = useRouter();
+  const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
   const defaultValues: UpdateMcpServer = {
     name: server.name,
@@ -68,6 +70,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
         await updateMcpServerAction(server.id, data);
         toast.success("Server configuration updated");
       }
+      await loadMcpServers();
       router.refresh();
     } catch {
       toast.error(

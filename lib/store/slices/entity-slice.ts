@@ -213,6 +213,8 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       headers: r.headers ?? undefined,
       enabled: r.enabled,
       isPublic: r.isPublic,
+      isInstalled: r.isInstalled,
+      installId: r.installId,
       createdAt: new Date(r.createdAt),
       updatedAt: new Date(r.updatedAt),
     }),

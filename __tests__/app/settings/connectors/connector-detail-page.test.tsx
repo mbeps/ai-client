@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // jsdom doesn't implement ResizeObserver (used by Radix UI components)
@@ -88,6 +88,7 @@ vi.mock("@/components/mcp/server-sharing-tab", () => ({
 
 import React from "react";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
+import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import McpServerPage from "@/app/settings/connectors/[id]/page";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -174,6 +175,37 @@ describe("McpServerPage (Connector Detail Page)", () => {
 
     expect(screen.getByText("GitHub Tools")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: /sharing/i })).not.toBeInTheDocument();
+  });
+
+  it("toggles server enabled state and reloads mcpServers", async () => {
+    useAppStore.setState({
+      mcpServers: [mockServer],
+    });
+    vi.mocked(toggleMcpServer).mockResolvedValueOnce({
+      id: "server-1",
+      userId: "user-1",
+      name: "GitHub Tools",
+      url: "https://mcp.github.com/sse",
+      headers: null,
+      enabled: false,
+      isPublic: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(listMcpServers).mockResolvedValueOnce([
+      { ...mockServer, enabled: false },
+    ]);
+
+    render(<McpServerPage />);
+
+    const switchEl = screen.getByRole("switch");
+    fireEvent.click(switchEl);
+
+    await waitFor(() => {
+      expect(toggleMcpServer).toHaveBeenCalledWith("server-1");
+      expect(listMcpServers).toHaveBeenCalled();
+      expect(mockRefresh).toHaveBeenCalled();
+    });
   });
 
   it("triggers notFound() when server is not found in non-empty mcpServers", () => {
