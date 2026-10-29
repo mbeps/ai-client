@@ -114,15 +114,6 @@ function useKnowledgebaseDetail(kbId: string) {
     return () => clearInterval(interval);
   }, [kb?.indexStatus, fetchKb]);
 
-  const hasAutoTriggeredReindexRef = useRef(false);
-
-  useEffect(() => {
-    if (kb?.indexStatus === "stale" && !hasAutoTriggeredReindexRef.current) {
-      hasAutoTriggeredReindexRef.current = true;
-      handleReindex();
-    }
-  }, [kb?.indexStatus, handleReindex]);
-
   return {
     kb,
     embeddingModelLabel,
@@ -137,10 +128,15 @@ function useKnowledgebaseDetail(kbId: string) {
  *
  * @param kbId - Knowledge base unique identifier
  * @param indexStatus - Target index status
+ * @param onSettled - Optional callback invoked when in-flight documents finish processing
  * @returns Hook state and control handlers.
  * @author Maruf Bepary
  */
-function useKnowledgebaseDocuments(kbId: string, indexStatus?: string) {
+function useKnowledgebaseDocuments(
+  kbId: string,
+  indexStatus?: string,
+  onSettled?: () => void,
+) {
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -154,26 +150,44 @@ function useKnowledgebaseDocuments(kbId: string, indexStatus?: string) {
     fetchDocuments();
   }, [fetchDocuments]);
 
+  const hasInFlightDocs = documents.some(
+    (d) => d.status === "pending" || d.status === "processing",
+  );
+
   useEffect(() => {
-    if (indexStatus !== "indexing") return;
+    if (indexStatus !== "indexing" && !hasInFlightDocs) return;
 
     const interval = setInterval(() => {
       fetchDocuments();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [indexStatus, fetchDocuments]);
+  }, [indexStatus, hasInFlightDocs, fetchDocuments]);
+
+  const prevInFlightRef = useRef(false);
+  const onSettledRef = useRef(onSettled);
+  useEffect(() => {
+    onSettledRef.current = onSettled;
+  }, [onSettled]);
+
+  useEffect(() => {
+    if (prevInFlightRef.current && !hasInFlightDocs) {
+      onSettledRef.current?.();
+    }
+    prevInFlightRef.current = hasInFlightDocs;
+  }, [hasInFlightDocs]);
 
   const handleDeleted = useCallback((id: string) => {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
   const handleUploadSuccess = useCallback((doc: KbDocumentRow) => {
-    setDocuments((prev) => [doc, ...prev]);
+    setDocuments((prev) => [{ ...doc, status: "processing" }, ...prev]);
   }, []);
 
   return {
     documents,
+    hasInFlightDocs,
     showUpload,
     setShowUpload,
     handleDeleted,
@@ -240,7 +254,11 @@ function useKnowledgebaseSettings(
  */
 function useKnowledgebasePageState(kbId: string) {
   const detail = useKnowledgebaseDetail(kbId);
-  const docs = useKnowledgebaseDocuments(kbId, detail.kb?.indexStatus);
+  const docs = useKnowledgebaseDocuments(
+    kbId,
+    detail.kb?.indexStatus,
+    detail.fetchKb,
+  );
   const settings = useKnowledgebaseSettings(detail.kb, detail.fetchKb);
   const deletion = useEntityOptions({
     id: kbId,
@@ -252,6 +270,19 @@ function useKnowledgebasePageState(kbId: string) {
 
   const { models, isLoading: isModelsLoading } = useUserModels("embedding");
   const hasNoModels = !isModelsLoading && models.length === 0;
+
+  const hasAutoTriggeredReindexRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      detail.kb?.indexStatus === "stale" &&
+      !hasAutoTriggeredReindexRef.current &&
+      !docs.hasInFlightDocs
+    ) {
+      hasAutoTriggeredReindexRef.current = true;
+      detail.handleReindex();
+    }
+  }, [detail.kb?.indexStatus, detail.handleReindex, docs.hasInFlightDocs]);
 
   return {
     ...detail,
