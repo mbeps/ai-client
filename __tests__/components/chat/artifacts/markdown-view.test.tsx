@@ -62,6 +62,7 @@ vi.mock("next-themes", () => ({
 
 import { logger } from "@/lib/logger";
 import { MarkdownView } from "@/components/chat/artifacts/markdown-view";
+import { useCreateBlockNote } from "@blocknote/react";
 
 beforeAll(() => {
   global.ResizeObserver = class {
@@ -169,6 +170,125 @@ describe("MarkdownView — editor remount prevention and lifecycle", () => {
     expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledTimes(1);
     expect(blockNoteViewUnmountCount).toBe(0);
     expect(screen.queryByTestId("loader")).toBeNull();
+  });
+
+  it("updates BlockNoteEditor with new blocks when content changes externally for the same artifact id", async () => {
+    let utils: ReturnType<typeof render>;
+    await act(async () => {
+      utils = render(
+        <MarkdownView id="art-1" content="# Initial Content" />,
+      );
+    });
+
+    await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
+    expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledTimes(1);
+    expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledWith("# Initial Content");
+    expect(useCreateBlockNote).toHaveBeenCalledTimes(1);
+    expect(useCreateBlockNote).toHaveBeenCalledWith({
+      initialContent: [{ id: "b1", type: "paragraph", content: "# Initial Content" }],
+    });
+    expect(blockNoteViewMountCount).toBe(1);
+
+    // External update arrives for the same artifact id (e.g. LLM tool update or Raw mode edit)
+    await act(async () => {
+      utils.rerender(
+        <MarkdownView id="art-1" content="# External Update" />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledWith("# External Update"),
+    );
+    expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledTimes(2);
+
+    // BlockNoteEditor should remount and re-initialize with the newly parsed external blocks
+    await vi.waitFor(() => {
+      expect(blockNoteViewMountCount).toBe(2);
+    });
+    expect(blockNoteViewUnmountCount).toBe(1);
+    expect(useCreateBlockNote).toHaveBeenLastCalledWith({
+      initialContent: [{ id: "b1", type: "paragraph", content: "# External Update" }],
+    });
+  });
+
+  it("updates BlockNoteEditor with new blocks when id is undefined and content changes externally", async () => {
+    let utils: ReturnType<typeof render>;
+    await act(async () => {
+      utils = render(
+        <MarkdownView content="# Static Content One" />,
+      );
+    });
+
+    await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
+    expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledWith("# Static Content One");
+    expect(blockNoteViewMountCount).toBe(1);
+
+    await act(async () => {
+      utils.rerender(
+        <MarkdownView content="# Static Content Two" />,
+      );
+    });
+
+    await vi.waitFor(() => {
+      expect(blockNoteViewMountCount).toBe(2);
+    });
+    expect(blockNoteViewUnmountCount).toBe(1);
+    expect(mockTryParseMarkdownToBlocks).toHaveBeenCalledWith("# Static Content Two");
+    expect(useCreateBlockNote).toHaveBeenLastCalledWith({
+      initialContent: [{ id: "b1", type: "paragraph", content: "# Static Content Two" }],
+    });
+  });
+
+  it("allows user edits after an external update without unnecessary remounts", async () => {
+    vi.useFakeTimers();
+    const onUpdate = vi.fn();
+
+    let utils: ReturnType<typeof render>;
+    await act(async () => {
+      utils = render(
+        <MarkdownView id="art-mixed" content="# Step 1" onUpdate={onUpdate} />,
+      );
+    });
+
+    await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
+    expect(blockNoteViewMountCount).toBe(1);
+    expect(blockNoteViewUnmountCount).toBe(0);
+
+    // External update arrives (e.g. LLM tool update)
+    await act(async () => {
+      utils.rerender(
+        <MarkdownView id="art-mixed" content="# Step 2 (LLM)" onUpdate={onUpdate} />,
+      );
+    });
+
+    await vi.waitFor(() => expect(blockNoteViewMountCount).toBe(2));
+    expect(blockNoteViewUnmountCount).toBe(1);
+
+    // Now user types in the new editor instance
+    const lastProps = capturedProps[capturedProps.length - 1];
+    const onChange = lastProps.onChange as () => void;
+    expect(onChange).toBeDefined();
+
+    act(() => {
+      onChange();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(onUpdate).toHaveBeenCalledWith("# Updated Markdown");
+
+    // Parent re-renders with the user's updated markdown
+    await act(async () => {
+      utils.rerender(
+        <MarkdownView id="art-mixed" content="# Updated Markdown" onUpdate={onUpdate} />,
+      );
+    });
+
+    // Should NOT remount or re-parse on user's own edit
+    expect(blockNoteViewMountCount).toBe(2);
+    expect(blockNoteViewUnmountCount).toBe(1);
   });
 
   it("resets parsedBlocks and re-parses when artifact id changes", async () => {

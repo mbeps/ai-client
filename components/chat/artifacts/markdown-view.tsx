@@ -96,8 +96,9 @@ function BlockNoteEditor({
 /**
  * Markdown artifact editor powered by BlockNote.
  * Parses markdown content into editable blocks and renders rich editor interface.
- * Re-parses markdown when `id` changes or external content changes.
- * Avoids re-parsing and unmounting when `content` echoes back this editor's own edits.
+ * Re-parses markdown and increments editor revision when `id` or external content changes.
+ * Remounts `BlockNoteEditor` on external updates so `useCreateBlockNote` receives new blocks.
+ * Avoids re-parsing and remounting when `content` echoes back this editor's own edits.
  * Shows loading spinner while parsing; fires debounced updates on content changes.
  *
  * @param id - Optional artifact identifier; changes trigger markdown re-parsing
@@ -108,6 +109,7 @@ function BlockNoteEditor({
  */
 export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
   const [parsedBlocks, setParsedBlocks] = useState<Block[] | null>(null);
+  const [editorRevision, setEditorRevision] = useState(0);
   const lastEmittedContentRef = useRef<string | null>(null);
   const prevIdRef = useRef<string | undefined>(id);
 
@@ -131,15 +133,23 @@ export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
       return;
     }
 
+    lastEmittedContentRef.current = null;
+
     let cancelled = false;
 
     async function parseMarkdown() {
       try {
         const blocks = await parseMarkdownToBlocks(content);
-        if (!cancelled) setParsedBlocks(blocks);
+        if (!cancelled) {
+          setParsedBlocks(blocks);
+          setEditorRevision((rev) => rev + 1);
+        }
       } catch (err) {
         logger.error("Failed to parse markdown", err);
-        if (!cancelled) setParsedBlocks([]);
+        if (!cancelled) {
+          setParsedBlocks([]);
+          setEditorRevision((rev) => rev + 1);
+        }
       }
     }
 
@@ -159,7 +169,7 @@ export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
 
   return (
     <BlockNoteEditor
-      key={id ?? "static"}
+      key={`${id ?? "static"}-${editorRevision}`}
       blocks={parsedBlocks}
       onUpdate={handleUpdate}
     />
