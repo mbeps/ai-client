@@ -149,7 +149,7 @@ function resolveArtifactId(
  */
 export function extractArtifactFromToolResult(
   tr: unknown,
-): ArtifactData | null {
+): (ArtifactData & { id: string }) | null {
   if (!tr || typeof tr !== "object") return null;
   const record = tr as Record<string, unknown>;
 

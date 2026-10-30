@@ -128,6 +128,38 @@ describe("extractMessageArtifacts", () => {
     expect(artifacts[0].content).toBe("graph TD\nA --> B");
   });
 
+  it("falls back to a generated id when the artifact id is not a non-empty string", () => {
+    const msg: Message = {
+      id: "a-fallback",
+      chatId: "c1",
+      role: "assistant",
+      content: "",
+      parentId: "u1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolName: "manage_artifact",
+            result: {
+              artifact: {
+                id: "",
+                type: "markdown",
+                title: "Untitled",
+                content: "# Untitled",
+              },
+            },
+          },
+        ],
+      }),
+    };
+
+    const artifacts = extractMessageArtifacts(msg);
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0].id).toBe("artifact-default");
+    expect(artifacts[0].messageId).toBe("a-fallback");
+  });
+
   it("deduplicates artifacts when identical artifact id or mermaid content is encountered", () => {
     const msg: Message = {
       id: "a3",
@@ -553,5 +585,38 @@ describe("extractMessageArtifacts", () => {
     expect(artifacts).toHaveLength(1);
     expect(artifacts[0].id).toBe("tc-no-id-artifact");
     expect(artifacts[0].messageId).toBe("a-no-id");
+  });
+
+  it("skips a persisted tool result whose artifact has an unsupported type", () => {
+    // Covers the `if (art)` false arm in collectPersistedArtifacts: the tool
+    // result parses but extractArtifactFromToolResult returns null because the
+    // artifact type is not one of markdown/spreadsheet/html/mermaid.
+    const msg: Message = {
+      id: "a17",
+      chatId: "c1",
+      role: "assistant",
+      content: "",
+      parentId: "u1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-bad-type",
+            result: {
+              artifact: {
+                id: "art-bad",
+                type: "video",
+                title: "Bad Type",
+                content: "x",
+              },
+            },
+          },
+        ],
+      }),
+    };
+
+    expect(extractMessageArtifacts(msg)).toEqual([]);
   });
 });

@@ -670,6 +670,47 @@ describe("importProviderRegistry action", () => {
     expect(res.providersUpdated).toBe(0);
   });
 
+  it("does not add to touchedProviderIds when the provider write returns no row", async () => {
+    // Provider 1 inserts but the returning array is empty, so `provider?.id` is
+    // undefined and the id is never added to touchedProviderIds. Provider 2 then
+    // shares the same baseUrl and must still be created as a new provider.
+    selectWhereMock.mockResolvedValueOnce([]);
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([]);
+
+    selectWhereMock.mockResolvedValueOnce([]);
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([{ id: "prov-b" }]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          name: "Ghost A",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+        {
+          name: "Ghost B",
+          baseUrl: "http://localhost:11434/v1",
+          requiresKey: false,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+
+    expect(res).toEqual({
+      providersCreated: 2,
+      providersUpdated: 0,
+      modelsCreated: 0,
+      modelsSkipped: 0,
+    });
+  });
+
   it("does not match by baseUrl if the candidate DB provider name is claimed by another incoming provider", async () => {
     // When processing "Ollama A":
     // 1st select by (userId, name="Ollama A") -> not found

@@ -752,6 +752,27 @@ describe("parseZipBuffer directory detection", () => {
     return Buffer.concat([localPart, cdPart, eocd]);
   };
 
+  it("breaks out of the central-directory loop when a CD record has a bad signature", () => {
+    // The EOCD claims 2 entries but the second central-directory record does not
+    // start with the 0x02014b50 signature, so the loop must break early and the
+    // first entry is still returned.
+    const zip = assembleZip([storedEntry("SKILL.md", Buffer.from("# Ok"))]);
+    // Append a bogus second CD record before the EOCD and bump the entry count.
+    const bogus = Buffer.alloc(46);
+    bogus.writeUInt32LE(0xdeadbeef, 0);
+    const eocdOffset = zip.length - 22;
+    const patched = Buffer.concat([
+      zip.subarray(0, eocdOffset),
+      bogus,
+      zip.subarray(eocdOffset),
+    ]);
+    patched.writeUInt16LE(2, patched.length - 22 + 10);
+
+    const entries = parseZipBuffer(patched);
+
+    expect(entries.map((e) => e.path)).toEqual(["SKILL.md"]);
+  });
+
   it("marks a zero-length-name entry as a directory only via the size check", () => {
     // The name check `fileName.endsWith("/")` is false for an empty name, so the
     // directory verdict must come from the size arm instead.

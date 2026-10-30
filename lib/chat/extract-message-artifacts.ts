@@ -16,13 +16,12 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 function appendArtifact(
   artifacts: ArtifactData[],
   seenIds: Set<string>,
-  art: ArtifactData,
+  // extractArtifactFromToolResult always resolves a non-empty id, so the
+  // `<messageId>-artifact-N` fallback branch was unreachable dead code.
+  art: ArtifactData & { id: string },
   messageId: string,
 ): void {
-  const id =
-    typeof art.id === "string" && art.id.trim()
-      ? art.id
-      : `${messageId}-artifact-${artifacts.length}`;
+  const id = art.id;
   if (!seenIds.has(id)) {
     seenIds.add(id);
     artifacts.push({ ...art, id, messageId });

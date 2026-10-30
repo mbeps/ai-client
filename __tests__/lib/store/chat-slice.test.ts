@@ -548,6 +548,27 @@ describe("ChatSlice — in-memory (optimistic) actions", () => {
       expect(useAppStore.getState().chats.c1.title).toBe("Chat 1");
     });
 
+    it("uses the row createdAt when the row provides one", () => {
+      const createdAt = "2026-10-30T12:00:00.000Z";
+      useAppStore.getState().loadChats(
+        [
+          {
+            id: "c-created",
+            title: "With CreatedAt",
+            projectId: null,
+            assistantId: null,
+            currentLeafId: null,
+            createdAt,
+            updatedAt: createdAt,
+          },
+        ],
+        [],
+      );
+      expect(useAppStore.getState().chats["c-created"].createdAt).toEqual(
+        new Date(createdAt),
+      );
+    });
+
     it("links parent and child messages via childrenIds", () => {
       const now = new Date().toISOString();
       useAppStore.getState().loadChats(
@@ -825,6 +846,46 @@ describe("ChatSlice — DB actions", () => {
       expect(
         useAppStore.getState().chats[chatId].messages["msg-1"],
       ).toBeDefined();
+    });
+
+    it("keeps remaining chats when the chat vanishes before rollback captures it", async () => {
+      // Covers the `previousChat ? ... : state.chats` false arm at line 320.
+      // previousChat is read immediately after the existence guard, so the
+      // chat must disappear between those two reads. A one-shot getter on the
+      // chats record simulates that: the guard read sees the chat, the
+      // rollback capture read sees undefined.
+      const { deleteMessage: deleteMsgAction } = await import(
+        "@/actions/chats/delete-message"
+      );
+      vi.mocked(deleteMsgAction).mockRejectedValueOnce(new Error("DB error"));
+      const chatId = createChatInStore();
+      useAppStore.getState().addMessage(chatId, {
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        id: "msg-1",
+      });
+      const otherChatId = createChatInStore();
+
+      const realChat = useAppStore.getState().chats[chatId];
+      let read = false;
+      Object.defineProperty(useAppStore.getState().chats, chatId, {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          if (!read) {
+            read = true;
+            return realChat;
+          }
+          return undefined;
+        },
+      });
+
+      await expect(
+        useAppStore.getState().deleteMessageDb(chatId, "msg-1"),
+      ).rejects.toThrow("DB error");
+
+      expect(useAppStore.getState().chats[otherChatId]).toBeDefined();
     });
   });
 

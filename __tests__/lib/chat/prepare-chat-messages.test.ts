@@ -297,5 +297,56 @@ describe("prepareChatMessages — history truncation (T4A.3)", () => {
       const msg: any = { role: "user", content: null };
       expect(estimateModelMessageTokens(msg)).toBe(0);
     });
+
+    it("returns 0 for falsy, non-object, and null/undefined tool payloads", () => {
+      const msg: any = {
+        role: "assistant",
+        content: [
+          null, // falsy part → 0
+          42, // non-object non-string part → 0
+          { type: "tool-call", input: undefined }, // undefined payload → 0
+          { type: "tool-result", output: null }, // null payload → 0
+        ],
+      };
+      expect(estimateModelMessageTokens(msg)).toBe(0);
+    });
+
+    it("returns 0 when a tool payload cannot be JSON-stringified", () => {
+      const circular: any = { self: null };
+      circular.self = circular;
+
+      const msg: any = {
+        role: "assistant",
+        content: [{ type: "tool-call", args: circular }],
+      };
+      expect(estimateModelMessageTokens(msg)).toBe(0);
+    });
+
+    it("unwraps output.value and falls back to raw output/result without value", () => {
+      const msgWithValue: any = {
+        role: "tool",
+        content: [{ type: "tool-result", output: { type: "text", value: "A".repeat(400) } }],
+      };
+      const msgWithoutValue: any = {
+        role: "tool",
+        content: [{ type: "tool-result", output: { plain: "B".repeat(400) } }],
+      };
+      const msgFalsyOut: any = {
+        role: "tool",
+        content: [{ type: "tool-result", output: undefined, result: "C".repeat(400) }],
+      };
+
+      expect(estimateModelMessageTokens(msgWithValue)).toBeGreaterThan(100);
+      expect(estimateModelMessageTokens(msgWithoutValue)).toBeGreaterThan(100);
+      expect(estimateModelMessageTokens(msgFalsyOut)).toBeGreaterThan(100);
+    });
+
+    it("estimates reasoning parts", () => {
+      const msg: any = {
+        role: "assistant",
+        content: [{ type: "reasoning", reasoning: "thinking hard " + "D".repeat(400) }],
+      };
+      expect(estimateModelMessageTokens(msg)).toBeGreaterThan(100);
+    });
   });
 });

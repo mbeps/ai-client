@@ -566,5 +566,62 @@ describe("chat-stream-consumer", () => {
       expect(result.aborted).toBe(true);
       expect(result.accumulatedText).toBe("Start...");
     });
+
+    /**
+     * The ctx literal initialises flushReasoning/flushText/flushDeltas as
+     * no-op placeholders before they are reassigned. The placeholders are
+     * unreachable through consumeModelStream (they are overwritten before any
+     * call site), so this test exercises the real flush functions directly
+     * via the exported consumeModelStream contract: an empty-buffer flush
+     * must emit nothing, and a populated-buffer flush must emit exactly the
+     * buffered payload once.
+     */
+    it("flush functions emit nothing for empty buffers and exactly once for populated buffers", async () => {
+      const emitted: any[] = [];
+      const emit = async (data: any) => {
+        emitted.push(data);
+      };
+
+      // Empty buffers: the final flushDeltas must not emit anything.
+      async function* emptyStream() {
+        yield { type: "step-finish" };
+      }
+
+      const abortController = new AbortController();
+      await consumeModelStream(
+        emptyStream(),
+        abortController.signal,
+        emit,
+        {},
+        [],
+      );
+      expect(emitted).toEqual([]);
+
+      // Populated buffers: one text-delta and one reasoning-delta, each
+      // emitted exactly once by the final flushDeltas.
+      async function* bufferedStream() {
+        yield { type: "text-delta", text: "buffered text" };
+        yield { type: "reasoning-delta", text: "buffered reasoning" };
+        yield { type: "step-finish" };
+      }
+
+      const result = await consumeModelStream(
+        bufferedStream(),
+        abortController.signal,
+        emit,
+        {},
+        [],
+      );
+
+      expect(result).toEqual({
+        accumulatedText: "buffered text",
+        accumulatedReasoning: "buffered reasoning",
+        aborted: false,
+      });
+      expect(emitted).toEqual([
+        { type: "text-delta", text: "buffered text" },
+        { type: "reasoning-delta", reasoning: "buffered reasoning" },
+      ]);
+    });
   });
 });
