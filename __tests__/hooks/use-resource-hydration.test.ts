@@ -220,4 +220,48 @@ describe("useResourceHydration", () => {
     expect(result.current.loadingResources).toEqual([]);
     expect(result.current.isLoading).toBe(false);
   });
+
+  it("does not add resource to hydratedResources when store loadError is non-null", async () => {
+    hydratedResources.clear();
+    useAppStore.setState({
+      loadProjects: vi.fn().mockImplementation(async () => {
+        useAppStore.setState({ loadError: "Failed to load projects" });
+      }),
+    });
+
+    renderHook(() => useResourceHydration(["projects"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(hydratedResources.has("projects")).toBe(false);
+  });
+
+  it("allows a successful resource to hydrate even if another resource has an active loadError", async () => {
+    hydratedResources.clear();
+    useAppStore.setState({
+      loadError: "Failed to load assistants",
+      loadProjects: vi.fn().mockResolvedValue(undefined),
+    });
+
+    renderHook(() => useResourceHydration(["projects"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(hydratedResources.has("projects")).toBe(true);
+  });
+
+  it("handles empty resources array gracefully", async () => {
+    const { result } = renderHook(() => useResourceHydration([]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.loadingResources).toEqual([]);
+  });
 });

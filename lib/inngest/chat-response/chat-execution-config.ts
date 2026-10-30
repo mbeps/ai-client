@@ -12,7 +12,6 @@ import { classifyProviderError } from "@/lib/error/classify-provider-error";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
-import type { CompletedToolRecord } from "@/lib/inngest/chat-response/chat-response-types";
 import { getLogger } from "@/lib/logger";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 
@@ -26,7 +25,10 @@ const log = getLogger(["inngest", "chat", "response"]);
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function isAbortError(error: unknown, abortSignal: AbortSignal): boolean {
+export function isAbortError(
+  error: unknown,
+  abortSignal: AbortSignal,
+): boolean {
   return (
     abortSignal.aborted ||
     (error instanceof Error && error.name === "AbortError")
@@ -219,46 +221,6 @@ export function buildStreamExecutionConfig(params: {
     tools: params.allTools,
     stopWhen: params.hasAnyTools ? isStepCount(params.maxSteps) : undefined,
   };
-}
-
-/**
- * Builds assistant message metadata payload for persistence.
- * @author Maruf Bepary
- */
-export function buildAssistantMessageMetadata({
-  modelId,
-  reasoning,
-  completedTools,
-  usage,
-  finishReason,
-}: {
-  modelId: string;
-  reasoning: string;
-  completedTools: CompletedToolRecord[];
-  usage: any;
-  finishReason: string;
-}): string {
-  return JSON.stringify({
-    model: modelId,
-    reasoning,
-    toolCalls: completedTools.map((tc) => ({
-      toolCallId: tc.toolCallId,
-      toolName: tc.toolName,
-      args: tc.args,
-      ...(tc.serverName ? { serverName: tc.serverName } : {}),
-    })),
-    toolResults: completedTools.map((tc) => ({
-      toolCallId: tc.toolCallId,
-      toolName: tc.toolName,
-      result:
-        tc.result !== undefined
-          ? tc.result
-          : { error: "Tool execution was interrupted" },
-      ...(tc.serverName ? { serverName: tc.serverName } : {}),
-    })),
-    usage,
-    finishReason,
-  });
 }
 
 /**

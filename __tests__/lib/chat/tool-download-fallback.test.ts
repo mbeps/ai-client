@@ -586,4 +586,38 @@ describe("executeToolDownloadFallback", () => {
     });
     expect(throwingString).toHaveLength(0);
   });
+
+  it("awaits asynchronous emit callbacks for tool-call and tool-result events", async () => {
+    const order: string[] = [];
+    const asyncEmit = vi.fn(async (event: any) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      order.push(event.type);
+    });
+
+    const activeTools: Record<string, any> = {
+      mutator: { execute: vi.fn() },
+      download_file: {
+        execute: vi.fn().mockResolvedValue({ content: [{ type: "text", text: "ok" }] }),
+      },
+    };
+
+    const toolSourceMap: Record<string, string> = {
+      mutator: "srv-async",
+      download_file: "srv-async",
+    };
+
+    const completedTools: CompletedToolRecord[] = [
+      { toolCallId: "tc-async", toolName: "mutator", args: { file_path: "report.pdf" } },
+    ];
+
+    await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+      emit: asyncEmit,
+    });
+
+    expect(order).toEqual(["tool-call", "tool-result"]);
+    expect(asyncEmit).toHaveBeenCalledTimes(2);
+  });
 });

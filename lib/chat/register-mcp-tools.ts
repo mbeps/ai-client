@@ -112,7 +112,7 @@ export async function registerMcpTools(
 
   if (scopedServers.length > 0) {
     try {
-      const result = await getMcpTools(scopedServers);
+      const result = await getMcpTools(scopedServers, selectedTools);
       const filtered = filterSelectedMcpTools(result, selectedTools);
 
       // Sanitise remote MCP tool names to ensure LLM provider charset compliance (e.g. OpenAI ^[a-zA-Z0-9_-]{1,64}$)

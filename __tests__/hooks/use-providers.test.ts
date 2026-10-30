@@ -90,12 +90,16 @@ describe("useProviders hook", () => {
 
     expect(result.current.providers).toHaveLength(2);
 
-    // Trigger cache subscription callback with null cached
+    // Trigger cache subscription callback with null cached (cache invalidation)
     vi.mocked(getProviderRegistryCachedData).mockReturnValue(null);
-    act(() => {
+    await act(async () => {
       subscriberCb?.();
     });
-    expect(result.current.providers).toEqual([]);
+    expect(fetchProviderRegistryWithCache).toHaveBeenCalledWith(
+      "providers",
+      expect.any(Function),
+      { force: true },
+    );
   });
 
   it("handles refresh with force: true and calls invalidate", async () => {

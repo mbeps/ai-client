@@ -311,9 +311,11 @@ export async function discoverToolsAndResources(
   prompts: DiscoveredPrompt[];
 }> {
   return withMcpServer(server, async (client) => {
-    const tools = await discoverServerTools(client, server);
-    const resources = await discoverServerResources(client, server);
-    const prompts = await discoverServerPrompts(client, server);
+    const [tools, resources, prompts] = await Promise.all([
+      discoverServerTools(client, server),
+      discoverServerResources(client, server),
+      discoverServerPrompts(client, server),
+    ]);
 
     log.info(
       "Discovered {toolCount} tools, {resourceCount} resources, and {promptCount} prompts for server '{serverName}'",

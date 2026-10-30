@@ -90,4 +90,38 @@ describe("splitRecursive", () => {
       expect(chunk.length).toBeLessThanOrEqual(25);
     }
   });
+
+  it("handles zero overlap correctly without repeating content", () => {
+    const p1 = "alpha".repeat(10);
+    const p2 = "beta".repeat(10);
+    const text = `${p1}\n${p2}`;
+    const chunks = splitRecursive(text, ["\n"], 50, 0);
+
+    expect(chunks).toEqual([p1, p2]);
+  });
+
+  it("handles oversized piece following non-empty current by flushing current and delegating", () => {
+    const p1 = "A".repeat(40);
+    const oversized = "B".repeat(150);
+    const text = `${p1}\n${oversized}`;
+    const chunks = splitRecursive(text, ["\n"], 50, 10);
+
+    expect(chunks[0]).toBe(p1);
+    expect(chunks.length).toBeGreaterThan(1);
+    // None of the chunks should have A and B concatenated together into an oversized block
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it("drops tail when tail + sep + piece exceeds chunkSize", () => {
+    const p1 = "A".repeat(40);
+    const p2 = "B".repeat(45);
+    // chunkSize is 50, overlap is 10.
+    // 10 + 1 + 45 = 56 > 50, so tail must be dropped and chunk 2 should start directly with p2.
+    const text = `${p1}\n${p2}`;
+    const chunks = splitRecursive(text, ["\n"], 50, 10);
+
+    expect(chunks).toEqual([p1, p2]);
+  });
 });

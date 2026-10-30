@@ -157,6 +157,35 @@ async function handleToolErrorChunk(
 }
 
 /**
+ * Milliseconds to coalesce streaming text and reasoning deltas before publishing.
+ */
+export const DELTA_COALESCE_INTERVAL_MS = 40;
+
+/**
+ * Handles non-delta stream chunks by delegating to corresponding tool handlers.
+ *
+ * @param chunk - Target chunk
+ * @param completedTools - Target completed tools
+ * @param toolSourceMap - Target tool source map
+ * @param emit - Target emit
+ * @author Maruf Bepary
+ */
+async function handleNonDeltaChunk(
+  chunk: any,
+  completedTools: CompletedToolRecord[],
+  toolSourceMap: Record<string, string>,
+  emit: (data: ChatStreamEvent) => Promise<void>,
+): Promise<void> {
+  if (chunk.type === "tool-call") {
+    await handleToolCallChunk(chunk, completedTools, toolSourceMap, emit);
+  } else if (chunk.type === "tool-result") {
+    await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
+  } else if (chunk.type === "tool-error") {
+    await handleToolErrorChunk(chunk, completedTools, toolSourceMap, emit);
+  }
+}
+
+/**
  * Consumes chunks from a model stream, emits realtime events, and tracks completed tools.
  *
  * @param fullStream - Target full stream
@@ -176,26 +205,63 @@ export async function consumeModelStream(
 ): Promise<ConsumeModelStreamResult> {
   let accumulatedText = "";
   let accumulatedReasoning = "";
+  let bufferedText = "";
+  let bufferedReasoning = "";
+  let lastTextFlushTime = 0;
+  let lastReasoningFlushTime = 0;
+
+  const flushReasoning = async (): Promise<void> => {
+    if (bufferedReasoning.length === 0) return;
+    const reasoningToEmit = bufferedReasoning;
+    bufferedReasoning = "";
+    lastReasoningFlushTime = Date.now();
+    await emit({ type: "reasoning-delta", reasoning: reasoningToEmit });
+  };
+
+  const flushText = async (): Promise<void> => {
+    if (bufferedText.length === 0) return;
+    const textToEmit = bufferedText;
+    bufferedText = "";
+    lastTextFlushTime = Date.now();
+    await emit({ type: "text-delta", text: textToEmit });
+  };
+
+  const flushDeltas = async (): Promise<void> => {
+    await flushReasoning();
+    await flushText();
+  };
 
   for await (const chunk of fullStream) {
     if (abortSignal.aborted) {
+      await flushDeltas();
       return { accumulatedText, accumulatedReasoning, aborted: true };
     }
 
     if (chunk.type === "text-delta") {
       accumulatedText += chunk.text;
-      await emit({ type: "text-delta", text: chunk.text });
+      if (bufferedReasoning.length > 0) {
+        await flushReasoning();
+      }
+      bufferedText += chunk.text;
+      if (Date.now() - lastTextFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+        await flushText();
+      }
     } else if (chunk.type === "reasoning-delta") {
       accumulatedReasoning += chunk.text;
-      await emit({ type: "reasoning-delta", reasoning: chunk.text });
-    } else if (chunk.type === "tool-call") {
-      await handleToolCallChunk(chunk, completedTools, toolSourceMap, emit);
-    } else if (chunk.type === "tool-result") {
-      await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
-    } else if (chunk.type === "tool-error") {
-      await handleToolErrorChunk(chunk, completedTools, toolSourceMap, emit);
+      if (bufferedText.length > 0) {
+        await flushText();
+      }
+      bufferedReasoning += chunk.text;
+      if (Date.now() - lastReasoningFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+        await flushReasoning();
+      }
+    } else {
+      await flushDeltas();
+      await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
     }
   }
+
+  await flushDeltas();
 
   return { accumulatedText, accumulatedReasoning, aborted: false };
 }

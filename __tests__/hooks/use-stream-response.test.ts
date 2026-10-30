@@ -1247,19 +1247,27 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       await Promise.resolve();
     });
 
+    const expectedStopMeta = JSON.stringify({
+      model: "gpt-4o",
+      reasoning: "",
+      toolCalls: [],
+      toolResults: [],
+      finishReason: "stop",
+      stopped: true,
+    });
     expect(mockStoreState.addMessage).toHaveBeenCalledWith("chat-1", {
       role: "assistant",
       content: "half written",
       parentId: "user-msg-1",
       id: "a1",
-      metadata: JSON.stringify({ model: "gpt-4o", finishReason: "stop" }),
+      metadata: expectedStopMeta,
     });
     expect(mockPersist).toHaveBeenCalledWith("chat-1", {
       id: "a1",
       role: "assistant",
       content: "half written",
       parentId: "user-msg-1",
-      metadata: JSON.stringify({ model: "gpt-4o", finishReason: "stop" }),
+      metadata: expectedStopMeta,
     });
     expect(mockLogError).toHaveBeenCalledWith(
       "Failed to persist stopped message",
@@ -1452,7 +1460,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     vi.useRealTimers();
   });
 
-  it("stop while rejoined: skips committing partial text against the current leaf user message", async () => {
+  it("stop while rejoined: commits partial text against the current leaf user message", async () => {
     const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
 
     mockStoreState.chats = {
@@ -1474,13 +1482,27 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     mockStoreState.addMessage.mockClear();
+    mockPersist.mockClear();
 
     await act(async () => {
       result.current.stopStream();
       await Promise.resolve();
     });
 
-    expect(mockStoreState.addMessage).not.toHaveBeenCalled();
+    expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: "orphan partial",
+        parentId: "leaf-user-1",
+      }),
+    );
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        content: "orphan partial",
+        parentId: "leaf-user-1",
+      }),
+    );
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/chat/stop",
       expect.objectContaining({ method: "DELETE" }),
@@ -1923,8 +1945,20 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         await Promise.resolve();
       });
 
-      expect(mockStoreState.addMessage).not.toHaveBeenCalled();
-      expect(mockPersist).not.toHaveBeenCalled();
+      expect(mockStoreState.addMessage).toHaveBeenCalledWith(
+        "chat-1",
+        expect.objectContaining({
+          content: "tail",
+          parentId: "u1",
+        }),
+      );
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-1",
+        expect.objectContaining({
+          content: "tail",
+          parentId: "u1",
+        }),
+      );
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/chat/stop",
         expect.objectContaining({ method: "DELETE" }),

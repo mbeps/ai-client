@@ -13,7 +13,6 @@ import {
   updateChatKnowledgebase,
   useChatInitialSelections,
   useChatScrollToBottom,
-  useEnsureMcpServersLoaded,
 } from "@/components/chat/chat-ui-helpers";
 import { MessageThread } from "@/components/chat/message-thread";
 import { StreamingSection } from "@/components/chat/streaming-section";
@@ -71,7 +70,6 @@ export function ChatUI({
     setCurrentLeafDb,
     setKnowledgebaseDb,
     mcpServers,
-    loadMcpServers,
     assistants,
     userSettings,
     projects,
@@ -176,7 +174,6 @@ export function ChatUI({
   });
 
   const scrollRef = useChatScrollToBottom();
-  useEnsureMcpServersLoaded(mcpServers, loadMcpServers);
 
   useInitialChatAutoSend(
     chat,
@@ -243,6 +240,7 @@ export function ChatUI({
               onStop={stopStream}
               servers={allEnabledServers}
               activeChatAssistantId={chat?.assistantId}
+              systemPrompt={currentAssistant?.prompt ?? undefined}
               canMentionAssistant={checkCanMentionAssistant(
                 thread.length,
                 chat?.assistantId,

@@ -3,12 +3,16 @@ import type { Attachment } from "@/types/attachment/attachment";
 
 /**
  * Estimates token count for an attachment.
+ * Spreadsheets use a fixed estimate (~20 tokens) for injected spreadsheet reference tags.
  * Text files use string length estimation; images/binary use fixed vision tile estimates (~800 tokens).
  *
  * @param attachment - The attachment to estimate
  * @returns Estimated token count
  */
 export function estimateAttachmentTokens(attachment: Attachment): number {
+  if (attachment.type === "spreadsheet") {
+    return 20;
+  }
   if (attachment.type === "image") {
     return 800;
   }

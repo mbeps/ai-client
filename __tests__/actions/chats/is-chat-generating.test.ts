@@ -2,9 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockRequireSession = vi.hoisted(() => vi.fn());
 const mockFetchUserInngestRuns = vi.hoisted(() => vi.fn());
+const mockChatAbortRegistry = vi.hoisted(() => ({
+  has: vi.fn(),
+}));
 
 vi.mock("@/lib/auth/require-session", () => ({
   requireSession: mockRequireSession,
+}));
+
+vi.mock("@/lib/chat/chat-abort-registry", () => ({
+  chatAbortRegistry: mockChatAbortRegistry,
 }));
 
 vi.mock("@/lib/inngest/run-service", () => ({
@@ -25,10 +32,20 @@ import { isChatGenerating } from "@/actions/chats/is-chat-generating";
 describe("isChatGenerating server action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockChatAbortRegistry.has.mockReturnValue(false);
     mockRequireSession.mockResolvedValue({
       user: { id: "user-123" },
       session: { id: "session-123" },
     });
+  });
+
+  it("returns true immediately when chat is present in local chatAbortRegistry", async () => {
+    mockChatAbortRegistry.has.mockReturnValueOnce(true);
+
+    const result = await isChatGenerating("chat-123");
+    expect(result).toBe(true);
+    expect(mockChatAbortRegistry.has).toHaveBeenCalledWith("chat-123");
+    expect(mockFetchUserInngestRuns).not.toHaveBeenCalled();
   });
 
   it("returns true for a RUNNING chat job with matching entityId", async () => {
@@ -49,7 +66,7 @@ describe("isChatGenerating server action", () => {
     expect(result).toBe(true);
     expect(mockFetchUserInngestRuns).toHaveBeenCalledWith("user-123", {
       status: ["RUNNING", "QUEUED"],
-      limit: 20,
+      limit: 100,
     });
   });
 

@@ -116,26 +116,6 @@ export function resolveThread(
 }
 
 /**
- * Custom hook that provides use ensure mcp servers loaded functionality.
- *
- * @param mcpServers - Target mcp servers
- * @param loadMcpServers - Target load mcp servers
- * @returns Hook state and control handlers.
- * @author Maruf Bepary
- */
-export function useEnsureMcpServersLoaded(
-  mcpServers: { length: number },
-  loadMcpServers: () => Promise<unknown>,
-) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Load MCP servers once on mount
-  useEffect(() => {
-    if (mcpServers.length === 0) {
-      loadMcpServers().catch(() => {});
-    }
-  }, []);
-}
-
-/**
  * Custom hook that provides use chat scroll to bottom functionality.
  *
  * @returns Hook state and control handlers.

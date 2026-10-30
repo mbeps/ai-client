@@ -8,6 +8,7 @@ import {
   buildStreamExecutionConfig,
   extractFileAttachments,
   handleChatGenerationError,
+  isAbortError,
   loadChatExecutionResources,
   resolveOrchestratorMaxSteps,
   validateModelCapabilities,
@@ -21,7 +22,10 @@ import {
   needsFallbackSynthesis,
   runSynthesisFallbackPass,
 } from "@/lib/inngest/chat-response/chat-synthesis-pass";
-import { completeAssistantResponse } from "@/lib/inngest/chat-response/complete-assistant-response";
+import {
+  completeAssistantResponse,
+  persistAbortedAssistantResponse,
+} from "@/lib/inngest/chat-response/complete-assistant-response";
 import { buildOrchestratorToolSet } from "@/lib/inngest/chat-response/tool-set-builder";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
@@ -78,6 +82,21 @@ export const generateChatResponse = inngest.createFunction(
     const emit = createStreamEmitter(abortController.signal, ch.stream);
 
     let mcpCleanup: () => Promise<void> = async () => {};
+    let resolvedModelId = model ?? "";
+    let accumulatedText = "";
+    let accumulatedReasoning = "";
+    const completedTools: CompletedToolRecord[] = [];
+
+    const persistAbortedResponse = () =>
+      persistAbortedAssistantResponse({
+        chatId,
+        assistantMessageId,
+        userMessageId,
+        resolvedModelId,
+        accumulatedText,
+        accumulatedReasoning,
+        completedTools,
+      });
 
     try {
       await emit({ type: "start", messageId: assistantMessageId });
@@ -101,17 +120,29 @@ export const generateChatResponse = inngest.createFunction(
         capVision: resolved.modelRow.capVision,
         capTools: resolved.modelRow.capTools,
       };
-      const resolvedModelId = resolved.modelId;
+      resolvedModelId = resolved.modelId;
 
-      const {
-        mcpTools,
-        toolSourceMap,
-        mcpCleanup: registeredCleanup,
-      } = await registerMcpTools(ctx.servers as any, selectedTools);
-      mcpCleanup = registeredCleanup;
-
-      const hasExternalMcpTools = Object.keys(mcpTools).length > 0;
       const isToolCallingModel = !!resolvedModelRow?.capTools;
+      const hasExternalServers = (ctx.servers?.length ?? 0) > 0;
+
+      let mcpTools: Record<string, any> = {};
+      let toolSourceMap: Record<string, string> = {};
+
+      if (isToolCallingModel) {
+        const {
+          mcpTools: loadedTools,
+          toolSourceMap: loadedSourceMap,
+          mcpCleanup: registeredCleanup,
+        } = await registerMcpTools(ctx.servers as any, selectedTools);
+        mcpTools = loadedTools;
+        toolSourceMap = loadedSourceMap;
+        mcpCleanup = registeredCleanup;
+      }
+
+      const hasExternalMcpTools =
+        !isToolCallingModel && hasExternalServers
+          ? true
+          : Object.keys(mcpTools).length > 0;
 
       validateModelCapabilities({
         isToolCallingModel,
@@ -122,7 +153,13 @@ export const generateChatResponse = inngest.createFunction(
       });
 
       const fileAttachments = extractFileAttachments(thread);
-      const finalMessages = prepareChatMessages({ history: thread });
+      const maxContextTokens = resolved.modelRow?.contextWindow
+        ? Math.floor(resolved.modelRow.contextWindow * 0.85)
+        : undefined;
+      const finalMessages = prepareChatMessages({
+        history: thread,
+        maxContextTokens,
+      });
 
       const {
         allTools,
@@ -185,8 +222,6 @@ export const generateChatResponse = inngest.createFunction(
       );
       const safeUsage = Promise.resolve(result.usage).catch(() => undefined);
 
-      const completedTools: CompletedToolRecord[] = [];
-
       const streamState = await consumeModelStream(
         result.fullStream,
         abortController.signal,
@@ -195,16 +230,17 @@ export const generateChatResponse = inngest.createFunction(
         completedTools,
       );
 
+      accumulatedText = streamState.accumulatedText;
+      accumulatedReasoning = streamState.accumulatedReasoning;
+
       if (streamState.aborted) {
         log.info("Stream loop aborted by user (chatId: {chatId})", {
           chatId,
         });
         await deleteScratchpadFiles(assistantMessageId);
+        await persistAbortedResponse();
         return;
       }
-
-      let accumulatedText = streamState.accumulatedText;
-      let accumulatedReasoning = streamState.accumulatedReasoning;
 
       if (
         needsFallbackSynthesis(
@@ -235,6 +271,7 @@ export const generateChatResponse = inngest.createFunction(
           chatId,
         });
         await deleteScratchpadFiles(assistantMessageId);
+        await persistAbortedResponse();
         return;
       }
 
@@ -255,6 +292,9 @@ export const generateChatResponse = inngest.createFunction(
       });
     } catch (error: unknown) {
       await deleteScratchpadFiles(assistantMessageId);
+      if (isAbortError(error, abortController.signal)) {
+        await persistAbortedResponse();
+      }
       await handleChatGenerationError(
         error,
         abortController.signal,

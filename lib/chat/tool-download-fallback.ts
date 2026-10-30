@@ -24,7 +24,7 @@ interface ExecuteToolDownloadFallbackParams {
   completedTools: CompletedToolRecord[];
   activeTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
-  emit?: (event: any) => void;
+  emit?: (event: any) => Promise<unknown> | undefined;
 }
 
 const FILE_PATH_ARG_KEYS = [
@@ -369,14 +369,14 @@ export async function executeToolDownloadFallback(
       completedTools.push(fallbackRecord);
       addedRecords.push(fallbackRecord);
 
-      emit?.({
+      await emit?.({
         type: "tool-call",
         toolCallId: fallbackToolCallId,
         toolName: downloadToolName,
         args: toolArgs,
       });
 
-      emit?.({
+      await emit?.({
         type: "tool-result",
         toolCallId: fallbackToolCallId,
         toolName: downloadToolName,

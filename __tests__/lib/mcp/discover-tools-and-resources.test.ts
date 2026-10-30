@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { discoverToolsAndResources } from "@/lib/mcp/discover-tools-and-resources";
 
 const withMcpServerMock = vi.hoisted(() => vi.fn());
@@ -12,64 +12,77 @@ vi.mock("@/lib/mcp/with-timeout", () => ({
 }));
 
 describe("discoverToolsAndResources", () => {
-  it("discovers tools, resources, resource templates, and prompts successfully", async () => {
-    withMcpServerMock.mockImplementation(async (config, cb) => {
-      const client = {
-        listTools: vi.fn(),
-        listResources: vi.fn(),
-        listResourceTemplates: vi.fn(),
-        experimental_listPrompts: vi.fn(),
-      };
-      return cb(client);
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withTimeoutMock.mockImplementation((promise: any) => promise);
+  });
 
-    withTimeoutMock
-      .mockResolvedValueOnce({
-        tools: [
-          { name: "t1", description: "Tool 1", inputSchema: {} },
-          { name: "t2", inputSchema: {} },
-        ],
-        nextCursor: "cursor-1",
-      })
-      .mockResolvedValueOnce({
-        tools: [{ name: "t3", description: "Tool 3", inputSchema: {} }],
-        nextCursor: undefined,
-      })
-      .mockResolvedValueOnce({
-        resources: [
-          { uri: "res://1", name: "Res 1" },
-          { uri: "res://2", name: "Res 2", description: "Desc 2", mimeType: "text/plain" },
-        ],
-        nextCursor: "res-cursor-1",
-      })
-      .mockResolvedValueOnce({
-        resources: undefined,
-        nextCursor: undefined,
-      })
-      .mockResolvedValueOnce({
+  it("discovers tools, resources, resource templates, and prompts successfully", async () => {
+    const client = {
+      listTools: vi
+        .fn()
+        .mockResolvedValueOnce({
+          tools: [
+            { name: "t1", description: "Tool 1", inputSchema: {} },
+            { name: "t2", inputSchema: {} },
+          ],
+          nextCursor: "cursor-1",
+        })
+        .mockResolvedValueOnce({
+          tools: [{ name: "t3", description: "Tool 3", inputSchema: {} }],
+          nextCursor: undefined,
+        }),
+      listResources: vi
+        .fn()
+        .mockResolvedValueOnce({
+          resources: [
+            { uri: "res://1", name: "Res 1" },
+            {
+              uri: "res://2",
+              name: "Res 2",
+              description: "Desc 2",
+              mimeType: "text/plain",
+            },
+          ],
+          nextCursor: "res-cursor-1",
+        })
+        .mockResolvedValueOnce({
+          resources: undefined,
+          nextCursor: undefined,
+        }),
+      listResourceTemplates: vi.fn().mockResolvedValueOnce({
         resourceTemplates: [
           { uriTemplate: "res://{id}", name: "Template 1" },
-          { uriTemplate: "res://{id2}", name: "Template 2", description: "Tmpl 2", mimeType: "application/json" },
-        ],
-      })
-      .mockResolvedValueOnce({
-        prompts: [
           {
-            name: "p1",
-            description: "Prompt 1",
-            arguments: [
-              { name: "arg1", description: "Arg 1", required: true },
-              { name: "arg2" },
-            ],
+            uriTemplate: "res://{id2}",
+            name: "Template 2",
+            description: "Tmpl 2",
+            mimeType: "application/json",
           },
-          { name: "p2" },
         ],
-        nextCursor: "prompt-cursor-1",
-      })
-      .mockResolvedValueOnce({
-        prompts: undefined,
-        nextCursor: undefined,
-      });
+      }),
+      experimental_listPrompts: vi
+        .fn()
+        .mockResolvedValueOnce({
+          prompts: [
+            {
+              name: "p1",
+              description: "Prompt 1",
+              arguments: [
+                { name: "arg1", description: "Arg 1", required: true },
+                { name: "arg2" },
+              ],
+            },
+            { name: "p2" },
+          ],
+          nextCursor: "prompt-cursor-1",
+        })
+        .mockResolvedValueOnce({
+          prompts: undefined,
+          nextCursor: undefined,
+        }),
+    };
+    withMcpServerMock.mockImplementation(async (_config, cb) => cb(client as any));
 
     const result = await discoverToolsAndResources({ id: "s1", name: "Server" } as any);
 
@@ -86,65 +99,70 @@ describe("discoverToolsAndResources", () => {
   });
 
   it("handles server not supporting capabilities gracefully with Method not found / Server does not support", async () => {
-    withMcpServerMock.mockImplementation(async (config, cb) => {
-      const client = {
-        listTools: vi.fn(),
-        listResources: vi.fn(),
-        listResourceTemplates: vi.fn(),
-        experimental_listPrompts: vi.fn(),
-      };
-      return cb(client as any);
-    });
-
-    withTimeoutMock
-      .mockRejectedValueOnce(new Error("Server does not support tools"))
-      .mockRejectedValueOnce(new Error("Method not found"))
-      .mockRejectedValueOnce(new Error("Server does not support resources"))
-      .mockRejectedValueOnce(new Error("Server does not support prompts"));
+    const client = {
+      listTools: vi.fn().mockRejectedValue(new Error("Server does not support tools")),
+      listResources: vi.fn().mockRejectedValue(new Error("Method not found")),
+      listResourceTemplates: vi.fn().mockRejectedValue(new Error("Server does not support resources")),
+      experimental_listPrompts: vi.fn().mockRejectedValue(new Error("Server does not support prompts")),
+    };
+    withMcpServerMock.mockImplementation(async (_config, cb) => cb(client as any));
 
     const result = await discoverToolsAndResources({ id: "s1", name: "Server" } as any);
     expect(result).toEqual({ tools: [], resources: [], prompts: [] });
   });
 
   it("handles generic unexpected errors for all discovery steps", async () => {
-    withMcpServerMock.mockImplementation(async (config, cb) => {
-      const client = {
-        listTools: vi.fn(),
-        listResources: vi.fn(),
-        listResourceTemplates: vi.fn(),
-        experimental_listPrompts: vi.fn(),
-      };
-      return cb(client as any);
-    });
-
-    withTimeoutMock
-      .mockRejectedValueOnce("Network timeout string")
-      .mockRejectedValueOnce("Socket hangup string")
-      .mockRejectedValueOnce("String error in resource templates")
-      .mockRejectedValueOnce("Prompt crash string");
+    const client = {
+      listTools: vi.fn().mockRejectedValue("Network timeout string"),
+      listResources: vi.fn().mockRejectedValue("Socket hangup string"),
+      listResourceTemplates: vi.fn().mockRejectedValue("String error in resource templates"),
+      experimental_listPrompts: vi.fn().mockRejectedValue("Prompt crash string"),
+    };
+    withMcpServerMock.mockImplementation(async (_config, cb) => cb(client as any));
 
     const result = await discoverToolsAndResources({ id: "s1", name: "Server" } as any);
     expect(result).toEqual({ tools: [], resources: [], prompts: [] });
   });
 
   it("handles resourceTemplates result without resourceTemplates field", async () => {
-    withMcpServerMock.mockImplementation(async (config, cb) => {
-      const client = {
-        listTools: vi.fn(),
-        listResources: vi.fn(),
-        listResourceTemplates: vi.fn(),
-        experimental_listPrompts: vi.fn(),
-      };
-      return cb(client as any);
-    });
-
-    withTimeoutMock
-      .mockResolvedValueOnce({ tools: [] })
-      .mockResolvedValueOnce({ resources: [] })
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ prompts: [] });
+    const client = {
+      listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      listResources: vi.fn().mockResolvedValue({ resources: [] }),
+      listResourceTemplates: vi.fn().mockResolvedValue({}),
+      experimental_listPrompts: vi.fn().mockResolvedValue({ prompts: [] }),
+    };
+    withMcpServerMock.mockImplementation(async (_config, cb) => cb(client as any));
 
     const result = await discoverToolsAndResources({ id: "s1", name: "Server" } as any);
     expect(result).toEqual({ tools: [], resources: [], prompts: [] });
+  });
+
+  it("discovers tools, resources, and prompts concurrently via Promise.all", async () => {
+    let toolsFinished = false;
+    let promptsStartedConcurrently = false;
+
+    const client = {
+      listTools: vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            toolsFinished = true;
+            resolve({ tools: [] });
+          }, 30);
+        });
+      }),
+      listResources: vi.fn().mockResolvedValue({ resources: [] }),
+      listResourceTemplates: vi.fn().mockResolvedValue({ resourceTemplates: [] }),
+      experimental_listPrompts: vi.fn().mockImplementation(() => {
+        if (!toolsFinished) {
+          promptsStartedConcurrently = true;
+        }
+        return Promise.resolve({ prompts: [] });
+      }),
+    };
+    withMcpServerMock.mockImplementation(async (_config, cb) => cb(client as any));
+
+    await discoverToolsAndResources({ id: "s1", name: "Server" } as any);
+
+    expect(promptsStartedConcurrently).toBe(true);
   });
 });

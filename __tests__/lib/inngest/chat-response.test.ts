@@ -750,8 +750,13 @@ describe("generateChatResponse Inngest Function", () => {
         "Stream loop aborted by user (chatId: {chatId})",
         { chatId: "chat-loop-abort" },
       );
-      // Early return means nothing is persisted and no finish event is emitted
-      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockPersistResponse).toHaveBeenCalledWith({
+        assistantMessageId: expect.any(String),
+        chatId: "chat-loop-abort",
+        content: "partial",
+        parentId: "msg-1",
+        metadata: expect.stringContaining('"stopped":true'),
+      });
       expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
@@ -803,7 +808,13 @@ describe("generateChatResponse Inngest Function", () => {
         "Chat generation cleanly aborted by user (chatId: {chatId})",
         { chatId: "chat-post-loop-abort" },
       );
-      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockPersistResponse).toHaveBeenCalledWith({
+        assistantMessageId: expect.any(String),
+        chatId: "chat-post-loop-abort",
+        content: "first",
+        parentId: "msg-1",
+        metadata: expect.stringContaining('"stopped":true'),
+      });
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ type: "finish" }),
@@ -1497,6 +1508,7 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(mockPersistResponse).toHaveBeenCalled();
+      expect(mockRegisterMcpTools).not.toHaveBeenCalled();
     });
 
     it("resolves target kb IDs from activeKbIds array and handles undefined kbIsReady", async () => {

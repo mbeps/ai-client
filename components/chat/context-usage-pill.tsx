@@ -116,6 +116,8 @@ export function ContextUsagePill({
   systemPrompt,
   toolNames,
   mcpServerCount,
+  selectedSkillTokens,
+  availableSkillCount,
   className,
 }: ContextUsagePillProps) {
   const usage = useMemo(
@@ -128,6 +130,8 @@ export function ContextUsagePill({
         systemPrompt,
         toolNames,
         mcpServerCount,
+        selectedSkillTokens,
+        availableSkillCount,
       }),
     [
       thread,
@@ -137,6 +141,8 @@ export function ContextUsagePill({
       systemPrompt,
       toolNames,
       mcpServerCount,
+      selectedSkillTokens,
+      availableSkillCount,
     ],
   );
 

@@ -35,4 +35,23 @@ describe("ContextUsagePill", () => {
     expect(button.getAttribute("title")).toBeNull();
     expect(button.getAttribute("aria-label")).toMatch(/Context Window:/);
   });
+
+  it("factors selectedSkillTokens, availableSkillCount, and systemPrompt into token usage", () => {
+    // 64,000 tokens of skills on a 128,000 model should equal 50%
+    render(
+      <TooltipProvider>
+        <ContextUsagePill
+          selectedModel={mockModel}
+          systemPrompt="Custom instructions for assistant"
+          selectedSkillTokens={64000}
+          availableSkillCount={5}
+        />
+      </TooltipProvider>,
+    );
+
+    const button = screen.getByRole("button");
+    expect(button).toBeDefined();
+    // 64000 (skills) + 250 (catalog) + ~8 (prompt) = ~64258 / 128000 = 50%
+    expect(screen.getByText("50%")).toBeDefined();
+  });
 });

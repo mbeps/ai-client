@@ -80,13 +80,20 @@ function appendPieceToChunks(
   }
 
   if (acc.current) {
-    acc.chunks.push(acc.current);
-    acc.current = acc.current.slice(-overlap) + sep + piece;
-    if (piece.length > chunkSize || acc.current.length >= chunkSize) {
+    const previous = acc.current;
+    acc.chunks.push(previous.trim());
+
+    if (piece.length > chunkSize) {
       acc.chunks.push(
         ...splitOversizedPiece(piece, nextSeps, chunkSize, overlap),
       );
       acc.current = "";
+    } else {
+      const tail = overlap > 0 ? previous.slice(-overlap) : "";
+      acc.current =
+        tail && tail.length + sep.length + piece.length <= chunkSize
+          ? `${tail}${sep}${piece}`
+          : piece;
     }
     return;
   }

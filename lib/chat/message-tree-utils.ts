@@ -1,4 +1,5 @@
 import { isSpreadsheet as checkIsSpreadsheet } from "@/lib/attachments/is-spreadsheet";
+import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
@@ -21,16 +22,23 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
   );
 
   for (const m of sorted) {
-    messages[m.id] = {
-      id: m.id,
-      role: m.role as "user" | "assistant",
-      content: m.content,
-      createdAt: new Date(m.createdAt),
-      parentId: m.parentId,
-      childrenIds: [],
-      attachments: [],
-      metadata: m.metadata ?? null,
-    };
+    messages[m.id] = mapMessageFromDb(
+      {
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        parentId: m.parentId,
+        metadata:
+          typeof m.metadata === "string"
+            ? m.metadata
+            : m.metadata
+              ? JSON.stringify(m.metadata)
+              : null,
+        createdAt: new Date(m.createdAt),
+        chatId: row.id,
+      },
+      [],
+    );
   }
 
   for (const m of sorted) {
@@ -59,6 +67,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
         sizeBytes: att.size,
         dataUrl: "",
         key: att.key,
+        extractedText: att.extractedText ?? undefined,
       });
     }
   }

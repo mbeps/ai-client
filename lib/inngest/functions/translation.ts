@@ -13,6 +13,8 @@ import {
 } from "@/lib/inngest/translation-channel";
 import { getLogger } from "@/lib/logger";
 
+const DELTA_COALESCE_INTERVAL_MS = 40;
+
 const log = getLogger(["inngest", "workflow", "translation"]);
 
 /**
@@ -124,13 +126,29 @@ export const executeTranslationWorkflow = inngest.createFunction(
       });
 
       let accumulated = "";
-      for await (const chunk of result.textStream) {
-        accumulated += chunk;
+      let bufferedText = "";
+      let lastFlushTime = 0;
+
+      const flushTextDelta = async (): Promise<void> => {
+        if (bufferedText.length === 0) return;
+        const textToEmit = bufferedText;
+        bufferedText = "";
+        lastFlushTime = Date.now();
         await emit({
           type: "text-delta",
-          text: chunk,
+          text: textToEmit,
         });
+      };
+
+      for await (const chunk of result.textStream) {
+        accumulated += chunk;
+        bufferedText += chunk;
+        if (Date.now() - lastFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+          await flushTextDelta();
+        }
       }
+
+      await flushTextDelta();
 
       const finalTranslated = accumulated.trim();
 
