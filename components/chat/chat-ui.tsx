@@ -243,6 +243,7 @@ export function ChatUI({
               onStop={stopStream}
               servers={allEnabledServers}
               activeChatAssistantId={chat?.assistantId}
+              systemPrompt={currentAssistant?.prompt ?? undefined}
               canMentionAssistant={checkCanMentionAssistant(
                 thread.length,
                 chat?.assistantId,

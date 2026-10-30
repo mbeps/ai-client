@@ -227,6 +227,7 @@ interface ChatInputActionButtonsProps {
   selectedModelObj: any;
   input: string;
   attachments: Attachment[];
+  systemPrompt?: string;
   activeToolNames: string[];
   selectedServerCount: number;
   selectedSkillTokens: number;
@@ -258,6 +259,7 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
         selectedModel={props.selectedModelObj ?? undefined}
         input={props.input}
         draftAttachments={props.attachments}
+        systemPrompt={props.systemPrompt}
         toolNames={props.activeToolNames}
         mcpServerCount={props.selectedServerCount}
         selectedSkillTokens={props.selectedSkillTokens}
@@ -317,6 +319,7 @@ export interface ChatInputToolbarProps {
   selectedModelObj: any;
   input: string;
   attachments: Attachment[];
+  systemPrompt?: string;
   selectedSkillTokens: number;
   availableSkillCount: number;
   onCancel?: () => void;
@@ -383,6 +386,7 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
         selectedModelObj={props.selectedModelObj}
         input={props.input}
         attachments={props.attachments}
+        systemPrompt={props.systemPrompt}
         activeToolNames={activeToolNames}
         selectedServerCount={selectedServerCount}
         selectedSkillTokens={props.selectedSkillTokens}

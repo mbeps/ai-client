@@ -42,7 +42,15 @@ describe("buildChatFromRows", () => {
           content: "Hello",
           createdAt: new Date(Date.now() - 1000).toISOString(),
           parentId: null,
-          metadata: { custom: true },
+          metadata: JSON.stringify({ custom: true }),
+        },
+        {
+          id: "msg-1b",
+          role: "user",
+          content: "Hello again with object metadata",
+          createdAt: new Date(Date.now() - 500).toISOString(),
+          parentId: "msg-1",
+          metadata: { customObj: true } as any,
         },
         {
           id: "msg-2",
@@ -50,7 +58,7 @@ describe("buildChatFromRows", () => {
           content: "Hi there",
           createdAt: new Date().toISOString(),
           parentId: "msg-1",
-          metadata: null,
+          metadata: JSON.stringify({ reasoning: "Thinking deeply about this" }),
         },
         {
           id: "msg-3",
@@ -69,6 +77,7 @@ describe("buildChatFromRows", () => {
           mimeType: "image/png",
           size: 1024,
           key: "photos/photo.png",
+          extractedText: null,
         },
         {
           id: "att-1b",
@@ -77,6 +86,7 @@ describe("buildChatFromRows", () => {
           mimeType: "application/pdf",
           size: 1024,
           key: "docs/document.pdf",
+          extractedText: "Extracted document content here",
         },
         {
           id: "att-2",
@@ -85,6 +95,7 @@ describe("buildChatFromRows", () => {
           mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           size: 2048,
           key: "sheets/data.xlsx",
+          extractedText: "Sheet 1 data",
         },
         {
           id: "att-3",
@@ -93,6 +104,7 @@ describe("buildChatFromRows", () => {
           mimeType: "text/plain",
           size: 512,
           key: "text/orphan.txt",
+          extractedText: null,
         },
         {
           id: "att-4",
@@ -101,17 +113,25 @@ describe("buildChatFromRows", () => {
           mimeType: "text/plain",
           size: 512,
           key: "text/orphan2.txt",
+          extractedText: null,
         },
       ],
     };
 
     const chat = buildChatFromRows(raw);
-    expect(chat.messages["msg-1"].childrenIds).toEqual(["msg-2"]);
+    expect(chat.messages["msg-1"].childrenIds).toEqual(["msg-1b", "msg-2"]);
     expect(chat.messages["msg-2"].childrenIds).toEqual([]);
+    expect(chat.messages["msg-2"].reasoning).toBe("Thinking deeply about this");
     expect(chat.messages["msg-1"].attachments).toHaveLength(2);
     expect(chat.messages["msg-1"].attachments[0].type).toBe("image");
     expect(chat.messages["msg-1"].attachments[1].type).toBe("document");
+    expect(chat.messages["msg-1"].attachments[1].extractedText).toBe(
+      "Extracted document content here",
+    );
     expect(chat.messages["msg-2"].attachments[0].type).toBe("spreadsheet");
+    expect(chat.messages["msg-2"].attachments[0].extractedText).toBe(
+      "Sheet 1 data",
+    );
     expect(chat.projectId).toBe("proj-1");
     expect(chat.assistantId).toBe("asst-1");
     expect(chat.knowledgebaseId).toBe("kb-1");

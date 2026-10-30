@@ -102,6 +102,9 @@ export interface ChatInputProps {
   /** Active thread messages for live context token usage calculation. */
   thread?: Message[];
 
+  /** Optional system prompt for live context token usage calculation. */
+  systemPrompt?: string;
+
   /** Initial subagents enabled state. */
   initialSubagentsEnabled?: boolean;
 
@@ -293,6 +296,7 @@ export function ChatInput(props: ChatInputProps) {
         selectedModelObj={services.selectedModelObj}
         input={input}
         attachments={interaction.attachments.attachments}
+        systemPrompt={props.systemPrompt}
         selectedSkillTokens={interaction.selectedSkillTokens}
         availableSkillCount={interaction.availableSkillCount}
         onCancel={props.onCancel}

@@ -141,7 +141,13 @@ export const generateChatResponse = inngest.createFunction(
       });
 
       const fileAttachments = extractFileAttachments(thread);
-      const finalMessages = prepareChatMessages({ history: thread });
+      const maxContextTokens = resolved.modelRow?.contextWindow
+        ? Math.floor(resolved.modelRow.contextWindow * 0.85)
+        : undefined;
+      const finalMessages = prepareChatMessages({
+        history: thread,
+        maxContextTokens,
+      });
 
       const {
         allTools,
