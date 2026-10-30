@@ -116,7 +116,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
         await (loader as () => Promise<void>)();
         const loadErr = useAppStore.getState().loadError;
         const hasFailed =
-          loadErr?.toLowerCase().includes(res.toLowerCase()) ?? false;
+          loadErr?.toLowerCase() === `failed to load ${res.toLowerCase()}`;
         if (!hasFailed) {
           hydratedResources.add(res);
         } else {
