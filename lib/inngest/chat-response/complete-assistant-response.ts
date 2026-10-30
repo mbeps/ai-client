@@ -1,12 +1,54 @@
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
-import { buildAssistantMessageMetadata } from "@/lib/inngest/chat-response/chat-execution-config";
 import type { CompletedToolRecord } from "@/lib/inngest/chat-response/chat-response-types";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 
 const log = getLogger(["inngest", "chat", "response"]);
+
+/**
+ * Builds assistant message metadata payload for persistence.
+ * @author Maruf Bepary
+ */
+export function buildAssistantMessageMetadata({
+  modelId,
+  reasoning,
+  completedTools,
+  usage,
+  finishReason,
+  stopped,
+}: {
+  modelId: string;
+  reasoning: string;
+  completedTools: CompletedToolRecord[];
+  usage?: any;
+  finishReason?: string;
+  stopped?: boolean;
+}): string {
+  return JSON.stringify({
+    model: modelId,
+    reasoning,
+    toolCalls: completedTools.map((tc) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      args: tc.args,
+      ...(tc.serverName ? { serverName: tc.serverName } : {}),
+    })),
+    toolResults: completedTools.map((tc) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      result:
+        tc.result !== undefined
+          ? tc.result
+          : { error: "Tool execution was interrupted" },
+      ...(tc.serverName ? { serverName: tc.serverName } : {}),
+    })),
+    usage,
+    finishReason,
+    ...(stopped !== undefined ? { stopped } : {}),
+  });
+}
 
 /**
  * Represents complete assistant response params.
@@ -113,4 +155,55 @@ export async function completeAssistantResponse(
     "Chat response successfully generated and persisted (chatId: {chatId}, messageId: {assistantMessageId})",
     { chatId, assistantMessageId },
   );
+}
+
+/**
+ * Persists an aborted or stopped assistant response with partial content.
+ *
+ * @param params - Persist abort parameters
+ * @author Maruf Bepary
+ */
+export async function persistAbortedAssistantResponse(params: {
+  chatId: string;
+  assistantMessageId: string;
+  userMessageId: string;
+  resolvedModelId: string;
+  accumulatedText: string;
+  accumulatedReasoning: string;
+  completedTools: CompletedToolRecord[];
+}): Promise<void> {
+  const {
+    chatId,
+    assistantMessageId,
+    userMessageId,
+    resolvedModelId,
+    accumulatedText,
+    accumulatedReasoning,
+    completedTools,
+  } = params;
+
+  if (
+    !accumulatedText &&
+    !accumulatedReasoning &&
+    completedTools.length === 0
+  ) {
+    return;
+  }
+
+  const metadata = buildAssistantMessageMetadata({
+    modelId: resolvedModelId,
+    reasoning: accumulatedReasoning,
+    completedTools,
+    usage: undefined,
+    finishReason: "stop",
+    stopped: true,
+  });
+
+  await persistAssistantResponse({
+    chatId,
+    assistantMessageId,
+    content: accumulatedText,
+    parentId: userMessageId,
+    metadata,
+  });
 }

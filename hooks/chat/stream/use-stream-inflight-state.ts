@@ -4,8 +4,36 @@ import type {
 } from "@/hooks/chat/stream/use-stream-types";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
+type InflightStreamPayload = {
+  text: string;
+  reasoning: string;
+  toolCalls: ToolCallState[];
+  assistantMessageId: string | null;
+};
+
+const INFLIGHT_THROTTLE_MS = 250;
+const inflightTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingInflightPayloads = new Map<string, InflightStreamPayload>();
+
+/**
+ * Flushes pending in-flight state immediately to sessionStorage.
+ *
+ * @param chatId - Chat identifier
+ * @author Maruf Bepary
+ */
+function flushInflightState(chatId: string) {
+  const payload = pendingInflightPayloads.get(chatId);
+  pendingInflightPayloads.delete(chatId);
+  inflightTimers.delete(chatId);
+  if (!payload) return;
+  try {
+    sessionStorage.setItem(`chat_inflight_${chatId}`, JSON.stringify(payload));
+  } catch {}
+}
+
 /**
  * Saves in-flight streaming state to sessionStorage for reconnection resiliency.
+ * Writes are throttled to at most once every 250ms per chatId.
  *
  * @param chatId - Chat identifier
  * @param state - Current text, reasoning, and tool call state
@@ -13,16 +41,15 @@ import type { ToolCallState } from "@/types/tool/tool-call";
  */
 export function saveInflightState(
   chatId: string,
-  state: {
-    text: string;
-    reasoning: string;
-    toolCalls: ToolCallState[];
-    assistantMessageId: string | null;
-  },
+  state: InflightStreamPayload,
 ) {
-  try {
-    sessionStorage.setItem(`chat_inflight_${chatId}`, JSON.stringify(state));
-  } catch {}
+  pendingInflightPayloads.set(chatId, state);
+  if (inflightTimers.has(chatId)) return;
+
+  const timer = setTimeout(() => {
+    flushInflightState(chatId);
+  }, INFLIGHT_THROTTLE_MS);
+  inflightTimers.set(chatId, timer);
 }
 
 /**
@@ -43,11 +70,18 @@ function loadInflightState(chatId: string) {
 
 /**
  * Clears in-flight streaming state from sessionStorage when stream finishes or stops.
+ * Cancels any active throttle timer for this chat session.
  *
  * @param chatId - Chat identifier
  * @author Maruf Bepary
  */
 export function clearInflightState(chatId: string) {
+  const timer = inflightTimers.get(chatId);
+  if (timer) {
+    clearTimeout(timer);
+    inflightTimers.delete(chatId);
+  }
+  pendingInflightPayloads.delete(chatId);
   try {
     sessionStorage.removeItem(`chat_inflight_${chatId}`);
   } catch {}

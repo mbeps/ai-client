@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { isChatGenerating } from "@/actions/chats/is-chat-generating";
 import { clearInflightState } from "@/hooks/chat/stream/use-stream-inflight-state";
 import type { StreamRefsObject } from "@/hooks/chat/stream/use-stream-types";
 import { logger } from "@/lib/logger";
@@ -81,6 +82,11 @@ async function executeWatchdogTick(params: {
       attempts: params.attempts,
     })
   ) {
+    if (!params.isConnectionError) {
+      const isGenerating = await isChatGenerating(params.chatId);
+      if (isGenerating) return;
+    }
+
     clearInflightState(params.chatId);
     clearInterval(params.interval);
     params.setIsStreaming(false);

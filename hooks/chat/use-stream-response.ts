@@ -182,8 +182,13 @@ export function useStreamResponse(
   const isStreamingReasoning =
     isStreaming && !!streamingReasoning && !streamingContent;
 
-  const stopStream = useCallback(() => {
-    executeStopStream(chatId, addMessage, resetStreamingState, streamRefs);
+  const stopStream = useCallback(async () => {
+    await executeStopStream(
+      chatId,
+      addMessage,
+      resetStreamingState,
+      streamRefs,
+    );
   }, [chatId, addMessage, resetStreamingState, streamRefs]);
 
   const streamResponse = useCallback(

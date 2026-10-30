@@ -14,6 +14,7 @@ export function buildAssistantFinishMetadata({
   usage,
   finishReason,
   durationMs,
+  stopped,
 }: {
   model: string;
   reasoning: string;
@@ -22,6 +23,7 @@ export function buildAssistantFinishMetadata({
   usage?: unknown;
   finishReason?: string;
   durationMs?: number;
+  stopped?: boolean;
 }): string {
   return JSON.stringify({
     model,
@@ -35,5 +37,6 @@ export function buildAssistantFinishMetadata({
     usage,
     finishReason,
     durationMs,
+    ...(stopped !== undefined ? { stopped } : {}),
   });
 }
