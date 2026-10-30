@@ -137,3 +137,322 @@ describe("persistMessage - Conflict & Model Preservation", () => {
   });
 });
 
+describe("persistMessage - metadata merge branches", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    chainable.select.mockReturnValue(chainable);
+    chainable.from.mockReturnValue(chainable);
+    chainable.where.mockReturnValue(chainable);
+    chainable.insert.mockReturnValue(chainable);
+    chainable.values.mockReturnValue(chainable);
+    chainable.onConflictDoUpdate.mockReturnValue(chainable);
+    chainable.returning.mockReturnValue(chainable);
+    chainable.update.mockReturnValue(chainable);
+    chainable.set.mockReturnValue(chainable);
+  });
+
+  function stubDb(returningRow: Record<string, unknown>) {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([]);
+    chainable.returning.mockResolvedValueOnce([returningRow]);
+  }
+
+  it("keeps incoming metadata when no existing message (existing null)", async () => {
+    stubDb({ id: MSG_UUID });
+    const metadata = JSON.stringify({ model: "m1" });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata }),
+    );
+  });
+
+  it("returns null metadata when both existing and incoming are null", async () => {
+    stubDb({ id: MSG_UUID });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: null,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: null }),
+    );
+  });
+
+  it("keeps existing metadata when incoming is null", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, metadata: JSON.stringify({ model: "old" }) },
+    ]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: null,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: JSON.stringify({ model: "old" }) }),
+    );
+  });
+
+  it("returns incoming metadata raw when existing metadata is not valid JSON", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, metadata: "not-json{{" },
+    ]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+    const incoming = JSON.stringify({ model: "new" });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: incoming,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: incoming }),
+    );
+  });
+
+  it("preserves existing model when incoming model is falsy", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, metadata: JSON.stringify({ model: "gpt-4o" }) },
+    ]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({ model: "" }),
+    });
+
+    const saved = JSON.parse(
+      (chainable.values.mock.calls[0][0] as { metadata: string }).metadata,
+    );
+    expect(saved.model).toBe("gpt-4o");
+  });
+
+  it("does not overwrite incoming model when it is present", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, metadata: JSON.stringify({ model: "old" }) },
+    ]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({ model: "new" }),
+    });
+
+    const saved = JSON.parse(
+      (chainable.values.mock.calls[0][0] as { metadata: string }).metadata,
+    );
+    expect(saved.model).toBe("new");
+  });
+});
+
+describe("persistMessage - preserveServerNames", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    chainable.select.mockReturnValue(chainable);
+    chainable.from.mockReturnValue(chainable);
+    chainable.where.mockReturnValue(chainable);
+    chainable.insert.mockReturnValue(chainable);
+    chainable.values.mockReturnValue(chainable);
+    chainable.onConflictDoUpdate.mockReturnValue(chainable);
+    chainable.returning.mockReturnValue(chainable);
+    chainable.update.mockReturnValue(chainable);
+    chainable.set.mockReturnValue(chainable);
+  });
+
+  function stubDb(existingMeta: unknown, incomingMeta: unknown) {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, metadata: JSON.stringify(existingMeta) },
+    ]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+    return incomingMeta;
+  }
+
+  function savedMetadata(): Record<string, unknown> {
+    return JSON.parse(
+      (chainable.values.mock.calls[0][0] as { metadata: string }).metadata,
+    );
+  }
+
+  it("copies serverName from existing toolCalls into incoming items missing it", async () => {
+    stubDb(
+      {
+        toolCalls: [
+          { toolCallId: "tc-1", serverName: "srv-a" },
+          { toolCallId: "tc-2", serverName: "srv-b" },
+        ],
+        toolResults: [{ toolCallId: "tc-1", serverName: "srv-a" }],
+      },
+      {
+        toolCalls: [
+          { toolCallId: "tc-1" },
+          { toolCallId: "tc-2", serverName: "kept" },
+          { toolCallId: "tc-3" },
+          "not-an-object",
+          { toolCallId: 42 },
+        ],
+        toolResults: [{ toolCallId: "tc-1" }],
+      },
+    );
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({
+        toolCalls: [
+          { toolCallId: "tc-1" },
+          { toolCallId: "tc-2", serverName: "kept" },
+          { toolCallId: "tc-3" },
+          "not-an-object",
+          { toolCallId: 42 },
+        ],
+        toolResults: [{ toolCallId: "tc-1" }],
+      }),
+    });
+
+    const saved = savedMetadata();
+    expect(saved.toolCalls).toEqual([
+      { toolCallId: "tc-1", serverName: "srv-a" },
+      { toolCallId: "tc-2", serverName: "kept" },
+      { toolCallId: "tc-3" },
+      "not-an-object",
+      { toolCallId: 42 },
+    ]);
+    expect(saved.toolResults).toEqual([
+      { toolCallId: "tc-1", serverName: "srv-a" },
+    ]);
+  });
+
+  it("skips serverName copy when existing item has no serverName", async () => {
+    stubDb(
+      { toolCalls: [{ toolCallId: "tc-1" }] },
+      { toolCalls: [{ toolCallId: "tc-1" }] },
+    );
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({ toolCalls: [{ toolCallId: "tc-1" }] }),
+    });
+
+    expect(savedMetadata().toolCalls).toEqual([{ toolCallId: "tc-1" }]);
+  });
+
+  it("skips preserveServerNames when existing toolCalls is not an array", async () => {
+    stubDb({ toolCalls: "nope" }, { toolCalls: [{ toolCallId: "tc-1" }] });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({ toolCalls: [{ toolCallId: "tc-1" }] }),
+    });
+
+    expect(savedMetadata().toolCalls).toEqual([{ toolCallId: "tc-1" }]);
+  });
+
+  it("skips preserveServerNames when incoming toolResults is not an array", async () => {
+    stubDb(
+      { toolResults: [{ toolCallId: "tc-1", serverName: "srv" }] },
+      { toolResults: "nope" },
+    );
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: JSON.stringify({ toolResults: "nope" }),
+    });
+
+    expect(savedMetadata().toolResults).toBe("nope");
+  });
+
+  it("handles null metadata on existing row without crashing", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([{ id: MSG_UUID, metadata: null }]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+    const incoming = JSON.stringify({ model: "m" });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: incoming,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: incoming }),
+    );
+  });
+
+  it("throws Not Found when chat does not exist or is not owned", async () => {
+    chainable.where.mockResolvedValueOnce([]);
+
+    await expect(
+      persistMessage(CHAT_UUID, {
+        id: MSG_UUID,
+        role: "assistant",
+        content: "hi",
+        parentId: null,
+        metadata: null,
+      }),
+    ).rejects.toThrow("Not Found");
+    expect(chainable.insert).not.toHaveBeenCalled();
+  });
+
+  it("treats non-array existing rows as no existing message", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce(undefined as unknown as never[]);
+    chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
+    const incoming = JSON.stringify({ model: "m" });
+
+    await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: incoming,
+    });
+
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: incoming }),
+    );
+  });
+});
+

@@ -195,6 +195,119 @@ describe("getAttachmentArtifact action", () => {
     expect(result.content).toContain("Binary preview is not supported for this file type (PDF)");
   });
 
+  it("resolves svg image mime when extension is svg but mime is not image/*", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/icon.svg",
+        name: "icon.svg",
+        mimeType: "text/plain",
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("<svg/>"));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toBe(
+      "![icon.svg](data:image/svg+xml;base64,PHN2Zy8+)",
+    );
+  });
+
+  it("derives image mime from extension when mime is not image/*", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/photo.webp",
+        name: "photo.webp",
+        mimeType: "application/octet-stream",
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("webp-bytes"));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toBe(
+      "![photo.webp](data:image/webp;base64,d2VicC1ieXRlcw==)",
+    );
+  });
+
+  it("returns binary notice for audio files", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/voice.mp3",
+        name: "voice.mp3",
+        mimeType: "audio/mpeg",
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("audio-bytes"));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toContain("Binary preview is not supported");
+  });
+
+  it("returns binary notice for archive mime with extensionless name", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/archive",
+        name: "archive",
+        mimeType: "application/zip",
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("zip-bytes"));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toContain("Binary preview is not supported");
+    expect(result.content).toContain("(binary)");
+  });
+
+  it("wraps json mime text files in code fence", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/config",
+        name: "config",
+        mimeType: "application/json",
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from('{"a":1}'));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toContain('```\n{"a":1}\n```');
+  });
+
+  it("treats null mimeType as empty string and returns raw text", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: VALID_UUID,
+        key: "attachments/user-1/notes.txt",
+        name: "notes.txt",
+        mimeType: null,
+      },
+    ]);
+
+    downloadObjectMock.mockResolvedValueOnce(Buffer.from("plain notes"));
+
+    const result = await getAttachmentArtifact(VALID_UUID);
+
+    expect(result.type).toBe("markdown");
+    expect(result.content).toBe("plain notes");
+  });
+
   it("throws Error if attachment not found or owned by different user", async () => {
     chainable.where.mockResolvedValueOnce([]);
 

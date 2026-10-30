@@ -355,5 +355,141 @@ describe("executeStopStream", () => {
     const parsed = JSON.parse(addMessage.mock.calls[0][1].metadata);
     expect(parsed.model).toBe("anthropic/claude-3-7-sonnet");
   });
+
+  it("falls back to userSettings defaultChatModelId when chat has no messages", async () => {
+    useAppStore.setState({
+      chats: {
+        "chat-no-msgs": {
+          id: "chat-no-msgs",
+          currentLeafId: null,
+        },
+      },
+      userSettings: {
+        defaultChatModelId: "default-model-x",
+      } as any,
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial" },
+      pendingRef: { current: { userMessageId: "u1", model: "" } },
+    });
+
+    await executeStopStream(
+      "chat-no-msgs",
+      addMessage,
+      resetStreamingState,
+      refs as any,
+    );
+
+    const parsed = JSON.parse(addMessage.mock.calls[0][1].metadata);
+    expect(parsed.model).toBe("default-model-x");
+  });
+
+  it("falls back to empty model string when no prior model and no user setting", async () => {
+    useAppStore.setState({
+      chats: {
+        "chat-junk-meta": {
+          id: "chat-junk-meta",
+          currentLeafId: "u1",
+          messages: {
+            u0: {
+              id: "u0",
+              role: "assistant",
+              metadata: JSON.stringify({ finishReason: "stop" }),
+            },
+            m1: {
+              id: "m1",
+              role: "user",
+              metadata: JSON.stringify({ model: "should-be-ignored" }),
+            },
+            u1: { id: "u1", role: "user" },
+          },
+        },
+      },
+      userSettings: null,
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial" },
+      pendingRef: { current: { userMessageId: "u1", model: "" } },
+    });
+
+    await executeStopStream(
+      "chat-junk-meta",
+      addMessage,
+      resetStreamingState,
+      refs as any,
+    );
+
+    const parsed = JSON.parse(addMessage.mock.calls[0][1].metadata);
+    expect(parsed.model).toBe("");
+  });
+
+  it("resolves user message id from a user-role leaf when pending id is null", async () => {
+    useAppStore.setState({
+      chats: {
+        "chat-leaf-user": {
+          id: "chat-leaf-user",
+          currentLeafId: "u9",
+          messages: {
+            u9: { id: "u9", role: "user" },
+          },
+        },
+      },
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial" },
+      pendingRef: { current: { userMessageId: null, model: "gpt-4o" } },
+    });
+
+    await executeStopStream(
+      "chat-leaf-user",
+      addMessage,
+      resetStreamingState,
+      refs as any,
+    );
+
+    expect(addMessage).toHaveBeenCalledWith(
+      "chat-leaf-user",
+      expect.objectContaining({ parentId: "u9" }),
+    );
+  });
+
+  it("skips persistence when the chat has no currentLeafId and pending id is null", async () => {
+    useAppStore.setState({
+      chats: {
+        "chat-no-leaf": {
+          id: "chat-no-leaf",
+          messages: {
+            u1: { id: "u1", role: "user" },
+          },
+        },
+      },
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial" },
+      pendingRef: { current: { userMessageId: null, model: "gpt-4o" } },
+    });
+
+    await executeStopStream(
+      "chat-no-leaf",
+      addMessage,
+      resetStreamingState,
+      refs as any,
+    );
+
+    expect(addMessage).not.toHaveBeenCalled();
+    expect(mockPersistMessage).not.toHaveBeenCalled();
+  });
 });
 

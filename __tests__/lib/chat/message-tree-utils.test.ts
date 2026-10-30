@@ -137,4 +137,37 @@ describe("buildChatFromRows", () => {
     expect(chat.knowledgebaseId).toBe("kb-1");
     expect(chat.createdAt).toEqual(new Date("2024-01-01T00:00:00.000Z"));
   });
+
+  it("returns null metadata when serialising an object row throws", () => {
+    // Covers the catch arm of serializeRowMetadata: a circular object row
+    // makes JSON.stringify throw, so the message must fall back to null
+    // metadata instead of crashing.
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    const raw = {
+      id: "chat-1",
+      title: "Test Chat",
+      projectId: null,
+      assistantId: null,
+      projectName: null,
+      assistantName: null,
+      updatedAt: new Date().toISOString(),
+      currentLeafId: null,
+      messages: [
+        {
+          id: "msg-1",
+          role: "user",
+          content: "Hello",
+          createdAt: new Date().toISOString(),
+          parentId: null,
+          metadata: circular,
+        },
+      ],
+      attachments: [],
+    };
+
+    const chat = buildChatFromRows(raw);
+    expect(chat.messages["msg-1"].metadata).toBeNull();
+  });
 });

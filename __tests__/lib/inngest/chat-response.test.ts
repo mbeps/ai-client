@@ -1396,6 +1396,96 @@ describe("generateChatResponse Inngest Function", () => {
       expect(call.stopWhen).toBe(mockIsStepCount.mock.results[0].value);
       expect(mockIsStepCount).toHaveBeenCalled();
     });
+
+    /**
+     * Covers the `Array.isArray(servers) ? servers.length : 0` fallback in
+     * setupChatMcpTools: a non-tool-calling model whose `servers` value is not
+     * an array must still resolve hasExternalMcpTools to false without
+     * throwing, and must not register any MCP tools.
+     */
+    it("treats a non-array servers value as zero external servers for a non-tool-calling model", async () => {
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "plain-chat",
+        modelRow: { capVision: true, capTools: false },
+        sdkProvider: { chat: () => () => {} },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: "not-an-array" as any,
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        assistantRow: null,
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "msg-1", role: "user", content: "just chat", attachments: [] },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-non-array-servers",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "plain-chat",
+          },
+        },
+      });
+
+      // No MCP tools were registered and no capability error was raised.
+      expect(mockRegisterMcpTools).not.toHaveBeenCalled();
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-non-array-servers",
+          content: "Hello there!",
+        }),
+      );
+    });
+
+    /**
+     * Covers the truthy arm of `resolved.modelRow?.contextWindow ? ... :
+     * undefined`: a model row with a contextWindow must derive
+     * maxContextTokens as 85% of the window for prepareChatMessages.
+     */
+    it("derives maxContextTokens from the model context window", async () => {
+      const prepareSpy = vi.spyOn(
+        await import("@/lib/chat/prepare-chat-messages"),
+        "prepareChatMessages",
+      );
+
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "gpt-4o",
+        modelRow: {
+          capVision: true,
+          capTools: true,
+          contextWindow: 10000,
+        },
+        sdkProvider: { chat: () => () => {} },
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-context-window",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(prepareSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ maxContextTokens: 8500 }),
+      );
+      prepareSpy.mockRestore();
+    });
   });
 
   describe("stream chunk dispatch", () => {

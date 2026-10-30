@@ -260,19 +260,7 @@ export async function consumeModelStream(
   toolSourceMap: Record<string, string>,
   completedTools: CompletedToolRecord[],
 ): Promise<ConsumeModelStreamResult> {
-  const ctx: DeltaStreamContext = {
-    accumulatedText: "",
-    accumulatedReasoning: "",
-    bufferedText: "",
-    bufferedReasoning: "",
-    lastTextFlushTime: 0,
-    lastReasoningFlushTime: 0,
-    flushReasoning: async () => {},
-    flushText: async () => {},
-    flushDeltas: async () => {},
-  };
-
-  ctx.flushReasoning = async (): Promise<void> => {
+  const flushReasoning = async (): Promise<void> => {
     if (ctx.bufferedReasoning.length === 0) return;
     const reasoningToEmit = ctx.bufferedReasoning;
     ctx.bufferedReasoning = "";
@@ -280,7 +268,7 @@ export async function consumeModelStream(
     await emit({ type: "reasoning-delta", reasoning: reasoningToEmit });
   };
 
-  ctx.flushText = async (): Promise<void> => {
+  const flushText = async (): Promise<void> => {
     if (ctx.bufferedText.length === 0) return;
     const textToEmit = ctx.bufferedText;
     ctx.bufferedText = "";
@@ -288,9 +276,21 @@ export async function consumeModelStream(
     await emit({ type: "text-delta", text: textToEmit });
   };
 
-  ctx.flushDeltas = async (): Promise<void> => {
-    await ctx.flushReasoning();
-    await ctx.flushText();
+  const flushDeltas = async (): Promise<void> => {
+    await flushReasoning();
+    await flushText();
+  };
+
+  const ctx: DeltaStreamContext = {
+    accumulatedText: "",
+    accumulatedReasoning: "",
+    bufferedText: "",
+    bufferedReasoning: "",
+    lastTextFlushTime: 0,
+    lastReasoningFlushTime: 0,
+    flushReasoning,
+    flushText,
+    flushDeltas,
   };
 
   for await (const chunk of fullStream) {
