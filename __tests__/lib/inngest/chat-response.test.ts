@@ -52,6 +52,9 @@ vi.mock("ai", () => ({
 
 const mockMcpCleanup = vi.hoisted(() => vi.fn(async () => {}));
 const mockRegisterMcpTools = vi.hoisted(() => vi.fn());
+const mockDeleteScratchpadFiles = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
 const mockIsStepCount = vi.hoisted(() => vi.fn(() => ({ isStepCount: true })));
 const abortState = vi.hoisted(() => ({
   controller: undefined as AbortController | undefined,
@@ -74,6 +77,10 @@ vi.mock("@/lib/chat/chat-abort-registry", () => ({
 // are scoped or the artifact tool is explicitly selected.
 vi.mock("@/lib/chat/register-mcp-tools", () => ({
   registerMcpTools: mockRegisterMcpTools,
+}));
+
+vi.mock("@/lib/subagents/delete-scratchpad-files", () => ({
+  deleteScratchpadFiles: mockDeleteScratchpadFiles,
 }));
 
 // Dual export shape per .agents/testing.md: domain-scoped getLogger plus the
@@ -270,6 +277,7 @@ describe("generateChatResponse Inngest Function", () => {
         message: "Context load failed",
       }),
     );
+    expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
   });
 
   it("publishes error event with classified code when provider error matches known pattern", async () => {
@@ -744,6 +752,7 @@ describe("generateChatResponse Inngest Function", () => {
       );
       // Early return means nothing is persisted and no finish event is emitted
       expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ type: "text-delta", text: "unreachable" }),
@@ -784,6 +793,7 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(result).toBeUndefined();
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
       // The first chunk was emitted, then the guard returned before persisting
       expect(inngest.realtime.publish).toHaveBeenCalledWith(
         expect.anything(),

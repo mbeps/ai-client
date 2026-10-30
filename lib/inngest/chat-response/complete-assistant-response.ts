@@ -4,6 +4,7 @@ import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import { buildAssistantMessageMetadata } from "@/lib/inngest/chat-response/chat-execution-config";
 import type { CompletedToolRecord } from "@/lib/inngest/chat-response/chat-response-types";
 import { getLogger } from "@/lib/logger";
+import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -80,6 +81,7 @@ export async function completeAssistantResponse(
       "Chat generation cleanly aborted before persistence (chatId: {chatId})",
       { chatId },
     );
+    await deleteScratchpadFiles(assistantMessageId);
     return;
   }
 
@@ -97,6 +99,7 @@ export async function completeAssistantResponse(
       "Chat was deleted concurrently; skipping completion emit (chatId: {chatId})",
       { chatId },
     );
+    await deleteScratchpadFiles(assistantMessageId);
     return;
   }
 

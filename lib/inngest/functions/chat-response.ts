@@ -25,6 +25,7 @@ import { completeAssistantResponse } from "@/lib/inngest/chat-response/complete-
 import { buildOrchestratorToolSet } from "@/lib/inngest/chat-response/tool-set-builder";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -198,6 +199,7 @@ export const generateChatResponse = inngest.createFunction(
         log.info("Stream loop aborted by user (chatId: {chatId})", {
           chatId,
         });
+        await deleteScratchpadFiles(assistantMessageId);
         return;
       }
 
@@ -232,6 +234,7 @@ export const generateChatResponse = inngest.createFunction(
         log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
           chatId,
         });
+        await deleteScratchpadFiles(assistantMessageId);
         return;
       }
 
@@ -251,6 +254,7 @@ export const generateChatResponse = inngest.createFunction(
         emit,
       });
     } catch (error: unknown) {
+      await deleteScratchpadFiles(assistantMessageId);
       await handleChatGenerationError(
         error,
         abortController.signal,

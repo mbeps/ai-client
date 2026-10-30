@@ -122,13 +122,13 @@ describe("scratchpad-service", () => {
   });
 
   describe("listScratchpadFiles", () => {
-    it("lists files with calculated sizeBytes", async () => {
+    it("lists files with projected sizeBytes without transferring full content column", async () => {
       const sample = {
         id: "sp-1",
         filePath: "notes/plan.md",
-        content: "# Plan",
         writtenByRole: "planner",
         version: 1,
+        sizeBytes: 6,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -140,9 +140,45 @@ describe("scratchpad-service", () => {
       mockDb.select.mockReturnValue(selectChain);
 
       const res = await listScratchpadFiles("msg-1");
+
+      const selectFields = mockDb.select.mock.calls[0][0];
+      expect(selectFields).toHaveProperty("sizeBytes");
+      expect(selectFields).not.toHaveProperty("content");
+
       expect(res).toHaveLength(1);
       expect(res[0]?.sizeBytes).toBe(6);
       expect(res[0]?.filePath).toBe("notes/plan.md");
+    });
+
+    it("safely coerces string or null sizeBytes to number", async () => {
+      const sample = {
+        id: "sp-2",
+        filePath: "notes/calc.md",
+        writtenByRole: "researcher",
+        version: 1,
+        sizeBytes: "42",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const nullSample = {
+        id: "sp-3",
+        filePath: "notes/empty.md",
+        writtenByRole: "researcher",
+        version: 1,
+        sizeBytes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const selectChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([sample, nullSample]),
+      };
+      mockDb.select.mockReturnValue(selectChain);
+
+      const res = await listScratchpadFiles("msg-2");
+      expect(res[0]?.sizeBytes).toBe(42);
+      expect(res[1]?.sizeBytes).toBe(0);
     });
   });
 });

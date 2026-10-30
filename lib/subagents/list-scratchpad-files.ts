@@ -1,9 +1,11 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { subagentScratchpad } from "@/drizzle/schemas/subagent-schema";
 
 /**
  * Lists all scratchpad files recorded for a message turn.
+ * Uses SQL `octet_length` projection to calculate byte sizes without transferring
+ * up to 2MB of raw text content per row across the database boundary.
  *
  * @param messageId - Target message id
  * @returns The resolved result
@@ -29,9 +31,9 @@ export async function listScratchpadFiles(messageId: string): Promise<
     .select({
       id: subagentScratchpad.id,
       filePath: subagentScratchpad.filePath,
-      content: subagentScratchpad.content,
       writtenByRole: subagentScratchpad.writtenByRole,
       version: subagentScratchpad.version,
+      sizeBytes: sql<number>`octet_length(${subagentScratchpad.content})`,
       createdAt: subagentScratchpad.createdAt,
       updatedAt: subagentScratchpad.updatedAt,
     })
@@ -43,7 +45,7 @@ export async function listScratchpadFiles(messageId: string): Promise<
     filePath: r.filePath,
     writtenByRole: r.writtenByRole,
     version: r.version,
-    sizeBytes: Buffer.byteLength(r.content, "utf8"),
+    sizeBytes: Number(r.sizeBytes) || 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   }));

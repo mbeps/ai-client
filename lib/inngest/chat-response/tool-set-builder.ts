@@ -98,6 +98,7 @@ function buildSubagentDispatchTools(params: {
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
+  scratchpadContext?: { chatId: string; messageId: string };
 }): Record<string, any> {
   if (!params.isSubagentDelegationEnabled) {
     return {};
@@ -111,6 +112,7 @@ function buildSubagentDispatchTools(params: {
       customWorkerModel,
       availableTools: params.orchestratorActiveTools,
       maxSteps: env.CHAT_MAX_STEPS,
+      scratchpadContext: params.scratchpadContext,
     }),
   };
 }
@@ -216,6 +218,10 @@ export function buildOrchestratorToolSet(
     resolved,
     resolvedModelId,
     workerResolved,
+    scratchpadContext: {
+      chatId,
+      messageId: assistantMessageId,
+    },
   });
 
   const allTools = Object.assign(
