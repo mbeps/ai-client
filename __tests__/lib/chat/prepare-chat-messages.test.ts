@@ -20,6 +20,7 @@ import {
   estimateModelMessageTokens,
   prepareChatMessages,
 } from "@/lib/chat/prepare-chat-messages";
+import { env } from "@/config/env";
 
 function thread(n: number) {
   return Array.from({ length: n }, (_, i) => ({
@@ -196,6 +197,100 @@ describe("prepareChatMessages — history truncation (T4A.3)", () => {
       const tokens = estimateModelMessageTokens(msg);
       // 800 + 800 for files/images plus text tokens
       expect(tokens).toBeGreaterThan(1600);
+    });
+
+    it("estimates tokens for AI SDK v7 output and input tool parts", () => {
+      const msgWithOutput: any = {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "call_1",
+            toolName: "fetch_data",
+            output: { type: "text", value: "A".repeat(400) },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "call_2",
+            toolName: "query_items",
+            output: { type: "json", value: { items: Array.from({ length: 50 }, (_, i) => ({ id: i, label: "sample item" })) } },
+          },
+        ],
+      };
+
+      const msgWithInput: any = {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "call_1",
+            toolName: "fetch_data",
+            input: { query: "A".repeat(400) },
+          },
+        ],
+      };
+
+      expect(estimateModelMessageTokens(msgWithOutput)).toBeGreaterThan(100);
+      expect(estimateModelMessageTokens(msgWithInput)).toBeGreaterThan(100);
+    });
+
+    it("trims historical turns when assembled tool results exceed maxContextTokens", () => {
+      // Allow enough turns so CHAT_MAX_HISTORY_TURNS doesn't trigger turn-slicing
+      const originalLimit = env.CHAT_MAX_HISTORY_TURNS;
+      (env as any).CHAT_MAX_HISTORY_TURNS = 10;
+
+      try {
+        // Turn 1 has a large tool output (>4000 chars ~ 1000 tokens)
+        // Turn 2 is a short follow-up
+        const threadWithLargeToolResult: any = [
+          {
+            id: "m0",
+            role: "user",
+            content: "Run tool please",
+          },
+          {
+            id: "m1",
+            role: "assistant",
+            content: "Running tool",
+            metadata: JSON.stringify({
+              toolCalls: [
+                { toolCallId: "tc_big", toolName: "generate_report", args: { topic: "test" } },
+              ],
+              toolResults: [
+                {
+                  toolCallId: "tc_big",
+                  toolName: "generate_report",
+                  result: "R".repeat(4000), // ~1000 tokens
+                },
+              ],
+            }),
+          },
+          {
+            id: "m2",
+            role: "user",
+            content: "What was in the report?",
+          },
+          {
+            id: "m3",
+            role: "assistant",
+            content: "Summary of report",
+          },
+        ];
+
+        // If tool results are counted (~1000 tokens), total tokens ~1050.
+        // With maxContextTokens: 200, Turn 1 (m0, m1, tool msg) should be trimmed away, leaving Turn 2 (m2, m3).
+        // If tool results are ignored (0 tokens), total tokens ~50, so Turn 1 would NOT be trimmed!
+        const messages = prepareChatMessages({
+          history: threadWithLargeToolResult,
+          maxContextTokens: 200,
+        });
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toMatchObject({ content: "What was in the report?", role: "user" });
+        expect(messages[1]).toMatchObject({ content: "Summary of report", role: "assistant" });
+      } finally {
+        (env as any).CHAT_MAX_HISTORY_TURNS = originalLimit;
+      }
     });
 
     it("returns 0 for unrecognized or empty message content", () => {

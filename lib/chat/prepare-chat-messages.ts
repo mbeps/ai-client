@@ -18,6 +18,74 @@ interface MessageOrchestrationOptions {
 }
 
 /**
+ * Resolves token count for a tool payload (args, input, result, or output).
+ *
+ * @param payload - Tool data payload
+ * @returns Estimated token count
+ * @author Maruf Bepary
+ */
+function estimatePayloadTokens(payload: unknown): number {
+  if (payload === undefined || payload === null) return 0;
+  if (typeof payload === "string") return estimateTokens(payload);
+  try {
+    return estimateTokens(JSON.stringify(payload));
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Resolves the underlying data value from a tool result message part.
+ *
+ * @param part - Message part containing output or result
+ * @returns Extracted value payload
+ * @author Maruf Bepary
+ */
+function resolveToolResultValue(part: Record<string, unknown>): unknown {
+  const out = part.output !== undefined ? part.output : part.result;
+  if (out && typeof out === "object" && "value" in out) {
+    return (out as { value: unknown }).value;
+  }
+  return out;
+}
+
+/**
+ * Estimates token consumption for an individual message part.
+ *
+ * Handles text, reasoning, image/file attachments, tool calls (args/input),
+ * and tool results (output/result, unwrapping AI SDK v7 output.value).
+ *
+ * @param part - Message part within a multimodal content array
+ * @returns Estimated tokens for the part
+ * @author Maruf Bepary
+ */
+function estimateMessagePartTokens(part: unknown): number {
+  if (!part) return 0;
+  if (typeof part === "string") return estimateTokens(part);
+  if (typeof part !== "object") return 0;
+
+  const p = part as Record<string, unknown>;
+
+  if (typeof p.text === "string") {
+    return estimateTokens(p.text);
+  }
+  if (p.type === "file" || p.type === "image") {
+    return 800;
+  }
+  if (typeof p.reasoning === "string") {
+    return estimateTokens(p.reasoning);
+  }
+  if ("input" in p || "args" in p) {
+    return estimatePayloadTokens(p.input !== undefined ? p.input : p.args);
+  }
+  if ("output" in p || "result" in p) {
+    return estimatePayloadTokens(resolveToolResultValue(p));
+  }
+
+  return 0;
+}
+
+/**
  * Estimates tokens for an assembled ModelMessage.
  *
  * @param m - Target ModelMessage
@@ -29,27 +97,10 @@ export function estimateModelMessageTokens(m: ModelMessage): number {
     return estimateTokens(m.content);
   }
   if (Array.isArray(m.content)) {
-    let tokens = 0;
-    for (const part of m.content) {
-      if (typeof part === "string") {
-        tokens += estimateTokens(part);
-      } else if ("text" in part && typeof part.text === "string") {
-        tokens += estimateTokens(part.text);
-      } else if (part.type === "file" || part.type === "image") {
-        tokens += 800;
-      } else if ("args" in part) {
-        tokens += estimateTokens(
-          typeof part.args === "string" ? part.args : JSON.stringify(part.args),
-        );
-      } else if ("result" in part) {
-        tokens += estimateTokens(
-          typeof part.result === "string"
-            ? part.result
-            : JSON.stringify(part.result),
-        );
-      }
-    }
-    return tokens;
+    return m.content.reduce(
+      (sum, part) => sum + estimateMessagePartTokens(part),
+      0,
+    );
   }
   return 0;
 }
