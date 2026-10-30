@@ -237,7 +237,6 @@ export const generateChatResponse = inngest.createFunction(
         log.info("Stream loop aborted by user (chatId: {chatId})", {
           chatId,
         });
-        await deleteScratchpadFiles(assistantMessageId);
         await persistAbortedResponse();
         return;
       }
@@ -270,7 +269,6 @@ export const generateChatResponse = inngest.createFunction(
         log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
           chatId,
         });
-        await deleteScratchpadFiles(assistantMessageId);
         await persistAbortedResponse();
         return;
       }
@@ -291,9 +289,10 @@ export const generateChatResponse = inngest.createFunction(
         emit,
       });
     } catch (error: unknown) {
-      await deleteScratchpadFiles(assistantMessageId);
       if (isAbortError(error, abortController.signal)) {
         await persistAbortedResponse();
+      } else {
+        await deleteScratchpadFiles(assistantMessageId);
       }
       await handleChatGenerationError(
         error,
