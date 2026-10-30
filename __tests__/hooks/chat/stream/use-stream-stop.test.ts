@@ -112,6 +112,7 @@ describe("executeStopStream", () => {
         role: "assistant",
         content: "partial answer",
         parentId: "u1",
+        reasoning: "thought process",
         metadata: expect.stringContaining('"stopped":true'),
       }),
     );
@@ -122,8 +123,18 @@ describe("executeStopStream", () => {
       reasoning: "thought process",
       finishReason: "stop",
       stopped: true,
-      toolCalls: [{ toolCallId: "tc-1", toolName: "calculator", args: { x: 1 } }],
-      toolResults: [{ toolCallId: "tc-1", toolName: "calculator", result: 2 }],
+      toolCalls: [
+        { toolCallId: "tc-1", toolName: "calculator", args: { x: 1 } },
+        { toolCallId: "tc-2", toolName: "pending_tool", args: {} },
+      ],
+      toolResults: [
+        { toolCallId: "tc-1", toolName: "calculator", result: 2 },
+        {
+          toolCallId: "tc-2",
+          toolName: "pending_tool",
+          result: { error: "Tool execution was interrupted" },
+        },
+      ],
     });
 
     expect(mockPersistMessage).toHaveBeenCalledWith(
@@ -256,4 +267,93 @@ describe("executeStopStream", () => {
       expect.any(Error),
     );
   });
+
+  it("handles stop with only an in-flight tool call (status: calling) and preserves serverName", async () => {
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "" },
+      accumulatedReasoningRef: { current: "" },
+      activeToolCallsRef: {
+        current: [
+          {
+            toolCallId: "tc-calling-1",
+            toolName: "mcp_weather",
+            args: { city: "London" },
+            status: "calling",
+            serverName: "weather-server",
+          },
+        ],
+      },
+      assistantMessageIdRef: { current: "asst-tool-only" },
+    });
+
+    await executeStopStream("chat-1", addMessage, resetStreamingState, refs as any);
+
+    expect(addMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        id: "asst-tool-only",
+        content: "",
+        parentId: "u1",
+      }),
+    );
+
+    const parsed = JSON.parse(addMessage.mock.calls[0][1].metadata);
+    expect(parsed.toolCalls).toEqual([
+      {
+        toolCallId: "tc-calling-1",
+        toolName: "mcp_weather",
+        args: { city: "London" },
+        serverName: "weather-server",
+      },
+    ]);
+    expect(parsed.toolResults).toEqual([
+      {
+        toolCallId: "tc-calling-1",
+        toolName: "mcp_weather",
+        result: { error: "Tool execution was interrupted" },
+        serverName: "weather-server",
+      },
+    ]);
+  });
+
+  it("resolves model from chat when stopping a rejoined stream with empty pendingRef model", async () => {
+    useAppStore.setState({
+      chats: {
+        "chat-rejoined": {
+          id: "chat-rejoined",
+          currentLeafId: "u1",
+          messages: {
+            u0: {
+              id: "u0",
+              role: "assistant",
+              metadata: JSON.stringify({ model: "anthropic/claude-3-7-sonnet" }),
+            },
+            u1: { id: "u1", role: "user" },
+          },
+        },
+      },
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      rejoinedRef: { current: true },
+      pendingRef: { current: { userMessageId: "u1", model: "" } },
+      accumulatedTextRef: { current: "rejoined response" },
+      assistantMessageIdRef: { current: "asst-rejoined-1" },
+    });
+
+    await executeStopStream(
+      "chat-rejoined",
+      addMessage,
+      resetStreamingState,
+      refs as any,
+    );
+
+    const parsed = JSON.parse(addMessage.mock.calls[0][1].metadata);
+    expect(parsed.model).toBe("anthropic/claude-3-7-sonnet");
+  });
 });
+

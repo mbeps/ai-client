@@ -10,6 +10,11 @@ vi.mock("@/lib/chat/persist-response", () => ({
   persistAssistantResponse: mockPersistResponse,
 }));
 
+const mockHasExistingAssistantMessage = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/has-existing-assistant-message", () => ({
+  hasExistingAssistantMessage: mockHasExistingAssistantMessage,
+}));
+
 const mockExecuteDownloadFallback = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/chat/tool-download-fallback", () => ({
   executeToolDownloadFallback: mockExecuteDownloadFallback,
@@ -35,6 +40,7 @@ describe("complete-assistant-response", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPersistResponse.mockResolvedValue(true);
+    mockHasExistingAssistantMessage.mockResolvedValue(false);
     mockExecuteDownloadFallback.mockResolvedValue([]);
     mockDeleteScratchpadFiles.mockResolvedValue(undefined);
   });
@@ -86,9 +92,10 @@ describe("complete-assistant-response", () => {
         expect.stringContaining("successfully generated and persisted"),
         expect.anything(),
       );
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
     });
 
-    it("halts and deletes scratchpad files when abortSignal is aborted before persistence", async () => {
+    it("persists aborted response and retains scratchpad files when abortSignal is aborted before persistence with partial content", async () => {
       const emit = vi.fn();
       const controller = new AbortController();
       controller.abort();
@@ -108,13 +115,71 @@ describe("complete-assistant-response", () => {
         emit,
       });
 
-      expect(mockPersistResponse).not.toHaveBeenCalled();
-      expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-2");
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-2",
+          assistantMessageId: "asst-2",
+          content: "Partial",
+          parentId: "user-2",
+        }),
+      );
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
       expect(emit).not.toHaveBeenCalled();
     });
 
-    it("skips emit when persistAssistantResponse returns false (concurrent deletion)", async () => {
+    it("deletes scratchpad files and skips persistence when abortSignal is aborted before persistence with empty content", async () => {
+      const emit = vi.fn();
+      const controller = new AbortController();
+      controller.abort();
+
+      await completeAssistantResponse({
+        chatId: "chat-empty-abort",
+        assistantMessageId: "asst-empty-abort",
+        userMessageId: "user-empty-abort",
+        accumulatedText: "",
+        accumulatedReasoning: "",
+        resolvedModelId: "gpt-4o",
+        completedTools: [],
+        toolSourceMap: {},
+        safeFinishReason: Promise.resolve("stop"),
+        safeUsage: Promise.resolve(undefined),
+        abortSignal: controller.signal,
+        emit,
+      });
+
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-empty-abort");
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it("does not delete scratchpad files when persistAssistantResponse returns false because message already exists", async () => {
       mockPersistResponse.mockResolvedValueOnce(false);
+      mockHasExistingAssistantMessage.mockResolvedValueOnce(true);
+      const emit = vi.fn();
+      const controller = new AbortController();
+
+      await completeAssistantResponse({
+        chatId: "chat-existing",
+        assistantMessageId: "asst-existing",
+        userMessageId: "user-existing",
+        accumulatedText: "Saved by client",
+        accumulatedReasoning: "",
+        resolvedModelId: "gpt-4o",
+        completedTools: [],
+        toolSourceMap: {},
+        safeFinishReason: Promise.resolve("stop"),
+        safeUsage: Promise.resolve(undefined),
+        abortSignal: controller.signal,
+        emit,
+      });
+
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it("skips emit and deletes scratchpad files when persistAssistantResponse returns false and message does not exist (concurrent deletion)", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      mockHasExistingAssistantMessage.mockResolvedValueOnce(false);
       const emit = vi.fn();
       const controller = new AbortController();
 
@@ -139,7 +204,7 @@ describe("complete-assistant-response", () => {
   });
 
   describe("persistAbortedAssistantResponse", () => {
-    it("returns early when there is no text, reasoning, or tool calls", async () => {
+    it("deletes scratchpad files when there is no text, reasoning, or tool calls", async () => {
       await persistAbortedAssistantResponse({
         chatId: "chat-empty",
         assistantMessageId: "asst-empty",
@@ -151,9 +216,10 @@ describe("complete-assistant-response", () => {
       });
 
       expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-empty");
     });
 
-    it("persists partial content with stopped: true in metadata", async () => {
+    it("persists partial content with stopped: true and does not delete scratchpad files", async () => {
       await persistAbortedAssistantResponse({
         chatId: "chat-stopped",
         assistantMessageId: "asst-stopped",
@@ -180,6 +246,7 @@ describe("complete-assistant-response", () => {
           metadata: expect.stringContaining('"stopped":true'),
         }),
       );
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
 
       const parsedMeta = JSON.parse(mockPersistResponse.mock.calls[0][0].metadata);
       expect(parsedMeta).toMatchObject({
@@ -189,6 +256,42 @@ describe("complete-assistant-response", () => {
         stopped: true,
         toolCalls: [{ toolCallId: "tc-stop", toolName: "fetch_data" }],
       });
+    });
+
+    it("does not delete scratchpad files when persistAssistantResponse returns false but message already exists", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      mockHasExistingAssistantMessage.mockResolvedValueOnce(true);
+
+      const result = await persistAbortedAssistantResponse({
+        chatId: "chat-stopped-exist",
+        assistantMessageId: "asst-stopped-exist",
+        userMessageId: "user-stopped-exist",
+        resolvedModelId: "gpt-4o",
+        accumulatedText: "Partial content",
+        accumulatedReasoning: "",
+        completedTools: [],
+      });
+
+      expect(result).toBe(true);
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
+    });
+
+    it("deletes scratchpad files when persistAssistantResponse returns false and message does not exist", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      mockHasExistingAssistantMessage.mockResolvedValueOnce(false);
+
+      const result = await persistAbortedAssistantResponse({
+        chatId: "chat-stopped-deleted",
+        assistantMessageId: "asst-stopped-deleted",
+        userMessageId: "user-stopped-deleted",
+        resolvedModelId: "gpt-4o",
+        accumulatedText: "Partial content",
+        accumulatedReasoning: "",
+        completedTools: [],
+      });
+
+      expect(result).toBe(false);
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-stopped-deleted");
     });
   });
 

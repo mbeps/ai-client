@@ -1,3 +1,4 @@
+import { hasExistingAssistantMessage } from "@/lib/chat/has-existing-assistant-message";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
 import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
@@ -123,7 +124,15 @@ export async function completeAssistantResponse(
       "Chat generation cleanly aborted before persistence (chatId: {chatId})",
       { chatId },
     );
-    await deleteScratchpadFiles(assistantMessageId);
+    await persistAbortedAssistantResponse({
+      chatId,
+      assistantMessageId,
+      userMessageId,
+      resolvedModelId,
+      accumulatedText,
+      accumulatedReasoning,
+      completedTools,
+    });
     return;
   }
 
@@ -137,11 +146,18 @@ export async function completeAssistantResponse(
   });
 
   if (!persisted) {
-    log.info(
-      "Chat was deleted concurrently; skipping completion emit (chatId: {chatId})",
-      { chatId },
+    const exists = await hasExistingAssistantMessage(
+      chatId,
+      userMessageId,
+      assistantMessageId,
     );
-    await deleteScratchpadFiles(assistantMessageId);
+    if (!exists) {
+      log.info(
+        "Chat was deleted concurrently; skipping completion emit (chatId: {chatId})",
+        { chatId },
+      );
+      await deleteScratchpadFiles(assistantMessageId);
+    }
     return;
   }
 
@@ -161,6 +177,7 @@ export async function completeAssistantResponse(
  * Persists an aborted or stopped assistant response with partial content.
  *
  * @param params - Persist abort parameters
+ * @returns true if persisted or already exists, false if skipped or deleted
  * @author Maruf Bepary
  */
 export async function persistAbortedAssistantResponse(params: {
@@ -171,7 +188,7 @@ export async function persistAbortedAssistantResponse(params: {
   accumulatedText: string;
   accumulatedReasoning: string;
   completedTools: CompletedToolRecord[];
-}): Promise<void> {
+}): Promise<boolean> {
   const {
     chatId,
     assistantMessageId,
@@ -187,7 +204,8 @@ export async function persistAbortedAssistantResponse(params: {
     !accumulatedReasoning &&
     completedTools.length === 0
   ) {
-    return;
+    await deleteScratchpadFiles(assistantMessageId);
+    return false;
   }
 
   const metadata = buildAssistantMessageMetadata({
@@ -199,11 +217,25 @@ export async function persistAbortedAssistantResponse(params: {
     stopped: true,
   });
 
-  await persistAssistantResponse({
+  const persisted = await persistAssistantResponse({
     chatId,
     assistantMessageId,
     content: accumulatedText,
     parentId: userMessageId,
     metadata,
   });
+
+  if (!persisted) {
+    const exists = await hasExistingAssistantMessage(
+      chatId,
+      userMessageId,
+      assistantMessageId,
+    );
+    if (!exists) {
+      await deleteScratchpadFiles(assistantMessageId);
+      return false;
+    }
+  }
+
+  return true;
 }

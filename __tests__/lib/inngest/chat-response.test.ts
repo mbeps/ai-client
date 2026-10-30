@@ -44,6 +44,10 @@ vi.mock("@/lib/chat/persist-response", () => ({
   persistAssistantResponse: mockPersistResponse,
 }));
 
+vi.mock("@/lib/chat/has-existing-assistant-message", () => ({
+  hasExistingAssistantMessage: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("ai", () => ({
   streamText: mockStreamText,
   isStepCount: mockIsStepCount,
@@ -757,7 +761,7 @@ describe("generateChatResponse Inngest Function", () => {
         parentId: "msg-1",
         metadata: expect.stringContaining('"stopped":true'),
       });
-      expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
       expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ type: "text-delta", text: "unreachable" }),
@@ -798,7 +802,7 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(result).toBeUndefined();
-      expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
       // The first chunk was emitted, then the guard returned before persisting
       expect(inngest.realtime.publish).toHaveBeenCalledWith(
         expect.anything(),
@@ -820,6 +824,36 @@ describe("generateChatResponse Inngest Function", () => {
         expect.objectContaining({ type: "finish" }),
       );
       expect(mockMcpCleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it("deletes scratchpad files and skips persistence when stream is aborted with no content or tools", async () => {
+      const controller = new AbortController();
+      abortState.controller = controller;
+
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          controller.abort();
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 0 }),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+
+      const result = await fn({
+        event: {
+          data: {
+            chatId: "chat-empty-abort",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(result).toBeUndefined();
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockDeleteScratchpadFiles).toHaveBeenCalled();
     });
 
     it("returns without emitting an error when the catch block sees an aborted signal", async () => {
@@ -932,7 +966,7 @@ describe("generateChatResponse Inngest Function", () => {
       );
     });
 
-    it("exits cleanly and skips persistence if stream was aborted before persistAssistantResponse", async () => {
+    it("exits cleanly and persists partial response if stream was aborted before persistAssistantResponse", async () => {
       const controller = new AbortController();
       abortState.controller = controller;
 
@@ -960,7 +994,14 @@ describe("generateChatResponse Inngest Function", () => {
         },
       });
 
-      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-abort-pre-persist",
+          content: "Text",
+          metadata: expect.stringContaining('"stopped":true'),
+        }),
+      );
+      expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
       expect(mockLog.info).toHaveBeenCalledWith(
         "Chat generation cleanly aborted before persistence (chatId: {chatId})",
         { chatId: "chat-abort-pre-persist" },

@@ -254,6 +254,22 @@ describe("useResourceHydration", () => {
     expect(hydratedResources.has("projects")).toBe(true);
   });
 
+  it("allows mcpServers to hydrate when publicMcpServers has an active loadError (substring collision bug)", async () => {
+    hydratedResources.clear();
+    useAppStore.setState({
+      loadError: "Failed to load publicMcpServers",
+      loadMcpServers: vi.fn().mockResolvedValue(undefined),
+    });
+
+    renderHook(() => useResourceHydration(["mcpServers"]));
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(hydratedResources.has("mcpServers")).toBe(true);
+  });
+
   it("handles empty resources array gracefully", async () => {
     const { result } = renderHook(() => useResourceHydration([]));
 

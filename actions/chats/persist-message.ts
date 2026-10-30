@@ -12,6 +12,85 @@ import type { MessageRow } from "@/types/message/message-row";
 const log = getLogger(["app", "actions", "messages"]);
 
 /**
+ * Type representing a tool call or result item with optional server attribution.
+ */
+type ToolMetaItem = { toolCallId: string; serverName?: string };
+
+/**
+ * Type guard verifying an unknown item contains a valid toolCallId string.
+ */
+function isToolMetaItem(item: unknown): item is ToolMetaItem {
+  return Boolean(
+    item &&
+      typeof item === "object" &&
+      "toolCallId" in item &&
+      typeof (item as { toolCallId: unknown }).toolCallId === "string",
+  );
+}
+
+/**
+ * Copies serverName from existing tool items into matching incoming items when missing.
+ *
+ * @param existingItems - Potential array of tool metadata from database
+ * @param incomingItems - Potential array of tool metadata from incoming message
+ * @author Maruf Bepary
+ */
+function preserveServerNames(
+  existingItems: unknown,
+  incomingItems: unknown,
+): void {
+  if (!Array.isArray(existingItems) || !Array.isArray(incomingItems)) return;
+
+  const existingMap = new Map<string, ToolMetaItem>(
+    existingItems
+      .filter(isToolMetaItem)
+      .map((item: ToolMetaItem) => [item.toolCallId, item]),
+  );
+
+  for (const item of incomingItems) {
+    if (!isToolMetaItem(item) || item.serverName) continue;
+    const matched = existingMap.get(item.toolCallId);
+    if (matched?.serverName) {
+      item.serverName = matched.serverName;
+    }
+  }
+}
+
+/**
+ * Merges incoming metadata with existing message metadata on conflict,
+ * preserving existing model ID and serverName if omitted in incoming.
+ *
+ * @param existingMetadataRaw - Existing JSON metadata from database
+ * @param incomingMetadataRaw - Newly provided JSON metadata
+ * @returns Merged JSON metadata string or null
+ * @author Maruf Bepary
+ */
+function mergeConflictMetadata(
+  existingMetadataRaw: string | null | undefined,
+  incomingMetadataRaw: string | null | undefined,
+): string | null {
+  if (!existingMetadataRaw) return incomingMetadataRaw ?? null;
+  if (!incomingMetadataRaw) return existingMetadataRaw;
+
+  try {
+    const existingMeta = JSON.parse(existingMetadataRaw);
+    const incomingMeta = JSON.parse(incomingMetadataRaw);
+
+    // Preserve non-empty model if incoming model is empty/falsy
+    if (!incomingMeta.model && existingMeta.model) {
+      incomingMeta.model = existingMeta.model;
+    }
+
+    preserveServerNames(existingMeta.toolCalls, incomingMeta.toolCalls);
+    preserveServerNames(existingMeta.toolResults, incomingMeta.toolResults);
+
+    return JSON.stringify(incomingMeta);
+  } catch {
+    return incomingMetadataRaw;
+  }
+}
+
+/**
  * Persists a message to the database with ownership check.
  * Validates input using Zod before insertion.
  *
@@ -41,6 +120,20 @@ export async function persistMessage(
 
   if (!chatRow) throw new Error("Not Found");
 
+  const existingRows = await db
+    .select({
+      id: message.id,
+      metadata: message.metadata,
+    })
+    .from(message)
+    .where(eq(message.id, validatedMsg.id));
+
+  const existingMessage = Array.isArray(existingRows) ? existingRows[0] : null;
+  const metadataToSave = mergeConflictMetadata(
+    existingMessage?.metadata,
+    validatedMsg.metadata,
+  );
+
   const [newMessage] = await db
     .insert(message)
     .values({
@@ -49,13 +142,13 @@ export async function persistMessage(
       role: validatedMsg.role,
       content: validatedMsg.content,
       parentId: validatedMsg.parentId,
-      metadata: validatedMsg.metadata ?? null,
+      metadata: metadataToSave,
     })
     .onConflictDoUpdate({
       target: message.id,
       set: {
         content: validatedMsg.content,
-        metadata: validatedMsg.metadata ?? null,
+        metadata: metadataToSave,
         updatedAt: new Date(),
       },
     })

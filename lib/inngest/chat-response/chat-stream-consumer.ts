@@ -196,6 +196,63 @@ async function handleNonDeltaChunk(
  * @returns The resolved result
  * @author Maruf Bepary
  */
+/**
+ * Internal state for delta streaming buffering and rate-limiting.
+ */
+interface DeltaStreamContext {
+  accumulatedText: string;
+  accumulatedReasoning: string;
+  bufferedText: string;
+  bufferedReasoning: string;
+  lastTextFlushTime: number;
+  lastReasoningFlushTime: number;
+  flushReasoning: () => Promise<void>;
+  flushText: () => Promise<void>;
+  flushDeltas: () => Promise<void>;
+}
+
+/**
+ * Handles text delta chunks, flushing pending reasoning and coalescing output text.
+ *
+ * @param chunkText - Text delta chunk from model stream
+ * @param ctx - Delta streaming context state
+ * @author Maruf Bepary
+ */
+async function handleStreamTextDelta(
+  chunkText: string,
+  ctx: DeltaStreamContext,
+): Promise<void> {
+  ctx.accumulatedText += chunkText;
+  if (ctx.bufferedReasoning.length > 0) {
+    await ctx.flushReasoning();
+  }
+  ctx.bufferedText += chunkText;
+  if (Date.now() - ctx.lastTextFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+    await ctx.flushText();
+  }
+}
+
+/**
+ * Handles reasoning delta chunks, flushing pending text and coalescing output reasoning.
+ *
+ * @param chunkText - Reasoning delta chunk from model stream
+ * @param ctx - Delta streaming context state
+ * @author Maruf Bepary
+ */
+async function handleStreamReasoningDelta(
+  chunkText: string,
+  ctx: DeltaStreamContext,
+): Promise<void> {
+  ctx.accumulatedReasoning += chunkText;
+  if (ctx.bufferedText.length > 0) {
+    await ctx.flushText();
+  }
+  ctx.bufferedReasoning += chunkText;
+  if (Date.now() - ctx.lastReasoningFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+    await ctx.flushReasoning();
+  }
+}
+
 export async function consumeModelStream(
   fullStream: AsyncIterable<any>,
   abortSignal: AbortSignal,
@@ -203,65 +260,64 @@ export async function consumeModelStream(
   toolSourceMap: Record<string, string>,
   completedTools: CompletedToolRecord[],
 ): Promise<ConsumeModelStreamResult> {
-  let accumulatedText = "";
-  let accumulatedReasoning = "";
-  let bufferedText = "";
-  let bufferedReasoning = "";
-  let lastTextFlushTime = 0;
-  let lastReasoningFlushTime = 0;
+  const ctx: DeltaStreamContext = {
+    accumulatedText: "",
+    accumulatedReasoning: "",
+    bufferedText: "",
+    bufferedReasoning: "",
+    lastTextFlushTime: 0,
+    lastReasoningFlushTime: 0,
+    flushReasoning: async () => {},
+    flushText: async () => {},
+    flushDeltas: async () => {},
+  };
 
-  const flushReasoning = async (): Promise<void> => {
-    if (bufferedReasoning.length === 0) return;
-    const reasoningToEmit = bufferedReasoning;
-    bufferedReasoning = "";
-    lastReasoningFlushTime = Date.now();
+  ctx.flushReasoning = async (): Promise<void> => {
+    if (ctx.bufferedReasoning.length === 0) return;
+    const reasoningToEmit = ctx.bufferedReasoning;
+    ctx.bufferedReasoning = "";
+    ctx.lastReasoningFlushTime = Date.now();
     await emit({ type: "reasoning-delta", reasoning: reasoningToEmit });
   };
 
-  const flushText = async (): Promise<void> => {
-    if (bufferedText.length === 0) return;
-    const textToEmit = bufferedText;
-    bufferedText = "";
-    lastTextFlushTime = Date.now();
+  ctx.flushText = async (): Promise<void> => {
+    if (ctx.bufferedText.length === 0) return;
+    const textToEmit = ctx.bufferedText;
+    ctx.bufferedText = "";
+    ctx.lastTextFlushTime = Date.now();
     await emit({ type: "text-delta", text: textToEmit });
   };
 
-  const flushDeltas = async (): Promise<void> => {
-    await flushReasoning();
-    await flushText();
+  ctx.flushDeltas = async (): Promise<void> => {
+    await ctx.flushReasoning();
+    await ctx.flushText();
   };
 
   for await (const chunk of fullStream) {
     if (abortSignal.aborted) {
-      await flushDeltas();
-      return { accumulatedText, accumulatedReasoning, aborted: true };
+      await ctx.flushDeltas();
+      return {
+        accumulatedText: ctx.accumulatedText,
+        accumulatedReasoning: ctx.accumulatedReasoning,
+        aborted: true,
+      };
     }
 
     if (chunk.type === "text-delta") {
-      accumulatedText += chunk.text;
-      if (bufferedReasoning.length > 0) {
-        await flushReasoning();
-      }
-      bufferedText += chunk.text;
-      if (Date.now() - lastTextFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
-        await flushText();
-      }
+      await handleStreamTextDelta(chunk.text, ctx);
     } else if (chunk.type === "reasoning-delta") {
-      accumulatedReasoning += chunk.text;
-      if (bufferedText.length > 0) {
-        await flushText();
-      }
-      bufferedReasoning += chunk.text;
-      if (Date.now() - lastReasoningFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
-        await flushReasoning();
-      }
+      await handleStreamReasoningDelta(chunk.text, ctx);
     } else {
-      await flushDeltas();
+      await ctx.flushDeltas();
       await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
     }
   }
 
-  await flushDeltas();
+  await ctx.flushDeltas();
 
-  return { accumulatedText, accumulatedReasoning, aborted: false };
+  return {
+    accumulatedText: ctx.accumulatedText,
+    accumulatedReasoning: ctx.accumulatedReasoning,
+    aborted: false,
+  };
 }

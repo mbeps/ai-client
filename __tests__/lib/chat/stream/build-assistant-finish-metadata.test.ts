@@ -65,5 +65,48 @@ describe("buildAssistantFinishMetadata", () => {
     const parsed = JSON.parse(json);
     expect(parsed.stopped).toBe(false);
   });
+
+  it("preserves serverName on toolCalls and toolResults when present", () => {
+    const json = buildAssistantFinishMetadata({
+      model: "gpt-4o",
+      reasoning: "",
+      completedTools: [
+        {
+          toolCallId: "tc-mcp-1",
+          toolName: "fetch_data",
+          args: { id: "123" },
+          status: "complete",
+          serverName: "my-mcp-server",
+        },
+      ],
+      toolResults: [
+        {
+          toolCallId: "tc-mcp-1",
+          toolName: "fetch_data",
+          result: { ok: true },
+          serverName: "my-mcp-server",
+        },
+      ],
+    });
+
+    const parsed = JSON.parse(json);
+    expect(parsed.toolCalls).toEqual([
+      {
+        toolCallId: "tc-mcp-1",
+        toolName: "fetch_data",
+        args: { id: "123" },
+        serverName: "my-mcp-server",
+      },
+    ]);
+    expect(parsed.toolResults).toEqual([
+      {
+        toolCallId: "tc-mcp-1",
+        toolName: "fetch_data",
+        result: { ok: true },
+        serverName: "my-mcp-server",
+      },
+    ]);
+  });
 });
+
 

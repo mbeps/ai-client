@@ -261,7 +261,7 @@ export function ChatInput(props: ChatInputProps) {
         onChange={interaction.mentions.handleInputChange}
         onKeyDown={interaction.submit.handleKeyDown}
         placeholder={inputPlaceholder}
-        className="max-h-[120px] resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+        className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         rows={2}
         disabled={services.hasNoModels}
       />

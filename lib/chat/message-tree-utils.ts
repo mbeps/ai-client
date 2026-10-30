@@ -6,6 +6,71 @@ import type { ChatWithMessages } from "@/types/chat/chat-with-messages";
 import type { Message } from "@/types/message/message";
 
 /**
+ * Normalizes message metadata from database row to a valid string or null.
+ *
+ * @param metadata - Raw metadata value from row
+ * @returns Serialized JSON string or null
+ * @author Maruf Bepary
+ */
+function serializeRowMetadata(metadata: unknown): string | null {
+  if (typeof metadata === "string") return metadata;
+  if (metadata && typeof metadata === "object") {
+    try {
+      return JSON.stringify(metadata);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Determines attachment classification based on MIME type and file extension.
+ *
+ * @param name - File name
+ * @param mimeType - File MIME type
+ * @returns Classified attachment type
+ * @author Maruf Bepary
+ */
+function classifyAttachmentType(
+  name: string,
+  mimeType: string,
+): "image" | "spreadsheet" | "document" {
+  if (mimeType.startsWith("image/")) return "image";
+  if (checkIsSpreadsheet(name, mimeType)) return "spreadsheet";
+  return "document";
+}
+
+/**
+ * Populates attachments array for matching messages in the message record.
+ *
+ * @param messages - Map of messages indexed by ID
+ * @param attachments - Flat attachment rows from database
+ * @author Maruf Bepary
+ */
+function populateMessageAttachments(
+  messages: Record<string, Message>,
+  attachments: ChatWithMessages["attachments"],
+): void {
+  for (const att of attachments) {
+    if (!att.messageId) continue;
+    const msg = messages[att.messageId];
+    if (!msg) continue;
+
+    (msg.attachments as Attachment[]).push({
+      id: att.id,
+      type: classifyAttachmentType(att.name, att.mimeType),
+      name: att.name,
+      mimeType: att.mimeType,
+      sizeBytes: att.size,
+      dataUrl: "",
+      key: att.key,
+      extractedText: att.extractedText ?? undefined,
+    });
+  }
+}
+
+/**
  * Reconstructs a message tree structure from flattened database rows.
  * Builds parent-child relationships by linking messages via parentId and populating childrenIds arrays.
  * Associates attachments with their corresponding messages based on messageId.
@@ -28,12 +93,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
         role: m.role as "user" | "assistant",
         content: m.content,
         parentId: m.parentId,
-        metadata:
-          typeof m.metadata === "string"
-            ? m.metadata
-            : m.metadata
-              ? JSON.stringify(m.metadata)
-              : null,
+        metadata: serializeRowMetadata(m.metadata),
         createdAt: new Date(m.createdAt),
         chatId: row.id,
       },
@@ -47,30 +107,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     }
   }
 
-  for (const att of row.attachments) {
-    if (!att.messageId) continue;
-    const msg = messages[att.messageId];
-    if (msg) {
-      const isImage = att.mimeType.startsWith("image/");
-      const isSpreadsheet = checkIsSpreadsheet(att.name, att.mimeType);
-      const type = isImage
-        ? "image"
-        : isSpreadsheet
-          ? "spreadsheet"
-          : "document";
-
-      (msg.attachments as Attachment[]).push({
-        id: att.id,
-        type,
-        name: att.name,
-        mimeType: att.mimeType,
-        sizeBytes: att.size,
-        dataUrl: "",
-        key: att.key,
-        extractedText: att.extractedText ?? undefined,
-      });
-    }
-  }
+  populateMessageAttachments(messages, row.attachments);
 
   return {
     id: row.id,

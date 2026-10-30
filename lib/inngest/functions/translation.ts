@@ -35,6 +35,45 @@ interface TranslationWorkflowEventData {
 }
 
 /**
+ * Streams text delta chunks from an async iterable, coalescing flushes at set intervals.
+ *
+ * @param textStream - Text stream from AI SDK
+ * @param emit - Stream emitter function
+ * @returns Accumulated complete text
+ * @author Maruf Bepary
+ */
+async function streamAndAccumulateText(
+  textStream: AsyncIterable<string>,
+  emit: (event: TranslationStreamEvent) => Promise<void>,
+): Promise<string> {
+  let accumulated = "";
+  let bufferedText = "";
+  let lastFlushTime = 0;
+
+  const flushTextDelta = async (): Promise<void> => {
+    if (bufferedText.length === 0) return;
+    const textToEmit = bufferedText;
+    bufferedText = "";
+    lastFlushTime = Date.now();
+    await emit({
+      type: "text-delta",
+      text: textToEmit,
+    });
+  };
+
+  for await (const chunk of textStream) {
+    accumulated += chunk;
+    bufferedText += chunk;
+    if (Date.now() - lastFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
+      await flushTextDelta();
+    }
+  }
+
+  await flushTextDelta();
+  return accumulated;
+}
+
+/**
  * Inngest durable function executing AI document and text translation workflows.
  * Runs in the background, streams tokens in real-time over Inngest Realtime,
  * survives page reloads/navigating away, and persists results to PostgreSQL.
@@ -125,30 +164,10 @@ export const executeTranslationWorkflow = inngest.createFunction(
         ],
       });
 
-      let accumulated = "";
-      let bufferedText = "";
-      let lastFlushTime = 0;
-
-      const flushTextDelta = async (): Promise<void> => {
-        if (bufferedText.length === 0) return;
-        const textToEmit = bufferedText;
-        bufferedText = "";
-        lastFlushTime = Date.now();
-        await emit({
-          type: "text-delta",
-          text: textToEmit,
-        });
-      };
-
-      for await (const chunk of result.textStream) {
-        accumulated += chunk;
-        bufferedText += chunk;
-        if (Date.now() - lastFlushTime >= DELTA_COALESCE_INTERVAL_MS) {
-          await flushTextDelta();
-        }
-      }
-
-      await flushTextDelta();
+      const accumulated = await streamAndAccumulateText(
+        result.textStream,
+        emit,
+      );
 
       const finalTranslated = accumulated.trim();
 

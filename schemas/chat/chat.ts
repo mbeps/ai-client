@@ -13,13 +13,23 @@ import { dateField, idField } from "@/schemas/shared-fields";
  * @see {@link types/message/message.ts} for Message type
  * @author Maruf Bepary
  */
-export const persistMessageSchema = z.object({
-  id: idField,
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().min(1),
-  parentId: idField.nullable(),
-  metadata: z.string().nullable().optional(),
-});
+export const persistMessageSchema = z
+  .object({
+    id: idField,
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.string(),
+    parentId: idField.nullable(),
+    metadata: z.string().nullable().optional(),
+  })
+  .refine(
+    (val) => {
+      if (val.role === "user") {
+        return val.content.trim().length > 0;
+      }
+      return true;
+    },
+    { message: "User message content cannot be empty", path: ["content"] },
+  );
 
 /**
  * Validates chat creation data from form input or API calls.

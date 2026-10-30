@@ -470,6 +470,22 @@ describe("T5.4 resetEntityState clears entity state", () => {
     });
   });
 
+  it("loadUserSettings clears loadError on success and sets it on failure", async () => {
+    useAppStore.setState({ loadError: "Old error" });
+    vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
+      userId: "u1",
+      theme: "dark",
+      defaultModelId: "gpt-4",
+    } as any);
+
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().loadError).toBeNull();
+
+    vi.mocked(getUserSettingsAction).mockRejectedValueOnce(new Error("failure"));
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().loadError).toBe("Failed to load userSettings");
+  });
+
   it("loads MCP prompts into store", async () => {
     vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce([
       {
@@ -482,5 +498,17 @@ describe("T5.4 resetEntityState clears entity state", () => {
 
     await useAppStore.getState().loadMcpPrompts();
     expect(useAppStore.getState().mcpPrompts).toHaveLength(1);
+  });
+
+  it("loadMcpPrompts clears loadError on success and sets it on failure", async () => {
+    useAppStore.setState({ loadError: "Old error" });
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce([]);
+
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().loadError).toBeNull();
+
+    vi.mocked(discoverAllPromptsAction).mockRejectedValueOnce(new Error("failure"));
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().loadError).toBe("Failed to load mcpPrompts");
   });
 });

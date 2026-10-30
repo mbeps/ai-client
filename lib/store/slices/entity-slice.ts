@@ -97,13 +97,21 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   loadError: null,
 
   loadMcpPrompts: async () => {
-    const prompts = await discoverAllPrompts();
-    set({ mcpPrompts: prompts });
+    try {
+      const prompts = await discoverAllPrompts();
+      set({ mcpPrompts: prompts, loadError: null });
+    } catch {
+      set({ loadError: "Failed to load mcpPrompts" });
+    }
   },
 
   loadUserSettings: async () => {
-    const settings = await getUserSettings();
-    set({ userSettings: settings });
+    try {
+      const settings = await getUserSettings();
+      set({ userSettings: settings, loadError: null });
+    } catch {
+      set({ loadError: "Failed to load userSettings" });
+    }
   },
 
   updateUserSettingsState: (settings) => {
