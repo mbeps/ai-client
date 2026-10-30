@@ -80,6 +80,7 @@ vi.mock("@/lib/skills/sanitize-skill-slug", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SKILL_BODY_MAX_BYTES, SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
 import { createSkill } from "@/actions/skills/create-skill";
 import { deleteSkill } from "@/actions/skills/delete-skill";
 import { exportSkillZip } from "@/actions/skills/export-skill";
@@ -88,6 +89,8 @@ import { importSkillFile } from "@/actions/skills/import-skill";
 import { listSkills } from "@/actions/skills/list-skills";
 import { toggleSkillEnabled } from "@/actions/skills/toggle-skill";
 import { updateSkill } from "@/actions/skills/update-skill";
+import { createSkillSchema, skillFileSchema } from "@/schemas/skill/skill";
+import { SkillBundleBudgetError, SKILL_FILE_PATH_ERROR } from "@/schemas/skill/skill-file";
 
 const SKILL_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -392,6 +395,80 @@ describe("Agent Skill Server Actions", () => {
 
       const result = await importSkillFile(fd);
       expect(result).toEqual(SAMPLE_SKILL);
+    });
+
+    it("throws when imported skill body exceeds budget", async () => {
+      mockParser.parseSkillMarkdown.mockReturnValueOnce({
+        name: "big-body",
+        displayName: "Big Body",
+        description: "desc",
+        content: "x".repeat(SKILL_BODY_MAX_BYTES + 1),
+        files: [],
+      });
+      const fd = new FormData();
+      fd.append("file", new File(["big"], "skill.md", { type: "text/markdown" }));
+
+      await expect(importSkillFile(fd)).rejects.toThrow(SkillBundleBudgetError);
+    });
+
+    it("throws when imported skill bundle exceeds budget", async () => {
+      mockParser.extractSkillFromZip.mockReturnValueOnce({
+        name: "big-bundle",
+        displayName: "Big Bundle",
+        description: "desc",
+        content: "# Valid",
+        files: [
+          {
+            path: "references/big.md",
+            content: "x".repeat(SKILL_BUNDLE_MAX_BYTES + 1),
+          },
+        ],
+      });
+      const fd = new FormData();
+      fd.append(
+        "file",
+        new File([new Uint8Array(10)], "skill.zip", { type: "application/zip" }),
+      );
+
+      await expect(importSkillFile(fd)).rejects.toThrow(SkillBundleBudgetError);
+    });
+  });
+
+  describe("skillFileSchema validation", () => {
+    it("rejects path traversal or invalid characters", () => {
+      expect(
+        skillFileSchema.safeParse({ path: "../secret.env", content: "data" })
+          .success,
+      ).toBe(false);
+      expect(
+        skillFileSchema.safeParse({ path: "foo\\bar.md", content: "data" })
+          .success,
+      ).toBe(false);
+      expect(
+        skillFileSchema.safeParse({ path: "dir/", content: "data" }).success,
+      ).toBe(false);
+    });
+
+    it("normalizes and accepts valid relative file paths", () => {
+      const parsed = skillFileSchema.safeParse({
+        path: "references/guide.md",
+        content: "data",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.path).toBe("references/guide.md");
+      }
+    });
+
+    it("normalizes skill.md to SKILL.md", () => {
+      const parsed = skillFileSchema.safeParse({
+        path: "skill.md",
+        content: "data",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.path).toBe("SKILL.md");
+      }
     });
   });
 });

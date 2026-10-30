@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getLogger } from "@/lib/logger";
 import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
 import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
+import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 
@@ -24,6 +25,7 @@ interface CreateSubagentDispatchToolParams {
   customWorkerModel?: any;
   availableTools: Record<string, any>;
   maxSteps?: number;
+  scratchpadContext?: { chatId: string; messageId: string };
 }
 
 /**
@@ -41,6 +43,7 @@ export function createSubagentDispatchTool(
     customWorkerModel,
     availableTools,
     maxSteps = 10,
+    scratchpadContext,
   } = params;
 
   return tool({
@@ -69,7 +72,17 @@ export function createSubagentDispatchTool(
     }),
     execute: async function* ({ role, taskBrief, inputData }, { abortSignal }) {
       const selectedModel = customWorkerModel ?? defaultModel;
-      const workerTools = getSubagentTools(availableTools);
+      const baseWorkerTools = getSubagentTools(availableTools);
+      const workerTools = scratchpadContext
+        ? {
+            ...baseWorkerTools,
+            ...registerScratchpadTools({
+              chatId: scratchpadContext.chatId,
+              messageId: scratchpadContext.messageId,
+              workerRole: role,
+            }),
+          }
+        : baseWorkerTools;
 
       const runId = crypto.randomUUID();
       const parentInvocationId = crypto.randomUUID();
@@ -101,11 +114,27 @@ export function createSubagentDispatchTool(
           abortSignal,
         });
 
-        // Stream each incremental UI message chunk to the frontend
+        let lastYieldTime = -Infinity;
+        let lastChunk: any = null;
+        let hasPendingUnyieldedChunk = false;
+
+        // Stream each incremental UI message chunk to the frontend, throttled to 150ms
         for await (const uiChunk of readUIMessageStream({
           stream: toUIMessageStream({ stream: streamResult.stream }),
         })) {
-          yield uiChunk;
+          lastChunk = uiChunk;
+          const now = Date.now();
+          if (now - lastYieldTime >= 150) {
+            lastYieldTime = now;
+            hasPendingUnyieldedChunk = false;
+            yield uiChunk;
+          } else {
+            hasPendingUnyieldedChunk = true;
+          }
+        }
+
+        if (hasPendingUnyieldedChunk && lastChunk) {
+          yield lastChunk;
         }
       } catch (err) {
         log.error("Subagent execution failed (role: {role}, runId: {runId})", {

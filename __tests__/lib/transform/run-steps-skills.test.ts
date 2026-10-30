@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
@@ -126,12 +127,12 @@ describe("runTransformSteps — skill wiring", () => {
     });
   });
 
-  it("registers the skill authoring tools for every run", async () => {
+  it("registers the skill authoring tools when MANAGE_SKILL is enabled", async () => {
     await runTransformSteps({
       steps: [STEP],
       startFromStep: 0,
       runRow: { id: "run-1" },
-      agentRow: AGENT_ROW as any,
+      agentRow: { ...AGENT_ROW, tools: [INTERNAL_TOOL_IDS.MANAGE_SKILL] } as any,
       userId: "user-1",
       allServers: [],
       resolvedProvider: MOCK_PROVIDER as any,

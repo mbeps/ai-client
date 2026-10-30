@@ -4,6 +4,10 @@ import { skill } from "@/drizzle/schemas/skill-schema";
 import { assertNameAvailable } from "@/lib/skills/skill-name-availability";
 import { resolveSkillRow } from "@/lib/skills/skill-service";
 import type { CreateSkillInput, UpdateSkillInput } from "@/schemas/skill/skill";
+import {
+  assertSkillBodyWithinBudget,
+  assertSkillBundleWithinBudget,
+} from "@/schemas/skill/skill-file";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
@@ -49,6 +53,10 @@ export async function createSkillForUser(
   data: CreateSkillInput,
 ): Promise<SkillRow> {
   await assertNameAvailable(userId, data.name);
+  assertSkillBodyWithinBudget(data.content);
+  if (data.files) {
+    assertSkillBundleWithinBudget(data.files);
+  }
 
   const [row] = await db
     .insert(skill)
@@ -58,8 +66,8 @@ export async function createSkillForUser(
       displayName: data.displayName,
       description: data.description,
       content: data.content,
-      files: data.files,
-      enabled: data.enabled,
+      files: data.files ?? [],
+      enabled: data.enabled ?? true,
     })
     .returning();
 
@@ -85,6 +93,14 @@ export async function updateSkillForUser(
 
   if (data.name) {
     await assertNameAvailable(userId, data.name, existing.id);
+  }
+
+  if (data.content !== undefined) {
+    assertSkillBodyWithinBudget(data.content);
+  }
+
+  if (data.files !== undefined) {
+    assertSkillBundleWithinBudget(data.files);
   }
 
   const [row] = await db

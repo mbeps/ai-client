@@ -3,7 +3,19 @@ import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
 import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
 import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
+import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 import * as aiModule from "ai";
+
+vi.mock("@/lib/subagents/register-subagent-tools", () => ({
+  registerScratchpadTools: vi.fn((context) => ({
+    scratchpad_write: {
+      description: `write-${context.workerRole}`,
+      workerRole: context.workerRole,
+    },
+    scratchpad_read: { description: "read" },
+    scratchpad_list: { description: "list" },
+  })),
+}));
 
 vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof aiModule>();
@@ -40,6 +52,30 @@ describe("subagent-dispatch-tool", () => {
       expect(result).not.toHaveProperty("subagent_dispatch");
       expect(result).not.toHaveProperty("manage_artifact");
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
+    });
+
+    it("strictly strips skill mutation tools while preserving read-only and other tools", () => {
+      const mockTools = {
+        create_skill: { description: "create" },
+        update_skill: { description: "update" },
+        write_skill_file: { description: "write file" },
+        delete_skill_file: { description: "delete file" },
+        [INTERNAL_TOOL_IDS.MANAGE_SKILL]: { description: "manage skill" },
+        read_skill_file: { description: "read file" },
+        load_skill: { description: "load skill" },
+        custom_tool: { description: "custom" },
+      };
+
+      const result = getSubagentTools(mockTools);
+
+      expect(result).toHaveProperty("read_skill_file");
+      expect(result).toHaveProperty("load_skill");
+      expect(result).toHaveProperty("custom_tool");
+      expect(result).not.toHaveProperty("create_skill");
+      expect(result).not.toHaveProperty("update_skill");
+      expect(result).not.toHaveProperty("write_skill_file");
+      expect(result).not.toHaveProperty("delete_skill_file");
+      expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_SKILL);
     });
   });
 
@@ -157,6 +193,106 @@ describe("subagent-dispatch-tool", () => {
 
       expect(capturedConfig.model).toBe("plain-model-string");
       expect(capturedConfig.instructions).toContain("Role: WORKER");
+    });
+
+    it("binds scratchpad tools with the worker role when scratchpadContext is provided", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: {
+          scratchpad_write: { description: "orchestrator-write" },
+        },
+        scratchpadContext: {
+          chatId: "chat-attr-1",
+          messageId: "msg-attr-1",
+        },
+      });
+
+      const generator = dispatchTool.execute(
+        {
+          role: "researcher",
+          taskBrief: "Research role attribution",
+        },
+        { abortSignal: undefined } as any,
+      );
+
+      for await (const _ of generator) {
+        // exhaust
+      }
+
+      expect(registerScratchpadTools).toHaveBeenCalledWith({
+        chatId: "chat-attr-1",
+        messageId: "msg-attr-1",
+        workerRole: "researcher",
+      });
+      expect(capturedConfig.tools).toHaveProperty("scratchpad_write");
+      expect(capturedConfig.tools.scratchpad_write.workerRole).toBe("researcher");
+    });
+
+    it("throttles intermediate UI chunks to at least 150ms and emits the final chunk", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        this.config = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      // 5 chunks emitted rapidly:
+      // chunk 0 at t=0
+      // chunk 1 at t=30
+      // chunk 2 at t=60
+      // chunk 3 at t=160
+      // chunk 4 at t=180
+      const timestamps = [0, 30, 60, 160, 180, 200];
+      let timeIndex = 0;
+      const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => timestamps[timeIndex++] ?? 200);
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-0", role: "assistant", parts: [{ type: "text", text: "chunk-0" }] };
+        yield { id: "m-1", role: "assistant", parts: [{ type: "text", text: "chunk-1" }] };
+        yield { id: "m-2", role: "assistant", parts: [{ type: "text", text: "chunk-2" }] };
+        yield { id: "m-3", role: "assistant", parts: [{ type: "text", text: "chunk-3" }] };
+        yield { id: "m-4", role: "assistant", parts: [{ type: "text", text: "chunk-4" }] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+      });
+
+      const generator = dispatchTool.execute(
+        {
+          role: "worker",
+          taskBrief: "Stream throttle test",
+        },
+        { abortSignal: undefined } as any,
+      );
+
+      const yielded: any[] = [];
+      for await (const chunk of generator) {
+        yielded.push(chunk);
+      }
+
+      nowSpy.mockRestore();
+
+      // chunk-0 yielded at t=0 (first chunk)
+      // chunk-1 (t=30) throttled (<150ms)
+      // chunk-2 (t=60) throttled (<150ms)
+      // chunk-3 yielded at t=160 (160 - 0 >= 150)
+      // chunk-4 (t=180) throttled, but then yielded as the final chunk after loop
+      expect(yielded).toHaveLength(3);
+      expect(yielded[0].parts[0].text).toBe("chunk-0");
+      expect(yielded[1].parts[0].text).toBe("chunk-3");
+      expect(yielded[2].parts[0].text).toBe("chunk-4");
     });
 
     it("catches worker errors and yields BLOCKED status message", async () => {

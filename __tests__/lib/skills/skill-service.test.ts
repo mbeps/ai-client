@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
+import { SKILL_BODY_MAX_BYTES, SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
+import { SkillBundleBudgetError } from "@/schemas/skill/skill-file";
 
 // ── env must be mocked before any module that reads it ──────────────────────
 vi.mock("@/config/env", () => ({
@@ -20,9 +21,11 @@ const chainable = vi.hoisted(() => {
     "delete",
     "returning",
     "orderBy",
+    "for",
   ]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
+  c.transaction = vi.fn().mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(c));
   return c;
 });
 
@@ -127,6 +130,31 @@ describe("createSkillForUser", () => {
       }),
     ).rejects.toThrow('A skill with name "clean-code" already exists.');
   });
+
+  it("refuses body exceeding budget with SkillBundleBudgetError", async () => {
+    limitQueue.rows = [[]];
+    await expect(
+      createSkillForUser("user-1", {
+        name: "oversized-skill",
+        displayName: "Oversized Skill",
+        description: "d",
+        content: "a".repeat(SKILL_BODY_MAX_BYTES + 1),
+      }),
+    ).rejects.toThrow(SkillBundleBudgetError);
+  });
+
+  it("refuses bundled files exceeding budget with SkillBundleBudgetError", async () => {
+    limitQueue.rows = [[]];
+    await expect(
+      createSkillForUser("user-1", {
+        name: "oversized-bundle",
+        displayName: "Oversized Bundle",
+        description: "d",
+        content: "valid",
+        files: [{ path: "ref.md", content: "a".repeat(SKILL_BUNDLE_MAX_BYTES + 1) }],
+      }),
+    ).rejects.toThrow(SkillBundleBudgetError);
+  });
 });
 
 describe("updateSkillForUser", () => {
@@ -178,6 +206,24 @@ describe("updateSkillForUser", () => {
     );
   });
 
+  it("refuses updated body exceeding budget with SkillBundleBudgetError", async () => {
+    limitQueue.rows = [[row]];
+    await expect(
+      updateSkillForUser("user-1", "clean-code", {
+        content: "a".repeat(SKILL_BODY_MAX_BYTES + 1),
+      }),
+    ).rejects.toThrow(SkillBundleBudgetError);
+  });
+
+  it("refuses updated bundle exceeding budget with SkillBundleBudgetError", async () => {
+    limitQueue.rows = [[row]];
+    await expect(
+      updateSkillForUser("user-1", "clean-code", {
+        files: [{ path: "ref.md", content: "a".repeat(SKILL_BUNDLE_MAX_BYTES + 1) }],
+      }),
+    ).rejects.toThrow(SkillBundleBudgetError);
+  });
+
   it("updates the description when supplied", async () => {
     await updateSkillForUser("user-1", "clean-code", {
       description: "New description",
@@ -226,6 +272,17 @@ describe("deleteSkillForUser", () => {
 });
 
 describe("writeSkillFileForUser", () => {
+  it("executes inside a transaction with row locking", async () => {
+    await writeSkillFileForUser(
+      "user-1",
+      "clean-code",
+      "SKILL.md",
+      "New body",
+    );
+    expect(chainable.transaction).toHaveBeenCalled();
+    expect(chainable.for).toHaveBeenCalledWith("update");
+  });
+
   it("routes SKILL.md to the body column", async () => {
     const result = await writeSkillFileForUser(
       "user-1",
@@ -389,6 +446,13 @@ describe("listSkillFilesForUser", () => {
 });
 
 describe("deleteSkillFileForUser", () => {
+  it("executes inside a transaction with row locking", async () => {
+    limitQueue.rows = [[{ ...row, files: [{ path: "a.md", content: "A" }] }]];
+    await deleteSkillFileForUser("user-1", "clean-code", "a.md");
+    expect(chainable.transaction).toHaveBeenCalled();
+    expect(chainable.for).toHaveBeenCalledWith("update");
+  });
+
   it("refuses to delete SKILL.md", async () => {
     expect(
       await deleteSkillFileForUser("user-1", "clean-code", "SKILL.md"),

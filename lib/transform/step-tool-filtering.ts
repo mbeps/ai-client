@@ -199,9 +199,9 @@ export function filterStepTools(params: FilterStepToolsParams): {
     Object.assign(filteredTools, registerSkillTool(userId));
   }
 
-  const allowSkillAuthoring =
-    allowedToolIds.size === 0 ||
-    allowedToolIds.has(INTERNAL_TOOL_IDS.MANAGE_SKILL);
+  const allowSkillAuthoring = allowedToolIds.has(
+    INTERNAL_TOOL_IDS.MANAGE_SKILL,
+  );
   if (allowSkillAuthoring) {
     Object.assign(filteredTools, registerSkillAuthoringTools(userId));
   }

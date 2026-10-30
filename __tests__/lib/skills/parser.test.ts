@@ -336,11 +336,11 @@ describe("createSkillZip & extractSkillFromZip", () => {
       }),
     );
 
-    // Overwrite SKILL.md occurrences with SKILL.bin
+    // Overwrite SKILL.md occurrences with SKILL.tx (exact 8 bytes to avoid corrupting header offsets)
     let idx = 0;
     while ((idx = zipBuffer.indexOf(Buffer.from("SKILL.md"), idx)) !== -1) {
-      zipBuffer.write("SKILL.bin", idx);
-      idx += 9;
+      zipBuffer.write("SKILL.tx", idx);
+      idx += 8;
     }
 
     const extracted = extractSkillFromZip(zipBuffer, "my-fallback");
@@ -455,12 +455,17 @@ description: This is line one
     fileName3.copy(local3, 30);
     data3.copy(local3, 30 + fileName3.length);
 
-    // Concat all three local file headers without central directory (triggers fallback parser)
+    // Valid zlib entry succeeds
+    const validBuffer = Buffer.concat([local1, local3]);
+    const extractedValid = extractSkillFromZip(validBuffer);
+    expect(extractedValid.content).toContain("Zlib Deflated Fallback");
+    expect(extractedValid.files.some((f) => f.path === "other.bin")).toBe(true);
+
+    // Corrupted entry throws Invalid or oversized ZIP entry
     const fallbackBuffer = Buffer.concat([local1, local2, local3]);
-    const extracted = extractSkillFromZip(fallbackBuffer);
-    expect(extracted.content).toContain("Zlib Deflated Fallback");
-    expect(extracted.files.some((f) => f.path === "corrupt.txt")).toBe(true);
-    expect(extracted.files.some((f) => f.path === "other.bin")).toBe(true);
+    expect(() => extractSkillFromZip(fallbackBuffer)).toThrow(
+      "Invalid or oversized ZIP entry",
+    );
   });
 
   it("handles empty file path or undefined file content in createSkillZip", () => {
@@ -614,8 +619,9 @@ description: This is line one
     eocd.writeUInt32LE(local.length, 16);
 
     const zipWithCorruptedCD = Buffer.concat([local, cd, eocd]);
-    const extractedCorrupt = extractSkillFromZip(zipWithCorruptedCD);
-    expect(extractedCorrupt.files.length).toBe(1);
+    expect(() => extractSkillFromZip(zipWithCorruptedCD)).toThrow(
+      "Invalid or oversized ZIP entry",
+    );
 
     // 5. Fallback sequential parser with dataEnd > buf.length
     const truncatedLocal = Buffer.alloc(30 + fileName.length);
@@ -821,26 +827,17 @@ const corruptSkillZip = (
 };
 
 describe("parseZipBuffer decompression error handling", () => {
-  it("falls back to the raw bytes and logs when both inflates fail", () => {
-    const entries = parseZipBuffer(corruptSkillZip());
+  it("throws Invalid or oversized ZIP entry and logs when decompression fails", () => {
+    expect(() => parseZipBuffer(corruptSkillZip())).toThrow(
+      "Invalid or oversized ZIP entry",
+    );
 
-    // Every entry still surfaces, with its name intact.
-    expect(entries.map((e) => e.path)).toContain("SKILL.md");
-    expect(entries.map((e) => e.path)).toContain("notes.txt");
-
-    // zlib raises a real Error here, so the log carries `err.message` rather
-    // than a String() fallback. One log per compressed entry.
     expect(logError).toHaveBeenCalled();
     const logged = JSON.stringify(logError.mock.calls);
     expect(logged).toContain("Failed to decompress");
-    expect(logged).toContain("SKILL.md");
-
-    // The raw deflate bytes are kept verbatim, so SKILL.md is no longer readable.
-    const skillEntry = entries.find((e) => e.path === "SKILL.md");
-    expect(skillEntry?.data.toString("utf8")).not.toBe("# Corrupt");
   });
 
-  it("logs the failure for the sequential local-header fallback path", () => {
+  it("throws Invalid or oversized ZIP entry for the sequential local-header fallback path", () => {
     const zip = corruptSkillZip([]);
     // Corrupt the EOCD signature so parseZipBuffer cannot use the central
     // directory and must fall through to the sequential local-header parser,
@@ -848,13 +845,13 @@ describe("parseZipBuffer decompression error handling", () => {
     const eocdSig = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
     zip.writeUInt32LE(0, zip.lastIndexOf(eocdSig));
 
-    const entries = parseZipBuffer(zip);
-
-    expect(entries.map((e) => e.path)).toContain("SKILL.md");
-    expect(logError).toHaveBeenCalled();
-    expect(JSON.stringify(logError.mock.calls)).toContain(
-      "Failed to decompress",
+    expect(() => parseZipBuffer(zip)).toThrow(
+      "Invalid or oversized ZIP entry",
     );
+
+    expect(logError).toHaveBeenCalled();
+    const logged = JSON.stringify(logError.mock.calls);
+    expect(logged).toContain("Failed to decompress");
   });
 
   it("falls back to an empty value for a frontmatter key with no captured text", () => {

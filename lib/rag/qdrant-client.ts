@@ -36,7 +36,7 @@ export type QdrantChunkPayload = {
 /**
  * Singleton Qdrant client instance connecting via configured environment variables.
  */
-export const qdrantClient = new QdrantClient({
+const qdrantClient = new QdrantClient({
   url: env.QDRANT_URL,
   apiKey: env.QDRANT_API_KEY || undefined,
 });
