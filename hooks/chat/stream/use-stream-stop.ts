@@ -8,6 +8,27 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
+ * Searches messages for the most recent valid model ID stored in assistant metadata.
+ *
+ * @param messages - Map of messages in active chat
+ * @returns Found model string or null
+ * @author Maruf Bepary
+ */
+function findPriorAssistantModel(
+  messages?: Record<string, { role: string; metadata?: string | null }>,
+): string | null {
+  if (!messages) return null;
+  for (const msg of Object.values(messages)) {
+    if (msg.role !== "assistant" || !msg.metadata) continue;
+    try {
+      const parsed = JSON.parse(msg.metadata);
+      if (parsed.model) return parsed.model;
+    } catch {}
+  }
+  return null;
+}
+
+/**
  * Resolves the active model ID when stopping an in-flight stream.
  * Falls back to prior chat messages or user settings default chat model
  * if the stream was rejoined without a locally tracked model ID.
@@ -25,22 +46,12 @@ function resolveModelForStop(
 ): string {
   if (pendingModel) return pendingModel;
 
-  if (currentChat?.messages) {
-    for (const msg of Object.values(currentChat.messages)) {
-      if (msg.role === "assistant" && msg.metadata) {
-        try {
-          const parsed = JSON.parse(msg.metadata);
-          if (parsed.model) return parsed.model;
-        } catch {}
-      }
-    }
-  }
+  const priorModel = findPriorAssistantModel(currentChat?.messages);
+  if (priorModel) return priorModel;
 
   const defaultChatModelId =
     useAppStore.getState().userSettings?.defaultChatModelId;
-  if (defaultChatModelId) return defaultChatModelId;
-
-  return "";
+  return defaultChatModelId ?? "";
 }
 
 /**

@@ -29,6 +29,34 @@ function isToolMetaItem(item: unknown): item is ToolMetaItem {
 }
 
 /**
+ * Copies serverName from existing tool items into matching incoming items when missing.
+ *
+ * @param existingItems - Potential array of tool metadata from database
+ * @param incomingItems - Potential array of tool metadata from incoming message
+ * @author Maruf Bepary
+ */
+function preserveServerNames(
+  existingItems: unknown,
+  incomingItems: unknown,
+): void {
+  if (!Array.isArray(existingItems) || !Array.isArray(incomingItems)) return;
+
+  const existingMap = new Map<string, ToolMetaItem>(
+    existingItems
+      .filter(isToolMetaItem)
+      .map((item: ToolMetaItem) => [item.toolCallId, item]),
+  );
+
+  for (const item of incomingItems) {
+    if (!isToolMetaItem(item) || item.serverName) continue;
+    const matched = existingMap.get(item.toolCallId);
+    if (matched?.serverName) {
+      item.serverName = matched.serverName;
+    }
+  }
+}
+
+/**
  * Merges incoming metadata with existing message metadata on conflict,
  * preserving existing model ID and serverName if omitted in incoming.
  *
@@ -53,45 +81,8 @@ function mergeConflictMetadata(
       incomingMeta.model = existingMeta.model;
     }
 
-    // Preserve serverName on toolCalls if missing in incoming
-    if (
-      Array.isArray(existingMeta.toolCalls) &&
-      Array.isArray(incomingMeta.toolCalls)
-    ) {
-      const existingTools = new Map<string, ToolMetaItem>(
-        existingMeta.toolCalls
-          .filter(isToolMetaItem)
-          .map((tc: ToolMetaItem) => [tc.toolCallId, tc]),
-      );
-      for (const tc of incomingMeta.toolCalls) {
-        if (isToolMetaItem(tc)) {
-          const matched = existingTools.get(tc.toolCallId);
-          if (!tc.serverName && matched?.serverName) {
-            tc.serverName = matched.serverName;
-          }
-        }
-      }
-    }
-
-    // Preserve serverName on toolResults if missing in incoming
-    if (
-      Array.isArray(existingMeta.toolResults) &&
-      Array.isArray(incomingMeta.toolResults)
-    ) {
-      const existingResults = new Map<string, ToolMetaItem>(
-        existingMeta.toolResults
-          .filter(isToolMetaItem)
-          .map((tr: ToolMetaItem) => [tr.toolCallId, tr]),
-      );
-      for (const tr of incomingMeta.toolResults) {
-        if (isToolMetaItem(tr)) {
-          const matched = existingResults.get(tr.toolCallId);
-          if (!tr.serverName && matched?.serverName) {
-            tr.serverName = matched.serverName;
-          }
-        }
-      }
-    }
+    preserveServerNames(existingMeta.toolCalls, incomingMeta.toolCalls);
+    preserveServerNames(existingMeta.toolResults, incomingMeta.toolResults);
 
     return JSON.stringify(incomingMeta);
   } catch {

@@ -194,10 +194,23 @@ export function ChatUI({
     );
   }
 
+  const chatAssistantId = chat.assistantId;
+  const activeArtifactId = activeArtifact?.id;
+  const assistantName = currentAssistant?.name;
+  const assistantPrompt = currentAssistant?.prompt ?? undefined;
+  const canMentionAssistant = checkCanMentionAssistant(
+    thread.length,
+    chatAssistantId,
+  );
+  const shouldShowReopen = checkShouldShowReopen(
+    isArtifactOpen,
+    allArtifacts.length,
+  );
+
   return (
     <div className="relative flex h-full w-full overflow-hidden">
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <AssistantBar assistantName={currentAssistant?.name} />
+        <AssistantBar assistantName={assistantName} />
 
         <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
           <div className="px-4 py-6 md:px-8">
@@ -210,7 +223,7 @@ export function ChatUI({
                 onRegenerate={handleRegenerate}
                 onNavigateBranch={handleNavigateBranch}
                 onToggleArtifact={handleToggleArtifact}
-                activeArtifactId={activeArtifact?.id}
+                activeArtifactId={activeArtifactId}
                 isCanvasOpen={isArtifactOpen}
               />
 
@@ -222,7 +235,7 @@ export function ChatUI({
                 activeToolCalls={activeToolCalls}
                 streamingCitations={streamingCitations}
                 onToggleArtifact={handleToggleArtifact}
-                activeArtifactId={activeArtifact?.id}
+                activeArtifactId={activeArtifactId}
                 isCanvasOpen={isArtifactOpen}
                 chatId={chatId}
                 assistantMessageId={assistantMessageId}
@@ -239,12 +252,9 @@ export function ChatUI({
               isLoading={isLoading}
               onStop={stopStream}
               servers={allEnabledServers}
-              activeChatAssistantId={chat?.assistantId}
-              systemPrompt={currentAssistant?.prompt ?? undefined}
-              canMentionAssistant={checkCanMentionAssistant(
-                thread.length,
-                chat?.assistantId,
-              )}
+              activeChatAssistantId={chatAssistantId}
+              systemPrompt={assistantPrompt}
+              canMentionAssistant={canMentionAssistant}
               initialSelectedServerIds={initialServerIds}
               initialSelectedTools={initialSelectedTools}
               initialSelectedKbs={initialKbIds}
@@ -259,9 +269,7 @@ export function ChatUI({
         </div>
       </div>
 
-      {checkShouldShowReopen(isArtifactOpen, allArtifacts.length) && (
-        <CanvasReopenButton onReopen={handleReopen} />
-      )}
+      {shouldShowReopen && <CanvasReopenButton onReopen={handleReopen} />}
 
       <ArtifactPanel
         isOpen={isArtifactOpen}

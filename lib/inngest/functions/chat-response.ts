@@ -34,6 +34,192 @@ import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 const log = getLogger(["inngest", "chat", "response"]);
 
 /**
+ * Registers MCP tools when supported by the active model, or determines external server status.
+ *
+ * @param isToolCallingModel - Whether the resolved model supports function calling
+ * @param servers - Active external MCP servers
+ * @param selectedTools - Explicitly selected tool identifiers
+ * @returns Registered tool state, source mapping, cleanup callback, and external availability flag
+ * @author Maruf Bepary
+ */
+async function setupChatMcpTools(
+  isToolCallingModel: boolean,
+  servers: unknown,
+  selectedTools?: string[],
+): Promise<{
+  mcpTools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  mcpCleanup: () => Promise<void>;
+  hasExternalMcpTools: boolean;
+}> {
+  if (!isToolCallingModel) {
+    const hasExternalServers =
+      (Array.isArray(servers) ? servers.length : 0) > 0;
+    return {
+      mcpTools: {},
+      toolSourceMap: {},
+      mcpCleanup: async () => {},
+      hasExternalMcpTools: hasExternalServers,
+    };
+  }
+
+  const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
+    servers as any,
+    selectedTools,
+  );
+  return {
+    mcpTools,
+    toolSourceMap,
+    mcpCleanup,
+    hasExternalMcpTools: Object.keys(mcpTools).length > 0,
+  };
+}
+
+/**
+ * Mutable state tracker for stream text, reasoning, and completed tools.
+ */
+interface ExecutionAccumulator {
+  accumulatedText: string;
+  accumulatedReasoning: string;
+  completedTools: CompletedToolRecord[];
+}
+
+/**
+ * Executes model streaming, handling user aborts, fallback synthesis, and final assistant persistence.
+ *
+ * @author Maruf Bepary
+ */
+async function executeModelStreamPipeline(options: {
+  chatId: string;
+  assistantMessageId: string;
+  userMessageId: string;
+  resolvedModelId: string;
+  abortController: AbortController;
+  emit: ReturnType<typeof createStreamEmitter>;
+  toolSourceMap: Record<string, string>;
+  finalMessages: ReturnType<typeof prepareChatMessages>;
+  hasArtifactTool: boolean;
+  artifactTools: Record<string, any>;
+  resolved: any;
+  systemPrompt: string;
+  allTools: Record<string, any> | undefined;
+  result: ReturnType<typeof streamText>;
+  accumulator: ExecutionAccumulator;
+  persistAbortedResponse: () => Promise<boolean>;
+}): Promise<void> {
+  const {
+    chatId,
+    assistantMessageId,
+    userMessageId,
+    resolvedModelId,
+    abortController,
+    emit,
+    toolSourceMap,
+    finalMessages,
+    hasArtifactTool,
+    artifactTools,
+    resolved,
+    systemPrompt,
+    allTools,
+    result,
+    accumulator,
+    persistAbortedResponse,
+  } = options;
+
+  const safeFinishReason = Promise.resolve(result.finishReason).catch(
+    () => "stop",
+  );
+  const safeUsage = Promise.resolve(result.usage).catch(() => undefined);
+
+  const streamState = await consumeModelStream(
+    result.fullStream,
+    abortController.signal,
+    emit,
+    toolSourceMap,
+    accumulator.completedTools,
+  );
+
+  accumulator.accumulatedText = streamState.accumulatedText;
+  accumulator.accumulatedReasoning = streamState.accumulatedReasoning;
+
+  if (streamState.aborted) {
+    log.info("Stream loop aborted by user (chatId: {chatId})", { chatId });
+    await persistAbortedResponse();
+    return;
+  }
+
+  if (
+    needsFallbackSynthesis(
+      abortController.signal.aborted,
+      accumulator.accumulatedText,
+      accumulator.completedTools.length,
+    )
+  ) {
+    const synthState = await runSynthesisFallbackPass({
+      chatId,
+      finalMessages,
+      completedTools: accumulator.completedTools,
+      hasArtifactTool,
+      artifactTools,
+      resolved,
+      resolvedModelId,
+      abortController,
+      systemPrompt,
+      emit,
+      toolSourceMap,
+    });
+    accumulator.accumulatedText += synthState.text;
+    accumulator.accumulatedReasoning += synthState.reasoning;
+  }
+
+  if (abortController.signal.aborted) {
+    log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
+      chatId,
+    });
+    await persistAbortedResponse();
+    return;
+  }
+
+  await completeAssistantResponse({
+    chatId,
+    assistantMessageId,
+    userMessageId,
+    accumulatedText: accumulator.accumulatedText,
+    accumulatedReasoning: accumulator.accumulatedReasoning,
+    resolvedModelId,
+    completedTools: accumulator.completedTools,
+    allTools,
+    toolSourceMap,
+    safeFinishReason,
+    safeUsage,
+    abortSignal: abortController.signal,
+    emit,
+  });
+}
+
+/**
+ * Handles errors during chat generation, persisting partial responses on abort
+ * and cleaning up scratchpad files on unrecoverable failures.
+ *
+ * @author Maruf Bepary
+ */
+async function handleChatExecutionError(
+  error: unknown,
+  signal: AbortSignal,
+  chatId: string,
+  assistantMessageId: string,
+  persistAbortedResponse: () => Promise<boolean>,
+  emit: ReturnType<typeof createStreamEmitter>,
+): Promise<void> {
+  if (isAbortError(error, signal)) {
+    await persistAbortedResponse();
+  } else {
+    await deleteScratchpadFiles(assistantMessageId);
+  }
+  await handleChatGenerationError(error, signal, chatId, emit);
+}
+
+/**
  * Inngest durable function generating AI chat responses in the background.
  * Streams tokens, reasoning, and tool calls to Inngest Realtime channel,
  * survives client disconnections and page refreshes, and persists the
@@ -83,9 +269,11 @@ export const generateChatResponse = inngest.createFunction(
 
     let mcpCleanup: () => Promise<void> = async () => {};
     let resolvedModelId = model ?? "";
-    let accumulatedText = "";
-    let accumulatedReasoning = "";
-    const completedTools: CompletedToolRecord[] = [];
+    const accumulator: ExecutionAccumulator = {
+      accumulatedText: "",
+      accumulatedReasoning: "",
+      completedTools: [],
+    };
 
     const persistAbortedResponse = () =>
       persistAbortedAssistantResponse({
@@ -93,9 +281,9 @@ export const generateChatResponse = inngest.createFunction(
         assistantMessageId,
         userMessageId,
         resolvedModelId,
-        accumulatedText,
-        accumulatedReasoning,
-        completedTools,
+        accumulatedText: accumulator.accumulatedText,
+        accumulatedReasoning: accumulator.accumulatedReasoning,
+        completedTools: accumulator.completedTools,
       });
 
     try {
@@ -114,42 +302,22 @@ export const generateChatResponse = inngest.createFunction(
           selectedSkillIds,
         });
 
-      const globalSystemPrompt = userSettings?.globalSystemPrompt;
-      const isMemoryEnabled = userSettings?.memoryEnabled ?? true;
-      const resolvedModelRow = {
-        capVision: resolved.modelRow.capVision,
-        capTools: resolved.modelRow.capTools,
-      };
       resolvedModelId = resolved.modelId;
+      const isToolCallingModel = !!resolved.modelRow.capTools;
 
-      const isToolCallingModel = !!resolvedModelRow?.capTools;
-      const hasExternalServers = (ctx.servers?.length ?? 0) > 0;
-
-      let mcpTools: Record<string, any> = {};
-      let toolSourceMap: Record<string, string> = {};
-
-      if (isToolCallingModel) {
-        const {
-          mcpTools: loadedTools,
-          toolSourceMap: loadedSourceMap,
-          mcpCleanup: registeredCleanup,
-        } = await registerMcpTools(ctx.servers as any, selectedTools);
-        mcpTools = loadedTools;
-        toolSourceMap = loadedSourceMap;
-        mcpCleanup = registeredCleanup;
-      }
-
-      const hasExternalMcpTools =
-        !isToolCallingModel && hasExternalServers
-          ? true
-          : Object.keys(mcpTools).length > 0;
+      const mcpState = await setupChatMcpTools(
+        isToolCallingModel,
+        ctx.servers,
+        selectedTools,
+      );
+      mcpCleanup = mcpState.mcpCleanup;
 
       validateModelCapabilities({
         isToolCallingModel,
-        hasExternalMcpTools,
+        hasExternalMcpTools: mcpState.hasExternalMcpTools,
         selectedTools,
         thread: thread as any,
-        capVision: resolvedModelRow?.capVision,
+        capVision: resolved.modelRow.capVision,
       });
 
       const fileAttachments = extractFileAttachments(thread);
@@ -173,11 +341,11 @@ export const generateChatResponse = inngest.createFunction(
         chatId,
         assistantMessageId,
         isToolCallingModel,
-        mcpTools,
+        mcpTools: mcpState.mcpTools,
         selectedTools,
         ctx,
         fileAttachments,
-        isMemoryEnabled,
+        isMemoryEnabled: userSettings?.memoryEnabled ?? true,
         subagentsEnabled,
         resolved,
         resolvedModelId,
@@ -189,7 +357,7 @@ export const generateChatResponse = inngest.createFunction(
       );
 
       const systemPrompt = buildSystemPrompt(
-        globalSystemPrompt,
+        userSettings?.globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
         ctx.assistantRow?.prompt,
         isToolCallingModel && hasKbTool,
@@ -217,87 +385,31 @@ export const generateChatResponse = inngest.createFunction(
         }),
       );
 
-      const safeFinishReason = Promise.resolve(result.finishReason).catch(
-        () => "stop",
-      );
-      const safeUsage = Promise.resolve(result.usage).catch(() => undefined);
-
-      const streamState = await consumeModelStream(
-        result.fullStream,
-        abortController.signal,
-        emit,
-        toolSourceMap,
-        completedTools,
-      );
-
-      accumulatedText = streamState.accumulatedText;
-      accumulatedReasoning = streamState.accumulatedReasoning;
-
-      if (streamState.aborted) {
-        log.info("Stream loop aborted by user (chatId: {chatId})", {
-          chatId,
-        });
-        await persistAbortedResponse();
-        return;
-      }
-
-      if (
-        needsFallbackSynthesis(
-          abortController.signal.aborted,
-          accumulatedText,
-          completedTools.length,
-        )
-      ) {
-        const synthState = await runSynthesisFallbackPass({
-          chatId,
-          finalMessages,
-          completedTools,
-          hasArtifactTool,
-          artifactTools,
-          resolved,
-          resolvedModelId,
-          abortController,
-          systemPrompt,
-          emit,
-          toolSourceMap,
-        });
-        accumulatedText += synthState.text;
-        accumulatedReasoning += synthState.reasoning;
-      }
-
-      if (abortController.signal.aborted) {
-        log.info("Chat generation cleanly aborted by user (chatId: {chatId})", {
-          chatId,
-        });
-        await persistAbortedResponse();
-        return;
-      }
-
-      await completeAssistantResponse({
+      await executeModelStreamPipeline({
         chatId,
         assistantMessageId,
         userMessageId,
-        accumulatedText,
-        accumulatedReasoning,
         resolvedModelId,
-        completedTools,
-        allTools,
-        toolSourceMap,
-        safeFinishReason,
-        safeUsage,
-        abortSignal: abortController.signal,
+        abortController,
         emit,
+        toolSourceMap: mcpState.toolSourceMap,
+        finalMessages,
+        hasArtifactTool,
+        artifactTools,
+        resolved,
+        systemPrompt,
+        allTools,
+        result,
+        accumulator,
+        persistAbortedResponse,
       });
     } catch (error: unknown) {
-      if (isAbortError(error, abortController.signal)) {
-        await persistAbortedResponse();
-      } else {
-        await deleteScratchpadFiles(assistantMessageId);
-      }
-      await handleChatGenerationError(
+      await handleChatExecutionError(
         error,
         abortController.signal,
         chatId,
+        assistantMessageId,
+        persistAbortedResponse,
         emit,
       );
     } finally {

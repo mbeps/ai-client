@@ -106,6 +106,66 @@ export function estimateModelMessageTokens(m: ModelMessage): number {
 }
 
 /**
+ * Drops leading non-user messages from the messages array so conversation begins with user input.
+ *
+ * @param messages - Model messages to inspect
+ * @returns Sliced array starting with a user message
+ * @author Maruf Bepary
+ */
+function trimLeadingNonUsers(messages: ModelMessage[]): ModelMessage[] {
+  let startIdx = 0;
+  while (startIdx < messages.length && messages[startIdx].role !== "user") {
+    startIdx++;
+  }
+  return startIdx > 0 ? messages.slice(startIdx) : messages;
+}
+
+/**
+ * Trims conversation history from the oldest turns forward until total tokens fall within budget.
+ *
+ * @param messages - Messages to trim
+ * @param maxContextTokens - Token budget
+ * @returns Messages within token budget
+ * @author Maruf Bepary
+ */
+function trimToTokenBudget(
+  messages: ModelMessage[],
+  maxContextTokens: number,
+): ModelMessage[] {
+  let currentMessages = messages;
+  let currentTokens = currentMessages.reduce(
+    (sum, m) => sum + estimateModelMessageTokens(m),
+    0,
+  );
+
+  while (currentTokens > maxContextTokens) {
+    const nextUserIdx = currentMessages.findIndex(
+      (m, idx) => idx > 0 && m.role === "user",
+    );
+    if (nextUserIdx === -1) break;
+
+    currentMessages = currentMessages.slice(nextUserIdx);
+    currentTokens = currentMessages.reduce(
+      (sum, m) => sum + estimateModelMessageTokens(m),
+      0,
+    );
+  }
+
+  if (currentMessages.length < messages.length) {
+    log.warn(
+      "Chat history budget-trimmed from {originalCount} to {keptCount} turns for context budget {maxContextTokens}",
+      {
+        originalCount: messages.length,
+        keptCount: currentMessages.length,
+        maxContextTokens,
+      },
+    );
+  }
+
+  return currentMessages;
+}
+
+/**
  * Orchestrates the final set of messages to be sent to the AI model. Converts the thread history into model messages and truncates to the most recent `env.CHAT_MAX_HISTORY_TURNS` entries (the last message is always kept, with a warning logged on truncation). The system prompt is NOT included here — the route passes it separately via `streamText({ system })`.
  *
  * @param options - Target options
@@ -120,12 +180,14 @@ export function prepareChatMessages(
   const processedMessages = assembleModelMessages(history);
 
   const limit = Math.max(1, env.CHAT_MAX_HISTORY_TURNS);
-  let finalMessages = processedMessages;
-  if (processedMessages.length > limit) {
-    finalMessages = processedMessages.slice(-limit);
-    while (finalMessages.length > 0 && finalMessages[0].role !== "user") {
-      finalMessages.shift();
-    }
+  const isTruncated = processedMessages.length > limit;
+  const initialSlice = isTruncated
+    ? processedMessages.slice(-limit)
+    : processedMessages;
+
+  let finalMessages = trimLeadingNonUsers(initialSlice);
+
+  if (isTruncated) {
     log.warn(
       "Chat history truncated from {originalCount} to {keptCount} turns",
       {
@@ -133,44 +195,10 @@ export function prepareChatMessages(
         keptCount: finalMessages.length,
       },
     );
-  } else {
-    while (finalMessages.length > 0 && finalMessages[0].role !== "user") {
-      finalMessages.shift();
-    }
   }
 
   if (maxContextTokens !== undefined && maxContextTokens > 0) {
-    let currentTokens = finalMessages.reduce(
-      (sum, m) => sum + estimateModelMessageTokens(m),
-      0,
-    );
-
-    const countBeforeTrimming = finalMessages.length;
-    while (currentTokens > maxContextTokens) {
-      const nextUserIdx = finalMessages.findIndex(
-        (m, idx) => idx > 0 && m.role === "user",
-      );
-      if (nextUserIdx === -1) {
-        break;
-      }
-
-      finalMessages = finalMessages.slice(nextUserIdx);
-      currentTokens = finalMessages.reduce(
-        (sum, m) => sum + estimateModelMessageTokens(m),
-        0,
-      );
-    }
-
-    if (finalMessages.length < countBeforeTrimming) {
-      log.warn(
-        "Chat history budget-trimmed from {originalCount} to {keptCount} turns for context budget {maxContextTokens}",
-        {
-          originalCount: countBeforeTrimming,
-          keptCount: finalMessages.length,
-          maxContextTokens,
-        },
-      );
-    }
+    finalMessages = trimToTokenBudget(finalMessages, maxContextTokens);
   }
 
   return finalMessages;
