@@ -47,4 +47,3 @@ export async function hasExistingAssistantMessage(
 
   return false;
 }
-

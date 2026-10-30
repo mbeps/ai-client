@@ -19,7 +19,12 @@ export function buildAssistantFinishMetadata({
   model: string;
   reasoning: string;
   completedTools: ToolCallState[];
-  toolResults: Array<{ toolCallId: string; toolName: string; result: unknown }>;
+  toolResults: Array<{
+    toolCallId: string;
+    toolName: string;
+    result: unknown;
+    serverName?: string;
+  }>;
   usage?: unknown;
   finishReason?: string;
   durationMs?: number;
@@ -32,6 +37,7 @@ export function buildAssistantFinishMetadata({
       toolCallId: tc.toolCallId,
       toolName: tc.toolName,
       args: tc.args,
+      ...(tc.serverName ? { serverName: tc.serverName } : {}),
     })),
     toolResults,
     usage,

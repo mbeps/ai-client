@@ -90,6 +90,30 @@ describe("handle-stream-tool-calls", () => {
     ]);
   });
 
+  it("extracts completed tool results with serverName when present", () => {
+    const tools: ToolCallState[] = [
+      {
+        toolCallId: "1",
+        toolName: "a",
+        status: "complete",
+        result: "res1",
+        serverName: "mcp-srv",
+      },
+      {
+        toolCallId: "2",
+        toolName: "b",
+        status: "complete",
+        result: "res2",
+      },
+    ];
+
+    const extracted = extractCompletedToolResults(tools);
+    expect(extracted).toEqual([
+      { toolCallId: "1", toolName: "a", result: "res1", serverName: "mcp-srv" },
+      { toolCallId: "2", toolName: "b", result: "res2" },
+    ]);
+  });
+
   it("builds assistant finish metadata JSON correctly", () => {
     const metaStr = buildAssistantFinishMetadata({
       model: "gpt-4o",
