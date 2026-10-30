@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { logger } from "@/lib/logger";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
@@ -66,8 +66,14 @@ export function useResourceHydration(resources: HydratableResource[]) {
   );
   const hydrationAttempted = useRef<Set<string>>(new Set());
 
+  const resourcesKey = resources.join(",");
+  const stableResources = useMemo(
+    () => (resourcesKey ? resourcesKey.split(",") : []) as HydratableResource[],
+    [resourcesKey],
+  );
+
   const hydrate = useCallback(async () => {
-    const toLoad = resources.filter((res) => {
+    const toLoad = stableResources.filter((res) => {
       const isPending =
         hydrationAttempted.current.has(res) || hydratedResources.has(res);
       return !isPending;
@@ -108,8 +114,16 @@ export function useResourceHydration(resources: HydratableResource[]) {
 
       try {
         await (loader as () => Promise<void>)();
-        hydratedResources.add(res);
+        const loadErr = useAppStore.getState().loadError;
+        const hasFailed =
+          loadErr?.toLowerCase().includes(res.toLowerCase()) ?? false;
+        if (!hasFailed) {
+          hydratedResources.add(res);
+        } else {
+          hydrationAttempted.current.delete(res);
+        }
       } catch (error) {
+        hydrationAttempted.current.delete(res);
         logger.error(`[Hydration] Failed to load ${res}`, error);
       } finally {
         setLoadingResources((prev) => {
@@ -121,7 +135,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
     });
 
     await Promise.all(loaders);
-  }, [resources, store]);
+  }, [stableResources, store]);
 
   useEffect(() => {
     hydrate();

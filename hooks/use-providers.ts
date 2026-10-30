@@ -80,11 +80,15 @@ export function useProviders(): UseProvidersResult {
     const unsubscribe = subscribeProviderRegistryCache("providers", () => {
       const cached =
         getProviderRegistryCachedData<AiProviderRow[]>("providers");
-      setProviders(cached ?? []);
+      if (cached === null) {
+        void loadProviders(true);
+      } else {
+        setProviders(cached);
+      }
     });
 
     return unsubscribe;
-  }, []);
+  }, [loadProviders]);
 
   useEffect(() => {
     const hasCached =

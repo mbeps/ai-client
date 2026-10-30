@@ -111,13 +111,17 @@ export function useUserModels(
     const unsubscribeModels = subscribeProviderRegistryCache("models", () => {
       const cached =
         getProviderRegistryCachedData<AiModelWithProvider[]>("models");
-      setRawModels(cached ?? []);
+      if (cached === null) {
+        void loadModels(true);
+      } else {
+        setRawModels(cached);
+      }
     });
 
     return () => {
       unsubscribeModels();
     };
-  }, []);
+  }, [loadModels]);
 
   useEffect(() => {
     const hasCached =

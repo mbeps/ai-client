@@ -311,18 +311,22 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       newLeafId = getDeepestLeaf(updatedMessages, newLeafId);
     }
 
-    const previous = get();
+    const previousChat = get().chats[chatId];
     get().deleteMessage(chatId, messageId);
     try {
       await deleteMessageAction(chatId, messageId, newLeafId);
     } catch (error) {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [chatId]: previousChat }
+          : state.chats,
+      }));
       throw error;
     }
   },
 
   setCurrentLeafDb: async (chatId, leafId) => {
-    const previous = get();
+    const previousChat = get().chats[chatId];
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -339,7 +343,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateCurrentLeafAction(chatId, leafId);
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [chatId]: previousChat }
+          : state.chats,
+      }));
     }
   },
 
@@ -371,7 +379,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   updateMessageMetadataDb: async (chatId, messageId, metadata) => {
-    const previous = get();
+    const previousChat = get().chats[chatId];
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -393,7 +401,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateMessageMetadataAction(messageId, metadata);
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [chatId]: previousChat }
+          : state.chats,
+      }));
     }
   },
 
@@ -439,7 +451,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   renameChatDb: async (id, title) => {
-    const previous = get();
+    const previousChat = get().chats[id];
     set((state) => {
       const chat = state.chats[id];
       if (!chat) return state;
@@ -457,12 +469,16 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await renameChatAction(id, title);
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [id]: previousChat }
+          : state.chats,
+      }));
     }
   },
 
   moveChatDb: async (id, projectId) => {
-    const previous = get();
+    const previousChat = get().chats[id];
     set((state) => {
       const chat = state.chats[id];
       if (!chat) return state;
@@ -480,7 +496,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await moveChatAction(id, projectId);
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [id]: previousChat }
+          : state.chats,
+      }));
     }
   },
 
@@ -502,7 +522,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   deleteChatDb: async (chatId) => {
-    const previous = get();
+    const previousChat = get().chats[chatId];
     set((state) => {
       const { [chatId]: removed, ...rest } = state.chats;
       return { chats: rest };
@@ -510,12 +530,16 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await deleteChat(chatId);
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [chatId]: previousChat }
+          : state.chats,
+      }));
     }
   },
 
   setKnowledgebaseDb: async (chatId, kbId) => {
-    const previous = get();
+    const previousChat = get().chats[chatId];
     set((state) => {
       const chat = state.chats[chatId];
       if (!chat) return state;
@@ -529,7 +553,11 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
     try {
       await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
     } catch {
-      set({ chats: previous.chats });
+      set((state) => ({
+        chats: previousChat
+          ? { ...state.chats, [chatId]: previousChat }
+          : state.chats,
+      }));
     }
   },
 

@@ -65,6 +65,8 @@ import { deleteMessage as deleteMessageAction } from "@/actions/chats/delete-mes
 import { moveChat as moveChatAction } from "@/actions/chats/move-chat";
 import { renameChat as renameChatAction } from "@/actions/chats/rename-chat";
 import { updateChatKnowledgebase as updateChatKnowledgebaseAction } from "@/actions/chats/update-chat-knowledgebase";
+import { updateCurrentLeaf as updateCurrentLeafAction } from "@/actions/chats/update-current-leaf";
+import { updateMessageMetadata as updateMessageMetadataAction } from "@/actions/chats/update-message-metadata";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const RESET_STATE = {
@@ -1206,6 +1208,153 @@ describe("T5.3 scoped rollback does not clobber entity state", () => {
       .catch(() => {});
     expect(useAppStore.getState().projects).toHaveLength(1);
     expect(useAppStore.getState().projects[0].id).toBe("p1");
+  });
+
+  it("scoped rollbacks preserve concurrent edits to other chats", async () => {
+    const baseChat1: Chat = {
+      id: "chat1",
+      title: "Chat 1 Original",
+      projectId: "proj-1",
+      assistantId: undefined,
+      knowledgebaseId: "kb-1",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      messages: {
+        m1: {
+          id: "m1",
+          role: "user",
+          content: "Hello",
+          createdAt: new Date(),
+          parentId: null,
+          childrenIds: [],
+          metadata: { note: "original" },
+        },
+      },
+      currentLeafId: "m1",
+    };
+
+    const baseChat2: Chat = {
+      id: "chat2",
+      title: "Chat 2",
+      projectId: undefined,
+      assistantId: undefined,
+      knowledgebaseId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      messages: {},
+      currentLeafId: null,
+    };
+
+    // 1. renameChatDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(renameChatAction).mockImplementationOnce(async () => {
+      // Simulate concurrent update to chat2 while chat1 action is in-flight
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 Concurrent Edit" } },
+      }));
+      throw new Error("Rename failed");
+    });
+    await useAppStore.getState().renameChatDb("chat1", "Chat 1 Renamed");
+    expect(useAppStore.getState().chats.chat1.title).toBe("Chat 1 Original");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 Concurrent Edit");
+
+    // 2. moveChatDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(moveChatAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 Moved Edit" } },
+      }));
+      throw new Error("Move failed");
+    });
+    await useAppStore.getState().moveChatDb("chat1", "proj-2");
+    expect(useAppStore.getState().chats.chat1.projectId).toBe("proj-1");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 Moved Edit");
+
+    // 3. setKnowledgebaseDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(updateChatKnowledgebaseAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 KB Edit" } },
+      }));
+      throw new Error("KB update failed");
+    });
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-2");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 KB Edit");
+
+    // 4. setCurrentLeafDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(updateCurrentLeafAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 Leaf Edit" } },
+      }));
+      throw new Error("Leaf update failed");
+    });
+    await useAppStore.getState().setCurrentLeafDb("chat1", "other-leaf");
+    expect(useAppStore.getState().chats.chat1.currentLeafId).toBe("m1");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 Leaf Edit");
+
+    // 5. updateMessageMetadataDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(updateMessageMetadataAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 Meta Edit" } },
+      }));
+      throw new Error("Metadata update failed");
+    });
+    await useAppStore.getState().updateMessageMetadataDb("chat1", "m1", { note: "changed" });
+    expect(useAppStore.getState().chats.chat1.messages.m1.metadata).toEqual({ note: "original" });
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 Meta Edit");
+
+    // 6. deleteChatDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(deleteChatAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 Delete Edit" } },
+      }));
+      throw new Error("Delete chat failed");
+    });
+    await useAppStore.getState().deleteChatDb("chat1");
+    expect(useAppStore.getState().chats.chat1).toBeDefined();
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 Delete Edit");
+
+    // 7. deleteMessageDb failure preserves chat2
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 }, chat2: { ...baseChat2 } } });
+    vi.mocked(deleteMessageAction).mockImplementationOnce(async () => {
+      useAppStore.setState((s) => ({
+        chats: { ...s.chats, chat2: { ...baseChat2, title: "Chat 2 DeleteMsg Edit" } },
+      }));
+      throw new Error("Delete msg failed");
+    });
+    await expect(useAppStore.getState().deleteMessageDb("chat1", "m1")).rejects.toThrow("Delete msg failed");
+    expect(useAppStore.getState().chats.chat1.messages.m1).toBeDefined();
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2 DeleteMsg Edit");
+
+    // 8. Error rollback when chat does not exist in store (falsy branch of previousChat ? ... : state.chats)
+    useAppStore.setState({ chats: { chat2: { ...baseChat2 } } });
+    vi.mocked(renameChatAction).mockRejectedValueOnce(new Error("Missing chat rename fail"));
+    await useAppStore.getState().renameChatDb("non-existent-chat", "New Title");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    vi.mocked(moveChatAction).mockRejectedValueOnce(new Error("Missing chat move fail"));
+    await useAppStore.getState().moveChatDb("non-existent-chat", "proj-x");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    vi.mocked(deleteChatAction).mockRejectedValueOnce(new Error("Missing chat delete fail"));
+    await useAppStore.getState().deleteChatDb("non-existent-chat");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    vi.mocked(updateChatKnowledgebaseAction).mockRejectedValueOnce(new Error("Missing chat kb fail"));
+    await useAppStore.getState().setKnowledgebaseDb("non-existent-chat", "kb-x");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    vi.mocked(updateCurrentLeafAction).mockRejectedValueOnce(new Error("Missing chat leaf fail"));
+    await useAppStore.getState().setCurrentLeafDb("non-existent-chat", "leaf-x");
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    vi.mocked(updateMessageMetadataAction).mockRejectedValueOnce(new Error("Missing chat meta fail"));
+    await useAppStore.getState().updateMessageMetadataDb("non-existent-chat", "msg-x", {});
+    expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
   });
 
   it("deleteMessageDb calculates newLeafId from deepest leaf of parent and handles rollback", async () => {

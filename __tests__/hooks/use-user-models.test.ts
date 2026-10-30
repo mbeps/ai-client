@@ -285,12 +285,16 @@ describe("useUserModels hook", () => {
     });
     expect(result.current.models).toHaveLength(2);
 
-    // Trigger subscription callback with null data fallback
+    // Trigger subscription callback with null data (cache invalidation)
     vi.mocked(getProviderRegistryCachedData).mockReturnValue(null);
-    act(() => {
+    await act(async () => {
       subscriberCb?.();
     });
-    expect(result.current.rawModels).toEqual([]);
+    expect(fetchProviderRegistryWithCache).toHaveBeenCalledWith(
+      "models",
+      expect.any(Function),
+      { force: true },
+    );
 
     // Call refresh
     await act(async () => {
