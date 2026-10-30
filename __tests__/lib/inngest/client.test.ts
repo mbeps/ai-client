@@ -51,5 +51,18 @@ describe("Inngest Client Configuration", () => {
 
     const { inngest } = await import("@/lib/inngest/client");
     expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(false);
+  });
+
+  it("evaluates isDev to true when INNGEST_SIGNING_KEY is local even in production", async () => {
+    mockEnv.INNGEST_DEV = "false";
+    mockEnv.INNGEST_BASE_URL = "";
+    mockEnv.INNGEST_SIGNING_KEY = "local";
+    mockEnv.INNGEST_EVENT_KEY = "";
+    mockEnv.NODE_ENV = "production";
+
+    const { inngest } = await import("@/lib/inngest/client");
+    expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(true);
   });
 });

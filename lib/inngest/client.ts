@@ -1,12 +1,8 @@
 import { Inngest } from "inngest";
 import { env } from "@/config/env";
+import { isDevMode } from "./run-service/run-metadata";
 
-const isDev =
-  env.INNGEST_DEV === "1" ||
-  env.INNGEST_DEV === "true" ||
-  env.NODE_ENV !== "production" ||
-  !env.INNGEST_SIGNING_KEY;
-!env.INNGEST_SIGNING_KEY || env.INNGEST_SIGNING_KEY === "local";
+const isDev = isDevMode();
 
 /**
  * Central Inngest client instance for ai-client application.

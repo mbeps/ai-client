@@ -1,6 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
+import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { fetchUserInngestRuns } from "@/lib/inngest/run-service";
 import { logger } from "@/lib/logger";
 
@@ -20,9 +21,14 @@ import { logger } from "@/lib/logger";
 export async function isChatGenerating(chatId: string): Promise<boolean> {
   try {
     const session = await requireSession();
+
+    if (chatAbortRegistry.has(chatId)) {
+      return true;
+    }
+
     const result = await fetchUserInngestRuns(session.user.id, {
       status: ["RUNNING", "QUEUED"],
-      limit: 20,
+      limit: 100,
     });
 
     if (!result.jobs || result.jobs.length === 0) {

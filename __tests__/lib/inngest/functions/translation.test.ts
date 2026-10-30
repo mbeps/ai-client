@@ -97,6 +97,62 @@ describe("executeTranslationWorkflow Inngest Function", () => {
     );
   });
 
+  it("coalesces rapid text chunks within 40ms window", async () => {
+    mockStreamText.mockReturnValue({
+      textStream: (async function* () {
+        yield "Chunk 1 ";
+        yield "Chunk 2 ";
+        yield "Chunk 3";
+      })(),
+    });
+
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    const result = await fn({
+      event: {
+        data: {
+          translationId: "trans-coalesce",
+          userId: "user-1",
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          sourceText: "Test coalesce",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    const textDeltaCalls = (inngest.realtime.publish as any).mock.calls.filter(
+      (call: any[]) => call[1]?.type === "text-delta",
+    );
+    expect(textDeltaCalls.length).toBeLessThan(3);
+  });
+
+  it("handles empty stream without emitting text-delta", async () => {
+    mockStreamText.mockReturnValue({
+      textStream: (async function* () {})(),
+    });
+
+    const fn = (executeTranslationWorkflow as any).fn;
+
+    const result = await fn({
+      event: {
+        data: {
+          translationId: "trans-empty",
+          userId: "user-1",
+          sourceLanguage: "English",
+          targetLanguage: "Spanish",
+          sourceText: "",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    const textDeltaCalls = (inngest.realtime.publish as any).mock.calls.filter(
+      (call: any[]) => call[1]?.type === "text-delta",
+    );
+    expect(textDeltaCalls.length).toBe(0);
+  });
+
   it("resolves specific model when modelId is provided", async () => {
     const fn = (executeTranslationWorkflow as any).fn;
 
