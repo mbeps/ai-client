@@ -46,22 +46,24 @@ export async function deleteSkillFileForUser(
     };
   }
 
-  const existing = await resolveSkillRow(userId, idOrName);
-  if (!existing) return { error: NOT_FOUND_ERROR(idOrName) };
+  return await db.transaction(async (tx) => {
+    const existing = await resolveSkillRow(userId, idOrName, tx, true);
+    if (!existing) return { error: NOT_FOUND_ERROR(idOrName) };
 
-  const currentFiles = existing.files;
-  const remains = deleteFile(currentFiles, cleanPathValue);
-  if (remains.length === currentFiles.length) {
-    return {
-      error: `File "${cleanPathValue}" not found in skill "${idOrName}".`,
-    };
-  }
+    const currentFiles = existing.files;
+    const remains = deleteFile(currentFiles, cleanPathValue);
+    if (remains.length === currentFiles.length) {
+      return {
+        error: `File "${cleanPathValue}" not found in skill "${idOrName}".`,
+      };
+    }
 
-  const [row] = await db
-    .update(skill)
-    .set({ files: remains, updatedAt: new Date() })
-    .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))
-    .returning();
+    const [row] = await tx
+      .update(skill)
+      .set({ files: remains, updatedAt: new Date() })
+      .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))
+      .returning();
 
-  return { skill: row as SkillRow, path: cleanPathValue };
+    return { skill: row as SkillRow, path: cleanPathValue };
+  });
 }

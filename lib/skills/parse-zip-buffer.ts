@@ -1,4 +1,5 @@
 import { inflateRawSync, inflateSync } from "node:zlib";
+import { SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "skills", "parser"]);
@@ -34,16 +35,20 @@ function decompressZipSlice(
 
   if (compressionMethod === 8) {
     try {
-      return inflateRawSync(rawData);
+      return inflateRawSync(rawData, {
+        maxOutputLength: SKILL_BUNDLE_MAX_BYTES,
+      });
     } catch {
       try {
-        return inflateSync(rawData);
+        return inflateSync(rawData, {
+          maxOutputLength: SKILL_BUNDLE_MAX_BYTES,
+        });
       } catch (err) {
         log.error("Failed to decompress {fileName} in zip: {error}", {
           fileName,
           error: (err as Error).message,
         });
-        return Buffer.from(rawData);
+        throw new Error("Invalid or oversized ZIP entry");
       }
     }
   }

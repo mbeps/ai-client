@@ -11,15 +11,19 @@ const UUID_PATTERN =
  *
  * @param userId - User identifier
  * @param idOrName - Target id or name
+ * @param executor - Optional database or transaction client
+ * @param forUpdate - Whether to acquire a row-level lock (FOR UPDATE)
  * @returns The resolved result
  * @author Maruf Bepary
  */
 export async function resolveSkillRow(
   userId: string,
   idOrName: string,
+  executor: any = db,
+  forUpdate = false,
 ): Promise<SkillRow | null> {
   const byId = UUID_PATTERN.test(idOrName);
-  const [row] = await db
+  let query = executor
     .select()
     .from(skill)
     .where(
@@ -27,8 +31,13 @@ export async function resolveSkillRow(
         eq(skill.userId, userId),
         byId ? eq(skill.id, idOrName) : eq(skill.name, idOrName),
       ),
-    )
-    .limit(1);
+    );
+
+  if (forUpdate) {
+    query = query.for("update");
+  }
+
+  const [row] = await query.limit(1);
 
   return (row as SkillRow) ?? null;
 }

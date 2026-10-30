@@ -32,7 +32,13 @@ export function registerSkillTool(userId: string) {
         const [found] = await db
           .select()
           .from(skill)
-          .where(and(eq(skill.userId, userId), eq(skill.name, cleanSlug)))
+          .where(
+            and(
+              eq(skill.userId, userId),
+              eq(skill.name, cleanSlug),
+              eq(skill.enabled, true),
+            ),
+          )
           .limit(1);
 
         if (!found) {

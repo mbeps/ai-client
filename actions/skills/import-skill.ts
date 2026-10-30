@@ -10,6 +10,10 @@ import {
   parseSkillMarkdown,
 } from "@/lib/skills/parse-skill-markdown";
 import { sanitizeSkillSlug } from "@/lib/skills/sanitize-skill-slug";
+import {
+  assertSkillBodyWithinBudget,
+  assertSkillBundleWithinBudget,
+} from "@/schemas/skill/skill-file";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
@@ -47,6 +51,9 @@ export async function importSkillFile(formData: FormData): Promise<SkillRow> {
       "Unsupported file format. Please upload a .md or .zip file.",
     );
   }
+
+  assertSkillBodyWithinBudget(parsedSkill.content);
+  assertSkillBundleWithinBudget(parsedSkill.files);
 
   let finalSlug = sanitizeSkillSlug(parsedSkill.name) || "imported-skill";
 

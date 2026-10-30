@@ -47,73 +47,75 @@ export async function writeSkillFileForUser(
   }
   const cleanPathValue = parsed.data;
 
-  const existing = await resolveSkillRow(userId, idOrName);
-  if (!existing) return { error: NOT_FOUND_ERROR(idOrName) };
+  return await db.transaction(async (tx) => {
+    const existing = await resolveSkillRow(userId, idOrName, tx, true);
+    if (!existing) return { error: NOT_FOUND_ERROR(idOrName) };
 
-  const isBody = isSkillBodyPath(cleanPathValue);
-  // `files` is NOT NULL with a default of [], so there is no null to guard here.
-  const currentFiles = existing.files;
+    const isBody = isSkillBodyPath(cleanPathValue);
+    // `files` is NOT NULL with a default of [], so there is no null to guard here.
+    const currentFiles = existing.files;
 
-  // An exact match is an ordinary rewrite and is allowed. A match that differs
-  // only in case would render twice in the directory tree and make the read-back
-  // path ambiguous, so it is refused rather than merged.
-  const existingEntry = currentFiles.find(
-    (file: SkillBundledFile) =>
-      cleanPath(file.path).toLowerCase() === cleanPathValue.toLowerCase(),
-  );
-  const caseOnlyClash =
-    existingEntry !== undefined &&
-    cleanPath(existingEntry.path) !== cleanPathValue &&
-    !isBody;
+    // An exact match is an ordinary rewrite and is allowed. A match that differs
+    // only in case would render twice in the directory tree and make the read-back
+    // path ambiguous, so it is refused rather than merged.
+    const existingEntry = currentFiles.find(
+      (file: SkillBundledFile) =>
+        cleanPath(file.path).toLowerCase() === cleanPathValue.toLowerCase(),
+    );
+    const caseOnlyClash =
+      existingEntry !== undefined &&
+      cleanPath(existingEntry.path) !== cleanPathValue &&
+      !isBody;
 
-  if (caseOnlyClash) {
-    return {
-      error: `A file with path "${cleanPathValue}" already exists in this skill under a different letter case.`,
-    };
-  }
+    if (caseOnlyClash) {
+      return {
+        error: `A file with path "${cleanPathValue}" already exists in this skill under a different letter case.`,
+      };
+    }
 
-  if (isBody) {
+    if (isBody) {
+      try {
+        assertSkillBodyWithinBudget(content);
+      } catch (error) {
+        return { error: (error as SkillBundleBudgetError).message };
+      }
+
+      const [row] = await tx
+        .update(skill)
+        .set({ content, updatedAt: new Date() })
+        .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))
+        .returning();
+
+      return {
+        skill: row as SkillRow,
+        path: cleanPathValue,
+        target: "skill-md",
+        action: "updated",
+      };
+    }
+
+    const nextFiles = addOrUpdateFile(currentFiles, {
+      path: cleanPathValue,
+      content,
+    });
+
     try {
-      assertSkillBodyWithinBudget(content);
+      assertSkillBundleWithinBudget(nextFiles);
     } catch (error) {
       return { error: (error as SkillBundleBudgetError).message };
     }
 
-    const [row] = await db
+    const [row] = await tx
       .update(skill)
-      .set({ content, updatedAt: new Date() })
+      .set({ files: nextFiles, updatedAt: new Date() })
       .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))
       .returning();
 
     return {
       skill: row as SkillRow,
       path: cleanPathValue,
-      target: "skill-md",
-      action: "updated",
+      target: "bundled",
+      action: existingEntry ? "updated" : "created",
     };
-  }
-
-  const nextFiles = addOrUpdateFile(currentFiles, {
-    path: cleanPathValue,
-    content,
   });
-
-  try {
-    assertSkillBundleWithinBudget(nextFiles);
-  } catch (error) {
-    return { error: (error as SkillBundleBudgetError).message };
-  }
-
-  const [row] = await db
-    .update(skill)
-    .set({ files: nextFiles, updatedAt: new Date() })
-    .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))
-    .returning();
-
-  return {
-    skill: row as SkillRow,
-    path: cleanPathValue,
-    target: "bundled",
-    action: existingEntry ? "updated" : "created",
-  };
 }

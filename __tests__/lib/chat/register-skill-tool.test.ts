@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { and, eq } from "drizzle-orm";
+import { skill } from "@/drizzle/schemas/skill-schema";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 
 const dbMock = vi.hoisted(() => ({
@@ -80,6 +82,29 @@ describe("registerSkillTool", () => {
     });
 
     expect(result).toEqual({ error: 'Skill "unknown" not found.' });
+  });
+
+  it("filters out disabled skills in query and returns not found", async () => {
+    const tools = registerSkillTool("user-1");
+    const mockQuery = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select.mockReturnValue(mockQuery);
+
+    const result = await (tools.load_skill as any).execute({
+      skillName: "disabled-skill",
+    });
+
+    expect(result).toEqual({ error: 'Skill "disabled-skill" not found.' });
+    expect(mockQuery.where).toHaveBeenCalledWith(
+      and(
+        eq(skill.userId, "user-1"),
+        eq(skill.name, "disabled-skill"),
+        eq(skill.enabled, true),
+      ),
+    );
   });
 
   it("uses a longer fence when a bundled file contains a backtick run", async () => {

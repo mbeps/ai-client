@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dateField, idField, nameField } from "@/schemas/shared-fields";
+import { skillFilePathSchema } from "@/schemas/skill/skill-file";
 
 /**
  * Maximum character length allowed for skill descriptions across schemas and database records.
@@ -36,7 +37,7 @@ const skillDescriptionSchema = z
  * @author Maruf Bepary
  */
 export const skillFileSchema = z.object({
-  path: z.string().min(1, "File path is required"),
+  path: skillFilePathSchema,
   content: z.string(),
 });
 
