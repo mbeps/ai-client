@@ -113,17 +113,14 @@ export async function loadTransformContext({
   if (kbIds && kbIds.length > 0) {
     kbContextPromise = (async () => {
       try {
-        const results = await Promise.all(
-          kbIds.map((id) =>
-            hybridSearch(
-              id,
-              agentRow.globalContext || agentRow.description || agentRow.name,
-              userId,
-              env.TRANSFORM_TOP_K,
-            ),
-          ),
+        const query =
+          agentRow.globalContext || agentRow.description || agentRow.name;
+        const allChunks = await hybridSearch(
+          kbIds,
+          query,
+          userId,
+          env.TRANSFORM_TOP_K,
         );
-        const allChunks = results.flat();
         if (allChunks.length > 0) {
           return (
             "\n\nKnowledge Base Context:\n" +

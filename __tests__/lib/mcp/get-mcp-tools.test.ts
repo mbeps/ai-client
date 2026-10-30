@@ -76,5 +76,48 @@ describe("getMcpTools", () => {
 
     await cleanup();
   });
+
+  it("filters per-server when selectedTools is provided so unselected tool on server 1 does not block selected tool on server 2", async () => {
+    connectServerMock.mockImplementation(async (server: McpServerConfig) => {
+      if (server.id === "s1") {
+        return {
+          serverId: "s1",
+          serverName: "server-1",
+          tools: {
+            duplicateTool: { description: "Server 1 Duplicate (unselected)" },
+          },
+          close: vi.fn(),
+        };
+      }
+      if (server.id === "s2") {
+        return {
+          serverId: "s2",
+          serverName: "server-2",
+          tools: {
+            duplicateTool: { description: "Server 2 Duplicate (selected)" },
+          },
+          close: vi.fn(),
+        };
+      }
+      throw new Error("Unknown server");
+    });
+
+    const servers = [
+      { id: "s1", name: "server-1" },
+      { id: "s2", name: "server-2" },
+    ] as McpServerConfig[];
+
+    // Only server-2's duplicateTool is selected
+    const selectedTools = ["s2:tool:duplicateTool"];
+    const { tools, toolSourceMap, toolServerIdMap } = await getMcpTools(
+      servers,
+      selectedTools,
+    );
+
+    expect(tools.duplicateTool).toBeDefined();
+    expect(tools.duplicateTool.description).toBe("Server 2 Duplicate (selected)");
+    expect(toolSourceMap.duplicateTool).toBe("server-2");
+    expect(toolServerIdMap.duplicateTool).toBe("s2");
+  });
 });
 

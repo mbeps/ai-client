@@ -244,6 +244,10 @@ describe("registerMcpTools — server-scoped tool selection (F8)", () => {
     );
 
     expect(mcpTools.shared_tool).toBeUndefined();
+    expect(getMcpToolsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      ["srv-b:tool:shared_tool"],
+    );
   });
 
   it("selecting with the owning server's full id enables the tool", async () => {

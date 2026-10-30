@@ -189,6 +189,44 @@ describe("loadTransformContext", () => {
     );
   });
 
+  it("passes knowledgeBaseIds array in a single hybridSearch call when multiple KBs are configured", async () => {
+    dbMock.select.mockImplementation(() => createMockQuery([]));
+    resolveProviderMock.mockResolvedValue({ modelId: "gpt-4" });
+    hybridSearchMock.mockResolvedValue([
+      { content: "KB Content 1" },
+      { content: "KB Content 2" },
+    ]);
+    registerMcpToolsMock.mockResolvedValue({
+      mcpTools: {},
+      toolSourceMap: new Map(),
+      mcpCleanup: vi.fn(),
+    });
+
+    const agentRow = {
+      id: "agent-multi-kb",
+      name: "Multi KB Agent",
+      globalContext: "multi kb context",
+      modelId: "openai/gpt-4",
+      knowledgeBaseIds: ["kb-1", "kb-2"],
+      steps: "[]",
+      tools: [],
+    };
+
+    const ctx = await loadTransformContext({
+      userId: "user-1",
+      agentRow,
+    });
+
+    expect(hybridSearchMock).toHaveBeenCalledTimes(1);
+    expect(hybridSearchMock).toHaveBeenCalledWith(
+      ["kb-1", "kb-2"],
+      "multi kb context",
+      "user-1",
+      expect.any(Number),
+    );
+    expect(ctx.kbContext).toContain("KB Content 1\n---\nKB Content 2");
+  });
+
   it("handles empty KB results and KB retrieval failure gracefully", async () => {
     dbMock.select.mockImplementation(() => createMockQuery([]));
 

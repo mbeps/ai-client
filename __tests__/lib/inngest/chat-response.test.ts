@@ -1508,6 +1508,7 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(mockPersistResponse).toHaveBeenCalled();
+      expect(mockRegisterMcpTools).not.toHaveBeenCalled();
     });
 
     it("resolves target kb IDs from activeKbIds array and handles undefined kbIsReady", async () => {

@@ -122,15 +122,27 @@ export const generateChatResponse = inngest.createFunction(
       };
       resolvedModelId = resolved.modelId;
 
-      const {
-        mcpTools,
-        toolSourceMap,
-        mcpCleanup: registeredCleanup,
-      } = await registerMcpTools(ctx.servers as any, selectedTools);
-      mcpCleanup = registeredCleanup;
-
-      const hasExternalMcpTools = Object.keys(mcpTools).length > 0;
       const isToolCallingModel = !!resolvedModelRow?.capTools;
+      const hasExternalServers = (ctx.servers?.length ?? 0) > 0;
+
+      let mcpTools: Record<string, any> = {};
+      let toolSourceMap: Record<string, string> = {};
+
+      if (isToolCallingModel) {
+        const {
+          mcpTools: loadedTools,
+          toolSourceMap: loadedSourceMap,
+          mcpCleanup: registeredCleanup,
+        } = await registerMcpTools(ctx.servers as any, selectedTools);
+        mcpTools = loadedTools;
+        toolSourceMap = loadedSourceMap;
+        mcpCleanup = registeredCleanup;
+      }
+
+      const hasExternalMcpTools =
+        !isToolCallingModel && hasExternalServers
+          ? true
+          : Object.keys(mcpTools).length > 0;
 
       validateModelCapabilities({
         isToolCallingModel,
