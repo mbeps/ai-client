@@ -8,7 +8,7 @@ import "@blocknote/mantine/style.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Props for MarkdownView artifact component.
@@ -23,6 +23,20 @@ interface MarkdownViewProps {
   content: string;
   /** Optional callback fired 1000ms after content changes (debounced). Returns updated markdown. */
   onUpdate?: (content: string) => void;
+}
+
+/**
+ * Parses a markdown string into BlockNote blocks via temporary headless editor.
+ * Dynamically imports `@blocknote/core` to keep client bundles lean.
+ *
+ * @param content - Markdown string to parse
+ * @returns Array of parsed BlockNote blocks
+ * @author Maruf Bepary
+ */
+async function parseMarkdownToBlocks(content: string): Promise<Block[]> {
+  const { BlockNoteEditor: BNEditor } = await import("@blocknote/core");
+  const tempEditor = BNEditor.create();
+  return tempEditor.tryParseMarkdownToBlocks(content);
 }
 
 /**
@@ -82,7 +96,8 @@ function BlockNoteEditor({
 /**
  * Markdown artifact editor powered by BlockNote.
  * Parses markdown content into editable blocks and renders rich editor interface.
- * Re-parses markdown only when `id` changes to avoid re-parsing during editing.
+ * Re-parses markdown when `id` changes or external content changes.
+ * Avoids re-parsing and unmounting when `content` echoes back this editor's own edits.
  * Shows loading spinner while parsing; fires debounced updates on content changes.
  *
  * @param id - Optional artifact identifier; changes trigger markdown re-parsing
@@ -93,26 +108,38 @@ function BlockNoteEditor({
  */
 export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
   const [parsedBlocks, setParsedBlocks] = useState<Block[] | null>(null);
+  const lastEmittedContentRef = useRef<string | null>(null);
+  const prevIdRef = useRef<string | undefined>(id);
 
-  // We only want to parse the initial content when the id changes,
-  // not on every content update, to avoid re-parsing while typing.
+  const handleUpdate = useCallback(
+    (updatedMarkdown: string) => {
+      lastEmittedContentRef.current = updatedMarkdown;
+      onUpdate?.(updatedMarkdown);
+    },
+    [onUpdate],
+  );
+
   useEffect(() => {
+    const idChanged = prevIdRef.current !== id;
+    if (idChanged) {
+      prevIdRef.current = id;
+      lastEmittedContentRef.current = null;
+      setParsedBlocks(null);
+    }
+
+    if (!idChanged && content === lastEmittedContentRef.current) {
+      return;
+    }
+
     let cancelled = false;
-    setParsedBlocks(null);
 
     async function parseMarkdown() {
       try {
-        const { BlockNoteEditor: BNEditor } = await import("@blocknote/core");
-        const tempEditor = BNEditor.create();
-        const blocks = await tempEditor.tryParseMarkdownToBlocks(content);
-        if (!cancelled) {
-          setParsedBlocks(blocks);
-        }
+        const blocks = await parseMarkdownToBlocks(content);
+        if (!cancelled) setParsedBlocks(blocks);
       } catch (err) {
         logger.error("Failed to parse markdown", err);
-        if (!cancelled) {
-          setParsedBlocks([]);
-        }
+        if (!cancelled) setParsedBlocks([]);
       }
     }
 
@@ -120,7 +147,7 @@ export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [content]);
+  }, [id, content]);
 
   if (!parsedBlocks) {
     return (
@@ -134,7 +161,7 @@ export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
     <BlockNoteEditor
       key={id ?? "static"}
       blocks={parsedBlocks}
-      onUpdate={onUpdate}
+      onUpdate={handleUpdate}
     />
   );
 }

@@ -47,7 +47,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateMessageMetadata } from "@/actions/chats/update-message-metadata";
 
 const MESSAGE_ID = "22222222-2222-4222-8222-222222222222";
-const CHAT_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("updateMessageMetadata action", () => {
   beforeEach(() => {
@@ -59,14 +58,10 @@ describe("updateMessageMetadata action", () => {
     chainable.set.mockReturnValue(chainable);
   });
 
-  it("successfully updates metadata and revalidates paths when owned by user", async () => {
+  it("successfully updates metadata without triggering revalidatePath when owned by user", async () => {
     chainable.where.mockResolvedValueOnce([
       {
         messageId: MESSAGE_ID,
-        userId: "user-1",
-        chatId: CHAT_ID,
-        projectId: "proj-1",
-        assistantId: "asst-1",
       },
     ]);
     chainable.where.mockResolvedValue(undefined);
@@ -74,17 +69,13 @@ describe("updateMessageMetadata action", () => {
     await updateMessageMetadata(MESSAGE_ID, JSON.stringify({ foo: "bar" }));
 
     expect(chainable.update).toHaveBeenCalled();
-    expect(revalidatePath).toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("successfully updates metadata when projectId and assistantId are null", async () => {
+  it("successfully updates metadata to null without revalidating paths", async () => {
     chainable.where.mockResolvedValueOnce([
       {
         messageId: MESSAGE_ID,
-        userId: "user-1",
-        chatId: CHAT_ID,
-        projectId: null,
-        assistantId: null,
       },
     ]);
     chainable.where.mockResolvedValue(undefined);
@@ -92,7 +83,7 @@ describe("updateMessageMetadata action", () => {
     await updateMessageMetadata(MESSAGE_ID, null);
 
     expect(chainable.update).toHaveBeenCalled();
-    expect(revalidatePath).toHaveBeenCalledTimes(1);
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("throws 'Unauthorized' if message does not exist or user does not own chat", async () => {
@@ -101,5 +92,6 @@ describe("updateMessageMetadata action", () => {
     await expect(
       updateMessageMetadata(MESSAGE_ID, '{"foo":"bar"}'),
     ).rejects.toThrow("Unauthorized");
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

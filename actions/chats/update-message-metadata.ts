@@ -1,14 +1,12 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
 
 /**
- * Updates message metadata after validating user ownership of chat. Revalidates related paths.
+ * Updates message metadata after validating user ownership of chat.
  *
  * @async
  * @param messageId - Message identifier to update
@@ -26,10 +24,6 @@ export async function updateMessageMetadata(
   const [row] = await db
     .select({
       messageId: message.id,
-      userId: chat.userId,
-      chatId: chat.id,
-      projectId: chat.projectId,
-      assistantId: chat.assistantId,
     })
     .from(message)
     .innerJoin(chat, eq(message.chatId, chat.id))
@@ -40,12 +34,4 @@ export async function updateMessageMetadata(
   }
 
   await db.update(message).set({ metadata }).where(eq(message.id, messageId));
-
-  revalidatePath(ROUTES.CHATS.detail(row.chatId));
-  if (row.projectId) {
-    revalidatePath(ROUTES.PROJECTS.chat(row.projectId, row.chatId));
-  }
-  if (row.assistantId) {
-    revalidatePath(ROUTES.ASSISTANTS.chat(row.assistantId, row.chatId));
-  }
 }
