@@ -140,7 +140,6 @@ describe("DynamicBreadcrumbs", () => {
           userId: "user-1",
           name: "My Project",
           description: "",
-          isPinned: false,
           globalPrompt: "",
           tools: [],
           knowledgebaseId: null,

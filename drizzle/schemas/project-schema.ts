@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, text } from "drizzle-orm/pg-core";
+import { index, pgTable, text } from "drizzle-orm/pg-core";
 import {
   entityIdColumn,
   timestampColumns,
@@ -9,7 +9,7 @@ import {
 /**
  * Stores user-created projects that act as scopes for grouping chats and sharing system prompts across conversations.
  * Many-to-one with user (CASCADE DELETE); globalPrompt is prepended to AI calls for chats in this project.
- * isPinned allows users to surface frequently-used projects in UI; auto-generated UUID primary key.
+ * Auto-generated UUID primary key.
  *
  */
 export const project = pgTable(
@@ -26,7 +26,6 @@ export const project = pgTable(
       .default("dynamic"),
     skillIds: text("skill_ids").array().notNull().default(sql`'{}'::text[]`),
     knowledgebaseId: text("knowledgebase_id"),
-    isPinned: boolean("is_pinned").notNull().default(false),
     ...timestampColumns(),
   },
   (table) => [index("project_user_id_idx").on(table.userId)],

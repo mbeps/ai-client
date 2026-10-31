@@ -12,7 +12,7 @@ import type { ProjectRow } from "@/types/project/project-row";
  * Runs on server only — invoked from client via Server Action.
  *
  * @param data - Project configuration object validated against createProjectSchema (name required; description, globalPrompt optional).
- * @returns The newly created project record with all fields populated and default isPinned=false.
+ * @returns The newly created project record with all fields populated.
  * @throws Error if session is not authenticated.
  * @throws ZodError if data fails schema validation (e.g., name is missing).
  * @see createChat to create a chat bound to this project.

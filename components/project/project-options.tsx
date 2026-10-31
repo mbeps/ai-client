@@ -1,10 +1,7 @@
 "use client";
-import { Edit2, Pin, PinOff, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { Edit2, Trash2 } from "lucide-react";
 import { deleteProject } from "@/actions/projects/delete-project";
 import { renameProject } from "@/actions/projects/rename-project";
-import { togglePinProject } from "@/actions/projects/toggle-pin-project";
 import { BaseEntityOptions } from "@/components/shared/base-entity-options";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
@@ -12,17 +9,16 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import type { Project } from "@/types/project/project";
 
 /**
- * Dropdown/Drawer menu with Pin/Unpin, Rename, and Delete options for projects.
+ * Dropdown/Drawer menu with Rename and Delete options for projects.
  * Uses useEntityOptions hook for shared dialog state and direct Server Actions for mutations.
  * Responsive design: renders as Popover on desktop, Drawer on mobile via useIsMobile.
  *
- * @param props.project - Project entity with id, name, and isPinned status.
+ * @param props.project - Project entity with id and name.
  * @returns Menu with action items, rename dialog, and delete confirmation dialog.
  * @see useEntityOptions for dialog and action state management.
  * @see ResponsiveMenu for responsive menu wrapper.
  */
 export function ProjectOptions({ project }: { project: Project }) {
-  const router = useRouter();
   const loadProjects = useAppStore((state) => state.loadProjects);
 
   const {
@@ -44,25 +40,7 @@ export function ProjectOptions({ project }: { project: Project }) {
     onAfterMutation: loadProjects,
   });
 
-  const handleTogglePin = async () => {
-    try {
-      await togglePinProject(project.id);
-      router.refresh();
-    } catch {
-      toast.error("Failed to update pin");
-    }
-  };
-
   const items = [
-    {
-      label: project.isPinned ? "Unpin Project" : "Pin Project",
-      icon: project.isPinned ? (
-        <PinOff className="mr-2 h-4 w-4" />
-      ) : (
-        <Pin className="mr-2 h-4 w-4" />
-      ),
-      onClick: handleTogglePin,
-    },
     {
       label: "Rename Project",
       icon: <Edit2 className="mr-2 h-4 w-4" />,

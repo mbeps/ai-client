@@ -55,8 +55,7 @@ export const renameProjectSchema = renameSchema;
 
 /**
  * Validates the full project object as stored in the database and loaded in the store.
- * Includes all fields from creation plus system metadata (id, userId, isPinned, timestamps).
- * isPinned flag controls whether project appears in pinned section of sidebar.
+ * Includes all fields from creation plus system metadata (id, userId, timestamps).
  * Tools and knowledgebaseId are inherited by all chats in the project.
  * Use for type-safe store hydration and API serialization.
  *
@@ -67,7 +66,6 @@ export const projectSchema = z.object({
   userId: z.string(),
   name: nameField,
   description: descriptionField,
-  isPinned: z.boolean(),
   globalPrompt: z.string(),
   tools: z.array(z.string()),
   skillMode: skillModeSchema,
