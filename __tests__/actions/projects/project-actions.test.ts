@@ -53,7 +53,6 @@ import { createProject } from "@/actions/projects/create-project";
 import { deleteProject } from "@/actions/projects/delete-project";
 import { listProjects } from "@/actions/projects/list-projects";
 import { renameProject } from "@/actions/projects/rename-project";
-import { togglePinProject } from "@/actions/projects/toggle-pin-project";
 import { updateProject } from "@/actions/projects/update-project";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
@@ -64,7 +63,6 @@ const SAMPLE_PROJECT = {
   userId: "user-1",
   name: "Test Project",
   description: "A test project",
-  isPinned: false,
   globalPrompt: "System prompt",
   tools: ["web_search"],
   knowledgebaseId: KB_ID,
@@ -164,7 +162,7 @@ describe("Project Server Actions", () => {
   });
 
   describe("listProjects", () => {
-    it("returns all user projects ordered by isPinned and updatedAt DESC", async () => {
+    it("returns all user projects ordered by updatedAt DESC", async () => {
       chainable.orderBy.mockResolvedValueOnce([SAMPLE_PROJECT]);
 
       const result = await listProjects();
@@ -179,23 +177,6 @@ describe("Project Server Actions", () => {
 
       const result = await renameProject(PROJECT_ID, "Renamed Project");
       expect(result).toEqual(renamed);
-    });
-  });
-
-  describe("togglePinProject", () => {
-    it("toggles pin status and returns updated row", async () => {
-      const pinned = { ...SAMPLE_PROJECT, isPinned: true };
-      chainable.returning.mockResolvedValueOnce([pinned]);
-
-      const result = await togglePinProject(PROJECT_ID);
-      expect(result).toEqual(pinned);
-      expect(chainable.update).toHaveBeenCalled();
-    });
-
-    it("throws 'Not Found' when project does not exist", async () => {
-      chainable.returning.mockResolvedValueOnce([]);
-
-      await expect(togglePinProject(PROJECT_ID)).rejects.toThrow("Not Found");
     });
   });
 

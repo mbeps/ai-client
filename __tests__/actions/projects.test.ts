@@ -80,7 +80,6 @@ import { createProject } from "@/actions/projects/create-project";
 import { deleteProject } from "@/actions/projects/delete-project";
 import { listProjects } from "@/actions/projects/list-projects";
 import { renameProject } from "@/actions/projects/rename-project";
-import { togglePinProject } from "@/actions/projects/toggle-pin-project";
 import { updateProject } from "@/actions/projects/update-project";
 import { requireSession } from "@/lib/auth/require-session";
 
@@ -89,7 +88,6 @@ const PROJECT_ROW = {
   name: "Test Project",
   description: null,
   globalPrompt: null,
-  isPinned: false,
   userId: "user-1",
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
@@ -341,32 +339,5 @@ describe("updateProject", () => {
     await expect(
       updateProject(VALID_UUID, { name: "Updated" }),
     ).rejects.toThrow("Unauthorized");
-  });
-});
-
-// ── togglePinProject ──────────────────────────────────────────────────────────
-describe("togglePinProject", () => {
-  const VALID_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-
-  it("updates pin status atomically and returns the updated row", async () => {
-    const pinned = { ...PROJECT_ROW, isPinned: true };
-    chainable.returning.mockResolvedValueOnce([pinned]);
-
-    const result = await togglePinProject(VALID_UUID);
-    expect(result).toEqual(pinned);
-    expect(chainable.update).toHaveBeenCalledOnce();
-    expect(chainable.set).toHaveBeenCalledWith(
-      expect.objectContaining({ updatedAt: expect.any(Date) }),
-    );
-  });
-
-  it("throws 'Not Found' when project does not exist or is not owned", async () => {
-    chainable.returning.mockResolvedValueOnce([]); // no matching row
-    await expect(togglePinProject(VALID_UUID)).rejects.toThrow("Not Found");
-  });
-
-  it("throws when unauthenticated", async () => {
-    vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(togglePinProject(VALID_UUID)).rejects.toThrow("Unauthorized");
   });
 });

@@ -38,7 +38,6 @@ export default async function SearchPage() {
     userId: row.userId,
     name: row.name,
     description: row.description ?? "",
-    isPinned: row.isPinned,
     globalPrompt: row.globalPrompt ?? "",
     tools: row.tools ?? [],
     skillMode: row.skillMode as "dynamic" | "none" | "specific",

@@ -48,7 +48,6 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       id: "project-123",
       name: "Alpha Project",
       description: "A test project",
-      isPinned: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

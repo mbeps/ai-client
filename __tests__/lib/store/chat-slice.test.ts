@@ -1238,7 +1238,6 @@ describe("T5.3 scoped rollback does not clobber entity state", () => {
           name: "Project 1",
           userId: "u1",
           description: "",
-          isPinned: false,
           globalPrompt: "",
           tools: [],
           knowledgebaseId: null,

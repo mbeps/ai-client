@@ -20,6 +20,6 @@ import type { ProjectRow } from "@/types/project/project-row";
  */
 export async function listProjects(): Promise<ProjectRow[]> {
   return listOwnedResources(project, {
-    orderBy: (t) => [desc(t.isPinned), desc(t.updatedAt)],
+    orderBy: (t) => [desc(t.updatedAt)],
   });
 }
