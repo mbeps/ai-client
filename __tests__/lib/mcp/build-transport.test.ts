@@ -6,6 +6,7 @@ vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
   isBlockedUrl: isBlockedUrlMock,
 }));
 
+import { safeMcpFetch } from "@/lib/mcp/safe-mcp-fetch";
 import { buildTransport } from "@/lib/mcp/build-transport";
 
 describe("buildTransport — SSRF redirect hardening (T9.5)", () => {
@@ -28,7 +29,7 @@ describe("buildTransport — SSRF redirect hardening (T9.5)", () => {
     });
   });
 
-  it("configures redirect: 'error' so redirects are never followed", async () => {
+  it("configures redirect: 'follow' with safeMcpFetch for safe redirect handling", async () => {
     isBlockedUrlMock.mockResolvedValueOnce(false);
     const transport = await buildTransport({
       type: "http",
@@ -39,7 +40,8 @@ describe("buildTransport — SSRF redirect hardening (T9.5)", () => {
     expect(transport).toMatchObject({
       type: "http",
       url: "https://example.com/mcp",
-      redirect: "error",
+      redirect: "follow",
+      fetch: safeMcpFetch,
     });
   });
 
