@@ -60,7 +60,7 @@ export function MoveChatDialog({
       onClose();
     } catch (error) {
       toast.error("Failed to move chat");
-      logger.error("Knowledgebase error", error);
+      logger.error("Failed to move chat", error);
     } finally {
       setIsLoading(false);
     }
