@@ -209,13 +209,15 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                   aria-label="Select all"
                 />
               </TableHead>
-              <TableHead>Model</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Capabilities</TableHead>
-              <TableHead>Context</TableHead>
-              <TableHead>Enabled</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="max-w-[260px] md:max-w-[320px]">
+                Model
+              </TableHead>
+              <TableHead className="w-[140px]">Provider</TableHead>
+              <TableHead className="w-[90px]">Type</TableHead>
+              <TableHead className="min-w-[160px]">Capabilities</TableHead>
+              <TableHead className="w-[120px]">Context</TableHead>
+              <TableHead className="w-[80px]">Enabled</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

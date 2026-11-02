@@ -1,5 +1,17 @@
 "use client";
 
+import {
+  Binary,
+  Boxes,
+  CheckCircle2,
+  CircleSlash,
+  Cpu,
+  Database,
+  MessageSquare,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,24 +49,39 @@ export type ModelTableFilterToolbarProps = {
 export function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Input
-        value={props.search}
-        onChange={(event) => props.onSearchChange(event.target.value)}
-        placeholder="Search models..."
-        className="h-9 w-full sm:w-[200px] lg:w-[280px]"
-      />
+      <div className="relative w-full sm:w-[200px] lg:w-[280px]">
+        <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4" />
+        <Input
+          value={props.search}
+          onChange={(event) => props.onSearchChange(event.target.value)}
+          placeholder="Search models..."
+          className="h-9 w-full pl-9"
+        />
+      </div>
 
       <Select
         value={props.statusFilter}
         onValueChange={props.onStatusFilterChange}
       >
-        <SelectTrigger className="h-9 w-full sm:w-[130px]">
+        <SelectTrigger
+          aria-label="Status filter"
+          className="h-9 w-full sm:w-[145px]"
+        >
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Everything</SelectItem>
-          <SelectItem value="enabled">Enabled</SelectItem>
-          <SelectItem value="disabled">Disabled</SelectItem>
+          <SelectItem value="all">
+            <SlidersHorizontal className="text-muted-foreground size-4" />
+            <span>Everything</span>
+          </SelectItem>
+          <SelectItem value="enabled">
+            <CheckCircle2 className="size-4 text-emerald-500" />
+            <span>Enabled</span>
+          </SelectItem>
+          <SelectItem value="disabled">
+            <CircleSlash className="text-muted-foreground size-4" />
+            <span>Disabled</span>
+          </SelectItem>
         </SelectContent>
       </Select>
 
@@ -62,14 +89,21 @@ export function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
         value={props.providerFilter}
         onValueChange={props.onProviderFilterChange}
       >
-        <SelectTrigger className="h-9 w-full sm:w-[180px]">
+        <SelectTrigger
+          aria-label="Provider filter"
+          className="h-9 w-full sm:w-[180px]"
+        >
           <SelectValue placeholder="Provider" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All providers</SelectItem>
+          <SelectItem value="all">
+            <Database className="text-muted-foreground size-4" />
+            <span>All providers</span>
+          </SelectItem>
           {props.providers.map((provider) => (
             <SelectItem key={provider.id} value={provider.id}>
-              {provider.name}
+              <Cpu className="text-muted-foreground size-4" />
+              <span>{provider.name}</span>
             </SelectItem>
           ))}
         </SelectContent>
@@ -83,14 +117,29 @@ export function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
           )
         }
       >
-        <SelectTrigger className="h-9 w-full sm:w-[140px]">
+        <SelectTrigger
+          aria-label="Type filter"
+          className="h-9 w-full sm:w-[140px]"
+        >
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          <SelectItem value="chat">chat</SelectItem>
-          <SelectItem value="embedding">embedding</SelectItem>
-          <SelectItem value="both">both</SelectItem>
+          <SelectItem value="all">
+            <Boxes className="text-muted-foreground size-4" />
+            <span>All types</span>
+          </SelectItem>
+          <SelectItem value="chat">
+            <MessageSquare className="text-muted-foreground size-4" />
+            <span>Chat</span>
+          </SelectItem>
+          <SelectItem value="embedding">
+            <Binary className="text-muted-foreground size-4" />
+            <span>Embedding</span>
+          </SelectItem>
+          <SelectItem value="both">
+            <Sparkles className="text-muted-foreground size-4" />
+            <span>Both</span>
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>

@@ -58,15 +58,26 @@ export function ModelTableRow({
           aria-label={`Select ${model.label}`}
         />
       </TableCell>
-      <TableCell>
-        <div className="space-y-0.5">
-          <div className="font-medium">{model.label}</div>
-          <div className="text-muted-foreground text-xs">{model.modelId}</div>
+      <TableCell className="max-w-[260px] md:max-w-[320px]">
+        <div className="min-w-0 space-y-0.5">
+          <div className="truncate font-medium" title={model.label}>
+            {model.label}
+          </div>
+          <div
+            className="text-muted-foreground truncate font-mono text-xs"
+            title={model.modelId}
+          >
+            {model.modelId}
+          </div>
         </div>
       </TableCell>
-      <TableCell>{providerName}</TableCell>
+      <TableCell className="max-w-[140px] truncate" title={providerName}>
+        {providerName}
+      </TableCell>
       <TableCell>
-        <Badge variant="outline">{model.modelType}</Badge>
+        <Badge variant="outline" className="capitalize">
+          {model.modelType}
+        </Badge>
       </TableCell>
       <TableCell>
         <ModelCapabilityBadges model={model} />
