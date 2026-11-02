@@ -3,6 +3,7 @@
 import { BrainCircuit, Command, Database, Zap } from "lucide-react";
 import Link from "next/link";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
+import { Badge } from "@/components/ui/badge";
 import { ROUTES } from "@/config/routes";
 
 /**
@@ -26,19 +27,22 @@ function PromptChip({ pid, promptEntry }: PromptChipProps) {
   const isMcp = pid.startsWith("mcp:");
   if (isMcp) {
     return (
-      <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs">
+      <Badge variant="secondary" className="gap-1 text-xs font-normal">
         <Zap className="h-3 w-3 text-amber-500" />/{promptEntry?.title ?? pid}
-      </span>
+      </Badge>
     );
   }
   return (
-    <Link
-      href={ROUTES.SETTINGS.PROMPTS.detail(pid)}
-      className="bg-primary/10 text-primary hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors"
+    <Badge
+      variant="secondary"
+      asChild
+      className="hover:bg-secondary/80 gap-1 text-xs font-normal transition-colors"
     >
-      <Command className="h-3 w-3" />/
-      {promptEntry?.shortcut ?? promptEntry?.title ?? pid}
-    </Link>
+      <Link href={ROUTES.SETTINGS.PROMPTS.detail(pid)}>
+        <Command className="h-3 w-3" />/
+        {promptEntry?.shortcut ?? promptEntry?.title ?? pid}
+      </Link>
+    </Badge>
   );
 }
 
@@ -93,26 +97,30 @@ export function UserMessageContextChips({
           (s) => s.id === skillId || s.name === skillId,
         );
         return (
-          <span
+          <Badge
             key={skillId}
-            className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
+            variant="secondary"
+            className="gap-1 text-xs font-normal"
           >
             <BrainCircuit className="text-primary h-3 w-3" />/
             {skill?.displayName ?? skill?.name ?? skillId}
-          </span>
+          </Badge>
         );
       })}
       {selectedKbIds.map((kbId) => {
         const kb = knowledgebases.find((k) => k.id === kbId);
         return (
-          <Link
+          <Badge
             key={kbId}
-            href={ROUTES.KNOWLEDGEBASES.detail(kbId)}
-            className="bg-primary/10 text-primary hover:bg-primary/20 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors"
+            variant="secondary"
+            asChild
+            className="hover:bg-secondary/80 gap-1 text-xs font-normal transition-colors"
           >
-            <Database className="h-3 w-3" />
-            {kb?.name ?? kbId}
-          </Link>
+            <Link href={ROUTES.KNOWLEDGEBASES.detail(kbId)}>
+              <Database className="h-3 w-3" />
+              {kb?.name ?? kbId}
+            </Link>
+          </Badge>
         );
       })}
     </div>

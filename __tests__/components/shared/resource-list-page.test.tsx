@@ -81,4 +81,47 @@ describe("ResourceListPage", () => {
     const grid = container.querySelector(".md\\:grid-cols-2");
     expect(grid).toBeInTheDocument();
   });
+
+  it("sorts by updatedAt descending by default when sortFn is omitted", () => {
+    const { container } = render(
+      <ResourceListPage
+        icon={<span>Icon</span>}
+        title="Test Resources"
+        description="Manage test resources"
+        items={mockItems}
+        emptyStateMessage="No resources found"
+        renderCard={(item) => (
+          <div data-testid={`card-${item.id}`}>{item.name}</div>
+        )}
+      />,
+    );
+
+    const cards = container.querySelectorAll("[data-testid^='card-']");
+    expect(cards[0]).toHaveTextContent("Resource Two"); // 2026-01-02
+    expect(cards[1]).toHaveTextContent("Resource One"); // 2026-01-01
+  });
+
+  it("applies custom sortFn when provided", () => {
+    // Custom sort: reverse alphabetical by name or sort by id ascending
+    const customSort = (items: TestItem[]) =>
+      [...items].sort((a, b) => a.id.localeCompare(b.id));
+
+    const { container } = render(
+      <ResourceListPage
+        icon={<span>Icon</span>}
+        title="Test Resources"
+        description="Manage test resources"
+        items={mockItems}
+        emptyStateMessage="No resources found"
+        sortFn={customSort}
+        renderCard={(item) => (
+          <div data-testid={`card-${item.id}`}>{item.name}</div>
+        )}
+      />,
+    );
+
+    const cards = container.querySelectorAll("[data-testid^='card-']");
+    expect(cards[0]).toHaveTextContent("Resource One"); // id 1
+    expect(cards[1]).toHaveTextContent("Resource Two"); // id 2
+  });
 });

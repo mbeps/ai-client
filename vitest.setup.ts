@@ -52,6 +52,13 @@ if (typeof window !== "undefined") {
       dispatchEvent: () => false,
     });
   }
+
+  if (window.HTMLElement) {
+    window.HTMLElement.prototype.hasPointerCapture = () => false;
+    window.HTMLElement.prototype.setPointerCapture = () => {};
+    window.HTMLElement.prototype.releasePointerCapture = () => {};
+    window.HTMLElement.prototype.scrollIntoView = () => {};
+  }
 }
 
 import { beforeEach } from "vitest";

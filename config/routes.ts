@@ -34,8 +34,11 @@ const PROFILE_BASE = "/profile" as const;
 /** Base path segment for API routes. */
 const API_BASE = "/api" as const;
 
-/** Base path segment for workflows. */
-const WORKFLOWS_BASE = "/workflows" as const;
+/** Base path segment for translation workflows. */
+const TRANSLATION_BASE = "/translation" as const;
+
+/** Base path segment for transform workflows. */
+const TRANSFORM_BASE = "/transform" as const;
 
 /** Base path segment for jobs. */
 const JOBS_BASE = "/jobs" as const;
@@ -155,19 +158,18 @@ export const ROUTES = {
     name: "Running Jobs",
   },
   WORKFLOWS: {
-    path: WORKFLOWS_BASE,
     name: "Workflows",
     TRANSLATION: {
-      path: `${WORKFLOWS_BASE}/translation` as const,
+      path: TRANSLATION_BASE,
       name: "Translation",
     },
     TRANSFORM: {
-      path: `${WORKFLOWS_BASE}/transform` as const,
+      path: TRANSFORM_BASE,
       name: "Step-by-Step Automations",
-      new: `${WORKFLOWS_BASE}/transform/new` as const,
-      detail: (id: string) => `${WORKFLOWS_BASE}/transform/${id}` as const,
+      new: `${TRANSFORM_BASE}/new` as const,
+      detail: (id: string) => `${TRANSFORM_BASE}/${id}` as const,
       runs: (agentId: string, runId: string) =>
-        `${WORKFLOWS_BASE}/transform/${agentId}/${runId}` as const,
+        `${TRANSFORM_BASE}/${agentId}/${runId}` as const,
     },
   },
 } as const;

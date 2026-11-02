@@ -6,6 +6,7 @@ import { AssistantCard } from "@/components/assistant/assistant-card";
 import { ChatCard } from "@/components/chat/chat-card";
 import { ProjectCard } from "@/components/project/project-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -109,9 +110,9 @@ export function SearchClient({
           <section>
             <div className="mb-4 flex items-center gap-2">
               <h2 className="text-xl font-bold tracking-tight">Projects</h2>
-              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+              <Badge variant="secondary" className="font-mono text-xs">
                 {projects.length}
-              </span>
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {projects.map((item) => (
@@ -125,9 +126,9 @@ export function SearchClient({
           <section>
             <div className="mb-4 flex items-center gap-2">
               <h2 className="text-xl font-bold tracking-tight">Assistants</h2>
-              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+              <Badge variant="secondary" className="font-mono text-xs">
                 {assistants.length}
-              </span>
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {assistants.map((item) => (
@@ -141,9 +142,9 @@ export function SearchClient({
           <section>
             <div className="mb-4 flex items-center gap-2">
               <h2 className="text-xl font-bold tracking-tight">Chats</h2>
-              <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+              <Badge variant="secondary" className="font-mono text-xs">
                 {chats.length}
-              </span>
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {chats.map((item) => (

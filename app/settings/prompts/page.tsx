@@ -6,12 +6,14 @@ import { PromptCard } from "@/components/prompt/prompt-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { sortByTitle } from "@/lib/sort-by-name";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Prompts listing page — client component displaying all user-defined prompt shortcuts.
  * Features: searchable grid of prompt cards (by title/shortcut/content), create new prompt.
  * Prompts are reusable slash-commands (e.g., `/shortcut`) that prepend content to AI calls.
+ * Displays prompts in alphabetical order by title to maintain stable card placement during updates.
  *
  * @author Maruf Bepary
  */
@@ -30,6 +32,7 @@ export default function PromptsPage() {
       emptyStateMessage="No prompts yet. Create one to define a custom prompt shortcut."
       searchPlaceholder="Search prompts..."
       onMount={loadPrompts}
+      sortFn={sortByTitle}
       action={
         <Button asChild className="w-full md:w-auto">
           <Link href={ROUTES.SETTINGS.PROMPTS.new}>

@@ -57,7 +57,10 @@ describe("MarkdownRenderer rich content survives sanitisation", () => {
     const { container } = render(
       <MarkdownRenderer content={"- [x] done\n- [ ] todo"} />,
     );
-    expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
+    const checkboxes = container.querySelectorAll('[role="checkbox"]');
+    expect(checkboxes.length).toBe(2);
+    expect(checkboxes[0].getAttribute("aria-checked")).toBe("true");
+    expect(checkboxes[1].getAttribute("aria-checked")).toBe("false");
   });
 });
 

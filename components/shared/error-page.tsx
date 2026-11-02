@@ -47,8 +47,20 @@ export function ErrorPage({
   resetIcon: ResetIcon = RotateCcw,
 }: ErrorPageProps) {
   useEffect(() => {
-    logger.error("Knowledgebase error", error);
+    logger.error("Page error", error);
   }, [error]);
+
+  const isChunkError =
+    error.name === "ChunkLoadError" ||
+    /chunkloaderror|failed to load chunk|loading chunk/i.test(error.message);
+
+  const handleReset = () => {
+    if (isChunkError && typeof window !== "undefined") {
+      window.location.reload();
+      return;
+    }
+    reset();
+  };
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -64,9 +76,9 @@ export function ErrorPage({
         )}
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" onClick={reset}>
+        <Button variant="outline" onClick={handleReset}>
           {ResetIcon && <ResetIcon className="mr-2 h-4 w-4" />}
-          Try again
+          {isChunkError ? "Reload page" : "Try again"}
         </Button>
         <Button asChild variant="ghost">
           <Link href={linkHref}>

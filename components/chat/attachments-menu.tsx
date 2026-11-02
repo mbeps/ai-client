@@ -73,14 +73,24 @@ function countSelectedPrompts(selectedPromptIds?: Set<string>): number {
 }
 
 /**
- * Formats count badge.
+ * Renders a count badge for menu options when items are selected.
  *
- * @param count - Target count
- * @returns The resolved result
+ * @param props - Component properties.
+ * @param props.count - The number of selected items.
+ * @returns The rendered JSX badge or null when count is zero or negative.
  * @author Maruf Bepary
  */
-function formatCountBadge(count: number): string {
-  return count > 0 ? ` (${count})` : "";
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
+  return (
+    <Badge
+      variant="secondary"
+      className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+    >
+      {count}
+    </Badge>
+  );
 }
 
 /**
@@ -107,7 +117,7 @@ function SkillsMenuOption(props: {
         <Button variant="ghost" size="sm" className="w-full justify-start">
           <BrainCircuit className="mr-2 h-4 w-4" />
           Select Skills
-          {formatCountBadge(props.selectedSkills?.size ?? 0)}
+          <CountBadge count={props.selectedSkills?.size ?? 0} />
         </Button>
       }
     />
@@ -144,7 +154,7 @@ function PromptsMenuOption(props: {
         <Button variant="ghost" size="sm" className="w-full justify-start">
           <SquareTerminal className="mr-2 h-4 w-4" />
           Select Prompts
-          {formatCountBadge(promptCount)}
+          <CountBadge count={promptCount} />
         </Button>
       }
     />
@@ -172,7 +182,7 @@ function KnowledgebaseMenuOption(props: {
         <Button variant="ghost" size="sm" className="w-full justify-start">
           <Database className="mr-2 h-4 w-4" />
           Add Knowledgebase
-          {formatCountBadge(props.selectedKbs.size)}
+          <CountBadge count={props.selectedKbs.size} />
         </Button>
       }
     />
@@ -216,7 +226,7 @@ function ToolsMenuOption(props: {
         >
           <Wrench className="mr-2 h-4 w-4" />
           {toolsButtonLabel}
-          {formatCountBadge(props.selectedTools.size)}
+          <CountBadge count={props.selectedTools.size} />
         </Button>
       }
     />

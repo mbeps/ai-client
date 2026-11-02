@@ -18,6 +18,7 @@ import {
   useModelTableFilters,
   useModelTableModals,
 } from "@/components/settings/providers/model-table/use-model-table-actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -159,10 +160,16 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
       {/* Actions Row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="text-muted-foreground text-sm">
-            {filteredModels.length}{" "}
-            {filteredModels.length === 1 ? "model" : "models"} found
-            {selectedIds.size > 0 && ` (${selectedIds.size} selected)`}
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
+            <span>
+              {filteredModels.length}{" "}
+              {filteredModels.length === 1 ? "model" : "models"} found
+            </span>
+            {selectedIds.size > 0 && (
+              <Badge variant="secondary" className="font-mono text-xs">
+                {selectedIds.size} selected
+              </Badge>
+            )}
           </div>
 
           {selectedIds.size > 0 && (
@@ -202,13 +209,15 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                   aria-label="Select all"
                 />
               </TableHead>
-              <TableHead>Model</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Capabilities</TableHead>
-              <TableHead>Context</TableHead>
-              <TableHead>Enabled</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="max-w-[260px] md:max-w-[320px]">
+                Model
+              </TableHead>
+              <TableHead className="w-[140px]">Provider</TableHead>
+              <TableHead className="w-[90px]">Type</TableHead>
+              <TableHead className="min-w-[160px]">Capabilities</TableHead>
+              <TableHead className="w-[120px]">Context</TableHead>
+              <TableHead className="w-[80px]">Enabled</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -1,6 +1,16 @@
 "use client";
 
-import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
+import {
+  Binary,
+  Cpu,
+  Edit2,
+  Loader2,
+  MessageSquare,
+  Plus,
+  Save,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createModel } from "@/actions/models/create-model";
@@ -404,7 +414,8 @@ export function ModelFormDialog({
               <SelectContent>
                 {providers.map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
+                    <Cpu className="text-muted-foreground size-4" />
+                    <span>{provider.name}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -444,9 +455,18 @@ export function ModelFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="chat">chat</SelectItem>
-                <SelectItem value="embedding">embedding</SelectItem>
-                <SelectItem value="both">both</SelectItem>
+                <SelectItem value="chat">
+                  <MessageSquare className="text-muted-foreground size-4" />
+                  <span>Chat</span>
+                </SelectItem>
+                <SelectItem value="embedding">
+                  <Binary className="text-muted-foreground size-4" />
+                  <span>Embedding</span>
+                </SelectItem>
+                <SelectItem value="both">
+                  <Sparkles className="text-muted-foreground size-4" />
+                  <span>Both</span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

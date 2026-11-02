@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -56,7 +57,7 @@ describe("AppSidebar", () => {
     mockStoreState.loadChats = vi.fn();
   });
 
-  it("renders Workflows and Running Jobs navigation buttons in order", async () => {
+  it("renders Workflows dropdown trigger and Running Jobs navigation buttons in order", async () => {
     await act(async () => {
       render(
         <TooltipProvider>
@@ -67,21 +68,38 @@ describe("AppSidebar", () => {
       );
     });
 
-    const workflowsLink = screen.getByRole("link", { name: /workflows/i });
-    expect(workflowsLink).toBeInTheDocument();
-    expect(workflowsLink).toHaveAttribute("href", ROUTES.WORKFLOWS.path);
+    const workflowsButton = screen.getByRole("button", { name: /workflows/i });
+    expect(workflowsButton).toBeInTheDocument();
 
     const runningJobsLink = screen.getByRole("link", { name: /running jobs/i });
     expect(runningJobsLink).toBeInTheDocument();
     expect(runningJobsLink).toHaveAttribute("href", ROUTES.JOBS.path);
+  });
 
-    // Verify ordering: Running Jobs should appear directly after Workflows
-    const allLinks = screen.getAllByRole("link");
-    const workflowsIndex = allLinks.findIndex((el) => el.getAttribute("href") === ROUTES.WORKFLOWS.path);
-    const jobsIndex = allLinks.findIndex((el) => el.getAttribute("href") === ROUTES.JOBS.path);
+  it("opens Workflows dropdown with Translation and Step-by-Step Automations items", async () => {
+    const user = userEvent.setup();
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
 
-    expect(workflowsIndex).toBeGreaterThan(-1);
-    expect(jobsIndex).toBe(workflowsIndex + 1);
+    const workflowsButton = screen.getByRole("button", { name: /workflows/i });
+    await user.click(workflowsButton);
+
+    const translationLink = screen.getByRole("menuitem", { name: /translation/i });
+    expect(translationLink).toBeInTheDocument();
+    expect(translationLink).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSLATION.path);
+
+    const transformLink = screen.getByRole("menuitem", {
+      name: new RegExp(ROUTES.WORKFLOWS.TRANSFORM.name, "i"),
+    });
+    expect(transformLink).toBeInTheDocument();
+    expect(transformLink).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSFORM.path);
   });
 
   it("marks the active chat with data-active=true when pathname matches its href", async () => {

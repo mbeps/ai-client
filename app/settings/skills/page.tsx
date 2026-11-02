@@ -6,11 +6,13 @@ import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { SkillCard } from "@/components/skill/skill-card";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { sortByName } from "@/lib/sort-by-name";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Agent Skills listing page.
  * Displays all user skills with search, enable/disable switches, and actions to create or upload skills.
+ * Displays skills in alphabetical order by name to prevent layout jumping when toggled or updated.
  *
  * @author Maruf Bepary
  */
@@ -29,6 +31,7 @@ export default function SkillsPage() {
       emptyStateMessage="No skills configured yet. Create a skill or upload an Open Agent Skills package (.md or .zip)."
       searchPlaceholder="Search skills by name, slug, description..."
       onMount={loadSkills}
+      sortFn={sortByName}
       action={
         <div className="flex w-full items-center gap-2 md:w-auto">
           <Button variant="outline" asChild className="w-full gap-2 md:w-auto">

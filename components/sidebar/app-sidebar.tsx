@@ -6,6 +6,8 @@ import {
   ChevronRight,
   Database,
   FolderOpen,
+  Languages,
+  List,
   MessageSquare,
   MessageSquarePlus,
   MoreHorizontal,
@@ -19,6 +21,12 @@ import { listChats } from "@/actions/chats/list-chats";
 import { ChatOptions } from "@/components/chat/chat-options";
 import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -31,6 +39,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Tooltip,
@@ -55,6 +64,7 @@ import { cn } from "@/lib/utils";
  * @see SidebarUserFooter for the user profile footer and action dropdown
  */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { isMobile, setOpenMobile } = useSidebar();
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
   const createNewChat = useCreateChat();
@@ -132,12 +142,53 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Workflows">
-                <Link href={ROUTES.WORKFLOWS.path}>
-                  <Workflow className="h-4 w-4" />
-                  <span>Workflows</span>
-                </Link>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    tooltip="Workflows"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    isActive={
+                      pathname.startsWith(ROUTES.WORKFLOWS.TRANSLATION.path) ||
+                      pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path)
+                    }
+                  >
+                    <Workflow className="h-4 w-4" />
+                    <span>Workflows</span>
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 data-[state=open]:rotate-90" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-56 rounded-lg"
+                  side={isMobile ? "bottom" : "right"}
+                  align={isMobile ? "end" : "start"}
+                  sideOffset={4}
+                >
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href={ROUTES.WORKFLOWS.TRANSLATION.path}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                    >
+                      <Languages className="mr-2 h-4 w-4 text-blue-500" />
+                      <span>{ROUTES.WORKFLOWS.TRANSLATION.name}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href={ROUTES.WORKFLOWS.TRANSFORM.path}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                    >
+                      <List className="mr-2 h-4 w-4 text-amber-500" />
+                      <span>{ROUTES.WORKFLOWS.TRANSFORM.name}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Running Jobs">
