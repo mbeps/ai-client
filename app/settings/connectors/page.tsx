@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Wrench } from "lucide-react";
+import { Plug, Plus } from "lucide-react";
 import Link from "next/link";
 import { ServerCard } from "@/components/mcp/server-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
@@ -21,7 +21,7 @@ export default function ConnectorsPage() {
 
   return (
     <ResourceListPage
-      icon={<Wrench className="text-primary h-8 w-8" />}
+      icon={<Plug className="text-primary h-8 w-8" />}
       title="Connectors"
       description="Manage MCP servers and the tools they expose."
       items={mcpServers}
