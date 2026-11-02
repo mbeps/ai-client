@@ -63,44 +63,92 @@ const sanitizeSchema = {
 /**
  * Client-side Mermaid diagram renderer component.
  * Dynamically imports Mermaid to avoid SSR hydration mismatches, renders the diagram
- * to SVG, and displays a loading skeleton or error message during render.
- * Each render uses a unique ID to prevent conflicts in multi-diagram scenarios.
+ * to SVG, and displays a loading skeleton or fallback code block on render error.
+ * Suppresses external DOM error pollution and cleans up temporary render containers.
  *
+ * @param props - Component properties.
  * @param props.chart - Raw Mermaid diagram definition string (e.g., "graph TD; A-->B").
- * @returns Centered SVG container, loading skeleton, or error message.
+ * @returns Centered SVG container, loading skeleton, or fallback code block on error.
  */
 const MermaidBlock = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    const renderChart = async () => {
+    let isCancelled = false;
+    // ponytail: strip accidental enclosing code fences if model/caller nested them
+    const cleanChart = chart
+      .replace(/^```(?:mermaid)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+
+    if (!cleanChart) {
+      setSvg("");
       setError("");
+      return;
+    }
+
+    const renderChart = async () => {
+      // Use a unique ID for each render to avoid conflicts
+      const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
       try {
         const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, theme: "default" });
-        // Use a unique ID for each render to avoid conflicts
-        const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
-        const { svg: svgCode } = await mermaid.render(id, chart);
-        setSvg(svgCode);
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "default",
+          suppressErrorRendering: true,
+        });
+
+        const { svg: svgCode } = await mermaid.render(id, cleanChart);
+        if (!isCancelled) {
+          setSvg(svgCode);
+          setError("");
+        }
       } catch (e: any) {
-        setError(e?.message || "Failed to render mermaid chart");
+        if (typeof document !== "undefined") {
+          document.getElementById(id)?.remove();
+          document.getElementById(`d${id}`)?.remove();
+        }
+        if (!isCancelled) {
+          const rawMsg = e?.message || "Failed to render mermaid chart";
+          // Strip verbose version boilerplate from mermaid error
+          const cleanedMsg = rawMsg
+            .replace(
+              /^Syntax error in text\s*(?:mermaid version [^\n]+\s*)?/i,
+              "",
+            )
+            .trim();
+          setError(cleanedMsg || rawMsg);
+        }
       }
     };
+
     renderChart();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [chart]);
+
+  const cleanChart = chart
+    .replace(/^```(?:mermaid)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 
   if (error) {
     return (
-      <div className="not-typeset bg-destructive/10 text-destructive rounded-md p-4 font-mono text-sm">
-        {error}
+      <div className="not-typeset my-4">
+        <div className="bg-destructive/10 text-destructive border-destructive/20 mb-2 rounded-md border p-3 font-mono text-xs">
+          Failed to render diagram: {error}
+        </div>
+        <CodeBlock language="mermaid" value={cleanChart || chart} />
       </div>
     );
   }
 
-  if (!svg) {
+  if (!cleanChart || !svg) {
     return (
-      <div className="not-typeset bg-muted flex h-24 animate-pulse items-center justify-center rounded-md">
+      <div className="not-typeset bg-muted text-muted-foreground flex h-24 animate-pulse items-center justify-center rounded-md text-sm">
         Loading diagram...
       </div>
     );

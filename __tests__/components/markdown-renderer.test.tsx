@@ -193,3 +193,93 @@ describe("MarkdownRenderer downloadable links", () => {
     expect(mockDownloadFile).not.toHaveBeenCalled();
   });
 });
+
+describe("MarkdownRenderer Mermaid diagrams", () => {
+  it("does not crash or show syntax error on empty mermaid diagram and leaves no body artifacts", async () => {
+    const { container } = render(
+      <MarkdownRenderer content={"```mermaid\n\n```"} />,
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(container.textContent).not.toContain("Syntax error in text");
+    expect(container.textContent).not.toContain("No diagram type detected");
+    expect(document.body.querySelectorAll('[id^="dmermaid-"]').length).toBe(0);
+  });
+
+  it("renders svg when mermaid.render succeeds", async () => {
+    const mermaidModule = await import("mermaid");
+    const spy = vi
+      .spyOn(mermaidModule.default, "render")
+      .mockResolvedValueOnce({
+        svg: '<svg data-testid="mermaid-svg"></svg>',
+      } as any);
+
+    const { container } = render(
+      <MarkdownRenderer content={"```mermaid\ngraph TD\nA-->B\n```"} />,
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(
+      container.querySelector('[data-testid="mermaid-svg"]'),
+    ).not.toBeNull();
+    spy.mockRestore();
+  });
+
+  it("shows fallback code block and cleaned error banner when render fails without polluting body", async () => {
+    const mermaidModule = await import("mermaid");
+    const spy = vi
+      .spyOn(mermaidModule.default, "render")
+      .mockRejectedValueOnce(
+        new Error(
+          "Syntax error in text\nmermaid version 12.1.0\nInvalid syntax error details",
+        ),
+      );
+
+    const { container } = render(
+      <MarkdownRenderer content={"```mermaid\nbad syntax here\n```"} />,
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(container.textContent).toContain(
+      "Failed to render diagram: Invalid syntax error details",
+    );
+    expect(container.textContent).not.toContain("mermaid version 12.1.0");
+    expect(container.textContent).toContain("bad syntax here");
+    expect(document.body.querySelectorAll('[id^="dmermaid-"]').length).toBe(0);
+    spy.mockRestore();
+  });
+
+  it("strips accidental nested code fences from mermaid blocks", async () => {
+    const mermaidModule = await import("mermaid");
+    const spy = vi
+      .spyOn(mermaidModule.default, "render")
+      .mockResolvedValueOnce({
+        svg: '<svg data-testid="mermaid-nested-svg"></svg>',
+      } as any);
+
+    render(
+      <MarkdownRenderer
+        content={"```mermaid\n```mermaid\ngraph TD\nA-->B\n```\n```"}
+      />,
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringMatching(/^mermaid-/),
+      "graph TD\nA-->B",
+    );
+    spy.mockRestore();
+  });
+});
