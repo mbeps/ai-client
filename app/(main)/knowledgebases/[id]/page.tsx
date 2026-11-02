@@ -460,7 +460,7 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <PageContainer variant="narrow" className="space-y-6">
+    <PageContainer className="space-y-6">
       <KnowledgebaseHeader kb={state.kb} />
 
       {state.hasNoModels ? (
