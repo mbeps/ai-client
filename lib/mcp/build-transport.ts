@@ -1,6 +1,7 @@
 import type { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 import { decrypt } from "@/lib/encryption/decrypt";
+import { safeMcpFetch } from "@/lib/mcp/safe-mcp-fetch";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 
@@ -59,10 +60,9 @@ export async function buildTransport(
   return {
     type: "http" as const,
     url: server.url,
-    // SSRF hardening: fetch follows redirects without re-validating the
-    // destination IP, so a public URL could 302 to 169.254.169.254 etc.
-    // Reject redirects outright — isBlockedUrl() only validated the original URL.
-    redirect: "error" as const,
+    // Safe redirect handling with SSRF re-validation on every redirect hop.
+    redirect: "follow" as const,
+    fetch: safeMcpFetch,
     ...(headers && { headers }),
   };
 }
