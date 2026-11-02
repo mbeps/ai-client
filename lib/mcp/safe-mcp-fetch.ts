@@ -103,4 +103,3 @@ export async function safeMcpFetch(
 
   throw new Error(`Too many redirects (limit: ${MAX_REDIRECTS})`);
 }
-
