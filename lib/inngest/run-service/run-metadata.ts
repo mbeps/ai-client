@@ -139,12 +139,12 @@ function resolveTransformUrl(
   entityId?: string,
 ): string {
   if (payloadData?.agentId && entityId) {
-    return `/workflows/transform/${payloadData.agentId}/${entityId}`;
+    return `/transform/${payloadData.agentId}/${entityId}`;
   }
   if (entityId) {
-    return `/workflows/transform?runId=${entityId}`;
+    return `/transform?runId=${entityId}`;
   }
-  return "/workflows/transform";
+  return "/transform";
 }
 
 /**
@@ -188,7 +188,7 @@ const JOB_METADATA_BUILDERS: Record<JobType, MetadataBuilder> = {
       payloadData?.sourceLanguage && payloadData?.targetLanguage
         ? `${payloadData.sourceLanguage} → ${payloadData.targetLanguage}`
         : undefined,
-    url: "/workflows/translation",
+    url: "/translation",
   }),
   "kb-ingest": (payloadData, entityId) => ({
     title: "Document Ingestion",

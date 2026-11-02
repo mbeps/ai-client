@@ -427,7 +427,7 @@ describe("listJobs Server Action", () => {
         startedAt: null,
         endedAt: null,
         entityId: "deleted-run-id",
-        url: "/workflows/transform?runId=deleted-run-id",
+        url: "/transform?runId=deleted-run-id",
       };
 
       mockFetchUserInngestRuns.mockResolvedValueOnce({
@@ -459,7 +459,7 @@ describe("listJobs Server Action", () => {
         startedAt: null,
         endedAt: null,
         entityId: "deleted-trans-id",
-        url: "/workflows/translation",
+        url: "/translation",
       };
 
       mockFetchUserInngestRuns.mockResolvedValueOnce({

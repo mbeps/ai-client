@@ -120,12 +120,11 @@ describe("DynamicBreadcrumbs", () => {
     expect(await screen.findByText("OpenRouter")).toBeDefined();
   });
 
-  it("renders Step-by-Step Automations in breadcrumb for /workflows/transform", () => {
-    mockPathname.mockReturnValue("/workflows/transform");
+  it("renders Step-by-Step Automations in breadcrumb for /transform", () => {
+    mockPathname.mockReturnValue("/transform");
 
     render(<DynamicBreadcrumbs />);
 
-    expect(screen.getByText("Workflows")).toBeDefined();
     expect(screen.getByText("Step-by-Step Automations")).toBeDefined();
   });
 

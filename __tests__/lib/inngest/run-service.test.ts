@@ -745,7 +745,7 @@ describe("Inngest Run Service", () => {
         agentId: "agent-9",
       });
       expect(job.subtitle).toBe("My Agent");
-      expect(job.url).toBe("/workflows/transform/agent-9/tr-9");
+      expect(job.url).toBe("/transform/agent-9/tr-9");
     });
 
     it("falls back to the runId query URL when agentId is absent", async () => {
@@ -753,7 +753,7 @@ describe("Inngest Run Service", () => {
         userId: "user-123",
         runId: "tr-10",
       });
-      expect(job.url).toBe("/workflows/transform?runId=tr-10");
+      expect(job.url).toBe("/transform?runId=tr-10");
       expect(job.subtitle).toBeUndefined();
     });
 
@@ -762,7 +762,7 @@ describe("Inngest Run Service", () => {
         userId: "user-123",
         agentId: "agent-10",
       });
-      expect(job.url).toBe("/workflows/transform");
+      expect(job.url).toBe("/transform");
     });
 
     it("builds the translation subtitle from both language fields", async () => {
@@ -773,7 +773,7 @@ describe("Inngest Run Service", () => {
         targetLanguage: "French",
       });
       expect(job.subtitle).toBe("English → French");
-      expect(job.url).toBe("/workflows/translation");
+      expect(job.url).toBe("/translation");
     });
 
     it("omits the translation subtitle when targetLanguage is absent", async () => {

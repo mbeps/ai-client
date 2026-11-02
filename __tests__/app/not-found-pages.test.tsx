@@ -11,8 +11,8 @@ import RootNotFound from "@/app/not-found";
 import PromptNotFound from "@/app/settings/prompts/[id]/not-found";
 import SkillNotFound from "@/app/settings/skills/[id]/not-found";
 import ConnectorNotFound from "@/app/settings/connectors/[id]/not-found";
-import TransformRunNotFound from "@/app/workflows/transform/[id]/[runId]/not-found";
-import TransformAgentNotFound from "@/app/workflows/transform/[id]/not-found";
+import TransformRunNotFound from "@/app/(main)/transform/[id]/[runId]/not-found";
+import TransformAgentNotFound from "@/app/(main)/transform/[id]/not-found";
 import { ROUTES } from "@/config/routes";
 
 describe("Not Found Pages", () => {

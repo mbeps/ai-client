@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import TransformRunDetailPage from "@/app/workflows/transform/[id]/[runId]/page";
+import TransformRunDetailPage from "@/app/(main)/transform/[id]/[runId]/page";
 
 beforeAll(() => {
   global.ResizeObserver = class {

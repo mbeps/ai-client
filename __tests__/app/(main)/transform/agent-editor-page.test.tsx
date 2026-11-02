@@ -99,7 +99,7 @@ vi.mock("@/components/shared/markdown-tab-editor", () => ({
   ),
 }));
 
-import AgentEditorPage from "@/app/workflows/transform/[id]/page";
+import AgentEditorPage from "@/app/(main)/transform/[id]/page";
 
 describe("AgentEditorPage - Step-by-Step Automation Regression Tests", () => {
   beforeEach(() => {

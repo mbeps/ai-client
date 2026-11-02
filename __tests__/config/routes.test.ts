@@ -112,20 +112,16 @@ describe("ROUTES — static paths", () => {
 });
 
 describe("ROUTES — Workflows", () => {
-  it("WORKFLOWS path", () => {
-    expect(ROUTES.WORKFLOWS.path).toBe("/workflows");
-  });
-
   it("WORKFLOWS.TRANSLATION path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSLATION.path).toBe("/workflows/translation");
+    expect(ROUTES.WORKFLOWS.TRANSLATION.path).toBe("/translation");
   });
 
   it("WORKFLOWS.TRANSFORM path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.path).toBe("/workflows/transform");
+    expect(ROUTES.WORKFLOWS.TRANSFORM.path).toBe("/transform");
   });
 
   it("WORKFLOWS.TRANSFORM.new path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.new).toBe("/workflows/transform/new");
+    expect(ROUTES.WORKFLOWS.TRANSFORM.new).toBe("/transform/new");
   });
 });
 
@@ -214,13 +210,13 @@ describe("ROUTES — dynamic helpers", () => {
 
   it("WORKFLOWS.TRANSFORM.detail returns correct path", () => {
     expect(ROUTES.WORKFLOWS.TRANSFORM.detail("agent-123")).toBe(
-      "/workflows/transform/agent-123",
+      "/transform/agent-123",
     );
   });
 
   it("WORKFLOWS.TRANSFORM.runs returns correct path", () => {
     expect(ROUTES.WORKFLOWS.TRANSFORM.runs("agent-123", "run-456")).toBe(
-      "/workflows/transform/agent-123/run-456",
+      "/transform/agent-123/run-456",
     );
   });
 
