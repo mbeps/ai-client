@@ -6,12 +6,14 @@ import { ServerCard } from "@/components/mcp/server-card";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { sortByName } from "@/lib/sort-by-name";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Connectors (MCP servers) listing page — client component displaying all configured MCP servers.
  * Features: searchable grid of MCP server cards, add new server configuration, discover community tools.
  * MCP servers provide external tools and resources that can be used in chat interactions.
+ * Displays servers in alphabetical order by name to prevent layout jumping when toggled or updated.
  *
  * @author Maruf Bepary
  */
@@ -38,6 +40,7 @@ export default function ConnectorsPage() {
         </Button>
       }
       filterFn={(s, q) => s.name.toLowerCase().includes(q.toLowerCase())}
+      sortFn={sortByName}
       onMount={loadMcpServers}
     />
   );

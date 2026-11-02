@@ -46,6 +46,8 @@ interface ResourceListPageProps<T extends SortableResource> {
   banner?: React.ReactNode;
   /** Number of grid columns on desktop/tablet screens (defaults to 3). */
   columns?: 2 | 3;
+  /** Optional custom sort function. If omitted, items are sorted by updatedAt descending. */
+  sortFn?: (items: T[]) => T[];
 }
 
 /**
@@ -69,6 +71,7 @@ export function ResourceListPage<T extends SortableResource>({
   renderList,
   banner,
   columns = 3,
+  sortFn,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
   const loadError = useAppStore((state) => state.loadError);
@@ -83,7 +86,7 @@ export function ResourceListPage<T extends SortableResource>({
     return matchesSearch && matchesCustom;
   });
 
-  const sorted = sortByUpdatedAt(filtered);
+  const sorted = sortFn ? sortFn(filtered) : sortByUpdatedAt(filtered);
   const gridColsClass =
     columns === 2
       ? "grid grid-cols-1 gap-4 md:grid-cols-2"
