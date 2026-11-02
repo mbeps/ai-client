@@ -176,8 +176,16 @@ export function ScratchpadViewerModal({
         <div className="flex min-h-0 flex-1 divide-x overflow-hidden">
           {/* File sidebar */}
           <div className="bg-muted/20 flex w-1/3 max-w-[260px] min-w-[200px] flex-col">
-            <div className="text-muted-foreground border-b px-3 py-2 text-[11px] font-semibold tracking-wider uppercase">
-              Files ({files.length})
+            <div className="text-muted-foreground flex items-center justify-between border-b px-3 py-2 text-[11px] font-semibold tracking-wider uppercase">
+              <span>Files</span>
+              {files.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="px-1.5 py-0 font-mono text-[10px]"
+                >
+                  {files.length}
+                </Badge>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto">
               {loading && files.length === 0 ? (

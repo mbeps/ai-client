@@ -20,6 +20,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { Badge } from "@/components/ui/badge";
 import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
 import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
 import { TransformRunsTab } from "@/components/workflows/sheet-flow/transform-runs-tab";
@@ -132,7 +133,15 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
       <SidebarTabsList>
         <SidebarTabsTrigger value="steps">
           <List className="mr-2 h-4 w-4" />
-          <span>Steps ({steps.length})</span>
+          <span>Steps</span>
+          {steps.length > 0 && (
+            <Badge
+              variant="secondary"
+              className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+            >
+              {steps.length}
+            </Badge>
+          )}
         </SidebarTabsTrigger>
         <SidebarTabsTrigger value="prompt">
           <FileText className="mr-2 h-4 w-4" />
@@ -153,7 +162,15 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
         {!isNew && (
           <SidebarTabsTrigger value="runs">
             <History className="mr-2 h-4 w-4" />
-            <span>Runs ({runs.length})</span>
+            <span>Runs</span>
+            {runs.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+              >
+                {runs.length}
+              </Badge>
+            )}
           </SidebarTabsTrigger>
         )}
         <SidebarTabsTrigger value="config">

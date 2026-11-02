@@ -132,45 +132,60 @@ function SubagentStatusBadge({
 }: SubagentStatusBadgeProps) {
   if (status === "pending") {
     return (
-      <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium">
+      <Badge
+        variant="outline"
+        className="border-primary/20 bg-primary/10 text-primary gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium"
+      >
         <Loader2 className="text-primary h-3 w-3 animate-spin" />
         <span>Delegating...</span>
-      </div>
+      </Badge>
     );
   }
 
   if (isError || outputText.includes("STATUS: BLOCKED")) {
     return (
-      <div className="bg-destructive/10 text-destructive flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+      <Badge
+        variant="destructive"
+        className="gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+      >
         <AlertCircle className="h-3 w-3" />
         <span>Blocked</span>
-      </div>
+      </Badge>
     );
   }
 
   if (outputText.includes("STATUS: DONE_WITH_CONCERNS")) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+      <Badge
+        variant="outline"
+        className="gap-1 rounded-full border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
+      >
         <AlertCircle className="h-3 w-3" />
         <span>Concerns</span>
-      </div>
+      </Badge>
     );
   }
 
   if (outputText.includes("STATUS: NEEDS_CONTEXT")) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400">
+      <Badge
+        variant="outline"
+        className="gap-1 rounded-full border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400"
+      >
         <AlertCircle className="h-3 w-3" />
         <span>Needs Context</span>
-      </div>
+      </Badge>
     );
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+    <Badge
+      variant="outline"
+      className="gap-1 rounded-full border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+    >
       <CheckCircle2 className="h-3 w-3" />
       <span>Completed</span>
-    </div>
+    </Badge>
   );
 }
 

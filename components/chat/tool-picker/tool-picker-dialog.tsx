@@ -3,6 +3,7 @@
 import { Wrench } from "lucide-react";
 import { PickerDialog } from "@/components/chat/picker-dialog";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -53,7 +54,14 @@ export function ToolPickerDialog({
           >
             <Wrench className="mr-2 h-4 w-4" />
             {supportsTools ? "Select Tools" : "Tools Unsupported"}
-            {selectedTools.size > 0 ? ` (${selectedTools.size})` : ""}
+            {selectedTools.size > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+              >
+                {selectedTools.size}
+              </Badge>
+            )}
           </Button>
         )
       }

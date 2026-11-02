@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,7 +83,15 @@ export function JobsControlsBar({
             onClick={onShowAll}
             className="text-muted-foreground hover:text-foreground h-8 text-xs"
           >
-            Show all ({totalJobs})
+            Show all
+            {totalJobs > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-1.5 px-1.5 py-0 font-mono text-[10px]"
+              >
+                {totalJobs}
+              </Badge>
+            )}
           </Button>
         )}
 

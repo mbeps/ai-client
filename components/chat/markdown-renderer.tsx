@@ -10,6 +10,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   downloadFile,
@@ -269,13 +270,14 @@ export function MarkdownRenderer({
           del: ({ node: _node, ...props }) => (
             <del className="text-muted-foreground line-through" {...props} />
           ),
-          input: ({ node: _node, type, ...props }: any) => {
+          input: ({ node: _node, type, checked, ...props }: any) => {
             if (type === "checkbox") {
               return (
-                <input
-                  type="checkbox"
-                  className="border-border accent-primary mr-2 inline-block h-4 w-4 cursor-default rounded align-middle"
-                  {...props}
+                <Checkbox
+                  checked={Boolean(checked)}
+                  disabled
+                  className="mr-2 inline-flex align-middle"
+                  aria-label="Task item"
                 />
               );
             }
