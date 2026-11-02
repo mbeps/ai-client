@@ -111,7 +111,6 @@ interface MessageBubbleProps {
 export function MessageBubble(props: MessageBubbleProps) {
   const {
     message,
-    isLatest,
     assistantId,
     onDelete,
     onEdit,
@@ -196,7 +195,6 @@ export function MessageBubble(props: MessageBubbleProps) {
             isStreamingReasoning={isStreamingReasoning}
             toolData={viewData.toolData}
             activeToolCalls={activeToolCalls}
-            isLatest={isLatest}
             messageId={message.id}
             chatId={chatId}
           />

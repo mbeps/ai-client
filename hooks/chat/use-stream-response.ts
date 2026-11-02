@@ -180,7 +180,10 @@ export function useStreamResponse(
 
   const isLoading = isStreaming;
   const isStreamingReasoning =
-    isStreaming && !!streamingReasoning && !streamingContent;
+    isStreaming &&
+    !!streamingReasoning &&
+    !streamingContent &&
+    activeToolCalls.length === 0;
 
   const stopStream = useCallback(async () => {
     await executeStopStream(

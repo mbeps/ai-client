@@ -101,12 +101,12 @@ describe("extractSkillChangesFromToolResults", () => {
     ).toEqual([]);
   });
 
-  it("falls back to the output key when result is absent", () => {
+  it("ignores an entry when result is absent", () => {
     expect(
       extractSkillChangesFromToolResults([
-        { toolName: "create_skill", output: { skillId: "s5" } },
+        { toolName: "create_skill" },
       ]),
-    ).toEqual(["s5"]);
+    ).toEqual([]);
   });
 
   it("ignores an entry whose tool name is not a string", () => {

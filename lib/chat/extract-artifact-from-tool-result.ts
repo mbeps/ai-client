@@ -155,7 +155,7 @@ export function extractArtifactFromToolResult(
 
   if (record.toolName !== "manage_artifact") return null;
 
-  const parsedRecord = parseToolResultObject(record.result ?? record.output);
+  const parsedRecord = parseToolResultObject(record.result);
   if (!parsedRecord) return null;
 
   const rawArtifact = resolveRawArtifact(parsedRecord);

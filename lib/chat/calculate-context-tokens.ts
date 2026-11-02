@@ -69,7 +69,7 @@ function estimateSingleToolResultTokens(tr: {
   toolName?: string;
   result?: unknown;
 }): number {
-  if (tr.toolName === "delegate_task" || tr.toolName === "subagent_dispatch") {
+  if (tr.toolName === "delegate_task") {
     return estimateTokens(sanitizeSubagentOutput(tr.result, 8000));
   }
   if (tr.toolName === "manage_artifact") {

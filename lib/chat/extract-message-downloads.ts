@@ -799,7 +799,7 @@ function processSinglePersistedToolResult(
   const trRecord = tr as Record<string, unknown>;
   const toolName =
     (typeof trRecord.toolName === "string" && trRecord.toolName) || "tool";
-  const raw = trRecord.result !== undefined ? trRecord.result : trRecord.output;
+  const raw = trRecord.result;
   const matchingCall = toolCallsList.find(
     (c: any) => c.toolCallId === trRecord.toolCallId,
   );

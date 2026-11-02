@@ -33,7 +33,6 @@ describe("subagent-dispatch-tool", () => {
     it("strictly strips delegate_task and manage_artifact", () => {
       const mockTools = {
         delegate_task: { description: "delegate" },
-        subagent_dispatch: { description: "dispatch" },
         manage_artifact: { description: "manage artifact" },
         [INTERNAL_TOOL_IDS.MANAGE_ARTIFACT]: { description: "manage artifact full" },
         scratchpad_write: { description: "write" },
@@ -49,7 +48,6 @@ describe("subagent-dispatch-tool", () => {
 
       // Verify strict exclusion
       expect(result).not.toHaveProperty("delegate_task");
-      expect(result).not.toHaveProperty("subagent_dispatch");
       expect(result).not.toHaveProperty("manage_artifact");
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
     });

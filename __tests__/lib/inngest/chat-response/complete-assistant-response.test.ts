@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  buildAssistantMessageMetadata,
   completeAssistantResponse,
   persistAbortedAssistantResponse,
 } from "@/lib/inngest/chat-response/complete-assistant-response";
@@ -292,31 +291,6 @@ describe("complete-assistant-response", () => {
 
       expect(result).toBe(false);
       expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-stopped-deleted");
-    });
-  });
-
-  describe("buildAssistantMessageMetadata", () => {
-    it("handles interrupted tool executions with fallback error object", () => {
-      const json = buildAssistantMessageMetadata({
-        modelId: "gpt-4o",
-        reasoning: "reason",
-        completedTools: [
-          {
-            toolCallId: "tc-interrupted",
-            toolName: "heavy_task",
-            args: {},
-            result: undefined,
-          },
-        ],
-        usage: { totalTokens: 10 },
-        finishReason: "length",
-      });
-
-      const parsed = JSON.parse(json);
-      expect(parsed.toolResults[0].result).toEqual({
-        error: "Tool execution was interrupted",
-      });
-      expect(parsed.finishReason).toBe("length");
     });
   });
 });

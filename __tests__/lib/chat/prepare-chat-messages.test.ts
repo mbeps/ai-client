@@ -317,12 +317,12 @@ describe("prepareChatMessages — history truncation (T4A.3)", () => {
 
       const msg: any = {
         role: "assistant",
-        content: [{ type: "tool-call", args: circular }],
+        content: [{ type: "tool-call", input: circular }],
       };
       expect(estimateModelMessageTokens(msg)).toBe(0);
     });
 
-    it("unwraps output.value and falls back to raw output/result without value", () => {
+    it("unwraps output.value and falls back to raw output without value", () => {
       const msgWithValue: any = {
         role: "tool",
         content: [{ type: "tool-result", output: { type: "text", value: "A".repeat(400) } }],
@@ -331,14 +331,14 @@ describe("prepareChatMessages — history truncation (T4A.3)", () => {
         role: "tool",
         content: [{ type: "tool-result", output: { plain: "B".repeat(400) } }],
       };
-      const msgFalsyOut: any = {
+      const msgRawOut: any = {
         role: "tool",
-        content: [{ type: "tool-result", output: undefined, result: "C".repeat(400) }],
+        content: [{ type: "tool-result", output: "C".repeat(400) }],
       };
 
       expect(estimateModelMessageTokens(msgWithValue)).toBeGreaterThan(100);
       expect(estimateModelMessageTokens(msgWithoutValue)).toBeGreaterThan(100);
-      expect(estimateModelMessageTokens(msgFalsyOut)).toBeGreaterThan(100);
+      expect(estimateModelMessageTokens(msgRawOut)).toBeGreaterThan(100);
     });
 
     it("estimates reasoning parts", () => {

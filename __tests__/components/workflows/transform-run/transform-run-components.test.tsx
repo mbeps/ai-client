@@ -19,9 +19,9 @@ vi.mock("@/components/chat/artifact-panel", () => ({
   ),
 }));
 
-vi.mock("@/components/chat/message/tool-call-display", () => ({
-  ToolCallDisplay: ({ toolCalls }: { toolCalls: any[] }) => (
-    <div data-testid="tool-call-display">{toolCalls.length} tool calls</div>
+vi.mock("@/components/chat/message/response-timeline", () => ({
+  ResponseTimeline: ({ toolCalls }: { toolCalls: any[] }) => (
+    <div data-testid="response-timeline">{toolCalls.length} tool calls</div>
   ),
 }));
 
@@ -174,7 +174,7 @@ describe("Transform Run Components", () => {
         />,
       );
 
-      expect(screen.getByTestId("tool-call-display")).toBeDefined();
+      expect(screen.getByTestId("response-timeline")).toBeDefined();
     });
   });
 

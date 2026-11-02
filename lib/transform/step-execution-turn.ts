@@ -110,7 +110,7 @@ async function emitStepToolCalls(
       type: "tool-call",
       toolCallId: tc.toolCallId,
       toolName: tc.toolName,
-      args: (tc as any).args || (tc as any).input,
+      args: (tc as any).input,
       serverName,
     });
   }

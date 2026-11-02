@@ -42,14 +42,8 @@ function parseArtifactResultPayload(raw: unknown): {
 function applyArtifactContent(tr: any, parsed: any, isString: boolean): void {
   if (isString) {
     tr.result = JSON.stringify(parsed);
-    if (tr.output) {
-      tr.output = tr.result;
-    }
   } else {
     tr.result = parsed;
-    if (tr.output) {
-      tr.output = parsed;
-    }
   }
 }
 
@@ -67,7 +61,7 @@ function updateToolResultArtifact(
   artifactId: string,
   newContent: string,
 ): boolean {
-  const raw = tr.result ?? tr.output;
+  const raw = tr.result;
   const { parsed, isString } = parseArtifactResultPayload(raw);
   if (!parsed || typeof parsed !== "object") return false;
 

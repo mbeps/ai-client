@@ -1079,7 +1079,7 @@ describe("generateChatResponse Inngest Function", () => {
           type: "tool-result",
           toolCallId: "tc-unknown",
           toolName: "orphan_tool",
-          result: { ok: true },
+          output: { ok: true },
         },
       ]);
 

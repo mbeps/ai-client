@@ -129,7 +129,7 @@ function assembleUserMessageWithAttachments(m: HistoryMessage): ModelMessage {
  * @author Maruf Bepary
  */
 function parseToolCallInput(tc: any): unknown {
-  let parsedInput = tc.args ?? tc.input;
+  let parsedInput = tc.args;
   if (typeof parsedInput === "string") {
     try {
       parsedInput = JSON.parse(parsedInput);
@@ -232,7 +232,6 @@ function formatGenericToolResult(tc: any, raw: unknown): any {
 function resolveRawToolResult(tr: any): unknown {
   if (!tr) return { error: "Tool execution did not return a result" };
   if (tr.result !== undefined) return tr.result;
-  if (tr.output !== undefined) return tr.output;
   return { error: "Tool execution did not return a result" };
 }
 
@@ -289,7 +288,7 @@ function formatToolResultPart(tc: any, toolResultsList: any[]): any {
   const tr = toolResultsList.find((r: any) => r.toolCallId === tc.toolCallId);
   const raw = resolveRawToolResult(tr);
 
-  if (tc.toolName === "delegate_task" || tc.toolName === "subagent_dispatch") {
+  if (tc.toolName === "delegate_task") {
     return formatSubagentResult(tc, raw);
   }
 
@@ -330,7 +329,6 @@ function buildAssistantToolCallParts(toolCalls: any[]): any[] {
       toolCallId: tc.toolCallId,
       toolName: tc.toolName,
       input: parsedInput,
-      args: parsedInput,
     });
   }
   return parts;

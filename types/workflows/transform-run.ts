@@ -1,24 +1,8 @@
 import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { ToolCall } from "@/types/chat/tool-call";
+import type { ToolResult } from "@/types/chat/tool-result";
 
-/**
- * Tool call entry representing an MCP or system tool execution during a transform step.
- */
-export interface ToolCall {
-  toolCallId: string;
-  toolName: string;
-  serverName?: string;
-  args: unknown;
-}
-
-/**
- * Tool result entry containing the execution output from an MCP or system tool.
- */
-export interface ToolResult {
-  toolCallId: string;
-  toolName: string;
-  serverName?: string;
-  result: unknown;
-}
+export type { ToolCall, ToolResult };
 
 /**
  * Runtime execution state for an individual transform agent step during a workflow run.

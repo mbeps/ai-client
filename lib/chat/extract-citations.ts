@@ -13,7 +13,7 @@ export function extractCitations(toolResults: ToolResult[]): Citation[] {
 
   for (const tr of toolResults) {
     if (tr.toolName === "search_knowledge_base") {
-      const raw = tr.result ?? (tr as any).output;
+      const raw = tr.result;
       let data: unknown = raw;
       if (typeof raw === "string") {
         try {

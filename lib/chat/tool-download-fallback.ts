@@ -1,19 +1,8 @@
 import { randomUUID } from "crypto";
 import { getLogger } from "@/lib/logger";
+import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 const log = getLogger(["app", "chat", "download-fallback"]);
-
-/**
- * Represents completed tool record.
- *
- * @author Maruf Bepary
- */
-interface CompletedToolRecord {
-  toolCallId: string;
-  toolName: string;
-  args?: unknown;
-  result?: unknown;
-}
 
 /**
  * Represents execute tool download fallback params.

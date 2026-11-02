@@ -31,7 +31,7 @@ export function extractSkillChangesFromToolResults(
     if (typeof record.toolName !== "string") continue;
     if (!SKILL_TOOL_NAMES.has(record.toolName)) continue;
 
-    const raw = record.result ?? record.output;
+    const raw = record.result;
     const payload = readPayload(raw);
     if (!payload) continue;
 
