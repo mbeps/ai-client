@@ -318,7 +318,7 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
     });
   });
 
-  it("falls back to the legacy `input` field when a tool call carries only that", () => {
+  it("parses stringified JSON args when present on a tool call", () => {
     const messages = assembleModelMessages([
       {
         role: "assistant",
@@ -327,13 +327,12 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
           toolCalls: [
             {
               toolCallId: "call_1",
-              toolName: "legacy_tool",
-              // `args` absent; only the legacy `input` key is present
-              input: { legacy: true },
+              toolName: "json_tool",
+              args: JSON.stringify({ parsed: true }),
             },
           ],
           toolResults: [
-            { toolCallId: "call_1", toolName: "legacy_tool", result: { ok: 1 } },
+            { toolCallId: "call_1", toolName: "json_tool", result: { ok: 1 } },
           ],
         }),
       },
@@ -342,8 +341,8 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
     const toolCallPart = (messages[0] as any).content.find(
       (p: any) => p.type === "tool-call",
     );
-    expect(toolCallPart.input).toEqual({ legacy: true });
-    expect(toolCallPart.args).toEqual({ legacy: true });
+    expect(toolCallPart.input).toEqual({ parsed: true });
+    expect(toolCallPart.args).toBeUndefined();
   });
 
   it("emits an empty text value when a matched tool result is nullish", () => {
@@ -466,11 +465,9 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
         metadata: JSON.stringify({
           toolCalls: [
             { toolCallId: "call_delegate", toolName: "delegate_task", args: { task: "research" } },
-            { toolCallId: "call_dispatch", toolName: "subagent_dispatch", args: { task: "code" } },
           ],
           toolResults: [
             { toolCallId: "call_delegate", toolName: "delegate_task", result: { summary: "done research" } },
-            { toolCallId: "call_dispatch", toolName: "subagent_dispatch", result: "all done" },
           ],
         }),
       },
@@ -480,9 +477,6 @@ describe("assembleModelMessages — tool results (T10.4)", () => {
     expect(parts[0].type).toBe("tool-result");
     expect(parts[0].toolName).toBe("delegate_task");
     expect(parts[0].output.type).toBe("text");
-    expect(parts[1].type).toBe("tool-result");
-    expect(parts[1].toolName).toBe("subagent_dispatch");
-    expect(parts[1].output.type).toBe("text");
   });
 
   it("falls back to error message when toolResult object has neither result nor output", () => {

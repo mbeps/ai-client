@@ -62,11 +62,11 @@ describe("extractCitations", () => {
     expect(extractCitations(results)).toEqual([]);
   });
 
-  it("extracts citations from output property fallback and handles non-array results", () => {
+  it("extracts citations from canonical result property and handles non-array results", () => {
     const results = [
       {
         toolName: "search_knowledge_base",
-        output: { results: [{ id: "5", title: "Doc 5" }] },
+        result: { results: [{ id: "5", title: "Doc 5" }] },
       },
       {
         toolName: "search_knowledge_base",

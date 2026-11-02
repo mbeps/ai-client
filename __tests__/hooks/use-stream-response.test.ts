@@ -665,6 +665,50 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     ]);
   });
 
+  it("computes isStreamingReasoning as true only when reasoning streams without content or active tools", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "a1" } },
+          { data: { type: "reasoning-delta", reasoning: "thinking step 1" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.streamingReasoning).toBe("thinking step 1");
+    expect(result.current.streamingContent).toBeNull();
+    expect(result.current.activeToolCalls).toEqual([]);
+    expect(result.current.isStreamingReasoning).toBe(true);
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          {
+            data: {
+              type: "tool-call",
+              toolCallId: "tool-1",
+              toolName: "web_search",
+              args: { query: "weather" },
+            },
+          },
+        ],
+      };
+      rerender();
+    });
+
+    expect(result.current.activeToolCalls.length).toBe(1);
+    expect(result.current.streamingContent).toBeNull();
+    expect(result.current.isStreamingReasoning).toBe(false);
+  });
+
   it("clears streaming state when finish event is processed", async () => {
     const { result, rerender } = renderHook(() =>
       useStreamResponse("chat-1"),

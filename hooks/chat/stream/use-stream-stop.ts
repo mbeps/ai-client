@@ -2,7 +2,6 @@ import { persistMessage } from "@/actions/chats/persist-message";
 import { clearInflightState } from "@/hooks/chat/stream/use-stream-inflight-state";
 import type { StreamRefsObject } from "@/hooks/chat/stream/use-stream-types";
 import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
-import { extractCompletedToolResults } from "@/lib/chat/stream/extract-completed-tool-results";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { ToolCallState } from "@/types/tool/tool-call";
@@ -119,7 +118,6 @@ export async function executeStopStream(
           : { error: "Tool execution was interrupted" },
     }),
   );
-  const toolResults = extractCompletedToolResults(completedTools);
   const hasPartial = Boolean(
     partialText || reasoning || completedTools.length > 0,
   );
@@ -146,7 +144,6 @@ export async function executeStopStream(
       model: resolvedModel,
       reasoning,
       completedTools,
-      toolResults,
       finishReason: "stop",
       stopped: true,
     });

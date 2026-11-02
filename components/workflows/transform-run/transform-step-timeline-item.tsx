@@ -1,5 +1,5 @@
 import { CheckCircle2, Circle, Clock, Loader2 } from "lucide-react";
-import { ToolCallDisplay } from "@/components/chat/message/tool-call-display";
+import { ResponseTimeline } from "@/components/chat/message/response-timeline";
 import { Badge } from "@/components/ui/badge";
 import type { TransformStep } from "@/types/transform/transform-step";
 import type {
@@ -99,7 +99,7 @@ function StepToolCalls({
 
   return (
     <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-      <ToolCallDisplay toolCalls={toolCalls} toolResults={toolResults || []} />
+      <ResponseTimeline toolCalls={toolCalls} toolResults={toolResults || []} />
     </div>
   );
 }

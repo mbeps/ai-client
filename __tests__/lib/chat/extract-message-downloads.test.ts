@@ -728,7 +728,7 @@ describe("extractMessageDownloads", () => {
     expect(extractMessageDownloads(emptyContentMsg)).toHaveLength(0);
   });
 
-  it("extracts download from tool result using output instead of result", () => {
+  it("extracts download from tool result using result property", () => {
     const msg: Message = {
       ...baseMessage,
       metadata: {
@@ -736,7 +736,7 @@ describe("extractMessageDownloads", () => {
           {
             toolCallId: "tc-output-field",
             toolName: "exporter",
-            output: { url: "https://example.com/output-report.pdf" },
+            result: { url: "https://example.com/output-report.pdf" },
           },
         ],
       },

@@ -1,7 +1,15 @@
-import type { ToolCallState } from "@/types/tool/tool-call";
+export interface AssistantToolRecord {
+  toolCallId: string;
+  toolName: string;
+  args?: unknown;
+  result?: unknown;
+  serverName?: string;
+}
 
 /**
  * Constructs the metadata JSON string for a finished assistant message.
+ * Derives both toolCalls and toolResults directly from completedTools in a single pass.
+ *
  * @param params - Generation metadata including model, reasoning, tools, usage, and timing
  * @returns Serialized JSON string suitable for message metadata
  * @author Maruf Bepary
@@ -10,7 +18,6 @@ export function buildAssistantFinishMetadata({
   model,
   reasoning,
   completedTools,
-  toolResults,
   usage,
   finishReason,
   durationMs,
@@ -18,13 +25,7 @@ export function buildAssistantFinishMetadata({
 }: {
   model: string;
   reasoning: string;
-  completedTools: ToolCallState[];
-  toolResults: Array<{
-    toolCallId: string;
-    toolName: string;
-    result: unknown;
-    serverName?: string;
-  }>;
+  completedTools: AssistantToolRecord[];
   usage?: unknown;
   finishReason?: string;
   durationMs?: number;
@@ -39,10 +40,18 @@ export function buildAssistantFinishMetadata({
       args: tc.args,
       ...(tc.serverName ? { serverName: tc.serverName } : {}),
     })),
-    toolResults,
+    toolResults: completedTools.map((tc) => ({
+      toolCallId: tc.toolCallId,
+      toolName: tc.toolName,
+      result:
+        tc.result !== undefined
+          ? tc.result
+          : { error: "Tool execution was interrupted" },
+      ...(tc.serverName ? { serverName: tc.serverName } : {}),
+    })),
     usage,
     finishReason,
-    durationMs,
+    ...(durationMs !== undefined ? { durationMs } : {}),
     ...(stopped !== undefined ? { stopped } : {}),
   });
 }

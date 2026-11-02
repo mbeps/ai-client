@@ -15,7 +15,6 @@ interface MessageTimelineSectionProps {
   isStreamingReasoning?: boolean;
   toolData: ParsedMessageMetadata["toolData"];
   activeToolCalls?: ToolCallState[];
-  isLatest: boolean;
   messageId: string;
   chatId?: string;
 }
@@ -33,7 +32,6 @@ export function MessageTimelineSection({
   isStreamingReasoning,
   toolData,
   activeToolCalls,
-  isLatest,
   messageId,
   chatId,
 }: MessageTimelineSectionProps) {
@@ -45,7 +43,6 @@ export function MessageTimelineSection({
       toolCalls={toolData?.toolCalls}
       toolResults={toolData?.toolResults}
       activeToolCalls={activeToolCalls}
-      isLatest={isLatest}
       messageId={messageId}
       chatId={chatId}
     />

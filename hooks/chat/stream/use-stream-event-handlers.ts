@@ -23,7 +23,6 @@ import {
 } from "@/lib/chat/stream/accumulate-stream-chunks";
 import { applyToolResultEvent } from "@/lib/chat/stream/apply-tool-result-event";
 import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
-import { extractCompletedToolResults } from "@/lib/chat/stream/extract-completed-tool-results";
 import { applyToolCallEvent } from "@/lib/chat/stream/handle-stream-tool-calls";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import { logger } from "@/lib/logger";
@@ -157,9 +156,7 @@ function executeStandardFinish(params: {
   const resolvedAssistantId = params.assistantId || crypto.randomUUID();
   const durationMs = Date.now() - params.pending.startTime;
 
-  const toolResults = extractCompletedToolResults(completedTools);
-
-  if (extractSkillChangesFromToolResults(toolResults).length > 0) {
+  if (extractSkillChangesFromToolResults(completedTools).length > 0) {
     void useAppStore.getState().loadSkills();
   }
 
@@ -167,7 +164,6 @@ function executeStandardFinish(params: {
     model: params.pending.model,
     reasoning: params.reasoning,
     completedTools,
-    toolResults,
     usage: params.event.usage,
     finishReason: params.event.finishReason,
     durationMs,

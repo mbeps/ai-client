@@ -42,7 +42,7 @@ function estimatePayloadTokens(payload: unknown): number {
  * @author Maruf Bepary
  */
 function resolveToolResultValue(part: Record<string, unknown>): unknown {
-  const out = part.output !== undefined ? part.output : part.result;
+  const out = part.output;
   if (out && typeof out === "object" && "value" in out) {
     return (out as { value: unknown }).value;
   }
@@ -75,10 +75,10 @@ function estimateMessagePartTokens(part: unknown): number {
   if (typeof p.reasoning === "string") {
     return estimateTokens(p.reasoning);
   }
-  if ("input" in p || "args" in p) {
-    return estimatePayloadTokens(p.input !== undefined ? p.input : p.args);
+  if ("input" in p) {
+    return estimatePayloadTokens(p.input);
   }
-  if ("output" in p || "result" in p) {
+  if ("output" in p) {
     return estimatePayloadTokens(resolveToolResultValue(p));
   }
 

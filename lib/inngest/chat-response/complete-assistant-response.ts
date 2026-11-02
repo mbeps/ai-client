@@ -1,5 +1,6 @@
 import { hasExistingAssistantMessage } from "@/lib/chat/has-existing-assistant-message";
 import { persistAssistantResponse } from "@/lib/chat/persist-response";
+import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
 import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import type { CompletedToolRecord } from "@/lib/inngest/chat-response/chat-response-types";
@@ -7,49 +8,6 @@ import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 
 const log = getLogger(["inngest", "chat", "response"]);
-
-/**
- * Builds assistant message metadata payload for persistence.
- * @author Maruf Bepary
- */
-export function buildAssistantMessageMetadata({
-  modelId,
-  reasoning,
-  completedTools,
-  usage,
-  finishReason,
-  stopped,
-}: {
-  modelId: string;
-  reasoning: string;
-  completedTools: CompletedToolRecord[];
-  usage?: any;
-  finishReason?: string;
-  stopped?: boolean;
-}): string {
-  return JSON.stringify({
-    model: modelId,
-    reasoning,
-    toolCalls: completedTools.map((tc) => ({
-      toolCallId: tc.toolCallId,
-      toolName: tc.toolName,
-      args: tc.args,
-      ...(tc.serverName ? { serverName: tc.serverName } : {}),
-    })),
-    toolResults: completedTools.map((tc) => ({
-      toolCallId: tc.toolCallId,
-      toolName: tc.toolName,
-      result:
-        tc.result !== undefined
-          ? tc.result
-          : { error: "Tool execution was interrupted" },
-      ...(tc.serverName ? { serverName: tc.serverName } : {}),
-    })),
-    usage,
-    finishReason,
-    ...(stopped !== undefined ? { stopped } : {}),
-  });
-}
 
 /**
  * Represents complete assistant response params.
@@ -110,8 +68,8 @@ export async function completeAssistantResponse(
   const finishReason = await safeFinishReason;
   const usage = await safeUsage;
 
-  const metadata = buildAssistantMessageMetadata({
-    modelId: resolvedModelId,
+  const metadata = buildAssistantFinishMetadata({
+    model: resolvedModelId,
     reasoning: accumulatedReasoning,
     completedTools,
     usage,
@@ -208,8 +166,8 @@ export async function persistAbortedAssistantResponse(params: {
     return false;
   }
 
-  const metadata = buildAssistantMessageMetadata({
-    modelId: resolvedModelId,
+  const metadata = buildAssistantFinishMetadata({
+    model: resolvedModelId,
     reasoning: accumulatedReasoning,
     completedTools,
     usage: undefined,

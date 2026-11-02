@@ -69,7 +69,7 @@ async function handleToolCallChunk(
   emit: (data: ChatStreamEvent) => Promise<void>,
 ): Promise<void> {
   const serverName = toolSourceMap[chunk.toolName];
-  const args = chunk.args ?? chunk.input;
+  const args = chunk.input;
   completedTools.push({
     toolCallId: chunk.toolCallId,
     toolName: chunk.toolName,
@@ -102,7 +102,7 @@ async function handleToolResultChunk(
   emit: (data: ChatStreamEvent) => Promise<void>,
 ): Promise<void> {
   const isPreliminary = Boolean(chunk.preliminary);
-  const rawResult = chunk.result ?? chunk.output;
+  const rawResult = chunk.output;
   const tc = completedTools.find((t) => t.toolCallId === chunk.toolCallId);
   const isSubagent =
     chunk.toolName === "delegate_task" ||

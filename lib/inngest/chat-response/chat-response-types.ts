@@ -1,18 +1,8 @@
 import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
+import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
-/**
- * Represents completed tool record.
- *
- * @author Maruf Bepary
- */
-export interface CompletedToolRecord {
-  toolCallId: string;
-  toolName: string;
-  args: any;
-  result?: any;
-  serverName?: string;
-}
+export type { CompletedToolRecord };
 
 /**
  * Represents build orchestrator tool set params.

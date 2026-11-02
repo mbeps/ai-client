@@ -61,10 +61,10 @@ describe("extractArtifactFromToolResult", () => {
     });
   });
 
-  it("extracts artifact from v7 output field instead of result", () => {
+  it("extracts artifact from canonical result field", () => {
     const tr = {
       toolName: "manage_artifact",
-      output: {
+      result: {
         success: true,
         artifact: {
           id: "art-3",

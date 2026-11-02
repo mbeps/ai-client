@@ -11,13 +11,6 @@ describe("buildAssistantFinishMetadata", () => {
           toolCallId: "tc-1",
           toolName: "web_search",
           args: { query: "weather" },
-          status: "complete",
-        },
-      ],
-      toolResults: [
-        {
-          toolCallId: "tc-1",
-          toolName: "web_search",
           result: { temp: 20 },
         },
       ],
@@ -45,11 +38,11 @@ describe("buildAssistantFinishMetadata", () => {
       model: "gpt-4o",
       reasoning: "",
       completedTools: [],
-      toolResults: [],
     });
 
     const parsed = JSON.parse(json);
     expect(parsed.stopped).toBeUndefined();
+    expect(parsed.durationMs).toBeUndefined();
     expect(parsed.model).toBe("gpt-4o");
   });
 
@@ -58,7 +51,6 @@ describe("buildAssistantFinishMetadata", () => {
       model: "gpt-4o",
       reasoning: "",
       completedTools: [],
-      toolResults: [],
       stopped: false,
     });
 
@@ -75,14 +67,6 @@ describe("buildAssistantFinishMetadata", () => {
           toolCallId: "tc-mcp-1",
           toolName: "fetch_data",
           args: { id: "123" },
-          status: "complete",
-          serverName: "my-mcp-server",
-        },
-      ],
-      toolResults: [
-        {
-          toolCallId: "tc-mcp-1",
-          toolName: "fetch_data",
           result: { ok: true },
           serverName: "my-mcp-server",
         },
@@ -107,6 +91,26 @@ describe("buildAssistantFinishMetadata", () => {
       },
     ]);
   });
+
+  it("substitutes interrupted error when tool result is undefined", () => {
+    const json = buildAssistantFinishMetadata({
+      model: "gpt-4o",
+      reasoning: "thinking",
+      completedTools: [
+        {
+          toolCallId: "tc-interrupted",
+          toolName: "slow_tool",
+          args: { timeout: 10 },
+          result: undefined,
+        },
+      ],
+    });
+
+    const parsed = JSON.parse(json);
+    expect(parsed.toolResults[0]).toEqual({
+      toolCallId: "tc-interrupted",
+      toolName: "slow_tool",
+      result: { error: "Tool execution was interrupted" },
+    });
+  });
 });
-
-

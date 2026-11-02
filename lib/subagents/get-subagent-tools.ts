@@ -15,7 +15,6 @@ export function getSubagentTools(
 ): Record<string, any> {
   const forbidden = new Set([
     "delegate_task",
-    "subagent_dispatch",
     "manage_artifact",
     INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
     "create_skill",
