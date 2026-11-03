@@ -33,6 +33,23 @@ function findFilePathInObject(obj: Record<string, unknown>): string | null {
 }
 
 /**
+ * Parses JSON safely without throwing.
+ *
+ * @param val - Value to parse
+ * @returns Parsed object or null
+ * @author Maruf Bepary
+ */
+function parseJsonObjectSafe(val: unknown): Record<string, unknown> | null {
+  if (typeof val !== "string") return null;
+  try {
+    const parsed = JSON.parse(val);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Extracts a file path string from a tool result or payload, supporting multiple shapes: - Direct `{ file_path: "..." }` or `{ filePath: "..." }` object - Nested in `structuredContent` - JSON-encoded string - `{ content: [{ text: "..." }] }` where text is JSON with a file path.
  *
  * @param result - Target result
@@ -42,16 +59,9 @@ function findFilePathInObject(obj: Record<string, unknown>): string | null {
 export function extractUploadedFilePath(result: unknown): string | null {
   if (!result) return null;
 
-  if (typeof result === "string") {
-    try {
-      const parsed = JSON.parse(result);
-      if (parsed && typeof parsed === "object") {
-        return findFilePathInObject(parsed);
-      }
-      return null;
-    } catch {
-      return null;
-    }
+  const parsedStringObj = parseJsonObjectSafe(result);
+  if (parsedStringObj) {
+    return findFilePathInObject(parsedStringObj);
   }
 
   if (typeof result !== "object") return null;
@@ -63,15 +73,10 @@ export function extractUploadedFilePath(result: unknown): string | null {
   if (!Array.isArray(resultObj.content)) return null;
 
   for (const item of resultObj.content) {
-    if (typeof item?.text !== "string") continue;
-    try {
-      const parsed = JSON.parse(item.text);
-      if (parsed && typeof parsed === "object") {
-        const found = findFilePathInObject(parsed);
-        if (found) return found;
-      }
-    } catch {
-      // ignore non-JSON tool payloads
+    const parsedItem = parseJsonObjectSafe(item?.text);
+    if (parsedItem) {
+      const found = findFilePathInObject(parsedItem);
+      if (found) return found;
     }
   }
 

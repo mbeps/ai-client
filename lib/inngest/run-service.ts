@@ -19,34 +19,6 @@ import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";
 const log = getLogger(["inngest", "run-service"]);
 
 /**
- * Constructs the Inngest v2 runs query URL with CEL expression filtering.
- *
- * @param baseUrl - Normalized Inngest API base URL
- * @param userId - Target user identifier
- * @param options - Optional status and limit filters
- * @returns Fully constructed URL
- * @author Maruf Bepary
- */
-function buildRunsUrl(
-  baseUrl: string,
-  userId: string,
-  options?: { status?: JobStatus[]; limit?: number },
-): URL {
-  const url = new URL(`${baseUrl}/v2/runs`);
-  url.searchParams.set("query", `event.data.userId == "${userId}"`);
-  url.searchParams.set("limit", String(options?.limit ?? 20));
-  url.searchParams.set("include", "output");
-
-  if (options?.status && options.status.length > 0) {
-    for (const s of options.status) {
-      url.searchParams.append("status", s);
-    }
-  }
-
-  return url;
-}
-
-/**
  * Fetches triggering event payload data from Inngest when inline trigger data is absent.
  * Deduplicates in-flight requests per eventId within a batch.
  *
@@ -99,6 +71,80 @@ async function fetchEventPayload(
 }
 
 /**
+ * Resolves run event payload data, either from inline run properties or via fallback fetch.
+ *
+ * @param run - Raw run record from Inngest
+ * @param baseUrl - Inngest API base URL
+ * @param headers - HTTP headers
+ * @param signal - AbortSignal
+ * @param eventCache - In-flight event promise cache
+ * @returns Object containing resolved payload data and optional fallback event name
+ * @author Maruf Bepary
+ */
+export async function resolveRunEventData(
+  run: Record<string, any>,
+  baseUrl: string,
+  headers: Record<string, string>,
+  signal: AbortSignal,
+  eventCache: Map<
+    string,
+    Promise<{ data?: Record<string, any>; name?: string } | null>
+  > = new Map(),
+): Promise<{ payloadData?: Record<string, any>; eventNameFallback?: string }> {
+  let payloadData = extractInlinePayloadData(run);
+  let eventNameFallback: string | undefined;
+
+  if (!payloadData) {
+    const eventId = extractTriggerEventId(run);
+    if (eventId) {
+      const eventResult = await fetchEventPayload(
+        baseUrl,
+        eventId,
+        headers,
+        signal,
+        eventCache,
+      );
+      if (eventResult?.data) {
+        payloadData = eventResult.data;
+      }
+      if (eventResult?.name) {
+        eventNameFallback = eventResult.name;
+      }
+    }
+  }
+
+  return { payloadData, eventNameFallback };
+}
+
+/**
+ * Constructs the Inngest v2 runs query URL with CEL expression filtering.
+ *
+ * @param baseUrl - Normalized Inngest API base URL
+ * @param userId - Target user identifier
+ * @param options - Optional status and limit filters
+ * @returns Fully constructed URL
+ * @author Maruf Bepary
+ */
+function buildRunsUrl(
+  baseUrl: string,
+  userId: string,
+  options?: { status?: JobStatus[]; limit?: number },
+): URL {
+  const url = new URL(`${baseUrl}/v2/runs`);
+  url.searchParams.set("query", `event.data.userId == "${userId}"`);
+  url.searchParams.set("limit", String(options?.limit ?? 20));
+  url.searchParams.set("include", "output");
+
+  if (options?.status && options.status.length > 0) {
+    for (const s of options.status) {
+      url.searchParams.append("status", s);
+    }
+  }
+
+  return url;
+}
+
+/**
  * Normalizes an Inngest run and constructs a JobItem, verifying user tenant boundaries.
  *
  * @param run - Raw run record from Inngest
@@ -121,27 +167,13 @@ async function buildJobItem(
     Promise<{ data?: Record<string, any>; name?: string } | null>
   >,
 ): Promise<JobItem | null> {
-  let payloadData = extractInlinePayloadData(run);
-  let eventNameFallback: string | undefined;
-
-  if (!payloadData) {
-    const eventId = extractTriggerEventId(run);
-    if (eventId) {
-      const eventResult = await fetchEventPayload(
-        baseUrl,
-        eventId,
-        headers,
-        signal,
-        eventCache,
-      );
-      if (eventResult?.data) {
-        payloadData = eventResult.data;
-      }
-      if (eventResult?.name) {
-        eventNameFallback = eventResult.name;
-      }
-    }
-  }
+  const { payloadData, eventNameFallback } = await resolveRunEventData(
+    run,
+    baseUrl,
+    headers,
+    signal,
+    eventCache,
+  );
 
   const norm = normalizeRunFields(run, payloadData, eventNameFallback);
 
@@ -242,6 +274,55 @@ export async function fetchUserInngestRuns(
 }
 
 /**
+ * Verifies that a run belongs to the specified user before allowing mutation.
+ *
+ * @param baseUrl - Normalized Inngest API base URL
+ * @param headers - HTTP headers
+ * @param runId - Workflow run identifier
+ * @param userId - Target user identifier
+ * @param signal - AbortSignal
+ * @returns Verification result with optional error message
+ * @author Maruf Bepary
+ */
+async function verifyRunOwnership(
+  baseUrl: string,
+  headers: Record<string, string>,
+  runId: string,
+  userId: string,
+  signal: AbortSignal,
+): Promise<{ ok: boolean; error?: string }> {
+  const runRes = await fetch(`${baseUrl}/v2/runs/${runId}`, {
+    headers,
+    signal,
+  });
+
+  if (!runRes.ok) {
+    return {
+      ok: false,
+      error: `Failed to verify run ownership: HTTP ${runRes.status}`,
+    };
+  }
+
+  const runBody = await runRes.json();
+  const run = runBody?.data ?? runBody;
+  const { payloadData } = await resolveRunEventData(
+    run,
+    baseUrl,
+    headers,
+    signal,
+  );
+
+  if (isMismatchedUser(payloadData, userId)) {
+    return {
+      ok: false,
+      error: "Run does not belong to user or trigger payload is missing",
+    };
+  }
+
+  return { ok: true };
+}
+
+/**
  * Cancels an Inngest background workflow run.
  * When `userId` is provided, verifies ownership by fetching run details before cancelling.
  * Uses the Inngest REST v2 API (`POST /v2/runs/{runId}/cancel`) uniformly across environments.
@@ -261,46 +342,17 @@ export async function cancelInngestRun(
     const signal = AbortSignal.timeout(HTTP_TIMEOUT_MS);
 
     if (userId) {
-      const runRes = await fetch(`${baseUrl}/v2/runs/${runId}`, {
+      const ownership = await verifyRunOwnership(
+        baseUrl,
         headers,
+        runId,
+        userId,
         signal,
-      });
-
-      if (!runRes.ok) {
+      );
+      if (!ownership.ok) {
         return {
           success: false,
-          error: `Failed to verify run ownership: HTTP ${runRes.status}`,
-        };
-      }
-
-      const runBody = await runRes.json();
-      const run = runBody?.data ?? runBody;
-      let payloadData = extractInlinePayloadData(run);
-
-      if (!payloadData) {
-        const eventId = extractTriggerEventId(run);
-        if (eventId) {
-          const eventCache = new Map<
-            string,
-            Promise<{ data?: Record<string, any>; name?: string } | null>
-          >();
-          const eventResult = await fetchEventPayload(
-            baseUrl,
-            eventId,
-            headers,
-            signal,
-            eventCache,
-          );
-          if (eventResult?.data) {
-            payloadData = eventResult.data;
-          }
-        }
-      }
-
-      if (isMismatchedUser(payloadData, userId)) {
-        return {
-          success: false,
-          error: "Run does not belong to user or trigger payload is missing",
+          error: ownership.error,
         };
       }
     }

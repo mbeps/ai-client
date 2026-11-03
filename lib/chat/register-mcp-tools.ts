@@ -76,6 +76,88 @@ function resolveTargetKbIds(
 }
 
 /**
+ * Loads and sanitises external MCP tools for the provided scoped servers.
+ *
+ * @param scopedServers - MCP server parameters
+ * @param selectedTools - Optional allowed tools filter
+ * @returns Loaded tools, source map, and cleanup callback
+ * @author Maruf Bepary
+ */
+async function loadScopedMcpTools(
+  scopedServers: McpServerParam[],
+  selectedTools?: string[],
+): Promise<{
+  tools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  cleanup: () => Promise<void>;
+}> {
+  if (scopedServers.length === 0) {
+    return { tools: {}, toolSourceMap: {}, cleanup: async () => {} };
+  }
+
+  try {
+    const result = await getMcpTools(scopedServers, selectedTools);
+    const filtered = filterSelectedMcpTools(result, selectedTools);
+    const sanitised = sanitiseToolNames(filtered.tools, filtered.toolSourceMap);
+    return {
+      tools: sanitised.tools,
+      toolSourceMap: sanitised.toolSourceMap,
+      cleanup: result.cleanup,
+    };
+  } catch (error) {
+    log.warn("Failed to load MCP tools: {error}", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { tools: {}, toolSourceMap: {}, cleanup: async () => {} };
+  }
+}
+
+interface LegacyInternalToolOptions {
+  isArtifactToolSelected?: boolean;
+  activeKbId?: string | null;
+  activeKbIds?: string[];
+  kbIsReady?: boolean;
+  userId?: string;
+  selectedTools?: string[];
+}
+
+/**
+ * Injects legacy internal tools (artifacts and knowledge base) into the tool registry.
+ *
+ * @param mcpTools - Tool dictionary to populate
+ * @param toolSourceMap - Tool source map to update
+ * @param options - Internal tool flags and context
+ * @author Maruf Bepary
+ */
+function registerLegacyInternalTools(
+  mcpTools: Record<string, any>,
+  toolSourceMap: Record<string, string>,
+  options: LegacyInternalToolOptions,
+): void {
+  if (options.isArtifactToolSelected) {
+    Object.assign(mcpTools, registerArtifactTool());
+    toolSourceMap.manage_artifact = "Internal";
+  }
+
+  const targetKbIds = resolveTargetKbIds(
+    options.activeKbIds,
+    options.activeKbId,
+  );
+  if (targetKbIds.length > 0 && options.kbIsReady && options.userId) {
+    const kbTools = registerKnowledgebaseTool(
+      targetKbIds,
+      options.kbIsReady,
+      options.userId,
+      options.selectedTools,
+    );
+    if (kbTools.search_knowledge_base) {
+      Object.assign(mcpTools, kbTools);
+      toolSourceMap.search_knowledge_base = "System";
+    }
+  }
+}
+
+/**
  * Registers external MCP tools and optionally delegates built-in tools
  * (manage_artifact, search_knowledge_base) for backward compatibility.
  * Filters MCP tools by selectedTools list if provided.
@@ -106,52 +188,19 @@ export async function registerMcpTools(
   toolSourceMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
 }> {
-  let mcpTools: Record<string, any> = {};
-  let toolSourceMap: Record<string, string> = {};
-  let mcpCleanup = async () => {};
+  const { tools, toolSourceMap, cleanup } = await loadScopedMcpTools(
+    scopedServers,
+    selectedTools,
+  );
 
-  if (scopedServers.length > 0) {
-    try {
-      const result = await getMcpTools(scopedServers, selectedTools);
-      const filtered = filterSelectedMcpTools(result, selectedTools);
+  registerLegacyInternalTools(tools, toolSourceMap, {
+    isArtifactToolSelected,
+    activeKbId,
+    activeKbIds,
+    kbIsReady,
+    userId,
+    selectedTools,
+  });
 
-      // Sanitise remote MCP tool names to ensure LLM provider charset compliance (e.g. OpenAI ^[a-zA-Z0-9_-]{1,64}$)
-      const sanitised = sanitiseToolNames(
-        filtered.tools,
-        filtered.toolSourceMap,
-      );
-      mcpTools = sanitised.tools;
-      toolSourceMap = sanitised.toolSourceMap;
-
-      mcpCleanup = result.cleanup;
-    } catch (error) {
-      log.warn("Failed to load MCP tools: {error}", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  // Delegation for backward compatibility:
-  if (isArtifactToolSelected) {
-    const artifactTools = registerArtifactTool();
-    Object.assign(mcpTools, artifactTools);
-    toolSourceMap.manage_artifact = "Internal";
-  }
-
-  const targetKbIds = resolveTargetKbIds(activeKbIds, activeKbId);
-
-  if (targetKbIds.length > 0 && kbIsReady && userId) {
-    const kbTools = registerKnowledgebaseTool(
-      targetKbIds,
-      kbIsReady,
-      userId,
-      selectedTools,
-    );
-    if (kbTools.search_knowledge_base) {
-      Object.assign(mcpTools, kbTools);
-      toolSourceMap.search_knowledge_base = "System";
-    }
-  }
-
-  return { mcpTools, toolSourceMap, mcpCleanup };
+  return { mcpTools: tools, toolSourceMap, mcpCleanup: cleanup };
 }

@@ -545,7 +545,15 @@ describe("executeToolDownloadFallback", () => {
     });
     expect(noDownloadTool).toHaveLength(0);
 
-    // 5. Download tool missing execute or execute is not a function
+    // 5. Tool without source mapping falls back to "unknown"
+    const unmappedSource = await executeToolDownloadFallback({
+      completedTools: [{ toolCallId: "tc-nomap", toolName: "mutator", args: { file_path: "nomap.pdf" } }],
+      activeTools: { mutator: { execute: vi.fn() }, download_file: { execute: vi.fn() } },
+      toolSourceMap: {},
+    });
+    expect(unmappedSource).toHaveLength(0);
+
+    // 6. Download tool missing execute or execute is not a function
     const missingExecute = await executeToolDownloadFallback({
       completedTools: [{ toolCallId: "tc-noexec", toolName: "mutator", args: { file_path: "doc.pdf" } }],
       activeTools: { mutator: { execute: vi.fn() }, download_file: { notAFunction: true } },
@@ -619,5 +627,37 @@ describe("executeToolDownloadFallback", () => {
 
     expect(order).toEqual(["tool-call", "tool-result"]);
     expect(asyncEmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("handles tool args object where none of the keys match target path", async () => {
+    const downloadMock = vi.fn().mockResolvedValue({ content: "ok" });
+    const activeTools: Record<string, any> = {
+      mutator: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      mutator: "srv-unmatched",
+      download_file: "srv-unmatched",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-unmatched",
+        toolName: "mutator",
+        args: { unrelatedKey: "some-value" },
+        result: { file_path: "unmatched.pdf" },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(downloadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ file_path: "unmatched.pdf" }),
+      expect.anything(),
+    );
   });
 });
