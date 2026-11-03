@@ -958,6 +958,13 @@ function extractDownloadsFromMarkdown(
   extractBareUrls(content, registerItem);
 }
 
+export type MessageDownloadTarget = Pick<Message, "id"> & {
+  content?: string;
+  metadata?: Message["metadata"];
+  role?: Message["role"];
+  createdAt?: Date | string;
+};
+
 /**
  * Schema-agnostic extractor for downloadable materials in an assistant message.
  * Inspects tool results (persisted or streaming) and markdown links,
@@ -969,7 +976,7 @@ function extractDownloadsFromMarkdown(
  * @author Maruf Bepary
  */
 export function extractMessageDownloads(
-  message: Message,
+  message: MessageDownloadTarget,
   activeToolCalls?: ToolCallState[],
 ): DownloadItem[] {
   if (message.role === "user") {

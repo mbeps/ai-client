@@ -1,19 +1,17 @@
 "use client";
 
-import {
-  CheckSquare,
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Square,
-  SquareTerminal,
-  X,
-} from "lucide-react";
+import { CheckSquare, Search, Square, SquareTerminal, X } from "lucide-react";
+import type React from "react";
 import { useMemo, useState } from "react";
 import { PickerDialog } from "@/components/chat/picker-dialog";
-import { Badge } from "@/components/ui/badge";
+import { PromptGroupSection } from "@/components/chat/prompt-picker/prompt-group-section";
+import {
+  buildPromptItems,
+  filterPromptsByQuery,
+  groupPromptsByCategory,
+  resolveInitialExpandedGroups,
+} from "@/components/chat/prompt-picker/prompt-picker-utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
@@ -26,7 +24,7 @@ import type { Prompt } from "@/types/prompt/prompt";
  *
  * @author Maruf Bepary
  */
-interface PromptPickerProps {
+export interface PromptPickerProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
   selectedPromptIds?: Set<string>;
@@ -36,18 +34,6 @@ interface PromptPickerProps {
   className?: string;
   maxHeight?: string;
   defaultExpanded?: boolean;
-}
-
-/**
- * Represents prompt group.
- *
- * @author Maruf Bepary
- */
-interface PromptGroup {
-  id: string;
-  name: string;
-  isInternal: boolean;
-  items: MentionPromptItem[];
 }
 
 /**
@@ -67,24 +53,13 @@ export function PromptPicker({
   defaultExpanded = false,
 }: PromptPickerProps) {
   const [search, setSearch] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (defaultExpanded) {
-      initial.add("internal");
-      mcpPrompts.forEach((p) => {
-        initial.add(p.serverId || p.serverName || "mcp");
-      });
-    } else if (selectedPromptIds && selectedPromptIds.size > 0) {
-      initial.add("internal");
-      mcpPrompts.forEach((p) => {
-        const sId = p.serverId || p.serverName || "mcp";
-        if (selectedPromptIds.has(`mcp:${p.serverId}:${p.name}`)) {
-          initial.add(sId);
-        }
-      });
-    }
-    return initial;
-  });
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() =>
+    resolveInitialExpandedGroups(
+      defaultExpanded,
+      selectedPromptIds,
+      mcpPrompts,
+    ),
+  );
 
   const toggleExpand = (groupId: string) => {
     setExpandedGroups((prev) => {
@@ -98,114 +73,26 @@ export function PromptPicker({
     });
   };
 
-  const allItems: MentionPromptItem[] = useMemo(() => {
-    const localItems: MentionPromptItem[] = prompts.map((p) => ({
-      ...p,
-      isMcp: false,
-      isSkill: false,
-    }));
+  const allItems = useMemo(
+    () => buildPromptItems(prompts, mcpPrompts),
+    [prompts, mcpPrompts],
+  );
 
-    const mcpItems: MentionPromptItem[] = mcpPrompts.map((p) => ({
-      ...p,
-      id: `mcp:${p.serverId}:${p.name}`,
-      title: p.name,
-      shortcut: p.name,
-      sourceServer: p.serverName,
-      isMcp: true,
-      isSkill: false,
-    }));
+  const filteredItems = useMemo(
+    () => filterPromptsByQuery(allItems, search),
+    [allItems, search],
+  );
 
-    return [...localItems, ...mcpItems];
-  }, [prompts, mcpPrompts]);
-
-  const filteredItems = useMemo(() => {
-    const q = search.toLowerCase();
-    return allItems.filter((item) => {
-      const titleMatch = item.title.toLowerCase().includes(q);
-      const shortcutMatch = item.shortcut.toLowerCase().includes(q);
-      const contentMatch =
-        "content" in item && typeof item.content === "string"
-          ? item.content.toLowerCase().includes(q)
-          : false;
-      const descMatch =
-        "description" in item && typeof item.description === "string"
-          ? item.description.toLowerCase().includes(q)
-          : false;
-      const serverMatch =
-        "sourceServer" in item && typeof item.sourceServer === "string"
-          ? item.sourceServer.toLowerCase().includes(q)
-          : false;
-      return (
-        titleMatch || shortcutMatch || contentMatch || descMatch || serverMatch
-      );
-    });
-  }, [allItems, search]);
-
-  const groups: PromptGroup[] = useMemo(() => {
-    const list: PromptGroup[] = [];
-
-    // Internal group
-    const internalItems = filteredItems.filter((item) => !item.isMcp);
-    if (internalItems.length > 0 || (!search && prompts.length > 0)) {
-      list.push({
-        id: "internal",
-        name: "Internal Prompts",
-        isInternal: true,
-        items: internalItems,
-      });
-    }
-
-    // MCP groups
-    const mcpServerOrder: string[] = [];
-    const mcpServerMap = new Map<
-      string,
-      { name: string; items: MentionPromptItem[] }
-    >();
-
-    mcpPrompts.forEach((p) => {
-      const serverId = p.serverId || p.serverName || "mcp";
-      if (!mcpServerMap.has(serverId)) {
-        mcpServerOrder.push(serverId);
-        mcpServerMap.set(serverId, {
-          name: p.serverName || "MCP Server",
-          items: [],
-        });
-      }
-    });
-
-    filteredItems
-      .filter((item) => item.isMcp)
-      .forEach((item) => {
-        const sId =
-          ("serverId" in item && typeof item.serverId === "string"
-            ? item.serverId
-            : "") ||
-          item.sourceServer ||
-          "mcp";
-        if (!mcpServerMap.has(sId)) {
-          mcpServerOrder.push(sId);
-          mcpServerMap.set(sId, {
-            name: item.sourceServer || "MCP Server",
-            items: [],
-          });
-        }
-        mcpServerMap.get(sId)!.items.push(item);
-      });
-
-    mcpServerOrder.forEach((serverId) => {
-      const data = mcpServerMap.get(serverId);
-      if (data && (data.items.length > 0 || !search)) {
-        list.push({
-          id: serverId,
-          name: data.name,
-          isInternal: false,
-          items: data.items,
-        });
-      }
-    });
-
-    return list;
-  }, [filteredItems, search, prompts.length, mcpPrompts]);
+  const groups = useMemo(
+    () =>
+      groupPromptsByCategory(
+        filteredItems,
+        mcpPrompts,
+        Boolean(search.length > 0),
+        prompts.length > 0,
+      ),
+    [filteredItems, search, prompts.length, mcpPrompts],
+  );
 
   const isAllSelected = useMemo(() => {
     if (filteredItems.length === 0) return false;
@@ -214,10 +101,6 @@ export function PromptPicker({
     }
     return false;
   }, [filteredItems, selectedPromptIds]);
-
-  const handleToggle = (item: MentionPromptItem) => {
-    onTogglePrompt?.(item);
-  };
 
   const handleToggleAll = () => {
     if (onSelectAll && onClearAll) {
@@ -246,55 +129,6 @@ export function PromptPicker({
     }
     return 0;
   }, [filteredItems, selectedPromptIds]);
-
-  const renderPromptCard = (item: MentionPromptItem) => {
-    const isSelected = selectedPromptIds?.has(item.id) ?? false;
-
-    return (
-      <div
-        key={item.id}
-        className={cn(
-          "group bg-card hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
-          isSelected && "border-primary bg-primary/5",
-        )}
-        onClick={() => handleToggle(item)}
-      >
-        <div className="pt-0.5">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => handleToggle(item)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-sm leading-none font-medium">
-              {item.title}
-            </span>
-            {!item.isMcp && "shortcut" in item && item.shortcut && (
-              <Badge
-                variant="secondary"
-                className="bg-muted text-muted-foreground h-4 shrink-0 px-1 py-0 font-mono text-[10px]"
-              >
-                {item.shortcut.startsWith("/")
-                  ? item.shortcut
-                  : `/${item.shortcut}`}
-              </Badge>
-            )}
-          </div>
-          {"description" in item && item.description ? (
-            <p className="text-muted-foreground line-clamp-2 text-xs">
-              {item.description}
-            </p>
-          ) : "content" in item && item.content ? (
-            <p className="text-muted-foreground line-clamp-2 font-mono text-xs">
-              {item.content}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
@@ -345,143 +179,16 @@ export function PromptPicker({
               )}
             </div>
           ) : (
-            groups.map((group) => {
-              const isExpanded =
-                expandedGroups.has(group.id) || search.length > 0;
-              const selectedInGroup = group.items.filter((item) =>
-                selectedPromptIds?.has(item.id),
-              ).length;
-
-              if (group.isInternal) {
-                return (
-                  <div
-                    key={group.id}
-                    className="border-primary/20 flex flex-col overflow-hidden rounded-lg border"
-                  >
-                    <div
-                      className="bg-primary/5 hover:bg-primary/10 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
-                      onClick={() => toggleExpand(group.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isExpanded ? (
-                          <ChevronDown className="text-primary h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="text-primary h-4 w-4" />
-                        )}
-                        <span className="text-primary font-medium">
-                          {group.name}
-                        </span>
-                        {selectedInGroup > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="h-4 px-1 text-[10px]"
-                          >
-                            {selectedInGroup} selected
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="flex items-center"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onTogglePrompt) {
-                              if (selectedInGroup > 0) {
-                                group.items.forEach((item) => {
-                                  if (selectedPromptIds?.has(item.id))
-                                    onTogglePrompt(item);
-                                });
-                              } else {
-                                group.items.forEach((item) => {
-                                  if (!selectedPromptIds?.has(item.id))
-                                    onTogglePrompt(item);
-                                });
-                              }
-                            }
-                          }}
-                        >
-                          <Checkbox
-                            checked={selectedInGroup > 0}
-                            disabled={group.items.length === 0}
-                            aria-label={`Select all from ${group.name}`}
-                            className="h-4 w-4"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="border-primary/20 bg-card/50 space-y-2 border-t p-3">
-                        {group.items.map((item) => renderPromptCard(item))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={group.id}
-                  className="flex flex-col overflow-hidden rounded-lg border"
-                >
-                  <div
-                    className="bg-muted/30 hover:bg-muted/50 flex shrink-0 cursor-pointer items-center justify-between p-3 transition-colors"
-                    onClick={() => toggleExpand(group.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                      <span className="font-medium">{group.name}</span>
-                      {selectedInGroup > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="h-4 px-1 text-[10px]"
-                        >
-                          {selectedInGroup} selected
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="flex items-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onTogglePrompt) {
-                            if (selectedInGroup > 0) {
-                              group.items.forEach((item) => {
-                                if (selectedPromptIds?.has(item.id))
-                                  onTogglePrompt(item);
-                              });
-                            } else {
-                              group.items.forEach((item) => {
-                                if (!selectedPromptIds?.has(item.id))
-                                  onTogglePrompt(item);
-                              });
-                            }
-                          }
-                        }}
-                      >
-                        <Checkbox
-                          checked={selectedInGroup > 0}
-                          disabled={group.items.length === 0}
-                          aria-label={`Select all from ${group.name}`}
-                          className="h-4 w-4"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="bg-card/50 space-y-2 border-t p-3">
-                      {group.items.map((item) => renderPromptCard(item))}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+            groups.map((group) => (
+              <PromptGroupSection
+                key={group.id}
+                group={group}
+                isExpanded={expandedGroups.has(group.id) || search.length > 0}
+                selectedPromptIds={selectedPromptIds}
+                onToggleExpand={toggleExpand}
+                onTogglePrompt={onTogglePrompt}
+              />
+            ))
           )}
         </div>
       </div>
@@ -494,7 +201,7 @@ export function PromptPicker({
  *
  * @author Maruf Bepary
  */
-interface PromptPickerDialogProps {
+export interface PromptPickerDialogProps {
   prompts?: Prompt[];
   mcpPrompts?: DiscoveredPrompt[];
   selectedPromptIds?: Set<string>;

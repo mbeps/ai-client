@@ -1,7 +1,7 @@
 "use client";
 
+import { StreamingAssistantBubble } from "@/components/chat/message/streaming-assistant-bubble";
 import { StreamingPlaceholder } from "@/components/chat/message/streaming-placeholder";
-import { MessageBubble } from "@/components/chat/message-bubble";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Citation } from "@/types/chat/citation";
 import type { ToolCallState } from "@/types/tool/tool-call";
@@ -9,7 +9,7 @@ import type { ToolCallState } from "@/types/tool/tool-call";
 /**
  * Props for the StreamingSection component.
  */
-interface StreamingSectionProps {
+export interface StreamingSectionProps {
   /** True while the AI is generating a response. */
   isLoading: boolean;
   /** The accumulated text content being streamed, or null if not yet started. */
@@ -32,77 +32,90 @@ interface StreamingSectionProps {
   chatId?: string;
   /** Optional assistant message ID generated during streaming. */
   assistantMessageId?: string | null;
+  /** Optional selected model name for the header. */
+  selectedModelName?: string;
+}
+
+/**
+ * Evaluates whether any stream output or in-flight tool call should be rendered.
+ *
+ * @param params - Content streams and active tool call states.
+ * @returns True if any stream content or active tool call exists.
+ * @author Maruf Bepary
+ */
+export function hasRenderableStreamContent({
+  streamingContent,
+  streamingReasoning,
+  streamingCitations,
+  activeToolCalls,
+}: {
+  streamingContent: string | null;
+  streamingReasoning: string | null;
+  streamingCitations: Citation[];
+  activeToolCalls: ToolCallState[];
+}): boolean {
+  return (
+    streamingContent !== null ||
+    streamingReasoning !== null ||
+    streamingCitations.length > 0 ||
+    activeToolCalls.length > 0
+  );
 }
 
 /**
  * Renders the streaming response area below the existing message thread.
  * Shows a loading placeholder while waiting for the first token, active tool
- * call status messages, and a streaming MessageBubble once content arrives.
+ * call status messages, and a streaming assistant bubble once content arrives.
  *
  * @param props - Streaming state and tool call tracking.
- * @returns A fragment containing the loading indicator, tool call statuses,
- *          and the streaming message bubble as applicable.
+ * @returns A fragment containing the loading indicator or streaming bubble,
+ *          or null if inactive.
+ * @author Maruf Bepary
  */
-export function StreamingSection({
-  isLoading,
-  streamingContent,
-  streamingReasoning,
-  isStreamingReasoning,
-  activeToolCalls,
-  streamingCitations,
-  onToggleArtifact,
-  activeArtifactId,
-  isCanvasOpen,
-  chatId,
-  assistantMessageId,
-}: StreamingSectionProps) {
-  const hasStreamingContent =
-    streamingContent !== null ||
-    streamingReasoning !== null ||
-    streamingCitations.length > 0 ||
-    activeToolCalls.length > 0;
+export function StreamingSection(props: StreamingSectionProps) {
+  const {
+    isLoading,
+    streamingContent,
+    streamingReasoning,
+    isStreamingReasoning,
+    activeToolCalls,
+    streamingCitations,
+    onToggleArtifact,
+    activeArtifactId,
+    isCanvasOpen,
+    chatId,
+    assistantMessageId,
+    selectedModelName,
+  } = props;
 
-  if (
-    !isLoading &&
-    streamingContent === null &&
-    streamingReasoning === null &&
-    activeToolCalls.length === 0
-  ) {
+  const hasContent = hasRenderableStreamContent({
+    streamingContent,
+    streamingReasoning,
+    streamingCitations,
+    activeToolCalls,
+  });
+
+  if (!isLoading && !hasContent) {
     return null;
   }
 
   return (
     <>
-      {isLoading &&
-        streamingContent === null &&
-        streamingReasoning === null &&
-        activeToolCalls.length === 0 && <StreamingPlaceholder />}
+      {isLoading && !hasContent && <StreamingPlaceholder />}
 
-      {hasStreamingContent && (
-        <MessageBubble
-          message={{
-            id: assistantMessageId || "streaming",
-            role: "assistant",
-            content: streamingContent ?? "",
-            createdAt: new Date(),
-            parentId: null,
-            childrenIds: [],
-            metadata: null,
-          }}
-          isLatest={true}
-          onDelete={() => {}}
-          onEdit={() => {}}
-          siblings={[]}
-          currentSiblingIndex={0}
-          onNavigateBranch={() => {}}
+      {hasContent && (
+        <StreamingAssistantBubble
+          chatId={chatId}
+          content={streamingContent ?? ""}
           reasoning={streamingReasoning ?? undefined}
           isStreamingReasoning={isStreamingReasoning}
-          streamingCitations={streamingCitations}
           activeToolCalls={activeToolCalls}
+          streamingCitations={streamingCitations}
           onToggleArtifact={onToggleArtifact}
           activeArtifactId={activeArtifactId}
           isCanvasOpen={isCanvasOpen}
-          chatId={chatId}
+          assistantMessageId={assistantMessageId}
+          selectedModelName={selectedModelName}
         />
       )}
     </>
