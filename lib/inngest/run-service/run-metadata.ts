@@ -20,6 +20,64 @@ export function isDevMode(): boolean {
 }
 
 /**
+ * Resolves Inngest signing key, omitting "local" placeholders.
+ *
+ * @returns Production signing key or undefined in dev/local mode
+ * @author Maruf Bepary
+ */
+export function resolveInngestSigningKey(): string | undefined {
+  if (!env.INNGEST_SIGNING_KEY || env.INNGEST_SIGNING_KEY === "local") {
+    return undefined;
+  }
+  return env.INNGEST_SIGNING_KEY;
+}
+
+/**
+ * Resolves Inngest event key, omitting "local" placeholders.
+ *
+ * @returns Production event key or undefined in dev/local mode
+ * @author Maruf Bepary
+ */
+export function resolveInngestEventKey(): string | undefined {
+  if (!env.INNGEST_EVENT_KEY || env.INNGEST_EVENT_KEY === "local") {
+    return undefined;
+  }
+  return env.INNGEST_EVENT_KEY;
+}
+
+/**
+ * Resolves the Inngest API base URL for REST v2 queries.
+ * Trims trailing slashes to guarantee clean endpoint concatenation.
+ *
+ * @returns Base URL without trailing slash
+ * @author Maruf Bepary
+ */
+export function resolveInngestApiBaseUrl(): string {
+  const base =
+    env.INNGEST_BASE_URL ||
+    (isDevMode() ? "http://127.0.0.1:8288" : "https://api.inngest.com");
+  return base.replace(/\/+$/, "");
+}
+
+/**
+ * Constructs standard headers for Inngest REST v2 and v1 requests.
+ * Includes Bearer Authorization header only when a non-local signing key is configured.
+ *
+ * @returns Header dictionary
+ * @author Maruf Bepary
+ */
+export function resolveInngestHeaders(): Record<string, string> {
+  const signingKey = resolveInngestSigningKey();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (signingKey) {
+    headers.Authorization = `Bearer ${signingKey}`;
+  }
+  return headers;
+}
+
+/**
  * Resolves job category type based on triggering event name.
  *
  * @param eventName - Target event name
@@ -60,43 +118,116 @@ export function firstNonEmpty<T>(
 }
 
 /**
- * Parses a JSON string and extracts its data property if present.
+ * Extracts inline payload data from various run properties across Inngest versions.
  *
- * @param str - Target str
- * @returns The resolved result
+ * @param run - Raw run record from Inngest
+ * @returns The resolved payload data record if present
  * @author Maruf Bepary
  */
-function parsePayloadString(str: string): Record<string, any> | undefined {
-  try {
-    const parsed = JSON.parse(str);
-    if (!parsed || typeof parsed !== "object") return undefined;
-    return parsed.data ?? parsed;
-  } catch {
-    return undefined;
+export function extractInlinePayloadData(
+  run: Record<string, any>,
+): Record<string, any> | undefined {
+  if (run.trigger?.data && typeof run.trigger.data === "object") {
+    return run.trigger.data;
   }
+  if (run.event?.data && typeof run.event.data === "object") {
+    return run.event.data;
+  }
+  if (run.data && typeof run.data === "object") {
+    return run.data;
+  }
+  return undefined;
 }
 
 /**
- * Extracts payload data and entity identifiers from trigger event payloads.
+ * Extracts triggering event identifier from Inngest v2 or flat run records.
  *
- * @param payloads - Target payloads
- * @returns The resolved result
+ * @param run - Raw run record from Inngest
+ * @returns Event ULID string or undefined
  * @author Maruf Bepary
  */
-export function parseTriggerPayloadData(
-  payloads?: unknown[],
-): Record<string, any> | undefined {
-  if (!Array.isArray(payloads)) return undefined;
-  for (const item of payloads) {
-    if (typeof item === "string") {
-      const parsed = parsePayloadString(item);
-      if (parsed) return parsed;
-    } else if (item && typeof item === "object") {
-      const rec = item as Record<string, any>;
-      return rec.data ?? rec;
-    }
+export function extractTriggerEventId(
+  run: Record<string, any>,
+): string | undefined {
+  if (Array.isArray(run.trigger?.eventIds) && run.trigger.eventIds.length > 0) {
+    return run.trigger.eventIds[0];
   }
-  return undefined;
+  return run.event_id ?? run.eventId ?? undefined;
+}
+
+/**
+ * Normalized run fields across Inngest REST v2, GraphQL, and flat shapes.
+ *
+ * @author Maruf Bepary
+ */
+export interface NormalizedRun {
+  payloadData?: Record<string, any>;
+  eventName: string;
+  functionName: string;
+  functionId: string;
+  status: JobStatus;
+  queuedAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  output: unknown;
+}
+
+/**
+ * Normalizes an Inngest run object into standard application fields.
+ * Supports canonical v2 structures (`function.id`, `trigger.eventName`) as well as
+ * legacy/flat properties (`function_id`, `event_name`).
+ *
+ * @param run - Raw run record
+ * @param fallbackPayloadData - Optional externally resolved payload data (e.g. from /v1/events)
+ * @param fallbackEventName - Optional externally resolved event name
+ * @returns NormalizedRun
+ * @author Maruf Bepary
+ */
+export function normalizeRunFields(
+  run: Record<string, any>,
+  fallbackPayloadData?: Record<string, any>,
+  fallbackEventName?: string,
+): NormalizedRun {
+  const functionId =
+    firstNonEmpty<string>(
+      run.function?.slug,
+      run.function?.id,
+      run.function_id,
+      run.functionId,
+    ) ?? "";
+  const functionName =
+    firstNonEmpty<string>(
+      run.function?.name,
+      run.function_name,
+      run.functionName,
+      functionId,
+    ) ?? "";
+  const eventName =
+    firstNonEmpty<string>(
+      run.trigger?.eventName,
+      run.event_name,
+      run.eventName,
+      run.trigger?.name,
+      fallbackEventName,
+    ) ?? "";
+  const queuedAt =
+    firstNonEmpty<string>(run.queued_at, run.queuedAt) ??
+    new Date().toISOString();
+  const startedAt =
+    firstNonEmpty<string>(run.started_at, run.startedAt) ?? null;
+  const endedAt = firstNonEmpty<string>(run.ended_at, run.endedAt) ?? null;
+
+  return {
+    payloadData: extractInlinePayloadData(run) ?? fallbackPayloadData,
+    eventName,
+    functionId,
+    functionName,
+    status: (run.status as JobStatus) || "QUEUED",
+    queuedAt,
+    startedAt,
+    endedAt,
+    output: firstNonEmpty(run.output, run.error),
+  };
 }
 
 const ENTITY_ID_KEYS = [
