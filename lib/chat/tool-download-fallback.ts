@@ -43,6 +43,14 @@ const READ_ONLY_TOOL_PREFIXES = [
   "download_",
 ];
 
+const SCHEMA_PATH_KEYS = [
+  "file_path",
+  "path",
+  "filePath",
+  "filename",
+  "fileName",
+] as const;
+
 /**
  * Checks if a tool name indicates a read-only operation.
  *
@@ -113,6 +121,61 @@ function extractFilePathFromRecord(record: unknown): string | null {
 }
 
 /**
+ * Checks if a completed tool call was a download/export call targeting the file.
+ *
+ * @param tc - Completed tool record
+ * @param targetBasename - Lowercase normalized basename
+ * @returns True if matched
+ * @author Maruf Bepary
+ */
+function isDownloadCallMatchingFile(
+  tc: CompletedToolRecord,
+  targetBasename: string,
+): boolean {
+  const isDownload =
+    tc.toolName.toLowerCase().includes("download") ||
+    tc.toolName.toLowerCase().includes("export");
+  if (!isDownload || !tc.args || typeof tc.args !== "object") return false;
+
+  const callPath = extractFilePathFromRecord(tc.args);
+  if (!callPath) return false;
+  return callPath.toLowerCase().replace(/\\/g, "/").endsWith(targetBasename);
+}
+
+/**
+ * Checks if a completed tool result already contains file payload or URL.
+ *
+ * @param tc - Completed tool record
+ * @param targetBasename - Lowercase normalized basename
+ * @returns True if matched
+ * @author Maruf Bepary
+ */
+function isToolResultContainingFile(
+  tc: CompletedToolRecord,
+  targetBasename: string,
+): boolean {
+  if (!tc.result || typeof tc.result !== "object") return false;
+  const res = tc.result as Record<string, unknown>;
+  const hasContentOrUrl = Boolean(
+    res.file_content ||
+      res.fileContent ||
+      res.content_base64 ||
+      res.base64 ||
+      res.file_data ||
+      res.url ||
+      res.download_url ||
+      res.downloadUrl ||
+      res.file_url,
+  );
+  if (!hasContentOrUrl) return false;
+
+  const resPath =
+    extractFilePathFromRecord(res) ?? extractFilePathFromRecord(tc.args);
+  if (!resPath) return false;
+  return resPath.toLowerCase().replace(/\\/g, "/").endsWith(targetBasename);
+}
+
+/**
  * Checks whether a file path has already been downloaded or exported in completedTools.
  *
  * @param filePath - Target file path
@@ -124,53 +187,17 @@ function isFileAlreadyDownloaded(
   filePath: string,
   completedTools: CompletedToolRecord[],
 ): boolean {
-  const normTarget = filePath.toLowerCase().replace(/\\/g, "/");
-  const targetBasename = normTarget.split("/").pop()!;
+  const targetBasename = filePath
+    .toLowerCase()
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()!;
 
-  for (const tc of completedTools) {
-    // 1. Check if tool call was a download tool targeting this file
-    const isDownloadCall =
-      tc.toolName.toLowerCase().includes("download") ||
-      tc.toolName.toLowerCase().includes("export");
-
-    if (isDownloadCall && tc.args && typeof tc.args === "object") {
-      const callPath = extractFilePathFromRecord(tc.args);
-      if (callPath) {
-        const normCall = callPath.toLowerCase().replace(/\\/g, "/");
-        if (normCall.endsWith(targetBasename)) {
-          return true;
-        }
-      }
-    }
-
-    // 2. Check if tool result already contains file_content or download URL
-    if (tc.result && typeof tc.result === "object") {
-      const res = tc.result as Record<string, unknown>;
-      const hasBase64 = Boolean(
-        res.file_content ||
-          res.fileContent ||
-          res.content_base64 ||
-          res.base64 ||
-          res.file_data,
-      );
-      const hasUrl = Boolean(
-        res.url || res.download_url || res.downloadUrl || res.file_url,
-      );
-
-      if (hasBase64 || hasUrl) {
-        const resPath =
-          extractFilePathFromRecord(res) ?? extractFilePathFromRecord(tc.args);
-        if (resPath) {
-          const normRes = resPath.toLowerCase().replace(/\\/g, "/");
-          if (normRes.endsWith(targetBasename)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
+  return completedTools.some(
+    (tc) =>
+      isDownloadCallMatchingFile(tc, targetBasename) ||
+      isToolResultContainingFile(tc, targetBasename),
+  );
 }
 
 /**
@@ -216,6 +243,21 @@ function findDownloadToolName(
 }
 
 /**
+ * Finds the first schema key matching known path parameters.
+ *
+ * @param schemaObj - Shape or properties dictionary from tool schema
+ * @returns Matching schema key or null
+ * @author Maruf Bepary
+ */
+function findMatchingSchemaKey(schemaObj: unknown): string | null {
+  if (!schemaObj || typeof schemaObj !== "object") return null;
+  for (const key of SCHEMA_PATH_KEYS) {
+    if (key in schemaObj) return key;
+  }
+  return null;
+}
+
+/**
  * Builds the arguments object expected by the download tool.
  *
  * @param tool - Target tool
@@ -229,31 +271,166 @@ function buildDownloadToolArgs(
   filePath: string,
   preferredKey?: string,
 ): Record<string, string> {
-  const shape = tool?.parameters?.shape;
-  if (shape && typeof shape === "object") {
-    if ("file_path" in shape) return { file_path: filePath };
-    if ("path" in shape) return { path: filePath };
-    if ("filePath" in shape) return { filePath: filePath };
-    if ("filename" in shape) return { filename: filePath };
-    if ("fileName" in shape) return { fileName: filePath };
+  const schemaKey =
+    findMatchingSchemaKey(tool?.parameters?.shape) ??
+    findMatchingSchemaKey(tool?.parameters?.properties);
+
+  if (schemaKey) {
+    return { [schemaKey]: filePath };
   }
 
-  const properties = tool?.parameters?.properties;
-  if (properties && typeof properties === "object") {
-    if ("file_path" in properties) return { file_path: filePath };
-    if ("path" in properties) return { path: filePath };
-    if ("filePath" in properties) return { filePath: filePath };
-    if ("filename" in properties) return { filename: filePath };
-    if ("fileName" in properties) return { fileName: filePath };
-  }
-
-  // If a specific key was used when the file was created (e.g. "path"), preserve it
   if (preferredKey) {
     return { [preferredKey]: filePath };
   }
 
-  // Default to file_path
   return { file_path: filePath };
+}
+
+interface CandidateFile {
+  serverName: string;
+  argKey?: string;
+}
+
+/**
+ * Detects which argument key in tool args held the target file path.
+ *
+ * @param args - Tool arguments
+ * @param targetPath - File path to locate
+ * @returns Argument key name or undefined
+ * @author Maruf Bepary
+ */
+function findArgKeyForPath(
+  args: unknown,
+  targetPath: string,
+): string | undefined {
+  if (!args || typeof args !== "object") return undefined;
+  const argsObj = args as Record<string, unknown>;
+  return FILE_PATH_ARG_KEYS.find((k) => argsObj[k] === targetPath);
+}
+
+/**
+ * Gathers candidate undownloaded files across completed tool calls.
+ *
+ * @param completedTools - Executed tool calls and results
+ * @param toolSourceMap - Map of tool names to server sources
+ * @returns Map of file paths to candidate metadata
+ * @author Maruf Bepary
+ */
+function collectCandidateFiles(
+  completedTools: CompletedToolRecord[],
+  toolSourceMap: Record<string, string>,
+): Map<string, CandidateFile> {
+  const candidateFiles = new Map<string, CandidateFile>();
+
+  for (const tc of completedTools) {
+    if (isReadOnlyTool(tc.toolName)) continue;
+
+    const pathInArgs = extractFilePathFromRecord(tc.args);
+    const pathInResult = extractFilePathFromRecord(tc.result);
+    const targetPath = pathInResult || pathInArgs;
+    if (!targetPath) continue;
+
+    if (!isFileAlreadyDownloaded(targetPath, completedTools)) {
+      candidateFiles.set(targetPath, {
+        serverName: toolSourceMap[tc.toolName] ?? "unknown",
+        argKey: findArgKeyForPath(tc.args, targetPath),
+      });
+    }
+  }
+
+  return candidateFiles;
+}
+
+interface FallbackDownloadContext {
+  filePath: string;
+  serverName: string;
+  argKey?: string;
+  activeTools: Record<string, any>;
+  toolSourceMap: Record<string, string>;
+  emit?: (event: any) => Promise<unknown> | undefined;
+}
+
+/**
+ * Invokes fallback download for a single candidate file and emits streaming trace events.
+ *
+ * @param ctx - Context parameters for single file download
+ * @returns CompletedToolRecord on success, null on skip or failure
+ * @author Maruf Bepary
+ */
+async function executeSingleFallbackDownload(
+  ctx: FallbackDownloadContext,
+): Promise<CompletedToolRecord | null> {
+  const { filePath, serverName, argKey, activeTools, toolSourceMap, emit } =
+    ctx;
+  const downloadToolName = findDownloadToolName(
+    serverName,
+    activeTools,
+    toolSourceMap,
+  );
+
+  if (!downloadToolName) {
+    log.debug(
+      "No matching download tool found for server {serverName} to download {filePath}",
+      { serverName, filePath },
+    );
+    return null;
+  }
+
+  const downloadTool = activeTools[downloadToolName];
+  if (!downloadTool || typeof downloadTool.execute !== "function") {
+    return null;
+  }
+
+  const toolArgs = buildDownloadToolArgs(downloadTool, filePath, argKey);
+  const fallbackToolCallId = `dl-fallback-${randomUUID()}`;
+
+  try {
+    log.info(
+      "Executing fallback file download for {filePath} via {downloadToolName} on {serverName}",
+      { filePath, downloadToolName, serverName },
+    );
+
+    const downloadResult = await downloadTool.execute(toolArgs, {
+      toolCallId: fallbackToolCallId,
+      messages: [],
+    });
+
+    if (!downloadResult) return null;
+
+    const fallbackRecord: CompletedToolRecord = {
+      toolCallId: fallbackToolCallId,
+      toolName: downloadToolName,
+      args: toolArgs,
+      result: downloadResult,
+    };
+
+    await emit?.({
+      type: "tool-call",
+      toolCallId: fallbackToolCallId,
+      toolName: downloadToolName,
+      args: toolArgs,
+    });
+
+    await emit?.({
+      type: "tool-result",
+      toolCallId: fallbackToolCallId,
+      toolName: downloadToolName,
+      result: downloadResult,
+      serverName,
+    });
+
+    return fallbackRecord;
+  } catch (err) {
+    log.warn(
+      "Fallback download execution failed for {filePath} via {downloadToolName}: {error}",
+      {
+        filePath,
+        downloadToolName,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    );
+    return null;
+  }
 }
 
 /**
@@ -272,39 +449,7 @@ export async function executeToolDownloadFallback(
   params: ExecuteToolDownloadFallbackParams,
 ): Promise<CompletedToolRecord[]> {
   const { completedTools, activeTools, toolSourceMap, emit } = params;
-
-  // Track candidate files: Map<filePath, { serverName: string; argKey?: string }>
-  const candidateFiles = new Map<
-    string,
-    { serverName: string; argKey?: string }
-  >();
-
-  for (const tc of completedTools) {
-    if (isReadOnlyTool(tc.toolName)) continue;
-
-    const pathInArgs = extractFilePathFromRecord(tc.args);
-    const pathInResult = extractFilePathFromRecord(tc.result);
-    const targetPath = pathInResult || pathInArgs;
-
-    if (!targetPath) continue;
-
-    // Detect which argument key was used in tool args
-    let argKey: string | undefined;
-    if (tc.args && typeof tc.args === "object") {
-      const argsObj = tc.args as Record<string, unknown>;
-      for (const k of FILE_PATH_ARG_KEYS) {
-        if (argsObj[k] === targetPath) {
-          argKey = k;
-          break;
-        }
-      }
-    }
-
-    const serverName = toolSourceMap[tc.toolName] ?? "unknown";
-    if (!isFileAlreadyDownloaded(targetPath, completedTools)) {
-      candidateFiles.set(targetPath, { serverName, argKey });
-    }
-  }
+  const candidateFiles = collectCandidateFiles(completedTools, toolSourceMap);
 
   if (candidateFiles.size === 0) {
     return [];
@@ -313,74 +458,18 @@ export async function executeToolDownloadFallback(
   const addedRecords: CompletedToolRecord[] = [];
 
   for (const [filePath, { serverName, argKey }] of candidateFiles.entries()) {
-    const downloadToolName = findDownloadToolName(
+    const fallbackRecord = await executeSingleFallbackDownload({
+      filePath,
       serverName,
+      argKey,
       activeTools,
       toolSourceMap,
-    );
+      emit,
+    });
 
-    if (!downloadToolName) {
-      log.debug(
-        "No matching download tool found for server {serverName} to download {filePath}",
-        { serverName, filePath },
-      );
-      continue;
-    }
-
-    const downloadTool = activeTools[downloadToolName];
-    if (!downloadTool || typeof downloadTool.execute !== "function") {
-      continue;
-    }
-
-    const toolArgs = buildDownloadToolArgs(downloadTool, filePath, argKey);
-    const fallbackToolCallId = `dl-fallback-${randomUUID()}`;
-
-    try {
-      log.info(
-        "Executing fallback file download for {filePath} via {downloadToolName} on {serverName}",
-        { filePath, downloadToolName, serverName },
-      );
-
-      const downloadResult = await downloadTool.execute(toolArgs, {
-        toolCallId: fallbackToolCallId,
-        messages: [],
-      });
-
-      if (!downloadResult) continue;
-
-      const fallbackRecord: CompletedToolRecord = {
-        toolCallId: fallbackToolCallId,
-        toolName: downloadToolName,
-        args: toolArgs,
-        result: downloadResult,
-      };
-
+    if (fallbackRecord) {
       completedTools.push(fallbackRecord);
       addedRecords.push(fallbackRecord);
-
-      await emit?.({
-        type: "tool-call",
-        toolCallId: fallbackToolCallId,
-        toolName: downloadToolName,
-        args: toolArgs,
-      });
-
-      await emit?.({
-        type: "tool-result",
-        toolCallId: fallbackToolCallId,
-        toolName: downloadToolName,
-        result: downloadResult,
-        serverName,
-      });
-    } catch (err) {
-      log.warn(
-        "Fallback download execution failed for {filePath} via {downloadToolName}: {error}",
-        {
-          filePath,
-          downloadToolName,
-          error: err instanceof Error ? err.message : String(err),
-        },
-      );
     }
   }
 

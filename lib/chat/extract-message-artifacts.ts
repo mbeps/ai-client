@@ -3,6 +3,12 @@ import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Message } from "@/types/message/message";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
+export type MessageArtifactTarget = Pick<Message, "id"> & {
+  content?: string;
+  metadata?: Message["metadata"];
+  role?: Message["role"];
+};
+
 /**
  * Appends an artifact if its ID has not been encountered yet.
  *
@@ -38,7 +44,7 @@ function appendArtifact(
  * @author Maruf Bepary
  */
 function collectPersistedArtifacts(
-  message: Message,
+  message: Pick<Message, "id"> & { metadata?: string | null },
   artifacts: ArtifactData[],
   seenIds: Set<string>,
 ): void {
@@ -74,7 +80,7 @@ function collectPersistedArtifacts(
  * @author Maruf Bepary
  */
 function collectStreamingArtifacts(
-  message: Message,
+  message: Pick<Message, "id">,
   activeToolCalls: ToolCallState[] | undefined,
   artifacts: ArtifactData[],
   seenIds: Set<string>,
@@ -105,7 +111,7 @@ function collectStreamingArtifacts(
  * @author Maruf Bepary
  */
 function collectMermaidArtifacts(
-  message: Message,
+  message: Pick<Message, "id"> & { content?: string },
   artifacts: ArtifactData[],
   seenIds: Set<string>,
 ): void {
@@ -146,7 +152,7 @@ function collectMermaidArtifacts(
  * @author Maruf Bepary
  */
 export function extractMessageArtifacts(
-  message: Message,
+  message: MessageArtifactTarget,
   activeToolCalls?: ToolCallState[],
 ): ArtifactData[] {
   if (message.role === "user") {

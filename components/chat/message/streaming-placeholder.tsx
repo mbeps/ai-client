@@ -10,7 +10,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
  */
 export function StreamingPlaceholder() {
   return (
-    <div className="fade-in slide-in-from-bottom-2 animate-in bg-muted/30 flex w-full flex-col gap-2 rounded-lg p-4 duration-300">
+    <div
+      data-testid="streaming-placeholder"
+      className="fade-in slide-in-from-bottom-2 animate-in bg-muted/30 flex w-full flex-col gap-2 rounded-lg p-4 duration-300"
+    >
       <div className="flex items-center gap-2">
         <Avatar className="h-6 w-6">
           <AvatarFallback className="bg-secondary text-secondary-foreground">

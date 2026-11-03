@@ -1,6 +1,7 @@
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { AttachmentRow } from "@/types/attachment/attachment-row";
+import type { AddMessageParams } from "@/types/chat/add-message-params";
 import type { Chat } from "@/types/chat/chat";
 import type { ChatRow } from "@/types/chat/chat-row";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
@@ -132,18 +133,7 @@ export type AppState = {
    * @param input - Message fields (role, content, parentId and optional id,
    * metadata, attachments, reasoning)
    */
-  addMessage: (
-    chatId: string,
-    input: {
-      role: "user" | "assistant";
-      content: string;
-      parentId: string | null;
-      id?: string;
-      metadata?: string | null;
-      attachments?: Attachment[];
-      reasoning?: string;
-    },
-  ) => void;
+  addMessage: (chatId: string, input: AddMessageParams) => void;
 
   /**
    * Deletes a message from local store only.

@@ -1069,5 +1069,56 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       expect(meta.subtitle).toBe("Model: gpt-4");
       expect(meta.url).toBeUndefined();
     });
+
+    it("resolves inline payload directly in resolveRunEventData without network call", async () => {
+      const { resolveRunEventData } = await import(
+        "@/lib/inngest/run-service"
+      );
+      const fetchSpy = vi.fn();
+      globalThis.fetch = fetchSpy;
+
+      const run = { trigger: { data: { userId: "user-1", chatId: "chat-1" } } };
+      const result = await resolveRunEventData(
+        run,
+        "http://127.0.0.1:8288",
+        {},
+        AbortSignal.timeout(1000),
+      );
+
+      expect(result.payloadData).toEqual({ userId: "user-1", chatId: "chat-1" });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("fetches event payload from /v1/events in resolveRunEventData when inline data is absent", async () => {
+      const { resolveRunEventData } = await import(
+        "@/lib/inngest/run-service"
+      );
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes("/v1/events/ev-123")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                name: "chat/response.generate",
+                data: { userId: "user-1", chatId: "chat-99" },
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      const run = { trigger: { eventIds: ["ev-123"] } };
+      const result = await resolveRunEventData(
+        run,
+        "http://127.0.0.1:8288",
+        { Authorization: "Bearer key" },
+        AbortSignal.timeout(1000),
+      );
+
+      expect(result.payloadData).toEqual({ userId: "user-1", chatId: "chat-99" });
+      expect(result.eventNameFallback).toBe("chat/response.generate");
+    });
   });
 });

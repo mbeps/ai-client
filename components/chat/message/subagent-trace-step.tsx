@@ -64,6 +64,83 @@ export interface SubagentTraceStepProps {
 }
 
 /**
+ * Resolves the trace line visual status from the running and error states.
+ *
+ * @param isRunning - Whether the execution is currently in progress.
+ * @param isError - Whether the step failed or produced an error outcome.
+ * @returns Status string for TraceLine.
+ * @author Maruf Bepary
+ */
+export function resolveTraceLineStatus(
+  isRunning: boolean,
+  isError: boolean,
+): "running" | "error" | undefined {
+  if (isRunning) return "running";
+  if (isError) return "error";
+  return undefined;
+}
+
+interface SubagentTraceDetailsProps {
+  taskBrief: string;
+  inputData?: string;
+  outputText: string | null;
+  result?: unknown;
+}
+
+/**
+ * Renders the collapsible details for a subagent trace step.
+ *
+ * @param props - Subagent prompt, context, and findings.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
+function SubagentTraceDetails({
+  taskBrief,
+  inputData,
+  outputText,
+  result,
+}: SubagentTraceDetailsProps) {
+  return (
+    <div className="bg-muted/20 mt-2 space-y-3 rounded-md p-3 text-xs">
+      <TraceContextUsage args={{ taskBrief, inputData }} result={result} />
+
+      <div>
+        <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
+          <Workflow className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+          <span>Delegated Prompt</span>
+        </div>
+        <div className="text-foreground rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-xs leading-relaxed">
+          <MarkdownRenderer content={taskBrief} />
+        </div>
+      </div>
+
+      {inputData && (
+        <div>
+          <div className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
+            Context Pointers & Input Data
+          </div>
+          <div className="border-border/40 bg-muted/40 text-muted-foreground overflow-x-auto rounded-lg border p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+            {inputData}
+          </div>
+        </div>
+      )}
+
+      {outputText && (
+        <div>
+          <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
+            <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+            <span>Worker Findings</span>
+          </div>
+          <div className="border-border/60 bg-background/80 text-foreground rounded-lg border p-3 text-xs leading-relaxed shadow-xs">
+            <MarkdownRenderer content={outputText} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Renders a delegated subagent activity step inside a Trace container.
  *
  * @author Maruf Bepary
@@ -95,11 +172,7 @@ export function SubagentTraceStep({
 
   const isRunning = state === "running";
   const isError = state === "error" || outcome.isError;
-  const status: "running" | "error" | undefined = isRunning
-    ? "running"
-    : isError
-      ? "error"
-      : undefined;
+  const status = resolveTraceLineStatus(isRunning, isError);
 
   return (
     <TraceCollapsible>
@@ -157,42 +230,12 @@ export function SubagentTraceStep({
         )}
       </div>
       <TraceCollapsibleContent>
-        <div className="bg-muted/20 mt-2 space-y-3 rounded-md p-3 text-xs">
-          <TraceContextUsage args={{ taskBrief, inputData }} result={result} />
-
-          <div>
-            <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
-              <Workflow className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-              <span>Delegated Prompt</span>
-            </div>
-            <div className="text-foreground rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 text-xs leading-relaxed">
-              <MarkdownRenderer content={taskBrief} />
-            </div>
-          </div>
-
-          {inputData && (
-            <div>
-              <div className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
-                Context Pointers & Input Data
-              </div>
-              <div className="border-border/40 bg-muted/40 text-muted-foreground overflow-x-auto rounded-lg border p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-                {inputData}
-              </div>
-            </div>
-          )}
-
-          {outputText && (
-            <div>
-              <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
-                <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                <span>Worker Findings</span>
-              </div>
-              <div className="border-border/60 bg-background/80 text-foreground rounded-lg border p-3 text-xs leading-relaxed shadow-xs">
-                <MarkdownRenderer content={outputText} />
-              </div>
-            </div>
-          )}
-        </div>
+        <SubagentTraceDetails
+          taskBrief={taskBrief}
+          inputData={inputData}
+          outputText={outputText}
+          result={result}
+        />
       </TraceCollapsibleContent>
 
       {messageId && (

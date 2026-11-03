@@ -40,6 +40,21 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
 }));
 
+vi.mock("@/lib/logger", () => ({
+  getLogger: vi.fn(() => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 import { POST } from "@/app/api/chat/route";
 import { inngest } from "@/lib/inngest/client";
 import { checkRateLimit } from "@/lib/rate-limit";

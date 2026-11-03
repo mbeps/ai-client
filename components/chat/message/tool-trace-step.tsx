@@ -26,6 +26,80 @@ export interface ToolTraceStepProps {
   state: "running" | "done" | "error";
 }
 
+interface ToolTraceTitleProps {
+  isMcp: boolean;
+  serverName?: string;
+  toolName: string;
+}
+
+/**
+ * Renders the tool title displaying server name separation for MCP tools.
+ *
+ * @param props - Tool naming properties.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
+export function ToolTraceTitle({
+  isMcp,
+  serverName,
+  toolName,
+}: ToolTraceTitleProps) {
+  if (isMcp && serverName) {
+    return (
+      <span className="flex items-center gap-1.5 font-mono text-xs">
+        <span className="text-foreground/90 font-semibold">{serverName}</span>
+        <Circle className="fill-muted-foreground/50 text-muted-foreground/50 size-1.5" />
+        <span>{toolName}</span>
+      </span>
+    );
+  }
+  return <span className="font-mono text-xs">{toolName}</span>;
+}
+
+interface ToolTraceResultPanelProps {
+  isError: boolean;
+  result: unknown;
+}
+
+/**
+ * Renders the completed tool result payload box.
+ *
+ * @param props - Execution result and error status.
+ * @returns The rendered JSX element.
+ * @author Maruf Bepary
+ */
+export function ToolTraceResultPanel({
+  isError,
+  result,
+}: ToolTraceResultPanelProps) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+          Result
+        </span>
+        <div className="bg-muted h-px flex-1" />
+      </div>
+      <div
+        className={cn(
+          "max-h-80 overflow-x-hidden overflow-y-auto rounded-md ring-1 ring-inset",
+          isError
+            ? "bg-destructive/5 text-destructive ring-destructive/20"
+            : "bg-zinc-950/90 text-zinc-300 ring-white/5 dark:bg-black/40",
+        )}
+      >
+        <div className="p-2.5">
+          <pre className="font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap">
+            {typeof result === "string"
+              ? result
+              : JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Renders an MCP or system tool execution step inside a Trace container.
  *
@@ -61,17 +135,11 @@ export function ToolTraceStep({
             )}
           </TraceIcon>
           <TraceTitle>
-            {isMcp && serverName ? (
-              <span className="flex items-center gap-1.5 font-mono text-xs">
-                <span className="text-foreground/90 font-semibold">
-                  {serverName}
-                </span>
-                <Circle className="fill-muted-foreground/50 text-muted-foreground/50 size-1.5" />
-                <span>{toolName}</span>
-              </span>
-            ) : (
-              <span className="font-mono text-xs">{toolName}</span>
-            )}
+            <ToolTraceTitle
+              isMcp={isMcp}
+              serverName={serverName}
+              toolName={toolName}
+            />
           </TraceTitle>
           <TraceDescription
             className={cn(
@@ -103,30 +171,7 @@ export function ToolTraceStep({
             </div>
           </div>
           {!isRunning && (
-            <div>
-              <div className="mb-1.5 flex items-center gap-2">
-                <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                  Result
-                </span>
-                <div className="bg-muted h-px flex-1" />
-              </div>
-              <div
-                className={cn(
-                  "max-h-80 overflow-x-hidden overflow-y-auto rounded-md ring-1 ring-inset",
-                  isError
-                    ? "bg-destructive/5 text-destructive ring-destructive/20"
-                    : "bg-zinc-950/90 text-zinc-300 ring-white/5 dark:bg-black/40",
-                )}
-              >
-                <div className="p-2.5">
-                  <pre className="font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap">
-                    {typeof result === "string"
-                      ? result
-                      : JSON.stringify(result, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </div>
+            <ToolTraceResultPanel isError={isError} result={result} />
           )}
         </div>
       </TraceCollapsibleContent>
