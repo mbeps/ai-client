@@ -37,9 +37,37 @@ const schema = {
 };
 
 /**
+ * Normalizes PostgreSQL connection string for pg-connection-string libpq compatibility.
+ * When sslmode is require, prefer, or verify-ca and uselibpqcompat is not specified, adds uselibpqcompat=true
+ * to eliminate Node.js security deprecation warnings in serverless environments.
+ *
+ * @param rawUrl - Database connection string
+ * @returns Normalized connection string
+ * @author Maruf Bepary
+ */
+export function normalizePostgresUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    const sslmode = parsed.searchParams.get("sslmode");
+    if (
+      (sslmode === "require" ||
+        sslmode === "prefer" ||
+        sslmode === "verify-ca") &&
+      !parsed.searchParams.has("uselibpqcompat")
+    ) {
+      parsed.searchParams.set("uselibpqcompat", "true");
+      return parsed.toString();
+    }
+  } catch {
+    // Return original string if not a parseable URL
+  }
+  return rawUrl;
+}
+
+/**
  * Drizzle ORM database client configured with full application schema.
  * Uses node-postgres driver and DATABASE_URL environment variable for connection string.
  * Must be initialised before any Server Action or API route uses database queries.
  * Schema includes auth tables (user, session, account, verification, twoFactor, passkey) and app tables (chat, message, attachment, project, assistant, prompt, mcpServer).
  */
-export const db = drizzle(env.DATABASE_URL, { schema });
+export const db = drizzle(normalizePostgresUrl(env.DATABASE_URL), { schema });

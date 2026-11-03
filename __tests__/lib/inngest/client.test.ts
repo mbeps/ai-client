@@ -27,8 +27,46 @@ describe("Inngest Client Configuration", () => {
   it("configures client correctly with dev defaults", async () => {
     mockEnv.INNGEST_DEV = "1";
     mockEnv.INNGEST_SIGNING_KEY = "local";
+    mockEnv.INNGEST_EVENT_KEY = "local";
+    mockEnv.NODE_ENV = "development";
+    mockEnv.INNGEST_BASE_URL = "";
+
     const { inngest } = await import("@/lib/inngest/client");
     expect(inngest).toBeDefined();
+    expect(inngest.id).toBe("ai-client");
+  });
+
+  it("configures client in development mode with INNGEST_DEV='true'", async () => {
+    mockEnv.INNGEST_DEV = "true";
+    mockEnv.INNGEST_SIGNING_KEY = "sign-key";
+    mockEnv.INNGEST_EVENT_KEY = "event-key";
+    mockEnv.NODE_ENV = "production";
+
+    const { inngest } = await import("@/lib/inngest/client");
+    expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(true);
+  });
+
+  it("configures client in development mode when NODE_ENV is not production", async () => {
+    mockEnv.INNGEST_DEV = "0";
+    mockEnv.INNGEST_SIGNING_KEY = "sign-key";
+    mockEnv.INNGEST_EVENT_KEY = "event-key";
+    mockEnv.NODE_ENV = "test";
+
+    const { inngest } = await import("@/lib/inngest/client");
+    expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(true);
+  });
+
+  it("configures client in development mode when INNGEST_SIGNING_KEY is missing", async () => {
+    mockEnv.INNGEST_DEV = "0";
+    mockEnv.INNGEST_SIGNING_KEY = "";
+    mockEnv.INNGEST_EVENT_KEY = "";
+    mockEnv.NODE_ENV = "production";
+
+    const { inngest } = await import("@/lib/inngest/client");
+    expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(true);
   });
 
   it("configures client with production settings and custom base url", async () => {
@@ -40,6 +78,7 @@ describe("Inngest Client Configuration", () => {
 
     const { inngest } = await import("@/lib/inngest/client");
     expect(inngest).toBeDefined();
+    expect((inngest as any).options.isDev).toBe(false);
   });
 
   it("configures client with production settings and empty base url (isDev false)", async () => {
@@ -54,11 +93,11 @@ describe("Inngest Client Configuration", () => {
     expect((inngest as any).options.isDev).toBe(false);
   });
 
-  it("evaluates isDev to true when INNGEST_SIGNING_KEY is local even in production", async () => {
+  it("handles 'local' signing and event keys gracefully by treating them as undefined in production", async () => {
     mockEnv.INNGEST_DEV = "false";
     mockEnv.INNGEST_BASE_URL = "";
     mockEnv.INNGEST_SIGNING_KEY = "local";
-    mockEnv.INNGEST_EVENT_KEY = "";
+    mockEnv.INNGEST_EVENT_KEY = "local";
     mockEnv.NODE_ENV = "production";
 
     const { inngest } = await import("@/lib/inngest/client");

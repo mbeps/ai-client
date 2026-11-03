@@ -1,6 +1,10 @@
 import { Inngest } from "inngest";
 import { env } from "@/config/env";
-import { isDevMode } from "./run-service/run-metadata";
+import {
+  isDevMode,
+  resolveInngestEventKey,
+  resolveInngestSigningKey,
+} from "./run-service/run-metadata";
 
 const isDev = isDevMode();
 
@@ -13,12 +17,6 @@ export const inngest = new Inngest({
   isDev,
   baseUrl:
     env.INNGEST_BASE_URL || (isDev ? "http://127.0.0.1:8288" : undefined),
-  eventKey:
-    env.INNGEST_EVENT_KEY && env.INNGEST_EVENT_KEY !== "local"
-      ? env.INNGEST_EVENT_KEY
-      : undefined,
-  signingKey:
-    env.INNGEST_SIGNING_KEY && env.INNGEST_SIGNING_KEY !== "local"
-      ? env.INNGEST_SIGNING_KEY
-      : undefined,
+  eventKey: resolveInngestEventKey(),
+  signingKey: resolveInngestSigningKey(),
 });
