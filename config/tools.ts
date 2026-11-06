@@ -51,6 +51,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
     name: "manage_artifact",
+    displayName: "Artifact",
     category: "Artifacts",
     description:
       "Displays an interactive artifact in a side panel: a markdown document, a multi-sheet spreadsheet, an HTML interface, or a Mermaid diagram. Use this when you want to render structured visual content, code side-by-side with the chat, or write large text. You have 4 modes: 'markdown', 'spreadsheet', 'html', and 'mermaid'.",
@@ -59,6 +60,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: INTERNAL_TOOL_IDS.MANAGE_MEMORY,
     name: "save_memory",
+    displayName: "Save Memory",
     category: "Memory",
     description:
       "Saves a user preference, background detail, or enduring convention to long-term memory. Use this to remember important details across chat sessions.",
@@ -67,6 +69,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: INTERNAL_TOOL_IDS.DELEGATE_TASK,
     name: "delegate_task",
+    displayName: "Delegate Task",
     category: "Agents",
     description:
       "Delegates context-heavy research, planning, or exploration tasks to an isolated worker subagent. Operates with fresh context and shared scratchpad memory.",
@@ -76,6 +79,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,
     name: "search_knowledge_base",
+    displayName: "Search Knowledge Base",
     category: "Knowledge",
     description:
       "Searches the knowledge bases attached to the chat using hybrid semantic and keyword search, and returns the most relevant passages. Use this to retrieve grounded context and factual excerpts from attached documents.",
@@ -85,6 +89,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "load_skill",
     name: "load_skill",
+    displayName: "Load Skill",
     category: "Skills",
     description:
       "Loads the full instructions and bundled reference files for one skill from the catalogue. Use this when you need detailed guidelines or reference materials to perform a specific task correctly.",
@@ -93,6 +98,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "create_skill",
     name: "create_skill",
+    displayName: "Create Skill",
     category: "Skills",
     description:
       "Creates a new skill owned by the user, with its name, description, and SKILL.md instruction body. Use this to define and persist a new reusable capability or workflow.",
@@ -101,6 +107,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "update_skill",
     name: "update_skill",
+    displayName: "Update Skill",
     category: "Skills",
     description:
       "Updates a skill's display name, description, or enabled flag. Use this when you need to modify skill metadata or toggle its active state.",
@@ -109,6 +116,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "write_skill_file",
     name: "write_skill_file",
+    displayName: "Write Skill File",
     category: "Skills",
     description:
       "Writes one file inside an existing skill, creating it or replacing its content. Use this to add or update reference files and instruction bodies within a skill.",
@@ -117,6 +125,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "read_skill_file",
     name: "read_skill_file",
+    displayName: "Read Skill File",
     category: "Skills",
     description:
       "Lists every file in a skill, or reads the full content of one file. Use this to inspect skill contents before modifying or referencing them.",
@@ -125,6 +134,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "delete_skill_file",
     name: "delete_skill_file",
+    displayName: "Delete Skill File",
     category: "Skills",
     description:
       "Removes a bundled reference file from a skill. Use this to clean up outdated or unused files within a skill package.",
@@ -133,12 +143,32 @@ export const INTERNAL_TOOL_CATALOGUE = [
   {
     id: "get_file_url",
     name: "get_file_url",
+    displayName: "Get File URL",
     category: "Files",
     description:
       "Returns a temporary download URL for a file the user uploaded to the chat. Use this when you need to provide an accessible file URL to another tool or API.",
     availability: "Registered when the chat has at least one file attachment.",
   },
 ] as const;
+
+/** Map of optional alias tool names to internal display names. */
+const TOOL_NAME_ALIASES: Record<string, string> = {
+  manage_memory: "Save Memory",
+};
+
+/**
+ * Resolves the human-readable display name for an internal tool.
+ * Returns undefined if the tool name does not match any internal tool.
+ *
+ * @param toolName - Technical tool name (e.g., "search_knowledge_base")
+ * @returns Human-readable display name (e.g., "Search Knowledge Base") or undefined
+ */
+export function getInternalToolDisplayName(
+  toolName: string,
+): string | undefined {
+  const match = INTERNAL_TOOL_CATALOGUE.find((tool) => tool.name === toolName);
+  return match?.displayName ?? TOOL_NAME_ALIASES[toolName];
+}
 
 /** Category of an internal tool, derived from the catalogue. */
 export type InternalToolCategory =

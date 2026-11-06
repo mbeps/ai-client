@@ -11,6 +11,7 @@ import {
   TraceLine,
   TraceTitle,
 } from "@/components/ui/trace";
+import { getInternalToolDisplayName } from "@/config/tools";
 import { cn } from "@/lib/utils";
 
 /**
@@ -33,7 +34,7 @@ interface ToolTraceTitleProps {
 }
 
 /**
- * Renders the tool title displaying server name separation for MCP tools.
+ * Renders the tool title displaying human-readable names for internal tools or server separation for MCP tools.
  *
  * @param props - Tool naming properties.
  * @returns The rendered JSX element.
@@ -44,6 +45,20 @@ export function ToolTraceTitle({
   serverName,
   toolName,
 }: ToolTraceTitleProps) {
+  const isServerInternal =
+    !serverName || serverName === "Internal" || serverName === "System";
+  const internalDisplayName = isServerInternal
+    ? getInternalToolDisplayName(toolName)
+    : undefined;
+
+  if (internalDisplayName) {
+    return (
+      <span className="text-foreground/90 text-xs font-semibold">
+        {internalDisplayName}
+      </span>
+    );
+  }
+
   if (isMcp && serverName) {
     return (
       <span className="flex items-center gap-1.5 font-mono text-xs">

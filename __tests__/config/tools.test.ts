@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ENABLED_TOOLS,
+  getInternalToolDisplayName,
   groupToolsByCategory,
   INTERNAL_TOOL_CATALOGUE,
   INTERNAL_TOOL_IDS,
@@ -12,9 +13,10 @@ describe("INTERNAL_TOOL_CATALOGUE", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("gives every entry a non-empty name, description, and availability note", () => {
+  it("gives every entry a non-empty name, displayName, description, and availability note", () => {
     for (const tool of INTERNAL_TOOL_CATALOGUE) {
       expect(tool.name.length).toBeGreaterThan(0);
+      expect(tool.displayName.length).toBeGreaterThan(0);
       expect(tool.description.length).toBeGreaterThan(0);
       expect(tool.availability.length).toBeGreaterThan(0);
       expect(tool.category.length).toBeGreaterThan(0);
@@ -60,6 +62,23 @@ describe("INTERNAL_TOOL_CATALOGUE", () => {
     expect(DEFAULT_ENABLED_TOOLS).toContain(INTERNAL_TOOL_IDS.MANAGE_SKILL);
     const ids = new Set(INTERNAL_TOOL_CATALOGUE.map((tool) => tool.id));
     expect(ids.has(INTERNAL_TOOL_IDS.MANAGE_SKILL)).toBe(false);
+  });
+});
+
+describe("getInternalToolDisplayName", () => {
+  it("resolves human readable names for internal tools", () => {
+    expect(getInternalToolDisplayName("search_knowledge_base")).toBe(
+      "Search Knowledge Base",
+    );
+    expect(getInternalToolDisplayName("manage_artifact")).toBe(
+      "Manage Artifact",
+    );
+    expect(getInternalToolDisplayName("save_memory")).toBe("Save Memory");
+  });
+
+  it("returns undefined for external or unknown tools", () => {
+    expect(getInternalToolDisplayName("external_api_call")).toBeUndefined();
+    expect(getInternalToolDisplayName("unknown_tool")).toBeUndefined();
   });
 });
 

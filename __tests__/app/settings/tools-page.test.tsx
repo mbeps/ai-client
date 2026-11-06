@@ -22,10 +22,11 @@ describe("ToolsSettingsPage", () => {
     expect(requireSessionMock).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a card for every catalogued tool", async () => {
+  it("renders a card for every catalogued tool with human readable name and technical name", async () => {
     render(await ToolsSettingsPage());
 
     for (const tool of INTERNAL_TOOL_CATALOGUE) {
+      expect(screen.getByText(tool.displayName)).toBeInTheDocument();
       expect(screen.getByText(tool.name)).toBeInTheDocument();
       expect(screen.getByText(tool.description)).toBeInTheDocument();
     }
