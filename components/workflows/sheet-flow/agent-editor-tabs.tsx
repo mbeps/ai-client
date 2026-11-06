@@ -228,9 +228,9 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
             transformation.
           </p>
         </div>
-        <div className="bg-card rounded-lg border p-4">
+        <div className="flex max-h-[500px] flex-col overflow-hidden">
           <ToolPickerList
-            servers={mcpServers}
+            servers={mcpServers.filter((s) => s.enabled)}
             selectedTools={tools}
             onToggleTool={onToggleTool}
             onBulkSelect={onBulkSelectTools}

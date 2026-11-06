@@ -40,6 +40,36 @@ describe("discoverMcpServerTools", () => {
     await expect(discoverMcpServerTools("srv-1")).rejects.toThrow("Not Found");
   });
 
+  it("returns empty tools, resources, and prompts without calling discoverToolsAndResources when server is disabled", async () => {
+    const disabledServerRow = {
+      id: "srv-disabled",
+      userId: "user-1",
+      name: "Disabled Server",
+      url: "https://example.com/mcp",
+      type: "http",
+      headers: null,
+      enabled: false,
+      isPublic: false,
+    };
+
+    const mockSelectServer = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([disabledServerRow]),
+    };
+    const mockSelectInstall = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+
+    dbMock.select
+      .mockReturnValueOnce(mockSelectServer)
+      .mockReturnValueOnce(mockSelectInstall);
+
+    const result = await discoverMcpServerTools("srv-disabled");
+    expect(result).toEqual({ tools: [], resources: [], prompts: [] });
+    expect(discoverToolsAndResourcesMock).not.toHaveBeenCalled();
+  });
+
   it("discovers tools and resources with server headers when installRow is not present", async () => {
     const serverRow = {
       id: "srv-1",

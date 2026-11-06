@@ -47,7 +47,10 @@ export async function discoverMcpServerTools(serverId: string): Promise<{
       )
       .then((rows) => rows[0] ?? null),
     db
-      .select({ headers: userMcpServerInstall.headers })
+      .select({
+        headers: userMcpServerInstall.headers,
+        enabled: userMcpServerInstall.enabled,
+      })
       .from(userMcpServerInstall)
       .where(
         and(
@@ -59,6 +62,15 @@ export async function discoverMcpServerTools(serverId: string): Promise<{
   ]);
 
   if (!row) throw new Error("Not Found");
+
+  const isEnabled =
+    row.userId === session.user.id
+      ? row.enabled
+      : (installRow?.enabled ?? row.enabled);
+
+  if (!isEnabled) {
+    return { tools: [], resources: [], prompts: [] };
+  }
 
   const effectiveRow = {
     ...row,
