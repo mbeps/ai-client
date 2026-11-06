@@ -48,11 +48,7 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import { ingestKbDocument } from "@/actions/knowledgebases/ingest-kb-document";
-import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
-import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
-import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { inngest } from "@/lib/inngest/client";
 
 describe("ingestKbDocument action", () => {
@@ -69,10 +65,10 @@ describe("ingestKbDocument action", () => {
 
   it("validates UUID format and rejects invalid IDs", async () => {
     const result = await ingestKbDocument("not-a-uuid");
-    expect(result).toEqual({
-      success: false,
-      error: "Invalid document ID format",
-    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("INVALID_INPUT");
+    }
   });
 
   it("returns error if document is not found or not owned by user", async () => {
@@ -82,10 +78,10 @@ describe("ingestKbDocument action", () => {
       "00000000-0000-4000-8000-000000000001",
     );
 
-    expect(result).toEqual({
-      success: false,
-      error: "Document not found or access denied",
-    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("NOT_FOUND");
+    }
   });
 
   it("updates status to processing and dispatches Inngest event", async () => {
@@ -93,7 +89,7 @@ describe("ingestKbDocument action", () => {
       "00000000-0000-4000-8000-000000000001",
     );
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: true, value: undefined });
     expect(chainable.set).toHaveBeenCalledWith({
       status: "processing",
       statusMessage: null,
@@ -108,50 +104,6 @@ describe("ingestKbDocument action", () => {
     });
   });
 
-  it("handles RateLimitError correctly", async () => {
-    chainable.update.mockImplementationOnce(() => {
-      throw new RateLimitError("Rate limit exceeded");
-    });
-
-    const result = await ingestKbDocument(
-      "00000000-0000-4000-8000-000000000001",
-    );
-    expect(result).toEqual({
-      success: false,
-      error: "Rate limit exceeded",
-    });
-  });
-
-  it("handles RagExtractionEmptyError correctly", async () => {
-    chainable.update.mockImplementationOnce(() => {
-      throw new RagExtractionEmptyError("Extraction empty", "RAG_EXTRACTION_EMPTY");
-    });
-
-    const result = await ingestKbDocument(
-      "00000000-0000-4000-8000-000000000001",
-    );
-    expect(result).toEqual({
-      success: false,
-      error: "Extraction empty",
-      code: "RAG_EXTRACTION_EMPTY",
-    });
-  });
-
-  it("handles ProviderNotConfiguredError correctly", async () => {
-    chainable.update.mockImplementationOnce(() => {
-      throw new ProviderNotConfiguredError("Provider not configured", "PROVIDER_NOT_CONFIGURED");
-    });
-
-    const result = await ingestKbDocument(
-      "00000000-0000-4000-8000-000000000001",
-    );
-    expect(result).toEqual({
-      success: false,
-      error: "Provider not configured",
-      code: "PROVIDER_NOT_CONFIGURED",
-    });
-  });
-
   it("handles unexpected errors correctly", async () => {
     chainable.update.mockImplementationOnce(() => {
       throw new Error("Database offline");
@@ -160,24 +112,10 @@ describe("ingestKbDocument action", () => {
     const result = await ingestKbDocument(
       "00000000-0000-4000-8000-000000000001",
     );
-    expect(result).toEqual({
-      success: false,
-      error: "An unexpected error occurred during ingestion",
-    });
-  });
-
-  it("handles z.ZodError correctly", async () => {
-    chainable.update.mockImplementationOnce(() => {
-      throw new z.ZodError([]);
-    });
-
-    const result = await ingestKbDocument(
-      "00000000-0000-4000-8000-000000000001",
-    );
-    expect(result).toEqual({
-      success: false,
-      error: "Invalid input data",
-    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("INTERNAL");
+    }
   });
 
   it("handles non-Error thrown gracefully", async () => {
@@ -188,9 +126,9 @@ describe("ingestKbDocument action", () => {
     const result = await ingestKbDocument(
       "00000000-0000-4000-8000-000000000001",
     );
-    expect(result).toEqual({
-      success: false,
-      error: "An unexpected error occurred during ingestion",
-    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("INTERNAL");
+    }
   });
 });

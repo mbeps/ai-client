@@ -131,7 +131,7 @@ describe("AgentEditorPage - Step-by-Step Automation Regression Tests", () => {
       ]),
     };
 
-    mockGetTransformAgent.mockResolvedValue(initialAgent);
+    mockGetTransformAgent.mockResolvedValue({ ok: true, value: initialAgent });
 
     render(<AgentEditorPage />);
 
@@ -183,7 +183,7 @@ describe("AgentEditorPage - Step-by-Step Automation Regression Tests", () => {
       ]),
     };
 
-    mockGetTransformAgent.mockResolvedValue(initialAgent);
+    mockGetTransformAgent.mockResolvedValue({ ok: true, value: initialAgent });
 
     render(<AgentEditorPage />);
 

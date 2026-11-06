@@ -3,6 +3,10 @@
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getOwnedResource } from "@/lib/db/get-owned-resource";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 
 /**
@@ -12,20 +16,19 @@ import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
  * Runs on server only — invoked from client via Server Action.
  *
  * @param id - UUID of the agent to retrieve; must be owned by the authenticated user.
- * @returns The transform agent record with all configuration.
- * @throws Error if session is not authenticated.
- * @throws Error if agent is not found or user does not own it (returns "Not Found").
- * @throws Error if database query fails due to connection issues.
- * @see listTransformAgents to fetch all agents.
+ * @returns Result wrapping transform agent record or null.
  * @author Maruf Bepary
  */
-export async function getTransformAgent(
-  id: string,
-): Promise<TransformAgentRow | null> {
-  const session = await requireSession();
-  return getOwnedResource<TransformAgentRow>(
-    transformAgent,
-    id,
-    session.user.id,
-  );
-}
+export const getTransformAgent = defineAction(
+  async (
+    id: string,
+  ): Promise<Result<TransformAgentRow | null, CommonError>> => {
+    const session = await requireSession();
+    const row = await getOwnedResource<TransformAgentRow>(
+      transformAgent,
+      id,
+      session.user.id,
+    );
+    return ok(row);
+  },
+);

@@ -48,13 +48,17 @@ describe("deleteModel action", () => {
 
   it("deletes model owned by user", async () => {
     const res = await deleteModel("model-1");
-    expect(res).toEqual({ deletedCount: 1 });
+    expect(res).toEqual({ ok: true, value: { deletedCount: 1 } });
     expect(chainable.delete).toHaveBeenCalled();
   });
 
   it("rejects deletion if model does not exist or belongs to another user", async () => {
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(deleteModel("model-1")).rejects.toThrow("Not Found");
+    const res = await deleteModel("model-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 });

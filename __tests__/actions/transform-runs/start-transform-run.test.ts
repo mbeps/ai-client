@@ -76,7 +76,7 @@ describe("startTransformRunAction", () => {
 
     const result = await startTransformRunAction(runId);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: true, value: { success: true } });
     expect(chainable.update).toHaveBeenCalled();
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -104,17 +104,22 @@ describe("startTransformRunAction", () => {
 
     const result = await startTransformRunAction(runId);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: true, value: { success: true } });
     expect(inngest.send).not.toHaveBeenCalled();
   });
 
-  it("throws Error('Transform run not found') when run does not exist or user does not own it", async () => {
+  it("returns error NOT_FOUND when run does not exist or user does not own it", async () => {
     chainable.returning.mockResolvedValueOnce([]);
     chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-    await expect(startTransformRunAction(runId)).rejects.toThrow(
-      "Transform run not found",
-    );
+    const result = await startTransformRunAction(runId);
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "Transform run not found",
+      },
+    });
     expect(inngest.send).not.toHaveBeenCalled();
   });
 });

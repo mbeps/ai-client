@@ -3,12 +3,17 @@
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { createChatSchema } from "@/schemas/chat/chat";
+import type { ChatRow } from "@/types/chat/chat-row";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "chat"]);
-
-import type { ChatRow } from "@/types/chat/chat-row";
 
 /**
  * Creates a new chat session for the authenticated user.
@@ -18,39 +23,51 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * @param title - Optional initial title; defaults to "New Chat" if not provided.
  * @param projectId - Optional project ID to scope chat within a specific project context.
  * @param assistantId - Optional assistant ID to bind a persona to the chat.
- * @returns The newly created chat row with all fields populated.
- * @throws Error if session is not authenticated.
- * @throws ZodError if any input fails schema validation.
- * @see getChat to fetch a single chat with messages.
- * @see deleteChat to remove a chat.
+ * @returns The newly created chat row wrapped in Result.
  */
-export async function createChat(
-  title?: string,
-  projectId?: string,
-  assistantId?: string,
-): Promise<ChatRow> {
-  const session = await requireSession();
+export const createChat = defineAction(
+  async (
+    title?: string,
+    projectId?: string,
+    assistantId?: string,
+  ): Promise<Result<ChatRow, CommonError>> => {
+    const session = await requireSession();
 
-  // Validate inputs
-  const validated = createChatSchema.parse({ title, projectId, assistantId });
+    const parsed = createChatSchema.safeParse({
+      title,
+      projectId,
+      assistantId,
+    });
+    if (!parsed.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: parsed.error.issues[0].message,
+        issues: parsed.error.issues.map(
+          (i) => `${i.path.join(".")}: ${i.message}`,
+        ),
+      });
+    }
 
-  const [newChat] = await db
-    .insert(chat)
-    .values({
-      id: crypto.randomUUID(),
-      title: validated.title ?? "New Chat",
+    const validated = parsed.data;
+
+    const [newChat] = await db
+      .insert(chat)
+      .values({
+        id: crypto.randomUUID(),
+        title: validated.title ?? "New Chat",
+        userId: session.user.id,
+        projectId: validated.projectId ?? null,
+        assistantId: validated.assistantId ?? null,
+      })
+      .returning();
+
+    log.info("Chat created (id: {chatId})", {
+      chatId: newChat.id,
       userId: session.user.id,
-      projectId: validated.projectId ?? null,
-      assistantId: validated.assistantId ?? null,
-    })
-    .returning();
+      projectId: newChat.projectId,
+      assistantId: newChat.assistantId,
+    });
 
-  log.info("Chat created (id: {chatId})", {
-    chatId: newChat.id,
-    userId: session.user.id,
-    projectId: newChat.projectId,
-    assistantId: newChat.assistantId,
-  });
-
-  return newChat;
-}
+    return ok(newChat);
+  },
+);

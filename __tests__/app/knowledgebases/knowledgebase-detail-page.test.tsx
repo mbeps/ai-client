@@ -118,21 +118,24 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
   it("polls listDocuments every 3s while an in-flight document is processing and calls fetchKb when settled", async () => {
     vi.useFakeTimers();
 
-    mockGetKnowledgebase.mockResolvedValue(baseKb);
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: baseKb });
     // Initial fetch: 1 processing doc
-    mockListDocuments.mockResolvedValueOnce([
-      {
-        id: "doc-1",
-        kbId: "kb-1",
-        name: "architecture.pdf",
-        status: "processing",
-        fileType: "application/pdf",
-        fileSize: 2048,
-        chunkCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    mockListDocuments.mockResolvedValueOnce({
+      ok: true,
+      value: [
+        {
+          id: "doc-1",
+          kbId: "kb-1",
+          name: "architecture.pdf",
+          status: "processing",
+          fileType: "application/pdf",
+          fileSize: 2048,
+          chunkCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    });
 
     render(<KnowledgebasePage />);
 
@@ -146,19 +149,22 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
     expect(mockGetKnowledgebase).toHaveBeenCalledTimes(1);
 
     // After 3 seconds, polls again
-    mockListDocuments.mockResolvedValueOnce([
-      {
-        id: "doc-1",
-        kbId: "kb-1",
-        name: "architecture.pdf",
-        status: "ready",
-        fileType: "application/pdf",
-        fileSize: 2048,
-        chunkCount: 5,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    mockListDocuments.mockResolvedValueOnce({
+      ok: true,
+      value: [
+        {
+          id: "doc-1",
+          kbId: "kb-1",
+          name: "architecture.pdf",
+          status: "ready",
+          fileType: "application/pdf",
+          fileSize: 2048,
+          chunkCount: 5,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    });
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3000);
@@ -176,8 +182,8 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
   it("marks uploaded document as processing and starts polling until settled", async () => {
     vi.useFakeTimers();
 
-    mockGetKnowledgebase.mockResolvedValue(baseKb);
-    mockListDocuments.mockResolvedValueOnce([]); // Initially empty
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: baseKb });
+    mockListDocuments.mockResolvedValueOnce({ ok: true, value: [] }); // Initially empty
 
     render(<KnowledgebasePage />);
 
@@ -199,19 +205,22 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
     expect(screen.getByText("Processing")).toBeInTheDocument();
 
     // Next poll returns ready
-    mockListDocuments.mockResolvedValueOnce([
-      {
-        id: "doc-new",
-        kbId: "kb-1",
-        name: "uploaded.pdf",
-        status: "ready",
-        fileType: "application/pdf",
-        fileSize: 1024,
-        chunkCount: 3,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    mockListDocuments.mockResolvedValueOnce({
+      ok: true,
+      value: [
+        {
+          id: "doc-new",
+          kbId: "kb-1",
+          name: "uploaded.pdf",
+          status: "ready",
+          fileType: "application/pdf",
+          fileSize: 1024,
+          chunkCount: 3,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    });
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3000);
@@ -231,21 +240,24 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
       ...baseKb,
       indexStatus: "stale",
     };
-    mockGetKnowledgebase.mockResolvedValue(staleKb);
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: staleKb });
     // In-flight doc returned on mount
-    mockListDocuments.mockResolvedValue([
-      {
-        id: "doc-1",
-        kbId: "kb-1",
-        name: "draft.pdf",
-        status: "processing",
-        fileType: "application/pdf",
-        fileSize: 1024,
-        chunkCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    mockListDocuments.mockResolvedValue({
+      ok: true,
+      value: [
+        {
+          id: "doc-1",
+          kbId: "kb-1",
+          name: "draft.pdf",
+          status: "processing",
+          fileType: "application/pdf",
+          fileSize: 1024,
+          chunkCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    });
 
     render(<KnowledgebasePage />);
 

@@ -66,8 +66,14 @@ describe("ServerSettings UI", () => {
   });
 
   it("renders 'Delete Server' for owned server and uninstalls/reloads on confirmation", async () => {
-    vi.mocked(deleteMcpServer).mockResolvedValueOnce({ deletedCount: 1 });
-    vi.mocked(listMcpServers).mockResolvedValueOnce([mockInstalledServer]);
+    vi.mocked(deleteMcpServer).mockResolvedValueOnce({
+      ok: true,
+      value: { deletedCount: 1 },
+    } as any);
+    vi.mocked(listMcpServers).mockResolvedValueOnce({
+      ok: true,
+      value: [mockInstalledServer],
+    } as any);
 
     render(<ServerSettings serverId="srv-owned" />);
 
@@ -93,8 +99,14 @@ describe("ServerSettings UI", () => {
   });
 
   it("renders 'Uninstall Tool' for installed community server and uninstalls/reloads on confirmation", async () => {
-    vi.mocked(deleteMcpServer).mockResolvedValueOnce({ deletedCount: 1 });
-    vi.mocked(listMcpServers).mockResolvedValueOnce([mockOwnedServer]);
+    vi.mocked(deleteMcpServer).mockResolvedValueOnce({
+      ok: true,
+      value: { deletedCount: 1 },
+    } as any);
+    vi.mocked(listMcpServers).mockResolvedValueOnce({
+      ok: true,
+      value: [mockOwnedServer],
+    } as any);
 
     render(<ServerSettings serverId="srv-installed" />);
 

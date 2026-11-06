@@ -10,6 +10,7 @@ import {
   resolveInitialSelectedStep,
 } from "@/components/workflows/transform-run/state-helpers";
 import type { TransformAgent } from "@/types/transform/transform-agent";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 import type { TransformRun } from "@/types/transform/transform-run";
 import type { StepState } from "@/types/workflows/transform-run";
 
@@ -36,9 +37,7 @@ function parseAgentSteps(rawSteps?: string | null) {
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function mapAgentRowToAgent(
-  agentRow: NonNullable<Awaited<ReturnType<typeof getTransformAgent>>>,
-): TransformAgent {
+function mapAgentRowToAgent(agentRow: TransformAgentRow): TransformAgent {
   const steps = parseAgentSteps(agentRow.steps);
   return {
     id: agentRow.id,
@@ -84,8 +83,8 @@ export function useTransformRunData(runId: string) {
     );
     const meta: Record<string, { url: string; name: string }> = {};
     results.forEach((r, i) => {
-      if (r.status === "fulfilled") {
-        meta[ids[i]] = { url: r.value.url, name: r.value.name };
+      if (r.status === "fulfilled" && r.value.ok) {
+        meta[ids[i]] = { url: r.value.value.url, name: r.value.value.name };
       }
     });
     setAttachmentMeta((prev) => ({ ...prev, ...meta }));
@@ -94,18 +93,19 @@ export function useTransformRunData(runId: string) {
 
   useEffect(() => {
     async function load() {
-      const runRow = await getTransformRun(runId);
-      if (!runRow) {
+      const runRes = await getTransformRun(runId);
+      if (!runRes?.ok || !runRes.value) {
         setIsLoading(false);
         return;
       }
+      const runRow = runRes.value;
       const mapped = mapRunRowToRun(runRow);
       setRun(mapped);
 
       let mappedAgent: TransformAgent | null = null;
-      const agentRow = await getTransformAgent(runRow.agentId);
-      if (agentRow) {
-        mappedAgent = mapAgentRowToAgent(agentRow);
+      const agentRes = await getTransformAgent(runRow.agentId);
+      if (agentRes.ok && agentRes.value) {
+        mappedAgent = mapAgentRowToAgent(agentRes.value);
         setAgent(mappedAgent);
         setStepStates(
           buildInitialStepStates(
@@ -154,7 +154,10 @@ export function useTransformRunData(runId: string) {
     if (!run) return;
     setIsApproving(true);
     try {
-      await approveTransformRunAction(run.id);
+      const approveRes = await approveTransformRunAction(run.id);
+      if (!approveRes.ok) {
+        throw new Error(approveRes.error.message);
+      }
       setRun((prev) => (prev ? { ...prev, status: "running" } : prev));
       toast.success("Run approved and resumed");
     } catch {

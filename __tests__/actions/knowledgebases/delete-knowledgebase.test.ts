@@ -138,7 +138,7 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     const cmd1 = sendMock.mock.calls[0][0] as DeleteObjectCommand;
     expect(cmd1.input.Bucket).toBe("test-bucket");
     expect(cmd1.input.Key).toBe("kb/kb-1/doc-1/file.pdf");
-    expect(result).toEqual({ deletedCount: 1 });
+    expect(result).toEqual({ ok: true, value: { deletedCount: 1 } });
   });
 
   it("scopes the DB delete to the owner via where", async () => {
@@ -154,13 +154,14 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     sendMock.mockRejectedValue(new Error("S3 down"));
 
     await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
   });
 
   it("returns deletedCount 0 when passed an empty array", async () => {
     const result = await deleteKnowledgebase([]);
-    expect(result).toEqual({ deletedCount: 0 });
+    expect(result).toEqual({ ok: true, value: { deletedCount: 0 } });
     expect(chainable.select).not.toHaveBeenCalled();
   });
 
@@ -169,7 +170,8 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     sendMock.mockRejectedValue("String S3 failure");
 
     await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
   });
 
@@ -198,7 +200,8 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     deletePointsByKbIdsMock.mockRejectedValueOnce(new Error("Qdrant failure"));
 
     await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
   });
 
@@ -207,7 +210,21 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     deletePointsByKbIdsMock.mockRejectedValueOnce("String error");
 
     await expect(deleteKnowledgebase("kb-1")).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
+    });
+  });
+
+  it("returns failure when deleteKbRow returns !result.ok", async () => {
+    selectResult = [];
+    chainable.returning.mockResolvedValueOnce([]);
+
+    const res = await deleteKnowledgebase("kb-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+      }),
     });
   });
 });

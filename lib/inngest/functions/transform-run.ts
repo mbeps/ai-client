@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
+import { NonRetriableError } from "inngest";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import {
   transformAgent,
   transformRun,
 } from "@/drizzle/schemas/transform-agent-schema";
+import { toAppError } from "@/lib/error/to-app-error";
 import { inngest } from "@/lib/inngest/client";
 import {
   type TransformStreamEvent,
@@ -141,7 +143,8 @@ async function initializeTransformRun(
       .from(transformAgent)
       .where(eq(transformAgent.id, runRow.agentId));
 
-    if (!agentRow) throw new Error(`Agent ${runRow.agentId} not found`);
+    if (!agentRow)
+      throw new NonRetriableError(`Agent ${runRow.agentId} not found`);
 
     await db
       .update(transformRun)
@@ -154,19 +157,19 @@ async function initializeTransformRun(
       const steps = parseAndValidateAgentSteps(agentRow.steps, agentRow.id);
       return { runRow, agentRow, steps };
     } catch (err) {
-      const errorMsg = (err as Error).message;
+      const appErr = toAppError(err);
       await db
         .update(transformRun)
         .set({
           status: "failed",
-          errorMessage: errorMsg,
+          errorMessage: appErr.message,
           updatedAt: new Date(),
         })
         .where(eq(transformRun.id, runId));
       await emit({
         type: "error",
-        message: errorMsg,
-        code: "INVALID_AGENT_STEPS",
+        message: appErr.message,
+        code: appErr.code,
       });
       throw err;
     }
@@ -400,6 +403,29 @@ export const executeTransformRun = inngest.createFunction(
         if: "async.data.runId == event.data.runId",
       },
     ],
+    onFailure: async ({ event, error }) => {
+      const { runId } = event.data.event.data as { runId?: string };
+      if (runId) {
+        const appErr = toAppError(error);
+        await db
+          .update(transformRun)
+          .set({
+            status: "failed",
+            errorMessage: appErr.message,
+            updatedAt: new Date(),
+          })
+          .where(eq(transformRun.id, runId));
+
+        const trCh = transformRunChannel({ runId });
+        await inngest.realtime
+          .publish(trCh.progress, {
+            type: "error",
+            message: appErr.message,
+            code: appErr.code,
+          })
+          .catch(() => {});
+      }
+    },
   },
   async ({ event, step }) => {
     const { runId, userId } = event.data;

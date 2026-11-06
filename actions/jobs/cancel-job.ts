@@ -6,7 +6,13 @@ import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { abortChatStream } from "@/lib/chat/abort-chat-stream";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { cancelInngestRun } from "@/lib/inngest/run-service";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Options for cancelling an Inngest background job run with dual-layer abort.
@@ -31,54 +37,60 @@ export interface CancelJobOptions {
  * @param runId Inngest run identifier to cancel.
  * @param options Contextual entity IDs for dual-layer cancellation.
  * @returns Result object indicating whether cancellation was successful.
- * @throws {Error} "Unauthorized" if no authenticated session exists.
  * @author Maruf Bepary
  */
-export async function cancelJob(
-  runId: string,
-  options?: CancelJobOptions,
-): Promise<{ success: boolean; error?: string }> {
-  const session = await requireSession();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+export const cancelJob = defineAction(
+  async (
+    runId: string,
+    options?: CancelJobOptions,
+  ): Promise<Result<{ success: boolean }, CommonError>> => {
+    const session = await requireSession();
 
-  const validatedId = z.string().min(1).parse(runId);
-  const userId = session.user.id;
-
-  // 1. If this is a chat job, abort the active stream gracefully via abortChatStream.
-  // The in-memory stream aborts, generateChatResponse cleans up MCP tools and exits cleanly with HTTP 200,
-  // causing Inngest to mark the run as COMPLETED (identical to pressing the Stop button in the chat interface).
-  // We do not invoke cancelInngestRun for chats, preserving consistent COMPLETED status and avoiding retries.
-  if (options?.chatId) {
-    await abortChatStream(options.chatId, userId);
-    if (!options.transformRunId) {
-      return { success: true };
+    const parsed = z.string().min(1).safeParse(runId);
+    if (!parsed.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Invalid runId",
+      });
     }
-  }
+    const validatedId = parsed.data;
+    const userId = session.user.id;
 
-  // 2. If this is a transform run, update DB record to failed
-  if (options?.transformRunId) {
-    await db
-      .update(transformRun)
-      .set({
-        status: "failed",
-        errorMessage: "Cancelled by user",
-      })
-      .where(
-        and(
-          eq(transformRun.id, options.transformRunId),
-          eq(transformRun.userId, userId),
-        ),
-      );
-  }
+    // 1. If this is a chat job, abort the active stream gracefully via abortChatStream.
+    if (options?.chatId) {
+      await abortChatStream(options.chatId, userId);
+      if (!options.transformRunId) {
+        return ok({ success: true });
+      }
+    }
 
-  // 3. For non-chat jobs (e.g. transform, translation, or generic Inngest runs),
-  // cancel via Inngest run cancellation API.
-  const cancelResult = await cancelInngestRun(validatedId, userId);
-  if (!cancelResult.success) {
-    return { success: false, error: cancelResult.error };
-  }
+    // 2. If this is a transform run, update DB record to failed
+    if (options?.transformRunId) {
+      await db
+        .update(transformRun)
+        .set({
+          status: "failed",
+          errorMessage: "Cancelled by user",
+        })
+        .where(
+          and(
+            eq(transformRun.id, options.transformRunId),
+            eq(transformRun.userId, userId),
+          ),
+        );
+    }
 
-  return { success: true };
-}
+    // 3. For non-chat jobs (e.g. transform, translation, or generic Inngest runs),
+    // cancel via Inngest run cancellation API.
+    const cancelResult = await cancelInngestRun(validatedId, userId);
+    if (!cancelResult.success) {
+      return fail({
+        code: ERROR_CODE.INTERNAL,
+        message: cancelResult.error || "Failed to cancel run",
+        ref: "inngest-cancel",
+      });
+    }
+
+    return ok({ success: true });
+  },
+);

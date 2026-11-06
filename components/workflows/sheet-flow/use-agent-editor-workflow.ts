@@ -72,11 +72,19 @@ export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
       });
 
       if (isNew) {
-        const created = await createTransformAgent(payload);
+        const res = await createTransformAgent(payload);
+        if (!res.ok) {
+          handleApiError(res.error, "Failed to save agent");
+          return;
+        }
         toast.success("Agent created successfully");
-        router.push(ROUTES.WORKFLOWS.TRANSFORM.detail(created.id));
+        router.push(ROUTES.WORKFLOWS.TRANSFORM.detail(res.value.id));
       } else {
-        await updateTransformAgent(id, payload);
+        const res = await updateTransformAgent(id, payload);
+        if (!res.ok) {
+          handleApiError(res.error, "Failed to save agent");
+          return;
+        }
         toast.success("Agent updated successfully");
       }
     } catch (err) {
@@ -89,7 +97,12 @@ export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteTransformAgent(id);
+      const res = await deleteTransformAgent(id);
+      if (!res.ok) {
+        handleApiError(res.error, "Failed to delete agent");
+        setIsDeleting(false);
+        return;
+      }
       toast.success("Agent deleted successfully");
       router.push(ROUTES.WORKFLOWS.TRANSFORM.path);
     } catch (err) {

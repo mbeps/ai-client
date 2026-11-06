@@ -287,7 +287,9 @@ function useProjectChats(projectId: string) {
   // Load project-specific chats on mount if not already loaded into store
   useEffect(() => {
     if (chats.length === 0) {
-      listChats().then((rows) => loadChats(rows, []));
+      listChats().then((res) => {
+        if (res.ok) loadChats(res.value, []);
+      });
     }
   }, [chats.length, loadChats]);
 

@@ -28,7 +28,7 @@ const baseAttachment: Attachment = {
 describe("uploadSingleAttachment — blob stripping (F6)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpload.mockResolvedValue({ key: "uploads/pic.png" });
+    mockUpload.mockResolvedValue({ ok: true, value: { key: "uploads/pic.png" } });
   });
 
   it("strips dataUrl and rawFile once the key exists", async () => {
@@ -78,5 +78,16 @@ describe("uploadSingleAttachment — blob stripping (F6)", () => {
     expect(mockToast.error).toHaveBeenCalledWith(
       'Failed to upload "pic.png". It will not be sent to the AI.',
     );
+  });
+
+  it("handles uploadAttachment returning ok: false", async () => {
+    mockUpload.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Storage quota reached" },
+    });
+
+    const result = await uploadSingleAttachment(baseAttachment, "msg-1");
+    expect(result).toBeNull();
+    expect(mockToast.error).toHaveBeenCalledWith("Storage quota reached");
   });
 });

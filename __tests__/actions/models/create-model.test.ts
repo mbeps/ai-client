@@ -49,21 +49,24 @@ describe("createModel action", () => {
   });
 
   it("validates payload and rejects invalid input", async () => {
-    await expect(createModel({} as any)).rejects.toThrow();
+    const res = await createModel({} as any);
+    expect(res.ok).toBe(false);
   });
 
   it("rejects if provider is not owned by user", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(
-      createModel({
-        providerId: VALID_UUID,
-        modelId: "gpt-4",
-        label: "GPT-4",
-        modelType: "chat",
-        contextWindow: 8192,
-      }),
-    ).rejects.toThrow("Not Found");
+    const res = await createModel({
+      providerId: VALID_UUID,
+      modelId: "gpt-4",
+      label: "GPT-4",
+      modelType: "chat",
+      contextWindow: 8192,
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("inserts model row into database and returns created model", async () => {
@@ -89,7 +92,7 @@ describe("createModel action", () => {
       contextWindow: 8192,
     });
 
-    expect(res).toEqual(newModel);
+    expect(res).toEqual({ ok: true, value: newModel });
     expect(chainable.insert).toHaveBeenCalled();
   });
 });

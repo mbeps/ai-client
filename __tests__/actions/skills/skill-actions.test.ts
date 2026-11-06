@@ -80,6 +80,8 @@ vi.mock("@/lib/skills/sanitize-skill-slug", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { SKILL_BODY_MAX_BYTES, SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
 import { createSkill } from "@/actions/skills/create-skill";
 import { deleteSkill } from "@/actions/skills/delete-skill";
@@ -138,36 +140,99 @@ describe("Agent Skill Server Actions", () => {
         enabled: true,
       });
 
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
       expect(chainable.insert).toHaveBeenCalled();
     });
 
-    it("throws error when skill name already exists", async () => {
+    it("returns error when skill name already exists", async () => {
       chainable.limit.mockResolvedValueOnce([{ id: "other-skill" }]);
 
-      await expect(
-        createSkill({
-          name: "test-skill",
-          displayName: "Test Skill",
-          description: "A test skill",
-          content: "# Instructions",
+      const res = await createSkill({
+        name: "test-skill",
+        displayName: "Test Skill",
+        description: "A test skill",
+        content: "# Instructions",
+      });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "CONFLICT",
+          message: 'A skill with name "test-skill" already exists.',
         }),
-      ).rejects.toThrow('A skill with name "test-skill" already exists.');
+      });
+    });
+
+    it("returns INVALID_INPUT when createSkill input validation fails", async () => {
+      const res = await createSkill({
+        name: "",
+        displayName: "Test Skill",
+        description: "A test skill",
+        content: "# Instructions",
+      } as any);
+
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
+    it("handles SkillBundleBudgetError when thrown in createSkill", async () => {
+      chainable.limit.mockResolvedValueOnce([]);
+      chainable.returning.mockImplementationOnce(() => {
+        throw new SkillBundleBudgetError("Skill body exceeds 200000 characters limit.");
+      });
+
+      const res = await createSkill({
+        name: "budget-skill",
+        displayName: "Budget Skill",
+        description: "A test skill",
+        content: "# Instructions",
+      });
+
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+      expect(res.error.message).toContain("exceeds");
+    });
+
+    it("handles unexpected error rethrown in createSkill via defineAction", async () => {
+      chainable.limit.mockRejectedValueOnce(new Error("Unexpected DB crash"));
+
+      const res = await createSkill({
+        name: "crash-skill",
+        displayName: "Crash Skill",
+        description: "A test skill",
+        content: "# Instructions",
+      });
+
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INTERNAL");
     });
   });
 
   describe("getSkill", () => {
+    it("returns INVALID_INPUT for non-UUID skill id", async () => {
+      const res = await getSkill("invalid-uuid");
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
     it("returns skill row when found", async () => {
       chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await getSkill(SKILL_ID);
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
     });
 
-    it("throws 'Not Found' when skill does not exist", async () => {
+    it("returns 'Not Found' when skill does not exist", async () => {
       chainable.limit.mockResolvedValueOnce([]);
 
-      await expect(getSkill(SKILL_ID)).rejects.toThrow("Not Found");
+      const res = await getSkill(SKILL_ID);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
     });
   });
 
@@ -176,30 +241,74 @@ describe("Agent Skill Server Actions", () => {
       chainable.orderBy.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await listSkills();
-      expect(result).toEqual([SAMPLE_SKILL]);
+      expect(result).toEqual({ ok: true, value: [SAMPLE_SKILL] });
     });
   });
 
   describe("toggleSkillEnabled", () => {
+    it("returns INVALID_INPUT for non-UUID skill id", async () => {
+      const res = await toggleSkillEnabled("invalid-uuid", true);
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
     it("toggles enabled status and returns updated skill", async () => {
       const updated = { ...SAMPLE_SKILL, enabled: false };
       chainable.returning.mockResolvedValueOnce([updated]);
 
       const result = await toggleSkillEnabled(SKILL_ID, false);
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       expect(chainable.update).toHaveBeenCalled();
     });
 
-    it("throws 'Not Found' when skill does not exist", async () => {
+    it("returns 'Not Found' when skill does not exist", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 
-      await expect(toggleSkillEnabled(SKILL_ID, false)).rejects.toThrow(
-        "Not Found",
-      );
+      const res = await toggleSkillEnabled(SKILL_ID, false);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
     });
   });
 
   describe("updateSkill", () => {
+    it("returns INVALID_INPUT for non-UUID skill id", async () => {
+      const res = await updateSkill("invalid-uuid", { displayName: "New" });
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
+    it("returns INVALID_INPUT when data validation fails", async () => {
+      const res = await updateSkill(SKILL_ID, { name: "" });
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
+    it("handles SkillBundleBudgetError when thrown in updateSkill", async () => {
+      chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
+      chainable.returning.mockImplementationOnce(() => {
+        throw new SkillBundleBudgetError("Skill files budget exceeded");
+      });
+
+      const res = await updateSkill(SKILL_ID, { displayName: "Budget" });
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+    });
+
+    it("handles unexpected error rethrown in updateSkill via defineAction", async () => {
+      chainable.limit.mockRejectedValueOnce(new Error("Unexpected DB crash"));
+
+      const res = await updateSkill(SKILL_ID, { displayName: "Crash" });
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INTERNAL");
+    });
+
     it("updates all fields when provided and name is unique", async () => {
       // First probe resolves the row, second checks the new slug is free.
       chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
@@ -224,16 +333,21 @@ describe("Agent Skill Server Actions", () => {
         enabled: false,
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
 
-    it("throws error when updated name collides with another skill", async () => {
+    it("returns error when updated name collides with another skill", async () => {
       chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.limit.mockResolvedValueOnce([{ id: "another-id" }]);
 
-      await expect(
-        updateSkill(SKILL_ID, { name: "colliding-name" }),
-      ).rejects.toThrow('A skill with name "colliding-name" already exists.');
+      const res = await updateSkill(SKILL_ID, { name: "colliding-name" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "CONFLICT",
+          message: 'A skill with name "colliding-name" already exists.',
+        }),
+      });
     });
 
     it("updates without a slug check when name is omitted", async () => {
@@ -246,7 +360,7 @@ describe("Agent Skill Server Actions", () => {
         enabled: true,
       });
 
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
       // One probe only: the ownership lookup, with no duplicate-slug probe.
       expect(chainable.limit).toHaveBeenCalledTimes(1);
     });
@@ -262,25 +376,29 @@ describe("Agent Skill Server Actions", () => {
         files: [],
       });
 
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
     });
 
-    it("throws 'Not Found' when the skill is not visible to the user", async () => {
+    it("returns 'Not Found' when the skill is not visible to the user", async () => {
       chainable.limit.mockResolvedValueOnce([]);
 
-      await expect(
-        updateSkill(SKILL_ID, { displayName: "No Row" }),
-      ).rejects.toThrow("Not Found");
+      const res = await updateSkill(SKILL_ID, { displayName: "No Row" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
       expect(chainable.returning).not.toHaveBeenCalled();
     });
 
-    it("throws 'Not Found' when the write returns no row", async () => {
+    it("returns 'Not Found' when the write returns no row", async () => {
       chainable.limit.mockResolvedValueOnce([SAMPLE_SKILL]);
       chainable.returning.mockResolvedValueOnce([]);
 
-      await expect(
-        updateSkill(SKILL_ID, { displayName: "No Row" }),
-      ).rejects.toThrow("Not Found");
+      const res = await updateSkill(SKILL_ID, { displayName: "No Row" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
     });
   });
 
@@ -290,17 +408,21 @@ describe("Agent Skill Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([{ id: SKILL_ID }]);
 
       const result = await deleteSkill(SKILL_ID);
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toEqual({ ok: true, value: { deletedCount: 1 } });
     });
 
-    it("throws 'Not Found' when the skill is not visible to the user", async () => {
+    it("returns 'Not Found' when the skill is not visible to the user", async () => {
       chainable.limit.mockResolvedValueOnce([]);
 
-      await expect(deleteSkill(SKILL_ID)).rejects.toThrow("Not Found");
+      const res = await deleteSkill(SKILL_ID);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
     });
 
     it("returns zero without a query when given no ids", async () => {
-      expect(await deleteSkill([])).toEqual({ deletedCount: 0 });
+      expect(await deleteSkill([])).toEqual({ ok: true, value: { deletedCount: 0 } });
       expect(chainable.limit).not.toHaveBeenCalled();
     });
   });
@@ -311,8 +433,11 @@ describe("Agent Skill Server Actions", () => {
 
       const result = await exportSkillZip(SKILL_ID);
       expect(result).toEqual({
-        filename: "test-skill.zip",
-        base64: Buffer.from("fake-zip-binary").toString("base64"),
+        ok: true,
+        value: {
+          filename: "test-skill.zip",
+          base64: Buffer.from("fake-zip-binary").toString("base64"),
+        },
       });
       expect(mockParser.createSkillZip).toHaveBeenCalled();
     });
@@ -321,31 +446,50 @@ describe("Agent Skill Server Actions", () => {
       chainable.limit.mockResolvedValueOnce([{ ...SAMPLE_SKILL, files: null }]);
 
       const result = await exportSkillZip(SKILL_ID);
-      expect(result.filename).toBe("test-skill.zip");
+      expect(result).toEqual({
+        ok: true,
+        value: expect.objectContaining({ filename: "test-skill.zip" }),
+      });
     });
 
     it("propagates Not Found error when skill does not exist", async () => {
       chainable.limit.mockResolvedValueOnce([]);
 
-      await expect(exportSkillZip(SKILL_ID)).rejects.toThrow("Not Found");
+      const res = await exportSkillZip(SKILL_ID);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+      });
     });
   });
 
   describe("importSkillFile", () => {
-    it("throws if no file is uploaded", async () => {
+    it("returns INVALID_INPUT if no file is uploaded", async () => {
       const fd = new FormData();
-      await expect(importSkillFile(fd)).rejects.toThrow("No file uploaded");
+      const res = await importSkillFile(fd);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "INVALID_INPUT",
+          message: "No file uploaded",
+        }),
+      });
     });
 
-    it("throws for unsupported file extensions", async () => {
+    it("returns UNSUPPORTED_FILE_TYPE for unsupported file extensions", async () => {
       const fd = new FormData();
       fd.append(
         "file",
         new File([new Uint8Array(5)], "image.png", { type: "image/png" }),
       );
-      await expect(importSkillFile(fd)).rejects.toThrow(
-        "Unsupported file format. Please upload a .md or .zip file.",
-      );
+      const res = await importSkillFile(fd);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "UNSUPPORTED_FILE_TYPE",
+          message: "Unsupported file format. Please upload a .md or .zip file.",
+        }),
+      });
     });
 
     it("imports .zip file and appends suffix if slug already exists", async () => {
@@ -362,7 +506,7 @@ describe("Agent Skill Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await importSkillFile(fd);
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
       expect(mockParser.extractSkillFromZip).toHaveBeenCalled();
     });
 
@@ -378,7 +522,7 @@ describe("Agent Skill Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await importSkillFile(fd);
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
       expect(mockParser.parseSkillMarkdown).toHaveBeenCalled();
     });
 
@@ -394,10 +538,10 @@ describe("Agent Skill Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([SAMPLE_SKILL]);
 
       const result = await importSkillFile(fd);
-      expect(result).toEqual(SAMPLE_SKILL);
+      expect(result).toEqual({ ok: true, value: SAMPLE_SKILL });
     });
 
-    it("throws when imported skill body exceeds budget", async () => {
+    it("returns error when imported skill body exceeds budget", async () => {
       mockParser.parseSkillMarkdown.mockReturnValueOnce({
         name: "big-body",
         displayName: "Big Body",
@@ -408,10 +552,14 @@ describe("Agent Skill Server Actions", () => {
       const fd = new FormData();
       fd.append("file", new File(["big"], "skill.md", { type: "text/markdown" }));
 
-      await expect(importSkillFile(fd)).rejects.toThrow(SkillBundleBudgetError);
+      const res = await importSkillFile(fd);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
     });
 
-    it("throws when imported skill bundle exceeds budget", async () => {
+    it("returns error when imported skill bundle exceeds budget", async () => {
       mockParser.extractSkillFromZip.mockReturnValueOnce({
         name: "big-bundle",
         displayName: "Big Bundle",
@@ -430,7 +578,55 @@ describe("Agent Skill Server Actions", () => {
         new File([new Uint8Array(10)], "skill.zip", { type: "application/zip" }),
       );
 
-      await expect(importSkillFile(fd)).rejects.toThrow(SkillBundleBudgetError);
+      const res = await importSkillFile(fd);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
+    });
+
+    it("handles AppException thrown during importSkillFile", async () => {
+      mockParser.parseSkillMarkdown.mockImplementationOnce(() => {
+        throw new AppException({
+          code: ERROR_CODE.INVALID_INPUT,
+          message: "Frontmatter parsing failed",
+        });
+      });
+      const fd = new FormData();
+      fd.append("file", new File(["bad"], "skill.md", { type: "text/markdown" }));
+
+      const res = await importSkillFile(fd);
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+      expect(res.error.message).toBe("Frontmatter parsing failed");
+    });
+
+    it("handles non-Error thrown during importSkillFile", async () => {
+      mockParser.parseSkillMarkdown.mockImplementationOnce(() => {
+        throw new Error("Generic parser error");
+      });
+      const fdError = new FormData();
+      fdError.append("file", new File(["bad"], "skill.md", { type: "text/markdown" }));
+
+      const resError = await importSkillFile(fdError);
+      expect(resError.ok).toBe(false);
+      if (!resError.ok) {
+        expect(resError.error.code).toBe("INVALID_INPUT");
+        expect(resError.error.message).toBe("Generic parser error");
+      }
+
+      mockParser.parseSkillMarkdown.mockImplementationOnce(() => {
+        throw "String error";
+      });
+      const fd = new FormData();
+      fd.append("file", new File(["bad"], "skill.md", { type: "text/markdown" }));
+
+      const res = await importSkillFile(fd);
+      expect(res.ok).toBe(false);
+      if (res.ok) return;
+      expect(res.error.code).toBe("INVALID_INPUT");
+      expect(res.error.message).toBe("Failed to parse file");
     });
   });
 

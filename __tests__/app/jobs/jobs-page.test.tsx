@@ -152,11 +152,17 @@ describe("Running Jobs Page & JobsView Component", () => {
     vi.clearAllMocks();
     mockQueryParams = { tab: "running" };
     mockListJobs.mockResolvedValue({
-      jobs: sampleJobs,
-      offline: false,
+      ok: true,
+      value: {
+        jobs: sampleJobs,
+        offline: false,
+      },
     });
     mockCancelJob.mockResolvedValue({
-      success: true,
+      ok: true,
+      value: {
+        success: true,
+      },
     });
   });
 
@@ -363,9 +369,12 @@ describe("Running Jobs Page & JobsView Component", () => {
 
   it("offline banner renders when offline: true and clicking Retry triggers reload", async () => {
     mockListJobs.mockResolvedValueOnce({
-      jobs: [],
-      offline: true,
-      error: "Inngest server is not reachable",
+      ok: true,
+      value: {
+        jobs: [],
+        offline: true,
+        error: "Inngest server is not reachable",
+      },
     });
 
     render(<JobsView />);
@@ -380,8 +389,11 @@ describe("Running Jobs Page & JobsView Component", () => {
 
     // Mock successful next call
     mockListJobs.mockResolvedValueOnce({
-      jobs: sampleJobs,
-      offline: false,
+      ok: true,
+      value: {
+        jobs: sampleJobs,
+        offline: false,
+      },
     });
 
     const retryButton = screen.getByRole("button", { name: /retry/i });
@@ -487,8 +499,11 @@ describe("Running Jobs Page & JobsView Component", () => {
   it("handles empty states for 'Running' and filtered search results", async () => {
     const user = userEvent.setup();
     mockListJobs.mockResolvedValueOnce({
-      jobs: [],
-      offline: false,
+      ok: true,
+      value: {
+        jobs: [],
+        offline: false,
+      },
     });
 
     render(<JobsView />);

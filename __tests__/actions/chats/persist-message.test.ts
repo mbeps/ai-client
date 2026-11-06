@@ -421,18 +421,20 @@ describe("persistMessage - preserveServerNames", () => {
     );
   });
 
-  it("throws Not Found when chat does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when chat does not exist or is not owned", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(
-      persistMessage(CHAT_UUID, {
-        id: MSG_UUID,
-        role: "assistant",
-        content: "hi",
-        parentId: null,
-        metadata: null,
-      }),
-    ).rejects.toThrow("Not Found");
+    const res = await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "assistant",
+      content: "hi",
+      parentId: null,
+      metadata: null,
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
     expect(chainable.insert).not.toHaveBeenCalled();
   });
 

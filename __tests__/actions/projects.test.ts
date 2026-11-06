@@ -131,7 +131,7 @@ describe("createProject", () => {
   it("inserts a project and returns the new row", async () => {
     chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
     const result = await createProject({ name: "Test Project" });
-    expect(result).toEqual(PROJECT_ROW);
+    expect(result).toEqual({ ok: true, value: PROJECT_ROW });
     expect(chainable.insert).toHaveBeenCalledOnce();
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Test Project", userId: "user-1" }),
@@ -163,19 +163,29 @@ describe("createProject", () => {
     );
   });
 
-  it("throws ZodError when name is empty", async () => {
-    await expect(createProject({ name: "" })).rejects.toThrow();
+  it("returns INVALID_INPUT when name is empty", async () => {
+    const res = await createProject({ name: "" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when name exceeds 100 characters", async () => {
-    await expect(createProject({ name: "n".repeat(101) })).rejects.toThrow();
+  it("returns INVALID_INPUT when name exceeds 100 characters", async () => {
+    const res = await createProject({ name: "n".repeat(101) });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(createProject({ name: "Test" })).rejects.toThrow(
-      "Unauthorized",
-    );
+    const res = await createProject({ name: "Test" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -184,18 +194,22 @@ describe("listProjects", () => {
   it("returns all projects for the user", async () => {
     chainable.orderBy.mockResolvedValueOnce([PROJECT_ROW]);
     const result = await listProjects();
-    expect(result).toEqual([PROJECT_ROW]);
+    expect(result).toEqual({ ok: true, value: [PROJECT_ROW] });
     expect(chainable.select).toHaveBeenCalledOnce();
   });
 
   it("returns an empty array when user has no projects", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
-    expect(await listProjects()).toEqual([]);
+    expect(await listProjects()).toEqual({ ok: true, value: [] });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(listProjects()).rejects.toThrow("Unauthorized");
+    const res = await listProjects();
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -206,7 +220,8 @@ describe("deleteProject", () => {
   it("runs a transaction to unlink chats and delete project", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deleteProject(VALID_UUID)).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
     expect(chainable.transaction).toHaveBeenCalledOnce();
     expect(chainable.update).toHaveBeenCalledOnce(); // unlink chats
@@ -214,14 +229,22 @@ describe("deleteProject", () => {
     expect(chainable.delete).toHaveBeenCalledOnce(); // delete project
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(deleteProject(VALID_UUID)).rejects.toThrow("Unauthorized");
+    const res = await deleteProject(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 
-  it("propagates transaction errors", async () => {
+  it("propagates transaction errors as INTERNAL", async () => {
     chainable.transaction.mockRejectedValueOnce(new Error("DB error"));
-    await expect(deleteProject(VALID_UUID)).rejects.toThrow("DB error");
+    const res = await deleteProject(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INTERNAL" }),
+    });
   });
 });
 
@@ -233,32 +256,44 @@ describe("renameProject", () => {
     const updated = { ...PROJECT_ROW, name: "Renamed Project" };
     chainable.returning.mockResolvedValueOnce([updated]);
     const result = await renameProject(VALID_UUID, "Renamed Project");
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Renamed Project" }),
     );
   });
 
-  it("throws 'Not Found' when project does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when project does not exist or is not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(renameProject(VALID_UUID, "Renamed")).rejects.toThrow(
-      "Not Found",
-    );
+    const res = await renameProject(VALID_UUID, "Renamed");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws ZodError when name is empty", async () => {
-    await expect(renameProject(VALID_UUID, "")).rejects.toThrow();
+  it("returns INVALID_INPUT when name is empty", async () => {
+    const res = await renameProject(VALID_UUID, "");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when projectId is not a UUID", async () => {
-    await expect(renameProject("bad-id", "New Name")).rejects.toThrow();
+  it("returns INVALID_INPUT when projectId is not a UUID", async () => {
+    const res = await renameProject("bad-id", "New Name");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(renameProject(VALID_UUID, "New Name")).rejects.toThrow(
-      "Unauthorized",
-    );
+    const res = await renameProject(VALID_UUID, "New Name");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -277,7 +312,7 @@ describe("updateProject", () => {
       name: "Updated",
       globalPrompt: "New prompt",
     });
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
   });
 
@@ -321,23 +356,29 @@ describe("updateProject", () => {
     );
   });
 
-  it("throws 'Not Found' when project is missing or not owned", async () => {
+  it("returns NOT_FOUND when project is missing or not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(
-      updateProject(VALID_UUID, { name: "Updated" }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateProject(VALID_UUID, { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws ZodError when projectId is not a UUID", async () => {
-    await expect(
-      updateProject("bad-id", { name: "Updated" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when projectId is not a UUID", async () => {
+    const res = await updateProject("bad-id", { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(
-      updateProject(VALID_UUID, { name: "Updated" }),
-    ).rejects.toThrow("Unauthorized");
+    const res = await updateProject(VALID_UUID, { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });

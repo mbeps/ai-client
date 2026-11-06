@@ -25,9 +25,14 @@ describe("getScratchpadFilesAction", () => {
     const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin });
     vi.mocked(db.select).mockReturnValueOnce({ from: mockFrom } as any);
 
-    await expect(getScratchpadFilesAction("msg-1")).rejects.toThrow(
-      "Message not found or access denied.",
-    );
+    const res = await getScratchpadFilesAction("msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Message not found or access denied.",
+      }),
+    });
   });
 
   it("returns scratchpad files when authorized", async () => {
@@ -62,7 +67,7 @@ describe("getScratchpadFilesAction", () => {
       .mockReturnValueOnce({ from: mockFromFiles } as any);
 
     const result = await getScratchpadFilesAction("msg-1");
-    expect(result).toEqual(mockFiles);
+    expect(result).toEqual({ ok: true, value: mockFiles });
   });
 
   it("returns scratchpad files in 2-arg mode when chat is owned", async () => {
@@ -94,10 +99,10 @@ describe("getScratchpadFilesAction", () => {
       .mockReturnValueOnce({ from: mockFromFiles } as any);
 
     const result = await getScratchpadFilesAction("chat-1", "msg-1");
-    expect(result).toEqual(mockFiles);
+    expect(result).toEqual({ ok: true, value: mockFiles });
   });
 
-  it("throws error in 2-arg mode when user does not own chat", async () => {
+  it("returns NOT_FOUND in 2-arg mode when user does not own chat", async () => {
     vi.mocked(requireSession).mockResolvedValueOnce({
       user: { id: "user-1" },
     } as any);
@@ -108,9 +113,14 @@ describe("getScratchpadFilesAction", () => {
 
     vi.mocked(db.select).mockReturnValueOnce({ from: mockFromChat } as any);
 
-    await expect(getScratchpadFilesAction("chat-1", "msg-1")).rejects.toThrow(
-      "Chat not found or access denied.",
-    );
+    const res = await getScratchpadFilesAction("chat-1", "msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Chat not found or access denied.",
+      }),
+    });
   });
 
   it("returns empty array safely when messageId is streaming", async () => {
@@ -119,7 +129,7 @@ describe("getScratchpadFilesAction", () => {
     } as any);
 
     const result = await getScratchpadFilesAction("chat-1", "streaming");
-    expect(result).toEqual([]);
+    expect(result).toEqual({ ok: true, value: [] });
   });
 });
 

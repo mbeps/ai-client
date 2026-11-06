@@ -21,7 +21,7 @@ describe("useStreamWatchdog", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    mockIsChatGenerating.mockResolvedValue(false);
+    mockIsChatGenerating.mockResolvedValue({ ok: true, value: false });
   });
 
   afterEach(() => {
@@ -40,7 +40,7 @@ describe("useStreamWatchdog", () => {
   }
 
   it("does not abort at 30-attempt threshold if isChatGenerating returns true", async () => {
-    mockIsChatGenerating.mockResolvedValue(true);
+    mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
     const syncFromDb = vi.fn().mockResolvedValue(false);
     const setIsStreaming = vi.fn();
     const refs = createRefs({
@@ -71,7 +71,7 @@ describe("useStreamWatchdog", () => {
   });
 
   it("aborts at 30-attempt threshold when isChatGenerating returns false", async () => {
-    mockIsChatGenerating.mockResolvedValue(false);
+    mockIsChatGenerating.mockResolvedValue({ ok: true, value: false });
     const syncFromDb = vi.fn().mockResolvedValue(false);
     const setIsStreaming = vi.fn();
     const refs = createRefs({

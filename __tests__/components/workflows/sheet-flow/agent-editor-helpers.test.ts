@@ -180,15 +180,15 @@ describe("agent-editor-helpers", () => {
   describe("uploadRunInputFiles", () => {
     it("returns empty array when no files are provided", async () => {
       const result = await uploadRunInputFiles([]);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: true, value: [] });
       expect(uploadRunInput).not.toHaveBeenCalled();
     });
 
     it("uploads files and returns their IDs", async () => {
-      vi.mocked(uploadRunInput).mockResolvedValue([
-        { id: "att-1" },
-        { id: "att-2" },
-      ] as any);
+      vi.mocked(uploadRunInput).mockResolvedValue({
+        ok: true,
+        value: [{ id: "att-1" }, { id: "att-2" }],
+      } as any);
 
       const files = [
         new File(["content 1"], "test1.txt"),
@@ -196,8 +196,22 @@ describe("agent-editor-helpers", () => {
       ];
 
       const result = await uploadRunInputFiles(files);
-      expect(result).toEqual(["att-1", "att-2"]);
+      expect(result).toEqual({ ok: true, value: ["att-1", "att-2"] });
       expect(uploadRunInput).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns fail Result when upload fails", async () => {
+      vi.mocked(uploadRunInput).mockResolvedValue({
+        ok: false,
+        error: { code: "FILE_TOO_LARGE", message: "File too large" },
+      } as any);
+
+      const files = [new File(["content 1"], "large.bin")];
+      const result = await uploadRunInputFiles(files);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "FILE_TOO_LARGE", message: "File too large" },
+      });
     });
   });
 });

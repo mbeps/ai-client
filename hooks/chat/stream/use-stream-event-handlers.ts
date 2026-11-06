@@ -110,7 +110,14 @@ async function executeRejoinFinish(
   if (!chatId || !chatExists) return;
 
   try {
-    const data = await getChat(chatId);
+    const res = await getChat(chatId);
+    if (!res.ok) {
+      if (!isAccessOrNotFoundError(res.error)) {
+        logger.error("Failed to refetch chat on rejoin finish", res.error);
+      }
+      return;
+    }
+    const data = res.value;
     const fullChat = buildChatFromRows(data);
     upsertChat(fullChat);
 

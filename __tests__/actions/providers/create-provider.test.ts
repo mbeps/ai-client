@@ -48,7 +48,8 @@ describe("createProvider action", () => {
   });
 
   it("rejects invalid input schema", async () => {
-    await expect(createProvider({} as any)).rejects.toThrow();
+    const res = await createProvider({} as any);
+    expect(res.ok).toBe(false);
   });
 
   it("encrypts api key and creates provider record", async () => {
@@ -62,7 +63,7 @@ describe("createProvider action", () => {
       baseUrl: "https://api.openai.com/v1",
     });
 
-    expect(res).toEqual(created);
+    expect(res).toEqual({ ok: true, value: created });
     expect(chainable.insert).toHaveBeenCalled();
   });
 });

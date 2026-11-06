@@ -106,16 +106,24 @@ describe("listJobs Server Action", () => {
   });
 
   describe("Authentication", () => {
-    it("throws unauthorized error when session is missing", async () => {
-      mockRequireSession.mockRejectedValueOnce(new Error("Unauthorized"));
+    it("returns unauthorized error when session is missing", async () => {
+      const { AppException } = await import("@/lib/error/app-exception");
+      const { ERROR_CODE } = await import("@/lib/error/error-code");
+      mockRequireSession.mockRejectedValueOnce(
+        new AppException({
+          code: ERROR_CODE.UNAUTHORIZED,
+          message: "Unauthorized",
+        }),
+      );
 
-      await expect(listJobs()).rejects.toThrow("Unauthorized");
-    });
-
-    it("throws unauthorized error when session user is missing", async () => {
-      mockRequireSession.mockResolvedValueOnce({ session: { id: "sess-1" } });
-
-      await expect(listJobs()).rejects.toThrow("Unauthorized");
+      const res = await listJobs();
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "UNAUTHORIZED",
+          message: "Unauthorized",
+        }),
+      });
     });
   });
 
@@ -127,7 +135,9 @@ describe("listJobs Server Action", () => {
         error: "Inngest daemon unreachable",
       });
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result).toEqual({
         jobs: [],
@@ -143,7 +153,9 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result).toEqual({
         jobs: [],
@@ -184,7 +196,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -221,7 +235,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -258,7 +274,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -297,7 +315,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -334,7 +354,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -370,7 +392,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -405,7 +429,9 @@ describe("listJobs Server Action", () => {
       // No chats found in DB
       mockDbData.chats = [];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -437,7 +463,9 @@ describe("listJobs Server Action", () => {
 
       mockDbData.transformRuns = [];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -469,7 +497,9 @@ describe("listJobs Server Action", () => {
 
       mockDbData.translations = [];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -501,7 +531,9 @@ describe("listJobs Server Action", () => {
 
       mockDbData.kbDocs = [];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -533,7 +565,9 @@ describe("listJobs Server Action", () => {
 
       mockDbData.knowledgebases = [];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
@@ -565,7 +599,9 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       expect(result.jobs[0]).toEqual(rawJob);
@@ -614,7 +650,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(2);
       expect(result.jobs[0].title).toBe("Deduplicated Chat");
@@ -641,7 +679,9 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs).toHaveLength(1);
       expect(result.jobs[0].title).toBe("Custom Sync Task");
@@ -676,7 +716,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs[0].title).toBe("Default Chat Title");
     });
@@ -709,7 +751,9 @@ describe("listJobs Server Action", () => {
         },
       ];
 
-      const result = await listJobs();
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const result = (res as any).value;
 
       expect(result.jobs[0].title).toBe("Default Transform Title");
       expect(result.jobs[0].url).toBe(

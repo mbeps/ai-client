@@ -104,6 +104,8 @@ vi.mock("@/lib/logger", () => ({
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { inngest } from "@/lib/inngest/client";
 
 describe("generateChatResponse Inngest Function", () => {
@@ -922,6 +924,42 @@ describe("generateChatResponse Inngest Function", () => {
       );
     });
 
+    it("does not treat TimeoutError or ResponseAborted as clean user abort", async () => {
+      const timeoutError = new Error("Gateway timeout");
+      timeoutError.name = "TimeoutError";
+      mockLoadChatContext.mockRejectedValueOnce(timeoutError);
+
+      const fn = (generateChatResponse as any).fn;
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-timeout-error",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).rejects.toThrow("Gateway timeout");
+
+      const respAbortedError = new Error("Response aborted by upstream");
+      respAbortedError.name = "ResponseAborted";
+      mockLoadChatContext.mockRejectedValueOnce(respAbortedError);
+
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-resp-aborted",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).rejects.toThrow("Response aborted by upstream");
+    });
+
     it("skips finish emission and exits cleanly when persistAssistantResponse returns false", async () => {
       mockPersistResponse.mockResolvedValueOnce(false);
       const fn = (generateChatResponse as any).fn;
@@ -964,6 +1002,22 @@ describe("generateChatResponse Inngest Function", () => {
         expect.anything(),
         expect.objectContaining({ type: "error" }),
       );
+
+      // Also verify AppException with ERROR_CODE.NOT_FOUND
+      mockLoadChatContext.mockRejectedValueOnce(
+        new AppException({ code: ERROR_CODE.NOT_FOUND, message: "Chat not found" }),
+      );
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-deleted",
+              userId: "user-1",
+              userMessageId: "msg-1",
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
     });
 
     it("exits cleanly and persists partial response if stream was aborted before persistAssistantResponse", async () => {

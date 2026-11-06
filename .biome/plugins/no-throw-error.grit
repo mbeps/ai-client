@@ -1,0 +1,5 @@
+language js
+
+`throw new Error($args)` where {
+  register_diagnostic(span=$args, message="Avoid generic throw new Error in Server Actions; return Result or throw AppException", severity="error")
+}

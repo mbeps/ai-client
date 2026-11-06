@@ -117,7 +117,10 @@ describe("exportProviderRegistry", () => {
       headers: { Authorization: "Bearer sk-plaintext-secret" },
     });
 
-    const result = await exportProviderRegistry();
+    const res = await exportProviderRegistry();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result.providers).toHaveLength(1);
     const exported = result.providers[0];
@@ -134,9 +137,12 @@ describe("exportProviderRegistry", () => {
       .mockResolvedValueOnce([PROVIDER_ROW])
       .mockResolvedValueOnce([MODEL_ROW]);
 
-    const result = await exportProviderRegistry({
+    const res = await exportProviderRegistry({
       providerIds: ["11111111-1111-4111-8111-111111111111"],
     });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result.providers).toHaveLength(1);
     expect(result.version).toBe("1");
@@ -145,7 +151,10 @@ describe("exportProviderRegistry", () => {
   it("handles empty providers and models correctly", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    const result = await exportProviderRegistry();
+    const res = await exportProviderRegistry();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result.providers).toHaveLength(0);
   });
@@ -162,7 +171,10 @@ describe("exportProviderRegistry", () => {
       .mockResolvedValueOnce([PROVIDER_ROW])
       .mockResolvedValueOnce(modelsWithVariousTypes);
 
-    const result = await exportProviderRegistry({ providerIds: [] });
+    const res = await exportProviderRegistry({ providerIds: [] });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result.providers[0].models).toHaveLength(4);
     expect(result.providers[0].models[0].modelType).toBe("embedding");

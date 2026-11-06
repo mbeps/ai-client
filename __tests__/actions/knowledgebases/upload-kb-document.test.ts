@@ -1,48 +1,35 @@
-// ── env must be mocked before any module that reads it ──────────────────────
-vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    S3_ENDPOINT: "http://localhost:9000",
-    S3_REGION: "us-east-1",
-    S3_ACCESS_KEY: "test",
-    S3_SECRET_KEY: "test",
-    S3_BUCKET: "test-bucket",
-    POSTMARK_SERVER_TOKEN: "test-token",
-    POSTMARK_FROM_EMAIL: "noreply@example.com",
-    NODE_ENV: "test",
-  },
-}));
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("next/headers", () => ({ headers: vi.fn().mockResolvedValue({}) }));
-
-// Drizzle awaits terminate at `.where(...)` for selects and at
-// `.returning()` for inserts — seed those, not a fake `then`.
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of [
-    "select",
-    "from",
-    "insert",
-    "values",
-    "update",
-    "set",
-    "delete",
-  ]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
-  c.where = vi.fn();
-  c.returning = vi.fn();
+  const c: Record<string, ReturnType<typeof vi.fn>> = {};
+  c.select = vi.fn(() => c);
+  c.from = vi.fn(() => c);
+  c.where = vi.fn(() => c);
+  c.insert = vi.fn(() => c);
+  c.values = vi.fn(() => c);
+  c.returning = vi.fn(() => c);
+  c.delete = vi.fn(() => c);
+  c.update = vi.fn(() => c);
+  c.set = vi.fn(() => c);
   return c;
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-const uploadObjectMock = vi.hoisted(() => vi.fn());
+vi.mock("@/config/env", () => ({
+  env: {
+    RATE_LIMIT_UPLOAD_RPM: 60,
+  },
+}));
 
+vi.mock("@/config/knowledgebase", () => ({
+  KB_CONFIG: {
+    ALLOWED_MIME_TYPES: new Set(["application/pdf", "text/plain", "text/markdown"]),
+    MAX_FILE_SIZE_BYTES: 50 * 1024 * 1024,
+  },
+}));
+
+const uploadObjectMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/storage/upload-object", () => ({
   uploadObject: uploadObjectMock,
 }));
@@ -53,8 +40,7 @@ vi.mock("@/lib/storage/ensure-bucket", () => ({
 
 vi.mock("@/lib/auth/require-session", () => ({
   requireSession: vi.fn().mockResolvedValue({
-    user: { id: "user-1", name: "Test User", email: "test@example.com" },
-    session: { id: "session-1" },
+    user: { id: "user_test_1" },
   }),
 }));
 
@@ -65,53 +51,56 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: checkRateLimitMock,
 }));
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@/lib/attachments/resolve-mime-type", () => ({
+  resolveMimeType: vi.fn(async (file: File) => {
+    const bytes = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    }
+    return file.type || "text/plain";
+  }),
+}));
+
 import { uploadKbDocument } from "@/actions/knowledgebases/upload-kb-document";
+import { ERROR_CODE } from "@/lib/error/error-code";
 
 const DOC_ROW = {
-  id: "33333333-3333-4333-8333-333333333333",
-  kbId: "44444444-4444-4444-8444-444444444444",
-  userId: "user-1",
-  name: "doc.txt",
+  id: "doc_test_1",
+  kbId: "kb_test_1",
+  userId: "user_test_1",
+  name: "guide.txt",
   mimeType: "text/plain",
-  size: 5,
+  size: 1024,
+  s3Key: "kb/kb_test_1/doc_test_1/guide.txt",
   status: "pending",
+  createdAt: new Date(),
+  updatedAt: new Date(),
 };
 
 function makeFormData(): FormData {
   const fd = new FormData();
-  fd.append(
-    "file",
-    new File([new Uint8Array(5)], "doc.txt", { type: "text/plain" }),
-  );
-  fd.append("kbId", "44444444-4444-4444-8444-444444444444");
+  const file = new File([new Uint8Array(1024)], "guide.txt", {
+    type: "text/plain",
+  });
+  fd.append("file", file);
+  fd.append("kbId", DOC_ROW.kbId);
   return fd;
 }
 
 describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    chainable.select.mockReturnValue(chainable);
-    chainable.from.mockReturnValue(chainable);
-    chainable.insert.mockReturnValue(chainable);
-    chainable.values.mockReturnValue(chainable);
-    chainable.update.mockReturnValue(chainable);
-    chainable.set.mockReturnValue(chainable);
-    chainable.delete.mockReturnValue(chainable);
-    // call 1: KB ownership select; later calls: compensation delete (not awaited)
-    let whereCall = 0;
-    chainable.where.mockImplementation(() => {
-      whereCall++;
-      return whereCall === 1
-        ? Promise.resolve([{ id: DOC_ROW.kbId }])
-        : chainable;
-    });
-    chainable.returning.mockResolvedValue([DOC_ROW]);
+    chainable.where.mockImplementation(() =>
+      Promise.resolve([{ id: DOC_ROW.kbId }]),
+    );
+    chainable.returning.mockImplementation(() => Promise.resolve([DOC_ROW]));
     uploadObjectMock.mockResolvedValue(undefined);
+    checkRateLimitMock.mockReturnValue({ allowed: true, retryAfterSeconds: 0 });
   });
 
-  it("inserts the DB row BEFORE calling uploadObject", async () => {
+  it("inserts the pending row before calling uploadObject", async () => {
     const order: string[] = [];
+
     chainable.values.mockImplementation((() => {
       order.push("db-insert");
       return chainable;
@@ -120,7 +109,8 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
       order.push("s3-upload");
     });
 
-    await uploadKbDocument(makeFormData());
+    const result = await uploadKbDocument(makeFormData());
+    expect(result.ok).toBe(true);
 
     expect(order.indexOf("db-insert")).toBeLessThan(order.indexOf("s3-upload"));
   });
@@ -128,9 +118,11 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
   it("compensates by deleting the inserted row when uploadObject rejects", async () => {
     uploadObjectMock.mockRejectedValue(new Error("S3 unavailable"));
 
-    await expect(uploadKbDocument(makeFormData())).rejects.toThrow(
-      "S3 unavailable",
-    );
+    const result = await uploadKbDocument(makeFormData());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.INTERNAL);
+    }
 
     expect(chainable.delete).toHaveBeenCalled();
     expect(chainable.where).toHaveBeenCalled();
@@ -138,55 +130,83 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
 
   it("returns the document row and marks KB stale on happy path", async () => {
     const result = await uploadKbDocument(makeFormData());
-    expect(result).toEqual(DOC_ROW);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual(DOC_ROW);
+    }
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({ indexStatus: "stale" }),
     );
   });
 
   it("rejects a file whose sniffed magic bytes are a disallowed type (T9.8)", async () => {
-    // Claims text/plain but bytes are a ZIP archive → sniffs as xlsx, not allowed for KBs.
     const zipBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
     const fd = new FormData();
     fd.append("file", new File([zipBytes], "doc.txt", { type: "text/plain" }));
     fd.append("kbId", DOC_ROW.kbId);
 
-    await expect(uploadKbDocument(fd)).rejects.toThrow(/not supported/i);
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UNSUPPORTED_FILE_TYPE);
+      expect(result.error.message).toContain("Spreadsheets and Office files are not supported");
+    }
   });
 
-  it("throws when rate limit is exceeded", async () => {
+  it("returns RATE_LIMIT when rate limit is exceeded", async () => {
     checkRateLimitMock.mockReturnValueOnce({ allowed: false, retryAfterSeconds: 45 });
-    await expect(uploadKbDocument(makeFormData())).rejects.toThrow(
-      "Too many uploads. Retry in 45s.",
-    );
+    const result = await uploadKbDocument(makeFormData());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.RATE_LIMIT);
+      expect(result.error.message).toBe("Too many uploads. Retry in 45s.");
+    }
   });
 
-  it("throws when no file is provided", async () => {
+  it("returns INVALID_INPUT when no file is provided", async () => {
     const fd = new FormData();
     fd.append("kbId", DOC_ROW.kbId);
-    await expect(uploadKbDocument(fd)).rejects.toThrow("No file provided");
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+      expect(result.error.message).toBe("No file provided");
+    }
   });
 
-  it("throws when no kbId is provided", async () => {
+  it("returns INVALID_INPUT when no kbId is provided", async () => {
     const fd = new FormData();
     fd.append("file", new File([new Uint8Array(5)], "doc.txt", { type: "text/plain" }));
-    await expect(uploadKbDocument(fd)).rejects.toThrow("No kbId provided");
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+      expect(result.error.message).toBe("No kbId provided");
+    }
   });
 
-  it("throws 'Not Found' when knowledgebase does not exist or user does not own it", async () => {
+  it("returns NOT_FOUND when knowledgebase does not exist or user does not own it", async () => {
     chainable.where.mockImplementationOnce(() => Promise.resolve([]));
-    await expect(uploadKbDocument(makeFormData())).rejects.toThrow("Not Found");
+    const result = await uploadKbDocument(makeFormData());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.NOT_FOUND);
+      expect(result.error.message).toBe("Not Found");
+    }
   });
 
-  it("throws when file size exceeds 50 MB limit", async () => {
+  it("returns FILE_TOO_LARGE when file size exceeds 50 MB limit", async () => {
     const bigFile = new File([new Uint8Array(5)], "big.txt", { type: "text/plain" });
     Object.defineProperty(bigFile, "size", { value: 50 * 1024 * 1024 + 1 });
     const fd = new FormData();
     fd.append("file", bigFile);
     fd.append("kbId", DOC_ROW.kbId);
 
-    await expect(uploadKbDocument(fd)).rejects.toThrow(
-      "File exceeds the 50 MB size limit.",
-    );
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.FILE_TOO_LARGE);
+      expect(result.error.message).toBe("File exceeds the 50 MB size limit.");
+    }
   });
 });

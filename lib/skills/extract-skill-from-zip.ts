@@ -1,3 +1,4 @@
+import { AppException } from "@/lib/error/app-exception";
 import {
   type ParsedSkill,
   parseSkillMarkdown,
@@ -111,7 +112,11 @@ export function extractSkillFromZip(
   buffer: Buffer | Uint8Array,
   fallbackName = "uploaded-skill",
 ): ParsedSkill {
-  const entries = parseZipBuffer(buffer);
+  const entriesRes = parseZipBuffer(buffer);
+  if (!entriesRes.ok) {
+    throw new AppException(entriesRes.error);
+  }
+  const entries = entriesRes.value;
 
   // Locate primary SKILL.md (case-insensitive) or any root .md file
   let skillEntry = entries.find(

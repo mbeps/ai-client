@@ -72,13 +72,16 @@ describe("MCP redirect bug reproduction", () => {
       });
 
     try {
-      const transport = await buildTransport({
+      const transportRes = await buildTransport({
         id: "srv-redir",
         name: "Redirecting MCP",
         url: "https://redirect.example.com/api/mcp",
       });
 
-      const client = await createMCPClient({ transport });
+      expect(transportRes.ok).toBe(true);
+      if (!transportRes.ok) return;
+
+      const client = await createMCPClient({ transport: transportRes.value });
       await client.tools();
       await client.close();
     } finally {

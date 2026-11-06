@@ -74,7 +74,7 @@ describe("Memory Server Actions", () => {
       });
 
       const result = await listMemories();
-      expect(result).toEqual(mockRows);
+      expect(result).toEqual({ ok: true, value: mockRows });
       expect(mockRequireSession).toHaveBeenCalled();
     });
   });
@@ -88,10 +88,10 @@ describe("Memory Server Actions", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockSaveMemoryForUser.mockResolvedValue(mockResult);
+      mockSaveMemoryForUser.mockResolvedValue({ ok: true, value: mockResult });
 
       const result = await createMemory({ content: "Prefers concise replies" });
-      expect(result).toEqual(mockResult);
+      expect(result).toEqual({ ok: true, value: mockResult });
       expect(mockSaveMemoryForUser).toHaveBeenCalledWith(
         "user-123",
         "Prefers concise replies",
@@ -99,7 +99,11 @@ describe("Memory Server Actions", () => {
     });
 
     it("rejects invalid input", async () => {
-      await expect(createMemory({ content: "" })).rejects.toThrow();
+      const res = await createMemory({ content: "" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
     });
   });
 
@@ -113,15 +117,26 @@ describe("Memory Server Actions", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockUpdateMemoryForUser.mockResolvedValue(mockResult);
+      mockUpdateMemoryForUser.mockResolvedValue({
+        ok: true,
+        value: mockResult,
+      });
 
       const result = await updateMemory({ id, content: "Updated preference" });
-      expect(result).toEqual(mockResult);
+      expect(result).toEqual({ ok: true, value: mockResult });
       expect(mockUpdateMemoryForUser).toHaveBeenCalledWith(
         "user-123",
         id,
         "Updated preference",
       );
+    });
+
+    it("rejects invalid input", async () => {
+      const res = await updateMemory({ id: "invalid-uuid", content: "" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
     });
   });
 
@@ -131,7 +146,8 @@ describe("Memory Server Actions", () => {
       const id2 = crypto.randomUUID();
       mockDeleteMemoryForUser.mockResolvedValue(undefined);
 
-      await deleteMemories({ ids: [id1, id2] });
+      const res = await deleteMemories({ ids: [id1, id2] });
+      expect(res).toEqual({ ok: true, value: undefined });
       expect(mockDeleteMemoryForUser).toHaveBeenCalledWith("user-123", [
         id1,
         id2,
@@ -142,8 +158,17 @@ describe("Memory Server Actions", () => {
       const id = crypto.randomUUID();
       mockDeleteMemoryForUser.mockResolvedValue(undefined);
 
-      await deleteMemories({ ids: [id] });
+      const res = await deleteMemories({ ids: [id] });
+      expect(res).toEqual({ ok: true, value: undefined });
       expect(mockDeleteMemoryForUser).toHaveBeenCalledWith("user-123", [id]);
+    });
+
+    it("rejects invalid input", async () => {
+      const res = await deleteMemories({ ids: ["invalid-uuid"] });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
     });
   });
 });

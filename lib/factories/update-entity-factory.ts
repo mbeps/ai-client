@@ -2,7 +2,13 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "factory"]);
 
@@ -25,52 +31,81 @@ export interface UpdateEntityConfig<TSchema, _TResult> {
 
 /**
  * A factory function to create a standardized update action for any entity.
- * It handles session retrieval, input validation, ownership check, and database update.
+ * It handles session retrieval, input validation, ownership check, and database update,
+ * returning a Result wrapped by defineAction.
  *
  * @param config - Configuration object for the update action.
- * @returns An async function that performs the update and returns the updated record.
+ * @returns An async function that performs the update and returns a Result.
+ * @author Maruf Bepary
  */
 export function updateEntityFactory<TSchema, TResult>(
   config: UpdateEntityConfig<TSchema, TResult>,
 ) {
   const { table, schema, mapValues } = config;
 
-  return async (id: string, data: TSchema): Promise<TResult> => {
-    const session = await requireSession();
+  return defineAction(
+    async (
+      id: string,
+      data: TSchema,
+    ): Promise<Result<TResult, CommonError>> => {
+      const session = await requireSession();
 
-    // Validate inputs
-    const validatedId = z.string().uuid().parse(id);
-    const validatedData = schema.parse(data);
+      // Validate inputs
+      const idParsed = z.string().uuid().safeParse(id);
+      if (!idParsed.success) {
+        return fail({
+          code: ERROR_CODE.INVALID_INPUT,
+          message: "Invalid entity ID format",
+        });
+      }
+      const validatedId = idParsed.data;
 
-    // Prepare update data
-    const updateValues: Record<string, unknown> = mapValues
-      ? mapValues(validatedData)
-      : Object.fromEntries(
-          Object.entries(validatedData as any).filter(
-            ([_, v]) => v !== undefined,
-          ),
+      const dataParsed = schema.safeParse(data);
+      if (!dataParsed.success) {
+        const issues = dataParsed.error.issues.map((i) =>
+          i.path.length > 0 ? `${i.path.join(".")}: ${i.message}` : i.message,
         );
+        return fail({
+          code: ERROR_CODE.INVALID_INPUT,
+          message: dataParsed.error.issues[0]?.message ?? "Invalid input",
+          issues,
+        });
+      }
+      const validatedData = dataParsed.data;
 
-    // Ensure updatedAt is set if the table has it
-    if ("updatedAt" in table) {
-      updateValues.updatedAt = new Date();
-    }
+      // Prepare update data
+      const updateValues: Record<string, unknown> = mapValues
+        ? mapValues(validatedData)
+        : Object.fromEntries(
+            Object.entries(validatedData as any).filter(
+              ([_, v]) => v !== undefined,
+            ),
+          );
 
-    const [row] = await db
-      .update(table)
-      .set(updateValues)
-      .where(whereOwner(table, validatedId, session.user.id))
-      .returning();
+      // Ensure updatedAt is set if the table has it
+      if ("updatedAt" in table) {
+        updateValues.updatedAt = new Date();
+      }
 
-    if (!row) {
-      throw new Error("Not Found");
-    }
+      const [row] = await db
+        .update(table)
+        .set(updateValues)
+        .where(whereOwner(table, validatedId, session.user.id))
+        .returning();
 
-    log.info("Updated entity (id: {id})", {
-      id: validatedId,
-      userId: session.user.id,
-    });
+      if (!row) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Not Found",
+        });
+      }
 
-    return row as TResult;
-  };
+      log.info("Updated entity (id: {id})", {
+        id: validatedId,
+        userId: session.user.id,
+      });
+
+      return ok(row as TResult);
+    },
+  );
 }

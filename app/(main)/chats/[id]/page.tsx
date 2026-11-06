@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { getChat } from "@/actions/chats/get-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
-import type { Chat } from "@/types/chat/chat";
 
 /**
  * Chat detail page with streaming message view and AI interaction.
@@ -25,13 +24,12 @@ export default async function ChatPage({
   const { id: chatId } = await params;
   const { msg } = await searchParams;
 
-  let chat: Chat;
-  try {
-    const data = await getChat(chatId);
-    chat = buildChatFromRows(data);
-  } catch {
+  const res = await getChat(chatId);
+  if (!res.ok) {
     notFound();
   }
+
+  const chat = buildChatFromRows(res.value);
 
   return <ChatPageClient initialChat={chat} initialMessage={msg} />;
 }

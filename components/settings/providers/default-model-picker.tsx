@@ -102,7 +102,11 @@ export function DefaultModelPicker({
 
     setIsSaving(true);
     try {
-      await setDefaultChatModel(item.id);
+      const res = await setDefaultChatModel(item.id);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to set chat model");
+        return;
+      }
       invalidateProviderRegistryCache();
       await onRefresh();
       toast.success("Default chat model updated");
@@ -120,7 +124,11 @@ export function DefaultModelPicker({
 
     setIsSaving(true);
     try {
-      await setDefaultEmbeddingModel(item.id);
+      const res = await setDefaultEmbeddingModel(item.id);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to set embedding model");
+        return;
+      }
       invalidateProviderRegistryCache();
       await onRefresh();
       toast.success("Default embedding model updated");

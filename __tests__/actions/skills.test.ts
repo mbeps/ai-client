@@ -145,21 +145,26 @@ describe("createSkill", () => {
       enabled: true,
     });
 
-    expect(result).toEqual(SKILL_ROW);
+    expect(result).toEqual({ ok: true, value: SKILL_ROW });
     expect(chainable.insert).toHaveBeenCalledOnce();
   });
 
-  it("throws error if slug already exists for user", async () => {
+  it("returns CONFLICT error if slug already exists for user", async () => {
     chainable.limit.mockResolvedValueOnce([{ id: "existing-id" }]);
 
-    await expect(
-      createSkill({
-        name: "clean-code",
-        displayName: "Clean Code",
-        description: "Desc",
-        content: "Content",
+    const res = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Desc",
+      content: "Content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "CONFLICT",
+        message: 'A skill with name "clean-code" already exists.',
       }),
-    ).rejects.toThrow('A skill with name "clean-code" already exists.');
+    });
   });
 });
 
@@ -167,7 +172,7 @@ describe("listSkills", () => {
   it("returns all user skills", async () => {
     chainable.orderBy.mockResolvedValueOnce([SKILL_ROW]);
     const result = await listSkills();
-    expect(result).toEqual([SKILL_ROW]);
+    expect(result).toEqual({ ok: true, value: [SKILL_ROW] });
     expect(chainable.select).toHaveBeenCalledOnce();
   });
 });
@@ -176,12 +181,16 @@ describe("getSkill", () => {
   it("returns skill by id", async () => {
     chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
     const result = await getSkill(SKILL_ROW.id);
-    expect(result).toEqual(SKILL_ROW);
+    expect(result).toEqual({ ok: true, value: SKILL_ROW });
   });
 
-  it("throws Not Found when skill does not exist", async () => {
+  it("returns NOT_FOUND when skill does not exist", async () => {
     chainable.limit.mockResolvedValueOnce([]);
-    await expect(getSkill(SKILL_ROW.id)).rejects.toThrow("Not Found");
+    const res = await getSkill(SKILL_ROW.id);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+    });
   });
 });
 
@@ -196,7 +205,7 @@ describe("updateSkill", () => {
       displayName: "Updated Clean Code",
     });
 
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
   });
 });
@@ -207,7 +216,10 @@ describe("toggleSkillEnabled", () => {
     chainable.returning.mockResolvedValueOnce([toggled]);
 
     const result = await toggleSkillEnabled(SKILL_ROW.id, false);
-    expect(result.enabled).toBe(false);
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({ enabled: false }),
+    });
   });
 });
 
@@ -215,14 +227,20 @@ describe("deleteSkill", () => {
   it("deletes skill by id", async () => {
     chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
     chainable.returning.mockResolvedValueOnce([{ id: SKILL_ROW.id }]);
-    await expect(deleteSkill(SKILL_ROW.id)).resolves.toEqual({
-      deletedCount: 1,
+    const result = await deleteSkill(SKILL_ROW.id);
+    expect(result).toEqual({
+      ok: true,
+      value: { deletedCount: 1 },
     });
     expect(chainable.delete).toHaveBeenCalledOnce();
   });
 
-  it("throws Not Found when the skill is not visible to the user", async () => {
+  it("returns NOT_FOUND when the skill is not visible to the user", async () => {
     chainable.limit.mockResolvedValueOnce([]);
-    await expect(deleteSkill(SKILL_ROW.id)).rejects.toThrow("Not Found");
+    const res = await deleteSkill(SKILL_ROW.id);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+    });
   });
 });

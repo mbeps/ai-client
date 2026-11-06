@@ -1,7 +1,7 @@
 import { toast } from "sonner";
-import type { getLatestTranslationAction } from "@/actions/workflows/get-latest-translation";
 import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import { LANGUAGES } from "@/config/languages";
+import type { WorkflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -21,9 +21,7 @@ export interface RealtimeTranslationEvent {
  *
  * @author Maruf Bepary
  */
-export type LatestTranslation = NonNullable<
-  Awaited<ReturnType<typeof getLatestTranslationAction>>
->;
+export type LatestTranslation = WorkflowTranslation;
 
 /**
  * Represents translation hydration setters.
@@ -199,14 +197,21 @@ export async function executeTranslationRequest(params: {
 }): Promise<void> {
   try {
     const payloadAttachment = toTranslationAttachmentPayload(params.attachment);
-    const { translationId } = await triggerTranslation({
+    const res = await triggerTranslation({
       text: params.sourceText,
       sourceLanguage: params.sourceLangLabel,
       targetLanguage: params.targetLangLabel,
       modelId: params.modelId || undefined,
       attachment: payloadAttachment,
     });
-    params.onSuccess(translationId);
+    if (!res.ok) {
+      params.onError();
+      if (!params.handleApiError(res.error)) {
+        toast.error(res.error.message || "Translation failed");
+      }
+      return;
+    }
+    params.onSuccess(res.value.translationId);
   } catch (error: unknown) {
     params.onError();
     if (!params.handleApiError(error)) {

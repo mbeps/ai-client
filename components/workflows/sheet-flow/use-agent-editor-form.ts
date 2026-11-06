@@ -66,13 +66,13 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
     let mounted = true;
     async function loadAgent() {
       try {
-        const agent = await getTransformAgent(id);
-        if (!agent) {
+        const res = await getTransformAgent(id);
+        if (!res.ok || !res.value) {
           if (mounted) notFound();
           return;
         }
         if (mounted) {
-          hydrateAgentFormState(agent, {
+          hydrateAgentFormState(res.value, {
             setName,
             setDescription,
             setGlobalContext,

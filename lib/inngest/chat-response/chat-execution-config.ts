@@ -8,7 +8,9 @@ import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
-import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { toAppError } from "@/lib/error/to-app-error";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
@@ -29,6 +31,12 @@ export function isAbortError(
   error: unknown,
   abortSignal: AbortSignal,
 ): boolean {
+  if (
+    error instanceof Error &&
+    (error.name === "TimeoutError" || error.name === "ResponseAborted")
+  ) {
+    return false;
+  }
   return (
     abortSignal.aborted ||
     (error instanceof Error && error.name === "AbortError")
@@ -45,7 +53,8 @@ export function isAbortError(
 function isChatNotFoundError(error: unknown): boolean {
   return (
     error instanceof ChatNotFoundError ||
-    (error as Record<string, unknown> | null)?.code === "CHAT_NOT_FOUND"
+    (error as Record<string, unknown> | null)?.code === "CHAT_NOT_FOUND" ||
+    (error instanceof AppException && error.error.code === ERROR_CODE.NOT_FOUND)
   );
 }
 
@@ -252,16 +261,15 @@ export async function handleChatGenerationError(
     );
     return;
   }
-  const effectiveError = classifyProviderError(error) ?? error;
+  const appErr = toAppError(error);
   const errorMsg =
-    effectiveError instanceof Error
-      ? effectiveError.message
-      : "Generation failed";
-  const errorCode = (effectiveError as any)?.code;
+    appErr.code === ERROR_CODE.INTERNAL && error instanceof Error
+      ? error.message
+      : appErr.message;
   log.error("Chat generation failed in Inngest (chatId: {chatId}): {error}", {
     chatId,
     error: errorMsg,
   });
-  await emit({ type: "error", message: errorMsg, code: errorCode });
+  await emit({ type: "error", message: errorMsg, code: appErr.code });
   throw error;
 }

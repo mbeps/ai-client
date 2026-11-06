@@ -10,7 +10,8 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * @see ChatsClient for client-side rendering and interactions
  */
 export default async function ChatsPage() {
-  const rows = await listChats().catch(() => [] as ChatRow[]);
+  const res = await listChats();
+  const rows: ChatRow[] = res.ok ? res.value : [];
   const chats = rows.map((row) => ({
     id: row.id,
     title: row.title,

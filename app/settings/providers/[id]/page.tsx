@@ -128,7 +128,7 @@ export default function ProviderDetailPage() {
           .filter(([k, v]) => k.length > 0 && v.length > 0),
       );
 
-      await updateProvider(providerId, {
+      const res = await updateProvider(providerId, {
         name: name.trim(),
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim().length > 0 ? apiKey.trim() : undefined,
@@ -136,6 +136,11 @@ export default function ProviderDetailPage() {
         requiresKey,
         isEnabled,
       });
+
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to save provider");
+        return;
+      }
 
       invalidateProviderRegistryCache();
       await refresh();
@@ -152,7 +157,12 @@ export default function ProviderDetailPage() {
   const handleDelete = async (): Promise<void> => {
     setIsDeleting(true);
     try {
-      await deleteProvider(providerId);
+      const res = await deleteProvider(providerId);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to delete provider");
+        setIsDeleting(false);
+        return;
+      }
       invalidateProviderRegistryCache();
       toast.success("Provider deleted");
       router.push(ROUTES.SETTINGS.PROVIDERS.path);

@@ -24,6 +24,15 @@ export const reindexKbFunction = inngest.createFunction(
         if: "async.data.kbId == event.data.kbId",
       },
     ],
+    onFailure: async ({ event }) => {
+      const { kbId } = event.data.event.data as { kbId?: string };
+      if (kbId) {
+        await db
+          .update(knowledgebase)
+          .set({ indexStatus: "stale", updatedAt: new Date() })
+          .where(eq(knowledgebase.id, kbId));
+      }
+    },
     triggers: [{ event: "knowledgebase/reindex" }],
   },
   async ({ event, step }) => {

@@ -42,16 +42,21 @@ describe("memory-service", () => {
   });
 
   describe("saveMemoryForUser", () => {
-    it("throws an error when memoryEnabled is false in user settings", async () => {
+    it("returns FORBIDDEN error when memoryEnabled is false in user settings", async () => {
       mockGetUserSettingsByUserId.mockResolvedValue({
         id: "settings-1",
         userId: "user-1",
         memoryEnabled: false,
       });
 
-      await expect(
-        saveMemoryForUser("user-1", "Prefers TypeScript"),
-      ).rejects.toThrow("Memory is disabled for this user");
+      const res = await saveMemoryForUser("user-1", "Prefers TypeScript");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "FORBIDDEN",
+          message: "Memory is disabled for this user",
+        }),
+      });
       expect(mockSelect).not.toHaveBeenCalled();
       expect(mockInsert).not.toHaveBeenCalled();
     });
@@ -85,8 +90,11 @@ describe("memory-service", () => {
 
       const result = await saveMemoryForUser("user-1", "Still saves");
       expect(result).toEqual({
-        ...mockInserted,
-        deduplicated: false,
+        ok: true,
+        value: {
+          ...mockInserted,
+          deduplicated: false,
+        },
       });
       expect(mockInsert).toHaveBeenCalled();
     });
@@ -118,12 +126,15 @@ describe("memory-service", () => {
       const result = await saveMemoryForUser("user-1", "  Prefers TypeScript  ");
 
       expect(result).toEqual({
-        id: "mem-1",
-        userId: "user-1",
-        content: "Prefers TypeScript",
-        createdAt: now,
-        updatedAt: now,
-        deduplicated: false,
+        ok: true,
+        value: {
+          id: "mem-1",
+          userId: "user-1",
+          content: "Prefers TypeScript",
+          createdAt: now,
+          updatedAt: now,
+          deduplicated: false,
+        },
       });
       expect(mockInsert).toHaveBeenCalled();
     });
@@ -162,12 +173,15 @@ describe("memory-service", () => {
       const result = await saveMemoryForUser("user-1", "prefers typescript");
 
       expect(result).toEqual({
-        id: "mem-existing",
-        userId: "user-1",
-        content: "Prefers TypeScript",
-        createdAt,
-        updatedAt: newUpdatedAt,
-        deduplicated: true,
+        ok: true,
+        value: {
+          id: "mem-existing",
+          userId: "user-1",
+          content: "Prefers TypeScript",
+          createdAt,
+          updatedAt: newUpdatedAt,
+          deduplicated: true,
+        },
       });
       expect(mockInsert).not.toHaveBeenCalled();
       expect(mockUpdate).toHaveBeenCalled();
@@ -204,12 +218,15 @@ describe("memory-service", () => {
       const result = await saveMemoryForUser("user-1", "Uses PostgreSQL");
 
       expect(result).toEqual({
-        id: "mem-existing-2",
-        userId: "user-1",
-        content: "Uses PostgreSQL",
-        createdAt,
-        updatedAt: oldUpdatedAt,
-        deduplicated: true,
+        ok: true,
+        value: {
+          id: "mem-existing-2",
+          userId: "user-1",
+          content: "Uses PostgreSQL",
+          createdAt,
+          updatedAt: oldUpdatedAt,
+          deduplicated: true,
+        },
       });
     });
   });
@@ -238,11 +255,11 @@ describe("memory-service", () => {
         "Updated preference",
       );
 
-      expect(result).toEqual(mockUpdated);
+      expect(result).toEqual({ ok: true, value: mockUpdated });
       expect(mockUpdate).toHaveBeenCalled();
     });
 
-    it("throws error when memory to update is not found", async () => {
+    it("returns NOT_FOUND error when memory to update is not found", async () => {
       mockUpdate.mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -251,9 +268,14 @@ describe("memory-service", () => {
         }),
       });
 
-      await expect(
-        updateMemoryForUser("user-1", "mem-missing", "Content"),
-      ).rejects.toThrow("Memory not found");
+      const res = await updateMemoryForUser("user-1", "mem-missing", "Content");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "NOT_FOUND",
+          message: "Memory not found",
+        }),
+      });
     });
   });
 

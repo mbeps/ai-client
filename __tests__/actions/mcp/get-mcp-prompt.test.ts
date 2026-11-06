@@ -64,7 +64,11 @@ describe("getMcpPrompt action", () => {
       .mockResolvedValueOnce([]) // server query
       .mockResolvedValueOnce([]); // install query
 
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow("Not Found");
+    const res = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("throws Not Found if server is public but user has not installed it", async () => {
@@ -74,7 +78,11 @@ describe("getMcpPrompt action", () => {
       ])
       .mockResolvedValueOnce([]); // install not found
 
-    await expect(getMcpPrompt("srv-pub", "my-prompt")).rejects.toThrow("Not Found");
+    const res = await getMcpPrompt("srv-pub", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("throws Not Found if server is private and owned by another user", async () => {
@@ -84,7 +92,11 @@ describe("getMcpPrompt action", () => {
       ])
       .mockResolvedValueOnce([]);
 
-    await expect(getMcpPrompt("srv-priv", "my-prompt")).rejects.toThrow("Not Found");
+    const res = await getMcpPrompt("srv-priv", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("throws MCP server is disabled if user-owned server is disabled", async () => {
@@ -94,7 +106,11 @@ describe("getMcpPrompt action", () => {
       ])
       .mockResolvedValueOnce([]);
 
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow("MCP server is disabled");
+    const res = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("MCP server is disabled");
+    }
   });
 
   it("throws MCP server is disabled if installed public server has install disabled", async () => {
@@ -106,7 +122,11 @@ describe("getMcpPrompt action", () => {
         { enabled: false, headers: null },
       ]);
 
-    await expect(getMcpPrompt("srv-pub", "my-prompt")).rejects.toThrow("MCP server is disabled");
+    const res = await getMcpPrompt("srv-pub", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("MCP server is disabled");
+    }
   });
 
   it("throws MCP server is disabled if installed public server itself is disabled", async () => {
@@ -118,7 +138,11 @@ describe("getMcpPrompt action", () => {
         { enabled: true, headers: null },
       ]);
 
-    await expect(getMcpPrompt("srv-pub", "my-prompt")).rejects.toThrow("MCP server is disabled");
+    const res = await getMcpPrompt("srv-pub", "my-prompt");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("MCP server is disabled");
+    }
   });
 
   it("connects to MCP client and returns retrieved prompt for owned server", async () => {
@@ -146,7 +170,7 @@ describe("getMcpPrompt action", () => {
     });
 
     const res = await getMcpPrompt("srv-1", "my-prompt", { arg1: "val" });
-    expect(res).toEqual(mockPromptResult);
+    expect(res).toEqual({ ok: true, value: mockPromptResult });
     expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: "owner-headers",
@@ -181,7 +205,7 @@ describe("getMcpPrompt action", () => {
     });
 
     const res = await getMcpPrompt("srv-pub", "my-prompt");
-    expect(res).toEqual(mockPromptResult);
+    expect(res).toEqual({ ok: true, value: mockPromptResult });
     expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: "subscriber-headers",
@@ -216,7 +240,7 @@ describe("getMcpPrompt action", () => {
     });
 
     const res = await getMcpPrompt("srv-pub-null", "my-prompt");
-    expect(res).toEqual(mockPromptResult);
+    expect(res).toEqual({ ok: true, value: mockPromptResult });
     expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: null,
@@ -238,7 +262,8 @@ describe("getMcpPrompt action", () => {
       return cb(mockClient);
     });
 
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow("Prompt not found");
+    const res1 = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res1.ok).toBe(false);
 
     // Non-error throw inside callback
     chainable.where
@@ -252,7 +277,8 @@ describe("getMcpPrompt action", () => {
       };
       return cb(mockClient);
     });
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow();
+    const res2 = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res2.ok).toBe(false);
   });
 
   it("handles outer connection error when withMcpServer itself fails", async () => {
@@ -264,7 +290,8 @@ describe("getMcpPrompt action", () => {
 
     withMcpServerMock.mockRejectedValueOnce(new Error("Connection refused"));
 
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow("Connection refused");
+    const res1 = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res1.ok).toBe(false);
 
     // Outer non-error throw
     chainable.where
@@ -273,6 +300,7 @@ describe("getMcpPrompt action", () => {
       ])
       .mockResolvedValueOnce([]);
     withMcpServerMock.mockRejectedValueOnce("Outer string error");
-    await expect(getMcpPrompt("srv-1", "my-prompt")).rejects.toThrow();
+    const res2 = await getMcpPrompt("srv-1", "my-prompt");
+    expect(res2.ok).toBe(false);
   });
 });

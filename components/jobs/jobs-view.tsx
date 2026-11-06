@@ -116,10 +116,14 @@ export function JobsView() {
     }
     try {
       const res = await listJobs();
-      setJobs(res.jobs || []);
-      setOffline(Boolean(res.offline));
-      if (res.error && !res.offline) {
-        toast.error(res.error);
+      if (res.ok) {
+        setJobs(res.value.jobs || []);
+        setOffline(Boolean(res.value.offline));
+        if (res.value.error && !res.value.offline) {
+          toast.error(res.value.error);
+        }
+      } else {
+        toast.error(res.error.message || "Failed to load jobs");
       }
     } catch (err) {
       const message =
@@ -146,12 +150,12 @@ export function JobsView() {
               : undefined,
         });
 
-        if (res.success) {
+        if (res.ok) {
           toast.success("Job run cancelled successfully");
           setCancelTarget(null);
           await loadJobs(false);
         } else {
-          toast.error(res.error || "Failed to cancel job");
+          toast.error(res.error.message || "Failed to cancel job");
         }
       } catch (err) {
         toast.error(

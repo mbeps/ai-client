@@ -67,7 +67,9 @@ export function useTranslationRealtimeStream(
 
   const fetchTranslationToken = useCallback(async () => {
     if (!activeTranslationId) throw new Error("No active translation");
-    return getTranslationRealtimeToken(activeTranslationId);
+    const res = await getTranslationRealtimeToken(activeTranslationId);
+    if (!res.ok) throw new Error(res.error.message);
+    return res.value;
   }, [activeTranslationId]);
 
   const { messages } = useRealtime({

@@ -29,19 +29,27 @@ describe("Chat Realtime Token Action", () => {
   });
 
   describe("getChatRealtimeToken", () => {
-    it("throws an error when user is unauthorized or chat does not belong to user", async () => {
+    it("returns NOT_FOUND when user is unauthorized or chat does not belong to user", async () => {
       chainable.where.mockResolvedValueOnce([]);
 
-      await expect(getChatRealtimeToken("chat-123")).rejects.toThrow(
-        "Chat not found or access denied",
-      );
+      const res = await getChatRealtimeToken("chat-123");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "NOT_FOUND",
+          message: "Chat not found or access denied",
+        }),
+      });
     });
 
     it("returns subscription token when chat is owned by user", async () => {
       chainable.where.mockResolvedValueOnce([{ id: "chat-123" }]);
 
       const token = await getChatRealtimeToken("chat-123");
-      expect(token).toBe("mock-chat-token");
+      expect(token).toEqual({
+        ok: true,
+        value: "mock-chat-token",
+      });
     });
   });
 });

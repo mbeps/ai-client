@@ -1,33 +1,24 @@
-vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    NODE_ENV: "test",
-  },
-}));
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of ["select", "from", "where"]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
+  const c: Record<string, ReturnType<typeof vi.fn>> = {};
+  c.select = vi.fn(() => c);
+  c.from = vi.fn(() => c);
+  c.where = vi.fn(() => c);
   return c;
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-vi.mock("@/lib/auth/require-session", () => ({
-  requireSession: vi.fn().mockResolvedValue({
-    user: { id: "user-1", name: "Test User", email: "test@example.com" },
-    session: { id: "session-1" },
-  }),
-}));
-
 const isBlockedUrlMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
   isBlockedUrl: isBlockedUrlMock,
+}));
+
+vi.mock("@/lib/auth/require-session", () => ({
+  requireSession: vi.fn().mockResolvedValue({
+    user: { id: "user_test_1" },
+  }),
 }));
 
 const decodeProviderRecordMock = vi.hoisted(() => vi.fn());
@@ -35,16 +26,8 @@ vi.mock("@/lib/providers/decode-provider-record", () => ({
   decodeProviderRecord: decodeProviderRecordMock,
 }));
 
-vi.mock("@/lib/logger", () => ({
-  getLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-  }),
-}));
-
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testProviderConnection } from "@/actions/providers/test-provider-connection";
+import { ERROR_CODE } from "@/lib/error/error-code";
 
 describe("testProviderConnection action", () => {
   beforeEach(() => {
@@ -66,7 +49,11 @@ describe("testProviderConnection action", () => {
     chainable.where.mockResolvedValueOnce([]);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({ ok: false, error: "Provider not found" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.NOT_FOUND);
+      expect(res.error.message).toBe("Provider not found");
+    }
   });
 
   it("returns ok false if provider URL is blocked by SSRF guard", async () => {
@@ -76,10 +63,11 @@ describe("testProviderConnection action", () => {
     isBlockedUrlMock.mockResolvedValueOnce(true);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({
-      ok: false,
-      error: "Provider URL is blocked by SSRF guard",
-    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.FORBIDDEN);
+      expect(res.error.message).toBe("Provider URL is blocked by SSRF guard");
+    }
   });
 
   it("verifies connection successfully with apiKey and custom headers", async () => {
@@ -91,7 +79,10 @@ describe("testProviderConnection action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({ ok: true });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value).toEqual({ connected: true });
+    }
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.openai.com/v1/models",
       expect.objectContaining({
@@ -125,64 +116,90 @@ describe("testProviderConnection action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({ ok: true });
+    expect(res.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.ollama.com/models",
       expect.objectContaining({
         method: "GET",
         headers: {},
+        redirect: "error",
+        signal: expect.any(AbortSignal),
       }),
     );
     vi.unstubAllGlobals();
   });
 
-  it("returns error message when upstream returns non-ok status code", async () => {
+  it("handles non-ok response from provider endpoint", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
     ]);
 
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401 });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({
-      ok: false,
-      error: "Provider responded with status 401",
-    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(res.error.message).toBe("Provider responded with status 401");
+    }
     vi.unstubAllGlobals();
   });
 
-  it("handles Error thrown during fetch (e.g. timeout)", async () => {
+  it("returns 404 tailored message when status is 404", async () => {
     chainable.where.mockResolvedValueOnce([
-      { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
+      { id: "prov-1", baseUrl: "https://openrouter.ai/api/fs" },
     ]);
 
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValue(new Error("Connection timed out"));
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({
-      ok: false,
-      error: "Connection timed out",
-    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(res.error.message).toContain("Check the base URL (it usually ends with /v1).");
+    }
     vi.unstubAllGlobals();
   });
 
-  it("handles non-Error thrown during fetch", async () => {
+  it("handles fetch rejection gracefully", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
     ]);
 
-    const fetchMock = vi.fn().mockRejectedValue("network fail");
+    const fetchMock = vi.fn().mockRejectedValue(new Error("Connection refused"));
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await testProviderConnection("prov-1");
-    expect(res).toEqual({
-      ok: false,
-      error: "Connection test failed",
-    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(res.error.message).toBe("Connection refused");
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("handles non-Error rejection gracefully", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
+    ]);
+
+    const fetchMock = vi.fn().mockRejectedValue("Unknown fatal error");
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await testProviderConnection("prov-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(res.error.message).toBe("Connection test failed");
+    }
     vi.unstubAllGlobals();
   });
 });

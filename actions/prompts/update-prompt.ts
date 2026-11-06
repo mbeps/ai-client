@@ -1,10 +1,8 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "@/drizzle/db";
+import type { z } from "zod";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
-import { requireSession } from "@/lib/auth/require-session";
+import { updateEntityFactory } from "@/lib/factories/update-entity-factory";
 import { updatePromptSchema } from "@/schemas/prompt/prompt";
 import type { PromptRow } from "@/types/prompt/prompt-row";
 
@@ -16,38 +14,13 @@ import type { PromptRow } from "@/types/prompt/prompt-row";
  *
  * @param id - UUID of the prompt to update; must be owned by the authenticated user.
  * @param data - Partial prompt update object (shortcut, title, content fields).
- * @returns The updated prompt record with all fields populated.
- * @throws Error if session is not authenticated.
- * @throws ZodError if id is not a valid UUID format.
- * @throws ZodError if data fails schema validation against updatePromptSchema.
- * @throws Error if prompt is not found or user does not own it (returns "Not Found").
- * @throws Error if database update fails due to constraints or connection issues.
- * @see createPrompt to create a new prompt.
- * @see deletePrompt to remove a prompt.
+ * @returns The Result containing updated prompt record with all fields populated.
  * @author Maruf Bepary
  */
-export async function updatePrompt(
-  id: string,
-  data: z.infer<typeof updatePromptSchema>,
-): Promise<PromptRow> {
-  const session = await requireSession();
-
-  // Validate inputs
-  const validatedId = z.string().uuid().parse(id);
-  const validatedData = updatePromptSchema.parse(data);
-
-  const [row] = await db
-    .update(prompt)
-    .set({
-      title: validatedData.title,
-      shortcut: validatedData.shortcut,
-      content: validatedData.content,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(prompt.id, validatedId), eq(prompt.userId, session.user.id)))
-    .returning();
-
-  if (!row) throw new Error("Not Found");
-
-  return row;
-}
+export const updatePrompt = updateEntityFactory<
+  z.infer<typeof updatePromptSchema>,
+  PromptRow
+>({
+  table: prompt,
+  schema: updatePromptSchema,
+});

@@ -3,7 +3,6 @@ import { getChat } from "@/actions/chats/get-chat";
 import { ChatPageClient } from "@/components/chat/chat-page-client";
 import { ROUTES } from "@/config/routes";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
-import type { Chat } from "@/types/chat/chat";
 
 /**
  * Chat detail page within a project context — server component with validation.
@@ -22,13 +21,12 @@ export default async function ProjectChatPage({
 }) {
   const { id, chatId } = await params;
 
-  let chat: Chat;
-  try {
-    const data = await getChat(chatId);
-    chat = buildChatFromRows(data);
-  } catch {
+  const res = await getChat(chatId);
+  if (!res.ok) {
     notFound();
   }
+
+  const chat = buildChatFromRows(res.value);
 
   if (chat.projectId !== id) {
     redirect(ROUTES.CHATS.detail(chatId));

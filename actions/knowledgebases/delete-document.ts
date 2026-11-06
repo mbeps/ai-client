@@ -6,11 +6,17 @@ import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deletePointsByDocumentId } from "@/lib/rag/qdrant-client";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "knowledgebases"]);
 
@@ -24,62 +30,65 @@ const log = getLogger(["app", "actions", "knowledgebases"]);
  * Runs on server only — invoked from client via Server Action.
  *
  * @param data - Object containing kbId and documentId of the document to delete
- * @returns Resolves when document row and underlying S3 object are removed
- * @throws {Error} if session is not authenticated.
- * @throws {Error} if knowledge base is not found or user does not own it (returns "Not Found").
- * @throws {Error} if document is not found or does not belong to the knowledge base.
- * @throws {Error} if database deletion fails due to constraints or connection issues.
- * @see listDocuments to view documents in a knowledge base.
- * @see uploadKbDocument to add a new document.
+ * @returns Result resolving when document row and underlying S3 object are removed
  * @author Maruf Bepary
  */
-export async function deleteDocument(
-  data: z.infer<typeof deleteDocumentSchema>,
-): Promise<void> {
-  const session = await requireSession();
+export const deleteDocument = defineAction(
+  async (
+    data: z.infer<typeof deleteDocumentSchema>,
+  ): Promise<Result<void, CommonError>> => {
+    const session = await requireSession();
 
-  const validated = deleteDocumentSchema.parse(data);
+    const validated = deleteDocumentSchema.parse(data);
 
-  const [doc] = await db
-    .select()
-    .from(kbDocument)
-    .where(
-      and(
-        eq(kbDocument.id, validated.documentId),
-        eq(kbDocument.userId, session.user.id),
-      ),
+    const [doc] = await db
+      .select()
+      .from(kbDocument)
+      .where(
+        and(
+          eq(kbDocument.id, validated.documentId),
+          eq(kbDocument.userId, session.user.id),
+        ),
+      );
+
+    if (!doc) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
+
+    await inngest.send({
+      name: "knowledgebase/document.cancel",
+      data: { documentId: validated.documentId },
+    });
+
+    await s3Client.send(
+      new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
     );
 
-  if (!doc) throw new Error("Not Found");
+    await db.delete(kbDocument).where(eq(kbDocument.id, validated.documentId));
 
-  await inngest.send({
-    name: "knowledgebase/document.cancel",
-    data: { documentId: validated.documentId },
-  });
+    try {
+      await deletePointsByDocumentId(validated.documentId);
+    } catch (err) {
+      log.warn(
+        "Failed to delete Qdrant points for deleted document (documentId: {documentId})",
+        {
+          documentId: validated.documentId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+    }
 
-  await s3Client.send(
-    new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
-  );
-
-  await db.delete(kbDocument).where(eq(kbDocument.id, validated.documentId));
-
-  try {
-    await deletePointsByDocumentId(validated.documentId);
-  } catch (err) {
-    log.warn(
-      "Failed to delete Qdrant points for deleted document (documentId: {documentId})",
+    log.info(
+      "Deleted knowledge base document (documentId: {documentId}, kbId: {kbId})",
       {
         documentId: validated.documentId,
-        error: err instanceof Error ? err.message : String(err),
+        kbId: doc.kbId,
       },
     );
-  }
 
-  log.info(
-    "Deleted knowledge base document (documentId: {documentId}, kbId: {kbId})",
-    {
-      documentId: validated.documentId,
-      kbId: doc.kbId,
-    },
-  );
-}
+    return ok(undefined);
+  },
+);

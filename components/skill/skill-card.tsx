@@ -55,7 +55,11 @@ export function SkillCard({ skill }: SkillCardProps) {
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true);
     try {
-      await toggleSkillEnabled(skill.id, checked);
+      const res = await toggleSkillEnabled(skill.id, checked);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to update skill");
+        return;
+      }
       await loadSkills();
       toast.success(checked ? "Skill enabled" : "Skill disabled");
     } catch (err: any) {
@@ -68,7 +72,11 @@ export function SkillCard({ skill }: SkillCardProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteSkill(skill.id);
+      const res = await deleteSkill(skill.id);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to delete skill");
+        return;
+      }
       await loadSkills();
       toast.success("Skill deleted");
     } catch (err: any) {

@@ -78,11 +78,15 @@ export function useModelTableActions(
 
   const runModelAction = async (
     modelId: string,
-    action: () => Promise<void>,
+    action: () => Promise<unknown>,
   ): Promise<void> => {
     setBusyModelId(modelId);
     try {
-      await action();
+      const res = await action();
+      if (res && typeof res === "object" && "ok" in res && !(res as any).ok) {
+        toast.error((res as any).error.message || "Model action failed");
+        return;
+      }
       invalidateProviderRegistryCache();
       await onRefresh();
     } catch (error) {
@@ -107,7 +111,10 @@ export function useModelTableActions(
     try {
       await toast.promise(
         (async () => {
-          await updateModels(targetIds, { isEnabled: action === "enable" });
+          const res = await updateModels(targetIds, {
+            isEnabled: action === "enable",
+          });
+          if (!res.ok) throw new Error(res.error.message);
           invalidateProviderRegistryCache();
           await onRefresh();
           setSelectedIds(new Set());
@@ -133,7 +140,8 @@ export function useModelTableActions(
     try {
       await toast.promise(
         (async () => {
-          await deleteModel(targetIds);
+          const res = await deleteModel(targetIds);
+          if (!res.ok) throw new Error(res.error.message);
           invalidateProviderRegistryCache();
           await onRefresh();
           setSelectedIds(new Set());

@@ -71,7 +71,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(buf);
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.id).toBe(VALID_UUID);
     expect(result.type).toBe("spreadsheet");
@@ -93,7 +95,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("# Quarterly Report\nSummary here."));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.id).toBe(VALID_UUID);
     expect(result.type).toBe("markdown");
@@ -113,7 +117,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("<div class='chart'>Content</div>"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.id).toBe(VALID_UUID);
     expect(result.type).toBe("html");
@@ -133,7 +139,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("graph TD\nA-->B"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.id).toBe(VALID_UUID);
     expect(result.type).toBe("mermaid");
@@ -153,7 +161,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from('{"key":"value"}'));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toContain("```json\n{\"key\":\"value\"}\n```");
@@ -171,7 +181,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("png-bytes"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toBe("![photo.png](data:image/png;base64,cG5nLWJ5dGVz)");
@@ -189,7 +201,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("%PDF-1.4"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toContain("Binary preview is not supported for this file type (PDF)");
@@ -207,7 +221,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("<svg/>"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toBe(
@@ -227,7 +243,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("webp-bytes"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toBe(
@@ -247,7 +265,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("audio-bytes"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toContain("Binary preview is not supported");
@@ -265,7 +285,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("zip-bytes"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toContain("Binary preview is not supported");
@@ -284,7 +306,9 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from('{"a":1}'));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toContain('```\n{"a":1}\n```');
@@ -302,16 +326,37 @@ describe("getAttachmentArtifact action", () => {
 
     downloadObjectMock.mockResolvedValueOnce(Buffer.from("plain notes"));
 
-    const result = await getAttachmentArtifact(VALID_UUID);
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res.ok).toBe(true);
+    const result = (res as any).value;
 
     expect(result.type).toBe("markdown");
     expect(result.content).toBe("plain notes");
   });
 
-  it("throws Error if attachment not found or owned by different user", async () => {
+  it("returns NOT_FOUND if attachment not found or owned by different user", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(getAttachmentArtifact(VALID_UUID)).rejects.toThrow("Not Found");
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Not Found",
+      }),
+    });
+  });
+
+  it("handles unexpected errors rethrown as INTERNAL via defineAction", async () => {
+    chainable.where.mockRejectedValueOnce(new Error("Unexpected DB crash"));
+
+    const res = await getAttachmentArtifact(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "INTERNAL",
+      }),
+    });
   });
 });
 

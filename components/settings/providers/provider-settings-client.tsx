@@ -64,12 +64,12 @@ export function ProviderSettingsClient({
   const isLoading = providersLoading || modelsLoading;
 
   const refreshAll = async (): Promise<void> => {
-    const [nextSettings] = await Promise.all([
+    const [nextSettingsRes] = await Promise.all([
       getUserSettings(),
       refreshProviders(),
       refreshModels(),
     ]);
-    setSettings(nextSettings);
+    setSettings(nextSettingsRes.ok ? nextSettingsRes.value : null);
   };
 
   return (

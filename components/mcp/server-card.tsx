@@ -63,7 +63,11 @@ export function ServerCard({ server }: ServerCardProps) {
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true);
     try {
-      await toggleMcpServer(server.id);
+      const res = await toggleMcpServer(server.id);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to toggle server");
+        return;
+      }
       await loadMcpServers();
       toast.success(checked ? "Server enabled" : "Server disabled");
     } catch {
@@ -76,7 +80,16 @@ export function ServerCard({ server }: ServerCardProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteMcpServer(server.id);
+      const res = await deleteMcpServer(server.id);
+      if (!res.ok) {
+        toast.error(
+          res.error.message ||
+            (server.isInstalled
+              ? "Failed to uninstall tool"
+              : "Failed to delete server"),
+        );
+        return;
+      }
       await loadMcpServers();
       toast.success(server.isInstalled ? "Tool uninstalled" : "Server deleted");
     } catch {

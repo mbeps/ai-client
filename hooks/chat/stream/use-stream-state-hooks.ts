@@ -125,7 +125,8 @@ async function executeMountRejoinCheck(params: {
   syncFromDb: () => Promise<boolean>;
 }) {
   try {
-    const generating = await isChatGenerating(params.chatId);
+    const res = await isChatGenerating(params.chatId);
+    const generating = res.ok ? res.value : false;
     if (generating) {
       params.refs.rejoinedRef.current = true;
       params.refs.pendingRef.current = {

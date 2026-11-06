@@ -2,7 +2,11 @@
 
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { listOwnedResources } from "@/lib/db/utils/list-owned-resources";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
 import type { ChatRow } from "@/types/chat/chat-row";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Fetches all chat sessions for the authenticated user, ordered by most recently updated first.
@@ -10,13 +14,12 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * Performs automatic ownership check via session validation.
  * Runs on server only — invoked from client via Server Action.
  *
- * @returns Array of all user's chats sorted by updatedAt descending; empty array if no chats exist.
- * @throws Error if session is not authenticated.
- * @throws Error if database query fails due to connection issues.
- * @see createChat to create a new chat.
- * @see getChat to fetch a single chat with full message tree and attachments.
+ * @returns Result containing array of all user's chats sorted by updatedAt descending; empty array if no chats exist.
  * @author Maruf Bepary
  */
-export async function listChats(): Promise<ChatRow[]> {
-  return listOwnedResources(chat);
-}
+export const listChats = defineAction(
+  async (): Promise<Result<ChatRow[], CommonError>> => {
+    const rows = await listOwnedResources(chat);
+    return ok(rows);
+  },
+);

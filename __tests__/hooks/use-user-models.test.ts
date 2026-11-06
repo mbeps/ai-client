@@ -8,7 +8,7 @@ import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-regist
 import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 
 vi.mock("@/actions/models/list-models", () => ({
-  listModels: vi.fn().mockResolvedValue([]),
+  listModels: vi.fn().mockResolvedValue({ ok: true, value: [] }),
 }));
 
 vi.mock("@/lib/providers/fetch-provider-registry-with-cache", () => ({
@@ -356,6 +356,38 @@ describe("useUserModels hook", () => {
       { force: false },
     );
     expect(result.current.models).toEqual([]);
+  });
+
+  it("invokes listModels fetcher callback passed to fetchProviderRegistryWithCache and checks ok and error branches", async () => {
+    vi.mocked(getProviderRegistryCachedData).mockReturnValue(null);
+    vi.mocked(isProviderRegistryCacheFresh).mockReturnValue(false);
+    vi.mocked(subscribeProviderRegistryCache).mockReturnValue(() => {});
+
+    let capturedFetcher: (() => Promise<any>) | undefined;
+    vi.mocked(fetchProviderRegistryWithCache).mockImplementation(
+      async (_key: string, fetcher: any) => {
+        capturedFetcher = fetcher;
+        return fetcher();
+      },
+    );
+
+    vi.mocked(listModels).mockResolvedValueOnce({
+      ok: true,
+      value: [{ id: "m-1" } as any],
+    });
+
+    const { result } = renderHook(() => useUserModels("chat"));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Test when listModels returns ok: false
+    vi.mocked(listModels).mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed to load models" },
+    } as any);
+
+    await expect(capturedFetcher!()).rejects.toThrow("Failed to load models");
   });
 });
 

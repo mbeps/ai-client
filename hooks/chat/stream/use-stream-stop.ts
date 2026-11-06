@@ -156,13 +156,16 @@ export async function executeStopStream(
       reasoning: reasoning || undefined,
     });
     try {
-      await persistMessage(chatId, {
+      const res = await persistMessage(chatId, {
         id: messageId,
         role: "assistant",
         content: partialText,
         parentId: userMsgId,
         metadata: stopMetadata,
       });
+      if (res && !res.ok) {
+        logger.error("Failed to persist stopped message", res.error);
+      }
     } catch (err) {
       logger.error("Failed to persist stopped message", err);
     }

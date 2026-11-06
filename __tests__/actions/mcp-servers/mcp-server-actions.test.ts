@@ -98,7 +98,7 @@ describe("mcp server personal actions", () => {
         isPublic: false,
       });
 
-      expect(result).toEqual(inserted);
+      expect(result).toEqual({ ok: true, value: inserted });
       expect(chainable.insert).toHaveBeenCalled();
       const passedValues = chainable.values.mock.calls[0][0];
       expect(decrypt(passedValues.headers)).toBe('{"auth":"token"}');
@@ -108,7 +108,7 @@ describe("mcp server personal actions", () => {
   describe("deleteMcpServer", () => {
     it("returns 0 deleted count immediately for empty array", async () => {
       const result = await deleteMcpServer([]);
-      expect(result).toEqual({ deletedCount: 0 });
+      expect(result).toEqual({ ok: true, value: { deletedCount: 0 } });
     });
 
     it("deletes personal owned server", async () => {
@@ -117,7 +117,7 @@ describe("mcp server personal actions", () => {
         .mockResolvedValueOnce([]); // install delete
 
       const result = await deleteMcpServer("srv-1");
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toEqual({ ok: true, value: { deletedCount: 1 } });
     });
 
     it("deletes installed community server when personal yields none", async () => {
@@ -126,7 +126,7 @@ describe("mcp server personal actions", () => {
         .mockResolvedValueOnce([{ id: "inst-1" }]); // install delete
 
       const result = await deleteMcpServer("inst-1");
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toEqual({ ok: true, value: { deletedCount: 1 } });
     });
 
     it("throws Not Found when neither personal nor installed matches", async () => {
@@ -134,7 +134,11 @@ describe("mcp server personal actions", () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
-      await expect(deleteMcpServer("missing-id")).rejects.toThrow("Not Found");
+      const res = await deleteMcpServer("missing-id");
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBe("Not Found");
+      }
     });
   });
 
@@ -144,7 +148,7 @@ describe("mcp server personal actions", () => {
       chainable.returning.mockResolvedValueOnce([toggled]);
 
       const result = await toggleMcpServer("srv-1");
-      expect(result).toEqual({ ...toggled, isInstalled: false });
+      expect(result).toEqual({ ok: true, value: { ...toggled, isInstalled: false } });
     });
 
     it("toggles installed community server and fetches source server info", async () => {
@@ -170,13 +174,16 @@ describe("mcp server personal actions", () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([sourceServer]).then(onFulfilled);
 
       const result = await toggleMcpServer("inst-1");
-      expect(result).toMatchObject({
-        id: "src-1",
-        name: "Community Tool",
-        enabled: true,
-        isInstalled: true,
-        installId: "inst-1",
-      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toMatchObject({
+          id: "src-1",
+          name: "Community Tool",
+          enabled: true,
+          isInstalled: true,
+          installId: "inst-1",
+        });
+      }
     });
 
     it("throws Not Found when neither personal nor install row matches", async () => {
@@ -184,7 +191,11 @@ describe("mcp server personal actions", () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
-      await expect(toggleMcpServer("unknown-id")).rejects.toThrow("Not Found");
+      const res = await toggleMcpServer("unknown-id");
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBe("Not Found");
+      }
     });
 
     it("throws Not Found when install row exists but underlying server is missing", async () => {
@@ -198,7 +209,11 @@ describe("mcp server personal actions", () => {
 
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-      await expect(toggleMcpServer("inst-1")).rejects.toThrow("Not Found");
+      const res = await toggleMcpServer("inst-1");
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBe("Not Found");
+      }
     });
   });
 
@@ -220,7 +235,7 @@ describe("mcp server personal actions", () => {
         isPublic: true,
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       const passedSet = chainable.set.mock.calls[0][0];
       expect(decrypt(passedSet.headers)).toBe('{"auth":"new"}');
     });
@@ -241,7 +256,7 @@ describe("mcp server personal actions", () => {
         isPublic: false,
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       expect(chainable.set).toHaveBeenCalledWith(
         expect.not.objectContaining({ headers: expect.anything() }),
       );
@@ -250,13 +265,15 @@ describe("mcp server personal actions", () => {
     it("throws Not Found when update returns empty array", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 
-      await expect(
-        updateMcpServer("missing-id", {
-          name: "Missing",
-          url: "https://example.com/mcp",
-          isPublic: false,
-        }),
-      ).rejects.toThrow("Not Found");
+      const res = await updateMcpServer("missing-id", {
+        name: "Missing",
+        url: "https://example.com/mcp",
+        isPublic: false,
+      });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBe("Not Found");
+      }
     });
   });
 });

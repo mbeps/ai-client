@@ -3,9 +3,15 @@
 import * as xlsx from "xlsx";
 import { requireUserAttachment } from "@/lib/attachments/attachment-auth";
 import { getExtension } from "@/lib/attachments/get-extension";
+import { AppException } from "@/lib/error/app-exception";
+import { defineAction } from "@/lib/factories/define-action";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { downloadObject } from "@/lib/storage/download-object";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { ArtifactSheet } from "@/types/artifact/artifact-sheet";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const SPREADSHEET_EXTS = new Set([
   ".xlsx",
@@ -210,66 +216,74 @@ function formatTextArtifactContent(
  * load server-side attachments without client-side CORS or S3 issues.
  *
  * @param id - UUID of the attachment to retrieve; must belong to authenticated user.
- * @returns Normalised ArtifactData object for rendering in ArtifactPanel.
- * @throws Error if session is unauthenticated or attachment is not found.
+ * @returns Result wrapping normalised ArtifactData object for rendering in ArtifactPanel.
  * @author Maruf Bepary
  */
-export async function getAttachmentArtifact(id: string): Promise<ArtifactData> {
-  const { attachment: row } = await requireUserAttachment(id);
+export const getAttachmentArtifact = defineAction(
+  async (id: string): Promise<Result<ArtifactData, CommonError>> => {
+    try {
+      const { attachment: row } = await requireUserAttachment(id);
 
-  const buffer = await downloadObject(row.key);
-  const ext = getExtension(row.name);
-  const mime = (row.mimeType || "").toLowerCase();
+      const buffer = await downloadObject(row.key);
+      const ext = getExtension(row.name);
+      const mime = (row.mimeType || "").toLowerCase();
 
-  if (isSpreadsheetFile(ext, mime)) {
-    return {
-      id: row.id,
-      type: "spreadsheet",
-      title: row.name,
-      content: parseSpreadsheetContent(buffer),
-    };
-  }
+      if (isSpreadsheetFile(ext, mime)) {
+        return ok({
+          id: row.id,
+          type: "spreadsheet",
+          title: row.name,
+          content: parseSpreadsheetContent(buffer),
+        });
+      }
 
-  if (isHtmlFile(ext, mime)) {
-    return {
-      id: row.id,
-      type: "html",
-      title: row.name,
-      content: buffer.toString("utf-8"),
-    };
-  }
+      if (isHtmlFile(ext, mime)) {
+        return ok({
+          id: row.id,
+          type: "html",
+          title: row.name,
+          content: buffer.toString("utf-8"),
+        });
+      }
 
-  if (isMermaidFile(ext, mime)) {
-    return {
-      id: row.id,
-      type: "mermaid",
-      title: row.name,
-      content: buffer.toString("utf-8"),
-    };
-  }
+      if (isMermaidFile(ext, mime)) {
+        return ok({
+          id: row.id,
+          type: "mermaid",
+          title: row.name,
+          content: buffer.toString("utf-8"),
+        });
+      }
 
-  if (isImageFile(ext, mime)) {
-    return {
-      id: row.id,
-      type: "markdown",
-      title: row.name,
-      content: formatImageArtifactContent(row.name, ext, mime, buffer),
-    };
-  }
+      if (isImageFile(ext, mime)) {
+        return ok({
+          id: row.id,
+          type: "markdown",
+          title: row.name,
+          content: formatImageArtifactContent(row.name, ext, mime, buffer),
+        });
+      }
 
-  if (isBinaryFile(ext, mime)) {
-    return {
-      id: row.id,
-      type: "markdown",
-      title: row.name,
-      content: formatBinaryArtifactContent(row.name, ext),
-    };
-  }
+      if (isBinaryFile(ext, mime)) {
+        return ok({
+          id: row.id,
+          type: "markdown",
+          title: row.name,
+          content: formatBinaryArtifactContent(row.name, ext),
+        });
+      }
 
-  return {
-    id: row.id,
-    type: "markdown",
-    title: row.name,
-    content: formatTextArtifactContent(ext, mime, buffer),
-  };
-}
+      return ok({
+        id: row.id,
+        type: "markdown",
+        title: row.name,
+        content: formatTextArtifactContent(ext, mime, buffer),
+      });
+    } catch (err) {
+      if (err instanceof AppException) {
+        return fail(err.error);
+      }
+      throw err;
+    }
+  },
+);

@@ -15,6 +15,8 @@ vi.mock("@/lib/auth/auth", () => ({
   },
 }));
 
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { requireSession } from "@/lib/auth/require-session";
 
 describe("requireSession", () => {
@@ -35,10 +37,18 @@ describe("requireSession", () => {
     expect(getSessionMock).toHaveBeenCalledTimes(1);
   });
 
-  it("throws Unauthorized when session is null", async () => {
+  it("throws Unauthorized AppException when session is null", async () => {
     getSessionMock.mockResolvedValueOnce(null);
 
     await expect(requireSession()).rejects.toThrow("Unauthorized");
+    getSessionMock.mockResolvedValueOnce(null);
+    try {
+      await requireSession();
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppException);
+      expect((error as AppException).error.code).toBe(ERROR_CODE.UNAUTHORIZED);
+    }
   });
 });
 

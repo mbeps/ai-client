@@ -69,8 +69,11 @@ describe("MemoryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserSettings.memoryEnabled = true;
-    mockToggleMemoryEnabled.mockResolvedValue({ memoryEnabled: false });
-    mockDeleteMemories.mockResolvedValue({ success: true, count: 2 });
+    mockToggleMemoryEnabled.mockResolvedValue({
+      ok: true,
+      value: { memoryEnabled: false },
+    });
+    mockDeleteMemories.mockResolvedValue({ ok: true, value: undefined });
   });
 
   it("calls loadMemories and loadUserSettings on mount and renders list of memories", () => {

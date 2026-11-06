@@ -70,7 +70,7 @@ describe("user settings actions", () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
       const result = await getUserSettings();
-      expect(result).toBeNull();
+      expect(result).toEqual({ ok: true, value: null });
     });
 
     it("returns settings row when found", async () => {
@@ -84,7 +84,7 @@ describe("user settings actions", () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([mockSettings]).then(onFulfilled);
 
       const result = await getUserSettings();
-      expect(result).toEqual(mockSettings);
+      expect(result).toEqual({ ok: true, value: mockSettings });
     });
   });
 
@@ -103,7 +103,7 @@ describe("user settings actions", () => {
         globalSystemPrompt: "Custom prompt",
       });
 
-      expect(result).toEqual(updatedRow);
+      expect(result).toEqual({ ok: true, value: updatedRow });
       expect(chainable.insert).toHaveBeenCalled();
       expect(chainable.onConflictDoUpdate).toHaveBeenCalled();
       expect(revalidatePathMock).toHaveBeenCalledWith(ROUTES.SETTINGS.APP.path);
@@ -121,7 +121,7 @@ describe("user settings actions", () => {
 
       const result = await updateUserSettings({});
 
-      expect(result).toEqual(updatedRow);
+      expect(result).toEqual({ ok: true, value: updatedRow });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           userId,
@@ -145,7 +145,7 @@ describe("user settings actions", () => {
         memoryEnabled: true,
       });
 
-      expect(result).toEqual(updatedRow);
+      expect(result).toEqual({ ok: true, value: updatedRow });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           userId,
@@ -169,7 +169,7 @@ describe("user settings actions", () => {
         memoryEnabled: false,
       });
 
-      expect(result).toEqual(updatedRow);
+      expect(result).toEqual({ ok: true, value: updatedRow });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           userId,

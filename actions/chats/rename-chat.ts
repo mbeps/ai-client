@@ -5,38 +5,58 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { renameChatSchema } from "@/schemas/chat/chat";
 import type { ChatRow } from "@/types/chat/chat-row";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Renames a chat with ownership check.
  *
  * @param chatId - The ID of the chat to rename.
  * @param title - The new title for the chat.
- * @returns The updated chat record.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if chatId is not a valid UUID format.
- * @throws ZodError if title fails schema validation (empty or exceeds max length).
- * @throws Error if chat does not exist or user does not own it (returns "Chat not found or unauthorized").
- * @throws Error if database update fails due to constraints or connection issues.
+ * @returns Result containing the updated chat record.
+ * @author Maruf Bepary
  */
-export async function renameChat(
-  chatId: string,
-  title: string,
-): Promise<ChatRow> {
-  const session = await requireSession();
+export const renameChat = defineAction(
+  async (
+    chatId: string,
+    title: string,
+  ): Promise<Result<ChatRow, CommonError>> => {
+    const session = await requireSession();
 
-  // Validate inputs
-  const validatedChatId = z.string().uuid().parse(chatId);
-  const { title: validatedTitle } = renameChatSchema.parse({ title });
+    const parsedChatId = z.string().uuid().safeParse(chatId);
+    const parsedTitle = renameChatSchema.safeParse({ title });
 
-  const [updated] = await db
-    .update(chat)
-    .set({ title: validatedTitle, updatedAt: new Date() })
-    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
-    .returning();
+    if (!parsedChatId.success || !parsedTitle.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Invalid input",
+      });
+    }
 
-  if (!updated) throw new Error("Not Found");
+    const validatedChatId = parsedChatId.data;
+    const { title: validatedTitle } = parsedTitle.data;
 
-  return updated;
-}
+    const [updated] = await db
+      .update(chat)
+      .set({ title: validatedTitle, updatedAt: new Date() })
+      .where(
+        and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+      )
+      .returning();
+
+    if (!updated) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
+
+    return ok(updated);
+  },
+);

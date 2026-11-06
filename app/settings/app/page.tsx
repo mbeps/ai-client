@@ -15,7 +15,8 @@ import { requireSession } from "@/lib/auth/require-session";
  */
 export default async function SettingsPage() {
   await requireSession();
-  const settings = await getUserSettings();
+  const settingsRes = await getUserSettings();
+  const settings = settingsRes.ok ? settingsRes.value : null;
 
   return (
     <PageContainer className="space-y-6">

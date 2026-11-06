@@ -71,15 +71,25 @@ export function MemoryDialog({
     startTransition(async () => {
       try {
         if (memory) {
-          const updated = await updateMemory({
+          const res = await updateMemory({
             id: memory.id,
             content: trimmed,
           });
+          if (!res.ok) {
+            toast.error(res.error.message || "Failed to update memory");
+            return;
+          }
+          const updated = res.value;
           updateMemoryInStore(updated);
           toast.success("Memory updated");
           onSaved?.(updated);
         } else {
-          const created = await createMemory({ content: trimmed });
+          const res = await createMemory({ content: trimmed });
+          if (!res.ok) {
+            toast.error(res.error.message || "Failed to save memory");
+            return;
+          }
+          const created = res.value;
           addMemoryToStore(created);
           toast.success("Memory added");
           onSaved?.(created);

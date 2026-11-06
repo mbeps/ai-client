@@ -1,3 +1,5 @@
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 
 /**
@@ -74,9 +76,10 @@ export async function safeMcpFetch(
 
       // Re-validate every redirect hop against SSRF rules
       if (await isBlockedUrl(nextUrl.href)) {
-        throw new Error(
-          `Redirect destination "${nextUrl.href}" points to a blocked/internal address`,
-        );
+        throw new AppException({
+          code: ERROR_CODE.FORBIDDEN,
+          message: `Redirect destination "${nextUrl.href}" points to a blocked/internal address`,
+        });
       }
 
       currentUrl = nextUrl.href;
@@ -101,5 +104,8 @@ export async function safeMcpFetch(
     return response;
   }
 
-  throw new Error(`Too many redirects (limit: ${MAX_REDIRECTS})`);
+  throw new AppException({
+    code: ERROR_CODE.UPSTREAM_HTTP,
+    message: `Too many redirects (limit: ${MAX_REDIRECTS})`,
+  });
 }

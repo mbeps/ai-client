@@ -68,9 +68,12 @@ describe("getAttachmentUrl action", () => {
     const result = await getAttachmentUrl(VALID_UUID);
 
     expect(result).toEqual({
-      url: "https://s3.example.com/presigned",
-      name: "file.txt",
-      mimeType: "text/plain",
+      ok: true,
+      value: {
+        url: "https://s3.example.com/presigned",
+        name: "file.txt",
+        mimeType: "text/plain",
+      },
     });
     expect(getPresignedUrlMock).toHaveBeenCalledWith(
       "attachments/user-1/file.txt",
@@ -93,9 +96,12 @@ describe("getAttachmentUrl action", () => {
     const result = await getAttachmentUrl(VALID_UUID);
 
     expect(result).toEqual({
-      url: `data:image/png;base64,${Buffer.from("fake-png-bytes").toString("base64")}`,
-      name: "cover.png",
-      mimeType: "image/png",
+      ok: true,
+      value: {
+        url: `data:image/png;base64,${Buffer.from("fake-png-bytes").toString("base64")}`,
+        name: "cover.png",
+        mimeType: "image/png",
+      },
     });
     expect(downloadObjectMock).toHaveBeenCalledWith("attachments/user-1/cover.png");
     expect(getPresignedUrlMock).not.toHaveBeenCalled();
@@ -116,9 +122,12 @@ describe("getAttachmentUrl action", () => {
     const result = await getAttachmentUrl(VALID_UUID);
 
     expect(result).toEqual({
-      url: "https://s3.example.com/fallback-cover.png",
-      name: "cover.png",
-      mimeType: "image/png",
+      ok: true,
+      value: {
+        url: "https://s3.example.com/fallback-cover.png",
+        name: "cover.png",
+        mimeType: "image/png",
+      },
     });
     expect(getPresignedUrlMock).toHaveBeenCalledWith(
       "attachments/user-1/cover.png",
@@ -127,20 +136,49 @@ describe("getAttachmentUrl action", () => {
     );
   });
 
-  it("throws error if id is not a valid UUID", async () => {
-    await expect(getAttachmentUrl("not-a-uuid")).rejects.toThrow();
+  it("returns error if id is not a valid UUID", async () => {
+    const res = await getAttachmentUrl("not-a-uuid");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws 'Not Found' if attachment does not exist or user does not own it", async () => {
+  it("returns 'Not Found' if attachment does not exist or user does not own it", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(getAttachmentUrl(VALID_UUID)).rejects.toThrow("Not Found");
+    const res = await getAttachmentUrl(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND", message: "Not Found" }),
+    });
   });
 
-  it("throws error if session is unauthenticated", async () => {
+  it("returns UNAUTHORIZED if session is unauthenticated", async () => {
     const { requireSession } = await import("@/lib/auth/require-session");
-    vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
+    const { AppException } = await import("@/lib/error/app-exception");
+    const { ERROR_CODE } = await import("@/lib/error/error-code");
+    vi.mocked(requireSession).mockRejectedValueOnce(
+      new AppException({
+        code: ERROR_CODE.UNAUTHORIZED,
+        message: "Unauthorized",
+      }),
+    );
 
-    await expect(getAttachmentUrl(VALID_UUID)).rejects.toThrow("Unauthorized");
+    const res = await getAttachmentUrl(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED", message: "Unauthorized" }),
+    });
+  });
+
+  it("handles unexpected error and returns INTERNAL via defineAction", async () => {
+    chainable.where.mockRejectedValueOnce(new Error("Unexpected DB crash"));
+
+    const res = await getAttachmentUrl(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INTERNAL" }),
+    });
   });
 });

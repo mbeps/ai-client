@@ -310,14 +310,20 @@ describe("executeTranslationWorkflow Inngest Function", () => {
       }),
     ).rejects.toBe("provider returned a bare string");
 
-    expect(chainable.set).toHaveBeenCalledWith({
-      status: "failed",
-      errorMessage: "Translation failed",
-    });
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: expect.stringMatching(/Something went wrong/),
+      }),
+    );
 
     expect(inngest.realtime.publish).toHaveBeenCalledWith(
       expect.anything(),
-      { type: "error", message: "Translation failed" },
+      expect.objectContaining({
+        type: "error",
+        message: expect.stringMatching(/Something went wrong/),
+        code: "INTERNAL",
+      }),
     );
   });
 

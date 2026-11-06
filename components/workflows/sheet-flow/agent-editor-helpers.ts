@@ -1,6 +1,12 @@
-import type { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
-import { uploadRunInput } from "@/actions/transform-runs/upload-run-input";
+import {
+  type UploadRunInputError,
+  uploadRunInput,
+} from "@/actions/transform-runs/upload-run-input";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { Result } from "@/types/result";
+import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 import type { TransformStep } from "@/types/transform/transform-step";
 
 /**
@@ -8,9 +14,7 @@ import type { TransformStep } from "@/types/transform/transform-step";
  *
  * @author Maruf Bepary
  */
-export type TransformAgentData = NonNullable<
-  Awaited<ReturnType<typeof getTransformAgent>>
->;
+export type TransformAgentData = TransformAgentRow;
 
 /**
  * Represents raw step like.
@@ -179,15 +183,20 @@ export function buildAgentPayload(state: AgentPayloadInput) {
  * Uploads selected input files for a transform run and returns their attachment IDs.
  *
  * @param files - Target files
- * @returns The resolved result
+ * @returns Result wrapping array of attachment IDs
  * @author Maruf Bepary
  */
-export async function uploadRunInputFiles(files: File[]): Promise<string[]> {
-  if (files.length === 0) return [];
+export async function uploadRunInputFiles(
+  files: File[],
+): Promise<Result<string[], UploadRunInputError>> {
+  if (files.length === 0) return ok([]);
   const formData = new FormData();
   for (const file of files) {
     formData.append("files", file);
   }
-  const uploaded = await uploadRunInput(formData);
-  return uploaded.map((u) => u.id);
+  const res = await uploadRunInput(formData);
+  if (!res.ok) {
+    return fail(res.error);
+  }
+  return ok(res.value.map((u) => u.id));
 }

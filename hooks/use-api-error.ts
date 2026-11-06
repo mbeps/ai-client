@@ -161,10 +161,14 @@ function extractErrorInfo(
   const fallback = fallbackMessage ?? "An error occurred";
 
   if (error instanceof Error) {
+    const raw = error as any;
+    const code = raw.code ?? raw.error?.code;
+    const errorPayload =
+      raw.error && typeof raw.error === "object" ? raw.error : raw;
     return {
-      code: (error as any).code,
+      code,
       message: error.message,
-      raw: error as any,
+      raw: errorPayload,
     };
   }
 

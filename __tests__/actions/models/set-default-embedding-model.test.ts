@@ -49,13 +49,18 @@ describe("setDefaultEmbeddingModel action", () => {
   it("throws NotFound if model does not exist or lacks embedding capability", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(setDefaultEmbeddingModel("model-1")).rejects.toThrow("Not Found");
+    const res = await setDefaultEmbeddingModel("model-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("sets default embedding model successfully", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "model-1" }]);
 
-    await setDefaultEmbeddingModel("model-1");
+    const res = await setDefaultEmbeddingModel("model-1");
+    expect(res).toEqual({ ok: true, value: undefined });
     expect(chainable.insert).toHaveBeenCalled();
   });
 });

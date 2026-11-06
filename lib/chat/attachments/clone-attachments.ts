@@ -24,7 +24,18 @@ export async function cloneAttachments(
 
   try {
     const ids = attachmentsToClone.map((att) => att.id);
-    const results = await cloneAttachmentsBatch(ids, newMessageId);
+    const res = await cloneAttachmentsBatch(ids, newMessageId);
+    if (!res.ok) {
+      log.error("Attachment batch clone failed: {error}", {
+        error: res.error.message,
+      });
+      toast.error(
+        "Failed to clone attachments. They will not be sent to the AI.",
+      );
+      return [];
+    }
+
+    const results = res.value;
 
     return results.map((result) => {
       const original = attachmentsToClone.find((a) => a.key === result.key);

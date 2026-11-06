@@ -290,13 +290,12 @@ function useRealtimeRunMessages(
 ) {
   const lastProcessedIndexRef = useRef(0);
 
-  const fetchToken = useCallback(
-    () =>
-      runId
-        ? getTransformRunRealtimeToken(runId)
-        : Promise.reject(new Error("No runId")),
-    [runId],
-  );
+  const fetchToken = useCallback(async () => {
+    if (!runId) throw new Error("No runId");
+    const res = await getTransformRunRealtimeToken(runId);
+    if (!res.ok) throw new Error(res.error.message);
+    return res.value;
+  }, [runId]);
 
   const apiBaseUrl = useMemo(() => getRealtimeApiBaseUrl(), []);
 
@@ -349,11 +348,18 @@ function usePendingRunAutoStarter(
       return;
     }
     hasStartedStream.current = true;
-    startTransformRunAction(run.id).catch((err) => {
-      const msg = err instanceof Error ? err.message : "Failed to start run";
-      onError(msg);
-      toast.error(msg);
-    });
+    startTransformRunAction(run.id)
+      .then((res) => {
+        if (!res.ok) {
+          onError(res.error.message);
+          toast.error(res.error.message);
+        }
+      })
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : "Failed to start run";
+        onError(msg);
+        toast.error(msg);
+      });
   }, [run, agent, onError]);
 }
 

@@ -1,3 +1,6 @@
+import { NonRetriableError } from "inngest";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { toAppError } from "@/lib/error/to-app-error";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { ingestDocument } from "@/lib/rag/ingest";
@@ -36,7 +39,20 @@ export const ingestKbDocumentFunction = inngest.createFunction(
         userId,
       });
 
-      await ingestDocument(documentId, userId);
+      try {
+        await ingestDocument(documentId, userId);
+      } catch (err) {
+        const appErr = toAppError(err);
+        if (
+          appErr.code === ERROR_CODE.NOT_FOUND ||
+          appErr.code === ERROR_CODE.RAG_EXTRACTION_EMPTY ||
+          appErr.code === ERROR_CODE.PROVIDER_NOT_CONFIGURED ||
+          appErr.code === ERROR_CODE.INVALID_API_KEY
+        ) {
+          throw new NonRetriableError(appErr.message, { cause: err });
+        }
+        throw err;
+      }
 
       log.info("Completed durable ingestion for document {documentId}", {
         documentId,

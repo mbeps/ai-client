@@ -100,7 +100,7 @@ describe("Project Server Actions", () => {
         knowledgebaseId: KB_ID,
       });
 
-      expect(result).toEqual(SAMPLE_PROJECT);
+      expect(result).toEqual({ ok: true, value: SAMPLE_PROJECT });
       expect(chainable.insert).toHaveBeenCalled();
     });
 
@@ -118,7 +118,7 @@ describe("Project Server Actions", () => {
         name: "Test Project",
       });
 
-      expect(result).toEqual(minimalProject);
+      expect(result).toEqual({ ok: true, value: minimalProject });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           description: null,
@@ -155,7 +155,7 @@ describe("Project Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([{ id: PROJECT_ID }]);
 
       const result = await deleteProject(PROJECT_ID);
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toEqual({ ok: true, value: { deletedCount: 1 } });
       expect(chainable.update).toHaveBeenCalled();
       expect(chainable.delete).toHaveBeenCalled();
     });
@@ -166,7 +166,7 @@ describe("Project Server Actions", () => {
       chainable.orderBy.mockResolvedValueOnce([SAMPLE_PROJECT]);
 
       const result = await listProjects();
-      expect(result).toEqual([SAMPLE_PROJECT]);
+      expect(result).toEqual({ ok: true, value: [SAMPLE_PROJECT] });
     });
   });
 
@@ -176,7 +176,7 @@ describe("Project Server Actions", () => {
       chainable.returning.mockResolvedValueOnce([renamed]);
 
       const result = await renameProject(PROJECT_ID, "Renamed Project");
-      expect(result).toEqual(renamed);
+      expect(result).toEqual({ ok: true, value: renamed });
     });
   });
 
@@ -200,7 +200,7 @@ describe("Project Server Actions", () => {
         knowledgebaseId: null,
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
 
     it("updates even fields (name, globalPrompt, knowledgebaseId)", async () => {
@@ -212,7 +212,7 @@ describe("Project Server Actions", () => {
         knowledgebaseId: KB_ID,
       });
 
-      expect(result).toEqual(SAMPLE_PROJECT);
+      expect(result).toEqual({ ok: true, value: SAMPLE_PROJECT });
     });
 
     it("updates odd fields (description, tools)", async () => {
@@ -223,7 +223,7 @@ describe("Project Server Actions", () => {
         tools: [],
       });
 
-      expect(result).toEqual(SAMPLE_PROJECT);
+      expect(result).toEqual({ ok: true, value: SAMPLE_PROJECT });
     });
 
     it("updates optional values with null for nullable fields", async () => {
@@ -233,15 +233,17 @@ describe("Project Server Actions", () => {
         knowledgebaseId: null,
       });
 
-      expect(result).toEqual(SAMPLE_PROJECT);
+      expect(result).toEqual({ ok: true, value: SAMPLE_PROJECT });
     });
 
-    it("throws 'Not Found' when updated row is not found", async () => {
+    it("returns NOT_FOUND when updated row is not found", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 
-      await expect(
-        updateProject(PROJECT_ID, { name: "Non-existent" }),
-      ).rejects.toThrow("Not Found");
+      const res = await updateProject(PROJECT_ID, { name: "Non-existent" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "NOT_FOUND" }),
+      });
     });
 
     it("always writes skillMode and skillIds, which the schema defaults to 'dynamic' and []", async () => {

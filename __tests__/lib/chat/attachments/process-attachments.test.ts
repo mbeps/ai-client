@@ -71,16 +71,19 @@ describe("processAttachments", () => {
 
   describe("routing by key presence", () => {
     it("calls cloneAttachmentsBatch when attachment has a key", async () => {
-      mockCloneAttachmentsBatch.mockResolvedValueOnce([
-        {
-          id: "cloned-1",
-          key: "uploads/existing.pdf",
-          name: "doc.pdf",
-          mimeType: "application/pdf",
-          size: 4096,
-          extractedText: null,
-        },
-      ]);
+      mockCloneAttachmentsBatch.mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            id: "cloned-1",
+            key: "uploads/existing.pdf",
+            name: "doc.pdf",
+            mimeType: "application/pdf",
+            size: 4096,
+            extractedText: null,
+          },
+        ],
+      });
 
       const att = makeAttachment({ id: "att-1", key: "uploads/existing.pdf" });
       const result = await processAttachments([att], "msg-1");
@@ -97,7 +100,10 @@ describe("processAttachments", () => {
 
     it("calls uploadSingleAttachment (via uploadAttachment) when attachment has no key", async () => {
       mockUploadAttachment.mockResolvedValueOnce({
-        key: "uploads/new.pdf",
+        ok: true,
+        value: {
+          key: "uploads/new.pdf",
+        },
       });
 
       const att = makeAttachment({
@@ -123,7 +129,7 @@ describe("processAttachments", () => {
         maxConcurrentUploads = Math.max(maxConcurrentUploads, activeUploads);
         await new Promise((resolve) => setTimeout(resolve, 25));
         activeUploads--;
-        return { key: "uploads/uploaded.pdf" };
+        return { ok: true, value: { key: "uploads/uploaded.pdf" } };
       });
 
       const att1 = makeAttachment({
@@ -152,18 +158,24 @@ describe("processAttachments", () => {
 
   describe("mixed attachments", () => {
     it("processes both existing and new attachments in a single call", async () => {
-      mockCloneAttachmentsBatch.mockResolvedValueOnce([
-        {
-          id: "cloned-1",
-          key: "uploads/existing.pdf",
-          name: "doc.pdf",
-          mimeType: "application/pdf",
-          size: 4096,
-          extractedText: null,
-        },
-      ]);
+      mockCloneAttachmentsBatch.mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            id: "cloned-1",
+            key: "uploads/existing.pdf",
+            name: "doc.pdf",
+            mimeType: "application/pdf",
+            size: 4096,
+            extractedText: null,
+          },
+        ],
+      });
       mockUploadAttachment.mockResolvedValueOnce({
-        key: "uploads/new.pdf",
+        ok: true,
+        value: {
+          key: "uploads/new.pdf",
+        },
       });
 
       const existing = makeAttachment({
@@ -233,16 +245,19 @@ describe("processAttachments", () => {
 
   describe("extractedText propagation", () => {
     it("passes extractedText from clone result when present", async () => {
-      mockCloneAttachmentsBatch.mockResolvedValueOnce([
-        {
-          id: "cloned-1",
-          key: "uploads/doc.pdf",
-          name: "doc.pdf",
-          mimeType: "application/pdf",
-          size: 4096,
-          extractedText: "Extracted content from PDF",
-        },
-      ]);
+      mockCloneAttachmentsBatch.mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            id: "cloned-1",
+            key: "uploads/doc.pdf",
+            name: "doc.pdf",
+            mimeType: "application/pdf",
+            size: 4096,
+            extractedText: "Extracted content from PDF",
+          },
+        ],
+      });
 
       const att = makeAttachment({
         id: "att-1",
@@ -255,16 +270,19 @@ describe("processAttachments", () => {
     });
 
     it("falls back to original extractedText when clone returns null", async () => {
-      mockCloneAttachmentsBatch.mockResolvedValueOnce([
-        {
-          id: "cloned-1",
-          key: "uploads/doc.pdf",
-          name: "doc.pdf",
-          mimeType: "application/pdf",
-          size: 4096,
-          extractedText: null,
-        },
-      ]);
+      mockCloneAttachmentsBatch.mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            id: "cloned-1",
+            key: "uploads/doc.pdf",
+            name: "doc.pdf",
+            mimeType: "application/pdf",
+            size: 4096,
+            extractedText: null,
+          },
+        ],
+      });
 
       const att = makeAttachment({
         id: "att-1",
@@ -278,7 +296,10 @@ describe("processAttachments", () => {
 
     it("passes extractedText to uploadAttachment when present on new file", async () => {
       mockUploadAttachment.mockResolvedValueOnce({
-        key: "uploads/new.pdf",
+        ok: true,
+        value: {
+          key: "uploads/new.pdf",
+        },
       });
 
       const att = makeAttachment({

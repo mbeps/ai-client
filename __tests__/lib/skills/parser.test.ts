@@ -770,7 +770,9 @@ describe("parseZipBuffer directory detection", () => {
 
     const entries = parseZipBuffer(patched);
 
-    expect(entries.map((e) => e.path)).toEqual(["SKILL.md"]);
+    expect(entries.ok ? entries.value.map((e) => e.path) : []).toEqual([
+      "SKILL.md",
+    ]);
   });
 
   it("marks a zero-length-name entry as a directory only via the size check", () => {
@@ -849,9 +851,14 @@ const corruptSkillZip = (
 
 describe("parseZipBuffer decompression error handling", () => {
   it("throws Invalid or oversized ZIP entry and logs when decompression fails", () => {
-    expect(() => parseZipBuffer(corruptSkillZip())).toThrow(
-      "Invalid or oversized ZIP entry",
-    );
+    const res = parseZipBuffer(corruptSkillZip());
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "INVALID_INPUT",
+        message: "Invalid or oversized ZIP entry",
+      }),
+    });
 
     expect(logError).toHaveBeenCalled();
     const logged = JSON.stringify(logError.mock.calls);
@@ -866,9 +873,14 @@ describe("parseZipBuffer decompression error handling", () => {
     const eocdSig = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
     zip.writeUInt32LE(0, zip.lastIndexOf(eocdSig));
 
-    expect(() => parseZipBuffer(zip)).toThrow(
-      "Invalid or oversized ZIP entry",
-    );
+    const res = parseZipBuffer(zip);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "INVALID_INPUT",
+        message: "Invalid or oversized ZIP entry",
+      }),
+    });
 
     expect(logError).toHaveBeenCalled();
     const logged = JSON.stringify(logError.mock.calls);
@@ -925,10 +937,34 @@ description:
     eocd.writeUInt32LE(cd.length, 12);
     eocd.writeUInt32LE(local.length, 16);
 
-    const entries = parseZipBuffer(Buffer.concat([local, cd, eocd]));
+    const entriesRes = parseZipBuffer(Buffer.concat([local, cd, eocd]));
 
-    expect(entries).toHaveLength(1);
-    expect(entries[0].path).toBe("emptyfile");
-    expect(entries[0].isDirectory).toBe(true);
+    expect(entriesRes.ok).toBe(true);
+    if (entriesRes.ok) {
+      expect(entriesRes.value).toHaveLength(1);
+      expect(entriesRes.value[0].path).toBe("emptyfile");
+      expect(entriesRes.value[0].isDirectory).toBe(true);
+    }
+  });
+
+  it("handles non-Error thrown exceptions during zip parsing", () => {
+    vi.spyOn(Buffer, "isBuffer").mockImplementationOnce(() => {
+      throw new Error("Standard error thrown");
+    });
+    const resError = parseZipBuffer(Buffer.alloc(10));
+    expect(resError.ok).toBe(false);
+    if (!resError.ok) {
+      expect(resError.error.message).toBe("Standard error thrown");
+    }
+
+    vi.spyOn(Buffer, "isBuffer").mockImplementationOnce(() => {
+      throw "Non-error string thrown";
+    });
+
+    const res = parseZipBuffer(Buffer.alloc(10));
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Failed to parse ZIP buffer");
+    }
   });
 });

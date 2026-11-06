@@ -4,12 +4,18 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { mcpServer } from "@/drizzle/schemas/mcp-server-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { buildServerConfig } from "@/lib/mcp/build-server-config";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import {
   type UpdateMcpServer,
   updateMcpServerSchema,
 } from "@/schemas/providers/mcp-server";
+import type { CommonError } from "@/types/error/common-error";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
+import type { Result } from "@/types/result";
 
 /**
  * Updates an existing MCP server configuration for the authenticated user.
@@ -17,32 +23,36 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
  *
  * @param id - UUID of the MCP server to update; must be owned by the authenticated user.
  * @param data - Updated server configuration validated against updateMcpServerSchema.
- * @returns The updated MCP server row with all fields.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws ZodError if data fails schema validation (malformed URL, etc.).
- * @throws Error if server does not exist or user does not own it (returns "Not Found").
- * @throws Error if database update fails due to constraints or connection issues.
+ * @returns Result containing updated MCP server row.
+ * @author Maruf Bepary
  */
-export async function updateMcpServer(
-  id: string,
-  data: UpdateMcpServer,
-): Promise<McpServerRow> {
-  const session = await requireSession();
+export const updateMcpServer = defineAction(
+  async (
+    id: string,
+    data: UpdateMcpServer,
+  ): Promise<Result<McpServerRow, CommonError>> => {
+    const session = await requireSession();
 
-  const parsed = updateMcpServerSchema.parse(data);
+    const parsed = updateMcpServerSchema.parse(data);
 
-  const values = buildServerConfig(parsed);
-  // SEC-07: empty headers string means "no change" — preserve existing headers
-  const { headers: _h, ...restValues } = values;
-  const updateFields = parsed.headers === "" ? restValues : values;
+    const values = buildServerConfig(parsed);
+    // SEC-07: empty headers string means "no change" — preserve existing headers
+    const { headers: _h, ...restValues } = values;
+    const updateFields = parsed.headers === "" ? restValues : values;
 
-  const [updated] = await db
-    .update(mcpServer)
-    .set({ ...updateFields, updatedAt: new Date() })
-    .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
-    .returning();
+    const [updated] = await db
+      .update(mcpServer)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(and(eq(mcpServer.id, id), eq(mcpServer.userId, session.user.id)))
+      .returning();
 
-  if (!updated) throw new Error("Not Found");
+    if (!updated) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
 
-  return updated;
-}
+    return ok(updated);
+  },
+);

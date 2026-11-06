@@ -60,7 +60,14 @@ export function useEntityOptions({
   const handleRename = async (newName: string) => {
     if (!onRename) return;
     try {
-      await onRename(id, newName);
+      const res = await onRename(id, newName);
+      if (res && typeof res === "object" && "ok" in res && !res.ok) {
+        toast.error(
+          (res as any).error?.message ??
+            `Failed to rename ${type.toLowerCase()}`,
+        );
+        return;
+      }
       toast.success(`${type} renamed`);
       if (useRouterRefresh) {
         router.refresh();
@@ -76,7 +83,14 @@ export function useEntityOptions({
     if (!onDelete) return;
     setIsDeleting(true);
     try {
-      await onDelete(id);
+      const res = await onDelete(id);
+      if (res && typeof res === "object" && "ok" in res && !res.ok) {
+        toast.error(
+          (res as any).error?.message ??
+            `Failed to delete ${type.toLowerCase()}`,
+        );
+        return;
+      }
       toast.success(`${type} deleted`);
       if (useRouterRefresh) {
         router.refresh();

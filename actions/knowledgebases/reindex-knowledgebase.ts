@@ -5,7 +5,13 @@ import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { inngest } from "@/lib/inngest/client";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Re-indexes KB documents sequentially after validating ownership. Updates embeddings from S3 files.
@@ -14,71 +20,79 @@ import { inngest } from "@/lib/inngest/client";
  *
  * @async
  * @param kbId - Knowledge base UUID to re-index
- * @returns Re-indexing summary with processed and failed counts
- * @throws {Error} if KB not found or not owned by current user
+ * @returns Result containing re-indexing summary with processed and failed counts
  * @author Maruf Bepary
  */
-export async function reindexKnowledgebase(kbId: string) {
-  const session = await requireSession();
+export const reindexKnowledgebase = defineAction(
+  async (
+    kbId: string,
+  ): Promise<
+    Result<{ processedCount: number; failedCount: number }, CommonError>
+  > => {
+    const session = await requireSession();
 
-  // 1. Fetch KB + verify ownership
-  const [kb] = await db
-    .select()
-    .from(knowledgebase)
-    .where(
-      and(
-        eq(knowledgebase.id, kbId),
-        eq(knowledgebase.userId, session.user.id),
-      ),
-    );
+    // 1. Fetch KB + verify ownership
+    const [kb] = await db
+      .select()
+      .from(knowledgebase)
+      .where(
+        and(
+          eq(knowledgebase.id, kbId),
+          eq(knowledgebase.userId, session.user.id),
+        ),
+      );
 
-  if (!kb) {
-    throw new Error("Not Found");
-  }
+    if (!kb) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
 
-  // 2. Mark as indexing and fetch docs atomically
-  const docs = await db.transaction(async (tx) => {
-    await tx
-      .update(knowledgebase)
-      .set({
-        indexStatus: "indexing",
-        lastIndexedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(knowledgebase.id, kbId));
+    // 2. Mark as indexing and fetch docs atomically
+    const docs = await db.transaction(async (tx) => {
+      await tx
+        .update(knowledgebase)
+        .set({
+          indexStatus: "indexing",
+          lastIndexedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(knowledgebase.id, kbId));
 
-    // Reset status to pending and clear status message for all documents being re-indexed
-    await tx
-      .update(kbDocument)
-      .set({
-        status: "pending",
-        statusMessage: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(kbDocument.kbId, kbId));
+      // Reset status to pending and clear status message for all documents being re-indexed
+      await tx
+        .update(kbDocument)
+        .set({
+          status: "pending",
+          statusMessage: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(kbDocument.kbId, kbId));
 
-    return tx
-      .select({ id: kbDocument.id })
-      .from(kbDocument)
-      .where(eq(kbDocument.kbId, kbId));
-  });
-
-  // 3. Dispatch durable re-index background job to Inngest
-  try {
-    await inngest.send({
-      name: "knowledgebase/reindex",
-      data: { kbId, userId: session.user.id },
+      return tx
+        .select({ id: kbDocument.id })
+        .from(kbDocument)
+        .where(eq(kbDocument.kbId, kbId));
     });
-  } catch (error) {
-    await db
-      .update(knowledgebase)
-      .set({
-        indexStatus: "ready",
-        updatedAt: new Date(),
-      })
-      .where(eq(knowledgebase.id, kbId));
-    throw error;
-  }
 
-  return { processedCount: docs.length, failedCount: 0 };
-}
+    // 3. Dispatch durable re-index background job to Inngest
+    try {
+      await inngest.send({
+        name: "knowledgebase/reindex",
+        data: { kbId, userId: session.user.id },
+      });
+    } catch (error) {
+      await db
+        .update(knowledgebase)
+        .set({
+          indexStatus: "ready",
+          updatedAt: new Date(),
+        })
+        .where(eq(knowledgebase.id, kbId));
+      throw error;
+    }
+
+    return ok({ processedCount: docs.length, failedCount: 0 });
+  },
+);

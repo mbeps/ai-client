@@ -4,7 +4,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { inngest } from "@/lib/inngest/client";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Server action to start executing a transform run via Inngest background job.
@@ -12,48 +18,54 @@ import { inngest } from "@/lib/inngest/client";
  *
  * @param runId - UUID of the transformation run to start
  * @returns Resolves when the Inngest execution event is dispatched
- * @throws {Error} When transform run is not found or access denied
  * @author Maruf Bepary
  */
-export async function startTransformRunAction(runId: string) {
-  const session = await requireSession();
+export const startTransformRunAction = defineAction(
+  async (runId: string): Promise<Result<{ success: boolean }, CommonError>> => {
+    const session = await requireSession();
 
-  const [claimed] = await db
-    .update(transformRun)
-    .set({ status: "running", updatedAt: new Date() })
-    .where(
-      and(
-        eq(transformRun.id, runId),
-        eq(transformRun.userId, session.user.id),
-        eq(transformRun.status, "pending"),
-      ),
-    )
-    .returning();
-
-  if (!claimed) {
-    const [existing] = await db
-      .select({ id: transformRun.id, status: transformRun.status })
-      .from(transformRun)
+    const [claimed] = await db
+      .update(transformRun)
+      .set({ status: "running", updatedAt: new Date() })
       .where(
         and(
           eq(transformRun.id, runId),
           eq(transformRun.userId, session.user.id),
+          eq(transformRun.status, "pending"),
         ),
-      );
+      )
+      .returning();
 
-    if (!existing) throw new Error("Transform run not found");
+    if (!claimed) {
+      const [existing] = await db
+        .select({ id: transformRun.id, status: transformRun.status })
+        .from(transformRun)
+        .where(
+          and(
+            eq(transformRun.id, runId),
+            eq(transformRun.userId, session.user.id),
+          ),
+        );
 
-    return { success: true };
-  }
+      if (!existing) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Transform run not found",
+        });
+      }
 
-  await inngest.send({
-    name: "workflows/transform.execute",
-    data: {
-      runId,
-      userId: session.user.id,
-      startFromStep: claimed.currentStepIndex ?? 0,
-    },
-  });
+      return ok({ success: true });
+    }
 
-  return { success: true };
-}
+    await inngest.send({
+      name: "workflows/transform.execute",
+      data: {
+        runId,
+        userId: session.user.id,
+        startFromStep: claimed.currentStepIndex ?? 0,
+      },
+    });
+
+    return ok({ success: true });
+  },
+);

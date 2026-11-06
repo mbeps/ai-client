@@ -42,8 +42,11 @@ describe("Scoped Chat Pages", () => {
   });
 
   describe("ProjectChatPage", () => {
-    it("calls notFound when getChat throws", async () => {
-      mockGetChat.mockRejectedValueOnce(new Error("Not found"));
+    it("calls notFound when getChat fails", async () => {
+      mockGetChat.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Not found" },
+      });
 
       await expect(
         ProjectChatPage({
@@ -55,7 +58,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("redirects to standalone chat when chat.projectId !== id", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null, // unlinked from project
@@ -73,7 +76,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("redirects to standalone chat when chat.projectId belongs to different project", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: "proj-other",
@@ -91,7 +94,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("renders ChatPageClient when chat.projectId matches id", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: "proj-1",
@@ -109,8 +112,11 @@ describe("Scoped Chat Pages", () => {
   });
 
   describe("AssistantChatPage", () => {
-    it("calls notFound when getChat throws", async () => {
-      mockGetChat.mockRejectedValueOnce(new Error("Not found"));
+    it("calls notFound when getChat fails", async () => {
+      mockGetChat.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Not found" },
+      });
 
       await expect(
         AssistantChatPage({
@@ -122,7 +128,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("redirects to standalone chat when chat.assistantId !== id", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,
@@ -140,7 +146,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("redirects to standalone chat when chat.assistantId belongs to different assistant", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,
@@ -158,7 +164,7 @@ describe("Scoped Chat Pages", () => {
     });
 
     it("renders ChatPageClient when chat.assistantId matches id", async () => {
-      mockGetChat.mockResolvedValueOnce({ id: "chat-1" });
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,

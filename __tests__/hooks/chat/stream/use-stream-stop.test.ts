@@ -268,6 +268,27 @@ describe("executeStopStream", () => {
     );
   });
 
+  it("logs error when persistMessage returns ok: false", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    mockPersistMessage.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed to persist" },
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial message" },
+    });
+
+    await executeStopStream("chat-1", addMessage, resetStreamingState, refs as any);
+
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Failed to persist stopped message",
+      { code: "INTERNAL", message: "Failed to persist" },
+    );
+  });
+
   it("handles stop with only an in-flight tool call (status: calling) and preserves serverName", async () => {
     const addMessage = vi.fn();
     const resetStreamingState = vi.fn();
@@ -490,6 +511,35 @@ describe("executeStopStream", () => {
 
     expect(addMessage).not.toHaveBeenCalled();
     expect(mockPersistMessage).not.toHaveBeenCalled();
+  });
+
+  it("handles persistMessage returning ok: true and ok: false result", async () => {
+    mockPersistMessage.mockResolvedValueOnce({
+      ok: true,
+      value: { id: "msg-persisted-ok" },
+    });
+
+    const addMessage = vi.fn();
+    const resetStreamingState = vi.fn();
+    const refs = createRefs({
+      accumulatedTextRef: { current: "partial text ok" },
+      assistantMessageIdRef: { current: "asst-msg-ok" },
+    });
+
+    await executeStopStream("chat-1", addMessage, resetStreamingState, refs as any);
+    expect(mockLogError).not.toHaveBeenCalled();
+
+    // Now test persistMessage ok: false
+    mockPersistMessage.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed to persist" },
+    });
+
+    await executeStopStream("chat-1", addMessage, resetStreamingState, refs as any);
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Failed to persist stopped message",
+      expect.objectContaining({ code: "INTERNAL" }),
+    );
   });
 });
 

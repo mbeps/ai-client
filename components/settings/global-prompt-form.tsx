@@ -75,19 +75,18 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
             <ActionButton
               type="submit"
               action={async () => {
-                try {
-                  const values = form.getValues();
-                  await updateUserSettings(values);
-                  return {
-                    error: false,
-                    message: "Settings updated successfully",
-                  };
-                } catch (error: any) {
+                const values = form.getValues();
+                const res = await updateUserSettings(values);
+                if (!res.ok) {
                   return {
                     error: true,
-                    message: error?.message || "Failed to update settings",
+                    message: res.error.message || "Failed to update settings",
                   };
                 }
+                return {
+                  error: false,
+                  message: "Settings updated successfully",
+                };
               }}
             >
               <div className="flex items-center">

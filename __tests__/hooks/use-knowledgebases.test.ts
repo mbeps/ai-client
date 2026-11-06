@@ -20,10 +20,13 @@ describe("useKnowledgebases hook", () => {
   });
 
   it("fetches knowledge bases on mount, normalizes description, and allows manual refresh", async () => {
-    vi.mocked(listKnowledgebases).mockResolvedValueOnce([
-      { id: "kb-1", name: "KB 1", description: null, documentCount: 2, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
-      { id: "kb-2", name: "KB 2", description: "Has description", documentCount: 5, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
-    ]);
+    vi.mocked(listKnowledgebases).mockResolvedValueOnce({
+      ok: true,
+      value: [
+        { id: "kb-1", name: "KB 1", description: null, documentCount: 2, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
+        { id: "kb-2", name: "KB 2", description: "Has description", documentCount: 5, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
+      ],
+    } as any);
 
     const { result } = renderHook(() => useKnowledgebases());
 
@@ -36,9 +39,12 @@ describe("useKnowledgebases hook", () => {
     expect(result.current.normalizedKnowledgebases[1].description).toBe("Has description");
 
     // Manual refresh
-    vi.mocked(listKnowledgebases).mockResolvedValueOnce([
-      { id: "kb-1", name: "KB 1", description: "Updated description", documentCount: 3, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
-    ]);
+    vi.mocked(listKnowledgebases).mockResolvedValueOnce({
+      ok: true,
+      value: [
+        { id: "kb-1", name: "KB 1", description: "Updated description", documentCount: 3, createdAt: new Date(), updatedAt: new Date(), userId: "u1" } as any,
+      ],
+    } as any);
 
     await act(async () => {
       await result.current.refresh();
@@ -60,6 +66,25 @@ describe("useKnowledgebases hook", () => {
 
     expect(result.current.knowledgebases).toEqual([]);
     expect(logger.error).toHaveBeenCalledWith("[useKnowledgebases] Failed to load knowledgebases", errorObj);
+  });
+
+  it("logs error when listKnowledgebases returns ok: false", async () => {
+    vi.mocked(listKnowledgebases).mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed to list knowledge bases" },
+    } as any);
+
+    const { result } = renderHook(() => useKnowledgebases());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.knowledgebases).toEqual([]);
+    expect(logger.error).toHaveBeenCalledWith(
+      "[useKnowledgebases] Failed to load knowledgebases",
+      { code: "INTERNAL", message: "Failed to list knowledge bases" },
+    );
   });
 });
 

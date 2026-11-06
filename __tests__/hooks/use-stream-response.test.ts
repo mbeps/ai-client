@@ -41,7 +41,7 @@ vi.mock("inngest/react", () => ({
   getClientSubscriptionToken: vi.fn().mockResolvedValue("mock-token"),
 }));
 
-const mockPersist = vi.hoisted(() => vi.fn());
+const mockPersist = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true, value: {} }));
 vi.mock("@/actions/chats/persist-message", () => ({
   persistMessage: mockPersist,
 }));
@@ -56,13 +56,13 @@ vi.mock("@/lib/chat/message-tree-utils", () => ({
   buildChatFromRows: mockBuildChatFromRows,
 }));
 
-const mockIsChatGenerating = vi.hoisted(() => vi.fn().mockResolvedValue(false));
+const mockIsChatGenerating = vi.hoisted(() => vi.fn().mockResolvedValue({ ok: true, value: false }));
 vi.mock("@/actions/chats/is-chat-generating", () => ({
   isChatGenerating: mockIsChatGenerating,
 }));
 
 const mockGetChatRealtimeToken = vi.hoisted(() =>
-  vi.fn().mockResolvedValue("mock-token"),
+  vi.fn().mockResolvedValue({ ok: true, value: "mock-token" }),
 );
 vi.mock("@/actions/chats/chat-realtime-token", () => ({
   getChatRealtimeToken: mockGetChatRealtimeToken,
@@ -136,12 +136,14 @@ beforeEach(() => {
     byTopic: {},
     last: null,
   };
-  mockPersist.mockResolvedValue({});
+  mockPersist.mockResolvedValue({ ok: true, value: {} });
   mockProcessAttachments.mockResolvedValue([]);
   mockGetChat.mockReset();
   mockBuildChatFromRows.mockReset();
   mockIsChatGenerating.mockReset();
-  mockIsChatGenerating.mockResolvedValue(false);
+  mockIsChatGenerating.mockResolvedValue({ ok: true, value: false });
+  mockGetChatRealtimeToken.mockReset();
+  mockGetChatRealtimeToken.mockResolvedValue({ ok: true, value: "mock-token" });
   mockStoreState.upsertChat.mockClear();
   mockStoreState.chats = { "chat-1": { id: "chat-1", messages: {} } };
   mockLogError.mockClear();
@@ -157,8 +159,10 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
   it("awaits persistMessage BEFORE triggering the API dispatch", async () => {
     const { result } = renderHook(() => useStreamResponse("chat-1"));
 
-    let resolvePersist!: () => void;
-    mockPersist.mockReturnValue(new Promise<void>((r) => (resolvePersist = r)));
+    let resolvePersist!: (val: any) => void;
+    mockPersist.mockReturnValue(
+      new Promise<any>((r) => (resolvePersist = r)),
+    );
 
     let p!: Promise<string>;
     await act(async () => {
@@ -167,7 +171,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     expect(global.fetch).not.toHaveBeenCalled();
 
     await act(async () => {
-      resolvePersist();
+      resolvePersist({ ok: true, value: {} });
       await p;
     });
 
@@ -791,7 +795,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       useStreamResponse("chat-1", { onDone }),
     );
 
-    mockGetChat.mockResolvedValue({
+    mockGetChat.mockResolvedValue({ ok: true, value: {
       id: "chat-1",
       messages: [
         {
@@ -803,7 +807,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         },
       ],
       attachments: [],
-    });
+    } });
     mockBuildChatFromRows.mockReturnValue({
       id: "chat-1",
       messages: {
@@ -854,6 +858,19 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     );
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
+
+    // Test persistMessage returning ok: false with NOT_FOUND
+    mockPersist.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "NOT_FOUND", message: "Not Found" },
+    });
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Chat not found or has been deleted.",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("halts execution and shows connection error toast if persistMessage fails with generic error", async () => {
@@ -872,6 +889,19 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     );
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
+
+    // Test persistMessage returning ok: false with generic error
+    mockPersist.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Persist error" },
+    });
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "hello", null);
+    });
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to save message. Please check your connection.",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("disables useRealtime when token fetch fails with chat not found", async () => {
@@ -1128,7 +1158,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
   it("watchdog interval stops when syncFromDb returns true", async () => {
     vi.useFakeTimers();
     const onDone = vi.fn();
-    mockGetChat.mockResolvedValue({
+    mockGetChat.mockResolvedValue({ ok: true, value: {
       id: "chat-1",
       messages: [
         {
@@ -1140,7 +1170,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         },
       ],
       attachments: [],
-    });
+    } });
     mockBuildChatFromRows.mockReturnValue({
       id: "chat-1",
       messages: {
@@ -1260,10 +1290,24 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     renderHook(() => useStreamResponse("chat-token"));
     await expect(realtimeState.config?.token()).resolves.toBe("mock-token");
     expect(mockGetChatRealtimeToken).toHaveBeenCalledWith("chat-token");
+
+    // Test token fetch when getChatRealtimeToken returns ok: false with NOT_FOUND
+    mockGetChatRealtimeToken.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "NOT_FOUND", message: "Not Found" },
+    });
+    await expect(realtimeState.config?.token()).rejects.toThrow("Not Found");
+
+    // Test token fetch when getChatRealtimeToken returns ok: false with generic error
+    mockGetChatRealtimeToken.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Token fetch failed" },
+    });
+    await expect(realtimeState.config?.token()).rejects.toThrow("Token fetch failed");
   });
 
   it("commits partial text on stop and persists it, logging persistence failures", async () => {
-    mockPersist.mockResolvedValueOnce({});
+    mockPersist.mockResolvedValueOnce({ ok: true, value: {} });
     const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
 
     await act(async () => {
@@ -1403,7 +1447,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
   it("does not match older assistant messages when neither assistant ID nor user message ID matches", async () => {
     const onDone = vi.fn();
-    mockGetChat.mockResolvedValue({
+    mockGetChat.mockResolvedValue({ ok: true, value: {
       id: "chat-1",
       messages: [
         {
@@ -1415,7 +1459,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         },
       ],
       attachments: [],
-    });
+    } });
     mockBuildChatFromRows.mockReturnValue({ id: "chat-1", messages: {} });
 
     const { result, rerender } = renderHook(() =>
@@ -1500,6 +1544,19 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.streamingContent).toBeNull();
     expect(onDone).not.toHaveBeenCalled();
+
+    // Verify watchdog branch when isChatGenerating returns ok: false
+    mockIsChatGenerating.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed check" },
+    });
+    await act(async () => {
+      await result.current.streamResponse("user-msg-2", "hello again", null);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(result.current.isLoading).toBe(false);
 
     vi.useRealTimers();
   });
@@ -1756,7 +1813,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
   describe("rejoin handling after page refresh", () => {
     it("1. rejoined finish refetches and never addMessages the partial tail", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -1768,7 +1825,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       };
 
       const onDone = vi.fn();
-      mockGetChat.mockResolvedValue({
+      mockGetChat.mockResolvedValue({ ok: true, value: {
         id: "chat-1",
         messages: [
           {
@@ -1787,7 +1844,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           },
         ],
         attachments: [],
-      });
+      } });
       mockBuildChatFromRows.mockReturnValue({
         id: "chat-1",
         messages: {
@@ -1845,10 +1902,31 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       expect(mockStoreState.upsertChat).toHaveBeenCalled();
       expect(onDone).toHaveBeenCalledWith("full complete reply from database");
       expect(result.current.isLoading).toBe(false);
+
+      // Verify executeRejoinFinish when onDone is omitted
+      const { rerender: rerenderNoOnDone } = renderHook(() =>
+        useStreamResponse("chat-1"),
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          all: [
+            { data: { type: "text-delta", text: "partial" } },
+            { data: { type: "finish", finishReason: "stop" } },
+          ],
+        };
+        rerenderNoOnDone();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
     });
 
     it("2. rejoin watchdog does not end streaming because an older assistant message exists", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -1860,7 +1938,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       };
 
       const onDone = vi.fn();
-      mockGetChat.mockResolvedValue({
+      mockGetChat.mockResolvedValue({ ok: true, value: {
         id: "chat-1",
         messages: [
           {
@@ -1872,7 +1950,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           },
         ],
         attachments: [],
-      });
+      } });
 
       const { result } = renderHook(() =>
         useStreamResponse("chat-1", { onDone }),
@@ -1897,7 +1975,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
     it("3. mount: leaf=user + true -> isLoading; false -> idle; leaf=assistant -> action not called; rejection -> idle, no toast", async () => {
       // (a) leaf=user + true -> isLoading
-      mockIsChatGenerating.mockResolvedValueOnce(true);
+      mockIsChatGenerating.mockResolvedValueOnce({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -1915,7 +1993,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
       // (b) leaf=user + false -> idle
       mockIsChatGenerating.mockClear();
-      mockIsChatGenerating.mockResolvedValueOnce(false);
+      mockIsChatGenerating.mockResolvedValueOnce({ ok: true, value: false });
       const { result: r2 } = renderHook(() => useStreamResponse("chat-1"));
       await act(async () => {
         await Promise.resolve();
@@ -1955,10 +2033,22 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       });
       expect(r4.current.isLoading).toBe(false);
       expect(mockToastError).not.toHaveBeenCalled();
+
+      // (e) isChatGenerating returns ok: false
+      mockIsChatGenerating.mockClear();
+      mockIsChatGenerating.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "INTERNAL", message: "Failed check" },
+      });
+      const { result: r5 } = renderHook(() => useStreamResponse("chat-1"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(r5.current.isLoading).toBe(false);
     });
 
     it("4. stop while rejoined: no addMessage/persistMessage, still calls /api/chat/stop", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -2012,7 +2102,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
     it("5. streamResponse resets rejoinedRef; normal finish still adds the message with the start id", async () => {
       // First mount in rejoined mode
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -2058,7 +2148,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     it("6. late hydration via rerender(); once per chatId; switching chatId re-checks", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {}; // Empty store, not hydrated
 
       const { rerender } = renderHook(
@@ -2112,7 +2202,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     it("7. run finished before subscribe: stall -> syncFromDb by parentId -> done", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -2122,7 +2212,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       };
 
       const onDone = vi.fn();
-      mockGetChat.mockResolvedValue({
+      mockGetChat.mockResolvedValue({ ok: true, value: {
         id: "chat-1",
         messages: [
           {
@@ -2134,7 +2224,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           },
         ],
         attachments: [],
-      });
+      } });
       mockBuildChatFromRows.mockReturnValue({
         id: "chat-1",
         messages: {
@@ -2171,7 +2261,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
   describe("resilience against deleted chats", () => {
     it("skips getChat in syncFromDb when chat is not in store", async () => {
       mockStoreState.chats = {}; // Empty store / deleted chat
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       const { rerender } = renderHook(() => useStreamResponse("chat-deleted"));
 
       // Trigger connection error to cause syncFromDb invocation
@@ -2191,7 +2281,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           messages: { "user-1": { id: "user-1", role: "user", content: "hi" } },
         },
       };
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockGetChat.mockRejectedValueOnce(new Error("Not Found"));
 
       const { rerender } = renderHook(() => useStreamResponse("chat-1"));
@@ -2208,10 +2298,47 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
       expect(mockGetChat).toHaveBeenCalledWith("chat-1");
       expect(mockLogError).not.toHaveBeenCalled();
+
+      // Test Result ok: false with NOT_FOUND in syncFromDb
+      mockGetChat.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Not Found" },
+      });
+      const { rerender: rerenderNotFoundSync } = renderHook(() =>
+        useStreamResponse("chat-1"),
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerenderNotFoundSync();
+      });
+      expect(mockLogError).not.toHaveBeenCalled();
+
+      // Test Result ok: false with generic error in syncFromDb
+      mockGetChat.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "INTERNAL", message: "Generic DB error" },
+      });
+      const { rerender: rerenderGenericSync } = renderHook(() =>
+        useStreamResponse("chat-1"),
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        realtimeState.connectionStatus = "error";
+        rerenderGenericSync();
+      });
+      expect(mockLogError).toHaveBeenCalledWith(
+        "Failed to sync chat from DB",
+        { code: "INTERNAL", message: "Generic DB error" },
+      );
     });
 
     it("skips getChat and resets streaming state when finish event arrives for a deleted rejoined chat", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -2248,7 +2375,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     it("absorbs 'Not Found' error on rejoin finish without logging an error", async () => {
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-1": {
           id: "chat-1",
@@ -2281,11 +2408,66 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       expect(mockGetChat).toHaveBeenCalledWith("chat-1");
       expect(mockLogError).not.toHaveBeenCalled();
       expect(result.current.isLoading).toBe(false);
+
+      // Separate renderHook instance to test Result error branches in executeRejoinFinish cleanly
+      mockGetChat.mockResolvedValue({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Not Found" },
+      });
+      const { rerender: rerenderNotFound } = renderHook(() =>
+        useStreamResponse("chat-1"),
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          all: [
+            { data: { type: "text-delta", text: "t1" } },
+            { data: { type: "finish", finishReason: "stop" } },
+          ],
+        };
+        rerenderNotFound();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockLogError).not.toHaveBeenCalled();
+
+      // Test Result ok: false with generic error in executeRejoinFinish
+      mockGetChat.mockResolvedValue({
+        ok: false,
+        error: { code: "INTERNAL", message: "Generic rejoin error" },
+      });
+      const { rerender: rerenderGeneric } = renderHook(() =>
+        useStreamResponse("chat-1"),
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          all: [
+            { data: { type: "text-delta", text: "t2" } },
+            { data: { type: "finish", finishReason: "stop" } },
+          ],
+        };
+        rerenderGeneric();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockLogError).toHaveBeenCalledWith(
+        "Failed to refetch chat on rejoin finish",
+        { code: "INTERNAL", message: "Generic rejoin error" },
+      );
     });
 
     it("restores cached stream state from sessionStorage on rejoin including calling tool calls", async () => {
       vi.useFakeTimers();
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       mockStoreState.chats = {
         "chat-rejoin-cache": {
           id: "chat-rejoin-cache",
@@ -2329,7 +2511,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         currentLeafId: "user-empty",
         messages: { "user-empty": { id: "user-empty", role: "user", content: "hello" } },
       };
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       renderHook(() => useStreamResponse("chat-empty-cache"));
       await act(async () => {
         await Promise.resolve();
@@ -2342,7 +2524,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         currentLeafId: "user-corrupted",
         messages: { "user-corrupted": { id: "user-corrupted", role: "user", content: "hello" } },
       };
-      mockIsChatGenerating.mockResolvedValue(true);
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
       renderHook(() => useStreamResponse("chat-corrupted"));
       await act(async () => {
         await Promise.resolve();
@@ -2358,7 +2540,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       };
       const { result, rerender } = renderHook(() => useStreamResponse("chat-1"));
 
-      mockGetChat.mockResolvedValue({
+      mockGetChat.mockResolvedValue({ ok: true, value: {
         id: "chat-1",
         messages: [
           {
@@ -2369,7 +2551,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           },
         ],
         attachments: [],
-      });
+      } });
       mockBuildChatFromRows.mockReturnValue({
         id: "chat-1",
         messages: {
@@ -2537,13 +2719,13 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         messages: { "a-leaf": { id: "a-leaf", role: "assistant", content: "leaf" } },
       };
 
-      mockGetChat.mockResolvedValueOnce({
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: {
         id: "chat-1",
         messages: [
           { id: "a-match", role: "assistant", parentId: "u-1", content: "Matched by assistantId" },
         ],
         attachments: [],
-      });
+      } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         messages: {
@@ -2582,13 +2764,13 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         currentLeafId: null,
         messages: {},
       };
-      mockGetChat.mockResolvedValueOnce({
+      mockGetChat.mockResolvedValueOnce({ ok: true, value: {
         id: "chat-no-leaf",
         messages: [
           { id: "a-first", role: "assistant", parentId: null, content: "First assistant msg" },
         ],
         attachments: [],
-      });
+      } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-no-leaf",
         messages: {
@@ -2626,12 +2808,12 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
           "u-wd": { id: "u-wd", role: "user", content: "wd prompt" },
         },
       };
-      mockIsChatGenerating.mockResolvedValue(true);
-      mockGetChat.mockResolvedValue({
+      mockIsChatGenerating.mockResolvedValue({ ok: true, value: true });
+      mockGetChat.mockResolvedValue({ ok: true, value: {
         id: "chat-rejoin-wd",
         messages: [],
         attachments: [],
-      });
+      } });
 
       const { rerender: rerenderWd, unmount: uWd } = renderHook(() =>
         useStreamResponse("chat-rejoin-wd"),
