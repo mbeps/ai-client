@@ -1,6 +1,7 @@
 "use server";
 
 import type { z } from "zod";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { createEntityFactory } from "@/lib/factories/create-entity-factory";
 import { createAssistantSchema } from "@/schemas/assistant/assistant";
@@ -28,7 +29,7 @@ export const createAssistant = createEntityFactory<
     name: validated.name,
     description: validated.description ?? null,
     prompt: validated.prompt ?? null,
-    tools: validated.tools ?? [],
+    tools: validated.tools ?? [...DEFAULT_ENABLED_TOOLS],
     skillMode: validated.skillMode,
     skillIds: validated.skillIds,
     avatar: validated.avatar ?? null,
