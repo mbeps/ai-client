@@ -35,8 +35,8 @@ export const updateAssistant = updateEntityFactory<
     if (data.description !== undefined) values.description = data.description;
     if (data.prompt !== undefined) values.prompt = data.prompt;
     if (data.tools !== undefined) values.tools = data.tools;
-    values.skillMode = data.skillMode;
-    values.skillIds = data.skillIds;
+    if (data.skillMode !== undefined) values.skillMode = data.skillMode;
+    if (data.skillIds !== undefined) values.skillIds = data.skillIds;
     if (data.avatar !== undefined) values.avatar = data.avatar ?? null;
     return values;
   },

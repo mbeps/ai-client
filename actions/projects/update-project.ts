@@ -36,8 +36,8 @@ export const updateProject = updateEntityFactory<
     if (data.globalPrompt !== undefined)
       values.globalPrompt = data.globalPrompt;
     if (data.tools !== undefined) values.tools = data.tools;
-    values.skillMode = data.skillMode;
-    values.skillIds = data.skillIds;
+    if (data.skillMode !== undefined) values.skillMode = data.skillMode;
+    if (data.skillIds !== undefined) values.skillIds = data.skillIds;
     if (data.knowledgebaseId !== undefined)
       values.knowledgebaseId = data.knowledgebaseId ?? null;
     return values;

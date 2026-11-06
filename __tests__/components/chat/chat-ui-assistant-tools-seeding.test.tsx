@@ -4,6 +4,7 @@ import { ChatUI } from "@/components/chat/chat-ui";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Chat } from "@/types/chat/chat";
+import type { Project } from "@/types/project/project";
 
 vi.mock("katex/dist/katex.min.css", () => ({}));
 vi.mock("@blocknote/mantine/style.css", () => ({}));
@@ -112,6 +113,56 @@ describe("ChatUI - assistant tools seeding", () => {
     };
 
     render(<ChatUI chatId="chat-1" initialChat={chat} />);
+
+    expect(lastChatInputProps?.initialSelectedTools).toEqual([]);
+    expect(lastChatInputProps?.initialSelectedTools).not.toContain(
+      INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
+    );
+  });
+
+  it("hands empty initialSelectedTools to ChatInput when project has canvas disabled", () => {
+    const project: Project = {
+      id: "proj-1",
+      userId: "user-1",
+      name: "Markdown Project",
+      description: "Project without canvas",
+      globalPrompt: "Text only",
+      tools: [], // Canvas disabled in project settings
+      skillMode: "dynamic",
+      skillIds: [],
+      knowledgebaseId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const chat: Chat = {
+      id: "chat-2",
+      userId: "user-1",
+      title: "Project Chat",
+      assistantId: null,
+      projectId: "proj-1",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: null,
+      messages: {},
+    } as Chat;
+
+    mockStoreState = {
+      chats: { [chat.id]: chat },
+      mcpServers: [],
+      loadMcpServers: vi.fn().mockResolvedValue([]),
+      assistants: [],
+      projects: [project],
+      prompts: [],
+      skills: [],
+      userSettings: null,
+      updateMessageMetadataDb: vi.fn(),
+      deleteMessageDb: vi.fn(),
+      setCurrentLeafDb: vi.fn(),
+      setKnowledgebaseDb: vi.fn(),
+    };
+
+    render(<ChatUI chatId="chat-2" initialChat={chat} />);
 
     expect(lastChatInputProps?.initialSelectedTools).toEqual([]);
     expect(lastChatInputProps?.initialSelectedTools).not.toContain(
