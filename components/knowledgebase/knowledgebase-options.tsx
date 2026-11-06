@@ -46,12 +46,12 @@ export function KnowledgebaseOptions({
 
   const items = [
     {
-      label: "Rename Knowledgebase",
+      label: "Rename",
       icon: <Edit2 className="mr-2 h-4 w-4" />,
       onClick: () => setShowRename(true),
     },
     {
-      label: "Delete Knowledgebase",
+      label: "Delete",
       icon: <Trash2 className="mr-2 h-4 w-4" />,
       onClick: () => setShowDelete(true),
       isDestructive: true,

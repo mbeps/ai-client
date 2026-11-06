@@ -141,13 +141,7 @@ export function ToolTraceStep({
               toolName={toolName}
             />
           </TraceTitle>
-          <TraceDescription
-            className={cn(
-              "text-[11px]",
-              isError && "text-destructive font-medium",
-              !isError && !isRunning && "text-muted-foreground",
-            )}
-          >
+          <TraceDescription className="text-muted-foreground text-[11px]">
             {isRunning ? "Running..." : isError ? "Failed" : "Success"}
           </TraceDescription>
         </TraceLine>
