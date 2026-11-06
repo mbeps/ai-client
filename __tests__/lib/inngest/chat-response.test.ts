@@ -234,6 +234,61 @@ describe("generateChatResponse Inngest Function", () => {
     );
   });
 
+  it("extracts and forwards canvasArtifacts from thread to buildSystemPrompt", async () => {
+    const fn = (generateChatResponse as any).fn;
+    const artifactMeta = JSON.stringify({
+      toolCalls: [
+        {
+          toolCallId: "call_1",
+          toolName: "manage_artifact",
+          args: { title: "Draft", type: "markdown", content: "old" },
+        },
+      ],
+      toolResults: [
+        {
+          toolCallId: "call_1",
+          toolName: "manage_artifact",
+          result: {
+            success: true,
+            artifact: {
+              id: "art-1",
+              title: "Draft",
+              type: "markdown",
+              content: "Dear Andy, updated content",
+            },
+          },
+        },
+      ],
+    });
+
+    mockLoadThread.mockResolvedValueOnce([
+      { id: "m1", role: "user", content: "draft email" },
+      { id: "m2", role: "assistant", content: "done", metadata: artifactMeta },
+      { id: "m3", role: "user", content: "what is manager name?" },
+    ]);
+
+    await fn({
+      event: {
+        data: {
+          chatId: "chat-123",
+          userId: "user-123",
+          userMessageId: "m3",
+          model: "gpt-4o",
+        },
+      },
+    });
+
+    const [, , , , options] = vi.mocked(buildSystemPrompt).mock.calls[0];
+    expect(options.canvasArtifacts).toBeDefined();
+    expect(options.canvasArtifacts).toHaveLength(1);
+    expect(options.canvasArtifacts[0]).toMatchObject({
+      id: "art-1",
+      title: "Draft",
+      type: "markdown",
+      content: "Dear Andy, updated content",
+    });
+  });
+
   it("omits save_memory tool when memoryEnabled is false in userSettings", async () => {
     mockGetUserSettings.mockResolvedValueOnce({
       id: "settings-1",

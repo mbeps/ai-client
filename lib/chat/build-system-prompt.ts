@@ -1,6 +1,7 @@
 import { PROMPTS } from "@/config/prompts";
 import { formatActiveSkill } from "@/lib/skills/format-active-skill";
 import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Skill, SkillSummary } from "@/types/skill/skill";
 
 /**
@@ -15,6 +16,32 @@ export interface SystemPromptOptions {
   userContext?: { name?: string | null; email?: string | null };
   userMemories?: string[];
   isSubagentDelegationEnabled?: boolean;
+  canvasArtifacts?: ArtifactData[];
+}
+
+/**
+ * Formats active canvas artifacts into an instruction block for the system prompt.
+ *
+ * @param artifacts - Active canvas artifacts
+ * @returns Markdown section with current canvas content or empty string
+ * @author Maruf Bepary
+ */
+function formatActiveCanvasSection(artifacts: ArtifactData[]): string {
+  if (!artifacts || artifacts.length === 0) return "";
+
+  const artifactBlocks = artifacts.map((art) => {
+    const title = art.title || "Untitled Artifact";
+    const type = art.type || "markdown";
+    const idInfo = art.id ? ` (id: "${art.id}")` : "";
+    return `### "${title}" [${type}]${idInfo}\n\`\`\`${type}\n${art.content}\n\`\`\``;
+  });
+
+  return (
+    `## Active Canvas\n` +
+    `The user is currently viewing/editing the following artifact(s) on their canvas:\n\n` +
+    artifactBlocks.join("\n\n") +
+    `\n\nNote: The content above reflects the latest state, including any direct edits made by the user on the canvas. When answering questions about or making modifications to the canvas, refer to this current content. To update the canvas, call \`manage_artifact\` with the full updated content.`
+  );
 }
 
 /**
@@ -76,6 +103,13 @@ export function buildSystemPrompt(
 
   if (assistantPrompt?.trim()) {
     systemParts.push(assistantPrompt.trim());
+  }
+
+  if (options.canvasArtifacts && options.canvasArtifacts.length > 0) {
+    const canvasSection = formatActiveCanvasSection(options.canvasArtifacts);
+    if (canvasSection) {
+      systemParts.push(canvasSection);
+    }
   }
 
   if (hasKnowledgeBase) {

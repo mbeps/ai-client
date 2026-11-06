@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
+import { extractThreadCanvasArtifacts } from "@/lib/chat/extract-canvas-artifacts";
 import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { chatChannel } from "@/lib/inngest/chat-channel";
@@ -356,6 +357,8 @@ export const generateChatResponse = inngest.createFunction(
         isSubagentDelegationEnabled,
       );
 
+      const canvasArtifacts = extractThreadCanvasArtifacts(thread);
+
       const systemPrompt = buildSystemPrompt(
         userSettings?.globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
@@ -369,6 +372,7 @@ export const generateChatResponse = inngest.createFunction(
           userContext: { name: userName, email: userEmail },
           userMemories: ctx.userMemories,
           isSubagentDelegationEnabled,
+          canvasArtifacts,
         },
       );
 
