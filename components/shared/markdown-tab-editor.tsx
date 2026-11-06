@@ -46,18 +46,22 @@ export interface MarkdownTabEditorProps {
 /**
  * Inner editor component using BlockNote.
  * Converts blocks to markdown lossy on change and debounces calls to `onChange`.
- * Flushes the latest markdown on unmount.
+ * Synchronizes external markdown content updates into the BlockNote editor.
+ * Flushes pending markdown on unmount.
  *
  * @param blocks - Initial BlockNote blocks parsed from markdown
+ * @param content - Current external markdown string
  * @param onChange - Callback to update parent markdown state
  * @param disabled - Whether editing is disabled
  */
 function InnerBlockNoteEditor({
   blocks,
+  content,
   onChange,
   disabled,
 }: {
   blocks: Block[];
+  content: string;
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
@@ -67,18 +71,52 @@ function InnerBlockNoteEditor({
 
   const { resolvedTheme } = useTheme();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const latestMarkdownRef = useRef<string | null>(null);
+  const latestMarkdownRef = useRef<string | null>(content);
+  const pendingChangeRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
-      if (latestMarkdownRef.current !== null) {
-        onChange(latestMarkdownRef.current);
+      if (pendingChangeRef.current !== null) {
+        onChange(pendingChangeRef.current);
       }
     };
   }, [onChange]);
+
+  // Synchronize external markdown updates into the active BlockNote document
+  useEffect(() => {
+    if (latestMarkdownRef.current === content) {
+      return;
+    }
+    latestMarkdownRef.current = content;
+
+    let cancelled = false;
+
+    async function syncExternalContent() {
+      try {
+        const parsed = await editor.tryParseMarkdownToBlocks(content);
+        if (!cancelled) {
+          const nextBlocks =
+            parsed.length > 0
+              ? parsed
+              : ([{ type: "paragraph", content: [] }] as unknown as Block[]);
+          editor.replaceBlocks(editor.document, nextBlocks);
+        }
+      } catch (err) {
+        logger.error(
+          "Failed to synchronize external markdown into BlockNote",
+          err,
+        );
+      }
+    }
+
+    syncExternalContent();
+    return () => {
+      cancelled = true;
+    };
+  }, [content, editor]);
 
   return (
     <div className="bg-card h-full w-full overflow-y-auto px-2 py-3">
@@ -94,6 +132,7 @@ function InnerBlockNoteEditor({
                 editor.document,
               );
               latestMarkdownRef.current = markdown;
+              pendingChangeRef.current = null;
               onChange(markdown);
             } catch (err) {
               logger.error(
@@ -162,6 +201,7 @@ function BlockNoteTabContent({
   return (
     <InnerBlockNoteEditor
       blocks={parsedBlocks}
+      content={content}
       onChange={onChange}
       disabled={disabled}
     />

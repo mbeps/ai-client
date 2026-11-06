@@ -451,6 +451,7 @@ function SkillDetailPageContent({
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <SkillFileEditor
+            key={directory.selectedFilePath}
             filePath={directory.selectedFilePath}
             content={directory.activeContent}
             onChangeContent={directory.handleContentChange}
