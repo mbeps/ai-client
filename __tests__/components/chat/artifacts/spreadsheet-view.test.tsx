@@ -94,4 +94,74 @@ describe("SpreadsheetView", () => {
     // But since the first sheet (activeSheet) has 0 rows:
     expect(screen.getByText("This sheet contains no data.")).toBeInTheDocument();
   });
+
+  it("renders spreadsheet grid when a header cell is empty or duplicate", () => {
+    const dataWithEmptyHeader = [
+      ["", "Age", "", "Age"],
+      ["Alice", 25, "Bob", 30],
+    ];
+
+    render(
+      <SpreadsheetView
+        title="Empty and Duplicate Headers"
+        content={JSON.stringify(dataWithEmptyHeader)}
+      />,
+    );
+
+    expect(screen.queryByText("Empty Spreadsheet")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Age").length).toBeGreaterThan(0);
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("renders spreadsheet grid for CSV with leading or trailing empty commas", () => {
+    const csvContent = ",Age,Score,\nAlice,25,95,foo";
+
+    render(
+      <SpreadsheetView
+        title="CSV with empty headers"
+        content={csvContent}
+      />,
+    );
+
+    expect(screen.queryByText("Empty Spreadsheet")).not.toBeInTheDocument();
+    expect(screen.getByText("Age")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("renders spreadsheet grid for array of objects with dotted keys", () => {
+    const aooWithDots = [
+      { "user.name": "Alice", "version 1.0": "v1" },
+      { "user.name": "Bob", "version 1.0": "v2" },
+    ];
+
+    render(
+      <SpreadsheetView
+        title="Dotted Keys Sheet"
+        content={JSON.stringify(aooWithDots)}
+      />,
+    );
+
+    expect(screen.queryByText("Empty Spreadsheet")).not.toBeInTheDocument();
+    expect(screen.getByText("user.name")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("renders data rows that have more columns than header row", () => {
+    const wideData = [
+      ["Col1"],
+      ["Val1", "Val2", "Val3"],
+    ];
+
+    render(
+      <SpreadsheetView
+        title="Wide Data Rows"
+        content={JSON.stringify(wideData)}
+      />,
+    );
+
+    expect(screen.getByText("Col1")).toBeInTheDocument();
+    expect(screen.getByText("Column 2")).toBeInTheDocument();
+    expect(screen.getByText("Column 3")).toBeInTheDocument();
+    expect(screen.getByText("Val2")).toBeInTheDocument();
+  });
 });
