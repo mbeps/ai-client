@@ -81,6 +81,7 @@ import { deleteAssistant } from "@/actions/assistants/delete-assistant";
 import { listAssistants } from "@/actions/assistants/list-assistants";
 import { renameAssistant } from "@/actions/assistants/rename-assistant";
 import { updateAssistant } from "@/actions/assistants/update-assistant";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { requireSession } from "@/lib/auth/require-session";
 
 const ASSISTANT_ROW = {
@@ -174,13 +175,26 @@ describe("createAssistant", () => {
     );
   });
 
-  it("applies schema defaults for skillMode and skillIds when omitted", async () => {
+  it("applies schema defaults for skillMode and skillIds and DEFAULT_ENABLED_TOOLS when omitted", async () => {
     chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
     await createAssistant({ name: "Test Bot" });
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
         skillMode: "dynamic",
         skillIds: [],
+        tools: [...DEFAULT_ENABLED_TOOLS],
+      }),
+    );
+  });
+
+  it("stores empty tools array when explicitly supplied", async () => {
+    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
+    await createAssistant({
+      name: "Test Bot",
+      tools: [],
+    });
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
         tools: [],
       }),
     );

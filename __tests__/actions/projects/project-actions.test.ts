@@ -54,6 +54,7 @@ import { deleteProject } from "@/actions/projects/delete-project";
 import { listProjects } from "@/actions/projects/list-projects";
 import { renameProject } from "@/actions/projects/rename-project";
 import { updateProject } from "@/actions/projects/update-project";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const KB_ID = "22222222-2222-4222-8222-222222222222";
@@ -104,12 +105,12 @@ describe("Project Server Actions", () => {
       expect(chainable.insert).toHaveBeenCalled();
     });
 
-    it("creates a project with only name and defaults optional fields to null / []", async () => {
+    it("creates a project with only name and defaults optional fields to null / [] / DEFAULT_ENABLED_TOOLS", async () => {
       const minimalProject = {
         ...SAMPLE_PROJECT,
         description: null,
         globalPrompt: null,
-        tools: [],
+        tools: [...DEFAULT_ENABLED_TOOLS],
         knowledgebaseId: null,
       };
       chainable.returning.mockResolvedValueOnce([minimalProject]);
@@ -123,11 +124,26 @@ describe("Project Server Actions", () => {
         expect.objectContaining({
           description: null,
           globalPrompt: null,
-          tools: [],
+          tools: [...DEFAULT_ENABLED_TOOLS],
           skillMode: "dynamic",
           skillIds: [],
           knowledgebaseId: null,
           userId: "user-1",
+        }),
+      );
+    });
+
+    it("stores empty tools array when explicitly supplied", async () => {
+      chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
+
+      await createProject({
+        name: "Test Project",
+        tools: [],
+      });
+
+      expect(chainable.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: [],
         }),
       );
     });
