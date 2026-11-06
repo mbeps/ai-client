@@ -80,8 +80,8 @@ export function AssistantOptions({ assistant }: { assistant: Assistant }) {
       isDeleting={isDeleting}
       handleRename={handleRename}
       handleDelete={handleDelete}
-      renameTitle="Rename Assistant"
-      deleteTitle="Delete Assistant"
+      renameTitle="Rename"
+      deleteTitle="Delete"
     />
   );
 }

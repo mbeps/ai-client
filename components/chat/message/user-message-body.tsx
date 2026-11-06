@@ -1,71 +1,48 @@
 "use client";
 
-import { Check, X } from "lucide-react";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
+import { ChatInput } from "@/components/chat/chat-input";
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { UserMessageContextChips } from "@/components/chat/message/user-message-context-chips";
-import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
-import { Button } from "@/components/ui/button";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
+import type { Message } from "@/types/message/message";
 
 /**
- * Represents user message editor props.
+ * Configuration and callbacks for ChatInput when editing a message.
  *
  * @author Maruf Bepary
  */
-interface UserMessageEditorProps {
-  editContent: string;
-  onEditContentChange: (val: string) => void;
+export interface UserMessageEditProps {
+  initialValue: string;
+  initialModelId?: string | null;
+  initialAttachments?: Attachment[];
+  initialSelectedServerIds?: string[] | null;
+  initialSelectedTools?: readonly string[] | string[] | null;
+  initialSelectedPromptId?: string | string[] | null;
+  initialSelectedAssistantId?: string | null;
+  initialSelectedKbs?: string[] | null;
+  initialSelectedSkillIds?: string[] | null;
+  initialSubagentsEnabled?: boolean | null;
+  initialSubagentModelId?: string | null;
+  servers?: (McpServer | PublicMcpServer)[];
+  activeChatAssistantId?: string | null;
+  thread?: Message[];
+  onSend: (
+    content: string,
+    attachments: Attachment[],
+    model: string,
+    selectedServerIds: string[],
+    selectedTools: string[],
+    selectedPromptId?: string | string[],
+    selectedAssistantId?: string,
+    selectedKnowledgebases?: string[],
+    selectedSkillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+  ) => void;
   onCancel: () => void;
-  onSave: () => void;
-  isSaveDisabled: boolean;
-}
-
-/**
- * Renders the user message editor component.
- *
- * @param props - Component properties.
- * @returns The rendered JSX element.
- * @author Maruf Bepary
- */
-function UserMessageEditor({
-  editContent,
-  onEditContentChange,
-  onCancel,
-  onSave,
-  isSaveDisabled,
-}: UserMessageEditorProps) {
-  return (
-    <div className="my-2 w-full space-y-3">
-      <MarkdownTabEditor
-        value={editContent}
-        onChange={onEditContentChange}
-        placeholder="Edit your message..."
-        minHeight="min-h-[140px]"
-        maxHeight="max-h-[500px]"
-        defaultTab="rich"
-      />
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCancel}
-          className="cursor-pointer"
-        >
-          <X className="mr-1.5 h-3.5 w-3.5" />
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          onClick={onSave}
-          disabled={isSaveDisabled}
-          className="cursor-pointer"
-        >
-          <Check className="mr-1.5 h-3.5 w-3.5" />
-          Save & Submit
-        </Button>
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -81,12 +58,8 @@ export interface UserMessageBodyProps {
   selectedKbIds: string[];
   knowledgebases: KnowledgebaseWithCount[];
   isEditing: boolean;
-  editContent: string;
-  onEditContentChange: (val: string) => void;
-  onCancel: () => void;
-  onSave: () => void;
-  hasAttachments: boolean;
   displayContent: string;
+  editProps?: UserMessageEditProps;
 }
 
 /**
@@ -104,14 +77,39 @@ export function UserMessageBody({
   selectedKbIds,
   knowledgebases,
   isEditing,
-  editContent,
-  onEditContentChange,
-  onCancel,
-  onSave,
-  hasAttachments,
   displayContent,
+  editProps,
 }: UserMessageBodyProps) {
-  const isSaveDisabled = !editContent.trim() && !hasAttachments;
+  if (isEditing && editProps) {
+    return (
+      <ChatInput
+        initialValue={editProps.initialValue}
+        initialModelId={editProps.initialModelId ?? undefined}
+        initialAttachments={editProps.initialAttachments}
+        initialSelectedServerIds={
+          editProps.initialSelectedServerIds ?? undefined
+        }
+        initialSelectedTools={editProps.initialSelectedTools ?? undefined}
+        initialSelectedPromptId={editProps.initialSelectedPromptId ?? undefined}
+        initialSelectedAssistantId={
+          editProps.initialSelectedAssistantId ?? undefined
+        }
+        initialSelectedKbs={editProps.initialSelectedKbs ?? undefined}
+        initialSelectedSkillIds={editProps.initialSelectedSkillIds ?? undefined}
+        initialSubagentsEnabled={editProps.initialSubagentsEnabled ?? undefined}
+        initialSubagentModelId={editProps.initialSubagentModelId ?? undefined}
+        servers={editProps.servers}
+        thread={editProps.thread}
+        activeChatAssistantId={editProps.activeChatAssistantId}
+        canMentionAssistant={!editProps.activeChatAssistantId}
+        submitLabel="Save & Submit"
+        placeholder="Edit your message... Use / for skills and prompts, @ for assistant, # for knowledgebases"
+        onCancel={editProps.onCancel}
+        onSend={editProps.onSend}
+        className="my-2 max-w-none md:mb-0"
+      />
+    );
+  }
 
   return (
     <div>
@@ -123,17 +121,7 @@ export function UserMessageBody({
         selectedKbIds={selectedKbIds}
         knowledgebases={knowledgebases}
       />
-      {isEditing ? (
-        <UserMessageEditor
-          editContent={editContent}
-          onEditContentChange={onEditContentChange}
-          onCancel={onCancel}
-          onSave={onSave}
-          isSaveDisabled={isSaveDisabled}
-        />
-      ) : (
-        <MarkdownRenderer content={displayContent} />
-      )}
+      <MarkdownRenderer content={displayContent} />
     </div>
   );
 }

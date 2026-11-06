@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { filterEnabledMcpServers } from "@/components/chat/chat-ui-helpers";
 import { ActiveSelectionChips } from "@/components/chat/input/active-selection-chips";
 import { ChatInputAttachmentList } from "@/components/chat/input/chat-input-attachment-list";
 import { ChatInputToolbar } from "@/components/chat/input/chat-input-toolbar";
@@ -14,6 +15,7 @@ import type {
   MentionItem,
   MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
+import { cn } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
@@ -110,6 +112,15 @@ export interface ChatInputProps {
 
   /** Initial worker subagent model ID. */
   initialSubagentModelId?: string;
+
+  /** Optional custom class name applied to container. */
+  className?: string;
+
+  /** Optional custom placeholder for textarea. */
+  placeholder?: string;
+
+  /** Optional accessible label for the textarea. */
+  textareaAriaLabel?: string;
 }
 
 const EMPTY_MESSAGES: Message[] = [];
@@ -133,13 +144,20 @@ function resolveInputDefaults(props: ChatInputProps) {
  * Resolves container class name.
  *
  * @param isDragging - Target is dragging
+ * @param className - Optional additional class names
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function resolveContainerClassName(isDragging: boolean): string {
+function resolveContainerClassName(
+  isDragging: boolean,
+  className?: string,
+): string {
   const base =
     "relative mx-auto w-full max-w-4xl rounded-2xl border bg-background px-3 py-2 shadow-sm transition-colors md:mb-4 md:bg-muted/30";
-  return isDragging ? `${base} bg-primary/5 ring-2 ring-primary` : base;
+  const stateClass = isDragging
+    ? `${base} bg-primary/5 ring-2 ring-primary`
+    : base;
+  return cn(stateClass, className);
 }
 
 /**
@@ -156,6 +174,41 @@ function resolveInputPlaceholder(hasNoModels: boolean): string {
 }
 
 /**
+ * Automatically decides whether mention menu should open upwards or downwards
+ * based on available space above the chat input container.
+ *
+ * @param containerRef - Ref to the chat input container element.
+ * @param isOpen - Whether the mention menu is actively opened.
+ * @returns "top" to open upwards, "bottom" to open downwards.
+ * @author Maruf Bepary
+ */
+function useMentionPlacement(
+  containerRef?: React.RefObject<HTMLDivElement | null>,
+  isOpen?: boolean,
+): "top" | "bottom" {
+  const [placement, setPlacement] = useState<"top" | "bottom">("top");
+
+  useEffect(() => {
+    if (!isOpen || !containerRef?.current) return;
+    const update = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      // When fewer than 320px of clearance above the input, open downwards
+      setPlacement(rect.top < 320 ? "bottom" : "top");
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [isOpen, containerRef]);
+
+  return placement;
+}
+
+/**
  * Renders the chat input mention commands component.
  *
  * @param props - Component properties.
@@ -168,7 +221,13 @@ function ChatInputMentionCommands(props: {
   selectedIndex: number;
   onSelect: (item: MentionItem) => void;
   onClose: () => void;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }) {
+  const placement = useMentionPlacement(
+    props.containerRef,
+    Boolean(props.openTrigger),
+  );
+
   if (!props.openTrigger) return null;
 
   return (
@@ -178,7 +237,10 @@ function ChatInputMentionCommands(props: {
       selectedIndex={props.selectedIndex}
       onSelect={props.onSelect}
       onClose={props.onClose}
-      className="absolute bottom-full left-0 mb-2"
+      className={cn(
+        "absolute left-0 z-50",
+        placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2",
+      )}
     />
   );
 }
@@ -192,6 +254,7 @@ function ChatInputMentionCommands(props: {
 export function ChatInput(props: ChatInputProps) {
   const defaults = resolveInputDefaults(props);
   const [input, setInput] = useState(defaults.initialValue);
+  const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -205,13 +268,22 @@ export function ChatInput(props: ChatInputProps) {
     canMentionAssistant: defaults.canMentionAssistant,
   });
 
+  const defaultServers = useMemo(
+    () => filterEnabledMcpServers(services.mcpServers),
+    [services.mcpServers],
+  );
+  const servers = props.servers ?? defaultServers;
+
   const containerClass = resolveContainerClassName(
     interaction.attachments.isDragging,
+    props.className,
   );
-  const inputPlaceholder = resolveInputPlaceholder(services.hasNoModels);
+  const inputPlaceholder =
+    props.placeholder ?? resolveInputPlaceholder(services.hasNoModels);
 
   return (
     <div
+      ref={containerRef}
       className={containerClass}
       onDragOver={interaction.attachments.handleDragOver}
       onDragLeave={interaction.attachments.handleDragLeave}
@@ -223,6 +295,7 @@ export function ChatInput(props: ChatInputProps) {
         selectedIndex={interaction.mentions.selectedIndex}
         onSelect={interaction.mentions.handleSelect}
         onClose={interaction.handleCloseMentions}
+        containerRef={containerRef}
       />
 
       <input
@@ -261,6 +334,10 @@ export function ChatInput(props: ChatInputProps) {
         onChange={interaction.mentions.handleInputChange}
         onKeyDown={interaction.submit.handleKeyDown}
         placeholder={inputPlaceholder}
+        aria-label={
+          props.textareaAriaLabel ??
+          (props.submitLabel ? "Edit message" : "Chat message")
+        }
         className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         rows={2}
         disabled={services.hasNoModels}
@@ -269,7 +346,7 @@ export function ChatInput(props: ChatInputProps) {
       <ChatInputToolbar
         isMobile={services.isMobile}
         hasNoModels={services.hasNoModels}
-        servers={props.servers}
+        servers={servers}
         fileInputRef={fileInputRef}
         selectedServerIds={interaction.selections.selectedServerIds}
         selectedTools={interaction.selections.selectedTools}

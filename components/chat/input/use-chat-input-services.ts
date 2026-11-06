@@ -26,6 +26,7 @@ export function useChatInputServices(initialModelId?: string) {
   const skills = useAppStore((state) => state.skills);
   const prompts = useAppStore((state) => state.prompts);
   const mcpPrompts = useAppStore((state) => state.mcpPrompts);
+  const mcpServers = useAppStore((state) => state.mcpServers);
   const isMobile = useIsMobile();
   const { handleApiError } = useApiError();
 
@@ -35,6 +36,7 @@ export function useChatInputServices(initialModelId?: string) {
     skills,
     prompts,
     mcpPrompts,
+    mcpServers,
     isMobile,
     handleApiError,
   };

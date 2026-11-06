@@ -6,6 +6,8 @@ import { useKnowledgebases } from "@/hooks/use-knowledgebases";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
 
 /**
@@ -43,6 +45,8 @@ interface MessageThreadProps {
   activeArtifactId?: string | null;
   /** Whether canvas panel is currently open. */
   isCanvasOpen?: boolean;
+  /** Available MCP servers for tool selection in message edit mode. */
+  servers?: (McpServer | PublicMcpServer)[];
 }
 
 /**
@@ -63,6 +67,7 @@ export function MessageThread({
   onToggleArtifact,
   activeArtifactId,
   isCanvasOpen,
+  servers,
 }: MessageThreadProps) {
   const { knowledgebases } = useKnowledgebases();
   const handleNavigateBranch = useCallback(
@@ -115,6 +120,8 @@ export function MessageThread({
             isCanvasOpen={isCanvasOpen}
             knowledgebases={knowledgebases}
             chatId={chat.id}
+            servers={servers}
+            thread={thread}
           />
         );
       })}

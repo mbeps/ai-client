@@ -34,40 +34,51 @@ vi.mock("@/lib/auth/auth-client", () => ({
 // Mock store
 vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) =>
-    selector({
-      prompts: [],
-      mcpServers: [],
-      skills: [],
-      assistants: [],
-    }),
+    typeof selector === "function"
+      ? selector({
+          prompts: [],
+          mcpServers: [],
+          skills: [],
+          assistants: [],
+          mcpPrompts: [],
+        })
+      : [],
 }));
 
 // Mock useUserModels
 vi.mock("@/hooks/use-user-models", () => ({
   useUserModels: () => ({
-    models: [{ modelId: "gpt-4o", name: "GPT-4o" }],
+    models: [
+      {
+        id: "m-1",
+        modelId: "gpt-4o",
+        name: "GPT-4o",
+        capTools: true,
+        capVision: true,
+      },
+    ],
     isLoading: false,
   }),
 }));
 
-// Mock MarkdownTabEditor
-vi.mock("@/components/shared/markdown-tab-editor", () => ({
-  MarkdownTabEditor: ({
-    value,
-    onChange,
-    placeholder,
-  }: {
-    value: string;
-    onChange: (val: string) => void;
-    placeholder?: string;
-  }) => (
-    <textarea
-      aria-label="markdown-tab-editor"
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  ),
+// Mock useKnowledgebases
+vi.mock("@/hooks/use-knowledgebases", () => ({
+  useKnowledgebases: () => ({
+    knowledgebases: [],
+    normalizedKnowledgebases: [],
+    isLoading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
+// Mock useIsMobile
+vi.mock("@/hooks/use-is-mobile", () => ({
+  useIsMobile: () => false,
+}));
+
+// Mock useApiError
+vi.mock("@/hooks/use-api-error", () => ({
+  useApiError: () => ({ handleApiError: vi.fn() }),
 }));
 
 import { MessageBubble } from "@/components/chat/message-bubble";
@@ -119,11 +130,11 @@ describe("MessageBubble message editing", () => {
     expect(screen.getByText("You")).toBeInTheDocument();
     expect(screen.getByText("Original question for AI")).toBeInTheDocument();
     expect(
-      screen.queryByLabelText("markdown-tab-editor"),
+      screen.queryByRole("textbox", { name: /edit message/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("enters edit mode when clicking edit button and renders MarkdownTabEditor", async () => {
+  it("enters edit mode when clicking edit button and renders message box editor", async () => {
     const user = userEvent.setup();
     renderMessageBubble();
 
@@ -131,7 +142,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     expect(editor).toBeInTheDocument();
     expect(editor).toHaveValue("Original question for AI");
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
@@ -148,7 +159,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "Updated question with **formatting**" },
     });
@@ -168,14 +179,14 @@ describe("MessageBubble message editing", () => {
       undefined,
       ["kb-1"],
       [],
-      undefined,
+      false,
       undefined,
     );
 
     // Exits edit mode
     await waitFor(() => {
       expect(
-        screen.queryByLabelText("markdown-tab-editor"),
+        screen.queryByRole("textbox", { name: /edit message/i }),
       ).not.toBeInTheDocument();
     });
   });
@@ -188,7 +199,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "Abandoned edits" },
     });
@@ -198,25 +209,105 @@ describe("MessageBubble message editing", () => {
 
     expect(onEdit).not.toHaveBeenCalled();
     expect(
-      screen.queryByLabelText("markdown-tab-editor"),
+      screen.queryByRole("textbox", { name: /edit message/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Original question for AI")).toBeInTheDocument();
   });
 
-  it("disables Save & Submit when content is empty and message has no attachments", async () => {
+  it("disables Save & Submit when content is empty and message has no attachments or context", async () => {
     const user = userEvent.setup();
-    renderMessageBubble();
+    const plainMsg: Message = {
+      ...mockUserMessage,
+      metadata: JSON.stringify({
+        model: "gpt-4o",
+      }),
+    };
+    renderMessageBubble({ message: plainMsg });
 
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "   " },
     });
 
     const saveBtn = screen.getByRole("button", { name: /save & submit/i });
     expect(saveBtn).toBeDisabled();
+  });
+
+  it("submits edit when pressing Enter key in the editor", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderMessageBubble({ onEdit });
+
+    const editBtn = screen.getByRole("button", { name: /edit message/i });
+    await user.click(editBtn);
+
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
+    fireEvent.change(editor, {
+      target: { value: "Submitted via Enter key" },
+    });
+    fireEvent.keyDown(editor, { key: "Enter", shiftKey: false });
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith(
+      "msg-1",
+      "Submitted via Enter key",
+      [],
+      "gpt-4o",
+      ["server-1"],
+      ["tool-1"],
+      undefined,
+      undefined,
+      ["kb-1"],
+      [],
+      false,
+      undefined,
+    );
+  });
+
+  it("preserves and submits attachments when editing a message with attachments", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const msgWithAttachments: Message = {
+      ...mockUserMessage,
+      attachments: [
+        {
+          id: "att-1",
+          name: "diagram.png",
+          type: "image/png",
+          url: "https://example.com/diagram.png",
+          size: 1024,
+        },
+      ],
+    };
+
+    renderMessageBubble({ message: msgWithAttachments, onEdit });
+
+    const editBtn = screen.getByRole("button", { name: /edit message/i });
+    await user.click(editBtn);
+
+    // Initial attachment is rendered in the attachment list inside the editor
+    expect(screen.getByText("diagram.png")).toBeInTheDocument();
+
+    const saveBtn = screen.getByRole("button", { name: /save & submit/i });
+    await user.click(saveBtn);
+
+    expect(onEdit).toHaveBeenCalledWith(
+      "msg-1",
+      "Original question for AI",
+      [expect.objectContaining({ id: "att-1", name: "diagram.png" })],
+      "gpt-4o",
+      ["server-1"],
+      ["tool-1"],
+      undefined,
+      undefined,
+      ["kb-1"],
+      [],
+      false,
+      undefined,
+    );
   });
 
   it("renders CanvasCard when assistant message metadata contains manage_artifact tool result", () => {

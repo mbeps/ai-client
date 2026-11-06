@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowledgebases";
 import { AssistantMessageBody } from "@/components/chat/message/assistant-message-body";
 import { AttachmentGallery } from "@/components/chat/message/attachment-gallery";
@@ -9,10 +9,7 @@ import {
   MessageActionSection,
   MessageHeader,
 } from "@/components/chat/message/message-bubble-header";
-import {
-  deriveMessageBubbleViewData,
-  resolveMessageEditParams,
-} from "@/components/chat/message/message-bubble-view-data";
+import { deriveMessageBubbleViewData } from "@/components/chat/message/message-bubble-view-data";
 import { MessageTimelineSection } from "@/components/chat/message/message-timeline-section";
 import { useMessageEditing } from "@/components/chat/message/use-message-editing";
 import { UserMessageBody } from "@/components/chat/message/user-message-body";
@@ -22,10 +19,13 @@ import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { cn } from "@/lib/utils";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
+import type { McpServer } from "@/types/mcp/mcp-server";
+import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
@@ -106,6 +106,10 @@ interface MessageBubbleProps {
   knowledgebases?: KnowledgebaseWithCount[];
   /** Optional chat ID for scratchpad authorization. */
   chatId?: string;
+  /** Available MCP servers for tool selection in edit mode. */
+  servers?: (McpServer | PublicMcpServer)[];
+  /** Active thread messages for live context token calculation in edit mode. */
+  thread?: Message[];
 }
 
 /**
@@ -136,6 +140,8 @@ export function MessageBubble(props: MessageBubbleProps) {
     activeToolCalls,
     knowledgebases = [],
     chatId,
+    servers,
+    thread,
   } = props;
   const { data: session } = authClient.useSession();
   const isUser = message.role === "user";
@@ -186,37 +192,48 @@ export function MessageBubble(props: MessageBubbleProps) {
     [message, activeToolCalls],
   );
 
-  const hasAttachments = Boolean(
-    message.attachments && message.attachments.length > 0,
+  const { isEditing, handleStartEdit, handleCancel } = useMessageEditing();
+
+  const handleSaveMessage = useCallback(
+    (
+      content: string,
+      attachments: Attachment[],
+      model: string,
+      serverIds: string[],
+      toolIds: string[],
+      promptId?: string | string[],
+      selectedAssistantId?: string,
+      kbs?: string[],
+      selectedSkillIds?: string[],
+      subagentsEnabled?: boolean,
+      subagentModelId?: string,
+    ) => {
+      onEdit(
+        message.id,
+        content,
+        attachments,
+        model,
+        serverIds,
+        toolIds,
+        promptId,
+        selectedAssistantId,
+        kbs,
+        selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+      );
+      handleCancel();
+    },
+    [message.id, onEdit, handleCancel],
   );
-
-  const handleSaveMessage = (content: string) => {
-    const editParams = resolveMessageEditParams({
-      message,
-      editContent: content,
-      metadata: viewData.parsedMetadata,
-      promptIds: viewData.promptIds,
-      assistantId,
-    });
-    onEdit(...editParams);
-  };
-
-  const {
-    isEditing,
-    editContent,
-    setEditContent,
-    handleStartEdit,
-    handleSave,
-    handleCancel,
-  } = useMessageEditing({
-    displayContent: viewData.displayContent,
-    hasAttachments,
-    onSaveMessage: handleSaveMessage,
-  });
 
   return (
     <div
-      className={`group flex w-full flex-col gap-2 p-4 ${isUser ? "" : "bg-muted/30 rounded-lg"}`}
+      className={cn(
+        "group flex w-full flex-col gap-2 p-4",
+        isUser ? "" : "bg-muted/30 rounded-lg",
+        isEditing && "relative z-30",
+      )}
     >
       <MessageHeader
         isUser={isUser}
@@ -225,7 +242,7 @@ export function MessageBubble(props: MessageBubbleProps) {
         assistantName={resolvedAssistantName}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className={cn("min-w-0 flex-1", !isEditing && "overflow-hidden")}>
         <div className="text-sm">
           <MessageTimelineSection
             isUser={isUser}
@@ -237,10 +254,12 @@ export function MessageBubble(props: MessageBubbleProps) {
             chatId={chatId}
           />
 
-          <UserAttachmentSection
-            isUser={isUser}
-            attachments={message.attachments}
-          />
+          {!isEditing && (
+            <UserAttachmentSection
+              isUser={isUser}
+              attachments={message.attachments}
+            />
+          )}
 
           {isUser ? (
             <UserMessageBody
@@ -251,12 +270,40 @@ export function MessageBubble(props: MessageBubbleProps) {
               selectedKbIds={viewData.selectedKbIds}
               knowledgebases={knowledgebases}
               isEditing={isEditing}
-              editContent={editContent}
-              onEditContentChange={setEditContent}
-              onCancel={handleCancel}
-              onSave={handleSave}
-              hasAttachments={hasAttachments}
               displayContent={viewData.displayContent}
+              editProps={
+                isEditing
+                  ? {
+                      initialValue: viewData.displayContent,
+                      initialModelId: viewData.parsedMetadata.modelId,
+                      initialAttachments: message.attachments ?? [],
+                      initialSelectedServerIds:
+                        viewData.parsedMetadata.selectedServerIds,
+                      initialSelectedTools:
+                        viewData.parsedMetadata.selectedTools,
+                      initialSelectedPromptId:
+                        viewData.promptIds.length > 0
+                          ? viewData.promptIds
+                          : viewData.parsedMetadata.promptMeta?.promptId,
+                      initialSelectedAssistantId:
+                        viewData.parsedMetadata.assistantId ??
+                        assistantId ??
+                        undefined,
+                      initialSelectedKbs: viewData.parsedMetadata.selectedKbIds,
+                      initialSelectedSkillIds:
+                        viewData.parsedMetadata.selectedSkillIds,
+                      initialSubagentsEnabled:
+                        viewData.parsedMetadata.subagentsEnabled,
+                      initialSubagentModelId:
+                        viewData.parsedMetadata.subagentModelId,
+                      servers,
+                      thread,
+                      activeChatAssistantId: assistantId,
+                      onCancel: handleCancel,
+                      onSend: handleSaveMessage,
+                    }
+                  : undefined
+              }
             />
           ) : (
             <AssistantMessageBody
