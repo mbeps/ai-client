@@ -40,6 +40,24 @@ function useToolSelections(
     () => new Set(initialTools ?? DEFAULT_ENABLED_TOOLS),
   );
 
+  const toolSeedKey = initialTools
+    ? Array.from(initialTools).join("::")
+    : "__default__";
+  const lastToolSeedKey = useRef(toolSeedKey);
+  useEffect(() => {
+    if (lastToolSeedKey.current === toolSeedKey) return;
+    lastToolSeedKey.current = toolSeedKey;
+    setSelectedTools(new Set(initialTools ?? DEFAULT_ENABLED_TOOLS));
+  }, [toolSeedKey, initialTools]);
+
+  const serverSeedKey = (initialServerIds ?? EMPTY_STRING_ARRAY).join("::");
+  const lastServerSeedKey = useRef(serverSeedKey);
+  useEffect(() => {
+    if (lastServerSeedKey.current === serverSeedKey) return;
+    lastServerSeedKey.current = serverSeedKey;
+    setSelectedServerIds(new Set(initialServerIds));
+  }, [serverSeedKey, initialServerIds]);
+
   const toggleTool = useCallback((serverId: string, toolName: string) => {
     const toolId = `${serverId}:tool:${toolName}`;
     setSelectedTools((prev) => {

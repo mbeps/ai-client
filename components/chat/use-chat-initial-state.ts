@@ -94,27 +94,27 @@ function resolveInitialTools(
   initialServerIds: string[];
   initialSelectedTools: string[];
 } {
-  const projectTools = currentProject?.tools ?? [];
-  const assistantTools = currentAssistant?.tools ?? [];
-  const hasCustomTools = projectTools.length > 0 || assistantTools.length > 0;
+  const configuredTools =
+    currentAssistant?.tools ?? currentProject?.tools ?? undefined;
 
-  const combined = Array.from(new Set([...projectTools, ...assistantTools]));
-  const serverIds = Array.from(
-    new Set(
-      combined
-        .map((t) => t.split(":")[0])
-        .filter((id): id is string => Boolean(id)),
-    ),
-  );
-
-  const customTools = combined.filter((t) => t.includes(":tool:"));
-  const selectedTools = hasCustomTools
-    ? customTools
-    : [...DEFAULT_ENABLED_TOOLS];
+  if (Array.isArray(configuredTools)) {
+    const selectedTools = configuredTools.filter((t) => t.includes(":tool:"));
+    const serverIds = Array.from(
+      new Set(
+        configuredTools
+          .map((t) => t.split(":")[0])
+          .filter((id): id is string => Boolean(id) && id !== "internal"),
+      ),
+    );
+    return {
+      initialServerIds: serverIds,
+      initialSelectedTools: selectedTools,
+    };
+  }
 
   return {
-    initialServerIds: serverIds,
-    initialSelectedTools: selectedTools,
+    initialServerIds: [],
+    initialSelectedTools: [...DEFAULT_ENABLED_TOOLS],
   };
 }
 

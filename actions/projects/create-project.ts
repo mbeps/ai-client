@@ -1,6 +1,7 @@
 "use server";
 
 import type { z } from "zod";
+import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { project } from "@/drizzle/schemas/project-schema";
 import { createEntityFactory } from "@/lib/factories/create-entity-factory";
 import { createProjectSchema } from "@/schemas/project/project";
@@ -28,7 +29,7 @@ export const createProject = createEntityFactory<
     name: validated.name,
     description: validated.description ?? null,
     globalPrompt: validated.globalPrompt ?? null,
-    tools: validated.tools ?? [],
+    tools: validated.tools ?? [...DEFAULT_ENABLED_TOOLS],
     skillMode: validated.skillMode,
     skillIds: validated.skillIds,
     knowledgebaseId: validated.knowledgebaseId ?? null,
