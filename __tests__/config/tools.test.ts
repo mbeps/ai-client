@@ -71,7 +71,7 @@ describe("getInternalToolDisplayName", () => {
       "Search Knowledge Base",
     );
     expect(getInternalToolDisplayName("manage_artifact")).toBe(
-      "Manage Artifact",
+      "Artifact",
     );
     expect(getInternalToolDisplayName("save_memory")).toBe("Save Memory");
   });
