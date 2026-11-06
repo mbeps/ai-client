@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, X } from "lucide-react";
 import { type ComponentProps, type ReactNode, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -66,9 +67,17 @@ export function ActionButton({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction disabled={isLoading} onClick={performAction}>
-              <LoadingSwap isLoading={isLoading}>Yes</LoadingSwap>
+              <LoadingSwap isLoading={isLoading}>
+                <span className="flex items-center">
+                  <Check className="mr-2 h-4 w-4" />
+                  Yes
+                </span>
+              </LoadingSwap>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

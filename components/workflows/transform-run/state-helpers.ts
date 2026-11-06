@@ -371,6 +371,7 @@ function resolveStepDataSpreadsheet(
   if (filenames.length === 0) return null;
   const firstFile = filenames[0];
   return {
+    id: `step-${stepIndex}-${firstFile}`,
     type: "spreadsheet",
     title: `${stepName || "Step"} - ${firstFile}`,
     content: JSON.stringify(stepData[firstFile]),

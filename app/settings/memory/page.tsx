@@ -7,17 +7,8 @@ import { deleteMemories } from "@/actions/memories/delete-memories";
 import { toggleMemoryEnabled } from "@/actions/user-settings/toggle-memory-enabled";
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryDialog } from "@/components/memory/memory-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -170,42 +161,20 @@ function DeleteMemoriesAlertDialog(props: DeleteMemoriesAlertDialogProps) {
   const count = props.targetDeleteIds?.length ?? 0;
 
   return (
-    <AlertDialog
-      open={Boolean(props.targetDeleteIds && props.targetDeleteIds.length > 0)}
-      onOpenChange={props.onOpenChange}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isMultiple ? `Delete ${count} Memories` : "Delete Memory"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {isMultiple
-              ? `Are you sure you want to delete ${count} memories? The AI will no longer remember these details.`
-              : "Are you sure you want to delete this memory? The AI will no longer remember this detail."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel disabled={props.isDeleting}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={props.onConfirmDelete}
-            disabled={props.isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {props.isDeleting ? (
-              "Deleting..."
-            ) : (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </>
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DeleteConfirmDialog
+      isOpen={Boolean(
+        props.targetDeleteIds && props.targetDeleteIds.length > 0,
+      )}
+      onClose={() => props.onOpenChange(false)}
+      onConfirm={props.onConfirmDelete}
+      title={isMultiple ? `Delete ${count} Memories` : "Delete Memory"}
+      description={
+        isMultiple
+          ? `Are you sure you want to delete ${count} memories? The AI will no longer remember these details.`
+          : "Are you sure you want to delete this memory? The AI will no longer remember this detail."
+      }
+      loading={props.isDeleting}
+    />
   );
 }
 

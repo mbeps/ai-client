@@ -41,7 +41,16 @@ export const createAssistantSchema = z.object({
  * @see {@link lib/actions/assistants/update-assistant.ts} for update action
  * @author Maruf Bepary
  */
-export const updateAssistantSchema = createAssistantSchema.partial();
+export const updateAssistantSchema = createAssistantSchema
+  .omit({
+    skillMode: true,
+    skillIds: true,
+  })
+  .partial()
+  .extend({
+    skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
+    skillIds: z.array(z.string()).optional(),
+  });
 
 /**
  * Validates assistant rename operations with only the new name field.

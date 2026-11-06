@@ -1,7 +1,9 @@
 "use client";
 
+import { FolderInput, Plus, Save, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -227,39 +229,26 @@ function MoveOrDeleteFolderModals(props: MoveOrDeleteFolderModalsProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={props.onCloseMoveFileDialog}>
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={handleMoveFile}>Move File</Button>
+            <Button onClick={handleMoveFile}>
+              <FolderInput className="mr-2 h-4 w-4" />
+              Move File
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Folder */}
-      <Dialog
-        open={props.deleteFolderDialogOpen}
-        onOpenChange={(o) => !o && props.onCloseDeleteFolderDialog()}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Delete Folder &quot;{props.folderToDelete}&quot;?
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this folder and its{" "}
-              {props.affectedFilesCount} contained file(s)? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={props.onCloseDeleteFolderDialog}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteFolder}>
-              Delete Folder
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        isOpen={props.deleteFolderDialogOpen}
+        onClose={props.onCloseDeleteFolderDialog}
+        onConfirm={handleDeleteFolder}
+        title={`Delete Folder "${props.folderToDelete}"?`}
+        description={`Are you sure you want to delete this folder and its ${props.affectedFilesCount} contained file(s)? This action cannot be undone.`}
+        confirmLabel="Delete Folder"
+      />
     </>
   );
 }
@@ -367,9 +356,13 @@ export function SkillDirectoryModals(props: SkillDirectoryModalsProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={props.onCloseFileDialog}>
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={handleCreateFile}>Create File</Button>
+            <Button onClick={handleCreateFile}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create File
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -399,9 +392,13 @@ export function SkillDirectoryModals(props: SkillDirectoryModalsProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={props.onCloseFolderDialog}>
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={handleCreateFolder}>Create Folder</Button>
+            <Button onClick={handleCreateFolder}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Folder
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -428,9 +425,13 @@ export function SkillDirectoryModals(props: SkillDirectoryModalsProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={props.onCloseRenameFileDialog}>
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={handleRenameFile}>Rename</Button>
+            <Button onClick={handleRenameFile}>
+              <Save className="mr-2 h-4 w-4" />
+              Rename
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -457,9 +458,13 @@ export function SkillDirectoryModals(props: SkillDirectoryModalsProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={props.onCloseRenameFolderDialog}>
+              <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={handleRenameFolder}>Rename Folder</Button>
+            <Button onClick={handleRenameFolder}>
+              <Save className="mr-2 h-4 w-4" />
+              Rename Folder
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

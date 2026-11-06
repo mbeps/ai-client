@@ -414,30 +414,28 @@ describe("updateAssistant", () => {
 
     const values = chainable.set.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(values.name).toBe("Only Name");
-    for (const omitted of ["description", "prompt", "tools", "avatar"]) {
+    for (const omitted of [
+      "description",
+      "prompt",
+      "tools",
+      "skillMode",
+      "skillIds",
+      "avatar",
+    ]) {
       expect(omitted in values).toBe(false);
     }
   });
 
-  it("always writes skillMode and skillIds, which the schema defaults to 'dynamic' and []", async () => {
-    chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
-
-    await updateAssistant(VALID_UUID, { name: "Only Name" });
-
-    expect(chainable.set).toHaveBeenCalledWith(
-      expect.objectContaining({ skillMode: "dynamic", skillIds: [] }),
-    );
-  });
-
-  it("accepts an empty payload and writes only the defaulted fields", async () => {
+  it("accepts an empty payload and writes only updatedAt", async () => {
     chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
 
     await updateAssistant(VALID_UUID, {});
 
     const values = chainable.set.mock.calls[0]?.[0] as Record<string, unknown>;
     expect("name" in values).toBe(false);
-    expect(values.skillMode).toBe("dynamic");
-    expect(values.skillIds).toEqual([]);
+    expect("skillMode" in values).toBe(false);
+    expect("skillIds" in values).toBe(false);
+    expect(values.updatedAt).toEqual(expect.any(Date));
   });
 
   it("maps description, prompt and tools when supplied", async () => {

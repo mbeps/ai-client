@@ -6,16 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { deleteSkill } from "@/actions/skills/delete-skill";
 import { toggleSkillEnabled } from "@/actions/skills/toggle-skill";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -176,31 +167,16 @@ export function SkillCard({ skill }: SkillCardProps) {
             <TooltipContent>Delete skill</TooltipContent>
           </Tooltip>
 
-          <AlertDialog
-            open={showDeleteDialog}
-            onOpenChange={setShowDeleteDialog}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Skill</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete &quot;
-                  {skill.displayName || skill.name}&quot;? This action cannot be
-                  undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive hover:bg-destructive/90"
-                  disabled={isDeleting}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DeleteConfirmDialog
+            isOpen={showDeleteDialog}
+            onClose={() => setShowDeleteDialog(false)}
+            onConfirm={handleDelete}
+            title="Delete Skill"
+            description={`Are you sure you want to delete "${
+              skill.displayName || skill.name
+            }"? This action cannot be undone.`}
+            loading={isDeleting}
+          />
         </div>
       </div>
     </Card>
