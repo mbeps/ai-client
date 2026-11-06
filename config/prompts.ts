@@ -31,7 +31,7 @@ export const PROMPTS = {
         "CONSTRAINTS:\n" +
         "- NEVER repeat artifact content in your main chat response.\n" +
         "- Provide a brief confirmation: 'I've created/updated the [Title] artifact for you.'\n" +
-        "- DO NOT use this tool to read artifacts; they are already visible in history.\n" +
+        "- Current canvas content (including any manual edits made by the user) is provided in your system instructions under 'Active Canvas'. When modifying or referring to the canvas, use that current content. When updating the canvas, call manage_artifact with the complete updated content.\n" +
         "- CRITICAL: Do NOT wrap arguments in an 'artifact' or 'updates' key. Pass all arguments at the top level of the tool call.",
       SUCCESS_MESSAGE:
         "Artifact successfully displayed to the user in a separate UI panel. SUCCESS CRITERIA CHECK: DO NOT repeat the content in your text response. Simply acknowledge that the artifact is ready.",
