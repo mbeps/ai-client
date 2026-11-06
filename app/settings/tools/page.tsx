@@ -40,6 +40,7 @@ export default async function ToolsSettingsPage() {
               <InternalToolCard
                 key={tool.id}
                 name={tool.name}
+                displayName={tool.displayName}
                 description={tool.description}
                 availability={tool.availability}
               />

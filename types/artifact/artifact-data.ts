@@ -19,7 +19,7 @@ export interface ArtifactData {
   content: string;
 
   /** Stable unique identifier for this artifact (assigned by the manage_artifact tool). */
-  id?: string;
+  id: string;
 
   /** ID of the message that generated this artifact. */
   messageId?: string;

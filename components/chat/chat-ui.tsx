@@ -225,6 +225,7 @@ export function ChatUI({
                 onToggleArtifact={handleToggleArtifact}
                 activeArtifactId={activeArtifactId}
                 isCanvasOpen={isArtifactOpen}
+                servers={allEnabledServers}
               />
 
               <StreamingSection
@@ -239,6 +240,7 @@ export function ChatUI({
                 isCanvasOpen={isArtifactOpen}
                 chatId={chatId}
                 assistantMessageId={assistantMessageId}
+                assistantName={assistantName}
               />
             </div>
           </div>

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StreamingAssistantBubble } from "@/components/chat/message/streaming-assistant-bubble";
+import { SITE_CONFIG } from "@/config/site";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 // Mock CSS imports for jsdom
@@ -53,8 +54,19 @@ describe("StreamingAssistantBubble", () => {
   it("renders assistant header with default name and content", () => {
     render(<StreamingAssistantBubble content="Streaming token stream..." />);
 
-    expect(screen.getByText("Assistant")).toBeDefined();
+    expect(screen.getByText(SITE_CONFIG.DEFAULT_ASSISTANT_NAME)).toBeDefined();
     expect(screen.getByText("Streaming token stream...")).toBeDefined();
+  });
+
+  it("renders with custom assistant name in header", () => {
+    render(
+      <StreamingAssistantBubble
+        content="Streaming output"
+        assistantName="Research Bot"
+      />,
+    );
+
+    expect(screen.getByText("Research Bot")).toBeDefined();
   });
 
   it("renders with custom selected model name in header", () => {

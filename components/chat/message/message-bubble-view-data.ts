@@ -95,6 +95,7 @@ function deriveUserViewData(
     selectedSkillIds: parsedMetadata.selectedSkillIds ?? [],
     toolData: null,
     modelName: null,
+    assistantId: parsedMetadata.assistantId,
     displayContent: promptMeta?.userContent ?? message.content,
   };
 }
@@ -117,6 +118,7 @@ function deriveAssistantViewData(
     selectedSkillIds: [],
     toolData: parsedMetadata.toolData,
     modelName: parsedMetadata.modelId,
+    assistantId: parsedMetadata.assistantId,
     displayContent: message.content,
   };
 }
@@ -134,6 +136,7 @@ export interface MessageBubbleViewData {
   toolData: ParsedMessageMetadata["toolData"];
   promptIds: string[];
   modelName: string | null;
+  assistantId?: string;
   citations: Citation[];
   displayContent: string;
 }

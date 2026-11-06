@@ -7,9 +7,32 @@ import {
 } from "@/components/chat/message/tool-trace-step";
 
 describe("ToolTraceTitle", () => {
-  it("renders simple tool name when isMcp is false", () => {
+  it("renders simple tool name when isMcp is false for non-internal tools", () => {
     render(<ToolTraceTitle isMcp={false} toolName="web_search" />);
     expect(screen.getByText("web_search")).toBeDefined();
+  });
+
+  it("renders human-readable bold title for internal tools", () => {
+    render(
+      <ToolTraceTitle isMcp={false} toolName="search_knowledge_base" />,
+    );
+    const element = screen.getByText("Search Knowledge Base");
+    expect(element).toBeDefined();
+    expect(element.className).toContain("font-semibold");
+    expect(element.className).toContain("text-foreground/90");
+  });
+
+  it("renders human-readable bold title for internal tools even if serverName is System or Internal", () => {
+    render(
+      <ToolTraceTitle
+        isMcp={true}
+        serverName="System"
+        toolName="search_knowledge_base"
+      />,
+    );
+    const element = screen.getByText("Search Knowledge Base");
+    expect(element).toBeDefined();
+    expect(element.className).toContain("font-semibold");
   });
 
   it("renders server name and tool name when isMcp is true and serverName exists", () => {

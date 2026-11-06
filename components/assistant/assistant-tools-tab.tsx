@@ -46,7 +46,7 @@ export function AssistantToolsTab({
         </p>
       </div>
       <div className="space-y-4">
-        <div className="flex max-h-[500px] flex-col overflow-hidden rounded-md border">
+        <div className="flex max-h-[500px] flex-col overflow-hidden">
           <ToolPickerList
             servers={mcpServers.filter((s) => s.enabled)}
             selectedTools={selectedTools}

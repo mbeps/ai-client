@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "@/types/message/message";
@@ -34,43 +34,56 @@ vi.mock("@/lib/auth/auth-client", () => ({
 // Mock store
 vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) =>
-    selector({
-      prompts: [],
-      mcpServers: [],
-      skills: [],
-    }),
+    typeof selector === "function"
+      ? selector({
+          prompts: [],
+          mcpServers: [],
+          skills: [],
+          assistants: [],
+          mcpPrompts: [],
+        })
+      : [],
 }));
 
 // Mock useUserModels
 vi.mock("@/hooks/use-user-models", () => ({
   useUserModels: () => ({
-    models: [{ modelId: "gpt-4o", name: "GPT-4o" }],
+    models: [
+      {
+        id: "m-1",
+        modelId: "gpt-4o",
+        name: "GPT-4o",
+        capTools: true,
+        capVision: true,
+      },
+    ],
     isLoading: false,
   }),
 }));
 
-// Mock MarkdownTabEditor
-vi.mock("@/components/shared/markdown-tab-editor", () => ({
-  MarkdownTabEditor: ({
-    value,
-    onChange,
-    placeholder,
-  }: {
-    value: string;
-    onChange: (val: string) => void;
-    placeholder?: string;
-  }) => (
-    <textarea
-      aria-label="markdown-tab-editor"
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  ),
+// Mock useKnowledgebases
+vi.mock("@/hooks/use-knowledgebases", () => ({
+  useKnowledgebases: () => ({
+    knowledgebases: [],
+    normalizedKnowledgebases: [],
+    isLoading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
+// Mock useIsMobile
+vi.mock("@/hooks/use-is-mobile", () => ({
+  useIsMobile: () => false,
+}));
+
+// Mock useApiError
+vi.mock("@/hooks/use-api-error", () => ({
+  useApiError: () => ({ handleApiError: vi.fn() }),
 }));
 
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SITE_CONFIG } from "@/config/site";
 
 describe("MessageBubble message editing", () => {
   const mockUserMessage: Message = {
@@ -117,11 +130,11 @@ describe("MessageBubble message editing", () => {
     expect(screen.getByText("You")).toBeInTheDocument();
     expect(screen.getByText("Original question for AI")).toBeInTheDocument();
     expect(
-      screen.queryByLabelText("markdown-tab-editor"),
+      screen.queryByRole("textbox", { name: /edit message/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("enters edit mode when clicking edit button and renders MarkdownTabEditor", async () => {
+  it("enters edit mode when clicking edit button and renders message box editor", async () => {
     const user = userEvent.setup();
     renderMessageBubble();
 
@@ -129,7 +142,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     expect(editor).toBeInTheDocument();
     expect(editor).toHaveValue("Original question for AI");
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
@@ -146,7 +159,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "Updated question with **formatting**" },
     });
@@ -166,14 +179,14 @@ describe("MessageBubble message editing", () => {
       undefined,
       ["kb-1"],
       [],
-      undefined,
+      false,
       undefined,
     );
 
     // Exits edit mode
     await waitFor(() => {
       expect(
-        screen.queryByLabelText("markdown-tab-editor"),
+        screen.queryByRole("textbox", { name: /edit message/i }),
       ).not.toBeInTheDocument();
     });
   });
@@ -186,7 +199,7 @@ describe("MessageBubble message editing", () => {
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "Abandoned edits" },
     });
@@ -196,25 +209,105 @@ describe("MessageBubble message editing", () => {
 
     expect(onEdit).not.toHaveBeenCalled();
     expect(
-      screen.queryByLabelText("markdown-tab-editor"),
+      screen.queryByRole("textbox", { name: /edit message/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Original question for AI")).toBeInTheDocument();
   });
 
-  it("disables Save & Submit when content is empty and message has no attachments", async () => {
+  it("disables Save & Submit when content is empty and message has no attachments or context", async () => {
     const user = userEvent.setup();
-    renderMessageBubble();
+    const plainMsg: Message = {
+      ...mockUserMessage,
+      metadata: JSON.stringify({
+        model: "gpt-4o",
+      }),
+    };
+    renderMessageBubble({ message: plainMsg });
 
     const editBtn = screen.getByRole("button", { name: /edit message/i });
     await user.click(editBtn);
 
-    const editor = screen.getByLabelText("markdown-tab-editor");
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
     fireEvent.change(editor, {
       target: { value: "   " },
     });
 
     const saveBtn = screen.getByRole("button", { name: /save & submit/i });
     expect(saveBtn).toBeDisabled();
+  });
+
+  it("submits edit when pressing Enter key in the editor", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderMessageBubble({ onEdit });
+
+    const editBtn = screen.getByRole("button", { name: /edit message/i });
+    await user.click(editBtn);
+
+    const editor = screen.getByRole("textbox", { name: /edit message/i });
+    fireEvent.change(editor, {
+      target: { value: "Submitted via Enter key" },
+    });
+    fireEvent.keyDown(editor, { key: "Enter", shiftKey: false });
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith(
+      "msg-1",
+      "Submitted via Enter key",
+      [],
+      "gpt-4o",
+      ["server-1"],
+      ["tool-1"],
+      undefined,
+      undefined,
+      ["kb-1"],
+      [],
+      false,
+      undefined,
+    );
+  });
+
+  it("preserves and submits attachments when editing a message with attachments", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const msgWithAttachments: Message = {
+      ...mockUserMessage,
+      attachments: [
+        {
+          id: "att-1",
+          name: "diagram.png",
+          type: "image/png",
+          url: "https://example.com/diagram.png",
+          size: 1024,
+        },
+      ],
+    };
+
+    renderMessageBubble({ message: msgWithAttachments, onEdit });
+
+    const editBtn = screen.getByRole("button", { name: /edit message/i });
+    await user.click(editBtn);
+
+    // Initial attachment is rendered in the attachment list inside the editor
+    expect(screen.getByText("diagram.png")).toBeInTheDocument();
+
+    const saveBtn = screen.getByRole("button", { name: /save & submit/i });
+    await user.click(saveBtn);
+
+    expect(onEdit).toHaveBeenCalledWith(
+      "msg-1",
+      "Original question for AI",
+      [expect.objectContaining({ id: "att-1", name: "diagram.png" })],
+      "gpt-4o",
+      ["server-1"],
+      ["tool-1"],
+      undefined,
+      undefined,
+      ["kb-1"],
+      [],
+      false,
+      undefined,
+    );
   });
 
   it("renders CanvasCard when assistant message metadata contains manage_artifact tool result", () => {
@@ -320,6 +413,124 @@ describe("MessageBubble message editing", () => {
     expect(
       screen.getByRole("button", { name: /^download$/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders default assistant name in header instead of model slug for assistant messages", () => {
+    const assistantMsg: Message = {
+      id: "msg-ai-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Hello! I am an assistant.",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "nvidia/nemotron-3.5-lightning:free",
+      }),
+    };
+
+    renderMessageBubble({
+      message: assistantMsg,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText(SITE_CONFIG.DEFAULT_ASSISTANT_NAME)).toBeInTheDocument();
+    expect(within(header).queryByText("nvidia/nemotron-3.5-lightning:free")).not.toBeInTheDocument();
+  });
+
+  it("renders assistant name from parent assistant when parent message has assistantId", () => {
+    const parentMsgWithAssistant: Message = {
+      id: "msg-parent-1",
+      chatId: "chat-1",
+      role: "user",
+      content: "Can you help me write Python?",
+      parentId: null,
+      childrenIds: ["msg-ai-2"],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        assistantId: "asst-python-1",
+      }),
+    };
+
+    const assistantMsg: Message = {
+      id: "msg-ai-2",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Sure! Here is Python code.",
+      parentId: "msg-parent-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "openai/gpt-4o",
+      }),
+    };
+
+    const mockAssistants = [
+      {
+        id: "asst-python-1",
+        name: "Python Pro Assistant",
+        userId: "user-1",
+        description: null,
+        prompt: null,
+        tools: null,
+        skillMode: "dynamic" as const,
+        skillIds: [],
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    renderMessageBubble({
+      message: assistantMsg,
+      parentMessage: parentMsgWithAssistant,
+      assistants: mockAssistants,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText("Python Pro Assistant")).toBeInTheDocument();
+    expect(within(header).queryByText("openai/gpt-4o")).not.toBeInTheDocument();
+  });
+
+  it("renders assistant name from chat assistantId when no parent message metadata exists", () => {
+    const assistantMsg: Message = {
+      id: "msg-ai-3",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Response from chat assistant.",
+      parentId: null,
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "anthropic/claude-3-opus",
+      }),
+    };
+
+    const mockAssistants = [
+      {
+        id: "asst-chat-1",
+        name: "Dedicated Chat Bot",
+        userId: "user-1",
+        description: null,
+        prompt: null,
+        tools: null,
+        skillMode: "dynamic" as const,
+        skillIds: [],
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    renderMessageBubble({
+      message: assistantMsg,
+      assistantId: "asst-chat-1",
+      assistants: mockAssistants,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText("Dedicated Chat Bot")).toBeInTheDocument();
+    expect(within(header).queryByText("anthropic/claude-3-opus")).not.toBeInTheDocument();
   });
 });
 

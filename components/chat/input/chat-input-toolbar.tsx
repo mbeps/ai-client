@@ -165,7 +165,7 @@ function SendStopButton({
       aria-label={submitLabel || "Send message"}
       disabled={isSendDisabled}
     >
-      {submitLabel === "Save" ? (
+      {submitLabel === "Save" || submitLabel === "Save & Submit" ? (
         <Save className="h-3.5 w-3.5" />
       ) : (
         <ArrowRight className="ml-0.5 h-3.5 w-3.5" />
@@ -188,6 +188,7 @@ function CancelButton({ onCancel }: { onCancel: () => void }) {
       size="icon"
       onClick={onCancel}
       className="h-7 w-7 rounded-full"
+      aria-label="Cancel"
     >
       <X className="h-3.5 w-3.5" />
     </Button>

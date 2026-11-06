@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { ToolPickerDialog } from "@/components/chat/tool-picker/tool-picker-dialog";
@@ -53,6 +53,36 @@ describe("ToolPickerList", () => {
     expect(screen.getByText("Internal Tools")).toBeDefined();
     expect(screen.getByText("Excel MCP")).toBeDefined();
     expect(screen.getByText("Select All")).toBeDefined();
+  });
+
+  it("ignores disabled MCP servers and does not discover their tools", async () => {
+    const serversWithDisabled: McpServer[] = [
+      ...mockServers,
+      {
+        id: "srv-disabled",
+        userId: "u1",
+        name: "Disabled Server",
+        url: "https://example.com/disabled",
+        isPublic: false,
+        enabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    await act(async () => {
+      render(
+        <ToolPickerList
+          servers={serversWithDisabled}
+          selectedTools={new Set()}
+          onToggleTool={vi.fn()}
+          onBulkSelect={vi.fn()}
+        />,
+      );
+    });
+
+    expect(screen.getByText("Excel MCP")).toBeDefined();
+    expect(screen.queryByText("Disabled Server")).toBeNull();
   });
 
   it("filters tools and servers by search", () => {

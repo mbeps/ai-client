@@ -6,16 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
 import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -196,33 +187,20 @@ export function ServerCard({ server }: ServerCardProps) {
             </TooltipContent>
           </Tooltip>
 
-          <AlertDialog
-            open={showDeleteDialog}
-            onOpenChange={setShowDeleteDialog}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {server.isInstalled ? "Uninstall Tool" : "Delete Server"}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to{" "}
-                  {server.isInstalled ? "uninstall" : "delete"} &quot;
-                  {server.name}&quot;? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive hover:bg-destructive/90"
-                  disabled={isDeleting}
-                >
-                  {server.isInstalled ? "Uninstall" : "Delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DeleteConfirmDialog
+            isOpen={showDeleteDialog}
+            onClose={() => setShowDeleteDialog(false)}
+            onConfirm={handleDelete}
+            title={server.isInstalled ? "Uninstall Tool" : "Delete Server"}
+            description={`Are you sure you want to ${
+              server.isInstalled ? "uninstall" : "delete"
+            } "${server.name}"? This action cannot be undone.`}
+            loading={isDeleting}
+            confirmLabel={server.isInstalled ? "Uninstall" : "Delete"}
+            confirmLoadingLabel={
+              server.isInstalled ? "Uninstalling..." : "Deleting..."
+            }
+          />
         </div>
       </div>
     </Card>

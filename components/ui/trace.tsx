@@ -34,7 +34,7 @@ function TraceLine({
       data-slot="trace-line"
       data-status={status}
       className={cn(
-        "text-muted-foreground in-[a:hover,button:hover]:text-foreground data-[status=error]:text-destructive data-[status=error]:in-[a:hover,button:hover]:text-destructive data-[status=running]:*:data-[slot=trace-title]:shimmer flex w-full min-w-0 items-center gap-2 text-sm transition-colors in-[a,button]:cursor-pointer data-[status=pending]:opacity-60",
+        "text-muted-foreground in-[a:hover,button:hover]:text-foreground flex w-full min-w-0 items-center gap-2 text-sm transition-colors in-[a,button]:cursor-pointer data-[status=pending]:opacity-60",
         className,
       )}
       {...props}
@@ -60,10 +60,7 @@ function TraceTitle({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="trace-title"
-      className={cn(
-        "motion-reduce:shimmer-none min-w-0 flex-1 truncate",
-        className,
-      )}
+      className={cn("min-w-0 flex-1 truncate", className)}
       {...props}
     />
   );
@@ -107,7 +104,7 @@ function TraceCollapsibleTrigger({
     <CollapsibleTrigger
       data-slot="trace-collapsible-trigger"
       className={cn(
-        "group/trace-collapsible-trigger text-muted-foreground hover:bg-muted/50 hover:text-foreground focus-visible:ring-ring/30 has-[[data-status=error]]:text-destructive flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors outline-none focus-visible:ring-3",
+        "group/trace-collapsible-trigger text-muted-foreground hover:bg-muted/50 hover:text-foreground focus-visible:ring-ring/30 flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border-0 px-2 py-1.5 text-left transition-colors outline-none focus-visible:ring-3",
         className,
       )}
       {...props}

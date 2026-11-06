@@ -81,11 +81,15 @@ describe("extractThreadCanvasArtifacts", () => {
     const thread = [
       makeMessage("m1", "assistant", meta1),
       makeMessage("m2", "assistant", meta2),
+      makeMessage("m3", "assistant", undefined), // message with markdown containing mermaid block (no id)
     ];
+    thread[2].content = "```mermaid\ngraph TD\nA-->B\n```";
 
     const artifacts = extractThreadCanvasArtifacts(thread);
-    expect(artifacts).toHaveLength(1);
+    expect(artifacts).toHaveLength(2);
     expect(artifacts[0].content).toBe("v2 content");
+    expect(artifacts[1].type).toBe("mermaid");
+    expect(artifacts[1].id).toBe("m3-mermaid-0");
   });
 
   it("limits to the most recent artifacts when thread has many distinct artifacts", () => {
@@ -98,6 +102,10 @@ describe("extractThreadCanvasArtifacts", () => {
     const artifacts = extractThreadCanvasArtifacts(thread, { maxArtifacts: 2 });
     expect(artifacts).toHaveLength(2);
     expect(artifacts.map((a) => a.id)).toEqual(["art-2", "art-3"]);
+
+    const allArtifacts = extractThreadCanvasArtifacts(thread, { maxArtifacts: 0 });
+    expect(allArtifacts).toHaveLength(3);
+    expect(allArtifacts.map((a) => a.id)).toEqual(["art-1", "art-2", "art-3"]);
   });
 
   it("truncates oversized artifact content beyond maxContentLength", () => {

@@ -5,4 +5,5 @@ export const SITE_CONFIG = {
   NAME: "AI Chat Client",
   DESCRIPTION:
     "AI chat client with support for streaming, tools and knowledge bases.",
+  DEFAULT_ASSISTANT_NAME: "AI Assistant",
 } as const;

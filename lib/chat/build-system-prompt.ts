@@ -27,8 +27,6 @@ export interface SystemPromptOptions {
  * @author Maruf Bepary
  */
 function formatActiveCanvasSection(artifacts: ArtifactData[]): string {
-  if (!artifacts || artifacts.length === 0) return "";
-
   const artifactBlocks = artifacts.map((art) => {
     const title = art.title || "Untitled Artifact";
     const type = art.type || "markdown";
@@ -106,10 +104,7 @@ export function buildSystemPrompt(
   }
 
   if (options.canvasArtifacts && options.canvasArtifacts.length > 0) {
-    const canvasSection = formatActiveCanvasSection(options.canvasArtifacts);
-    if (canvasSection) {
-      systemParts.push(canvasSection);
-    }
+    systemParts.push(formatActiveCanvasSection(options.canvasArtifacts));
   }
 
   if (hasKnowledgeBase) {

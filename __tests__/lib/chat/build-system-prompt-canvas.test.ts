@@ -57,4 +57,23 @@ describe("buildSystemPrompt — Active Canvas section", () => {
     expect(prompt).toContain('### "Doc 1" [markdown]');
     expect(prompt).toContain('### "Spreadsheet 1" [spreadsheet]');
   });
+
+  it("handles fallback artifact title, type, and missing id gracefully", () => {
+    const artifacts: ArtifactData[] = [
+      {
+        id: "",
+        title: "",
+        type: "" as any,
+        content: "Raw untitled content",
+      },
+    ];
+
+    const prompt = buildSystemPrompt(null, null, null, false, {
+      canvasArtifacts: artifacts,
+    });
+
+    expect(prompt).toContain('### "Untitled Artifact" [markdown]');
+    expect(prompt).not.toContain('(id:');
+    expect(prompt).toContain("Raw untitled content");
+  });
 });

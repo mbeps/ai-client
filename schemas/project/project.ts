@@ -39,7 +39,16 @@ export const createProjectSchema = z.object({
  * @see {@link lib/actions/projects/update-project.ts} for update action
  * @author Maruf Bepary
  */
-export const updateProjectSchema = createProjectSchema.partial();
+export const updateProjectSchema = createProjectSchema
+  .omit({
+    skillMode: true,
+    skillIds: true,
+  })
+  .partial()
+  .extend({
+    skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
+    skillIds: z.array(z.string()).optional(),
+  });
 
 /**
  * Validates project rename operations with only the new name field.

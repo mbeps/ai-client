@@ -64,8 +64,7 @@ export function extractThreadCanvasArtifacts(
   for (const msg of thread) {
     const extracted = extractMessageArtifacts(msg);
     for (const art of extracted) {
-      const key = art.id || `${msg.id}-${art.title}`;
-      artifactMap.set(key, art);
+      artifactMap.set(art.id, art);
     }
   }
 

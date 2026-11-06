@@ -164,14 +164,19 @@ export function ToolPickerList({
     }
   };
 
+  const enabledServers = useMemo(
+    () => servers.filter((server) => server.enabled),
+    [servers],
+  );
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: Fetch server content for new servers
   useEffect(() => {
-    servers.forEach((server) => {
+    enabledServers.forEach((server) => {
       if (!serverContent[server.id]) {
         fetchServerContent(server);
       }
     });
-  }, [servers]);
+  }, [enabledServers]);
 
   const toggleExpand = (serverId: string) => {
     setExpandedServers((prev) => {
@@ -186,8 +191,8 @@ export function ToolPickerList({
   };
 
   const filteredServers = useMemo(() => {
-    if (!search) return servers;
-    return servers.filter((server) => {
+    if (!search) return enabledServers;
+    return enabledServers.filter((server) => {
       const matchesServerName = server.name
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -199,10 +204,10 @@ export function ToolPickerList({
       );
       return matchesServerName || matchesTools;
     });
-  }, [servers, search, serverContent]);
+  }, [enabledServers, search, serverContent]);
 
   const allDiscoveredTools = useMemo(() => {
-    const mcpTools = servers.flatMap((s) =>
+    const mcpTools = enabledServers.flatMap((s) =>
       (serverContent[s.id]?.tools || []).map((t) => ({
         serverId: s.id,
         toolName: t.name,
@@ -213,7 +218,7 @@ export function ToolPickerList({
       { serverId: "internal", toolName: "manage_memory" },
       ...mcpTools,
     ];
-  }, [servers, serverContent]);
+  }, [enabledServers, serverContent]);
 
   const selectedCount = useMemo(() => {
     return allDiscoveredTools.filter((t) =>
@@ -242,7 +247,7 @@ export function ToolPickerList({
       ["manage_artifact", "manage_memory"],
       shouldSelect,
     );
-    servers.forEach((s) => {
+    enabledServers.forEach((s) => {
       const content = serverContent[s.id];
       if (content?.tools) {
         onBulkSelect(

@@ -262,7 +262,7 @@ describe("Project Server Actions", () => {
       });
     });
 
-    it("always writes skillMode and skillIds, which the schema defaults to 'dynamic' and []", async () => {
+    it("omits skillMode and skillIds when not supplied in partial update", async () => {
       chainable.returning.mockResolvedValueOnce([SAMPLE_PROJECT]);
 
       await updateProject(PROJECT_ID, { name: "Name Only" });
@@ -272,8 +272,8 @@ describe("Project Server Actions", () => {
         unknown
       >;
       expect(values.name).toBe("Name Only");
-      expect(values.skillMode).toBe("dynamic");
-      expect(values.skillIds).toEqual([]);
+      expect("skillMode" in values).toBe(false);
+      expect("skillIds" in values).toBe(false);
     });
 
     it("maps skillMode and skillIds when supplied", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2, X } from "lucide-react";
+import { Loader2, Trash2, X } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +31,23 @@ interface DeleteConfirmDialogProps {
   description: string;
   /** Optional loading state to disable buttons during processing. */
   loading?: boolean;
+  /** Custom label for confirmation action button. Defaults to "Delete". */
+  confirmLabel?: string;
+  /** Custom loading text for confirmation action button. Defaults to "Deleting...". */
+  confirmLoadingLabel?: string;
+  /** Custom icon for confirmation action button. Defaults to Trash2. Pass null to omit icon. */
+  confirmIcon?: ReactNode;
+  /** Custom label for cancel button. Defaults to "Cancel". */
+  cancelLabel?: string;
+  /** Custom icon for cancel button. Defaults to X. Pass null to omit icon. */
+  cancelIcon?: ReactNode;
 }
 
 /**
  * Shared alert dialog for confirming destructive delete actions.
  * Provides a standardised layout with a title, description, and "Cancel" vs "Delete" buttons.
  *
+ * @author Maruf Bepary
  */
 export function DeleteConfirmDialog({
   isOpen,
@@ -44,7 +56,21 @@ export function DeleteConfirmDialog({
   title,
   description,
   loading,
+  confirmLabel = "Delete",
+  confirmLoadingLabel = "Deleting...",
+  confirmIcon,
+  cancelLabel = "Cancel",
+  cancelIcon,
 }: DeleteConfirmDialogProps) {
+  const renderedCancelIcon =
+    cancelIcon === undefined ? <X className="mr-2 h-4 w-4" /> : cancelIcon;
+  const renderedConfirmIcon =
+    confirmIcon === undefined ? (
+      <Trash2 className="mr-2 h-4 w-4" />
+    ) : (
+      confirmIcon
+    );
+
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
@@ -54,8 +80,8 @@ export function DeleteConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>
-            <X className="mr-2 h-4 w-4" />
-            Cancel
+            {renderedCancelIcon}
+            {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={async (e) => {
@@ -67,11 +93,14 @@ export function DeleteConfirmDialog({
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {loading ? (
-              "Deleting..."
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {confirmLoadingLabel}
+              </>
             ) : (
               <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {renderedConfirmIcon}
+                {confirmLabel}
               </>
             )}
           </AlertDialogAction>
