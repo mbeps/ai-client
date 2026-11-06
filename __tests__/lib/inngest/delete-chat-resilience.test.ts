@@ -168,11 +168,18 @@ describe("Delete Chat While Streaming End-to-End Resilience Suite", () => {
     );
   });
 
-  it("2. deleteChat throws 'Not Found' and does not abort stream on unauthorized or missing chat", async () => {
+  it("2. deleteChat returns 'Not Found' error and does not abort stream on unauthorized or missing chat", async () => {
     chainable.where.mockReturnValueOnce([]);
     chainable.returning.mockReturnValueOnce([]); // no chat deleted
 
-    await expect(deleteChat(TEST_CHAT_ID)).rejects.toThrow("Not Found");
+    const res = await deleteChat(TEST_CHAT_ID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Not Found",
+      }),
+    });
 
     expect(mockAbortRegistry.abort).not.toHaveBeenCalled();
     expect(mockInngestSend).not.toHaveBeenCalledWith(

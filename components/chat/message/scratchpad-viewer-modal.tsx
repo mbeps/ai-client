@@ -93,9 +93,14 @@ export function ScratchpadViewerModal({
     setLoading(true);
     setError(null);
     try {
-      const result = chatId
+      const res = chatId
         ? await getScratchpadFilesAction(chatId, messageId)
         : await getScratchpadFilesAction(messageId);
+      if (!res.ok) {
+        setError(res.error.message || "Failed to load scratchpad files");
+        return;
+      }
+      const result = res.value;
       setFiles(result);
       if (result.length > 0) {
         setSelectedFileId((prev) =>

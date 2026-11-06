@@ -10,8 +10,29 @@ import { db } from "@/drizzle/db";
 import { attachment } from "@/drizzle/schemas/chat-schema";
 import { resolveMimeType } from "@/lib/attachments/resolve-mime-type";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { uploadObject } from "@/lib/storage/upload-object";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
+
+export type UploadRunInputError =
+  | CommonError
+  | {
+      readonly code: typeof ERROR_CODE.UNSUPPORTED_FILE_TYPE;
+      readonly message: string;
+    }
+  | {
+      readonly code: typeof ERROR_CODE.FILE_TOO_LARGE;
+      readonly message: string;
+    }
+  | {
+      readonly code: typeof ERROR_CODE.RATE_LIMIT;
+      readonly message: string;
+    };
 
 /**
  * Uploads multiple input files for a transform run to S3 and creates attachment records.
@@ -21,59 +42,65 @@ import { uploadObject } from "@/lib/storage/upload-object";
  *
  * @param formData - Multipart form data with key 'files' (required File array).
  * @returns Array of created attachment objects with id and name.
- * @throws Error if no files provided in formData.
- * @throws Error if S3 upload fails for any file.
- * @throws Error if database insertion fails due to constraints or connection issues.
  * @author Maruf Bepary
  */
-export async function uploadRunInput(
-  formData: FormData,
-): Promise<{ id: string; name: string }[]> {
-  const session = await requireSession();
+export const uploadRunInput = defineAction(
+  async (
+    formData: FormData,
+  ): Promise<Result<{ id: string; name: string }[], UploadRunInputError>> => {
+    const session = await requireSession();
 
-  const { allowed, retryAfterSeconds } = checkRateLimit(
-    `upload:${session.user.id}`,
-    env.RATE_LIMIT_UPLOAD_RPM,
-  );
-  if (!allowed) {
-    throw new Error(`Too many uploads. Retry in ${retryAfterSeconds}s.`);
-  }
-
-  const files = formData.getAll("files") as File[];
-  const results: { id: string; name: string }[] = [];
-
-  for (const file of files) {
-    const resolvedMimeType = await resolveMimeType(file);
-    if (!ALLOWED_SPREADSHEET_TYPES.has(resolvedMimeType)) {
-      throw new Error(
-        `File type "${resolvedMimeType || "unknown"}" is not supported. Only spreadsheet files are allowed.`,
-      );
+    const { allowed, retryAfterSeconds } = checkRateLimit(
+      `upload:${session.user.id}`,
+      env.RATE_LIMIT_UPLOAD_RPM,
+    );
+    if (!allowed) {
+      return fail({
+        code: ERROR_CODE.RATE_LIMIT,
+        message: `Too many uploads. Retry in ${retryAfterSeconds}s.`,
+      });
     }
-    if (file.size > MAX_SPREADSHEET_SIZE_BYTES) {
-      throw new Error(`File "${file.name}" exceeds the maximum size of 50 MB.`);
+
+    const files = formData.getAll("files") as File[];
+    const results: { id: string; name: string }[] = [];
+
+    for (const file of files) {
+      const resolvedMimeType = await resolveMimeType(file);
+      if (!ALLOWED_SPREADSHEET_TYPES.has(resolvedMimeType)) {
+        return fail({
+          code: ERROR_CODE.UNSUPPORTED_FILE_TYPE,
+          message: `File type "${resolvedMimeType || "unknown"}" is not supported. Only spreadsheet files are allowed.`,
+        });
+      }
+      if (file.size > MAX_SPREADSHEET_SIZE_BYTES) {
+        return fail({
+          code: ERROR_CODE.FILE_TOO_LARGE,
+          message: `File "${file.name}" exceeds the maximum size of 50 MB.`,
+        });
+      }
+      const id = randomUUID();
+      const key = `transform-inputs/${session.user.id}/${id}-${file.name}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      // Persist the sniffed MIME type, never the client-supplied file.type.
+      await uploadObject(key, buffer, resolvedMimeType);
+
+      const [row] = await db
+        .insert(attachment)
+        .values({
+          id,
+          messageId: null,
+          transformRunId: null,
+          userId: session.user.id,
+          name: file.name,
+          mimeType: resolvedMimeType,
+          size: file.size,
+          key,
+        })
+        .returning();
+
+      results.push({ id: row.id, name: row.name });
     }
-    const id = randomUUID();
-    const key = `transform-inputs/${session.user.id}/${id}-${file.name}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    // Persist the sniffed MIME type, never the client-supplied file.type.
-    await uploadObject(key, buffer, resolvedMimeType);
 
-    const [row] = await db
-      .insert(attachment)
-      .values({
-        id,
-        messageId: null,
-        transformRunId: null,
-        userId: session.user.id,
-        name: file.name,
-        mimeType: resolvedMimeType,
-        size: file.size,
-        key,
-      })
-      .returning();
-
-    results.push({ id: row.id, name: row.name });
-  }
-
-  return results;
-}
+    return ok(results);
+  },
+);

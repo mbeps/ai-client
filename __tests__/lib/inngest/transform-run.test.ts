@@ -1299,4 +1299,78 @@ describe("executeTransformRun Inngest Workflow", () => {
       }),
     );
   });
+
+  describe("onFailure handler", () => {
+    it("updates run to failed, logs message, and publishes error event to realtime channel", async () => {
+      const onFailure = (executeTransformRun as any).opts.onFailure;
+      expect(onFailure).toBeDefined();
+
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {
+                runId: "run-failed-1",
+              },
+            },
+          },
+        },
+        error: new Error("Pipeline crashed unexpectedly"),
+      });
+
+      expect(chainable.update).toHaveBeenCalled();
+      expect(mockUpdateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "failed",
+          errorMessage: expect.stringContaining("Something went wrong"),
+        }),
+      );
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "error",
+          message: expect.stringContaining("Something went wrong"),
+        }),
+      );
+
+      // Verify .catch(() => {}) is exercised when realtime.publish rejects
+      (inngest.realtime.publish as any).mockRejectedValueOnce(
+        new Error("Realtime publish failed"),
+      );
+      await expect(
+        onFailure({
+          event: {
+            data: {
+              event: {
+                data: {
+                  runId: "run-failed-catch",
+                },
+              },
+            },
+          },
+          error: new Error("Pipeline error"),
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    it("skips DB update and realtime publish when runId is omitted from failure event data", async () => {
+      const onFailure = (executeTransformRun as any).opts.onFailure;
+      mockUpdate.mockClear();
+      (inngest.realtime.publish as any).mockClear();
+
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {},
+            },
+          },
+        },
+        error: new Error("Anonymous failure"),
+      });
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(inngest.realtime.publish).not.toHaveBeenCalled();
+    });
+  });
 });

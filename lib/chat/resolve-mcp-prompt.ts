@@ -14,7 +14,18 @@ export async function resolveMcpPrompt(
 ): Promise<string> {
   const { getMcpPrompt } = await import("@/actions/mcp/get-mcp-prompt");
   const mcpPromptResult = await getMcpPrompt(serverId, promptName);
-  const mcpContent = (mcpPromptResult as any).messages
+  const promptData =
+    mcpPromptResult &&
+    typeof mcpPromptResult === "object" &&
+    "ok" in mcpPromptResult
+      ? mcpPromptResult.ok
+        ? mcpPromptResult.value
+        : null
+      : mcpPromptResult;
+  if (!promptData || !(promptData as any).messages) {
+    return "";
+  }
+  const mcpContent = (promptData as any).messages
     .map((m: any) => {
       if (typeof m.content === "string") return m.content;
       if (m.content?.type === "text") return m.content.text;

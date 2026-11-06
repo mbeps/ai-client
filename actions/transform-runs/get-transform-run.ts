@@ -3,6 +3,10 @@
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { getOwnedResource } from "@/lib/db/get-owned-resource";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 /**
@@ -13,15 +17,16 @@ import type { TransformRunRow } from "@/types/transform/transform-run-row";
  *
  * @param id - UUID of the run to retrieve; must be associated with an agent owned by the authenticated user.
  * @returns The transform run record with all execution details.
- * @throws Error if session is not authenticated.
- * @throws Error if run is not found or user does not own the associated agent (returns "Not Found").
- * @throws Error if database query fails due to connection issues.
- * @see listTransformRuns to fetch all runs for an agent.
  * @author Maruf Bepary
  */
-export async function getTransformRun(
-  id: string,
-): Promise<TransformRunRow | null> {
-  const session = await requireSession();
-  return getOwnedResource<TransformRunRow>(transformRun, id, session.user.id);
-}
+export const getTransformRun = defineAction(
+  async (id: string): Promise<Result<TransformRunRow | null, CommonError>> => {
+    const session = await requireSession();
+    const run = await getOwnedResource<TransformRunRow>(
+      transformRun,
+      id,
+      session.user.id,
+    );
+    return ok(run);
+  },
+);

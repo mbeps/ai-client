@@ -87,10 +87,30 @@ export function UploadDocumentDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
     if (!selected) return;
-    if (selected.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {
-      const _message = `File exceeds the ${KB_CONFIG.MAX_FILE_SIZE_MB} MB limit.`;
+
+    const allowedExts = KB_CONFIG.ACCEPTED_EXTENSIONS.split(",").map((s) =>
+      s.trim().toLowerCase(),
+    );
+    const dotIndex = selected.name.lastIndexOf(".");
+    const ext =
+      dotIndex !== -1 ? selected.name.slice(dotIndex).toLowerCase() : "";
+
+    if (!allowedExts.includes(ext)) {
+      setError(
+        "Spreadsheets and Office files are not supported. Use PDF, plain text or Markdown.",
+      );
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setFile(null);
+      return;
     }
+
+    if (selected.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {
+      setError(`File exceeds the ${KB_CONFIG.MAX_FILE_SIZE_MB} MB limit.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFile(null);
+      return;
+    }
+
     setError(null);
     setFile(selected);
   };
@@ -101,21 +121,26 @@ export function UploadDocumentDialog({
     setPhase("uploading");
     setError(null);
 
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("kbId", kbId);
+
+    const uploadRes = await uploadKbDocument(formData);
+    if (!uploadRes.ok) {
+      setPhase("error");
+      setError(uploadRes.error.message);
+      return;
+    }
+
+    const doc = uploadRes.value;
+    setPhase("ingesting");
+
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("kbId", kbId);
-
-      const doc = await uploadKbDocument(formData);
-
-      setPhase("ingesting");
-
       const result = await ingestKbDocument(doc.id);
-      if (!result.success) {
-        // Build a custom error object to trigger existing toast and error display logic
-        const error: any = new Error(result.error ?? "Ingestion failed");
-        if (result.code) error.code = result.code;
-        throw error;
+      if (!result.ok) {
+        setPhase("error");
+        setError(result.error.message || "Ingestion failed");
+        return;
       }
 
       toast.success(`"${file.name}" uploaded and queued for processing`);
@@ -126,7 +151,6 @@ export function UploadDocumentDialog({
       const msg = err instanceof Error ? err.message : "Upload failed";
       setPhase("error");
       setError(msg);
-      toast.error(msg);
     }
   };
 

@@ -21,11 +21,11 @@ vi.mock("@/components/knowledgebase/knowledgebase-options", () => ({
 }));
 
 vi.mock("@/actions/skills/delete-skill", () => ({
-  deleteSkill: vi.fn(),
+  deleteSkill: vi.fn().mockResolvedValue({ ok: true, value: { deletedCount: 1 } }),
 }));
 
 vi.mock("@/actions/skills/toggle-skill", () => ({
-  toggleSkillEnabled: vi.fn(),
+  toggleSkillEnabled: vi.fn().mockResolvedValue({ ok: true, value: {} }),
 }));
 
 import { ChatCard } from "@/components/chat/chat-card";

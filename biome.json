@@ -7,6 +7,12 @@
     "useIgnoreFile": true,
     "defaultBranch": "main"
   },
+  "plugins": [
+    {
+      "path": "./.biome/plugins/no-throw-error.grit",
+      "includes": ["actions/**/*.ts"]
+    }
+  ],
   "files": {
     "includes": [
       "**",

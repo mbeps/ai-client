@@ -53,9 +53,12 @@ describe("AttachmentGallery", () => {
     };
 
     mockGetAttachmentUrl.mockResolvedValueOnce({
-      url: "data:image/png;base64,resolved-image-data",
-      name: "cover.png",
-      mimeType: "image/png",
+      ok: true,
+      value: {
+        url: "data:image/png;base64,resolved-image-data",
+        name: "cover.png",
+        mimeType: "image/png",
+      },
     });
 
     render(<AttachmentGallery attachments={[att]} />);
@@ -85,9 +88,12 @@ describe("AttachmentGallery", () => {
     };
 
     mockGetAttachmentUrl.mockResolvedValueOnce({
-      url: "https://s3.example.com/report.pdf",
-      name: "report.pdf",
-      mimeType: "application/pdf",
+      ok: true,
+      value: {
+        url: "https://s3.example.com/report.pdf",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+      },
     });
 
     render(<AttachmentGallery attachments={[docAtt]} />);
@@ -111,9 +117,12 @@ describe("AttachmentGallery", () => {
     };
 
     mockGetAttachmentUrl.mockResolvedValueOnce({
-      url: "https://s3.example.com/data.xlsx",
-      name: "data.xlsx",
-      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ok: true,
+      value: {
+        url: "https://s3.example.com/data.xlsx",
+        name: "data.xlsx",
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
     });
 
     render(<AttachmentGallery attachments={[sheetAtt]} />);

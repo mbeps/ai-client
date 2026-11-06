@@ -51,16 +51,19 @@ describe("ServerSharingTab", () => {
 
   it("toggles server public status on switch change", async () => {
     vi.mocked(toggleMcpServerPublic).mockResolvedValue({
-      id: "srv-1",
-      userId: "user-1",
-      name: "GitHub Tools",
-      url: "https://mcp.github.com/sse",
-      headers: "{}",
-      isPublic: true,
-      enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+      ok: true,
+      value: {
+        id: "srv-1",
+        userId: "user-1",
+        name: "GitHub Tools",
+        url: "https://mcp.github.com/sse",
+        headers: "{}",
+        isPublic: true,
+        enabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    } as any);
 
     render(<ServerSharingTab serverId="srv-1" />);
 

@@ -49,16 +49,21 @@ describe("cloneAttachmentsBatch action", () => {
 
   it("returns early when given an empty input array", async () => {
     const result = await cloneAttachmentsBatch([], "msg-1");
-    expect(result).toEqual([]);
+    expect(result).toEqual({ ok: true, value: [] });
     expect(chainable.select).not.toHaveBeenCalled();
   });
 
   it("throws error when source attachments do not exist or count mismatch", async () => {
     chainable.where.mockResolvedValueOnce([]); // sources length 0 vs 1
 
-    await expect(cloneAttachmentsBatch(["att-1"], "msg-1")).rejects.toThrow(
-      "One or more source attachments not found",
-    );
+    const res = await cloneAttachmentsBatch(["att-1"], "msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "One or more source attachments not found",
+      }),
+    });
   });
 
   it("throws Forbidden error when source attachment owner does not match session user", async () => {
@@ -73,7 +78,14 @@ describe("cloneAttachmentsBatch action", () => {
       },
     ]);
 
-    await expect(cloneAttachmentsBatch(["att-1"], "msg-1")).rejects.toThrow("Forbidden");
+    const res = await cloneAttachmentsBatch(["att-1"], "msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "FORBIDDEN",
+        message: "Forbidden",
+      }),
+    });
   });
 
   it("throws error when target message is not found", async () => {
@@ -90,9 +102,14 @@ describe("cloneAttachmentsBatch action", () => {
       ])
       .mockResolvedValueOnce([]); // target message not found
 
-    await expect(cloneAttachmentsBatch(["att-1"], "msg-1")).rejects.toThrow(
-      "Target message not found",
-    );
+    const res = await cloneAttachmentsBatch(["att-1"], "msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Target message not found",
+      }),
+    });
   });
 
   it("throws Forbidden error when target chat owner does not match session user", async () => {
@@ -109,7 +126,14 @@ describe("cloneAttachmentsBatch action", () => {
       ])
       .mockResolvedValueOnce([{ chatUserId: "other-user" }]);
 
-    await expect(cloneAttachmentsBatch(["att-1"], "msg-1")).rejects.toThrow("Forbidden");
+    const res = await cloneAttachmentsBatch(["att-1"], "msg-1");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "FORBIDDEN",
+        message: "Forbidden",
+      }),
+    });
   });
 
   it("successfully clones attachments and returns new records", async () => {
@@ -138,7 +162,7 @@ describe("cloneAttachmentsBatch action", () => {
     chainable.returning.mockResolvedValueOnce([clonedRow]);
 
     const result = await cloneAttachmentsBatch(["att-1"], "msg-1");
-    expect(result).toEqual([clonedRow]);
+    expect(result).toEqual({ ok: true, value: [clonedRow] });
     expect(chainable.insert).toHaveBeenCalled();
   });
 });

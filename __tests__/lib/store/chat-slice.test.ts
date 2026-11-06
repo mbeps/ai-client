@@ -747,6 +747,42 @@ describe("ChatSlice — DB actions", () => {
       const id = await useAppStore.getState().createChatDb("DB Chat");
       expect(id).toBe("db-chat-1");
       expect(useAppStore.getState().chats["db-chat-1"]).toBeDefined();
+
+      // Test Result shape ok: true
+      vi.mocked(createChatAction).mockResolvedValueOnce({
+        ok: true,
+        value: {
+          id: "db-chat-2",
+          title: "DB Chat 2",
+          projectId: null,
+          assistantId: null,
+          currentLeafId: null,
+          userId: "user-1",
+          createdAt: now,
+          updatedAt: now,
+        },
+      } as any);
+      const id2 = await useAppStore.getState().createChatDb("DB Chat 2");
+      expect(id2).toBe("db-chat-2");
+      expect(useAppStore.getState().chats["db-chat-2"]).toBeDefined();
+
+      // Test Result shape ok: false throws error
+      vi.mocked(createChatAction).mockResolvedValueOnce({
+        ok: false,
+        error: { message: "Server refused to create chat" },
+      } as any);
+      await expect(
+        useAppStore.getState().createChatDb("DB Chat Fail"),
+      ).rejects.toThrow("Server refused to create chat");
+
+      // Test Result shape ok: false with no error message fallback
+      vi.mocked(createChatAction).mockResolvedValueOnce({
+        ok: false,
+        error: {},
+      } as any);
+      await expect(
+        useAppStore.getState().createChatDb("DB Chat Fail Default"),
+      ).rejects.toThrow("Failed to create chat");
     });
   });
 
@@ -1415,6 +1451,24 @@ describe("T5.3 scoped rollback does not clobber entity state", () => {
     vi.mocked(updateMessageMetadataAction).mockRejectedValueOnce(new Error("Missing chat meta fail"));
     await useAppStore.getState().updateMessageMetadataDb("non-existent-chat", "msg-x", {});
     expect(useAppStore.getState().chats.chat2.title).toBe("Chat 2");
+
+    // 9. Server action returns ok: false (Result error) rollback
+    useAppStore.setState({ chats: { chat1: { ...baseChat1 } } });
+    vi.mocked(renameChatAction).mockResolvedValueOnce({ ok: false, error: { message: "rename failed" } } as any);
+    await useAppStore.getState().renameChatDb("chat1", "Renamed Fail");
+    expect(useAppStore.getState().chats.chat1.title).toBe("Chat 1 Original");
+
+    vi.mocked(moveChatAction).mockResolvedValueOnce({ ok: false, error: { message: "move failed" } } as any);
+    await useAppStore.getState().moveChatDb("chat1", "proj-999");
+    expect(useAppStore.getState().chats.chat1.projectId).toBe("proj-1");
+
+    vi.mocked(deleteChatAction).mockResolvedValueOnce({ ok: false, error: { message: "delete failed" } } as any);
+    await useAppStore.getState().deleteChatDb("chat1");
+    expect(useAppStore.getState().chats.chat1).toBeDefined();
+
+    vi.mocked(updateChatKnowledgebaseAction).mockResolvedValueOnce({ ok: false, error: { message: "kb failed" } } as any);
+    await useAppStore.getState().setKnowledgebaseDb("chat1", "kb-999");
+    expect(useAppStore.getState().chats.chat1.knowledgebaseId).toBe("kb-1");
   });
 
   it("deleteMessageDb calculates newLeafId from deepest leaf of parent and handles rollback", async () => {

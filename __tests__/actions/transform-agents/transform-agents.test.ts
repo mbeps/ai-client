@@ -106,7 +106,7 @@ describe("transform agents actions", () => {
         steps: [validStep],
       });
 
-      expect(result).toEqual(inserted);
+      expect(result).toEqual({ ok: true, value: inserted });
       expect(chainable.insert).toHaveBeenCalled();
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -131,7 +131,7 @@ describe("transform agents actions", () => {
         name: "Minimal Agent",
       });
 
-      expect(result).toEqual(inserted);
+      expect(result).toEqual({ ok: true, value: inserted });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Minimal Agent",
@@ -157,6 +157,16 @@ describe("transform agents actions", () => {
           skillIds: [],
         }),
       );
+    });
+
+    it("returns INVALID_INPUT when createTransformAgent input validation fails", async () => {
+      const result = await createTransformAgent({
+        name: "",
+      } as any);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe("INVALID_INPUT");
     });
 
     it("stores skillMode and skillIds when supplied", async () => {
@@ -210,11 +220,21 @@ describe("transform agents actions", () => {
       chainable.returning.mockResolvedValueOnce([updated]);
 
       const result = await renameTransformAgent(agentId, "Renamed Agent");
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
   });
 
   describe("updateTransformAgent", () => {
+    it("returns INVALID_INPUT when update data validation fails", async () => {
+      const result = await updateTransformAgent(agentId, {
+        name: "",
+      } as any);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe("INVALID_INPUT");
+    });
+
     it("updates all partial fields when provided", async () => {
       const updated = { id: agentId, name: "Updated Agent" };
       chainable.returning.mockResolvedValueOnce([updated]);
@@ -240,7 +260,7 @@ describe("transform agents actions", () => {
         steps: [validStep],
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       expect(chainable.update).toHaveBeenCalled();
       expect(chainable.set).toHaveBeenCalledWith({
         name: "Updated Agent",
@@ -259,7 +279,7 @@ describe("transform agents actions", () => {
       chainable.returning.mockResolvedValueOnce([updated]);
 
       const result = await updateTransformAgent(agentId, {});
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       expect(chainable.set).toHaveBeenCalledWith({});
     });
 
@@ -273,7 +293,7 @@ describe("transform agents actions", () => {
         knowledgeBaseIds: ["kb-1"],
         steps: [],
       });
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
 
     it("updates even fields (name, globalContext, tools, requiresFileUpload)", async () => {
@@ -286,7 +306,7 @@ describe("transform agents actions", () => {
         tools: ["t-1"],
         requiresFileUpload: false,
       });
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
 
     it("updates optional values for description, globalContext, and modelId with undefined", async () => {
@@ -298,7 +318,7 @@ describe("transform agents actions", () => {
         globalContext: undefined,
         modelId: undefined,
       });
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
     });
 
     it("updates skillMode and skillIds when supplied", async () => {
@@ -310,19 +330,24 @@ describe("transform agents actions", () => {
         skillIds: ["skill-a", "skill-b"],
       });
 
-      expect(result).toEqual(updated);
+      expect(result).toEqual({ ok: true, value: updated });
       expect(chainable.set).toHaveBeenCalledWith({
         skillMode: "specific",
         skillIds: ["skill-a", "skill-b"],
       });
     });
 
-    it("throws Not Found when agent is not found or not owned", async () => {
+    it("returns Not Found when agent is not found or not owned", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 
-      await expect(
-        updateTransformAgent(agentId, { name: "Missing" }),
-      ).rejects.toThrow("Not Found");
+      const res = await updateTransformAgent(agentId, { name: "Missing" });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "NOT_FOUND",
+          message: "Not Found",
+        }),
+      });
     });
   });
 
@@ -332,7 +357,7 @@ describe("transform agents actions", () => {
       getOwnedResourceMock.mockResolvedValueOnce(mockAgent);
 
       const result = await getTransformAgent(agentId);
-      expect(result).toEqual(mockAgent);
+      expect(result).toEqual({ ok: true, value: mockAgent });
       expect(getOwnedResourceMock).toHaveBeenCalledWith(expect.anything(), agentId, userId);
     });
   });
@@ -343,7 +368,7 @@ describe("transform agents actions", () => {
       chainable.then = (onFulfilled: any) => Promise.resolve(mockAgents).then(onFulfilled);
 
       const result = await listTransformAgents();
-      expect(result).toEqual(mockAgents);
+      expect(result).toEqual({ ok: true, value: mockAgents });
       expect(chainable.select).toHaveBeenCalled();
       expect(chainable.orderBy).toHaveBeenCalled();
     });

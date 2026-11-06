@@ -98,9 +98,14 @@ describe("empty source text guard", () => {
   ])(
     "triggerTranslation rejects before the action guard: %s",
     async (_label, input) => {
-      await expect(triggerTranslation(input)).rejects.toThrow(
-        /Invalid translation request/,
-      );
+      const res = await triggerTranslation(input);
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "INVALID_INPUT",
+          message: expect.stringMatching(/Invalid translation request/),
+        }),
+      });
       expect(dbChainable.insert).not.toHaveBeenCalled();
     },
   );
@@ -112,13 +117,17 @@ describe("triggerTranslation action", () => {
   });
 
   it("validates input and throws on empty text without image", async () => {
-    await expect(
-      triggerTranslation({
-        sourceLanguage: "English",
-        targetLanguage: "Italian",
-        text: "",
+    const res = await triggerTranslation({
+      sourceLanguage: "English",
+      targetLanguage: "Italian",
+      text: "",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "INVALID_INPUT",
       }),
-    ).rejects.toThrow(/Invalid translation request/);
+    });
   });
 
   it("inserts translation record and dispatches Inngest event", async () => {
@@ -132,7 +141,7 @@ describe("triggerTranslation action", () => {
       text: "Hello world",
     });
 
-    expect(result).toEqual({ translationId: "trans-new-1" });
+    expect(result).toEqual({ ok: true, value: { translationId: "trans-new-1" } });
     expect(dbChainable.insert).toHaveBeenCalled();
     expect(inngest.send).toHaveBeenCalledWith({
       name: "workflows/translate.execute",
@@ -160,7 +169,7 @@ describe("triggerTranslation action", () => {
       },
     });
 
-    expect(result).toEqual({ translationId: "trans-doc-1" });
+    expect(result).toEqual({ ok: true, value: { translationId: "trans-doc-1" } });
     expect(inngest.send).toHaveBeenCalledWith({
       name: "workflows/translate.execute",
       data: expect.objectContaining({
@@ -186,7 +195,7 @@ describe("triggerTranslation action", () => {
       },
     });
 
-    expect(result).toEqual({ translationId: "trans-img-1" });
+    expect(result).toEqual({ ok: true, value: { translationId: "trans-img-1" } });
     // sourceText falls through both `||` operands to the "" literal
     expect(dbChainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -216,16 +225,21 @@ describe("getTranslationRealtimeToken action", () => {
   it("throws Unauthorized if record not found or belongs to another user", async () => {
     dbChainable.where.mockResolvedValueOnce([]);
 
-    await expect(getTranslationRealtimeToken("trans-ghost")).rejects.toThrow(
-      "Unauthorized",
-    );
+    const res = await getTranslationRealtimeToken("trans-ghost");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "UNAUTHORIZED",
+        message: "Unauthorized",
+      }),
+    });
   });
 
   it("returns subscription token when record exists and belongs to user", async () => {
     dbChainable.where.mockResolvedValueOnce([{ id: "trans-ok" }]);
 
     const token = await getTranslationRealtimeToken("trans-ok");
-    expect(token).toBe("mock-trans-token");
+    expect(token).toEqual({ ok: true, value: "mock-trans-token" });
   });
 });
 
@@ -241,14 +255,17 @@ describe("getLatestTranslationAction", () => {
 
     const latest = await getLatestTranslationAction();
     expect(latest).toEqual({
-      id: "trans-recent",
-      status: "completed",
-      translatedText: "Ciao",
+      ok: true,
+      value: {
+        id: "trans-recent",
+        status: "completed",
+        translatedText: "Ciao",
+      },
     });
 
     dbChainable.limit.mockResolvedValueOnce([]);
     const empty = await getLatestTranslationAction();
-    expect(empty).toBeNull();
+    expect(empty).toEqual({ ok: true, value: null });
   });
 });
 

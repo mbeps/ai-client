@@ -49,7 +49,14 @@ async function fetchPreviewArtifact(
 ): Promise<ArtifactData | null> {
   try {
     const res = await getAttachmentArtifact(attachmentId);
-    return formatStepArtifact(res, selectedStepIndex, stepName);
+    if (!res.ok) {
+      logger.warn?.(
+        "Failed to load preview artifact via server action",
+        res.error,
+      );
+      return null;
+    }
+    return formatStepArtifact(res.value, selectedStepIndex, stepName);
   } catch (err) {
     logger.warn?.("Failed to load preview artifact via server action", err);
     return null;

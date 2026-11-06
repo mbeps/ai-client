@@ -10,6 +10,7 @@ import { listSkills } from "@/actions/skills/list-skills";
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import type { AppState } from "@/types/app/app-state";
+import type { Result } from "@/types/result";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
@@ -25,13 +26,29 @@ import type { UserSettingsRow } from "@/types/user/user-settings-row";
 const createEntityLoader = <K extends keyof AppState, R>(
   set: (state: Partial<AppState>) => void,
   key: K,
-  listAction: () => Promise<R[]>,
+  listAction: () => Promise<R[] | Result<R[], any>>,
   mapper: (row: R) => AppState[K] extends (infer T)[] ? T : never,
 ) => {
   return async () => {
     try {
-      const rows = await listAction();
-      set({ [key]: rows.map(mapper), loadError: null } as Partial<AppState>);
+      const res = await listAction();
+      if (res && typeof res === "object" && "ok" in res) {
+        if (!res.ok) {
+          set({
+            loadError: res.error?.message || `Failed to load ${String(key)}`,
+          });
+          return;
+        }
+        set({
+          [key]: res.value.map(mapper),
+          loadError: null,
+        } as Partial<AppState>);
+        return;
+      }
+      set({
+        [key]: (res as R[]).map(mapper),
+        loadError: null,
+      } as Partial<AppState>);
     } catch {
       // ponytail: single shared error field; per-entity errors only if needed later
       set({ loadError: `Failed to load ${String(key)}` });
@@ -98,8 +115,16 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
 
   loadMcpPrompts: async () => {
     try {
-      const prompts = await discoverAllPrompts();
-      set({ mcpPrompts: prompts, loadError: null });
+      const res = await discoverAllPrompts();
+      if (res && typeof res === "object" && "ok" in res) {
+        if (!res.ok) {
+          set({ loadError: res.error.message || "Failed to load mcpPrompts" });
+          return;
+        }
+        set({ mcpPrompts: res.value, loadError: null });
+        return;
+      }
+      set({ mcpPrompts: res as any, loadError: null });
     } catch {
       set({ loadError: "Failed to load mcpPrompts" });
     }
@@ -107,8 +132,12 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
 
   loadUserSettings: async () => {
     try {
-      const settings = await getUserSettings();
-      set({ userSettings: settings, loadError: null });
+      const res = await getUserSettings();
+      if (!res.ok) {
+        set({ loadError: res.error.message || "Failed to load userSettings" });
+        return;
+      }
+      set({ userSettings: res.value, loadError: null });
     } catch {
       set({ loadError: "Failed to load userSettings" });
     }

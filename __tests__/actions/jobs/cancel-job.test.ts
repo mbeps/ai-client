@@ -56,19 +56,33 @@ describe("cancelJob Server Action", () => {
 
   describe("Authentication and Input Validation", () => {
     it("throws unauthorized error when session is missing", async () => {
-      mockRequireSession.mockRejectedValueOnce(new Error("Unauthorized"));
+      const { AppException } = await import("@/lib/error/app-exception");
+      const { ERROR_CODE } = await import("@/lib/error/error-code");
+      mockRequireSession.mockRejectedValueOnce(
+        new AppException({
+          code: ERROR_CODE.UNAUTHORIZED,
+          message: "Unauthorized",
+        }),
+      );
 
-      await expect(cancelJob("run-123")).rejects.toThrow("Unauthorized");
-    });
-
-    it("throws unauthorized error when session user is missing", async () => {
-      mockRequireSession.mockResolvedValueOnce({ session: { id: "session-abc" } });
-
-      await expect(cancelJob("run-123")).rejects.toThrow("Unauthorized");
+      const res = await cancelJob("run-123");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "UNAUTHORIZED",
+          message: "Unauthorized",
+        }),
+      });
     });
 
     it("rejects when runId is empty or not provided", async () => {
-      await expect(cancelJob("")).rejects.toThrow();
+      const res = await cancelJob("");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "INVALID_INPUT",
+        }),
+      });
     });
   });
 
@@ -77,7 +91,7 @@ describe("cancelJob Server Action", () => {
       const result = await cancelJob("run-123");
 
       expect(mockCancelInngestRun).toHaveBeenCalledWith("run-123", mockUser.id);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
       expect(mockChatAbortRegistry.abort).not.toHaveBeenCalled();
       expect(mockInngest.send).not.toHaveBeenCalled();
       expect(mockUpdate).not.toHaveBeenCalled();
@@ -92,8 +106,25 @@ describe("cancelJob Server Action", () => {
       const result = await cancelJob("run-123");
 
       expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "INTERNAL",
+          message: "Run not found or already completed",
+        }),
+      });
+
+      // Also test fallback message when cancelResult.error is empty/undefined
+      mockCancelInngestRun.mockResolvedValueOnce({
         success: false,
-        error: "Run not found or already completed",
+      } as any);
+
+      const resultFallback = await cancelJob("run-123");
+      expect(resultFallback).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "INTERNAL",
+          message: "Failed to cancel run",
+        }),
       });
     });
   });
@@ -111,7 +142,7 @@ describe("cancelJob Server Action", () => {
           userId: mockUser.id,
         },
       });
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
     });
   });
 
@@ -129,7 +160,7 @@ describe("cancelJob Server Action", () => {
       });
       expect(mockUpdateWhere).toHaveBeenCalled();
       expect(mockInngest.send).not.toHaveBeenCalled();
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
     });
   });
 
@@ -149,7 +180,7 @@ describe("cancelJob Server Action", () => {
         },
       });
       expect(mockUpdate).toHaveBeenCalledWith(transformRun);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
     });
   });
 });

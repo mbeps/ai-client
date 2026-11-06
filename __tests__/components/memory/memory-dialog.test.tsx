@@ -35,11 +35,14 @@ describe("MemoryDialog", () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     mockCreateMemory.mockResolvedValue({
-      id: "mem-new",
-      userId: "user-1",
-      content: "Prefers Python",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      ok: true,
+      value: {
+        id: "mem-new",
+        userId: "user-1",
+        content: "Prefers Python",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     });
 
     render(
@@ -73,8 +76,11 @@ describe("MemoryDialog", () => {
     };
 
     mockUpdateMemory.mockResolvedValue({
-      ...existingMemory,
-      content: "Prefers TypeScript and Rust",
+      ok: true,
+      value: {
+        ...existingMemory,
+        content: "Prefers TypeScript and Rust",
+      },
     });
 
     render(

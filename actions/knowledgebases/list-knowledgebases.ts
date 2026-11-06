@@ -4,7 +4,11 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
+import type { Result } from "@/types/result";
 
 /**
  * KB record with denormalized documentCount computed via SQL subquery (no N+1).
@@ -21,28 +25,31 @@ export type KnowledgebaseWithCount = KnowledgebaseRow & {
  * Lists user KBs with document counts (newest first). Uses SQL subquery to avoid N+1.
  *
  * @async
- * @returns KBs with counts ordered by updatedAt DESC
- * @throws If session authentication fails
+ * @returns Result containing KBs with counts ordered by updatedAt DESC
  * @author Maruf Bepary
  */
-export async function listKnowledgebases(): Promise<KnowledgebaseWithCount[]> {
-  const session = await requireSession();
+export const listKnowledgebases = defineAction(
+  async (): Promise<Result<KnowledgebaseWithCount[], CommonError>> => {
+    const session = await requireSession();
 
-  return db
-    .select({
-      id: knowledgebase.id,
-      userId: knowledgebase.userId,
-      name: knowledgebase.name,
-      description: knowledgebase.description,
-      indexStatus: knowledgebase.indexStatus,
-      lastIndexedAt: knowledgebase.lastIndexedAt,
-      createdAt: knowledgebase.createdAt,
-      updatedAt: knowledgebase.updatedAt,
-      documentCount: sql<number>`(
-        SELECT COUNT(*)::int FROM kb_document WHERE kb_document.kb_id = ${knowledgebase.id}
-      )`.mapWith(Number),
-    })
-    .from(knowledgebase)
-    .where(eq(knowledgebase.userId, session.user.id))
-    .orderBy(desc(knowledgebase.updatedAt));
-}
+    const rows = await db
+      .select({
+        id: knowledgebase.id,
+        userId: knowledgebase.userId,
+        name: knowledgebase.name,
+        description: knowledgebase.description,
+        indexStatus: knowledgebase.indexStatus,
+        lastIndexedAt: knowledgebase.lastIndexedAt,
+        createdAt: knowledgebase.createdAt,
+        updatedAt: knowledgebase.updatedAt,
+        documentCount: sql<number>`(
+          SELECT COUNT(*)::int FROM kb_document WHERE kb_document.kb_id = ${knowledgebase.id}
+        )`.mapWith(Number),
+      })
+      .from(knowledgebase)
+      .where(eq(knowledgebase.userId, session.user.id))
+      .orderBy(desc(knowledgebase.updatedAt));
+
+    return ok(rows);
+  },
+);

@@ -83,13 +83,20 @@ async function persistUserTurnMessage(
   metadata: string,
 ): Promise<{ success: boolean; isNotFound: boolean }> {
   try {
-    await persistMessage(chatId, {
+    const res = await persistMessage(chatId, {
       id: userMsgId,
       role: "user",
       content: fullContent,
       parentId,
       metadata,
     });
+    if (!res.ok) {
+      logger.error("Failed to persist message", res.error);
+      return {
+        success: false,
+        isNotFound: isAccessOrNotFoundError(res.error),
+      };
+    }
     return { success: true, isNotFound: false };
   } catch (err) {
     logger.error("Failed to persist message", err);

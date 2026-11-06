@@ -125,7 +125,7 @@ describe("addPublicServer", () => {
 
     const result = await addPublicServer("srv-pub-1", '{"Auth": "sub-key"}');
 
-    expect(result).toBe("install-123");
+    expect(result).toEqual({ ok: true, value: "install-123" });
     expect(chainable.insert).toHaveBeenCalledTimes(1);
     const passedValues = chainable.values.mock.calls[0][0];
     expect(passedValues.userId).toBe("user-1");
@@ -139,9 +139,11 @@ describe("addPublicServer", () => {
       Promise.resolve([{ ...MOCK_PUBLIC_SERVER, userId: "user-1" }]),
     );
 
-    await expect(addPublicServer("srv-pub-1")).rejects.toThrow(
-      "You already own this server in your personal list.",
-    );
+    const res = await addPublicServer("srv-pub-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("You already own this server in your personal list.");
+    }
   });
 
   it("returns existing install id if already installed", async () => {
@@ -150,15 +152,19 @@ describe("addPublicServer", () => {
       .mockImplementationOnce(() => Promise.resolve([{ id: "existing-install-1" }]));
 
     const result = await addPublicServer("srv-pub-1");
-    expect(result).toBe("existing-install-1");
+    expect(result).toEqual({ ok: true, value: "existing-install-1" });
     expect(chainable.insert).not.toHaveBeenCalled();
   });
 
   it("throws if public server is not found or not enabled", async () => {
     chainable.where.mockImplementationOnce(() => Promise.resolve([]));
-    await expect(addPublicServer("missing-pub-srv")).rejects.toThrow(
-      "The requested public server was not found or is currently unavailable.",
-    );
+    const res = await addPublicServer("missing-pub-srv");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe(
+        "The requested public server was not found or is currently unavailable.",
+      );
+    }
   });
 
   it("installs without headers when headers param is empty/whitespace", async () => {
@@ -169,7 +175,7 @@ describe("addPublicServer", () => {
     chainable.returning.mockResolvedValueOnce([{ id: "install-no-hdr" }]);
 
     const result = await addPublicServer("srv-pub-1", "   ");
-    expect(result).toBe("install-no-hdr");
+    expect(result).toEqual({ ok: true, value: "install-no-hdr" });
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: null,
@@ -180,14 +186,16 @@ describe("addPublicServer", () => {
 
 describe("updateInstalledServerHeaders", () => {
   it("updates subscriber headers for user_mcp_server_install and encrypts them", async () => {
-    await updateInstalledServerHeaders("srv-pub-1", '{"token": "xyz"}');
+    const res = await updateInstalledServerHeaders("srv-pub-1", '{"token": "xyz"}');
+    expect(res.ok).toBe(true);
     expect(chainable.update).toHaveBeenCalledTimes(1);
     const passedSet = chainable.set.mock.calls[0][0];
     expect(decrypt(passedSet.headers)).toBe('{"token": "xyz"}');
   });
 
   it("sets headers to null when empty or whitespace", async () => {
-    await updateInstalledServerHeaders("srv-pub-1", "   ");
+    const res = await updateInstalledServerHeaders("srv-pub-1", "   ");
+    expect(res.ok).toBe(true);
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: null,
@@ -200,14 +208,18 @@ describe("toggleMcpServerPublic", () => {
   it("prevents non-owners (e.g. subscriber of installed tool) from setting public", async () => {
     // If not owner, db.update returns empty
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(toggleMcpServerPublic("srv-pub-1")).rejects.toThrow("Not Found");
+    const res = await toggleMcpServerPublic("srv-pub-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("toggles and returns updated server for owner", async () => {
     const updatedServer = { ...MOCK_PUBLIC_SERVER, isPublic: false };
     chainable.returning.mockResolvedValueOnce([updatedServer]);
     const result = await toggleMcpServerPublic("srv-pub-1");
-    expect(result).toEqual(updatedServer);
+    expect(result).toEqual({ ok: true, value: updatedServer });
   });
 });
 
@@ -245,7 +257,10 @@ describe("listMcpServers", () => {
       .mockResolvedValueOnce([personalServer])
       .mockResolvedValueOnce([installedServer]);
 
-    const result = await listMcpServers();
+    const res = await listMcpServers();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe("inst-srv-1");
@@ -286,7 +301,11 @@ describe("listMcpServers", () => {
       .mockResolvedValueOnce([personalServer])
       .mockResolvedValueOnce([installedServer]);
 
-    const result = await listMcpServers();
+    const res = await listMcpServers();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
+
     expect(result).toHaveLength(2);
     expect(result[0].headers).toBeNull();
     expect(result[1].headers).toBeNull();
@@ -320,7 +339,10 @@ describe("listPublicMcpServers", () => {
       .mockImplementationOnce(() => Promise.resolve([publicServer1, publicServer2]))
       .mockImplementationOnce(() => Promise.resolve([{ id: "inst-1", serverId: "pub-1" }]));
 
-    const result = await listPublicMcpServers();
+    const res = await listPublicMcpServers();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({

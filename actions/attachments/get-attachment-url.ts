@@ -1,8 +1,20 @@
 "use server";
 
 import { requireUserAttachment } from "@/lib/attachments/attachment-auth";
+import { AppException } from "@/lib/error/app-exception";
+import { defineAction } from "@/lib/factories/define-action";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { downloadObject } from "@/lib/storage/download-object";
 import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
+
+export interface AttachmentUrlResult {
+  url: string;
+  name: string;
+  mimeType: string;
+}
 
 /**
  * Retrieves an access URL for an attachment if the user owns it.
@@ -12,26 +24,31 @@ import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
  * Runs on server only — invoked from client to generate display and download URLs.
  *
  * @param id - UUID of the attachment to retrieve; must be owned by the authenticated user.
- * @returns Object containing access URL (data URL for images, presigned URL for documents), attachment name, and MIME type.
- * @throws Error if session is not authenticated.
- * @throws ZodError if id is not a valid UUID format.
- * @throws Error if attachment is not found or user does not own it (returns "Not Found").
- * @throws Error if storage operations fail.
+ * @returns Result wrapping object containing access URL (data URL for images, presigned URL for documents), attachment name, and MIME type.
  * @author Maruf Bepary
  */
-export async function getAttachmentUrl(id: string) {
-  const { attachment: row } = await requireUserAttachment(id);
-
-  if (row.mimeType.startsWith("image/")) {
+export const getAttachmentUrl = defineAction(
+  async (id: string): Promise<Result<AttachmentUrlResult, CommonError>> => {
     try {
-      const buffer = await downloadObject(row.key);
-      const url = `data:${row.mimeType};base64,${buffer.toString("base64")}`;
-      return { url, name: row.name, mimeType: row.mimeType };
-    } catch {
-      // Fallback to presigned URL if server-side download fails
-    }
-  }
+      const { attachment: row } = await requireUserAttachment(id);
 
-  const url = await getPresignedUrl(row.key, undefined, row.name);
-  return { url, name: row.name, mimeType: row.mimeType };
-}
+      if (row.mimeType.startsWith("image/")) {
+        try {
+          const buffer = await downloadObject(row.key);
+          const url = `data:${row.mimeType};base64,${buffer.toString("base64")}`;
+          return ok({ url, name: row.name, mimeType: row.mimeType });
+        } catch {
+          // Fallback to presigned URL if server-side download fails
+        }
+      }
+
+      const url = await getPresignedUrl(row.key, undefined, row.name);
+      return ok({ url, name: row.name, mimeType: row.mimeType });
+    } catch (err) {
+      if (err instanceof AppException) {
+        return fail(err.error);
+      }
+      throw err;
+    }
+  },
+);

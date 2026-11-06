@@ -1,4 +1,5 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { toAppError } from "@/lib/error/to-app-error";
 import type { ChatStreamEvent, chatChannel } from "@/lib/inngest/chat-channel";
 import type {
   CompletedToolRecord,
@@ -182,6 +183,9 @@ async function handleNonDeltaChunk(
     await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
   } else if (chunk.type === "tool-error") {
     await handleToolErrorChunk(chunk, completedTools, toolSourceMap, emit);
+  } else if (chunk.type === "error") {
+    const appErr = toAppError(chunk.error);
+    await emit({ type: "error", message: appErr.message, code: appErr.code });
   }
 }
 

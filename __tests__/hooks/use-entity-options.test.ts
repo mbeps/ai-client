@@ -279,5 +279,87 @@ describe("useEntityOptions", () => {
 
       expect(mockRefresh).toHaveBeenCalled();
     });
+
+    it("displays error toast and halts when onRename returns fail result", async () => {
+      const onRename = vi.fn().mockResolvedValue({
+        ok: false,
+        error: { message: "Invalid name input" },
+      });
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onRename,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleRename("Bad Name");
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("Invalid name input");
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it("displays default error toast when onRename returns fail result with no message", async () => {
+      const onRename = vi.fn().mockResolvedValue({
+        ok: false,
+        error: {},
+      });
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onRename,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleRename("Bad Name");
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("Failed to rename project");
+    });
+
+    it("displays error toast and halts when onDelete returns fail result", async () => {
+      const onDelete = vi.fn().mockResolvedValue({
+        ok: false,
+        error: { message: "Cannot delete project" },
+      });
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onDelete,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleDelete();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("Cannot delete project");
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it("displays default error toast when onDelete returns fail result with no message", async () => {
+      const onDelete = vi.fn().mockResolvedValue({
+        ok: false,
+        error: {},
+      });
+      const { result } = renderHook(() =>
+        useEntityOptions({
+          id: "ent-1",
+          type: "Project",
+          onDelete,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleDelete();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("Failed to delete project");
+    });
   });
 });

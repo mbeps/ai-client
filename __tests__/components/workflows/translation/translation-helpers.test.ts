@@ -252,7 +252,10 @@ describe("translation-helpers", () => {
   describe("executeTranslationRequest", () => {
     it("triggers translation and calls onSuccess", async () => {
       vi.mocked(triggerTranslation).mockResolvedValue({
-        translationId: "tx-created",
+        ok: true,
+        value: {
+          translationId: "tx-created",
+        },
       } as any);
 
       const onSuccess = vi.fn();

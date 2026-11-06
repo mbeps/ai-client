@@ -2,8 +2,16 @@
 
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/require-session";
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { updateSkillForUser } from "@/lib/skills/skill-crud-service";
 import { updateSkillSchema } from "@/schemas/skill/skill";
+import { SkillBundleBudgetError } from "@/schemas/skill/skill-file";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
@@ -12,27 +20,57 @@ import type { SkillRow } from "@/types/skill/skill-row";
  *
  * @param id - UUID of the skill to update
  * @param data - Partial skill update payload
- * @returns Updated skill database record
- * @throws {Error} When skill is not found or validation fails
- * @decision Delegates to the skill service so the ownership and uniqueness
- * rules have one owner, shared with the AI tools.
+ * @returns Result wrapping updated skill database record
  * @author Maruf Bepary
  */
-export async function updateSkill(
-  id: string,
-  data: z.infer<typeof updateSkillSchema>,
-): Promise<SkillRow> {
-  const session = await requireSession();
-  const validatedId = z.string().uuid().parse(id);
-  const validatedData = updateSkillSchema.parse(data);
+export const updateSkill = defineAction(
+  async (
+    id: string,
+    data: z.infer<typeof updateSkillSchema>,
+  ): Promise<Result<SkillRow, CommonError>> => {
+    const session = await requireSession();
+    const validatedId = z.string().uuid().safeParse(id);
+    if (!validatedId.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Invalid skill ID",
+      });
+    }
 
-  const row = await updateSkillForUser(
-    session.user.id,
-    validatedId,
-    validatedData,
-  );
+    const validatedData = updateSkillSchema.safeParse(data);
+    if (!validatedData.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: validatedData.error.issues[0].message,
+      });
+    }
 
-  if (!row) throw new Error("Not Found");
+    try {
+      const row = await updateSkillForUser(
+        session.user.id,
+        validatedId.data,
+        validatedData.data,
+      );
 
-  return row;
-}
+      if (!row) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Not Found",
+        });
+      }
+
+      return ok(row);
+    } catch (err) {
+      if (err instanceof AppException) {
+        return fail(err.error);
+      }
+      if (err instanceof SkillBundleBudgetError) {
+        return fail({
+          code: ERROR_CODE.INVALID_INPUT,
+          message: err.message,
+        });
+      }
+      throw err;
+    }
+  },
+);

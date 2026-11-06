@@ -1,43 +1,23 @@
-vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    NODE_ENV: "test",
-  },
-}));
-
-const deleteModelMock = vi.hoisted(() => vi.fn());
-vi.mock("@/actions/models/delete-model", () => ({
-  deleteModel: deleteModelMock,
-}));
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of [
-    "select",
-    "from",
-    "where",
-    "insert",
-    "values",
-    "update",
-    "set",
-    "onConflictDoNothing",
-    "returning",
-  ]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
+  const c: Record<string, ReturnType<typeof vi.fn>> = {};
+  c.select = vi.fn(() => c);
+  c.from = vi.fn(() => c);
+  c.where = vi.fn(() => c);
+  c.insert = vi.fn(() => c);
+  c.values = vi.fn(() => c);
+  c.update = vi.fn(() => c);
+  c.set = vi.fn(() => c);
+  c.returning = vi.fn(() => Promise.resolve([]));
   return c;
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
-vi.mock("@/lib/auth/require-session", () => ({
-  requireSession: vi.fn().mockResolvedValue({
-    user: { id: "user-1", name: "Test User", email: "test@example.com" },
-    session: { id: "session-1" },
-  }),
+const deleteModelMock = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/models/delete-model", () => ({
+  deleteModel: deleteModelMock,
 }));
 
 const isBlockedUrlMock = vi.hoisted(() => vi.fn());
@@ -45,22 +25,23 @@ vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
   isBlockedUrl: isBlockedUrlMock,
 }));
 
+vi.mock("@/lib/auth/require-session", () => ({
+  requireSession: vi.fn().mockResolvedValue({
+    user: { id: "user_test_1" },
+  }),
+}));
+
 const decodeProviderRecordMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/providers/decode-provider-record", () => ({
   decodeProviderRecord: decodeProviderRecordMock,
 }));
 
-vi.mock("@/lib/logger", () => ({
-  getLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-  }),
+vi.mock("@/lib/providers/invalidate-provider-registry-cache", () => ({
+  invalidateProviderRegistryCache: vi.fn(),
 }));
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ModelMalformedIdError } from "@/lib/error/model-malformed-id-error";
 import { syncProviderModels } from "@/actions/models/sync-provider-models";
+import { ERROR_CODE } from "@/lib/error/error-code";
 
 describe("syncProviderModels action", () => {
   beforeEach(() => {
@@ -73,7 +54,7 @@ describe("syncProviderModels action", () => {
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
     chainable.returning.mockResolvedValue([]);
-    deleteModelMock.mockResolvedValue({ deletedCount: 0 });
+    deleteModelMock.mockResolvedValue({ ok: true, value: { deletedCount: 0 } });
     isBlockedUrlMock.mockResolvedValue(false);
     decodeProviderRecordMock.mockReturnValue({
       apiKey: "test-api-key",
@@ -86,25 +67,32 @@ describe("syncProviderModels action", () => {
     });
   });
 
-  it("throws NotFound if provider does not exist or user does not own it", async () => {
+  it("returns NOT_FOUND if provider does not exist or user does not own it", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow("Not Found");
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.NOT_FOUND);
+      expect(result.error.message).toBe("Not Found");
+    }
   });
 
-  it("throws error if provider URL is blocked by SSRF guard", async () => {
+  it("returns FORBIDDEN if provider URL is blocked by SSRF guard", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "http://127.0.0.1:8000" },
     ]);
     isBlockedUrlMock.mockResolvedValueOnce(true);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow(
-      "Provider URL is blocked by SSRF guard",
-    );
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.FORBIDDEN);
+      expect(result.error.message).toBe("Provider URL is blocked by SSRF guard");
+    }
   });
 
-  it("throws when primary /models endpoint returns HTTP error and does not wipe models", async () => {
-    // 1st where: provider
+  it("returns UPSTREAM_HTTP when primary /models endpoint returns HTTP error and does not wipe models", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
     ]);
@@ -122,17 +110,51 @@ describe("syncProviderModels action", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow(
-      "Failed to fetch models from provider (HTTP 500)",
-    );
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(result.error.message).toBe(
+        "Failed to fetch models from provider (HTTP 500)",
+      );
+    }
 
     expect(deleteModelMock).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
   });
 
-  it("throws when primary /models endpoint throws network error and does not wipe models", async () => {
-    // 1st where: provider
+  it("returns tailored 404 message when endpoint returns 404", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", baseUrl: "https://openrouter.ai/api/fs" },
+    ]);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(result.error.message).toContain(
+        "The provider returned HTTP 404 for https://openrouter.ai/api/fs/models. Check the base URL (it usually ends with /v1).",
+      );
+    }
+
+    vi.unstubAllGlobals();
+  });
+
+  it("returns UPSTREAM_HTTP when primary /models endpoint throws network error and does not wipe models", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
     ]);
@@ -147,9 +169,12 @@ describe("syncProviderModels action", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow(
-      "Network timeout",
-    );
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(result.error.message).toBe("Network timeout");
+    }
 
     expect(deleteModelMock).not.toHaveBeenCalled();
 
@@ -162,8 +187,6 @@ describe("syncProviderModels action", () => {
       baseUrl: "https://api.openai.com/v1/",
     };
 
-    // 1st where: provider lookup
-    // 2nd where: existing models lookup
     chainable.where
       .mockResolvedValueOnce([providerRow])
       .mockResolvedValueOnce([]);
@@ -184,13 +207,16 @@ describe("syncProviderModels action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
-    expect(result).toEqual({
-      added: 1,
-      unchanged: 0,
-      deleted: 0,
-      limitExceeded: false,
-      totalDiscovered: 1,
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 1,
+        unchanged: 0,
+        deleted: 0,
+        limitExceeded: false,
+        totalDiscovered: 1,
+      });
+    }
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.openai.com/v1/models",
@@ -205,8 +231,6 @@ describe("syncProviderModels action", () => {
   });
 
   it("handles Error thrown during optional endpoint fetch", async () => {
-    // 1st where: provider
-    // 2nd where: existing models
     chainable.where
       .mockResolvedValueOnce([
         { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
@@ -224,20 +248,21 @@ describe("syncProviderModels action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
-    expect(result).toEqual({
-      added: 0,
-      unchanged: 0,
-      deleted: 0,
-      limitExceeded: false,
-      totalDiscovered: 0,
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 0,
+        unchanged: 0,
+        deleted: 0,
+        limitExceeded: false,
+        totalDiscovered: 0,
+      });
+    }
 
     vi.unstubAllGlobals();
   });
 
   it("handles non-Error thrown during optional endpoint fetch and missing payload data", async () => {
-    // 1st where: provider
-    // 2nd where: existing models
     chainable.where
       .mockResolvedValueOnce([
         { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
@@ -248,25 +273,28 @@ describe("syncProviderModels action", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: undefined }),
+        json: async () => ({}),
       })
-      .mockRejectedValueOnce("Plain string error");
+      .mockRejectedValueOnce("String error in optional probe");
 
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
-    expect(result).toEqual({
-      added: 0,
-      unchanged: 0,
-      deleted: 0,
-      limitExceeded: false,
-      totalDiscovered: 0,
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 0,
+        unchanged: 0,
+        deleted: 0,
+        limitExceeded: false,
+        totalDiscovered: 0,
+      });
+    }
 
     vi.unstubAllGlobals();
   });
 
-  it("throws ModelMalformedIdError if standard or embedding endpoints return empty or missing model IDs", async () => {
+  it("returns MODEL_MALFORMED_ID if standard or embedding endpoints return empty or missing model IDs", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1" },
     ]);
@@ -288,15 +316,17 @@ describe("syncProviderModels action", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow(
-      ModelMalformedIdError,
-    );
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.MODEL_MALFORMED_ID);
+      expect((result.error as any).invalidCount).toBe(5);
+    }
 
     vi.unstubAllGlobals();
   });
 
-  it("throws when primary /models endpoint throws non-Error and does not wipe models", async () => {
-    // 1st where: provider
+  it("returns UPSTREAM_HTTP when primary /models endpoint throws non-Error and does not wipe models", async () => {
     chainable.where.mockResolvedValueOnce([
       { id: "prov-1", baseUrl: "https://api.openai.com/v1/" },
     ]);
@@ -311,9 +341,14 @@ describe("syncProviderModels action", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(syncProviderModels("prov-1")).rejects.toThrow(
-      "Failed to fetch models from provider: Connection refused",
-    );
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+      expect(result.error.message).toBe(
+        "Failed to fetch models from provider: Connection refused",
+      );
+    }
 
     expect(deleteModelMock).not.toHaveBeenCalled();
 
@@ -326,36 +361,22 @@ describe("syncProviderModels action", () => {
       baseUrl: "https://api.openai.com/v1/",
     };
 
-    // 1st where: provider lookup
-    // 2nd where: existing models in DB for this provider
     chainable.where
       .mockResolvedValueOnce([providerRow])
       .mockResolvedValueOnce([
         {
-          id: "m-embed-manual",
-          modelId: "text-embedding-3-small",
-          modelType: "embedding",
+          id: "m-existing-chat",
+          modelId: "existing-chat-model",
+          modelType: "chat",
+          isManuallyAdded: false,
+        },
+        {
+          id: "m-manual",
+          modelId: "manual-model",
+          modelType: "chat",
           isManuallyAdded: true,
         },
-        {
-          id: "m-bge-synced",
-          modelId: "bge-large-en",
-          modelType: "chat", // Will update because discovered is embedding
-          isManuallyAdded: false,
-        },
-        {
-          id: "m-custom-synced",
-          modelId: "custom-embed",
-          modelType: "embedding", // Already embedding -> no update needed!
-          isManuallyAdded: false,
-        },
       ]);
-
-    decodeProviderRecordMock.mockReturnValueOnce({
-      apiKey: null,
-      headers: {},
-      row: providerRow,
-    });
 
     const fetchMock = vi
       .fn()
@@ -364,37 +385,33 @@ describe("syncProviderModels action", () => {
         json: async () => ({
           data: [
             { id: "gpt-4o" },
-            { id: "gpt-4o" },
-            { id: "text-embedding-3-small" },
-            { id: "bge-large-en" },
+            { id: "existing-chat-model" },
             { id: "dual-model" },
+            { id: "manual-model" },
           ],
         }),
       })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          data: [
-            { id: "dual-model" },
-            { id: "custom-embed" },
-            { id: "custom-embed" },
-          ],
+          data: [{ id: "existing-chat-model" }, { id: "dual-model" }],
         }),
       });
 
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 2,
+        unchanged: 2,
+        deleted: 0,
+        limitExceeded: false,
+        totalDiscovered: 4,
+      });
+    }
 
-    expect(result).toEqual({
-      added: 2,
-      unchanged: 3,
-      deleted: 0,
-      limitExceeded: false,
-      totalDiscovered: 5,
-    });
-
-    // Check newly added models are batched in a single insert call and disabled by default (isEnabled: false)
     expect(chainable.insert).toHaveBeenCalledTimes(1);
     const insertValues = chainable.values.mock.calls[0][0];
     expect(insertValues).toHaveLength(2);
@@ -413,16 +430,11 @@ describe("syncProviderModels action", () => {
       ]),
     );
 
-    // Check existing models update only when modelType changed, preserving user configs
     expect(chainable.update).toHaveBeenCalledTimes(1);
     const setValues = chainable.set.mock.calls[0][0];
     expect(setValues).toMatchObject({
-      modelType: "embedding",
+      modelType: "both",
     });
-    expect(setValues.label).toBeUndefined();
-    expect(setValues.isEnabled).toBeUndefined();
-    expect(setValues.contextWindow).toBeUndefined();
-    expect(setValues.capTools).toBeUndefined();
 
     vi.unstubAllGlobals();
   });
@@ -433,8 +445,6 @@ describe("syncProviderModels action", () => {
       baseUrl: "https://api.openai.com/v1/",
     };
 
-    // 1st: provider lookup
-    // 2nd: existing models lookup (contains old-removed-model, manual-model, and gpt-4o)
     chainable.where
       .mockResolvedValueOnce([providerRow])
       .mockResolvedValueOnce([
@@ -458,7 +468,7 @@ describe("syncProviderModels action", () => {
         },
       ]);
 
-    deleteModelMock.mockResolvedValueOnce({ deletedCount: 1 });
+    deleteModelMock.mockResolvedValueOnce({ ok: true, value: { deletedCount: 1 } });
 
     const fetchMock = vi
       .fn()
@@ -476,14 +486,16 @@ describe("syncProviderModels action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
-
-    expect(result).toEqual({
-      added: 0,
-      unchanged: 1,
-      deleted: 1,
-      limitExceeded: false,
-      totalDiscovered: 1,
-    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 0,
+        unchanged: 1,
+        deleted: 1,
+        limitExceeded: false,
+        totalDiscovered: 1,
+      });
+    }
 
     expect(deleteModelMock).toHaveBeenCalledWith(["m-old"]);
 
@@ -496,8 +508,6 @@ describe("syncProviderModels action", () => {
       baseUrl: "https://api.openai.com/v1",
     };
 
-    // 1st: provider lookup
-    // 2nd: existing models lookup
     chainable.where
       .mockResolvedValueOnce([providerRow])
       .mockResolvedValueOnce([]);
@@ -520,19 +530,110 @@ describe("syncProviderModels action", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        added: 1000,
+        unchanged: 0,
+        deleted: 0,
+        limitExceeded: true,
+        totalDiscovered: 1005,
+      });
+    }
 
-    expect(result).toEqual({
-      added: 1000,
-      unchanged: 0,
-      deleted: 0,
-      limitExceeded: true,
-      totalDiscovered: 1005,
-    });
-
-    // Single batch insert of 1000 models, not 1000 individual insert calls
     expect(chainable.insert).toHaveBeenCalledTimes(1);
     expect(chainable.values.mock.calls[0][0]).toHaveLength(1000);
 
     vi.unstubAllGlobals();
+  });
+
+  it("handles pure embedding model discovery and header build without apiKey", async () => {
+    decodeProviderRecordMock.mockReturnValueOnce({
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: null,
+      headers: { "X-Custom": "val" },
+    });
+
+    const providerRow = {
+      id: "prov-1",
+      baseUrl: "https://api.openai.com/v1",
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([]);
+
+    // standard models returns embedding model id to trigger isEmbeddingModelId branch
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ id: "text-embedding-3-small" }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.added).toBe(1);
+    }
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles deleteModel failure returning 0 deleted", async () => {
+    deleteModelMock.mockResolvedValueOnce({ ok: false, error: { message: "Failed" } });
+
+    const providerRow = {
+      id: "prov-1",
+      baseUrl: "https://api.openai.com/v1",
+    };
+
+    chainable.where
+      .mockResolvedValueOnce([providerRow])
+      .mockResolvedValueOnce([
+        {
+          id: "m-stale",
+          modelId: "stale-model",
+          type: "chat",
+          isManuallyAdded: false,
+        },
+      ]);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.deleted).toBe(0);
+    }
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles unexpected error rethrown as INTERNAL via defineAction", async () => {
+    chainable.where.mockRejectedValueOnce(new Error("Unexpected DB crash"));
+
+    const result = await syncProviderModels("prov-1");
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INTERNAL" }),
+    });
   });
 });

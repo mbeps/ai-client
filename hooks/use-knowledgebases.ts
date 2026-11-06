@@ -38,8 +38,15 @@ export function useKnowledgebases() {
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await listKnowledgebases();
-      setKnowledgebases(data);
+      const res = await listKnowledgebases();
+      if (res.ok) {
+        setKnowledgebases(res.value);
+      } else {
+        logger.error(
+          "[useKnowledgebases] Failed to load knowledgebases",
+          res.error,
+        );
+      }
     } catch (error) {
       logger.error("[useKnowledgebases] Failed to load knowledgebases", error);
     } finally {

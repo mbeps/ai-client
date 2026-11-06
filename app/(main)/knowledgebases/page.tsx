@@ -35,10 +35,14 @@ export default function KnowledgebasesPage() {
 
   const fetchKbs = useCallback(async () => {
     try {
-      const data = await listKnowledgebases();
-      startTransition(() => {
-        setKnowledgebases(data);
-      });
+      const res = await listKnowledgebases();
+      if (res.ok) {
+        startTransition(() => {
+          setKnowledgebases(res.value);
+        });
+      } else {
+        logger.error("Failed to load knowledgebases", res.error);
+      }
     } catch (error) {
       logger.error("Failed to load knowledgebases", error);
     }

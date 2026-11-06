@@ -85,7 +85,11 @@ export function useUserModels(
       try {
         const models = await fetchProviderRegistryWithCache(
           "models",
-          () => listModels({}),
+          async () => {
+            const res = await listModels({});
+            if (!res.ok) throw new Error(res.error.message);
+            return res.value;
+          },
           {
             force: force ?? false,
           },

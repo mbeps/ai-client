@@ -278,6 +278,22 @@ describe("EntitySlice — loadError", () => {
 
     expect(useAppStore.getState().loadError).toBe("Failed to load projects");
     expect(useAppStore.getState().projects).toEqual([{ id: "p1" }]);
+
+    // Test Result ok: false with custom error message
+    vi.mocked(listProjectsAction).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Action error loading projects" },
+    } as any);
+    await useAppStore.getState().loadProjects();
+    expect(useAppStore.getState().loadError).toBe("Action error loading projects");
+
+    // Test Result ok: false with no error message (fallback)
+    vi.mocked(listProjectsAction).mockResolvedValueOnce({
+      ok: false,
+      error: {},
+    } as any);
+    await useAppStore.getState().loadProjects();
+    expect(useAppStore.getState().loadError).toBe("Failed to load projects");
   });
 
   it("clears loadError on successful load", async () => {
@@ -455,9 +471,12 @@ describe("T5.4 resetEntityState clears entity state", () => {
 
   it("loads user settings into store", async () => {
     vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
-      userId: "u1",
-      theme: "dark",
-      defaultModelId: "gpt-4",
+      ok: true,
+      value: {
+        userId: "u1",
+        theme: "dark",
+        defaultModelId: "gpt-4",
+      },
     } as any);
 
     await useAppStore.getState().loadUserSettings();
@@ -471,15 +490,32 @@ describe("T5.4 resetEntityState clears entity state", () => {
   it("loadUserSettings clears loadError on success and sets it on failure", async () => {
     useAppStore.setState({ loadError: "Old error" });
     vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
-      userId: "u1",
-      theme: "dark",
-      defaultModelId: "gpt-4",
+      ok: true,
+      value: {
+        userId: "u1",
+        theme: "dark",
+        defaultModelId: "gpt-4",
+      },
     } as any);
 
     await useAppStore.getState().loadUserSettings();
     expect(useAppStore.getState().loadError).toBeNull();
 
     vi.mocked(getUserSettingsAction).mockRejectedValueOnce(new Error("failure"));
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().loadError).toBe("Failed to load userSettings");
+
+    vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Server error getting settings" },
+    } as any);
+    await useAppStore.getState().loadUserSettings();
+    expect(useAppStore.getState().loadError).toBe("Server error getting settings");
+
+    vi.mocked(getUserSettingsAction).mockResolvedValueOnce({
+      ok: false,
+      error: {},
+    } as any);
     await useAppStore.getState().loadUserSettings();
     expect(useAppStore.getState().loadError).toBe("Failed to load userSettings");
   });
@@ -504,6 +540,35 @@ describe("T5.4 resetEntityState clears entity state", () => {
 
     await useAppStore.getState().loadMcpPrompts();
     expect(useAppStore.getState().loadError).toBeNull();
+
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce({
+      ok: true,
+      value: [
+        {
+          name: "p1",
+          description: "d1",
+          arguments: [],
+          serverName: "s1",
+        },
+      ],
+    } as any);
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().mcpPrompts).toHaveLength(1);
+    expect(useAppStore.getState().loadError).toBeNull();
+
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Failed discovery" },
+    } as any);
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().loadError).toBe("Failed discovery");
+
+    vi.mocked(discoverAllPromptsAction).mockResolvedValueOnce({
+      ok: false,
+      error: {},
+    } as any);
+    await useAppStore.getState().loadMcpPrompts();
+    expect(useAppStore.getState().loadError).toBe("Failed to load mcpPrompts");
 
     vi.mocked(discoverAllPromptsAction).mockRejectedValueOnce(new Error("failure"));
     await useAppStore.getState().loadMcpPrompts();

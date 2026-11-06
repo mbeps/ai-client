@@ -5,13 +5,13 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
-import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
-import { RateLimitError } from "@/lib/error/rate-limit-error";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { inngest } from "@/lib/inngest/client";
-import { getLogger } from "@/lib/logger";
-
-const log = getLogger(["app", "actions", "knowledgebase"]);
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 /**
  * Validates document ID payload for initiating document ingestion.
@@ -35,22 +35,23 @@ export type IngestKbDocumentResult = {
 
 /**
  * Next.js Server Action to trigger the ingestion process (extraction, chunking, embedding) for a document.
- * Follows the Result Object Pattern to safely handle errors in the frontend.
+ * Returns a Result object indicating dispatch success or failure error message.
  *
  * @param documentId - UUID of the uploaded document to ingest
- * @returns Result object indicating dispatch success or failure error message
+ * @returns Result resolving when ingestion background job is queued
  * @author Maruf Bepary
  */
-export async function ingestKbDocument(
-  documentId: string,
-): Promise<IngestKbDocumentResult> {
-  try {
+export const ingestKbDocument = defineAction(
+  async (documentId: string): Promise<Result<void, CommonError>> => {
     const session = await requireSession();
 
     // 1. Validate Input
     const validation = ingestKbDocumentSchema.safeParse({ documentId });
     if (!validation.success) {
-      return { success: false, error: "Invalid document ID format" };
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: validation.error.issues[0].message,
+      });
     }
     const validatedId = validation.data.documentId;
 
@@ -66,7 +67,10 @@ export async function ingestKbDocument(
       );
 
     if (!doc) {
-      return { success: false, error: "Document not found or access denied" };
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Document not found or access denied",
+      });
     }
 
     // 3. Execution via Inngest background job
@@ -84,34 +88,6 @@ export async function ingestKbDocument(
       },
     });
 
-    return { success: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, error: "Invalid input data" };
-    }
-
-    if (error instanceof RateLimitError) {
-      return { success: false, error: error.message };
-    }
-
-    if (
-      error instanceof RagExtractionEmptyError ||
-      error instanceof ProviderNotConfiguredError
-    ) {
-      return {
-        success: false,
-        error: error.message,
-        code: error.code,
-      };
-    }
-
-    log.error("Unexpected error ingesting KB document: {error}", {
-      documentId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {
-      success: false,
-      error: "An unexpected error occurred during ingestion",
-    };
-  }
-}
+    return ok(undefined);
+  },
+);

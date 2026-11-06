@@ -4,26 +4,29 @@ import { getScratchpadFilesAction } from "@/actions/subagents/get-scratchpad";
 import { ScratchpadViewerModal } from "@/components/chat/message/scratchpad-viewer-modal";
 
 vi.mock("@/actions/subagents/get-scratchpad", () => ({
-  getScratchpadFilesAction: vi.fn().mockResolvedValue([
-    {
-      id: "f-1",
-      filePath: "notes/findings.md",
-      content: "# Research Findings\nDetails here.",
-      writtenByRole: "researcher",
-      version: 2,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "f-2",
-      filePath: "specs/architecture.json",
-      content: '{\n  "version": "1.0"\n}',
-      writtenByRole: "planner",
-      version: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ]),
+  getScratchpadFilesAction: vi.fn().mockResolvedValue({
+    ok: true,
+    value: [
+      {
+        id: "f-1",
+        filePath: "notes/findings.md",
+        content: "# Research Findings\nDetails here.",
+        writtenByRole: "researcher",
+        version: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "f-2",
+        filePath: "specs/architecture.json",
+        content: '{\n  "version": "1.0"\n}',
+        writtenByRole: "planner",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  }),
 }));
 
 // Mock sonner toast

@@ -36,7 +36,15 @@ export async function uploadSingleAttachment(
       formData.append("extractedText", attachment.extractedText);
     }
 
-    const data = await uploadAttachment(formData);
+    const res = await uploadAttachment(formData);
+    if (!res.ok) {
+      log.error("Attachment upload failed: {error}", {
+        error: res.error.message,
+      });
+      toast.error(res.error.message);
+      return null;
+    }
+    const data = res.value;
     // Strip client-side blobs once the S3 key exists — the UI preview only
     // needs dataUrl pre-upload, and rawFile/dataUrl must not leak into
     // persisted messages or store state.

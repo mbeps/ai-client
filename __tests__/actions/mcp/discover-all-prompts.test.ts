@@ -90,10 +90,13 @@ describe("discoverAllPrompts action", () => {
 
     const result = await discoverAllPrompts();
 
-    expect(result).toEqual([
-      { name: "prompt-1", description: "Desc 1" },
-      { name: "prompt-2", description: "Desc 2" },
-    ]);
+    expect(result).toEqual({
+      ok: true,
+      value: [
+        { name: "prompt-1", description: "Desc 1" },
+        { name: "prompt-2", description: "Desc 2" },
+      ],
+    });
 
     // Check mapper calls
     expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
@@ -120,7 +123,7 @@ describe("discoverAllPrompts action", () => {
 
     const result = await discoverAllPrompts();
 
-    expect(result).toEqual([]);
+    expect(result).toEqual({ ok: true, value: [] });
   });
 
   it("handles non-Error server rejection gracefully", async () => {
@@ -132,7 +135,7 @@ describe("discoverAllPrompts action", () => {
     discoverToolsMock.mockRejectedValueOnce("Non-error string rejection");
 
     const result = await discoverAllPrompts();
-    expect(result).toEqual([]);
+    expect(result).toEqual({ ok: true, value: [] });
   });
 
   it("returns empty array if no servers are enabled", async () => {
@@ -140,6 +143,6 @@ describe("discoverAllPrompts action", () => {
     chainable.where.mockResolvedValueOnce([]);
 
     const result = await discoverAllPrompts();
-    expect(result).toEqual([]);
+    expect(result).toEqual({ ok: true, value: [] });
   });
 });

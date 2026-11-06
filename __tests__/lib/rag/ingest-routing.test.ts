@@ -149,7 +149,10 @@ describe("ingestion routes through shared pipeline (T3.5)", () => {
 
     const result = await reindexKnowledgebase("kb-1");
 
-    expect(result).toEqual({ processedCount: 2, failedCount: 0 });
+    expect(result).toEqual({
+      ok: true,
+      value: { processedCount: 2, failedCount: 0 },
+    });
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({
         indexStatus: "indexing",

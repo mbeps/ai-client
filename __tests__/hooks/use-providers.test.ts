@@ -9,10 +9,13 @@ import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-regist
 import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
 
 vi.mock("@/actions/providers/list-providers", () => ({
-  listProviders: vi.fn().mockResolvedValue([
-    { id: "prov-1", name: "OpenAI", isEnabled: true },
-    { id: "prov-2", name: "Anthropic", isEnabled: false },
-  ]),
+  listProviders: vi.fn().mockResolvedValue({
+    ok: true,
+    value: [
+      { id: "prov-1", name: "OpenAI", isEnabled: true },
+      { id: "prov-2", name: "Anthropic", isEnabled: false },
+    ],
+  }),
 }));
 
 vi.mock("@/lib/providers/fetch-provider-registry-with-cache", () => ({
@@ -188,6 +191,39 @@ describe("useProviders hook", () => {
       { force: false },
     );
     expect(result.current.providers).toHaveLength(1);
+  });
+
+  it("invokes listProviders factory callback passed to fetchProviderRegistryWithCache and checks ok and error branches", async () => {
+    vi.mocked(getProviderRegistryCachedData).mockReturnValue(null);
+    vi.mocked(isProviderRegistryCacheFresh).mockReturnValue(false);
+    vi.mocked(subscribeProviderRegistryCache).mockReturnValue(() => {});
+
+    let capturedFetcher: (() => Promise<any>) | undefined;
+    vi.mocked(fetchProviderRegistryWithCache).mockImplementation(
+      async (_key: string, fetcher: any) => {
+        capturedFetcher = fetcher;
+        return fetcher();
+      },
+    );
+
+    vi.mocked(listProviders).mockResolvedValueOnce({
+      ok: true,
+      value: [{ id: "prov-success" } as any],
+    });
+
+    const { result } = renderHook(() => useProviders());
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.providers).toEqual([{ id: "prov-success" }]);
+
+    // Now test when fetcher callback gets ok: false
+    vi.mocked(listProviders).mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "DB query failed" },
+    } as any);
+
+    await expect(capturedFetcher!()).rejects.toThrow("DB query failed");
   });
 });
 

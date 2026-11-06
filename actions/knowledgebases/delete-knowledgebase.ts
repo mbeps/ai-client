@@ -6,11 +6,15 @@ import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
 import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deletePointsByKbIds } from "@/lib/rag/qdrant-client";
+import { ok } from "@/lib/result/ok";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "knowledgebase"]);
 
@@ -29,72 +33,73 @@ const deleteKbRow = deleteEntityFactory({ table: knowledgebase });
  * (orphaned objects are acceptable; blocking the user is not).
  *
  * @param idOrIds - UUID or array of UUIDs of the knowledge bases to delete; must be owned by the authenticated user.
- * @returns Object with the number of knowledge bases successfully deleted.
- * @throws {Error} if session is not authenticated (requireSession call fails).
- * @throws {Error} if knowledge base is not found or user does not own it (ownership check enforced via session).
- * @see createKnowledgebase to create a new knowledge base.
- * @see updateKnowledgebase to modify knowledge base settings.
+ * @returns Result with the number of knowledge bases successfully deleted.
  * @author Maruf Bepary
  */
-export async function deleteKnowledgebase(
-  idOrIds: string | string[],
-): Promise<{ deletedCount: number }> {
-  const session = await requireSession();
-  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+export const deleteKnowledgebase = defineAction(
+  async (
+    idOrIds: string | string[],
+  ): Promise<Result<{ deletedCount: number }, CommonError>> => {
+    const session = await requireSession();
+    const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
 
-  if (ids.length === 0) return { deletedCount: 0 };
+    if (ids.length === 0) return ok({ deletedCount: 0 });
 
-  // Fetch keys before the DB delete — kb_document rows cascade away with the KB.
-  const docs = await db
-    .select({ s3Key: kbDocument.s3Key })
-    .from(kbDocument)
-    .where(
-      and(
-        inArray(kbDocument.kbId, ids),
-        eq(kbDocument.userId, session.user.id),
-      ),
-    );
-
-  const cancelEvents = ids.map((kbId) => ({
-    name: "knowledgebase/reindex.cancel" as const,
-    data: { kbId },
-  }));
-  await inngest.send(
-    cancelEvents.length === 1 ? cancelEvents[0] : cancelEvents,
-  );
-
-  const result = await deleteKbRow(idOrIds);
-
-  try {
-    await deletePointsByKbIds(ids);
-  } catch (err) {
-    log.warn(
-      "Failed to delete Qdrant points for deleted knowledgebase(s) (ids: {ids})",
-      {
-        ids,
-        error: err instanceof Error ? err.message : String(err),
-      },
-    );
-  }
-
-  // ponytail: sequential best-effort S3 cleanup; ceiling is slow deletes for
-  // huge KBs — upgrade path is batch DeleteObjectsCommand if that matters.
-  for (const doc of docs) {
-    try {
-      await s3Client.send(
-        new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
+    // Fetch keys before the DB delete — kb_document rows cascade away with the KB.
+    const docs = await db
+      .select({ s3Key: kbDocument.s3Key })
+      .from(kbDocument)
+      .where(
+        and(
+          inArray(kbDocument.kbId, ids),
+          eq(kbDocument.userId, session.user.id),
+        ),
       );
+
+    const cancelEvents = ids.map((kbId) => ({
+      name: "knowledgebase/reindex.cancel" as const,
+      data: { kbId },
+    }));
+    await inngest.send(
+      cancelEvents.length === 1 ? cancelEvents[0] : cancelEvents,
+    );
+
+    const result = await deleteKbRow(idOrIds);
+    if (!result.ok) {
+      return result;
+    }
+
+    try {
+      await deletePointsByKbIds(ids);
     } catch (err) {
       log.warn(
-        "Failed to delete S3 object for deleted knowledgebase (key: {key})",
+        "Failed to delete Qdrant points for deleted knowledgebase(s) (ids: {ids})",
         {
-          key: doc.s3Key,
+          ids,
           error: err instanceof Error ? err.message : String(err),
-          userId: session.user.id,
         },
       );
     }
-  }
 
-  return result;
-}
+    // ponytail: sequential best-effort S3 cleanup; ceiling is slow deletes for
+    // huge KBs — upgrade path is batch DeleteObjectsCommand if that matters.
+    for (const doc of docs) {
+      try {
+        await s3Client.send(
+          new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
+        );
+      } catch (err) {
+        log.warn(
+          "Failed to delete S3 object for deleted knowledgebase (key: {key})",
+          {
+            key: doc.s3Key,
+            error: err instanceof Error ? err.message : String(err),
+            userId: session.user.id,
+          },
+        );
+      }
+    }
+
+    return result;
+  },
+);

@@ -46,17 +46,22 @@ describe("updateModels action", () => {
 
   it("returns empty array if ids list is empty", async () => {
     const res = await updateModels([], { label: "New Label" });
-    expect(res).toEqual([]);
+    expect(res).toEqual({ ok: true, value: [] });
   });
 
   it("throws validation error on invalid input", async () => {
-    await expect(updateModels("model-1", { modelType: "invalid-type" as any })).rejects.toThrow();
+    const res = await updateModels("model-1", { modelType: "invalid-type" as any });
+    expect(res.ok).toBe(false);
   });
 
   it("throws NotFound if no models were updated", async () => {
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(updateModels("model-1", { label: "New Label" })).rejects.toThrow("Not Found");
+    const res = await updateModels("model-1", { label: "New Label" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("updates single model successfully with partial fields", async () => {
@@ -64,7 +69,7 @@ describe("updateModels action", () => {
     chainable.returning.mockResolvedValueOnce(updated);
 
     const res = await updateModels("model-1", { label: "New Label" });
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalled();
     expect(chainable.where).toHaveBeenCalled();
   });
@@ -88,7 +93,7 @@ describe("updateModels action", () => {
       isEnabled: false,
     });
 
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalled();
     expect(chainable.where).toHaveBeenCalled();
   });

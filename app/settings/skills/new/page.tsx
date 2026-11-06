@@ -55,7 +55,11 @@ export default function NewSkillPage() {
         files: [],
       });
 
-      await createSkill(payload);
+      const res = await createSkill(payload);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to create skill");
+        return;
+      }
       toast.success("Skill created");
       await loadSkills();
       router.push(ROUTES.SETTINGS.SKILLS.path);
@@ -74,7 +78,12 @@ export default function NewSkillPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const result = await importSkillFile(formData);
+      const res = await importSkillFile(formData);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to import skill");
+        return;
+      }
+      const result = res.value;
       toast.success(
         `Skill "${result.displayName || result.name}" imported successfully!`,
       );

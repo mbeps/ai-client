@@ -237,38 +237,52 @@ describe("skill-tree-utils", () => {
         { path: "guide.md", content: "guide" },
         { path: "scripts/run.sh", content: "sh" },
       ];
-      const { files: updated, newPath } = moveFile(files, "guide.md", "references");
-      expect(newPath).toBe("references/guide.md");
-      expect(updated[0].path).toBe("references/guide.md");
-      expect(updated[1].path).toBe("scripts/run.sh");
+      const res = moveFile(files, "guide.md", "references");
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.value.newPath).toBe("references/guide.md");
+        expect(res.value.files[0].path).toBe("references/guide.md");
+        expect(res.value.files[1].path).toBe("scripts/run.sh");
+      }
     });
 
     it("moves a file from a subfolder to root", () => {
       const files: SkillBundledFile[] = [
         { path: "references/guide.md", content: "guide" },
       ];
-      const { files: updated, newPath } = moveFile(files, "references/guide.md", "");
-      expect(newPath).toBe("guide.md");
-      expect(updated[0].path).toBe("guide.md");
+      const res = moveFile(files, "references/guide.md", "");
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.value.newPath).toBe("guide.md");
+        expect(res.value.files[0].path).toBe("guide.md");
+      }
     });
 
-    it("throws an error if target path already exists", () => {
+    it("returns error if target path already exists", () => {
       const files: SkillBundledFile[] = [
         { path: "guide.md", content: "guide 1" },
         { path: "references/guide.md", content: "guide 2" },
       ];
-      expect(() => moveFile(files, "guide.md", "references")).toThrow(
-        /already exists/,
-      );
+      const res = moveFile(files, "guide.md", "references");
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "CONFLICT",
+          message: expect.stringMatching(/already exists/),
+        }),
+      });
     });
 
     it("returns original files when destination is the same as current location", () => {
       const files: SkillBundledFile[] = [
         { path: "docs/guide.md", content: "guide" },
       ];
-      const result = moveFile(files, "docs/guide.md", "docs");
-      expect(result.newPath).toBe("docs/guide.md");
-      expect(result.files).toBe(files);
+      const res = moveFile(files, "docs/guide.md", "docs");
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.value.newPath).toBe("docs/guide.md");
+        expect(res.value.files).toBe(files);
+      }
     });
   });
 

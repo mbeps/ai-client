@@ -75,6 +75,52 @@ describe("KB Inngest Functions", () => {
       expect(mockIngestDocument).toHaveBeenCalledWith("doc-1", "user-1");
       expect(result).toEqual({ success: true, documentId: "doc-1" });
     });
+
+    it("throws NonRetriableError for known non-retriable ingestion error codes", async () => {
+      const { AppException } = await import("@/lib/error/app-exception");
+      const { ERROR_CODE } = await import("@/lib/error/error-code");
+      const { NonRetriableError } = await import("inngest");
+
+      mockIngestDocument.mockRejectedValueOnce(
+        new AppException({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Document not found",
+        }),
+      );
+
+      const fn = (ingestKbDocumentFunction as any).fn;
+      await expect(
+        fn({
+          event: { data: { documentId: "doc-missing", userId: "user-1" } },
+          step: mockStep,
+        }),
+      ).rejects.toThrow(NonRetriableError);
+
+      mockIngestDocument.mockRejectedValueOnce(
+        new AppException({
+          code: ERROR_CODE.PROVIDER_NOT_CONFIGURED,
+          message: "No provider",
+        }),
+      );
+      await expect(
+        fn({
+          event: { data: { documentId: "doc-no-provider", userId: "user-1" } },
+          step: mockStep,
+        }),
+      ).rejects.toThrow(NonRetriableError);
+    });
+
+    it("rethrows general unexpected error as retriable", async () => {
+      mockIngestDocument.mockRejectedValueOnce(new Error("Transient network glitch"));
+
+      const fn = (ingestKbDocumentFunction as any).fn;
+      await expect(
+        fn({
+          event: { data: { documentId: "doc-transient", userId: "user-1" } },
+          step: mockStep,
+        }),
+      ).rejects.toThrow("Transient network glitch");
+    });
   });
 
   describe("reindexKbFunction", () => {
@@ -214,6 +260,41 @@ describe("KB Inngest Functions", () => {
           step: mockStep,
         }),
       ).rejects.toThrow("Knowledge base kb-missing not found");
+    });
+
+    it("updates kb to stale on failure when kbId is present and handles missing kbId", async () => {
+      const onFailure = (reindexKbFunction as any).opts.onFailure;
+      expect(onFailure).toBeDefined();
+
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {
+                kbId: "kb-failed-1",
+              },
+            },
+          },
+        },
+      });
+
+      expect(chainable.update).toHaveBeenCalled();
+      expect(chainable.set).toHaveBeenCalledWith(
+        expect.objectContaining({ indexStatus: "stale" }),
+      );
+
+      chainable.update.mockClear();
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {},
+            },
+          },
+        },
+      });
+
+      expect(chainable.update).not.toHaveBeenCalled();
     });
   });
 });

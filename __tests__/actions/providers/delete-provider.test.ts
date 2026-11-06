@@ -50,12 +50,16 @@ describe("deleteProvider action", () => {
     chainable.returning.mockResolvedValueOnce([{ id: "prov-1" }]);
 
     const res = await deleteProvider("prov-1");
-    expect(res).toBeUndefined();
+    expect(res).toEqual({ ok: true, value: undefined });
   });
 
   it("throws NotFound if provider does not exist", async () => {
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(deleteProvider("prov-1")).rejects.toThrow("Not Found");
+    const res = await deleteProvider("prov-1");
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 });

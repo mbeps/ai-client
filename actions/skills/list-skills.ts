@@ -1,18 +1,24 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
 import { listSkillsForUser } from "@/lib/skills/skill-crud-service";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * Fetches all saved Agent Skills for the authenticated user, ordered by most recently updated first.
  *
- * @decision Delegates to the skill service so the ordering and ownership rules
- * have one owner, shared with the AI tools.
+ * @returns Result wrapping array of SkillRow objects
  * @author Maruf Bepary
  */
-export async function listSkills(): Promise<SkillRow[]> {
-  const session = await requireSession();
+export const listSkills = defineAction(
+  async (): Promise<Result<SkillRow[], CommonError>> => {
+    const session = await requireSession();
 
-  return listSkillsForUser(session.user.id);
-}
+    const rows = await listSkillsForUser(session.user.id);
+    return ok(rows);
+  },
+);

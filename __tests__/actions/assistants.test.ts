@@ -132,7 +132,7 @@ describe("createAssistant", () => {
   it("inserts an assistant and returns the new row", async () => {
     chainable.returning.mockResolvedValueOnce([ASSISTANT_ROW]);
     const result = await createAssistant({ name: "Test Bot" });
-    expect(result).toEqual(ASSISTANT_ROW);
+    expect(result).toEqual({ ok: true, value: ASSISTANT_ROW });
     expect(chainable.insert).toHaveBeenCalledOnce();
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Test Bot", userId: "user-1" }),
@@ -203,21 +203,29 @@ describe("createAssistant", () => {
     );
   });
 
-  it("throws ZodError when name is empty", async () => {
-    await expect(createAssistant({ name: "" })).rejects.toThrow();
+  it("returns INVALID_INPUT when name is empty", async () => {
+    const res = await createAssistant({ name: "" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when avatar is not a valid URL", async () => {
-    await expect(
-      createAssistant({ name: "Bot", avatar: "not-a-url" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when avatar is not a valid URL", async () => {
+    const res = await createAssistant({ name: "Bot", avatar: "not-a-url" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(createAssistant({ name: "Bot" })).rejects.toThrow(
-      "Unauthorized",
-    );
+    const res = await createAssistant({ name: "Bot" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -226,18 +234,22 @@ describe("listAssistants", () => {
   it("returns all assistants for the user", async () => {
     chainable.orderBy.mockResolvedValueOnce([ASSISTANT_ROW]);
     const result = await listAssistants();
-    expect(result).toEqual([ASSISTANT_ROW]);
+    expect(result).toEqual({ ok: true, value: [ASSISTANT_ROW] });
     expect(chainable.select).toHaveBeenCalledOnce();
   });
 
   it("returns an empty array when user has no assistants", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
-    expect(await listAssistants()).toEqual([]);
+    expect(await listAssistants()).toEqual({ ok: true, value: [] });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(listAssistants()).rejects.toThrow("Unauthorized");
+    const res = await listAssistants();
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -248,7 +260,8 @@ describe("deleteAssistant", () => {
   it("runs a transaction to unlink chats and delete assistant", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deleteAssistant(VALID_UUID)).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
     expect(chainable.transaction).toHaveBeenCalledOnce();
     expect(chainable.update).toHaveBeenCalledOnce(); // unlink chats
@@ -256,14 +269,22 @@ describe("deleteAssistant", () => {
     expect(chainable.delete).toHaveBeenCalledOnce(); // delete assistant
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(deleteAssistant(VALID_UUID)).rejects.toThrow("Unauthorized");
+    const res = await deleteAssistant(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 
-  it("propagates transaction errors", async () => {
+  it("propagates transaction errors as INTERNAL", async () => {
     chainable.transaction.mockRejectedValueOnce(new Error("DB error"));
-    await expect(deleteAssistant(VALID_UUID)).rejects.toThrow("DB error");
+    const res = await deleteAssistant(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INTERNAL" }),
+    });
   });
 });
 
@@ -275,32 +296,44 @@ describe("renameAssistant", () => {
     const updated = { ...ASSISTANT_ROW, name: "Renamed Bot" };
     chainable.returning.mockResolvedValueOnce([updated]);
     const result = await renameAssistant(VALID_UUID, "Renamed Bot");
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Renamed Bot" }),
     );
   });
 
-  it("throws 'Not Found' when assistant does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when assistant does not exist or is not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(renameAssistant(VALID_UUID, "New Name")).rejects.toThrow(
-      "Not Found",
-    );
+    const res = await renameAssistant(VALID_UUID, "New Name");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws ZodError when name is empty", async () => {
-    await expect(renameAssistant(VALID_UUID, "")).rejects.toThrow();
+  it("returns INVALID_INPUT when name is empty", async () => {
+    const res = await renameAssistant(VALID_UUID, "");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when assistantId is not a UUID", async () => {
-    await expect(renameAssistant("bad-id", "New Name")).rejects.toThrow();
+  it("returns INVALID_INPUT when assistantId is not a UUID", async () => {
+    const res = await renameAssistant("bad-id", "New Name");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(renameAssistant(VALID_UUID, "New Name")).rejects.toThrow(
-      "Unauthorized",
-    );
+    const res = await renameAssistant(VALID_UUID, "New Name");
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -319,37 +352,45 @@ describe("updateAssistant", () => {
       name: "Updated Bot",
       prompt: "Be concise.",
     });
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Updated Bot", prompt: "Be concise." }),
     );
   });
 
-  it("throws 'Not Found' when assistant is missing or not owned", async () => {
+  it("returns NOT_FOUND when assistant is missing or not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(
-      updateAssistant(VALID_UUID, { name: "Updated" }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateAssistant(VALID_UUID, { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws ZodError when id is not a UUID", async () => {
-    await expect(
-      updateAssistant("bad-id", { name: "Updated" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when id is not a UUID", async () => {
+    const res = await updateAssistant("bad-id", { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when avatar URL is invalid", async () => {
-    await expect(
-      updateAssistant(VALID_UUID, { avatar: "not-a-url" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when avatar URL is invalid", async () => {
+    const res = await updateAssistant(VALID_UUID, { avatar: "not-a-url" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(
-      updateAssistant(VALID_UUID, { name: "Updated" }),
-    ).rejects.toThrow("Unauthorized");
+    const res = await updateAssistant(VALID_UUID, { name: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 
   it("omits every field that has no schema default when not supplied", async () => {

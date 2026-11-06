@@ -86,7 +86,11 @@ export function PublicServerDiscovery({
     setAddingId(serverId);
     startTransition(async () => {
       try {
-        await addPublicServer(serverId);
+        const res = await addPublicServer(serverId);
+        if (!res.ok) {
+          toast.error(res.error.message || "Failed to add server");
+          return;
+        }
         toast.success(`Succesfully added "${serverName}"`);
 
         // Refresh local lists

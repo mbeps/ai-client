@@ -100,9 +100,9 @@ async function resolveTransformRunLabel(
   segment: string,
 ): Promise<string | null> {
   try {
-    const run = await getTransformRun(segment);
-    if (run) {
-      return format(new Date(run.createdAt), "dd/MM/yyyy HH:mm");
+    const res = await getTransformRun(segment);
+    if (res.ok && res.value) {
+      return format(new Date(res.value.createdAt), "dd/MM/yyyy HH:mm");
     }
   } catch (err) {
     logger.error("Failed to resolve run label", err);
@@ -120,9 +120,9 @@ async function resolveTransformAgentLabel(
   segment: string,
 ): Promise<string | null> {
   try {
-    const agent = await getTransformAgent(segment);
-    if (agent) {
-      return agent.name;
+    const res = await getTransformAgent(segment);
+    if (res.ok && res.value) {
+      return res.value.name;
     }
   } catch (err) {
     logger.error("Failed to resolve transform agent label", err);
@@ -140,9 +140,9 @@ async function resolveKnowledgebaseLabel(
   segment: string,
 ): Promise<string | null> {
   try {
-    const kb = await getKnowledgebase(segment);
-    if (kb) {
-      return kb.name;
+    const res = await getKnowledgebase(segment);
+    if (res.ok && res.value) {
+      return res.value.name;
     }
   } catch (err) {
     logger.error("Failed to resolve knowledgebase label", err);
@@ -158,10 +158,12 @@ async function resolveKnowledgebaseLabel(
  */
 async function resolveProviderLabel(segment: string): Promise<string | null> {
   try {
-    const allProviders = await listProviders();
-    const provider = allProviders.find((p) => p.id === segment);
-    if (provider) {
-      return provider.name;
+    const res = await listProviders();
+    if (res.ok) {
+      const provider = res.value.find((p) => p.id === segment);
+      if (provider) {
+        return provider.name;
+      }
     }
   } catch (err) {
     logger.error("Failed to resolve provider label", err);
@@ -177,9 +179,9 @@ async function resolveProviderLabel(segment: string): Promise<string | null> {
  */
 async function resolveSkillLabel(segment: string): Promise<string | null> {
   try {
-    const skill = await getSkill(segment);
-    if (skill) {
-      return skill.displayName || skill.name;
+    const res = await getSkill(segment);
+    if (res.ok) {
+      return res.value.displayName || res.value.name;
     }
   } catch (err) {
     logger.error("Failed to resolve skill label", err);

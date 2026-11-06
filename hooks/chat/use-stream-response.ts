@@ -74,7 +74,12 @@ export function useStreamResponse(
     if (!isChatInStore(chatId)) return false;
 
     try {
-      const data = await getChat(chatId);
+      const res = await getChat(chatId);
+      if (!res.ok) {
+        handleSyncError(res.error, setChatNotFound, resetStreamingState);
+        return false;
+      }
+      const data = res.value;
       const userMsgId = streamRefs.pendingRef.current.userMessageId;
       const assistantId = streamRefs.assistantMessageIdRef.current;
       const targetParentId = resolveSyncTargetParentId(userMsgId, activeLeaf);

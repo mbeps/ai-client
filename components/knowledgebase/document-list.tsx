@@ -64,9 +64,13 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
   function handleDelete(documentId: string) {
     startTransition(async () => {
       try {
-        await deleteDocument({ documentId });
-        toast.success("Document deleted");
-        onDeleted(documentId);
+        const res = await deleteDocument({ documentId });
+        if (res.ok) {
+          toast.success("Document deleted");
+          onDeleted(documentId);
+        } else {
+          toast.error(res.error.message || "Failed to delete document");
+        }
       } catch {
         toast.error("Failed to delete document");
       }

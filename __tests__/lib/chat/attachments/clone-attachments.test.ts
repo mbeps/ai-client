@@ -34,10 +34,13 @@ describe("cloneAttachments", () => {
   });
 
   it("clones attachments successfully and preserves original extractedText when result extractedText is null", async () => {
-    mockCloneAttachmentsBatch.mockResolvedValueOnce([
-      { id: "new-1", key: "key-1", extractedText: null },
-      { id: "new-2", key: "key-2", extractedText: "override text" },
-    ]);
+    mockCloneAttachmentsBatch.mockResolvedValueOnce({
+      ok: true,
+      value: [
+        { id: "new-1", key: "key-1", extractedText: null },
+        { id: "new-2", key: "key-2", extractedText: "override text" },
+      ],
+    });
 
     const atts = [
       { id: "1", key: "key-1", name: "doc1.txt", extractedText: "orig text" },
@@ -78,6 +81,25 @@ describe("cloneAttachments", () => {
     expect(mockLogError).toHaveBeenCalledWith(
       "Attachment batch clone failed: {error}",
       { error: "Plain string error" },
+    );
+  });
+
+  it("handles cloneAttachmentsBatch returning ok: false", async () => {
+    mockCloneAttachmentsBatch.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "Failed to clone batch" },
+    });
+
+    const atts = [{ id: "1", key: "key-1", name: "doc1.txt" }] as Attachment[];
+    const res = await cloneAttachments(atts, "msg-2");
+
+    expect(res).toEqual([]);
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Attachment batch clone failed: {error}",
+      { error: "Failed to clone batch" },
+    );
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Failed to clone attachments. They will not be sent to the AI.",
     );
   });
 });

@@ -40,8 +40,11 @@ export function AttachmentGallery({ attachments }: AttachmentGalleryProps) {
     Promise.all(
       unresolvedAtts.map(async (att) => {
         try {
-          const data = await getAttachmentUrl(att.id);
-          return { id: att.id, url: data.url as string };
+          const res = await getAttachmentUrl(att.id);
+          if (res.ok) {
+            return { id: att.id, url: res.value.url };
+          }
+          return null;
         } catch {
           return null;
         }

@@ -62,7 +62,11 @@ export default function NewMcpServerPage() {
 
   async function onSubmit(data: CreateMcpServer) {
     try {
-      await createMcpServer(data);
+      const res = await createMcpServer(data);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to add MCP server");
+        return;
+      }
       toast.success("MCP server added");
       await loadMcpServers();
       router.push(ROUTES.SETTINGS.CONNECTORS.path);

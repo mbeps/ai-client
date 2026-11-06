@@ -78,8 +78,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats once on sidebar mount
   React.useEffect(() => {
     listChats()
-      .then((rows) => {
-        loadChats(rows, []);
+      .then((res) => {
+        if (res.ok) {
+          loadChats(res.value, []);
+        }
       })
       .catch(() => {
         // silently ignore — sidebar will show empty state

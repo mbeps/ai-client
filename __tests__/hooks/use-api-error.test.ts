@@ -12,6 +12,7 @@ import { TOOLS_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/tools-not-supported-
 import { UNAUTHORIZED_ERROR_CODE } from "@/lib/error/unauthorized-error-code";
 import { VISION_NOT_SUPPORTED_ERROR_CODE } from "@/lib/error/vision-not-supported-error-code";
 import { useApiError } from "@/hooks/use-api-error";
+import { AppException } from "@/lib/error/app-exception";
 
 const mockPush = vi.fn();
 const mockRouter = { push: mockPush };
@@ -212,6 +213,53 @@ describe("useApiError hook", () => {
     const err = { code: "SOME_UNKNOWN_CODE", message: "Unknown problem" };
     expect(result.current.handleApiError(err, "Fallback message")).toBe(false);
     expect(toast.error).toHaveBeenCalledWith("Fallback message");
+  });
+
+  it("handles plain AppError result objects with dynamic code handlers", () => {
+    const { result } = renderHook(() => useApiError());
+    const err = {
+      code: MODEL_DUPLICATE_IMPORT_ERROR_CODE,
+      message: "Duplicate models detected",
+      duplicateCount: 5,
+    };
+    expect(result.current.handleApiError(err)).toBe(true);
+    expect(toast.warning).toHaveBeenCalledWith(
+      "5 model(s) skipped (already exist)",
+      expect.objectContaining({
+        description: "These models will be skipped during import.",
+      }),
+    );
+  });
+
+  it("handles AppException instances with dynamic code handlers and payload fields", () => {
+    const { result } = renderHook(() => useApiError());
+    const exception = new AppException({
+      code: MODEL_DUPLICATE_IMPORT_ERROR_CODE,
+      message: "Duplicate models detected",
+      duplicateCount: 4,
+    });
+    expect(result.current.handleApiError(exception)).toBe(true);
+    expect(toast.warning).toHaveBeenCalledWith(
+      "4 model(s) skipped (already exist)",
+      expect.objectContaining({
+        description: "These models will be skipped during import.",
+      }),
+    );
+  });
+
+  it("handles AppException instances with static code handlers", () => {
+    const { result } = renderHook(() => useApiError());
+    const exception = new AppException({
+      code: VISION_NOT_SUPPORTED_ERROR_CODE,
+      message: "Vision is not supported",
+    });
+    expect(result.current.handleApiError(exception)).toBe(true);
+    expect(toast.error).toHaveBeenCalledWith(
+      "Vision Not Supported",
+      expect.objectContaining({
+        description: expect.stringContaining("cannot see images"),
+      }),
+    );
   });
 });
 

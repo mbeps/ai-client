@@ -2,26 +2,41 @@
 
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { getSkillForUser } from "@/lib/skills/skill-crud-service";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * Fetches a single Agent Skill by ID for the authenticated user.
  *
  * @param id - UUID of the skill to fetch
- * @returns Skill database record
- * @throws {Error} When user is unauthenticated or skill is not found
- * @decision Delegates to the skill service so the ownership rule has one
- * owner, shared with the AI tools.
+ * @returns Result wrapping skill database record
  * @author Maruf Bepary
  */
-export async function getSkill(id: string): Promise<SkillRow> {
-  const session = await requireSession();
-  const validatedId = z.string().uuid().parse(id);
+export const getSkill = defineAction(
+  async (id: string): Promise<Result<SkillRow, CommonError>> => {
+    const session = await requireSession();
+    const validatedId = z.string().uuid().safeParse(id);
+    if (!validatedId.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Invalid skill ID",
+      });
+    }
 
-  const row = await getSkillForUser(session.user.id, validatedId);
+    const row = await getSkillForUser(session.user.id, validatedId.data);
+    if (!row) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
 
-  if (!row) throw new Error("Not Found");
-
-  return row;
-}
+    return ok(row);
+  },
+);

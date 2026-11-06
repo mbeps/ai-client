@@ -623,5 +623,32 @@ describe("chat-stream-consumer", () => {
         { type: "reasoning-delta", reasoning: "buffered reasoning" },
       ]);
     });
+
+    it("handles error chunk from stream by converting via toAppError and emitting error event", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+
+      async function* errorStream() {
+        yield { type: "error", error: new Error("Rate limit exceeded") };
+      }
+
+      await consumeModelStream(
+        errorStream(),
+        abortController.signal,
+        emit,
+        {},
+        [],
+      );
+
+      expect(emitted).toEqual([
+        expect.objectContaining({
+          type: "error",
+          message: expect.stringContaining("Rate limit"),
+        }),
+      ]);
+    });
   });
 });

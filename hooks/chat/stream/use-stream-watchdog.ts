@@ -83,7 +83,8 @@ async function executeWatchdogTick(params: {
     })
   ) {
     if (!params.isConnectionError) {
-      const isGenerating = await isChatGenerating(params.chatId);
+      const res = await isChatGenerating(params.chatId);
+      const isGenerating = res.ok ? res.value : false;
       if (isGenerating) return;
     }
 

@@ -5,7 +5,13 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "chats"]);
 
@@ -15,35 +21,52 @@ const log = getLogger(["app", "actions", "chats"]);
  *
  * @param chatId - Unique identifier of the chat.
  * @param leafId - Unique identifier of the message that is now the active tip.
- * @returns void (no return value).
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if chatId or leafId are not valid UUID format.
- * @throws Error if chat does not exist or user does not own it (returns "Not Found").
- * @throws Error if database update fails due to constraints or connection issues.
+ * @returns Result void.
+ * @author Maruf Bepary
  */
-export async function updateCurrentLeaf(
-  chatId: string,
-  leafId: string,
-): Promise<void> {
-  const session = await requireSession();
+export const updateCurrentLeaf = defineAction(
+  async (
+    chatId: string,
+    leafId: string,
+  ): Promise<Result<void, CommonError>> => {
+    const session = await requireSession();
 
-  // Validate inputs
-  const validatedChatId = z.string().uuid().parse(chatId);
-  const validatedLeafId = z.string().uuid().parse(leafId);
+    const parsedChatId = z.string().uuid().safeParse(chatId);
+    const parsedLeafId = z.string().uuid().safeParse(leafId);
 
-  const [updated] = await db
-    .update(chat)
-    .set({ currentLeafId: validatedLeafId, updatedAt: new Date() })
-    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)))
-    .returning({ id: chat.id });
+    if (!parsedChatId.success || !parsedLeafId.success) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Invalid UUID format",
+      });
+    }
 
-  if (!updated) throw new Error("Not Found");
+    const validatedChatId = parsedChatId.data;
+    const validatedLeafId = parsedLeafId.data;
 
-  log.debug(
-    "Updated current chat leaf pointer (chatId: {chatId}, leafId: {leafId})",
-    {
-      chatId: validatedChatId,
-      leafId: validatedLeafId,
-    },
-  );
-}
+    const [updated] = await db
+      .update(chat)
+      .set({ currentLeafId: validatedLeafId, updatedAt: new Date() })
+      .where(
+        and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+      )
+      .returning({ id: chat.id });
+
+    if (!updated) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
+
+    log.debug(
+      "Updated current chat leaf pointer (chatId: {chatId}, leafId: {leafId})",
+      {
+        chatId: validatedChatId,
+        leafId: validatedLeafId,
+      },
+    );
+
+    return ok(undefined);
+  },
+);

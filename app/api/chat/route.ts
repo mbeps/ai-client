@@ -4,6 +4,7 @@ import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { auth } from "@/lib/auth/auth";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -27,67 +28,90 @@ export const maxDuration = 60;
  * @author Maruf Bepary
  */
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return new Response("Unauthorized", { status: 401 });
-
-  const body = await req.json();
-  const parsed = chatRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    log.warn("Invalid chat request: {details}", {
-      details: parsed.error.flatten(),
-    });
-    return Response.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-
-  const {
-    chatId,
-    userMessageId,
-    model: requestedModel,
-    selectedServerIds,
-    selectedTools,
-    selectedAssistantId,
-    selectedSkillIds,
-    selectedKbIds,
-    subagentsEnabled,
-    subagentModelId,
-  } = parsed.data;
-
-  // Ensure model is undefined if empty or whitespace-only
-  const model =
-    requestedModel && requestedModel.trim() !== "" ? requestedModel : undefined;
-  const userId = session.user.id;
-
-  const rateLimit = checkRateLimit(`chat:${userId}`, env.RATE_LIMIT_CHAT_RPM);
-  if (!rateLimit.allowed) {
-    return Response.json(
-      { error: "Rate limit exceeded" },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
-      },
-    );
-  }
-
-  const [chatRow] = await db
-    .select({ id: chat.id })
-    .from(chat)
-    .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
-
-  if (!chatRow) {
-    log.warn(
-      "Chat not found or access denied (chatId: {chatId}, userId: {userId})",
-      { chatId, userId },
-    );
-    return Response.json(
-      { error: "Chat not found or access denied" },
-      { status: 404 },
-    );
-  }
-
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) {
+      return Response.json(
+        { error: "Unauthorized", code: ERROR_CODE.UNAUTHORIZED },
+        { status: 401 },
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return Response.json(
+        { error: "Invalid JSON payload", code: ERROR_CODE.INVALID_INPUT },
+        { status: 400 },
+      );
+    }
+
+    const parsed = chatRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      log.warn("Invalid chat request: {details}", {
+        details: parsed.error.flatten(),
+      });
+      return Response.json(
+        {
+          error: "Invalid request",
+          code: ERROR_CODE.INVALID_INPUT,
+          details: parsed.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      chatId,
+      userMessageId,
+      model: requestedModel,
+      selectedServerIds,
+      selectedTools,
+      selectedAssistantId,
+      selectedSkillIds,
+      selectedKbIds,
+      subagentsEnabled,
+      subagentModelId,
+    } = parsed.data;
+
+    // Ensure model is undefined if empty or whitespace-only
+    const model =
+      requestedModel && requestedModel.trim() !== ""
+        ? requestedModel
+        : undefined;
+    const userId = session.user.id;
+
+    const rateLimit = checkRateLimit(`chat:${userId}`, env.RATE_LIMIT_CHAT_RPM);
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: "Rate limit exceeded", code: ERROR_CODE.RATE_LIMIT },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        },
+      );
+    }
+
+    const [chatRow] = await db
+      .select({ id: chat.id })
+      .from(chat)
+      .where(and(eq(chat.id, chatId), eq(chat.userId, userId)));
+
+    if (!chatRow) {
+      log.warn(
+        "Chat not found or access denied (chatId: {chatId}, userId: {userId})",
+        { chatId, userId },
+      );
+      return Response.json(
+        {
+          error: "Chat not found or access denied",
+          code: ERROR_CODE.NOT_FOUND,
+        },
+        { status: 404 },
+      );
+    }
+
     await inngest.send({
       name: "chat/response.generate",
       data: {
@@ -109,13 +133,17 @@ export async function POST(req: Request) {
 
     return Response.json({ success: true, chatId, userMessageId });
   } catch (error: unknown) {
-    log.error("Chat dispatch failed (chatId: {chatId}): {error}", {
-      chatId,
-      error: error instanceof Error ? error.message : String(error),
-      userId,
+    const ref = crypto.randomUUID().slice(0, 8);
+    log.error("Chat dispatch failed (ref: {ref}): {error}", {
+      ref,
+      error: error instanceof Error ? (error.stack ?? error.message) : error,
     });
     return Response.json(
-      { error: "An internal error occurred." },
+      {
+        error: `An internal error occurred. (Ref: ${ref})`,
+        code: ERROR_CODE.INTERNAL,
+        ref,
+      },
       { status: 500 },
     );
   }

@@ -39,13 +39,18 @@ describe("Transform Run Inngest Actions", () => {
   });
 
   describe("startTransformRunAction", () => {
-    it("throws an error when transform run is not found or not owned by user", async () => {
+    it("returns error when transform run is not found or not owned by user", async () => {
       chainable.returning.mockResolvedValueOnce([]);
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-      await expect(startTransformRunAction("run-123")).rejects.toThrow(
-        "Transform run not found",
-      );
+      const res = await startTransformRunAction("run-123");
+      expect(res).toEqual({
+        ok: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Transform run not found",
+        },
+      });
     });
 
     it("dispatches workflows/transform.execute event when valid", async () => {
@@ -55,7 +60,7 @@ describe("Transform Run Inngest Actions", () => {
 
       const result = await startTransformRunAction("run-123");
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
       expect(inngest.send).toHaveBeenCalledWith({
         name: "workflows/transform.execute",
         data: {
@@ -73,7 +78,7 @@ describe("Transform Run Inngest Actions", () => {
 
       const result = await startTransformRunAction("run-123");
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
       expect(inngest.send).toHaveBeenCalledWith({
         name: "workflows/transform.execute",
         data: {
@@ -86,12 +91,17 @@ describe("Transform Run Inngest Actions", () => {
   });
 
   describe("approveTransformRunAction", () => {
-    it("throws an error when transform run is not found", async () => {
+    it("returns error when transform run is not found", async () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-      await expect(approveTransformRunAction("run-123")).rejects.toThrow(
-        "Transform run not found",
-      );
+      const res = await approveTransformRunAction("run-123");
+      expect(res).toEqual({
+        ok: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Transform run not found",
+        },
+      });
     });
 
     it("dispatches workflows/transform.approved event when valid", async () => {
@@ -100,7 +110,7 @@ describe("Transform Run Inngest Actions", () => {
 
       const result = await approveTransformRunAction("run-123");
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, value: { success: true } });
       expect(inngest.send).toHaveBeenCalledWith({
         name: "workflows/transform.approved",
         data: { runId: "run-123" },
@@ -109,12 +119,17 @@ describe("Transform Run Inngest Actions", () => {
   });
 
   describe("getTransformRunRealtimeToken", () => {
-    it("throws an error when unauthorized", async () => {
+    it("returns error when unauthorized", async () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-      await expect(getTransformRunRealtimeToken("run-123")).rejects.toThrow(
-        "Unauthorized",
-      );
+      const res = await getTransformRunRealtimeToken("run-123");
+      expect(res).toEqual({
+        ok: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "Unauthorized",
+        },
+      });
     });
 
     it("returns client subscription token for authorized user", async () => {
@@ -122,8 +137,7 @@ describe("Transform Run Inngest Actions", () => {
         Promise.resolve([{ id: "run-123" }]).then(onFulfilled);
 
       const token = await getTransformRunRealtimeToken("run-123");
-      expect(token).toBe("mock-client-token");
+      expect(token).toEqual({ ok: true, value: "mock-client-token" });
     });
   });
 });
-

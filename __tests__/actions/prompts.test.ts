@@ -133,7 +133,7 @@ describe("createPrompt", () => {
       shortcut: "cr",
       content: "Please review the following code:",
     });
-    expect(result).toEqual(PROMPT_ROW);
+    expect(result).toEqual({ ok: true, value: PROMPT_ROW });
     expect(chainable.insert).toHaveBeenCalledOnce();
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -145,57 +145,77 @@ describe("createPrompt", () => {
     );
   });
 
-  it("throws ZodError when title is empty", async () => {
-    await expect(
-      createPrompt({ title: "", shortcut: "cr", content: "Some content" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when title is empty", async () => {
+    const res = await createPrompt({
+      title: "",
+      shortcut: "cr",
+      content: "Some content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when shortcut is empty", async () => {
-    await expect(
-      createPrompt({
-        title: "Code Review",
-        shortcut: "",
-        content: "Some content",
-      }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when shortcut is empty", async () => {
+    const res = await createPrompt({
+      title: "Code Review",
+      shortcut: "",
+      content: "Some content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when shortcut contains spaces", async () => {
-    await expect(
-      createPrompt({
-        title: "Code Review",
-        shortcut: "my shortcut",
-        content: "Some content",
-      }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when shortcut contains spaces", async () => {
+    const res = await createPrompt({
+      title: "Code Review",
+      shortcut: "my shortcut",
+      content: "Some content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when content is empty", async () => {
-    await expect(
-      createPrompt({ title: "Code Review", shortcut: "cr", content: "" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when content is empty", async () => {
+    const res = await createPrompt({
+      title: "Code Review",
+      shortcut: "cr",
+      content: "",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when title exceeds 100 characters", async () => {
-    await expect(
-      createPrompt({
-        title: "t".repeat(101),
-        shortcut: "cr",
-        content: "Some content",
-      }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when title exceeds 100 characters", async () => {
+    const res = await createPrompt({
+      title: "t".repeat(101),
+      shortcut: "cr",
+      content: "Some content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(
-      createPrompt({
-        title: "Code Review",
-        shortcut: "cr",
-        content: "Some content",
-      }),
-    ).rejects.toThrow("Unauthorized");
+    const res = await createPrompt({
+      title: "Code Review",
+      shortcut: "cr",
+      content: "Some content",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -204,18 +224,22 @@ describe("listPrompts", () => {
   it("returns all prompts for the user", async () => {
     chainable.orderBy.mockResolvedValueOnce([PROMPT_ROW]);
     const result = await listPrompts();
-    expect(result).toEqual([PROMPT_ROW]);
+    expect(result).toEqual({ ok: true, value: [PROMPT_ROW] });
     expect(chainable.select).toHaveBeenCalledOnce();
   });
 
   it("returns an empty array when user has no prompts", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
-    expect(await listPrompts()).toEqual([]);
+    expect(await listPrompts()).toEqual({ ok: true, value: [] });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(listPrompts()).rejects.toThrow("Unauthorized");
+    const res = await listPrompts();
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -226,19 +250,28 @@ describe("deletePrompt", () => {
   it("deletes the prompt and resolves without error", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: VALID_UUID }]);
     await expect(deletePrompt(VALID_UUID)).resolves.toEqual({
-      deletedCount: 1,
+      ok: true,
+      value: { deletedCount: 1 },
     });
     expect(chainable.delete).toHaveBeenCalledOnce();
   });
 
-  it("throws 'Not Found' when prompt does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when prompt does not exist or is not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(deletePrompt(VALID_UUID)).rejects.toThrow("Not Found");
+    const res = await deletePrompt(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(deletePrompt(VALID_UUID)).rejects.toThrow("Unauthorized");
+    const res = await deletePrompt(VALID_UUID);
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });
 
@@ -253,36 +286,44 @@ describe("updatePrompt", () => {
       title: "Updated Review",
       shortcut: "ur",
     });
-    expect(result).toEqual(updated);
+    expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Updated Review", shortcut: "ur" }),
     );
   });
 
-  it("throws 'Not Found' when prompt is missing or not owned", async () => {
+  it("returns NOT_FOUND when prompt is missing or not owned", async () => {
     chainable.returning.mockResolvedValueOnce([]);
-    await expect(
-      updatePrompt(VALID_UUID, { title: "Updated" }),
-    ).rejects.toThrow("Not Found");
+    const res = await updatePrompt(VALID_UUID, { title: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "NOT_FOUND" }),
+    });
   });
 
-  it("throws ZodError when id is not a UUID", async () => {
-    await expect(
-      updatePrompt("bad-id", { title: "Updated" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when id is not a UUID", async () => {
+    const res = await updatePrompt("bad-id", { title: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws ZodError when shortcut contains invalid characters", async () => {
-    await expect(
-      updatePrompt(VALID_UUID, { shortcut: "my shortcut" }),
-    ).rejects.toThrow();
+  it("returns INVALID_INPUT when shortcut contains invalid characters", async () => {
+    const res = await updatePrompt(VALID_UUID, { shortcut: "my shortcut" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
   });
 
-  it("throws when unauthenticated", async () => {
+  it("returns UNAUTHORIZED when unauthenticated", async () => {
     vi.mocked(requireSession).mockRejectedValueOnce(new Error("Unauthorized"));
-    await expect(
-      updatePrompt(VALID_UUID, { title: "Updated" }),
-    ).rejects.toThrow("Unauthorized");
+    const res = await updatePrompt(VALID_UUID, { title: "Updated" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "UNAUTHORIZED" }),
+    });
   });
 });

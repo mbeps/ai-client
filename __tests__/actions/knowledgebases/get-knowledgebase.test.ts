@@ -61,13 +61,16 @@ describe("getKnowledgebase action", () => {
     chainable.limit.mockResolvedValueOnce([kbRow]);
 
     const result = await getKnowledgebase(KB_ID);
-    expect(result).toEqual(kbRow);
+    expect(result).toEqual({ ok: true, value: kbRow });
   });
 
-  it("returns undefined if knowledgebase not found or not owned by user", async () => {
+  it("returns NOT_FOUND error if knowledgebase not found or not owned by user", async () => {
     chainable.limit.mockResolvedValueOnce([]);
 
     const result = await getKnowledgebase(KB_ID);
-    expect(result).toBeUndefined();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("NOT_FOUND");
+    }
   });
 });

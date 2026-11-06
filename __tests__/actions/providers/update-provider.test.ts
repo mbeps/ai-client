@@ -51,15 +51,18 @@ describe("updateProvider action", () => {
   });
 
   it("throws validation error if input payload is empty or invalid", async () => {
-    await expect(updateProvider("prov-1", {} as any)).rejects.toThrow();
+    const res = await updateProvider("prov-1", {} as any);
+    expect(res.ok).toBe(false);
   });
 
   it("throws NotFound if provider does not exist in database", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(
-      updateProvider("prov-1", { name: "New Name" }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateProvider("prov-1", { name: "New Name" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("updates provider without apiKey or headers, preserving existing", async () => {
@@ -75,7 +78,7 @@ describe("updateProvider action", () => {
     chainable.returning.mockResolvedValueOnce([updated]);
 
     const res = await updateProvider("prov-1", { name: "New Name" });
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalled();
   });
 
@@ -108,7 +111,7 @@ describe("updateProvider action", () => {
       headers: { "X-Header": "val" },
     });
 
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
     expect(chainable.set).toHaveBeenCalled();
   });
 
@@ -125,7 +128,7 @@ describe("updateProvider action", () => {
     chainable.returning.mockResolvedValueOnce([updated]);
 
     const res = await updateProvider("prov-1", { apiKey: "sk-updated" });
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
   });
 
   it("updates provider with headers only, preserving existing apiKey", async () => {
@@ -143,7 +146,7 @@ describe("updateProvider action", () => {
     const res = await updateProvider("prov-1", {
       headers: { "X-Foo": "bar" },
     });
-    expect(res).toEqual(updated);
+    expect(res).toEqual({ ok: true, value: updated });
   });
 
   it("throws NotFound if update query returns empty result", async () => {
@@ -152,8 +155,10 @@ describe("updateProvider action", () => {
     ]);
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(
-      updateProvider("prov-1", { name: "Non-existent" }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateProvider("prov-1", { name: "Non-existent" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 });

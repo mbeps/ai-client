@@ -12,8 +12,12 @@ import {
 } from "@/drizzle/schemas/transform-agent-schema";
 import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
 import { fetchUserInngestRuns } from "@/lib/inngest/run-service";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
 import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";
+import type { Result } from "@/types/result";
 
 /**
  * Filter and pagination options for querying running Inngest jobs.
@@ -427,35 +431,32 @@ function enrichJobItem(job: JobItem, maps: EntityMaps): JobItem {
  *
  * @param options Optional status filter and pagination limit.
  * @returns Result object containing enriched jobs, offline flag, and optional error message.
- * @throws {Error} "Unauthorized" if no valid user session is found.
  * @author Maruf Bepary
  */
-export async function listJobs(
-  options?: ListJobsOptions,
-): Promise<ListJobsResult> {
-  const session = await requireSession();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+export const listJobs = defineAction(
+  async (
+    options?: ListJobsOptions,
+  ): Promise<Result<ListJobsResult, CommonError>> => {
+    const session = await requireSession();
+    const userId = session.user.id;
+    const result = await fetchUserInngestRuns(userId, options);
 
-  const userId = session.user.id;
-  const result = await fetchUserInngestRuns(userId, options);
+    if (result.offline || !result.jobs || result.jobs.length === 0) {
+      return ok({
+        jobs: [],
+        offline: result.offline,
+        error: result.error,
+      });
+    }
 
-  if (result.offline || !result.jobs || result.jobs.length === 0) {
-    return {
-      jobs: [],
+    const buckets = collectEntityIds(result.jobs);
+    const maps = await fetchEntityMaps(userId, buckets);
+    const enrichedJobs = result.jobs.map((job) => enrichJobItem(job, maps));
+
+    return ok({
+      jobs: enrichedJobs,
       offline: result.offline,
       error: result.error,
-    };
-  }
-
-  const buckets = collectEntityIds(result.jobs);
-  const maps = await fetchEntityMaps(userId, buckets);
-  const enrichedJobs = result.jobs.map((job) => enrichJobItem(job, maps));
-
-  return {
-    jobs: enrichedJobs,
-    offline: result.offline,
-    error: result.error,
-  };
-}
+    });
+  },
+);

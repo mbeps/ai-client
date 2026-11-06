@@ -86,18 +86,30 @@ describe("transform run actions", () => {
       getOwnedResourceMock.mockResolvedValueOnce(mockRun);
 
       const result = await getTransformRun(runId);
-      expect(result).toEqual(mockRun);
+      expect(result).toEqual({ ok: true, value: mockRun });
       expect(getOwnedResourceMock).toHaveBeenCalledWith(expect.anything(), runId, userId);
     });
   });
 
   describe("createTransformRun", () => {
-    it("throws Not Found when agent is not found or not owned", async () => {
+    it("returns INVALID_INPUT when validation fails", async () => {
+      const result = await createTransformRun({ agentId: "invalid-uuid" } as any);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe("INVALID_INPUT");
+    });
+
+    it("returns NOT_FOUND when agent is not found or not owned", async () => {
       chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
 
-      await expect(
-        createTransformRun({ agentId }),
-      ).rejects.toThrow("Not Found");
+      const result = await createTransformRun({ agentId });
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Not Found",
+        },
+      });
     });
 
     it("creates a transform run with array of input attachments and dryRun", async () => {
@@ -120,7 +132,7 @@ describe("transform run actions", () => {
         dryRun: true,
       });
 
-      expect(result).toEqual(createdRun);
+      expect(result).toEqual({ ok: true, value: createdRun });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           agentId,
@@ -145,7 +157,7 @@ describe("transform run actions", () => {
         inputAttachmentIds: attachmentId as any,
       });
 
-      expect(result).toEqual(createdRun);
+      expect(result).toEqual({ ok: true, value: createdRun });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           inputAttachmentIds: [attachmentId],
@@ -167,7 +179,7 @@ describe("transform run actions", () => {
         inputAttachmentIds: "" as any,
       });
 
-      expect(result).toEqual(createdRun);
+      expect(result).toEqual({ ok: true, value: createdRun });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           inputAttachmentIds: [],
@@ -186,7 +198,7 @@ describe("transform run actions", () => {
         agentId,
       });
 
-      expect(result).toEqual(createdRun);
+      expect(result).toEqual({ ok: true, value: createdRun });
       expect(chainable.values).toHaveBeenCalledWith(
         expect.objectContaining({
           dryRun: false,
@@ -202,7 +214,7 @@ describe("transform run actions", () => {
       chainable.then = (onFulfilled: any) => Promise.resolve(mockRuns).then(onFulfilled);
 
       const result = await listTransformRuns(agentId);
-      expect(result).toEqual(mockRuns);
+      expect(result).toEqual({ ok: true, value: mockRuns });
       expect(chainable.select).toHaveBeenCalled();
       expect(chainable.orderBy).toHaveBeenCalled();
     });

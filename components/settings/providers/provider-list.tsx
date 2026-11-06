@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes";
+import { useApiError } from "@/hooks/use-api-error";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
@@ -48,6 +49,7 @@ export function ProviderList({
   models,
   onRefresh,
 }: ProviderListProps) {
+  const { handleApiError } = useApiError();
   const [search, setSearch] = useState("");
   const [providerToDelete, setProviderToDelete] =
     useState<AiProviderRow | null>(null);
@@ -77,17 +79,19 @@ export function ProviderList({
 
   const runAction = async (
     providerId: string,
-    action: () => Promise<void>,
+    action: () => Promise<unknown>,
   ): Promise<void> => {
     setBusyProviderId(providerId);
     try {
-      await action();
+      const res = await action();
+      if (res && typeof res === "object" && "ok" in res && !(res as any).ok) {
+        handleApiError((res as any).error, "Provider action failed");
+        return;
+      }
       invalidateProviderRegistryCache();
       await onRefresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Provider action failed",
-      );
+      handleApiError(error, "Provider action failed");
     } finally {
       setBusyProviderId(null);
     }
@@ -136,7 +140,8 @@ export function ProviderList({
                 void runAction(provider.id, async () => {
                   const result = await testProviderConnection(provider.id);
                   if (!result.ok) {
-                    throw new Error(result.error ?? "Connection failed");
+                    handleApiError(result.error, "Connection failed");
+                    return;
                   }
                   toast.success("Connection successful");
                 })
@@ -144,15 +149,20 @@ export function ProviderList({
               onSync={() =>
                 void runAction(provider.id, async () => {
                   const result = await syncProviderModels(provider.id);
-                  if (result.limitExceeded) {
+                  if (!result.ok) {
+                    handleApiError(result.error, "Model sync failed");
+                    return;
+                  }
+                  const data = result.value;
+                  if (data.limitExceeded) {
                     toast.warning("Model Limit Reached", {
-                      description: `Found ${result.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
+                      description: `Found ${data.totalDiscovered?.toLocaleString()} models; displaying first 1,000.`,
                     });
                   } else {
                     const message =
-                      result.deleted > 0
-                        ? `Sync complete: +${result.added}, ${result.unchanged} unchanged, -${result.deleted} removed`
-                        : `Sync complete: +${result.added}, ${result.unchanged} unchanged`;
+                      data.deleted > 0
+                        ? `Sync complete: +${data.added}, ${data.unchanged} unchanged, -${data.deleted} removed`
+                        : `Sync complete: +${data.added}, ${data.unchanged} unchanged`;
                     toast.success(message);
                   }
                 })
@@ -171,9 +181,11 @@ export function ProviderList({
         onConfirm={async () => {
           if (!providerToDelete) return;
           await runAction(providerToDelete.id, async () => {
-            await deleteProvider(providerToDelete.id);
+            const res = await deleteProvider(providerToDelete.id);
+            if (!res.ok) return res;
             toast.success("Provider deleted");
             setProviderToDelete(null);
+            return res;
           });
         }}
       />

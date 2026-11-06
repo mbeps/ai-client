@@ -5,27 +5,16 @@ import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
-import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
 import {
   type ExportProviderRegistryInput,
   exportProviderRegistryInputSchema,
   type ProviderModelType,
   type RegistryExport,
 } from "@/schemas/providers/provider-registry";
-
-/**
- * Exports providers and models for authenticated user with optional ID filtering.
- * API keys NEVER exported (always null) for security. Headers are NOT exported
- * (decrypted plaintext auth headers must never leave the server). Timestamp ISO 8601.
- *
- * @param [input] - Optional {providerIds} filter
- * @returns RegistryExport with version 1, exportedAt, providers (apiKey=null), models
- * @throws If input validation or session fails; ProviderKeyCorruptedError on header decryption failure
- * @security API keys never exported; headers in memory only; treat export as sensitive
- * @see {@link importProviderRegistry} for importing exported registries
- * @see {@link decodeProviderRecord} for header decryption
- * @author Maruf Bepary
- */
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const PROVIDER_MODEL_TYPES = ["chat", "embedding", "both"] as const;
 
@@ -46,72 +35,71 @@ function toProviderModelType(
  * Exports a provider registry for bulk provider and model management.
  *
  * @param input - Optional filter with provider IDs
- * @returns Complete registry export with all provider and model metadata
- * @throws {Error} If decryption fails or input validation fails
- *
- * @see {@link importProviderRegistry} for importing
+ * @returns Result containing complete registry export with all provider and model metadata
  * @author Maruf Bepary
  */
-export async function exportProviderRegistry(
-  input?: ExportProviderRegistryInput,
-): Promise<RegistryExport> {
-  const session = await requireSession();
-  const parsed = exportProviderRegistryInputSchema.parse(input ?? {});
+export const exportProviderRegistry = defineAction(
+  async (
+    input?: ExportProviderRegistryInput,
+  ): Promise<Result<RegistryExport, CommonError>> => {
+    const session = await requireSession();
+    const parsed = exportProviderRegistryInputSchema.parse(input ?? {});
 
-  const conditions = [eq(aiProvider.userId, session.user.id)];
-  if (parsed.providerIds && parsed.providerIds.length > 0) {
-    conditions.push(inArray(aiProvider.id, parsed.providerIds));
-  }
+    const conditions = [eq(aiProvider.userId, session.user.id)];
+    if (parsed.providerIds && parsed.providerIds.length > 0) {
+      conditions.push(inArray(aiProvider.id, parsed.providerIds));
+    }
 
-  const providers = await db
-    .select()
-    .from(aiProvider)
-    .where(and(...conditions));
+    const providers = await db
+      .select()
+      .from(aiProvider)
+      .where(and(...conditions));
 
-  const providerIds = providers.map((provider) => provider.id);
+    const providerIds = providers.map((provider) => provider.id);
 
-  const models = providerIds.length
-    ? await db
-        .select()
-        .from(aiModel)
-        .where(
-          and(
-            eq(aiModel.userId, session.user.id),
-            inArray(aiModel.providerId, providerIds),
-          ),
-        )
-    : [];
+    const models = providerIds.length
+      ? await db
+          .select()
+          .from(aiModel)
+          .where(
+            and(
+              eq(aiModel.userId, session.user.id),
+              inArray(aiModel.providerId, providerIds),
+            ),
+          )
+      : [];
 
-  return {
-    version: "1",
-    exportedAt: new Date().toISOString(),
-    providers: providers.map((provider) => {
-      const providerModels = models.filter(
-        (model) => model.providerId === provider.id,
-      );
+    return ok({
+      version: "1",
+      exportedAt: new Date().toISOString(),
+      providers: providers.map((provider) => {
+        const providerModels = models.filter(
+          (model) => model.providerId === provider.id,
+        );
 
-      return {
-        name: provider.name,
-        baseUrl: provider.baseUrl,
-        requiresKey: provider.requiresKey,
-        apiKey: null,
-        isEnabled: provider.isEnabled,
-        models: providerModels.map((model) => ({
-          modelId: model.modelId,
-          label: model.label,
-          modelType: toProviderModelType(model.modelType),
-          contextWindow: model.contextWindow,
-          embeddingDimensions: model.embeddingDimensions,
-          capabilities: {
-            tools: model.capTools,
-            vision: model.capVision,
-            reasoning: model.capReasoning,
-            structuredOutput: model.capStructuredOutput,
-          },
-          isManuallyAdded: model.isManuallyAdded,
-          isEnabled: model.isEnabled,
-        })),
-      };
-    }),
-  };
-}
+        return {
+          name: provider.name,
+          baseUrl: provider.baseUrl,
+          requiresKey: provider.requiresKey,
+          apiKey: null,
+          isEnabled: provider.isEnabled,
+          models: providerModels.map((model) => ({
+            modelId: model.modelId,
+            label: model.label,
+            modelType: toProviderModelType(model.modelType),
+            contextWindow: model.contextWindow,
+            embeddingDimensions: model.embeddingDimensions,
+            capabilities: {
+              tools: model.capTools,
+              vision: model.capVision,
+              reasoning: model.capReasoning,
+              structuredOutput: model.capStructuredOutput,
+            },
+            isManuallyAdded: model.isManuallyAdded,
+            isEnabled: model.isEnabled,
+          })),
+        };
+      }),
+    });
+  },
+);

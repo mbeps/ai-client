@@ -4,6 +4,10 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
 
 /**
@@ -12,18 +16,18 @@ import type { TransformAgentRow } from "@/types/transform/transform-agent-row";
  * Use this to display available transform agents in selection dropdowns or list views.
  * Runs on server only — invoked from client via Server Action.
  *
- * @returns Array of all user's transform agents sorted by createdAt descending; empty array if no agents exist.
- * @throws Error if session is not authenticated.
- * @throws Error if database query fails due to connection issues.
- * @see createTransformAgent to create a new agent.
- * @see getTransformAgent to fetch details for a single agent.
+ * @returns Result wrapping array of all user's transform agents sorted by createdAt descending.
  * @author Maruf Bepary
  */
-export async function listTransformAgents(): Promise<TransformAgentRow[]> {
-  const session = await requireSession();
-  return db
-    .select()
-    .from(transformAgent)
-    .where(eq(transformAgent.userId, session.user.id))
-    .orderBy(desc(transformAgent.updatedAt));
-}
+export const listTransformAgents = defineAction(
+  async (): Promise<Result<TransformAgentRow[], CommonError>> => {
+    const session = await requireSession();
+    const rows = await db
+      .select()
+      .from(transformAgent)
+      .where(eq(transformAgent.userId, session.user.id))
+      .orderBy(desc(transformAgent.updatedAt));
+
+    return ok(rows as TransformAgentRow[]);
+  },
+);

@@ -55,10 +55,14 @@ describe("reindexKnowledgebase action", () => {
     sendMock.mockResolvedValue({ ids: ["event-1"] });
   });
 
-  it("throws 'Not Found' when knowledgebase is not found or not owned by user", async () => {
+  it("returns NOT_FOUND when knowledgebase is not found or not owned by user", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(reindexKnowledgebase(KB_ID)).rejects.toThrow("Not Found");
+    const result = await reindexKnowledgebase(KB_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("NOT_FOUND");
+    }
   });
 
   it("successfully updates status in a transaction, dispatches inngest event, and returns summary", async () => {
@@ -73,7 +77,10 @@ describe("reindexKnowledgebase action", () => {
 
     const result = await reindexKnowledgebase(KB_ID);
 
-    expect(result).toEqual({ processedCount: 2, failedCount: 0 });
+    expect(result).toEqual({
+      ok: true,
+      value: { processedCount: 2, failedCount: 0 },
+    });
     expect(chainable.transaction).toHaveBeenCalledTimes(1);
     expect(chainable.update).toHaveBeenCalledTimes(2);
     expect(chainable.set).toHaveBeenCalledWith({
@@ -101,7 +108,11 @@ describe("reindexKnowledgebase action", () => {
     // 6. Rollback update
     chainable.where.mockReturnValueOnce(chainable);
 
-    await expect(reindexKnowledgebase(KB_ID)).rejects.toThrow("Inngest dispatch failed");
+    const result = await reindexKnowledgebase(KB_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("INTERNAL");
+    }
 
     expect(chainable.transaction).toHaveBeenCalledTimes(1);
     expect(chainable.set).toHaveBeenCalledWith(

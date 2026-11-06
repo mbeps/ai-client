@@ -8,6 +8,10 @@ import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-prov
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import { toast } from "sonner";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 vi.mock("@/actions/providers/export-registry", () => ({
   exportProviderRegistry: vi.fn(),
 }));
@@ -85,7 +89,10 @@ describe("ImportExportPanel UI component", () => {
   it("exports all providers and triggers download on clicking 'Export All'", async () => {
     const user = userEvent.setup();
     const mockPayload = { version: "1", providers: [] };
-    vi.mocked(exportProviderRegistry).mockResolvedValueOnce(mockPayload as never);
+    vi.mocked(exportProviderRegistry).mockResolvedValueOnce({
+      ok: true,
+      value: mockPayload,
+    } as never);
 
     render(
       <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
@@ -102,7 +109,10 @@ describe("ImportExportPanel UI component", () => {
   it("exports a single provider on clicking its export button", async () => {
     const user = userEvent.setup();
     const mockPayload = { version: "1", providers: [] };
-    vi.mocked(exportProviderRegistry).mockResolvedValueOnce(mockPayload as never);
+    vi.mocked(exportProviderRegistry).mockResolvedValueOnce({
+      ok: true,
+      value: mockPayload,
+    } as never);
 
     render(
       <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
@@ -135,11 +145,14 @@ describe("ImportExportPanel UI component", () => {
     });
 
     vi.mocked(importProviderRegistry).mockResolvedValueOnce({
-      providersCreated: 1,
-      providersUpdated: 0,
-      modelsCreated: 2,
-      modelsSkipped: 0,
-    });
+      ok: true,
+      value: {
+        providersCreated: 1,
+        providersUpdated: 0,
+        modelsCreated: 2,
+        modelsSkipped: 0,
+      },
+    } as never);
 
     const { container } = render(
       <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
@@ -180,11 +193,14 @@ describe("ImportExportPanel UI component", () => {
     });
 
     vi.mocked(importProviderRegistry).mockResolvedValueOnce({
-      providersCreated: 1,
-      providersUpdated: 1,
-      modelsCreated: 3,
-      modelsSkipped: 0,
-    });
+      ok: true,
+      value: {
+        providersCreated: 1,
+        providersUpdated: 1,
+        modelsCreated: 3,
+        modelsSkipped: 0,
+      },
+    } as never);
 
     const { container } = render(
       <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,

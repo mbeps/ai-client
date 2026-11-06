@@ -18,14 +18,18 @@ vi.mock("@/lib/inngest/run-service", () => ({
   fetchUserInngestRuns: mockFetchUserInngestRuns,
 }));
 
-vi.mock("@/lib/logger", () => ({
-  logger: {
+vi.mock("@/lib/logger", () => {
+  const dummyLog = {
     warn: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
-  },
-}));
+  };
+  return {
+    logger: dummyLog,
+    getLogger: vi.fn(() => dummyLog),
+  };
+});
 
 import { isChatGenerating } from "@/actions/chats/is-chat-generating";
 
@@ -43,7 +47,7 @@ describe("isChatGenerating server action", () => {
     mockChatAbortRegistry.has.mockReturnValueOnce(true);
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(true);
+    expect(result).toEqual({ ok: true, value: true });
     expect(mockChatAbortRegistry.has).toHaveBeenCalledWith("chat-123");
     expect(mockFetchUserInngestRuns).not.toHaveBeenCalled();
   });
@@ -63,7 +67,7 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(true);
+    expect(result).toEqual({ ok: true, value: true });
     expect(mockFetchUserInngestRuns).toHaveBeenCalledWith("user-123", {
       status: ["RUNNING", "QUEUED"],
       limit: 100,
@@ -85,7 +89,7 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(true);
+    expect(result).toEqual({ ok: true, value: true });
   });
 
   it("returns false for a chat job with a different entityId", async () => {
@@ -103,7 +107,7 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 
   it("returns false for a non-chat job with matching entityId", async () => {
@@ -121,7 +125,7 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 
   it("returns false for an empty jobs list", async () => {
@@ -130,7 +134,7 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 
   it("returns false when run service reports offline", async () => {
@@ -141,20 +145,20 @@ describe("isChatGenerating server action", () => {
     });
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 
   it("returns false when requireSession throws an error", async () => {
     mockRequireSession.mockRejectedValueOnce(new Error("Unauthorized"));
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 
   it("returns false when fetchUserInngestRuns throws an error", async () => {
     mockFetchUserInngestRuns.mockRejectedValueOnce(new Error("Network failure"));
 
     const result = await isChatGenerating("chat-123");
-    expect(result).toBe(false);
+    expect(result).toEqual({ ok: true, value: false });
   });
 });

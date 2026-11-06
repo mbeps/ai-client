@@ -16,11 +16,17 @@ import type { ProjectRow } from "@/types/project/project-row";
  * @author Maruf Bepary
  */
 export default async function SearchPage() {
-  const [chatRows, projectRows, assistantRows] = await Promise.all([
-    listChats().catch(() => [] as ChatRow[]),
-    listProjects().catch(() => [] as ProjectRow[]),
-    listAssistants().catch(() => [] as AssistantRow[]),
+  const [chatRes, projectRes, assistantRes] = await Promise.all([
+    listChats().catch(() => ({ ok: false }) as const),
+    listProjects().catch(() => ({ ok: false }) as const),
+    listAssistants().catch(() => ({ ok: false }) as const),
   ]);
+
+  const chatRows: ChatRow[] = chatRes.ok ? chatRes.value : [];
+  const projectRows: ProjectRow[] = projectRes.ok ? projectRes.value : [];
+  const assistantRows: AssistantRow[] = assistantRes.ok
+    ? assistantRes.value
+    : [];
 
   const chats = chatRows.map((row) => ({
     id: row.id,

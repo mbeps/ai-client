@@ -4,6 +4,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { TransformRunRow } from "@/types/transform/transform-run-row";
 
 /**
@@ -13,24 +17,22 @@ import type { TransformRunRow } from "@/types/transform/transform-run-row";
  * Runs on server only — invoked from client via Server Action.
  *
  * @param agentId - UUID of the transform agent; must be owned by the authenticated user.
- * @returns Array of runs for the specified agent sorted by createdAt descending; empty array if no runs exist.
- * @throws Error if session is not authenticated.
- * @throws Error if database query fails due to connection issues.
- * @see getTransformRun to fetch details for a specific run.
+ * @returns Array of runs for the specified agent sorted by createdAt descending.
  * @author Maruf Bepary
  */
-export async function listTransformRuns(
-  agentId: string,
-): Promise<TransformRunRow[]> {
-  const session = await requireSession();
-  return db
-    .select()
-    .from(transformRun)
-    .where(
-      and(
-        eq(transformRun.agentId, agentId),
-        eq(transformRun.userId, session.user.id),
-      ),
-    )
-    .orderBy(desc(transformRun.createdAt));
-}
+export const listTransformRuns = defineAction(
+  async (agentId: string): Promise<Result<TransformRunRow[], CommonError>> => {
+    const session = await requireSession();
+    const rows = await db
+      .select()
+      .from(transformRun)
+      .where(
+        and(
+          eq(transformRun.agentId, agentId),
+          eq(transformRun.userId, session.user.id),
+        ),
+      )
+      .orderBy(desc(transformRun.createdAt));
+    return ok(rows);
+  },
+);

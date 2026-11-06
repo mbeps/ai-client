@@ -5,9 +5,15 @@ import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schemas/chat-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import { persistMessageSchema } from "@/schemas/chat/chat";
+import type { CommonError } from "@/types/error/common-error";
 import type { MessageRow } from "@/types/message/message-row";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "actions", "messages"]);
 
@@ -96,74 +102,102 @@ function mergeConflictMetadata(
  *
  * @param chatId - The ID of the chat the message belongs to.
  * @param msg - The message data to persist.
- * @returns The persisted message row.
- * @throws Error if session is not authenticated (requireSession call fails).
- * @throws Error if chatId is not a valid UUID format.
- * @throws ZodError if message data fails schema validation (invalid role, content, etc.).
- * @throws Error if chat does not exist or user does not own it (ownership check enforced via session).
- * @throws Error if database insertion fails due to constraints or connection issues.
+ * @returns Result containing the persisted message row.
+ * @author Maruf Bepary
  */
-export async function persistMessage(
-  chatId: string,
-  msg: z.infer<typeof persistMessageSchema>,
-): Promise<MessageRow> {
-  const session = await requireSession();
+export const persistMessage = defineAction(
+  async (
+    chatId: string,
+    msg: z.infer<typeof persistMessageSchema>,
+  ): Promise<Result<MessageRow, CommonError>> => {
+    const session = await requireSession();
 
-  // Validate inputs
-  const validatedChatId = z.string().uuid().parse(chatId);
-  const validatedMsg = persistMessageSchema.parse(msg);
+    const parsedChatId = z.string().uuid().safeParse(chatId);
+    const parsedMsg = persistMessageSchema.safeParse(msg);
 
-  const [chatRow] = await db
-    .select({ id: chat.id })
-    .from(chat)
-    .where(and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)));
+    if (!parsedChatId.success || !parsedMsg.success) {
+      const issues: string[] = [];
+      if (!parsedChatId.success) {
+        issues.push("Invalid chat ID format");
+      }
+      if (!parsedMsg.success) {
+        issues.push(
+          ...parsedMsg.error.issues.map(
+            (i) => `${i.path.join(".")}: ${i.message}`,
+          ),
+        );
+      }
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: issues[0],
+        issues,
+      });
+    }
 
-  if (!chatRow) throw new Error("Not Found");
+    const validatedChatId = parsedChatId.data;
+    const validatedMsg = parsedMsg.data;
 
-  const existingRows = await db
-    .select({
-      id: message.id,
-      metadata: message.metadata,
-    })
-    .from(message)
-    .where(eq(message.id, validatedMsg.id));
+    const [chatRow] = await db
+      .select({ id: chat.id })
+      .from(chat)
+      .where(
+        and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+      );
 
-  const existingMessage = Array.isArray(existingRows) ? existingRows[0] : null;
-  const metadataToSave = mergeConflictMetadata(
-    existingMessage?.metadata,
-    validatedMsg.metadata,
-  );
+    if (!chatRow) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
 
-  const [newMessage] = await db
-    .insert(message)
-    .values({
-      id: validatedMsg.id,
-      chatId: validatedChatId,
-      role: validatedMsg.role,
-      content: validatedMsg.content,
-      parentId: validatedMsg.parentId,
-      metadata: metadataToSave,
-    })
-    .onConflictDoUpdate({
-      target: message.id,
-      set: {
+    const existingRows = await db
+      .select({
+        id: message.id,
+        metadata: message.metadata,
+      })
+      .from(message)
+      .where(eq(message.id, validatedMsg.id));
+
+    const existingMessage = Array.isArray(existingRows)
+      ? existingRows[0]
+      : null;
+    const metadataToSave = mergeConflictMetadata(
+      existingMessage?.metadata,
+      validatedMsg.metadata,
+    );
+
+    const [newMessage] = await db
+      .insert(message)
+      .values({
+        id: validatedMsg.id,
+        chatId: validatedChatId,
+        role: validatedMsg.role,
         content: validatedMsg.content,
+        parentId: validatedMsg.parentId,
         metadata: metadataToSave,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+      })
+      .onConflictDoUpdate({
+        target: message.id,
+        set: {
+          content: validatedMsg.content,
+          metadata: metadataToSave,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
-  await db
-    .update(chat)
-    .set({ currentLeafId: newMessage.id, updatedAt: new Date() })
-    .where(eq(chat.id, validatedChatId));
+    await db
+      .update(chat)
+      .set({ currentLeafId: newMessage.id, updatedAt: new Date() })
+      .where(eq(chat.id, validatedChatId));
 
-  log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
-    id: newMessage.id,
-    chatId: validatedChatId,
-    role: newMessage.role,
-  });
+    log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
+      id: newMessage.id,
+      chatId: validatedChatId,
+      role: newMessage.role,
+    });
 
-  return newMessage as MessageRow;
-}
+    return ok(newMessage as MessageRow);
+  },
+);

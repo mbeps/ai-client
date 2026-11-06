@@ -70,7 +70,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ModelDuplicateImportError } from "@/lib/error/model-duplicate-import-error";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { importProviderRegistry } from "@/actions/providers/import-registry";
 
 describe("importProviderRegistry action", () => {
@@ -84,7 +84,8 @@ describe("importProviderRegistry action", () => {
   });
 
   it("rejects malformed registry payloads", async () => {
-    await expect(importProviderRegistry({} as any)).rejects.toThrow();
+    const res = await importProviderRegistry({} as any);
+    expect(res.ok).toBe(false);
   });
 
   it("imports new providers and models when none exist", async () => {
@@ -143,9 +144,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 1,
       providersUpdated: 0,
       modelsCreated: 2,
@@ -194,9 +197,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 0,
       providersUpdated: 1,
       modelsCreated: 1,
@@ -243,9 +248,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 0,
       providersUpdated: 1,
       modelsCreated: 1,
@@ -294,9 +301,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 0,
       providersUpdated: 1,
       modelsCreated: 1,
@@ -346,9 +355,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 1,
       providersUpdated: 0,
       modelsCreated: 1,
@@ -399,8 +410,10 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
-    expect(result.providersUpdated).toBe(1);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.providersUpdated).toBe(1);
   });
 
   it("creates a new provider defaulting isEnabled to true when omitted", async () => {
@@ -439,9 +452,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    const result = await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(result).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 1,
       providersUpdated: 0,
       modelsCreated: 1,
@@ -494,9 +509,11 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    await expect(importProviderRegistry(payload)).rejects.toThrow(
-      ModelDuplicateImportError,
-    );
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe(ERROR_CODE.MODEL_DUPLICATE_IMPORT);
+    }
   });
 
   it("executes the entire import inside a db transaction", async () => {
@@ -517,7 +534,8 @@ describe("importProviderRegistry action", () => {
       ],
     };
 
-    await importProviderRegistry(payload);
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
     expect(transactionMock).toHaveBeenCalledTimes(1);
   });
 
@@ -561,7 +579,9 @@ describe("importProviderRegistry action", () => {
     };
 
     const res = await importProviderRegistry(payload);
-    expect(res.providersUpdated).toBe(1);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.providersUpdated).toBe(1);
     expect(capturedUpdateValues).toBeDefined();
     expect(capturedUpdateValues.baseUrl).toBe("https://new.custom.com/v1");
     expect(capturedUpdateValues.headers).toBe("enc-existing-headers");
@@ -609,7 +629,9 @@ describe("importProviderRegistry action", () => {
     };
 
     const res = await importProviderRegistry(payload);
-    expect(res.providersUpdated).toBe(1);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.providersUpdated).toBe(1);
     expect(capturedUpdateValues.name).toBe("NewName");
   });
 
@@ -666,8 +688,10 @@ describe("importProviderRegistry action", () => {
     };
 
     const res = await importProviderRegistry(payload);
-    expect(res.providersCreated).toBe(2);
-    expect(res.providersUpdated).toBe(0);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.providersCreated).toBe(2);
+    expect(res.value.providersUpdated).toBe(0);
   });
 
   it("does not add to touchedProviderIds when the provider write returns no row", async () => {
@@ -702,8 +726,10 @@ describe("importProviderRegistry action", () => {
     };
 
     const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
 
-    expect(res).toEqual({
+    expect(res.value).toEqual({
       providersCreated: 2,
       providersUpdated: 0,
       modelsCreated: 0,
@@ -768,7 +794,24 @@ describe("importProviderRegistry action", () => {
     };
 
     const res = await importProviderRegistry(payload);
-    expect(res.providersCreated).toBe(1);
-    expect(res.providersUpdated).toBe(1);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.providersCreated).toBe(1);
+    expect(res.value.providersUpdated).toBe(1);
+  });
+
+  it("handles unexpected error thrown during transaction via defineAction", async () => {
+    transactionMock.mockRejectedValueOnce(new Error("Unexpected DB connection crash"));
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error.code).toBe("INTERNAL");
   });
 });

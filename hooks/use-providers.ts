@@ -57,7 +57,11 @@ export function useProviders(): UseProvidersResult {
       try {
         const data = await fetchProviderRegistryWithCache(
           "providers",
-          () => listProviders(),
+          async () => {
+            const res = await listProviders();
+            if (!res.ok) throw new Error(res.error.message);
+            return res.value;
+          },
           { force: force ?? false },
         );
         setProviders(data);

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { exportProviderRegistry } from "@/actions/providers/export-registry";
 import { importProviderRegistry } from "@/actions/providers/import-registry";
 import { Button } from "@/components/ui/button";
+import { useApiError } from "@/hooks/use-api-error";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -53,12 +54,17 @@ export function ImportExportPanel({
 }: ImportExportPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const { handleApiError } = useApiError();
 
   const exportAll = async (): Promise<void> => {
     setIsBusy(true);
     try {
-      const payload = await exportProviderRegistry();
-      downloadJson("provider-registry.json", payload);
+      const res = await exportProviderRegistry();
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to export registry");
+        return;
+      }
+      downloadJson("provider-registry.json", res.value);
       toast.success("Registry exported");
     } catch (error) {
       toast.error(
@@ -75,12 +81,16 @@ export function ImportExportPanel({
   ): Promise<void> => {
     setIsBusy(true);
     try {
-      const payload = await exportProviderRegistry({
+      const res = await exportProviderRegistry({
         providerIds: [providerId],
       });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to export provider");
+        return;
+      }
       downloadJson(
         `provider-${providerName.toLowerCase().replaceAll(" ", "-")}.json`,
-        payload,
+        res.value,
       );
       toast.success(`Exported ${providerName}`);
     } catch (error) {
@@ -97,7 +107,14 @@ export function ImportExportPanel({
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as unknown;
-      const result = await importProviderRegistry(parsed as never);
+      const res = await importProviderRegistry(parsed as never);
+      if (!res.ok) {
+        if (!handleApiError(res.error)) {
+          toast.error(res.error.message || "Failed to import registry");
+        }
+        return;
+      }
+      const result = res.value;
       invalidateProviderRegistryCache();
       await onRefresh();
 

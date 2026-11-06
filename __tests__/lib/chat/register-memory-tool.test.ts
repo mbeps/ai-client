@@ -36,8 +36,11 @@ describe("registerMemoryTool", () => {
 
   it("executes save_memory and calls saveMemoryForUser with trimmed content", async () => {
     mockSaveMemoryForUser.mockResolvedValue({
-      id: "mem-123",
-      content: "User prefers bun",
+      ok: true,
+      value: {
+        id: "mem-123",
+        content: "User prefers bun",
+      },
     });
 
     const tools = registerMemoryTool("user-1");
@@ -66,6 +69,21 @@ describe("registerMemoryTool", () => {
       content: "",
     });
     expect(resultEmpty.success).toBe(false);
+  });
+
+  it("returns error when saveMemoryForUser returns ok: false", async () => {
+    mockSaveMemoryForUser.mockResolvedValue({
+      ok: false,
+      error: { code: "FORBIDDEN", message: "Memory is disabled for this user" },
+    });
+
+    const tools = registerMemoryTool("user-1");
+    const result = await tools.save_memory.execute({
+      content: "Valid preference",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Memory is disabled for this user");
   });
 
   it("catches Error thrown by saveMemoryForUser and returns error message", async () => {

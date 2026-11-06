@@ -58,7 +58,10 @@ describe("toggleMemoryEnabled", () => {
         memoryEnabled: false,
       }),
     );
-    expect(result.memoryEnabled).toBe(false);
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({ memoryEnabled: false }),
+    });
   });
 
   it("updates memoryEnabled to true", async () => {
@@ -79,7 +82,10 @@ describe("toggleMemoryEnabled", () => {
         memoryEnabled: true,
       }),
     );
-    expect(result.memoryEnabled).toBe(true);
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({ memoryEnabled: true }),
+    });
   });
 });
 

@@ -83,6 +83,14 @@ describe("EditServerForm — header masking (SEC-07)", () => {
 describe("EditServerForm — submission", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(updateInstalledServerHeaders).mockResolvedValue({
+      ok: true,
+      value: undefined,
+    } as any);
+    vi.mocked(updateMcpServer).mockResolvedValue({
+      ok: true,
+      value: undefined,
+    } as any);
   });
 
   it("submits installed server by updating headers and reloading store", async () => {

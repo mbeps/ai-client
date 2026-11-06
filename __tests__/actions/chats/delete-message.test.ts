@@ -98,23 +98,30 @@ describe("deleteMessage action", () => {
     // 4. Delete messages & update chat
     chainable.where.mockResolvedValue(undefined);
 
-    await deleteMessage(CHAT_ID, MSG_ID_1, NEW_LEAF_ID);
+    const res = await deleteMessage(CHAT_ID, MSG_ID_1, NEW_LEAF_ID);
+    expect(res.ok).toBe(true);
 
     expect(chainable.delete).toHaveBeenCalled();
     expect(chainable.update).toHaveBeenCalled();
     expect(sweepMock).toHaveBeenCalledWith(["attachments/user-1/file1.txt"]);
   });
 
-  it("throws 'Not Found' if chat does not exist or user does not own it", async () => {
+  it("returns NOT_FOUND if chat does not exist or user does not own it", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(deleteMessage(CHAT_ID, MSG_ID_1, null)).rejects.toThrow(
-      "Not Found",
-    );
+    const res = await deleteMessage(CHAT_ID, MSG_ID_1, null);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("NOT_FOUND");
+    }
   });
 
-  it("throws ZodError if IDs are invalid UUIDs", async () => {
-    await expect(deleteMessage("not-uuid", MSG_ID_1, null)).rejects.toThrow();
+  it("returns INVALID_INPUT if IDs are invalid UUIDs", async () => {
+    const res = await deleteMessage("not-uuid", MSG_ID_1, null);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("INVALID_INPUT");
+    }
   });
 
   it("aborts active streams via abortChatStream when a stream is active", async () => {

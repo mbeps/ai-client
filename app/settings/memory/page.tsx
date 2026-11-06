@@ -260,7 +260,11 @@ function useMemorySelection(
     const idsToDelete = [...targetDeleteIds];
     startDeleteTransition(async () => {
       try {
-        await deleteMemories({ ids: idsToDelete });
+        const res = await deleteMemories({ ids: idsToDelete });
+        if (!res.ok) {
+          toast.error(res.error.message || "Failed to delete memories");
+          return;
+        }
         removeMemoriesFromStore(idsToDelete);
         setSelectedIds((prev) => {
           const next = new Set(prev);
@@ -353,7 +357,12 @@ export default function MemoryPage() {
     startToggleTransition(async () => {
       try {
         updateUserSettingsState({ memoryEnabled: checked });
-        await toggleMemoryEnabled(checked);
+        const res = await toggleMemoryEnabled(checked);
+        if (!res.ok) {
+          updateUserSettingsState({ memoryEnabled: !checked });
+          toast.error(res.error.message || "Failed to update memory setting");
+          return;
+        }
         toast.success(checked ? "Memory enabled" : "Memory disabled");
       } catch (err) {
         updateUserSettingsState({ memoryEnabled: !checked });

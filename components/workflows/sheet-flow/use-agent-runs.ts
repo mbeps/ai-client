@@ -29,7 +29,11 @@ export function useAgentRuns(
       setIsLoadingRuns(true);
       try {
         const result = await listTransformRuns(id);
-        if (mounted) setRuns(result);
+        if (!result.ok) {
+          handleApiError(result.error, "Failed to load runs");
+          return;
+        }
+        if (mounted) setRuns(result.value);
       } catch (err) {
         handleApiError(err, "Failed to load runs");
       } finally {

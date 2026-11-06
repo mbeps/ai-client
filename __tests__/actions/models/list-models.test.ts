@@ -42,39 +42,39 @@ describe("listModels action", () => {
     const mockModels = [{ id: "m-1", label: "Model 1", providerName: "OpenAI" }];
     chainable.orderBy.mockResolvedValueOnce(mockModels);
 
-    const models = await listModels();
-    expect(models).toEqual(mockModels);
+    const res = await listModels();
+    expect(res).toEqual({ ok: true, value: mockModels });
   });
 
   it("filters models by chat type and enabled true", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
 
-    const models = await listModels({ type: "chat", isEnabled: true, providerId: "prov-1" });
-    expect(models).toEqual([]);
+    const res = await listModels({ type: "chat", isEnabled: true, providerId: "prov-1" });
+    expect(res).toEqual({ ok: true, value: [] });
     expect(chainable.where).toHaveBeenCalled();
   });
 
   it("filters models by embedding type and enabled false", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
 
-    const models = await listModels({ type: "embedding", isEnabled: false });
-    expect(models).toEqual([]);
+    const res = await listModels({ type: "embedding", isEnabled: false });
+    expect(res).toEqual({ ok: true, value: [] });
     expect(chainable.where).toHaveBeenCalled();
   });
 
   it("filters models by both type", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
 
-    const models = await listModels({ type: "both" });
-    expect(models).toEqual([]);
+    const res = await listModels({ type: "both" });
+    expect(res).toEqual({ ok: true, value: [] });
     expect(chainable.where).toHaveBeenCalled();
   });
 
   it("handles filters object with undefined values", async () => {
     chainable.orderBy.mockResolvedValueOnce([]);
 
-    const models = await listModels({});
-    expect(models).toEqual([]);
+    const res = await listModels({});
+    expect(res).toEqual({ ok: true, value: [] });
     expect(chainable.where).toHaveBeenCalled();
   });
 });

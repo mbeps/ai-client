@@ -1,5 +1,6 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { MCP_SETTINGS } from "@/config/mcp";
+import { AppException } from "@/lib/error/app-exception";
 import { getLogger } from "@/lib/logger";
 import { buildTransport } from "@/lib/mcp/build-transport";
 import { withTimeout } from "@/lib/mcp/with-timeout";
@@ -20,7 +21,11 @@ export async function createConnectedClient(
   server: McpServerConfig,
   label?: string,
 ): Promise<Awaited<ReturnType<typeof createMCPClient>>> {
-  const transport = await buildTransport(server);
+  const transportRes = await buildTransport(server);
+  if (!transportRes.ok) {
+    throw new AppException(transportRes.error);
+  }
+  const transport = transportRes.value;
   return withTimeout(
     createMCPClient({
       transport,

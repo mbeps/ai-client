@@ -1,9 +1,14 @@
 import type { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 import { decrypt } from "@/lib/encryption/decrypt";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { safeMcpFetch } from "@/lib/mcp/safe-mcp-fetch";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
+import type { Result } from "@/types/result";
 
 /**
  * Represents mcptransport.
@@ -31,15 +36,21 @@ const headersSchema = z.record(z.string(), z.string());
  */
 export async function buildTransport(
   server: McpServerConfig,
-): Promise<MCPTransport> {
+): Promise<Result<MCPTransport, CommonError>> {
   const label = server.name ?? server.url ?? "unknown";
 
-  if (!server.url) throw new Error(`HTTP server "${label}" requires a URL`);
+  if (!server.url) {
+    return fail({
+      code: ERROR_CODE.INVALID_INPUT,
+      message: `HTTP server "${label}" requires a URL`,
+    });
+  }
 
   if (await isBlockedUrl(server.url)) {
-    throw new Error(
-      `HTTP MCP server URL "${server.url}" points to a blocked/internal address`,
-    );
+    return fail({
+      code: ERROR_CODE.FORBIDDEN,
+      message: `HTTP MCP server URL "${server.url}" points to a blocked/internal address`,
+    });
   }
 
   let headers: Record<string, string> | undefined;
@@ -53,16 +64,19 @@ export async function buildTransport(
     try {
       headers = headersSchema.parse(JSON.parse(rawHeaders));
     } catch {
-      throw new Error(`Invalid headers JSON for "${label}"`);
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: `Invalid headers JSON for "${label}"`,
+      });
     }
   }
 
-  return {
+  return ok({
     type: "http" as const,
     url: server.url,
     // Safe redirect handling with SSRF re-validation on every redirect hop.
     redirect: "follow" as const,
     fetch: safeMcpFetch,
     ...(headers && { headers }),
-  };
+  });
 }

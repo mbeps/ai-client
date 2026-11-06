@@ -182,19 +182,23 @@ describe("McpServerPage (Connector Detail Page)", () => {
       mcpServers: [mockServer],
     });
     vi.mocked(toggleMcpServer).mockResolvedValueOnce({
-      id: "server-1",
-      userId: "user-1",
-      name: "GitHub Tools",
-      url: "https://mcp.github.com/sse",
-      headers: null,
-      enabled: false,
-      isPublic: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    vi.mocked(listMcpServers).mockResolvedValueOnce([
-      { ...mockServer, enabled: false },
-    ]);
+      ok: true,
+      value: {
+        id: "server-1",
+        userId: "user-1",
+        name: "GitHub Tools",
+        url: "https://mcp.github.com/sse",
+        headers: null,
+        enabled: false,
+        isPublic: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    } as any);
+    vi.mocked(listMcpServers).mockResolvedValueOnce({
+      ok: true,
+      value: [{ ...mockServer, enabled: false }],
+    } as any);
 
     render(<McpServerPage />);
 
@@ -219,7 +223,7 @@ describe("McpServerPage (Connector Detail Page)", () => {
 
   it("triggers notFound() when loadMcpServers completes and server is not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(listMcpServers).mockResolvedValue([]);
+    vi.mocked(listMcpServers).mockResolvedValue({ ok: true, value: [] } as any);
 
     render(
       <TestErrorBoundary>

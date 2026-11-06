@@ -49,12 +49,17 @@ describe("toggleProvider action", () => {
   it("throws NotFound if provider does not exist", async () => {
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(toggleProvider("prov-1", true)).rejects.toThrow("Not Found");
+    const res = await toggleProvider("prov-1", true);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toBe("Not Found");
+    }
   });
 
   it("toggles provider enabled flag successfully", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: "prov-1", isEnabled: true }]);
 
-    await expect(toggleProvider("prov-1", true)).resolves.toBeUndefined();
+    const res = await toggleProvider("prov-1", true);
+    expect(res).toEqual({ ok: true, value: undefined });
   });
 });

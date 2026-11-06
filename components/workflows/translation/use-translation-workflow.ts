@@ -70,9 +70,9 @@ export function useTranslationWorkflow() {
   useEffect(() => {
     let mounted = true;
     getLatestTranslationAction()
-      .then((latest) => {
-        if (!mounted || !latest) return;
-        applyHydratedTranslation(latest, {
+      .then((res) => {
+        if (!mounted || !res.ok || !res.value) return;
+        applyHydratedTranslation(res.value, {
           setActiveTranslationId,
           setSourceText: form.setSourceText,
           setTranslatedText: form.setTranslatedText,

@@ -16,7 +16,8 @@ import { ROUTES } from "@/config/routes";
  * @author Maruf Bepary
  */
 export default async function TransformAgentsPage() {
-  const rows = await listTransformAgents();
+  const res = await listTransformAgents();
+  const rows = res.ok ? res.value : [];
   const agents = rows.map((row) => {
     let steps = [];
     try {

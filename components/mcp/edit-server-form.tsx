@@ -64,10 +64,18 @@ export function EditServerForm({ server }: EditServerFormProps) {
   async function onSubmit(data: UpdateMcpServer) {
     try {
       if (server.isInstalled) {
-        await updateInstalledServerHeaders(server.id, data.headers);
+        const res = await updateInstalledServerHeaders(server.id, data.headers);
+        if (!res.ok) {
+          toast.error(res.error.message || "Failed to update headers");
+          return;
+        }
         toast.success("Custom headers updated");
       } else {
-        await updateMcpServerAction(server.id, data);
+        const res = await updateMcpServerAction(server.id, data);
+        if (!res.ok) {
+          toast.error(res.error.message || "Failed to update server");
+          return;
+        }
         toast.success("Server configuration updated");
       }
       await loadMcpServers();

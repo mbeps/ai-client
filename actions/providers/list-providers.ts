@@ -4,7 +4,11 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { defineAction } from "@/lib/factories/define-action";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+import type { Result } from "@/types/result";
 
 /**
  * Fetches all AI provider configurations for the authenticated user.
@@ -12,25 +16,25 @@ import type { AiProviderRow } from "@/types/provider/ai-provider-row";
  * Sensitive fields (encrypted API keys, headers) are returned encrypted — use decodeProviderRecord to decrypt.
  * Runs on server only — invoked from client via Server Action.
  *
- * @returns Array of provider records sorted by name; empty array if no providers configured.
- * @throws Error if session is not authenticated.
- * @throws Error if database query fails due to connection issues.
- * @see createProvider to add a new provider.
- * @see updateProvider to modify provider settings.
+ * @returns Result containing array of provider records sorted by name.
  * @author Maruf Bepary
  */
-export async function listProviders(): Promise<AiProviderRow[]> {
-  const session = await requireSession();
+export const listProviders = defineAction(
+  async (): Promise<Result<AiProviderRow[], CommonError>> => {
+    const session = await requireSession();
 
-  const rows = await db
-    .select()
-    .from(aiProvider)
-    .where(eq(aiProvider.userId, session.user.id))
-    .orderBy(asc(aiProvider.name));
+    const rows = await db
+      .select()
+      .from(aiProvider)
+      .where(eq(aiProvider.userId, session.user.id))
+      .orderBy(asc(aiProvider.name));
 
-  return rows.map((r) => ({
-    ...r,
-    apiKey: r.apiKey ? "[REDACTED]" : null,
-    headers: r.headers ? "[REDACTED]" : null,
-  }));
-}
+    return ok(
+      rows.map((r) => ({
+        ...r,
+        apiKey: r.apiKey ? "[REDACTED]" : null,
+        headers: r.headers ? "[REDACTED]" : null,
+      })),
+    );
+  },
+);

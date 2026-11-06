@@ -4,84 +4,88 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
+import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
-
-const log = getLogger(["app", "actions", "model"]);
-
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
 import {
   type UpdateModelInput,
   updateModelSchema,
 } from "@/schemas/providers/provider-registry";
+import type { CommonError } from "@/types/error/common-error";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
+import type { Result } from "@/types/result";
+
+const log = getLogger(["app", "actions", "model"]);
 
 /**
  * Updates one or more AI models with partial field updates (label, type, context window, capabilities, enabled status).
  * Accepts a single modelId string or array of modelIds for batch updates.
  * Validates input against updateModelSchema and applies only non-undefined fields to database.
- * Logs update events for audit purposes.
  * Runs on server only — invoked from client via Server Action.
  *
  * @param modelIdOrIds - UUID of a single model or array of UUIDs to update; all must be owned by the authenticated user.
- * @param input - Partial model update object (any combination of label, modelType, contextWindow, embeddingDimensions, capabilities, isEnabled).
- * @returns Array of updated model records; empty array if modelIdOrIds is empty.
- * @throws Error if session is not authenticated.
- * @throws ZodError if data fails schema validation against updateModelSchema.
- * @throws Error if no matching models found for the given IDs (returns "Not Found").
- * @throws Error if database update fails due to constraints or connection issues.
- * @see createModel to register a new model.
+ * @param input - Partial model update object.
+ * @returns Result containing array of updated model records.
  * @author Maruf Bepary
  */
-export async function updateModels(
-  modelIdOrIds: string | string[],
-  input: UpdateModelInput,
-): Promise<AiModelRow[]> {
-  const session = await requireSession();
-  const parsed = updateModelSchema.parse(input);
+export const updateModels = defineAction(
+  async (
+    modelIdOrIds: string | string[],
+    input: UpdateModelInput,
+  ): Promise<Result<AiModelRow[], CommonError>> => {
+    const session = await requireSession();
+    const parsed = updateModelSchema.parse(input);
 
-  const ids = Array.isArray(modelIdOrIds) ? modelIdOrIds : [modelIdOrIds];
+    const ids = Array.isArray(modelIdOrIds) ? modelIdOrIds : [modelIdOrIds];
 
-  if (ids.length === 0) {
-    return [];
-  }
+    if (ids.length === 0) {
+      return ok([]);
+    }
 
-  const updated = await db
-    .update(aiModel)
-    .set({
-      ...(parsed.label !== undefined ? { label: parsed.label } : {}),
-      ...(parsed.modelType !== undefined
-        ? { modelType: parsed.modelType }
-        : {}),
-      contextWindow: parsed.contextWindow,
-      ...(parsed.embeddingDimensions !== undefined
-        ? { embeddingDimensions: parsed.embeddingDimensions }
-        : {}),
-      ...(parsed.capTools !== undefined ? { capTools: parsed.capTools } : {}),
-      ...(parsed.capVision !== undefined
-        ? { capVision: parsed.capVision }
-        : {}),
-      ...(parsed.capReasoning !== undefined
-        ? { capReasoning: parsed.capReasoning }
-        : {}),
-      ...(parsed.capStructuredOutput !== undefined
-        ? { capStructuredOutput: parsed.capStructuredOutput }
-        : {}),
-      ...(parsed.isEnabled !== undefined
-        ? { isEnabled: parsed.isEnabled }
-        : {}),
-      updatedAt: new Date(),
-    })
-    .where(and(inArray(aiModel.id, ids), eq(aiModel.userId, session.user.id)))
-    .returning();
+    const updated = await db
+      .update(aiModel)
+      .set({
+        ...(parsed.label !== undefined ? { label: parsed.label } : {}),
+        ...(parsed.modelType !== undefined
+          ? { modelType: parsed.modelType }
+          : {}),
+        contextWindow: parsed.contextWindow,
+        ...(parsed.embeddingDimensions !== undefined
+          ? { embeddingDimensions: parsed.embeddingDimensions }
+          : {}),
+        ...(parsed.capTools !== undefined ? { capTools: parsed.capTools } : {}),
+        ...(parsed.capVision !== undefined
+          ? { capVision: parsed.capVision }
+          : {}),
+        ...(parsed.capReasoning !== undefined
+          ? { capReasoning: parsed.capReasoning }
+          : {}),
+        ...(parsed.capStructuredOutput !== undefined
+          ? { capStructuredOutput: parsed.capStructuredOutput }
+          : {}),
+        ...(parsed.isEnabled !== undefined
+          ? { isEnabled: parsed.isEnabled }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(inArray(aiModel.id, ids), eq(aiModel.userId, session.user.id)))
+      .returning();
 
-  log.info("Models updated successfully (count: {count})", {
-    count: updated.length,
-    ids,
-    userId: session.user.id,
-  });
+    log.info("Models updated successfully (count: {count})", {
+      count: updated.length,
+      ids,
+      userId: session.user.id,
+    });
 
-  if (updated.length === 0) {
-    throw new Error("Not Found");
-  }
+    if (updated.length === 0) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Not Found",
+      });
+    }
 
-  return updated;
-}
+    return ok(updated);
+  },
+);

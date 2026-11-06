@@ -35,7 +35,7 @@ describe("createConnectedClient", () => {
     const mockClientPromise = Promise.resolve({ close: vi.fn() });
     const mockClient = { close: vi.fn() };
 
-    buildTransportMock.mockResolvedValueOnce(mockTransport);
+    buildTransportMock.mockResolvedValueOnce({ ok: true, value: mockTransport });
     createMCPClientMock.mockReturnValueOnce(mockClientPromise);
     withTimeoutMock.mockResolvedValueOnce(mockClient);
 
@@ -56,7 +56,7 @@ describe("createConnectedClient", () => {
 
   it("handles uncaught errors through onUncaughtError callback", async () => {
     const mockTransport = { type: "sse" };
-    buildTransportMock.mockResolvedValueOnce(mockTransport);
+    buildTransportMock.mockResolvedValueOnce({ ok: true, value: mockTransport });
     createMCPClientMock.mockReturnValueOnce(Promise.resolve({}));
     withTimeoutMock.mockResolvedValueOnce({});
 
@@ -74,7 +74,7 @@ describe("createConnectedClient", () => {
     const mockTransport = { type: "sse" };
     const mockClientPromise = Promise.resolve({});
 
-    buildTransportMock.mockResolvedValueOnce(mockTransport);
+    buildTransportMock.mockResolvedValueOnce({ ok: true, value: mockTransport });
     createMCPClientMock.mockReturnValueOnce(mockClientPromise);
     withTimeoutMock.mockResolvedValueOnce({});
 
@@ -85,6 +85,15 @@ describe("createConnectedClient", () => {
       expect.any(Number),
       "custom-connect-label",
     );
+  });
+
+  it("throws AppException when buildTransport returns ok: false", async () => {
+    buildTransportMock.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "FORBIDDEN", message: "SSRF blocked" },
+    });
+
+    await expect(createConnectedClient(server)).rejects.toThrow("SSRF blocked");
   });
 });
 

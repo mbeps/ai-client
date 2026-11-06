@@ -9,7 +9,7 @@ export type TranslationStreamEvent =
   | { type: "start"; translationId: string }
   | { type: "text-delta"; text: string }
   | { type: "finish"; translatedText: string }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; code?: string };
 
 /**
  * Realtime channel for streaming workflow translation tokens and completion status.

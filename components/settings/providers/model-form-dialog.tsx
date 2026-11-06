@@ -240,7 +240,7 @@ async function saveModelRecord(
   payload: ModelSavePayload,
 ): Promise<void> {
   if (isEdit && model) {
-    await updateModels(model.id, {
+    const res = await updateModels(model.id, {
       label: payload.label,
       modelType: payload.modelType,
       contextWindow: payload.contextWindow,
@@ -251,10 +251,16 @@ async function saveModelRecord(
       capStructuredOutput: payload.capStructuredOutput,
       isEnabled: payload.isEnabled,
     });
+    if (!res.ok) {
+      throw new Error(res.error.message || "Failed to update model");
+    }
     toast.success("Model updated");
     return;
   }
-  await createModel(payload);
+  const res = await createModel(payload);
+  if (!res.ok) {
+    throw new Error(res.error.message || "Failed to create model");
+  }
   toast.success("Model created");
 }
 

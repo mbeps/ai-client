@@ -172,11 +172,12 @@ function useSkillDirectoryState(
 
   const handleMoveFile = (sourcePath: string, targetFolder: string) => {
     try {
-      const { files: updated, newPath } = moveFile(
-        files,
-        sourcePath,
-        targetFolder,
-      );
+      const res = moveFile(files, sourcePath, targetFolder);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to move file");
+        return;
+      }
+      const { files: updated, newPath } = res.value;
       setFiles(updated);
       if (cleanPath(selectedFilePath) === cleanPath(sourcePath)) {
         setSelectedFilePath(newPath);
@@ -325,7 +326,11 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
     try {
       const filesToSave = updatedFiles ? updatedFiles : directory.files;
       const payload = buildSkillUpdatePayload(form, filesToSave);
-      await updateSkill(skillId, payload);
+      const res = await updateSkill(skillId, payload);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to save skill");
+        return;
+      }
 
       if (updatedFiles) directory.setFiles(updatedFiles);
       await loadSkills();
@@ -341,7 +346,12 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteSkill(skillId);
+      const res = await deleteSkill(skillId);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to delete skill");
+        setDeleting(false);
+        return;
+      }
       toast.success("Skill deleted");
       await loadSkills();
       router.refresh();
@@ -355,7 +365,12 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const { filename, base64 } = await exportSkillZip(skillId);
+      const res = await exportSkillZip(skillId);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to export skill bundle");
+        return;
+      }
+      const { filename, base64 } = res.value;
       downloadBase64Zip(filename, base64);
       toast.success("Skill package downloaded");
     } catch {

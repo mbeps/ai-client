@@ -41,11 +41,13 @@ import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
  * @author Maruf Bepary
  */
 async function resolveEmbeddingModelLabel(): Promise<string> {
-  const [settings, embeddingModels] = await Promise.all([
+  const [settingsRes, modelsRes] = await Promise.all([
     getUserSettings(),
     listModels({ type: "embedding", isEnabled: true }),
   ]);
 
+  const settings = settingsRes.ok ? settingsRes.value : null;
+  const embeddingModels = modelsRes.ok ? modelsRes.value : [];
   const defaultId = settings?.defaultEmbeddingModelId;
   const activeEmbedding =
     embeddingModels.find((m) => m.id === defaultId) || embeddingModels[0];
@@ -72,12 +74,12 @@ function useKnowledgebaseDetail(kbId: string) {
 
   const fetchKb = useCallback(async () => {
     try {
-      const [data, label] = await Promise.all([
+      const [res, label] = await Promise.all([
         getKnowledgebase(kbId),
         resolveEmbeddingModelLabel(),
       ]);
-      if (data) {
-        setKb(data);
+      if (res.ok) {
+        setKb(res.value);
       }
       setEmbeddingModelLabel(label);
     } catch (error) {
@@ -91,9 +93,13 @@ function useKnowledgebaseDetail(kbId: string) {
     if (kb?.indexStatus === "indexing") return;
 
     try {
-      await reindexKnowledgebase(kbId);
-      toast.success("Indexing started");
-      fetchKb();
+      const res = await reindexKnowledgebase(kbId);
+      if (res.ok) {
+        toast.success("Indexing started");
+        fetchKb();
+      } else {
+        toast.error(res.error.message || "Failed to start re-indexing");
+      }
     } catch (error) {
       toast.error("Failed to start re-indexing");
       logger.error("Knowledgebase error", error);
@@ -142,7 +148,11 @@ function useKnowledgebaseDocuments(
 
   const fetchDocuments = useCallback(() => {
     listDocuments(kbId)
-      .then(setDocuments)
+      .then((res) => {
+        if (res.ok) {
+          setDocuments(res.value);
+        }
+      })
       .catch(() => {});
   }, [kbId]);
 

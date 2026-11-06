@@ -41,12 +41,23 @@ export function useAgentRunDialog(params: UseAgentRunDialogParams) {
 
     setIsStartingRun(true);
     try {
-      const inputAttachmentIds = await uploadRunInputFiles(runFiles);
-      const run = await createTransformRun({
+      const uploadRes = await uploadRunInputFiles(runFiles);
+      if (!uploadRes.ok) {
+        handleApiError(uploadRes.error, "Failed to upload files");
+        return;
+      }
+      const inputAttachmentIds = uploadRes.value;
+
+      const res = await createTransformRun({
         agentId: id,
         dryRun,
         inputAttachmentIds,
       });
+      if (!res.ok) {
+        handleApiError(res.error, "Failed to start run");
+        return;
+      }
+      const run = res.value;
 
       toast.success("Run started successfully");
       setRunDialogOpen(false);

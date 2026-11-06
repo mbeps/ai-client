@@ -1,12 +1,14 @@
 import { clearInflightState } from "@/hooks/chat/stream/use-stream-inflight-state";
 import { ACCESS_OR_NOT_FOUND_PATTERNS } from "@/hooks/chat/stream/use-stream-types";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { logger } from "@/lib/logger";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 
 /**
  * Checks whether an error is a 404 or authorization/access failure.
+ * Supports Error instances, AppError objects, and Result failure shapes.
  *
  * @param err - Error instance or error payload to inspect
  * @returns True if error matches not found or access denied patterns
@@ -14,12 +16,41 @@ import type { Chat } from "@/types/chat/chat";
  */
 export function isAccessOrNotFoundError(err: unknown): boolean {
   if (!err) return false;
+  if (typeof err === "object") {
+    if ("code" in err) {
+      const code = (err as { code: unknown }).code;
+      if (
+        code === ERROR_CODE.NOT_FOUND ||
+        code === ERROR_CODE.UNAUTHORIZED ||
+        code === ERROR_CODE.FORBIDDEN
+      ) {
+        return true;
+      }
+    }
+    if (
+      "error" in err &&
+      err.error &&
+      typeof err.error === "object" &&
+      "code" in err.error
+    ) {
+      const code = (err.error as { code: unknown }).code;
+      if (
+        code === ERROR_CODE.NOT_FOUND ||
+        code === ERROR_CODE.UNAUTHORIZED ||
+        code === ERROR_CODE.FORBIDDEN
+      ) {
+        return true;
+      }
+    }
+  }
   const message =
     err instanceof Error
       ? err.message
-      : typeof err === "object" && "message" in err
-        ? String((err as { message: unknown }).message)
-        : "";
+      : typeof err === "string"
+        ? err
+        : typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "";
   return ACCESS_OR_NOT_FOUND_PATTERNS.some((pattern) =>
     message.includes(pattern),
   );

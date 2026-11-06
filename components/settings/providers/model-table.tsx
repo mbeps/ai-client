@@ -231,7 +231,10 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                 onToggleSelect={toggleSelectOne}
                 onToggleEnabled={(m, checked) =>
                   void runModelAction(m.id, async () => {
-                    await updateModels(m.id, { isEnabled: checked });
+                    const res = await updateModels(m.id, {
+                      isEnabled: checked,
+                    });
+                    if (!res.ok) throw new Error(res.error.message);
                   })
                 }
                 onEdit={(m) => {
@@ -268,7 +271,8 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         onConfirmDeleteModel={async () => {
           if (!modelToDelete) return;
           await runModelAction(modelToDelete.id, async () => {
-            await deleteModel(modelToDelete.id);
+            const res = await deleteModel(modelToDelete.id);
+            if (!res.ok) throw new Error(res.error.message);
             toast.success("Model deleted");
             setModelToDelete(null);
           });

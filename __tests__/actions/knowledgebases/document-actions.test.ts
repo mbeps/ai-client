@@ -97,9 +97,8 @@ describe("knowledgebase documents and CRUD actions", () => {
       ]);
       chainable.where.mockResolvedValueOnce(undefined);
 
-      await expect(
-        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
-      ).resolves.toBeUndefined();
+      const res = await deleteDocument({ kbId: KB_ID, documentId: DOC_ID });
+      expect(res).toEqual({ ok: true, value: undefined });
 
       expect(inngest.send).toHaveBeenCalledWith({
         name: "knowledgebase/document.cancel",
@@ -112,9 +111,11 @@ describe("knowledgebase documents and CRUD actions", () => {
     it("throws 'Not Found' when document does not exist or not owned by user", async () => {
       chainable.where.mockResolvedValueOnce([]);
 
-      await expect(
-        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
-      ).rejects.toThrow("Not Found");
+      const res = await deleteDocument({ kbId: KB_ID, documentId: DOC_ID });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.code).toBe("NOT_FOUND");
+      }
     });
 
     it("logs warning and still resolves when deletePointsByDocumentId fails with Error", async () => {
@@ -124,9 +125,8 @@ describe("knowledgebase documents and CRUD actions", () => {
       chainable.where.mockResolvedValueOnce(undefined);
       deletePointsByDocMock.mockRejectedValueOnce(new Error("Qdrant failure"));
 
-      await expect(
-        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
-      ).resolves.toBeUndefined();
+      const res = await deleteDocument({ kbId: KB_ID, documentId: DOC_ID });
+      expect(res).toEqual({ ok: true, value: undefined });
     });
 
     it("handles non-Error thrown by deletePointsByDocumentId gracefully", async () => {
@@ -136,9 +136,8 @@ describe("knowledgebase documents and CRUD actions", () => {
       chainable.where.mockResolvedValueOnce(undefined);
       deletePointsByDocMock.mockRejectedValueOnce("String error");
 
-      await expect(
-        deleteDocument({ kbId: KB_ID, documentId: DOC_ID }),
-      ).resolves.toBeUndefined();
+      const res = await deleteDocument({ kbId: KB_ID, documentId: DOC_ID });
+      expect(res).toEqual({ ok: true, value: undefined });
     });
   });
 
@@ -149,13 +148,17 @@ describe("knowledgebase documents and CRUD actions", () => {
       chainable.orderBy.mockResolvedValueOnce(mockDocs);
 
       const result = await listDocuments(KB_ID);
-      expect(result).toEqual(mockDocs);
+      expect(result).toEqual({ ok: true, value: mockDocs });
     });
 
     it("throws 'Not Found' when KB does not exist or not owned by user", async () => {
       chainable.where.mockResolvedValueOnce([]);
 
-      await expect(listDocuments(KB_ID)).rejects.toThrow("Not Found");
+      const result = await listDocuments(KB_ID);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe("NOT_FOUND");
+      }
     });
   });
 
@@ -165,7 +168,7 @@ describe("knowledgebase documents and CRUD actions", () => {
       chainable.orderBy.mockResolvedValueOnce(mockKbs);
 
       const result = await listKnowledgebases();
-      expect(result).toEqual(mockKbs);
+      expect(result).toEqual({ ok: true, value: mockKbs });
     });
   });
 
@@ -180,7 +183,7 @@ describe("knowledgebase documents and CRUD actions", () => {
       });
 
       expect(resolveEmbeddingMock).toHaveBeenCalledWith("user-1");
-      expect(result).toEqual(createdKb);
+      expect(result).toEqual({ ok: true, value: createdKb });
     });
 
     it("creates a knowledgebase with null description when omitted", async () => {
@@ -191,7 +194,7 @@ describe("knowledgebase documents and CRUD actions", () => {
         name: "New KB",
       });
 
-      expect(result).toEqual(createdKb);
+      expect(result).toEqual({ ok: true, value: createdKb });
     });
   });
 
@@ -205,7 +208,7 @@ describe("knowledgebase documents and CRUD actions", () => {
         description: "Updated",
       });
 
-      expect(result).toEqual(updatedKb);
+      expect(result).toEqual({ ok: true, value: updatedKb });
     });
 
     it("updates without description when only name provided", async () => {
@@ -216,7 +219,7 @@ describe("knowledgebase documents and CRUD actions", () => {
         name: "Updated KB",
       });
 
-      expect(result).toEqual(updatedKb);
+      expect(result).toEqual({ ok: true, value: updatedKb });
     });
 
     it("updates without name when only description provided", async () => {
@@ -227,7 +230,7 @@ describe("knowledgebase documents and CRUD actions", () => {
         description: "New desc",
       });
 
-      expect(result).toEqual(updatedKb);
+      expect(result).toEqual({ ok: true, value: updatedKb });
     });
   });
 });

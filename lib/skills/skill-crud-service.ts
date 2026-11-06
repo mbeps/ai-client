@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schemas/skill-schema";
+import { AppException } from "@/lib/error/app-exception";
 import { assertNameAvailable } from "@/lib/skills/skill-name-availability";
 import { resolveSkillRow } from "@/lib/skills/skill-service";
 import type { CreateSkillInput, UpdateSkillInput } from "@/schemas/skill/skill";
@@ -52,7 +53,10 @@ export async function createSkillForUser(
   userId: string,
   data: CreateSkillInput,
 ): Promise<SkillRow> {
-  await assertNameAvailable(userId, data.name);
+  const nameRes = await assertNameAvailable(userId, data.name);
+  if (!nameRes.ok) {
+    throw new AppException(nameRes.error);
+  }
   assertSkillBodyWithinBudget(data.content);
   if (data.files) {
     assertSkillBundleWithinBudget(data.files);
@@ -92,7 +96,10 @@ export async function updateSkillForUser(
   if (!existing) return null;
 
   if (data.name) {
-    await assertNameAvailable(userId, data.name, existing.id);
+    const nameRes = await assertNameAvailable(userId, data.name, existing.id);
+    if (!nameRes.ok) {
+      throw new AppException(nameRes.error);
+    }
   }
 
   if (data.content !== undefined) {

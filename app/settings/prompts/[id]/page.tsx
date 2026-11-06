@@ -77,11 +77,15 @@ export default function PromptDetailPage() {
   const handleSave = async (values: PromptFormValues) => {
     setSavingSettings(true);
     try {
-      await updatePrompt(promptId, {
+      const res = await updatePrompt(promptId, {
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
       });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to save prompt");
+        return;
+      }
       toast.success("Prompt saved");
       await loadPrompts();
       router.refresh();
@@ -95,7 +99,12 @@ export default function PromptDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deletePrompt(promptId);
+      const res = await deletePrompt(promptId);
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to delete prompt");
+        setDeleting(false);
+        return;
+      }
       toast.success("Prompt deleted");
       await loadPrompts();
       router.refresh();

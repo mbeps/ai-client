@@ -48,7 +48,7 @@ export default function NewProviderPage() {
           .filter(([k, v]) => k.length > 0 && v.length > 0),
       );
 
-      await createProvider({
+      const res = await createProvider({
         name: name.trim(),
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim().length > 0 ? apiKey.trim() : undefined,
@@ -56,6 +56,11 @@ export default function NewProviderPage() {
         requiresKey,
         isEnabled,
       });
+
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to create provider");
+        return;
+      }
 
       invalidateProviderRegistryCache();
       toast.success("Provider created");

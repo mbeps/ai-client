@@ -210,7 +210,9 @@ function useAssistantChats(assistantId: string) {
   // Load assistant-specific chats on mount
   useEffect(() => {
     if (chats.length === 0) {
-      listChats().then((rows) => loadChats(rows, []));
+      listChats().then((res) => {
+        if (res.ok) loadChats(res.value, []);
+      });
     }
   }, [chats.length, loadChats]);
 

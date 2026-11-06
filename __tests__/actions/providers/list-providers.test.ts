@@ -55,19 +55,22 @@ describe("listProviders action", () => {
     chainable.orderBy.mockResolvedValueOnce(provs);
 
     const res = await listProviders();
-    expect(res).toEqual([
-      {
-        id: "prov-1",
-        name: "OpenAI",
-        apiKey: "[REDACTED]",
-        headers: "[REDACTED]",
-      },
-      {
-        id: "prov-2",
-        name: "Ollama",
-        apiKey: null,
-        headers: null,
-      },
-    ]);
+    expect(res).toEqual({
+      ok: true,
+      value: [
+        {
+          id: "prov-1",
+          name: "OpenAI",
+          apiKey: "[REDACTED]",
+          headers: "[REDACTED]",
+        },
+        {
+          id: "prov-2",
+          name: "Ollama",
+          apiKey: null,
+          headers: null,
+        },
+      ],
+    });
   });
 });

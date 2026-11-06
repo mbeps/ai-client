@@ -95,7 +95,14 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
         1024,
       ),
     ]);
-    await expect(uploadRunInput(fd)).rejects.toThrow(/too many uploads/i);
+    const res = await uploadRunInput(fd);
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "RATE_LIMIT",
+        message: expect.stringMatching(/too many uploads/i),
+      },
+    });
     expect(uploadObject).not.toHaveBeenCalled();
   });
 
@@ -125,12 +132,26 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
 
   it("rejects non-spreadsheet file type (image/png)", async () => {
     const fd = makeFormData([makeFile("photo.png", "image/png", 1024)]);
-    await expect(uploadRunInput(fd)).rejects.toThrow(/not supported/i);
+    const res = await uploadRunInput(fd);
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "UNSUPPORTED_FILE_TYPE",
+        message: expect.stringMatching(/not supported/i),
+      },
+    });
   });
 
   it("rejects file with unknown mime type and reports 'unknown'", async () => {
     const fd = makeFormData([makeFile("data.unknown_ext", "", 1024)]);
-    await expect(uploadRunInput(fd)).rejects.toThrow('File type "unknown" is not supported');
+    const res = await uploadRunInput(fd);
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "UNSUPPORTED_FILE_TYPE",
+        message: 'File type "unknown" is not supported. Only spreadsheet files are allowed.',
+      },
+    });
   });
 
   it("rejects file over 50 MB", async () => {
@@ -141,9 +162,14 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
         MAX_SPREADSHEET_SIZE_BYTES + 1,
       ),
     ]);
-    await expect(uploadRunInput(fd)).rejects.toThrow(
-      /exceeds the maximum size/i,
-    );
+    const res = await uploadRunInput(fd);
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "FILE_TOO_LARGE",
+        message: expect.stringMatching(/exceeds the maximum size/i),
+      },
+    });
   });
 
   it("accepts a valid xlsx file", async () => {
@@ -155,12 +181,18 @@ describe("uploadRunInput — file type + size validation (T1.8)", () => {
       ),
     ]);
     const result = await uploadRunInput(fd);
-    expect(result).toEqual([{ id: "att-1", name: "test.xlsx" }]);
+    expect(result).toEqual({
+      ok: true,
+      value: [{ id: "att-1", name: "test.xlsx" }],
+    });
   });
 
   it("accepts a valid csv file", async () => {
     const fd = makeFormData([makeFile("data.csv", "text/csv", 2048)]);
     const result = await uploadRunInput(fd);
-    expect(result).toEqual([{ id: "att-1", name: "test.xlsx" }]);
+    expect(result).toEqual({
+      ok: true,
+      value: [{ id: "att-1", name: "test.xlsx" }],
+    });
   });
 });

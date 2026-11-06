@@ -55,7 +55,17 @@ export function ServerSettings({ serverId }: ServerSettingsProps) {
     const isInstalled = Boolean(server?.isInstalled);
     setDeleting(true);
     try {
-      await deleteMcpServer(serverId);
+      const res = await deleteMcpServer(serverId);
+      if (!res.ok) {
+        toast.error(
+          res.error.message ||
+            (isInstalled
+              ? "Failed to uninstall tool"
+              : "Failed to delete MCP server"),
+        );
+        setDeleting(false);
+        return;
+      }
       await loadMcpServers();
       toast.success(isInstalled ? "Tool uninstalled" : "MCP server deleted");
       router.refresh();

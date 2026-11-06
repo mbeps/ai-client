@@ -5,7 +5,7 @@ import { db } from "@/drizzle/db";
 import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
 import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
-import { classifyProviderError } from "@/lib/error/classify-provider-error";
+import { toAppError } from "@/lib/error/to-app-error";
 import { inngest } from "@/lib/inngest/client";
 import {
   type TranslationStreamEvent,
@@ -186,16 +186,18 @@ export const executeTranslationWorkflow = inngest.createFunction(
 
       return { success: true, translationId, translatedText: finalTranslated };
     } catch (error) {
-      const classified = classifyProviderError(error);
+      const appErr = toAppError(error);
       const errorMessage =
-        classified?.message ??
-        (error instanceof Error ? error.message : "Translation failed");
+        appErr.code === "INTERNAL" && error instanceof Error
+          ? error.message
+          : appErr.message;
 
       log.error(
         "Translation workflow failed (translationId: {translationId}): {error}",
         {
           translationId,
           error: errorMessage,
+          code: appErr.code,
         },
       );
 
@@ -210,6 +212,7 @@ export const executeTranslationWorkflow = inngest.createFunction(
       await emit({
         type: "error",
         message: errorMessage,
+        code: appErr.code,
       });
 
       throw error;

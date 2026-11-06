@@ -101,7 +101,15 @@ export function useStreamRealtimeChannel(
   const fetchChatToken = useCallback(async () => {
     if (!chatId) throw new Error("No chatId");
     try {
-      return await getChatRealtimeToken(chatId);
+      const res = await getChatRealtimeToken(chatId);
+      if (!res.ok) {
+        if (isAccessOrNotFoundError(res.error)) {
+          setChatNotFound(true);
+          resetStreamingState();
+        }
+        throw new Error(res.error.message);
+      }
+      return res.value;
     } catch (err: unknown) {
       if (isAccessOrNotFoundError(err)) {
         setChatNotFound(true);

@@ -39,7 +39,14 @@ export function registerMemoryTool(
         }
 
         try {
-          const memory = await saveMemoryForUser(userId, content);
+          const res = await saveMemoryForUser(userId, content);
+          if (!res.ok) {
+            return {
+              success: false,
+              error: res.error.message,
+            };
+          }
+          const memory = res.value;
           return {
             success: true,
             message: `Memory saved: "${memory.content}".`,

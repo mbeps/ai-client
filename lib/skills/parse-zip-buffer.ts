@@ -1,6 +1,12 @@
 import { inflateRawSync, inflateSync } from "node:zlib";
 import { SKILL_BUNDLE_MAX_BYTES } from "@/config/skills";
+import { AppException } from "@/lib/error/app-exception";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { getLogger } from "@/lib/logger";
+import { fail } from "@/lib/result/fail";
+import { ok } from "@/lib/result/ok";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 
 const log = getLogger(["app", "skills", "parser"]);
 
@@ -48,7 +54,10 @@ function decompressZipSlice(
           fileName,
           error: (err as Error).message,
         });
-        throw new Error("Invalid or oversized ZIP entry");
+        throw new AppException({
+          code: ERROR_CODE.INVALID_INPUT,
+          message: "Invalid or oversized ZIP entry",
+        });
       }
     }
   }
@@ -200,18 +209,32 @@ function readLocalHeaderEntriesFallback(buf: Buffer): ZipEntry[] {
  * to correctly handle streaming ZIPs, data descriptors, and standard Deflate compression.
  *
  * @param buffer - Buffer or Uint8Array of the ZIP archive.
- * @returns Parsed list of ZipEntry objects.
+ * @returns Result wrapping parsed list of ZipEntry objects.
  */
-export function parseZipBuffer(buffer: Buffer | Uint8Array): ZipEntry[] {
-  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+export function parseZipBuffer(
+  buffer: Buffer | Uint8Array,
+): Result<ZipEntry[], CommonError> {
+  try {
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
-  const eocdOffset = locateEocdOffset(buf);
-  if (eocdOffset !== -1) {
-    const entries = readCentralDirectoryEntries(buf, eocdOffset);
-    if (entries.length > 0) {
-      return entries;
+    const eocdOffset = locateEocdOffset(buf);
+    if (eocdOffset !== -1) {
+      const entries = readCentralDirectoryEntries(buf, eocdOffset);
+      if (entries.length > 0) {
+        return ok(entries);
+      }
     }
-  }
 
-  return readLocalHeaderEntriesFallback(buf);
+    const entries = readLocalHeaderEntriesFallback(buf);
+    return ok(entries);
+  } catch (err) {
+    if (err instanceof AppException) {
+      return fail(err.error);
+    }
+    return fail({
+      code: ERROR_CODE.INVALID_INPUT,
+      message:
+        err instanceof Error ? err.message : "Failed to parse ZIP buffer",
+    });
+  }
 }

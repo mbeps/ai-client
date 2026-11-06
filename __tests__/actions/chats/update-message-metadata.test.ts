@@ -86,12 +86,14 @@ describe("updateMessageMetadata action", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("throws 'Unauthorized' if message does not exist or user does not own chat", async () => {
+  it("returns UNAUTHORIZED if message does not exist or user does not own chat", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(
-      updateMessageMetadata(MESSAGE_ID, '{"foo":"bar"}'),
-    ).rejects.toThrow("Unauthorized");
+    const res = await updateMessageMetadata(MESSAGE_ID, '{"foo":"bar"}');
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("UNAUTHORIZED");
+    }
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

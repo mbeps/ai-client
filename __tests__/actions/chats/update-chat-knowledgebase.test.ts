@@ -55,9 +55,11 @@ describe("updateChatKnowledgebase action", () => {
     // chat update returning returns updated row
     chainable.returning.mockResolvedValueOnce([{ id: CHAT_ID }]);
 
-    await expect(
-      updateChatKnowledgebase({ chatId: CHAT_ID, knowledgebaseId: KB_ID }),
-    ).resolves.toBeUndefined();
+    const res = await updateChatKnowledgebase({
+      chatId: CHAT_ID,
+      knowledgebaseId: KB_ID,
+    });
+    expect(res).toEqual({ ok: true, value: undefined });
 
     expect(chainable.select).toHaveBeenCalled();
     expect(chainable.update).toHaveBeenCalled();
@@ -67,9 +69,11 @@ describe("updateChatKnowledgebase action", () => {
     // chat update returning returns updated row
     chainable.returning.mockResolvedValueOnce([{ id: CHAT_ID }]);
 
-    await expect(
-      updateChatKnowledgebase({ chatId: CHAT_ID, knowledgebaseId: null }),
-    ).resolves.toBeUndefined();
+    const res = await updateChatKnowledgebase({
+      chatId: CHAT_ID,
+      knowledgebaseId: null,
+    });
+    expect(res).toEqual({ ok: true, value: undefined });
 
     expect(chainable.select).not.toHaveBeenCalled();
     expect(chainable.update).toHaveBeenCalled();
@@ -78,25 +82,36 @@ describe("updateChatKnowledgebase action", () => {
   it("throws 'Not Found' when knowledgebase does not exist or not owned by user", async () => {
     chainable.where.mockResolvedValueOnce([]);
 
-    await expect(
-      updateChatKnowledgebase({ chatId: CHAT_ID, knowledgebaseId: KB_ID }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateChatKnowledgebase({
+      chatId: CHAT_ID,
+      knowledgebaseId: KB_ID,
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("NOT_FOUND");
+    }
   });
 
   it("throws 'Not Found' when chat update does not return any row", async () => {
     chainable.where.mockResolvedValueOnce([{ id: KB_ID }]);
     chainable.returning.mockResolvedValueOnce([]);
 
-    await expect(
-      updateChatKnowledgebase({ chatId: CHAT_ID, knowledgebaseId: KB_ID }),
-    ).rejects.toThrow("Not Found");
+    const res = await updateChatKnowledgebase({
+      chatId: CHAT_ID,
+      knowledgebaseId: KB_ID,
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("NOT_FOUND");
+    }
   });
 
   it("throws validation error for invalid input", async () => {
-    await expect(
-      // @ts-expect-error test invalid payload
-      updateChatKnowledgebase({ chatId: "invalid-id" }),
-    ).rejects.toThrow();
+    const res = await (updateChatKnowledgebase as any)({ chatId: "invalid-id" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("INVALID_INPUT");
+    }
   });
 });
 

@@ -226,7 +226,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       };
     });
     try {
-      await renameChatAction(id, title);
+      const res = await renameChatAction(id, title);
+      if (res?.ok === false) {
+        set((state) => ({
+          chats: createChatRollbackState(state.chats, id, previousChat),
+        }));
+      }
     } catch {
       set((state) => ({
         chats: createChatRollbackState(state.chats, id, previousChat),
@@ -247,7 +252,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       };
     });
     try {
-      await moveChatAction(id, projectId);
+      const res = await moveChatAction(id, projectId);
+      if (res?.ok === false) {
+        set((state) => ({
+          chats: createChatRollbackState(state.chats, id, previousChat),
+        }));
+      }
     } catch {
       set((state) => ({
         chats: createChatRollbackState(state.chats, id, previousChat),
@@ -256,7 +266,16 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   createChatDb: async (title, projectId, assistantId) => {
-    const row = await createChat(title, projectId, assistantId);
+    const res = await createChat(title, projectId, assistantId);
+    const row =
+      res && typeof res === "object" && "ok" in res
+        ? res.ok
+          ? res.value
+          : null
+        : (res as any);
+    if (!row) {
+      throw new Error((res as any)?.error?.message ?? "Failed to create chat");
+    }
     const newChat = buildNewChatFromRow(row);
     set((state) => ({ chats: { ...state.chats, [row.id]: newChat } }));
     return row.id;
@@ -269,7 +288,12 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       return { chats: rest };
     });
     try {
-      await deleteChat(chatId);
+      const res = await deleteChat(chatId);
+      if (res?.ok === false) {
+        set((state) => ({
+          chats: createChatRollbackState(state.chats, chatId, previousChat),
+        }));
+      }
     } catch {
       set((state) => ({
         chats: createChatRollbackState(state.chats, chatId, previousChat),
@@ -290,7 +314,15 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
       };
     });
     try {
-      await updateChatKnowledgebase({ chatId, knowledgebaseId: kbId });
+      const res = await updateChatKnowledgebase({
+        chatId,
+        knowledgebaseId: kbId,
+      });
+      if (res?.ok === false) {
+        set((state) => ({
+          chats: createChatRollbackState(state.chats, chatId, previousChat),
+        }));
+      }
     } catch {
       set((state) => ({
         chats: createChatRollbackState(state.chats, chatId, previousChat),
