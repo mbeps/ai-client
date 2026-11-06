@@ -112,4 +112,28 @@ describe("SkillFileEditor", () => {
     await user.click(deleteBtn);
     expect(handleDelete).toHaveBeenCalledTimes(1);
   });
+
+  it("switches file and renders new path when filePath and content change", () => {
+    const { rerender } = render(
+      <SkillFileEditor
+        filePath="SKILL.md"
+        content="# Primary instructions"
+        onChangeContent={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("SKILL.md")).toBeInTheDocument();
+    expect(screen.getByText("Primary Instructions")).toBeInTheDocument();
+
+    rerender(
+      <SkillFileEditor
+        filePath="references.md"
+        content="# References docs"
+        onChangeContent={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("references.md")).toBeInTheDocument();
+    expect(screen.getByText("Subfile")).toBeInTheDocument();
+  });
 });

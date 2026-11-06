@@ -7,16 +7,22 @@ vi.mock("katex/dist/katex.min.css", () => ({}));
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
 
-const { mockDocument } = vi.hoisted(() => ({
-  mockDocument: [
-    { id: "1", type: "paragraph", props: {}, content: [], children: [] },
-  ],
-}));
+const { mockDocument, mockReplaceBlocks, mockTryParseMarkdownToBlocks } =
+  vi.hoisted(() => ({
+    mockDocument: [
+      { id: "1", type: "paragraph", props: {}, content: [], children: [] },
+    ],
+    mockReplaceBlocks: vi.fn(),
+    mockTryParseMarkdownToBlocks: vi.fn(),
+  }));
 
 vi.mock("@blocknote/react", () => ({
   useCreateBlockNote: vi.fn().mockReturnValue({
     document: mockDocument,
     blocksToMarkdownLossy: vi.fn().mockResolvedValue("Updated BlockNote text"),
+    replaceBlocks: mockReplaceBlocks,
+    tryParseMarkdownToBlocks:
+      mockTryParseMarkdownToBlocks.mockResolvedValue(mockDocument),
   }),
 }));
 
@@ -152,5 +158,25 @@ describe("MarkdownTabEditor", () => {
       },
       { timeout: 1000 },
     );
+  });
+
+  it("updates BlockNote editor when value prop changes externally", async () => {
+    const { rerender } = render(
+      <MarkdownTabEditor value="# Initial content" onChange={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("blocknote-view")).toBeInTheDocument();
+    });
+
+    mockReplaceBlocks.mockClear();
+
+    rerender(
+      <MarkdownTabEditor value="# External update" onChange={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(mockReplaceBlocks).toHaveBeenCalled();
+    });
   });
 });

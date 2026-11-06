@@ -99,6 +99,7 @@ export function SkillFileEditor({
       {/* Editor component */}
       <div className="flex min-h-0 flex-1 flex-col">
         <MarkdownTabEditor
+          key={filePath}
           value={content}
           onChange={onChangeContent}
           className="flex h-full flex-1 flex-col"
