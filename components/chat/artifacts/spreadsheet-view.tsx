@@ -165,19 +165,36 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
     if (activeSheet.data.length === 0) return { headers: [], rows: [] };
 
     if (isAOA) {
-      const headerRow = activeSheet.data[0] as any[];
+      const headerRow = (activeSheet.data[0] as any[]) || [];
       const dataRows = activeSheet.data.slice(1);
 
-      const headers = headerRow.map((h, i) => {
-        const val = typeof h === "object" && h !== null ? h.v : h;
-        return String(val ?? `Column ${i + 1}`);
-      });
+      // Determine max columns across header row and all data rows
+      let colCount = headerRow.length;
+      for (const row of dataRows) {
+        if (Array.isArray(row) && row.length > colCount) {
+          colCount = row.length;
+        }
+      }
+
+      if (colCount === 0) return { headers: [], rows: [] };
+
+      const headers: { id: string; title: string }[] = [];
+      for (let i = 0; i < colCount; i++) {
+        const cell = headerRow[i];
+        const val =
+          cell && typeof cell === "object" && "v" in cell ? cell.v : cell;
+        const strVal = val != null ? String(val).trim() : "";
+        headers.push({
+          id: `col_${i}`,
+          title: strVal || `Column ${i + 1}`,
+        });
+      }
 
       const rows = dataRows.map((row) => {
         const obj: Record<string, any> = {};
-        headers.forEach((h, i) => {
-          obj[h] = row[i];
-        });
+        for (let i = 0; i < colCount; i++) {
+          obj[`col_${i}`] = Array.isArray(row) ? row[i] : undefined;
+        }
         return obj;
       });
 
@@ -186,12 +203,33 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
       // Array of Objects
       const keySet = new Set<string>();
       activeSheet.data.forEach((row: any) => {
-        Object.keys(row).forEach((key) => {
-          keySet.add(key);
-        });
+        if (row && typeof row === "object") {
+          Object.keys(row).forEach((key) => {
+            keySet.add(key);
+          });
+        }
       });
-      const headers = Array.from(keySet);
-      return { headers, rows: activeSheet.data };
+      const keys = Array.from(keySet);
+      if (keys.length === 0) return { headers: [], rows: [] };
+
+      const headers = keys.map((key, i) => {
+        const strVal = key.trim();
+        return {
+          id: `col_${i}`,
+          title: strVal || `Column ${i + 1}`,
+          key,
+        };
+      });
+
+      const rows = activeSheet.data.map((row: any) => {
+        const obj: Record<string, any> = {};
+        headers.forEach((h) => {
+          obj[h.id] = row && typeof row === "object" ? row[h.key] : undefined;
+        });
+        return obj;
+      });
+
+      return { headers, rows };
     }
   }, [activeSheet, isAOA]);
 
@@ -204,8 +242,9 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
         cell: (info) => info.row.index + 1,
       }),
       ...headers.map((header) =>
-        columnHelper.accessor(header, {
-          header: header,
+        columnHelper.accessor(header.id, {
+          id: header.id,
+          header: header.title,
           cell: (info) => {
             const val = info.getValue();
             if (val && typeof val === "object" && "v" in val) {
@@ -242,13 +281,25 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
     try {
       const workbook = xlsx.utils.book_new();
       spreadsheetData.sheets.forEach((sheet) => {
-        // Simple export: stripping styles for compatibility with basic sheet_to_json
-        const flatData = sheet.data.map((row) =>
-          row.map((cell) =>
-            cell && typeof cell === "object" && "v" in cell ? cell.v : cell,
-          ),
-        );
-        const worksheet = xlsx.utils.aoa_to_sheet(flatData);
+        const isSheetAOA =
+          sheet.data.length > 0 && Array.isArray(sheet.data[0]);
+        let worksheet: xlsx.WorkSheet;
+
+        if (isSheetAOA) {
+          const flatData = sheet.data.map((row) =>
+            Array.isArray(row)
+              ? row.map((cell) =>
+                  cell && typeof cell === "object" && "v" in cell
+                    ? cell.v
+                    : cell,
+                )
+              : [],
+          );
+          worksheet = xlsx.utils.aoa_to_sheet(flatData);
+        } else {
+          worksheet = xlsx.utils.json_to_sheet(sheet.data);
+        }
+
         xlsx.utils.book_append_sheet(workbook, worksheet, sheet.name);
       });
       const safeTitle = (title || "spreadsheet")
@@ -303,7 +354,7 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
       </div>
 
       {/* Grid Content */}
-      {activeSheet.data.length === 0 ? (
+      {activeSheet.data.length === 0 || headers.length === 0 ? (
         <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
           <AlertCircle className="h-6 w-6 text-amber-500" />
           <p className="text-sm font-medium">This sheet contains no data.</p>
