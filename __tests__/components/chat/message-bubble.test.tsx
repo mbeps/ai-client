@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "@/types/message/message";
@@ -38,6 +38,7 @@ vi.mock("@/lib/store/use-app-store", () => ({
       prompts: [],
       mcpServers: [],
       skills: [],
+      assistants: [],
     }),
 }));
 
@@ -71,6 +72,7 @@ vi.mock("@/components/shared/markdown-tab-editor", () => ({
 
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SITE_CONFIG } from "@/config/site";
 
 describe("MessageBubble message editing", () => {
   const mockUserMessage: Message = {
@@ -320,6 +322,124 @@ describe("MessageBubble message editing", () => {
     expect(
       screen.getByRole("button", { name: /^download$/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders default assistant name in header instead of model slug for assistant messages", () => {
+    const assistantMsg: Message = {
+      id: "msg-ai-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Hello! I am an assistant.",
+      parentId: "msg-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "nvidia/nemotron-3.5-lightning:free",
+      }),
+    };
+
+    renderMessageBubble({
+      message: assistantMsg,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText(SITE_CONFIG.DEFAULT_ASSISTANT_NAME)).toBeInTheDocument();
+    expect(within(header).queryByText("nvidia/nemotron-3.5-lightning:free")).not.toBeInTheDocument();
+  });
+
+  it("renders assistant name from parent assistant when parent message has assistantId", () => {
+    const parentMsgWithAssistant: Message = {
+      id: "msg-parent-1",
+      chatId: "chat-1",
+      role: "user",
+      content: "Can you help me write Python?",
+      parentId: null,
+      childrenIds: ["msg-ai-2"],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        assistantId: "asst-python-1",
+      }),
+    };
+
+    const assistantMsg: Message = {
+      id: "msg-ai-2",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Sure! Here is Python code.",
+      parentId: "msg-parent-1",
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "openai/gpt-4o",
+      }),
+    };
+
+    const mockAssistants = [
+      {
+        id: "asst-python-1",
+        name: "Python Pro Assistant",
+        userId: "user-1",
+        description: null,
+        prompt: null,
+        tools: null,
+        skillMode: "dynamic" as const,
+        skillIds: [],
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    renderMessageBubble({
+      message: assistantMsg,
+      parentMessage: parentMsgWithAssistant,
+      assistants: mockAssistants,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText("Python Pro Assistant")).toBeInTheDocument();
+    expect(within(header).queryByText("openai/gpt-4o")).not.toBeInTheDocument();
+  });
+
+  it("renders assistant name from chat assistantId when no parent message metadata exists", () => {
+    const assistantMsg: Message = {
+      id: "msg-ai-3",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Response from chat assistant.",
+      parentId: null,
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        model: "anthropic/claude-3-opus",
+      }),
+    };
+
+    const mockAssistants = [
+      {
+        id: "asst-chat-1",
+        name: "Dedicated Chat Bot",
+        userId: "user-1",
+        description: null,
+        prompt: null,
+        tools: null,
+        skillMode: "dynamic" as const,
+        skillIds: [],
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    renderMessageBubble({
+      message: assistantMsg,
+      assistantId: "asst-chat-1",
+      assistants: mockAssistants,
+    });
+
+    const header = screen.getByTestId("message-header");
+    expect(within(header).getByText("Dedicated Chat Bot")).toBeInTheDocument();
+    expect(within(header).queryByText("anthropic/claude-3-opus")).not.toBeInTheDocument();
   });
 });
 

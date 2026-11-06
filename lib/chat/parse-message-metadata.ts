@@ -162,6 +162,7 @@ export function parseMessageMetadata(
     usage: null,
     finishReason: null,
     durationMs: null,
+    assistantId: undefined,
   };
 
   if (!metadata) return empty;
@@ -197,6 +198,8 @@ export function parseMessageMetadata(
         typeof parsed.subagentModelId === "string"
           ? parsed.subagentModelId
           : undefined,
+      assistantId:
+        typeof parsed.assistantId === "string" ? parsed.assistantId : undefined,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

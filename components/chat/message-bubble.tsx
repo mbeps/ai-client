@@ -16,11 +16,14 @@ import {
 import { MessageTimelineSection } from "@/components/chat/message/message-timeline-section";
 import { useMessageEditing } from "@/components/chat/message/use-message-editing";
 import { UserMessageBody } from "@/components/chat/message/user-message-body";
+import { SITE_CONFIG } from "@/config/site";
 import { authClient } from "@/lib/auth/auth-client";
 import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
 import type { Message } from "@/types/message/message";
@@ -51,10 +54,14 @@ function UserAttachmentSection({
 interface MessageBubbleProps {
   /** The message node from the conversation tree to render. */
   message: Message;
+  /** Parent message in the thread tree, if any. */
+  parentMessage?: Message | null;
   /** Whether this message is the last one in the current thread. */
   isLatest: boolean;
   /** Assistant ID bound to the chat. */
   assistantId?: string | null;
+  /** Optional assistants list to resolve assistant names. */
+  assistants?: Assistant[];
   /** Callback to delete this message from the conversation tree. */
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */
@@ -111,7 +118,9 @@ interface MessageBubbleProps {
 export function MessageBubble(props: MessageBubbleProps) {
   const {
     message,
+    parentMessage,
     assistantId,
+    assistants: assistantsProp,
     onDelete,
     onEdit,
     siblings,
@@ -132,11 +141,40 @@ export function MessageBubble(props: MessageBubbleProps) {
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
   const skills = useAppStore((state) => state.skills);
+  const storeAssistants = useAppStore((state) => state.assistants);
+  const assistantsList = assistantsProp ?? storeAssistants;
 
   const viewData = useMemo(
     () => deriveMessageBubbleViewData(message, isUser, streamingCitations),
     [message, isUser, streamingCitations],
   );
+
+  const resolvedAssistantName = useMemo(() => {
+    if (isUser) return undefined;
+
+    const parentMeta = parentMessage
+      ? parseMessageMetadata(parentMessage.metadata)
+      : null;
+    const effectiveAssistantId =
+      parentMeta?.assistantId ??
+      viewData.parsedMetadata.assistantId ??
+      assistantId;
+
+    if (effectiveAssistantId && Array.isArray(assistantsList)) {
+      const matched = assistantsList.find((a) => a.id === effectiveAssistantId);
+      if (matched?.name) {
+        return matched.name;
+      }
+    }
+
+    return SITE_CONFIG.DEFAULT_ASSISTANT_NAME;
+  }, [
+    isUser,
+    parentMessage,
+    viewData.parsedMetadata.assistantId,
+    assistantId,
+    assistantsList,
+  ]);
 
   const messageArtifacts = useMemo(
     () => extractMessageArtifacts(message, activeToolCalls),
@@ -184,7 +222,7 @@ export function MessageBubble(props: MessageBubbleProps) {
         isUser={isUser}
         image={session?.user?.image}
         name={session?.user?.name}
-        modelName={viewData.modelName}
+        assistantName={resolvedAssistantName}
       />
 
       <div className="flex-1 overflow-hidden">

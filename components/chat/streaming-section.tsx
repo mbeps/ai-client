@@ -32,6 +32,8 @@ export interface StreamingSectionProps {
   chatId?: string;
   /** Optional assistant message ID generated during streaming. */
   assistantMessageId?: string | null;
+  /** Optional assistant name for the header. */
+  assistantName?: string;
   /** Optional selected model name for the header. */
   selectedModelName?: string;
 }
@@ -85,6 +87,7 @@ export function StreamingSection(props: StreamingSectionProps) {
     isCanvasOpen,
     chatId,
     assistantMessageId,
+    assistantName,
     selectedModelName,
   } = props;
 
@@ -115,6 +118,7 @@ export function StreamingSection(props: StreamingSectionProps) {
           activeArtifactId={activeArtifactId}
           isCanvasOpen={isCanvasOpen}
           assistantMessageId={assistantMessageId}
+          assistantName={assistantName ?? selectedModelName}
           selectedModelName={selectedModelName}
         />
       )}

@@ -239,6 +239,7 @@ export function ChatUI({
                 isCanvasOpen={isArtifactOpen}
                 chatId={chatId}
                 assistantMessageId={assistantMessageId}
+                assistantName={assistantName}
               />
             </div>
           </div>

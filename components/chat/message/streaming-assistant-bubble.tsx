@@ -5,6 +5,7 @@ import { AssistantMessageBody } from "@/components/chat/message/assistant-messag
 import { CitationsList } from "@/components/chat/message/citations-list";
 import { MessageHeader } from "@/components/chat/message/message-bubble-header";
 import { MessageTimelineSection } from "@/components/chat/message/message-timeline-section";
+import { SITE_CONFIG } from "@/config/site";
 import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
@@ -37,6 +38,8 @@ export interface StreamingAssistantBubbleProps {
   isCanvasOpen?: boolean;
   /** Optional assistant message ID generated during streaming. */
   assistantMessageId?: string | null;
+  /** Optional assistant name for the header. */
+  assistantName?: string;
   /** Optional selected model name for the header. */
   selectedModelName?: string;
 }
@@ -61,6 +64,7 @@ export function StreamingAssistantBubble({
   activeArtifactId,
   isCanvasOpen,
   assistantMessageId,
+  assistantName,
   selectedModelName,
 }: StreamingAssistantBubbleProps) {
   const messageId = assistantMessageId || "streaming";
@@ -92,7 +96,11 @@ export function StreamingAssistantBubble({
     >
       <MessageHeader
         isUser={false}
-        modelName={selectedModelName ?? "Assistant"}
+        assistantName={
+          assistantName ??
+          selectedModelName ??
+          SITE_CONFIG.DEFAULT_ASSISTANT_NAME
+        }
       />
 
       <div className="flex-1 overflow-hidden">

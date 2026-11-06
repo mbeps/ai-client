@@ -99,6 +99,7 @@ export function MessageThread({
           <MessageBubble
             key={msg.id}
             message={msg}
+            parentMessage={parent}
             isLatest={index === thread.length - 1}
             assistantId={chat?.assistantId}
             onDelete={onDelete}
