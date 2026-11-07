@@ -15,6 +15,60 @@ export interface PromptGroup {
 }
 
 /**
+ * Context determining which prompts can be accessed in a given chat scope.
+ */
+export interface PromptScopeContext {
+  projectId?: string | null;
+  assistantId?: string | null;
+  promptMode?: "all" | "none" | "specific";
+  allowedPromptIds?: string[];
+}
+
+/**
+ * Filters a list of database prompts based on the active scope (Project, Assistant, or Global/Standalone).
+ * - Prompts scoped to a specific project are accessible ONLY within that project.
+ * - Prompts scoped to a specific assistant are accessible ONLY with that assistant.
+ * - Global prompts (projectId and assistantId are null) are accessible in global chat, or governed
+ *   by promptMode ('all', 'none', 'specific') when inside a project or assistant.
+ *
+ * @param prompts - Database prompts.
+ * @param context - The current chat scope context.
+ * @returns Prompts accessible within the given scope.
+ */
+export function filterAccessiblePrompts(
+  prompts: Prompt[],
+  context: PromptScopeContext,
+): Prompt[] {
+  const {
+    projectId,
+    assistantId,
+    promptMode = "all",
+    allowedPromptIds = [],
+  } = context;
+  const allowedSet = new Set(allowedPromptIds);
+
+  return prompts.filter((p) => {
+    // 1. Scoped to a specific Project
+    if (p.projectId) {
+      return Boolean(projectId && p.projectId === projectId);
+    }
+    // 2. Scoped to a specific Assistant
+    if (p.assistantId) {
+      return Boolean(assistantId && p.assistantId === assistantId);
+    }
+    // 3. Global Prompt (neither projectId nor assistantId is set)
+    // In standalone global chat (no project, no assistant): always accessible
+    if (!projectId && !assistantId) {
+      return true;
+    }
+    // Inside a Project or Assistant: check promptMode
+    if (promptMode === "none") return false;
+    if (promptMode === "specific") return allowedSet.has(p.id);
+    return true; // "all"
+  });
+}
+
+/**
  * Maps database prompts and discovered MCP prompts into unified MentionPromptItems.
  *
  * @param prompts - Custom user prompts from the database.

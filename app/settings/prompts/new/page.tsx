@@ -2,7 +2,7 @@
 
 import { ChevronLeft, Command, Plus } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createPrompt } from "@/actions/prompts/create-prompt";
@@ -14,6 +14,7 @@ import {
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
@@ -24,17 +25,29 @@ import { useAppStore } from "@/lib/store/use-app-store";
  */
 export default function NewPromptPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultProjectId = searchParams.get("projectId") ?? undefined;
+  const defaultAssistantId = searchParams.get("assistantId") ?? undefined;
+
+  useResourceHydration(["projects", "assistants", "prompts"]);
+
   const loadPrompts = useAppStore((state) => state.loadPrompts);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async (values: PromptFormValues) => {
     setIsSubmitting(true);
     try {
-      await createPrompt({
+      const res = await createPrompt({
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
+        projectId: values.projectId ?? null,
+        assistantId: values.assistantId ?? null,
       });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to create prompt");
+        return;
+      }
       toast.success("Prompt created");
       await loadPrompts();
       router.push(ROUTES.SETTINGS.PROMPTS.path);
@@ -74,6 +87,8 @@ export default function NewPromptPage() {
           submitLabel="Create Prompt"
           submitIcon={<Plus className="mr-2 h-4 w-4" />}
           isSubmitting={isSubmitting}
+          defaultProjectId={defaultProjectId}
+          defaultAssistantId={defaultAssistantId}
         />
       </div>
     </PageContainer>

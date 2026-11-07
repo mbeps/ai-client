@@ -207,12 +207,16 @@ describe("createAssistant", () => {
       tools: ["web_search"],
       skillMode: "specific",
       skillIds: ["skill-1", "skill-2"],
+      promptMode: "specific",
+      promptIds: ["p-1"],
     });
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
         tools: ["web_search"],
         skillMode: "specific",
         skillIds: ["skill-1", "skill-2"],
+        promptMode: "specific",
+        promptIds: ["p-1"],
       }),
     );
   });
@@ -462,12 +466,16 @@ describe("updateAssistant", () => {
     await updateAssistant(VALID_UUID, {
       skillMode: "specific",
       skillIds: ["skill-a", "skill-b"],
+      promptMode: "none",
+      promptIds: [],
     });
 
     expect(chainable.set).toHaveBeenCalledWith(
       expect.objectContaining({
         skillMode: "specific",
         skillIds: ["skill-a", "skill-b"],
+        promptMode: "none",
+        promptIds: [],
       }),
     );
   });

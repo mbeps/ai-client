@@ -2,6 +2,10 @@
 
 import { type RefObject, useCallback, useMemo, useState } from "react";
 import {
+  filterAccessiblePrompts,
+  type PromptScopeContext,
+} from "@/components/chat/prompt-picker/prompt-picker-utils";
+import {
   isAssistantItem,
   isKnowledgebaseItem,
   isPromptItem,
@@ -109,6 +113,7 @@ export function useMentionCommands(
   onSelectSkill?: (skill: Skill) => void,
   onSelectKnowledgebase?: (kb: Knowledgebase) => void,
   knowledgebases?: Knowledgebase[],
+  promptScopeContext?: PromptScopeContext,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
@@ -175,7 +180,12 @@ export function useMentionCommands(
         )
         .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
 
-      const local = prompts
+      const accessiblePrompts = filterAccessiblePrompts(
+        prompts,
+        promptScopeContext ?? {},
+      );
+
+      const local = accessiblePrompts
         .filter(
           (p) =>
             p.shortcut.toLowerCase().includes(q) ||
@@ -249,6 +259,7 @@ export function useMentionCommands(
     kbs,
     openTrigger,
     selectedServerIds,
+    promptScopeContext,
   ]);
 
   const handleInputChange = useCallback(

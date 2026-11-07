@@ -25,6 +25,10 @@ export const assistant = pgTable(
       .notNull()
       .default("dynamic"),
     skillIds: text("skill_ids").array().notNull().default(sql`'{}'::text[]`),
+    promptMode: text("prompt_mode", { enum: ["all", "none", "specific"] })
+      .notNull()
+      .default("all"),
+    promptIds: text("prompt_ids").array().notNull().default(sql`'{}'::text[]`),
     avatar: text("avatar"),
     ...timestampColumns(),
   },

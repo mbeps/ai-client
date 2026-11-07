@@ -1248,6 +1248,97 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBeNull();
     });
   });
+
+  describe("promptScopeContext isolation", () => {
+    const SCOPED_PROMPTS = [
+      {
+        id: "global-1",
+        title: "Global Prompt",
+        shortcut: "global",
+        content: "Global content",
+        updatedAt: new Date(),
+      },
+      {
+        id: "proj-prompt-1",
+        title: "Project Prompt",
+        shortcut: "proj",
+        content: "Project content",
+        projectId: "proj-1",
+        updatedAt: new Date(),
+      },
+      {
+        id: "asst-prompt-1",
+        title: "Assistant Prompt",
+        shortcut: "asst",
+        content: "Assistant content",
+        assistantId: "asst-1",
+        updatedAt: new Date(),
+      },
+    ];
+
+    beforeEach(() => {
+      useAppStore.setState({ prompts: SCOPED_PROMPTS as any });
+    });
+
+    it("filters slash command suggestions using promptScopeContext in a project chat", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { projectId: "proj-1", promptMode: "all" },
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      // Should show global-1 and proj-prompt-1, but not asst-prompt-1
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "global-1",
+        "proj-prompt-1",
+      ]);
+    });
+
+    it("filters out global prompts when promptMode is none", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { projectId: "proj-1", promptMode: "none" },
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      // Should show only proj-prompt-1
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "proj-prompt-1",
+      ]);
+    });
+  });
 });
 
 

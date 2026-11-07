@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPromptItems,
+  filterAccessiblePrompts,
   filterPromptsByQuery,
   groupPromptsByCategory,
   resolveInitialExpandedGroups,
@@ -153,6 +154,124 @@ describe("resolveInitialExpandedGroups", () => {
   it("returns empty set when defaultExpanded is false and no prompts selected", () => {
     const expanded = resolveInitialExpandedGroups(false, new Set(), mockMcpPrompts);
     expect(expanded.size).toBe(0);
+  });
+});
+
+describe("filterAccessiblePrompts", () => {
+  const globalPrompt1: Prompt = {
+    id: "g1",
+    title: "Global 1",
+    shortcut: "g1",
+    content: "Global content 1",
+    userId: "u1",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const globalPrompt2: Prompt = {
+    id: "g2",
+    title: "Global 2",
+    shortcut: "g2",
+    content: "Global content 2",
+    userId: "u1",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const projectPromptA: Prompt = {
+    id: "pA",
+    title: "Proj A Prompt",
+    shortcut: "pa",
+    content: "Project A content",
+    userId: "u1",
+    projectId: "proj-a",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const projectPromptB: Prompt = {
+    id: "pB",
+    title: "Proj B Prompt",
+    shortcut: "pb",
+    content: "Project B content",
+    userId: "u1",
+    projectId: "proj-b",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const assistantPrompt1: Prompt = {
+    id: "asst1",
+    title: "Assistant 1 Prompt",
+    shortcut: "a1",
+    content: "Assistant 1 content",
+    userId: "u1",
+    assistantId: "asst-1",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const allPrompts: Prompt[] = [
+    globalPrompt1,
+    globalPrompt2,
+    projectPromptA,
+    projectPromptB,
+    assistantPrompt1,
+  ];
+
+  it("in global chat: includes all global prompts and excludes entity-scoped prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {});
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "g2"]);
+  });
+
+  it("in project chat with promptMode 'all': includes current project prompts and all global prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      projectId: "proj-a",
+      promptMode: "all",
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "g2", "pA"]);
+  });
+
+  it("in project chat with promptMode 'none': includes only current project prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      projectId: "proj-a",
+      promptMode: "none",
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["pA"]);
+  });
+
+  it("in project chat with promptMode 'specific': includes current project prompts and allowed global prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      projectId: "proj-a",
+      promptMode: "specific",
+      allowedPromptIds: ["g2"],
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["g2", "pA"]);
+  });
+
+  it("in assistant chat with promptMode 'all': includes current assistant prompts and all global prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      assistantId: "asst-1",
+      promptMode: "all",
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "g2", "asst1"]);
+  });
+
+  it("in assistant chat with promptMode 'none': includes only current assistant prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      assistantId: "asst-1",
+      promptMode: "none",
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["asst1"]);
+  });
+
+  it("in assistant chat with promptMode 'specific': includes current assistant prompts and allowed global prompts", () => {
+    const accessible = filterAccessiblePrompts(allPrompts, {
+      assistantId: "asst-1",
+      promptMode: "specific",
+      allowedPromptIds: ["g1"],
+    });
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "asst1"]);
   });
 });
 

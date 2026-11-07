@@ -57,6 +57,8 @@ type AssistantFormState = {
   selectedTools: Set<string>;
   skillMode: SkillMode;
   selectedSkillIds: Set<string>;
+  promptMode: "all" | "none" | "specific";
+  selectedPromptIds: Set<string>;
 };
 
 function buildInitialAssistantForm(assistant?: any): AssistantFormState {
@@ -68,6 +70,8 @@ function buildInitialAssistantForm(assistant?: any): AssistantFormState {
       selectedTools: new Set<string>(),
       skillMode: "dynamic",
       selectedSkillIds: new Set<string>(),
+      promptMode: "all",
+      selectedPromptIds: new Set<string>(),
     };
   }
 
@@ -78,6 +82,8 @@ function buildInitialAssistantForm(assistant?: any): AssistantFormState {
     selectedTools: resolveSetField(assistant.tools),
     skillMode: assistant.skillMode || "dynamic",
     selectedSkillIds: resolveSetField(assistant.skillIds),
+    promptMode: assistant.promptMode || "all",
+    selectedPromptIds: resolveSetField(assistant.promptIds),
   };
 }
 
@@ -122,6 +128,8 @@ function useAssistantEditor(assistantId: string, assistant?: any) {
         description: form.description,
         prompt: form.prompt,
         tools: Array.from(form.selectedTools),
+        promptMode: form.promptMode,
+        promptIds: Array.from(form.selectedPromptIds),
       });
       toast.success("Assistant updated");
       await loadAssistants();
@@ -166,6 +174,18 @@ function useAssistantEditor(assistantId: string, assistant?: any) {
     handleSaveSkills,
     onToggleTool,
     onBulkSelect,
+    onTogglePromptId: (id: string) => {
+      setForm((prev) => ({
+        ...prev,
+        selectedPromptIds: toggleSetItem(prev.selectedPromptIds, id),
+      }));
+    },
+    onSelectPromptIds: (ids: Set<string>) => {
+      setForm((prev) => ({
+        ...prev,
+        selectedPromptIds: ids,
+      }));
+    },
   };
 }
 
@@ -243,6 +263,7 @@ function useAssistantPageResources(assistantId: string) {
     "assistants",
     "mcpServers",
     "skills",
+    "prompts",
   ]);
 
   const assistant = assistants.find((a) => a.id === assistantId);
@@ -257,6 +278,7 @@ function useAssistantPageResources(assistantId: string) {
 }
 
 type AssistantPageTabsProps = {
+  assistantId: string;
   tab: string;
   onTabChange: (tab: string) => void;
   assistantChats: ReturnType<typeof useAssistantChats>;
@@ -268,6 +290,7 @@ type AssistantPageTabsProps = {
 
 function AssistantPageTabs(props: AssistantPageTabsProps) {
   const {
+    assistantId,
     tab,
     onTabChange,
     assistantChats,
@@ -316,10 +339,18 @@ function AssistantPageTabs(props: AssistantPageTabsProps) {
 
       <SidebarTabsContent value="prompt">
         <AssistantPromptTab
+          assistantId={assistantId}
           prompt={editor.form.prompt}
           onPromptChange={(val) =>
             editor.setForm((prev) => ({ ...prev, prompt: val }))
           }
+          promptMode={editor.form.promptMode}
+          onPromptModeChange={(val) =>
+            editor.setForm((prev) => ({ ...prev, promptMode: val }))
+          }
+          selectedPromptIds={editor.form.selectedPromptIds}
+          onTogglePromptId={editor.onTogglePromptId}
+          onSelectPromptIds={editor.onSelectPromptIds}
           onSave={editor.handleSave}
           isSaving={editor.saving}
         />
@@ -437,6 +468,7 @@ export default function AssistantPage() {
       />
 
       <AssistantPageTabs
+        assistantId={assistantId}
         tab={tab}
         onTabChange={setTab}
         assistantChats={assistantChats}

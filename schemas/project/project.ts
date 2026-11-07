@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { promptIdsSchema, promptModeSchema } from "@/schemas/prompt/prompt";
 import {
   contentField,
   descriptionField,
@@ -27,6 +28,8 @@ export const createProjectSchema = z.object({
   tools: z.array(z.string()).optional(),
   skillMode: skillModeSchema.optional(),
   skillIds: skillIdsSchema.optional(),
+  promptMode: promptModeSchema.optional(),
+  promptIds: promptIdsSchema.optional(),
   knowledgebaseId: z.string().nullable().optional(),
 });
 
@@ -43,11 +46,15 @@ export const updateProjectSchema = createProjectSchema
   .omit({
     skillMode: true,
     skillIds: true,
+    promptMode: true,
+    promptIds: true,
   })
   .partial()
   .extend({
     skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
     skillIds: z.array(z.string()).optional(),
+    promptMode: z.enum(["all", "none", "specific"]).optional(),
+    promptIds: z.array(z.string()).optional(),
   });
 
 /**
@@ -79,6 +86,8 @@ export const projectSchema = z.object({
   tools: z.array(z.string()),
   skillMode: skillModeSchema,
   skillIds: skillIdsSchema,
+  promptMode: promptModeSchema,
+  promptIds: promptIdsSchema,
   knowledgebaseId: idField.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),

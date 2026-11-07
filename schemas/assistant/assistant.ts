@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { promptIdsSchema, promptModeSchema } from "@/schemas/prompt/prompt";
 import {
   contentField,
   descriptionField,
@@ -28,6 +29,8 @@ export const createAssistantSchema = z.object({
   tools: z.array(z.string()).optional(),
   skillMode: skillModeSchema.optional(),
   skillIds: skillIdsSchema.optional(),
+  promptMode: promptModeSchema.optional(),
+  promptIds: promptIdsSchema.optional(),
   avatar: z.string().url().max(1024).optional().nullable(),
 });
 
@@ -45,11 +48,15 @@ export const updateAssistantSchema = createAssistantSchema
   .omit({
     skillMode: true,
     skillIds: true,
+    promptMode: true,
+    promptIds: true,
   })
   .partial()
   .extend({
     skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
     skillIds: z.array(z.string()).optional(),
+    promptMode: z.enum(["all", "none", "specific"]).optional(),
+    promptIds: z.array(z.string()).optional(),
   });
 
 /**
@@ -81,6 +88,8 @@ export const assistantSchema = z.object({
   tools: z.array(z.string()),
   skillMode: skillModeSchema,
   skillIds: skillIdsSchema,
+  promptMode: promptModeSchema,
+  promptIds: promptIdsSchema,
   avatar: z.string().url().max(1024).nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),

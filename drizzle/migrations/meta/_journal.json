@@ -358,6 +358,13 @@
       "when": 1793447744045,
       "tag": "0050_abandoned_dracula",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794062348309,
+      "tag": "0051_nostalgic_vance_astro",
+      "breakpoints": true
     }
   ]
 }
