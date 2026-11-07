@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assistantSchema,
   createAssistantSchema,
   renameAssistantSchema,
   updateAssistantSchema,
@@ -37,6 +38,14 @@ describe("createAssistantSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts valid promptMode and promptIds updates", () => {
+    const result = updateAssistantSchema.safeParse({
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects name longer than 100 characters", () => {
     const result = createAssistantSchema.safeParse({ name: "a".repeat(101) });
     expect(result.success).toBe(false);
@@ -48,6 +57,15 @@ describe("createAssistantSchema", () => {
       description: "d".repeat(501),
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts valid promptMode and promptIds", () => {
+    const result = createAssistantSchema.safeParse({
+      name: "Valid",
+      promptMode: "specific",
+      promptIds: ["prompt-1"],
+    });
+    expect(result.success).toBe(true);
   });
 
   it("rejects prompt longer than 10 000 characters", () => {
@@ -107,6 +125,14 @@ describe("updateAssistantSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts valid promptMode and promptIds updates", () => {
+    const result = updateAssistantSchema.safeParse({
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects name longer than 100 characters", () => {
     const result = updateAssistantSchema.safeParse({ name: "n".repeat(101) });
     expect(result.success).toBe(false);
@@ -137,6 +163,14 @@ describe("renameAssistantSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts valid promptMode and promptIds updates", () => {
+    const result = updateAssistantSchema.safeParse({
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects name longer than 100 characters", () => {
     const result = renameAssistantSchema.safeParse({ name: "x".repeat(101) });
     expect(result.success).toBe(false);
@@ -145,5 +179,26 @@ describe("renameAssistantSchema", () => {
   it("rejects missing name field", () => {
     const result = renameAssistantSchema.safeParse({});
     expect(result.success).toBe(false);
+  });
+});
+
+describe("assistantSchema", () => {
+  it("validates full assistant object", () => {
+    const result = assistantSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      userId: "user-1",
+      name: "Assistant",
+      description: "Description",
+      prompt: "Prompt",
+      tools: [],
+      skillMode: "dynamic",
+      skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      avatar: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    expect(result.success).toBe(true);
   });
 });

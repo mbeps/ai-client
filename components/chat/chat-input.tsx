@@ -9,6 +9,7 @@ import { ModelCapabilityBanner } from "@/components/chat/input/model-capability-
 import { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
 import { useChatInteraction } from "@/components/chat/input/use-chat-interaction";
 import { MentionCommands } from "@/components/chat/mention-commands";
+import { filterAccessiblePrompts } from "@/components/chat/prompt-picker/prompt-picker-utils";
 import { SubagentConfigDialog } from "@/components/chat/subagent-config-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -97,6 +98,18 @@ export interface ChatInputProps {
 
   /** If true, allows triggering assistant mentions (@). */
   canMentionAssistant?: boolean;
+
+  /** ID of the project the chat belongs to, for prompt scoping. */
+  projectId?: string | null;
+
+  /** ID of the assistant the chat is bound to, for prompt scoping. */
+  assistantId?: string | null;
+
+  /** Global prompt mode for this scope. */
+  promptMode?: "all" | "none" | "specific";
+
+  /** Allowed global prompt IDs when promptMode is 'specific'. */
+  promptIds?: string[];
 
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
@@ -274,6 +287,12 @@ export function ChatInput(props: ChatInputProps) {
   );
   const servers = props.servers ?? defaultServers;
 
+  const accessiblePrompts = useMemo(
+    () =>
+      filterAccessiblePrompts(services.prompts, interaction.promptScopeContext),
+    [services.prompts, interaction.promptScopeContext],
+  );
+
   const containerClass = resolveContainerClassName(
     interaction.attachments.isDragging,
     props.className,
@@ -358,7 +377,7 @@ export function ChatInput(props: ChatInputProps) {
         skills={services.skills}
         selectedSkills={interaction.selections.selectedSkills}
         handleToggleSkill={interaction.selections.handleToggleSkill}
-        prompts={services.prompts}
+        prompts={accessiblePrompts}
         mcpPrompts={services.mcpPrompts}
         selectedPromptIds={interaction.prompts.selectedPromptIds}
         handleTogglePrompt={interaction.prompts.handleTogglePrompt}

@@ -23,6 +23,7 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { PROMPTS } from "@/config/prompts";
 import { ROUTES } from "@/config/routes";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
@@ -50,6 +51,8 @@ export default function PromptDetailPage() {
   const prompts = useAppStore((state) => state.prompts);
   const prompt = prompts.find((p) => p.id === promptId);
   const loadPrompts = useAppStore((state) => state.loadPrompts);
+
+  useResourceHydration(["projects", "assistants", "prompts"]);
 
   const [loading, setLoading] = useState(prompts.length === 0);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -81,6 +84,8 @@ export default function PromptDetailPage() {
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
+        projectId: values.projectId ?? null,
+        assistantId: values.assistantId ?? null,
       });
       if (!res.ok) {
         toast.error(res.error.message || "Failed to save prompt");
@@ -149,6 +154,13 @@ export default function PromptDetailPage() {
               title: prompt.title,
               shortcut: prompt.shortcut,
               content: prompt.content,
+              projectId: prompt.projectId,
+              assistantId: prompt.assistantId,
+              scope: prompt.projectId
+                ? "project"
+                : prompt.assistantId
+                  ? "assistant"
+                  : "global",
             }}
             onSubmit={handleSave}
             placeholderContent={

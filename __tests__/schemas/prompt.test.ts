@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createPromptSchema,
+  promptIdsSchema,
+  promptModeSchema,
+  promptSchema,
   updatePromptSchema,
 } from "@/schemas/prompt/prompt";
 
@@ -122,6 +125,42 @@ describe("createPromptSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts valid projectId", () => {
+    const result = createPromptSchema.safeParse({
+      title: "Title",
+      content: "Content",
+      shortcut: "shortcut",
+      projectId: "proj-123",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid assistantId", () => {
+    const result = createPromptSchema.safeParse({
+      title: "Title",
+      content: "Content",
+      shortcut: "shortcut",
+      assistantId: "asst-123",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects both projectId and assistantId provided together", () => {
+    const result = createPromptSchema.safeParse({
+      title: "Title",
+      content: "Content",
+      shortcut: "shortcut",
+      projectId: "proj-123",
+      assistantId: "asst-123",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe(
+        "A prompt cannot be scoped to both a project and an assistant",
+      );
+    }
+  });
 });
 
 // updatePromptSchema
@@ -144,5 +183,55 @@ describe("updatePromptSchema", () => {
   it("rejects invalid shortcut when provided", () => {
     const result = updatePromptSchema.safeParse({ shortcut: "bad shortcut!" });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts updating projectId and assistantId individually", () => {
+    expect(
+      updatePromptSchema.safeParse({ projectId: "proj-1" }).success,
+    ).toBe(true);
+    expect(
+      updatePromptSchema.safeParse({ assistantId: "asst-1" }).success,
+    ).toBe(true);
+    expect(
+      updatePromptSchema.safeParse({ projectId: null, assistantId: null }).success,
+    ).toBe(true);
+  });
+
+  it("rejects updating both projectId and assistantId together", () => {
+    const result = updatePromptSchema.safeParse({
+      projectId: "proj-1",
+      assistantId: "asst-1",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("promptSchema, promptModeSchema, promptIdsSchema", () => {
+  it("validates promptModeSchema with defaults", () => {
+    expect(promptModeSchema.parse(undefined)).toBe("all");
+    expect(promptModeSchema.parse("none")).toBe("none");
+    expect(promptModeSchema.parse("specific")).toBe("specific");
+    expect(promptModeSchema.safeParse("invalid").success).toBe(false);
+  });
+
+  it("validates promptIdsSchema with defaults", () => {
+    expect(promptIdsSchema.parse(undefined)).toEqual([]);
+    expect(promptIdsSchema.parse(["p-1", "p-2"])).toEqual(["p-1", "p-2"]);
+    expect(promptIdsSchema.safeParse("not-an-array").success).toBe(false);
+  });
+
+  it("validates promptSchema full object", () => {
+    const validPrompt = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      userId: "user-1",
+      title: "Title",
+      shortcut: "shortcut",
+      content: "Content",
+      projectId: "proj-1",
+      assistantId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    expect(promptSchema.safeParse(validPrompt).success).toBe(true);
   });
 });

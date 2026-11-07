@@ -57,6 +57,8 @@ type ProjectFormState = {
   selectedTools: Set<string>;
   skillMode: SkillMode;
   selectedSkillIds: Set<string>;
+  promptMode: "all" | "none" | "specific";
+  selectedPromptIds: Set<string>;
   selectedKbId: string | null;
 };
 
@@ -98,6 +100,8 @@ function buildInitialProjectForm(project?: any): ProjectFormState {
       selectedTools: new Set<string>(),
       skillMode: "dynamic",
       selectedSkillIds: new Set<string>(),
+      promptMode: "all",
+      selectedPromptIds: new Set<string>(),
       selectedKbId: null,
     };
   }
@@ -109,6 +113,8 @@ function buildInitialProjectForm(project?: any): ProjectFormState {
     selectedTools: resolveSetField(project.tools),
     skillMode: project.skillMode || "dynamic",
     selectedSkillIds: resolveSetField(project.skillIds),
+    promptMode: project.promptMode || "all",
+    selectedPromptIds: resolveSetField(project.promptIds),
     selectedKbId: project.knowledgebaseId || null,
   };
 }
@@ -163,6 +169,8 @@ function useProjectEditor(projectId: string, project?: any) {
         description: form.description,
         globalPrompt: form.globalPrompt,
         tools: Array.from(form.selectedTools),
+        promptMode: form.promptMode,
+        promptIds: Array.from(form.selectedPromptIds),
       });
       toast.success("Project settings saved");
       await loadProjects();
@@ -229,6 +237,18 @@ function useProjectEditor(projectId: string, project?: any) {
     handleSaveKb,
     onToggleTool,
     onBulkSelect,
+    onTogglePromptId: (id: string) => {
+      setForm((prev) => ({
+        ...prev,
+        selectedPromptIds: toggleSetItem(prev.selectedPromptIds, id),
+      }));
+    },
+    onSelectPromptIds: (ids: Set<string>) => {
+      setForm((prev) => ({
+        ...prev,
+        selectedPromptIds: ids,
+      }));
+    },
   };
 }
 
@@ -317,6 +337,7 @@ function useProjectChats(projectId: string) {
  * @author Maruf Bepary
  */
 type ProjectPageTabsProps = {
+  projectId: string;
   tab: string;
   onTabChange: (tab: string) => void;
   projectChats: ReturnType<typeof useProjectChats>;
@@ -336,6 +357,7 @@ type ProjectPageTabsProps = {
  */
 function ProjectPageTabs(props: ProjectPageTabsProps) {
   const {
+    projectId,
     tab,
     onTabChange,
     projectChats,
@@ -401,10 +423,18 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
 
       <SidebarTabsContent value="prompt">
         <ProjectPromptTab
+          projectId={projectId}
           globalPrompt={editor.form.globalPrompt}
           onGlobalPromptChange={(val) =>
             editor.setForm((prev) => ({ ...prev, globalPrompt: val }))
           }
+          promptMode={editor.form.promptMode}
+          onPromptModeChange={(val) =>
+            editor.setForm((prev) => ({ ...prev, promptMode: val }))
+          }
+          selectedPromptIds={editor.form.selectedPromptIds}
+          onTogglePromptId={editor.onTogglePromptId}
+          onSelectPromptIds={editor.onSelectPromptIds}
           onSave={editor.handleSaveSettings}
           isSaving={editor.savingSettings}
         />
@@ -488,6 +518,7 @@ function useProjectPageResources(projectId: string) {
     "projects",
     "mcpServers",
     "skills",
+    "prompts",
   ]);
 
   const project = projects.find((p) => p.id === projectId);
@@ -553,6 +584,7 @@ export default function ProjectPage() {
       />
 
       <ProjectPageTabs
+        projectId={projectId}
         tab={tab}
         onTabChange={setTab}
         projectChats={projectChats}

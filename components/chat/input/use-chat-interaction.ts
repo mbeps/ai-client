@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useChatAttachments } from "@/components/chat/input/use-chat-attachments";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import type { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
@@ -44,6 +44,10 @@ export interface ChatInteractionProps {
   activeChatAssistantId?: string | null;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
+  projectId?: string | null;
+  assistantId?: string | null;
+  promptMode?: "all" | "none" | "specific";
+  promptIds?: string[];
 }
 
 /**
@@ -152,6 +156,16 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     services.supportsTools,
   );
 
+  const promptScopeContext = useMemo(
+    () => ({
+      projectId: props.projectId,
+      assistantId: props.assistantId,
+      promptMode: props.promptMode,
+      allowedPromptIds: props.promptIds,
+    }),
+    [props.projectId, props.assistantId, props.promptMode, props.promptIds],
+  );
+
   const mentions = useMentionCommands(
     input,
     setInput,
@@ -164,6 +178,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selections.onMentionSkill,
     selections.onMentionKb,
     services.knowledgebases,
+    promptScopeContext,
   );
 
   const prompts = useChatPromptSelection(
@@ -225,6 +240,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     mentions,
     prompts,
     isSendDisabled,
+    promptScopeContext,
     submit,
     handleRemoveAssistant,
     handleOpenSubagents,

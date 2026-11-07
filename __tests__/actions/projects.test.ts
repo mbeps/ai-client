@@ -146,11 +146,15 @@ describe("createProject", () => {
       name: "Test Project",
       description: "Desc",
       globalPrompt: "System prompt",
+      promptMode: "specific",
+      promptIds: ["p-1", "p-2"],
     });
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
         description: "Desc",
         globalPrompt: "System prompt",
+        promptMode: "specific",
+        promptIds: ["p-1", "p-2"],
       }),
     );
   });
@@ -337,6 +341,18 @@ describe("updateProject", () => {
   });
 
   it("updates knowledgebaseId to null and accepts empty payload", async () => {
+    chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
+    await updateProject(VALID_UUID, {
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        promptMode: "none",
+        promptIds: [],
+      }),
+    );
+
     chainable.returning.mockResolvedValueOnce([PROJECT_ROW]);
     await updateProject(VALID_UUID, {
       knowledgebaseId: null,

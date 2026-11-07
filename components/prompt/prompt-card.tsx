@@ -35,10 +35,18 @@ interface PromptCardProps {
  */
 export function PromptCard({ prompt }: PromptCardProps) {
   const loadPrompts = useAppStore((state) => state.loadPrompts);
+  const projects = useAppStore((state) => state.projects);
+  const assistants = useAppStore((state) => state.assistants);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.SETTINGS.PROMPTS.detail(prompt.id);
+
+  const scopeLabel = prompt.projectId
+    ? `Project: ${projects.find((p) => p.id === prompt.projectId)?.name || "Project"}`
+    : prompt.assistantId
+      ? `Assistant: ${assistants.find((a) => a.id === prompt.assistantId)?.name || "Assistant"}`
+      : "Global";
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -72,7 +80,7 @@ export function PromptCard({ prompt }: PromptCardProps) {
       </Link>
 
       <div className="mt-4 flex items-center justify-between gap-2 border-t pt-2">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Badge
             variant="secondary"
             className="bg-muted py-0 font-mono text-[10px]"
@@ -80,6 +88,9 @@ export function PromptCard({ prompt }: PromptCardProps) {
             {prompt.shortcut.startsWith("/")
               ? prompt.shortcut
               : `/${prompt.shortcut}`}
+          </Badge>
+          <Badge variant="outline" className="py-0 text-[10px]">
+            {scopeLabel}
           </Badge>
         </div>
 

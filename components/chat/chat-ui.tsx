@@ -266,6 +266,14 @@ export function ChatUI({
               initialSubagentModelId={initialSubagentModelId}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
+              projectId={chat?.projectId}
+              assistantId={chat?.assistantId}
+              promptMode={
+                currentProject?.promptMode || currentAssistant?.promptMode
+              }
+              promptIds={
+                currentProject?.promptIds || currentAssistant?.promptIds
+              }
             />
           </div>
         </div>

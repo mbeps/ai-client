@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createProjectSchema,
+  projectSchema,
   renameProjectSchema,
   updateProjectSchema,
 } from "@/schemas/project/project";
@@ -38,6 +39,14 @@ describe("createProjectSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts valid promptMode and promptIds updates", () => {
+    const result = updateProjectSchema.safeParse({
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects description longer than 500 characters", () => {
     const result = createProjectSchema.safeParse({
       name: "Valid",
@@ -52,6 +61,23 @@ describe("createProjectSchema", () => {
       description: "d".repeat(500),
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts valid promptMode and promptIds", () => {
+    const result = createProjectSchema.safeParse({
+      name: "Valid",
+      promptMode: "specific",
+      promptIds: ["prompt-1", "prompt-2"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid promptMode", () => {
+    const result = createProjectSchema.safeParse({
+      name: "Valid",
+      promptMode: "invalid-mode",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects globalPrompt longer than 10 000 characters", () => {
@@ -102,6 +128,14 @@ describe("updateProjectSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts valid promptMode and promptIds updates", () => {
+    const result = updateProjectSchema.safeParse({
+      promptMode: "none",
+      promptIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects description longer than 500 characters", () => {
     const result = updateProjectSchema.safeParse({
       description: "d".repeat(501),
@@ -132,5 +166,26 @@ describe("renameProjectSchema", () => {
   it("rejects missing name field", () => {
     const result = renameProjectSchema.safeParse({});
     expect(result.success).toBe(false);
+  });
+});
+
+describe("projectSchema", () => {
+  it("validates full project object", () => {
+    const result = projectSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      userId: "user-1",
+      name: "Project",
+      description: "Description",
+      globalPrompt: "Prompt",
+      tools: [],
+      skillMode: "dynamic",
+      skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      knowledgebaseId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    expect(result.success).toBe(true);
   });
 });
