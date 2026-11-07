@@ -16,4 +16,6 @@ export type McpServerRow = InferSelectModel<typeof mcpServer> &
   TimedResource & {
     isInstalled?: boolean;
     installId?: string;
+    oauthConnected?: boolean;
+    hasOAuthClientSecret?: boolean;
   };

@@ -2,6 +2,7 @@ import type { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 import { decrypt } from "@/lib/encryption/decrypt";
 import { ERROR_CODE } from "@/lib/error/error-code";
+import { McpOAuthProvider } from "@/lib/mcp/oauth/mcp-oauth-provider";
 import { safeMcpFetch } from "@/lib/mcp/safe-mcp-fetch";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { fail } from "@/lib/result/fail";
@@ -71,6 +72,11 @@ export async function buildTransport(
     }
   }
 
+  const authProvider =
+    server.authType === "oauth"
+      ? new McpOAuthProvider({ server, userId: server.userId })
+      : undefined;
+
   return ok({
     type: "http" as const,
     url: server.url,
@@ -78,5 +84,6 @@ export async function buildTransport(
     redirect: "follow" as const,
     fetch: safeMcpFetch,
     ...(headers && { headers }),
+    ...(authProvider && { authProvider }),
   });
 }

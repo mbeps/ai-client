@@ -3,6 +3,12 @@ import { isBlockedUrlSync } from "@/lib/mcp/url-guard/is-blocked-url-sync";
 import { idField, jsonObjectSchema } from "@/schemas/shared-fields";
 
 /**
+ * Authentication type supported for Model Context Protocol servers.
+ */
+const mcpAuthTypeSchema = z.enum(["none", "headers", "oauth"]);
+export type McpAuthType = z.infer<typeof mcpAuthTypeSchema>;
+
+/**
  * Validates MCP (Model Context Protocol) server configuration.
  * HTTP servers require URL (validated against internal/blocked hosts for security).
  * Headers optional for custom authentication (Bearer tokens, API keys, etc.).
@@ -13,7 +19,7 @@ import { idField, jsonObjectSchema } from "@/schemas/shared-fields";
  * @see {@link lib/mcp/}} for MCP server creation/update actions
  * @author Maruf Bepary
  */
-const mcpServerBaseSchema = z.object({
+const baseObject = z.object({
   name: z.string().min(1, "Name is required").max(100),
   url: z
     .string()
@@ -22,9 +28,27 @@ const mcpServerBaseSchema = z.object({
     .refine((val) => !isBlockedUrlSync(val), {
       message: "URL points to a blocked or internal address",
     }),
+  authType: mcpAuthTypeSchema.default("none"),
   headers: jsonObjectSchema.or(z.literal("")).optional(),
+  oauthClientId: z.string().max(512).optional(),
+  oauthClientSecret: z.string().max(2048).optional(),
+  oauthScope: z.string().max(1024).optional(),
   isPublic: z.boolean(),
 });
+
+/**
+ * Shared base schema for MCP server configurations with auto-inference of authType.
+ *
+ * @author Maruf Bepary
+ */
+const mcpServerBaseSchema = z.preprocess((val: any) => {
+  if (val && typeof val === "object") {
+    if (!val.authType && val.headers && val.headers !== "") {
+      return { ...val, authType: "headers" };
+    }
+  }
+  return val;
+}, baseObject);
 
 /**
  * Validates new MCP server creation.
@@ -54,19 +78,25 @@ export const updateMcpServerSchema = mcpServerBaseSchema;
  *
  * @author Maruf Bepary
  */
-export const mcpServerSchema = z
-  .object({
-    id: idField,
-    userId: z.string(),
-    name: z.string(),
-    enabled: z.boolean(),
-    isPublic: z.boolean(),
-    isInstalled: z.boolean().optional(),
-    installId: z.string().optional(),
-    createdAt: z.date(),
-    updatedAt: z.date(),
-  })
-  .and(mcpServerBaseSchema);
+export const mcpServerSchema = z.object({
+  id: idField,
+  userId: z.string(),
+  name: z.string(),
+  url: z.string(),
+  authType: mcpAuthTypeSchema.default("none"),
+  headers: jsonObjectSchema.or(z.literal("")).optional(),
+  oauthClientId: z.string().optional(),
+  oauthClientSecret: z.string().optional(),
+  oauthScope: z.string().optional(),
+  oauthConnected: z.boolean().optional(),
+  hasOAuthClientSecret: z.boolean().optional(),
+  enabled: z.boolean(),
+  isPublic: z.boolean(),
+  isInstalled: z.boolean().optional(),
+  installId: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 
 /**
  * Input payload shape for creating a new Model Context Protocol (MCP) server integration.

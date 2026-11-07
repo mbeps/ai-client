@@ -104,12 +104,14 @@ describe("discoverAllPrompts action", () => {
         id: "server-1",
         headers: "personal-headers",
       }),
+      "user-1",
     );
     expect(mcpServerRowToConfigMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "server-2",
         headers: "subscriber-headers",
       }),
+      "user-1",
     );
   });
 

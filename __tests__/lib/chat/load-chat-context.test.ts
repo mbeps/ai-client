@@ -138,12 +138,22 @@ describe("loadChatContext KB ownership", () => {
         name: "Personal Server",
         url: "https://personal.example.com/mcp",
         headers: JSON.stringify({ "X-Personal": "p-secret" }),
+        authType: "headers",
+        oauthClientId: null,
+        oauthClientSecret: null,
+        oauthScope: null,
+        userId: "user-1",
       },
       {
         id: "srv-2",
         name: "Installed Server",
         url: "https://installed.example.com/mcp",
         headers: JSON.stringify({ "X-Installed": "i-secret" }),
+        authType: "headers",
+        oauthClientId: null,
+        oauthClientSecret: null,
+        oauthScope: null,
+        userId: "user-1",
       },
     ]);
   });

@@ -57,12 +57,17 @@ export const discoverAllPrompts = defineAction(
     ]);
 
     const serversToQuery = [
-      ...personalRows.map((server) => mcpServerRowToConfig(server)),
+      ...personalRows.map((server) =>
+        mcpServerRowToConfig(server, session.user.id),
+      ),
       ...installedRows.map(({ server, installHeaders }) =>
-        mcpServerRowToConfig({
-          ...server,
-          headers: installHeaders,
-        }),
+        mcpServerRowToConfig(
+          {
+            ...server,
+            headers: installHeaders,
+          },
+          session.user.id,
+        ),
       ),
     ];
 

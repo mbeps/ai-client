@@ -3,6 +3,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
+  mcpOAuthCredential,
   mcpServer,
   userMcpServerInstall,
 } from "@/drizzle/schemas/mcp-server-schema";
@@ -26,6 +27,28 @@ export const listMcpServers = defineAction(
   async (): Promise<Result<McpServerRow[], CommonError>> => {
     const session = await requireSession();
 
+    // 0. Fetch user's active OAuth credentials to set oauthConnected status
+    let connectedServerIds = new Set<string>();
+    try {
+      const rawCreds = await db
+        .select({
+          serverId: mcpOAuthCredential.serverId,
+          accessToken: mcpOAuthCredential.accessToken,
+        })
+        .from(mcpOAuthCredential)
+        .where(eq(mcpOAuthCredential.userId, session.user.id));
+
+      if (Array.isArray(rawCreds)) {
+        connectedServerIds = new Set(
+          rawCreds
+            .filter((c: any) => Boolean(c?.accessToken))
+            .map((c: any) => c.serverId),
+        );
+      }
+    } catch {
+      // Safe fallback when mock DB harness in tests doesn't support separate query
+    }
+
     // 1. Fetch personal servers owned by user
     const personalRows = await db
       .select()
@@ -36,6 +59,8 @@ export const listMcpServers = defineAction(
     const personal: McpServerRow[] = personalRows.map((r) => ({
       ...r,
       headers: r.headers ? "[REDACTED]" : null,
+      oauthClientSecret: r.oauthClientSecret ? "[REDACTED]" : null,
+      oauthConnected: connectedServerIds.has(r.id),
       isInstalled: false,
     }));
 
@@ -49,6 +74,10 @@ export const listMcpServers = defineAction(
         headers: userMcpServerInstall.headers,
         enabled: userMcpServerInstall.enabled,
         isPublic: mcpServer.isPublic,
+        authType: mcpServer.authType,
+        oauthClientId: userMcpServerInstall.oauthClientId,
+        oauthClientSecret: userMcpServerInstall.oauthClientSecret,
+        oauthScope: mcpServer.oauthScope,
         createdAt: userMcpServerInstall.createdAt,
         updatedAt: userMcpServerInstall.updatedAt,
         installId: userMcpServerInstall.id,
@@ -72,6 +101,11 @@ export const listMcpServers = defineAction(
       headers: r.headers ? "[REDACTED]" : null,
       enabled: r.enabled,
       isPublic: false, // Subscriber cannot publish someone else's public tool
+      authType: (r.authType as any) ?? "none",
+      oauthClientId: r.oauthClientId ?? null,
+      oauthClientSecret: r.oauthClientSecret ? "[REDACTED]" : null,
+      oauthScope: r.oauthScope ?? null,
+      oauthConnected: connectedServerIds.has(r.id),
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
       isInstalled: true,

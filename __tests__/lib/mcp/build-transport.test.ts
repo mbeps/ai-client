@@ -115,4 +115,24 @@ describe("buildTransport — SSRF redirect hardening (T9.5)", () => {
       expect(res2.error.message).toBe('Invalid headers JSON for "https://example.com/mcp"');
     }
   });
+
+  it("attaches McpOAuthProvider when authType is oauth", async () => {
+    isBlockedUrlMock.mockResolvedValueOnce(false);
+    const res = await buildTransport({
+      id: "srv-oauth",
+      type: "http",
+      name: "oauth-test",
+      url: "https://example.com/mcp",
+      authType: "oauth",
+      userId: "user-123",
+    });
+
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value).toMatchObject({
+      type: "http",
+      url: "https://example.com/mcp",
+    });
+    expect((res.value as any).authProvider).toBeDefined();
+  });
 });

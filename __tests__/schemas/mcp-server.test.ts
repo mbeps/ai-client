@@ -124,4 +124,53 @@ describe("updateMcpServerSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts authType: 'oauth' with client ID, secret and scopes", () => {
+    const result = updateMcpServerSchema.safeParse({
+      name: "OAuth Server",
+      url: "https://mcp.example.com",
+      authType: "oauth",
+      oauthClientId: "client-123",
+      oauthClientSecret: "secret-456",
+      oauthScope: "read write offline_access",
+      isPublic: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.authType).toBe("oauth");
+      expect(result.data.oauthClientId).toBe("client-123");
+      expect(result.data.oauthClientSecret).toBe("secret-456");
+      expect(result.data.oauthScope).toBe("read write offline_access");
+    }
+  });
+
+  it("accepts authType: 'none'", () => {
+    const result = createMcpServerSchema.safeParse({
+      name: "No Auth Server",
+      url: "https://mcp.example.com",
+      authType: "none",
+      isPublic: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.authType).toBe("none");
+    }
+  });
+
+  it("defaults authType to 'headers' when headers is present, otherwise 'none'", () => {
+    const withHeaders = createMcpServerSchema.parse({
+      name: "With Headers",
+      url: "https://mcp.example.com",
+      headers: '{"Authorization": "Bearer 123"}',
+      isPublic: false,
+    });
+    expect(withHeaders.authType).toBe("headers");
+
+    const withoutHeaders = createMcpServerSchema.parse({
+      name: "Without Headers",
+      url: "https://mcp.example.com",
+      isPublic: false,
+    });
+    expect(withoutHeaders.authType).toBe("none");
+  });
 });

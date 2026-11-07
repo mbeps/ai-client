@@ -152,6 +152,16 @@ export const ROUTES = {
   SEARCH: { path: "/search" as const, name: "Search" },
   API: {
     AUTH: { path: `${API_BASE}/auth` as const, name: "Auth API" },
+    MCP_OAUTH: {
+      CALLBACK: {
+        path: `${API_BASE}/mcp/oauth/callback` as const,
+        name: "MCP OAuth Callback",
+      },
+      CLIENT_METADATA: {
+        path: `${API_BASE}/mcp/oauth/client-metadata` as const,
+        name: "MCP OAuth Client Metadata",
+      },
+    },
   },
   JOBS: {
     path: JOBS_BASE,

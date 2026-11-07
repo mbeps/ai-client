@@ -109,6 +109,17 @@ export function ServerCard({ server }: ServerCardProps) {
               Community
             </Badge>
           )}
+          {server.authType === "oauth" && (
+            <Badge
+              variant={server.oauthConnected ? "default" : "secondary"}
+              className={cn(
+                "h-4 px-1 text-[10px]",
+                server.oauthConnected && "bg-emerald-600 hover:bg-emerald-700",
+              )}
+            >
+              {server.oauthConnected ? "OAuth Connected" : "OAuth"}
+            </Badge>
+          )}
         </div>
         {server.url && (
           <p className="text-muted-foreground line-clamp-2 font-mono text-xs leading-relaxed">

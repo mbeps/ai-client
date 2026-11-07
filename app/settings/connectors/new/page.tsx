@@ -31,7 +31,11 @@ import {
 const DEFAULTS: CreateMcpServer = {
   name: "",
   url: "",
+  authType: "none",
   headers: "",
+  oauthClientId: "",
+  oauthClientSecret: "",
+  oauthScope: "",
   isPublic: false,
 };
 
@@ -54,7 +58,7 @@ export default function NewMcpServerPage() {
   );
 
   const form = useForm<CreateMcpServer>({
-    resolver: zodResolver(createMcpServerSchema),
+    resolver: zodResolver(createMcpServerSchema) as any,
     defaultValues: DEFAULTS,
   });
 

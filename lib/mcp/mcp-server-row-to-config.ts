@@ -20,19 +20,39 @@ function decryptHeaders(headers?: string | null): string | null {
   }
 }
 
+function decryptSecret(secret?: string | null): string | null {
+  if (!secret || typeof secret !== "string") {
+    return (secret as unknown as string) ?? null;
+  }
+  try {
+    return decrypt(secret);
+  } catch {
+    return secret;
+  }
+}
+
 /**
- * Converts McpServerRow to McpServerConfig for SDK use. Maps id, name, url, headers only.
- * Decrypts encrypted headers at rest while safely falling back to plaintext JSON.
+ * Converts McpServerRow to McpServerConfig for SDK use.
+ * Decrypts encrypted headers and oauthClientSecret at rest while safely falling back to plaintext.
  *
  * @param row - Database row from mcpServer table
+ * @param userId - Optional overriding userId for installed/subscribed servers (defaults to row.userId)
  * @returns Configuration object for MCP SDK initialization
  * @author Maruf Bepary
  */
-export function mcpServerRowToConfig(row: McpServerRow): McpServerConfig {
+export function mcpServerRowToConfig(
+  row: McpServerRow,
+  userId?: string,
+): McpServerConfig {
   return {
     id: row.id,
     name: row.name,
     url: row.url,
     headers: decryptHeaders(row.headers),
+    authType: (row.authType as any) ?? (row.headers ? "headers" : "none"),
+    oauthClientId: row.oauthClientId ?? null,
+    oauthClientSecret: decryptSecret(row.oauthClientSecret),
+    oauthScope: row.oauthScope ?? null,
+    userId: userId ?? row.userId,
   };
 }

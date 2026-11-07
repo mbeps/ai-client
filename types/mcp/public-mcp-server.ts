@@ -11,7 +11,10 @@ import type { McpServer } from "@/types/mcp/mcp-server";
  * @see {@link types/mcp/mcp-server.ts} for the full McpServer type
  * @author Maruf Bepary
  */
-export type PublicMcpServer = DistributiveOmit<McpServer, "headers"> & {
+export type PublicMcpServer = DistributiveOmit<
+  McpServer,
+  "headers" | "oauthClientSecret"
+> & {
   /** The id of the user who owns/shares this server */
   userId: string;
   /** Always true for this variant */

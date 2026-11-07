@@ -30,6 +30,10 @@ describe("buildServerConfig", () => {
       url: "http://localhost:3000/sse",
       headers: null,
       isPublic: false,
+      authType: "none",
+      oauthClientId: null,
+      oauthClientSecret: null,
+      oauthScope: null,
     });
   });
 
@@ -46,7 +50,27 @@ describe("buildServerConfig", () => {
       url: "http://localhost:3000/sse",
       headers: null,
       isPublic: false,
+      authType: "none",
+      oauthClientId: null,
+      oauthClientSecret: null,
+      oauthScope: null,
     });
+  });
+
+  it("handles oauth authType and encrypts oauthClientSecret", () => {
+    const config = buildServerConfig({
+      name: "OAuth Server",
+      url: "https://example.com/sse",
+      authType: "oauth",
+      oauthClientId: "client-123",
+      oauthClientSecret: "secret-abc",
+      oauthScope: "openid email",
+    });
+
+    expect(config.authType).toBe("oauth");
+    expect(config.oauthClientId).toBe("client-123");
+    expect(config.oauthScope).toBe("openid email");
+    expect(decrypt(config.oauthClientSecret!)).toBe("secret-abc");
   });
 });
 
