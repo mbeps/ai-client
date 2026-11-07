@@ -55,7 +55,8 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-import { POST } from "@/app/api/chat/route";
+import { POST, maxDuration, runtime, dynamic } from "@/app/api/chat/route";
+import { auth } from "@/lib/auth/auth";
 import { inngest } from "@/lib/inngest/client";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -155,5 +156,106 @@ describe("POST /api/chat — rate limiting (T9.1)", () => {
         userEmail: "alice@example.com",
       }),
     });
+  });
+
+  it("returns 401 when user session is missing", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValueOnce(null as any);
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: "11111111-1111-4111-8111-111111111111",
+        userMessageId: "22222222-2222-4222-8222-222222222222",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({
+      error: "Unauthorized",
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("returns 400 when request body is not valid JSON", async () => {
+    const req = {
+      json: vi.fn().mockRejectedValue(new Error("Unexpected token")),
+    } as unknown as Request;
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "Invalid JSON payload",
+      code: "INVALID_INPUT",
+    });
+  });
+
+  it("returns 400 when schema validation fails", async () => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        // missing required chatId and userMessageId
+        model: "gpt-4o",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; code: string };
+    expect(body.error).toBe("Invalid request");
+    expect(body.code).toBe("INVALID_INPUT");
+  });
+
+  it("normalizes empty or whitespace model string to undefined", async () => {
+    vi.mocked(checkRateLimit).mockReturnValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: "11111111-1111-4111-8111-111111111111",
+        userMessageId: "22222222-2222-4222-8222-222222222222",
+        model: "   ",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "chat/response.generate",
+      data: expect.objectContaining({
+        model: undefined,
+      }),
+    });
+  });
+
+  it("returns 500 when database or inngest dispatch throws an error", async () => {
+    vi.mocked(checkRateLimit).mockReturnValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
+    mockDbSelect.chain.where.mockRejectedValueOnce(new Error("Database connection lost"));
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: "11111111-1111-4111-8111-111111111111",
+        userMessageId: "22222222-2222-4222-8222-222222222222",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: string; code: string; ref: string };
+    expect(body.code).toBe("INTERNAL");
+    expect(body.error).toContain("An internal error occurred");
+    expect(body.ref).toBeDefined();
+  });
+
+  it("exports correct Next.js route segment configuration", () => {
+    expect(maxDuration).toBe(60);
+    expect(runtime).toBe("nodejs");
+    expect(dynamic).toBe("force-dynamic");
   });
 });

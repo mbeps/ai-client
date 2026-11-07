@@ -13,11 +13,13 @@ import { chatRequestSchema } from "@/schemas/chat/chat";
 const log = getLogger(["app", "api", "chat"]);
 
 /**
- * Maximum execution timeout in seconds for chat request dispatch.
+ * Route segment configuration.
  *
  * @author Maruf Bepary
  */
 export const maxDuration = 60;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * Dispatches AI chat response generation as an Inngest background job.

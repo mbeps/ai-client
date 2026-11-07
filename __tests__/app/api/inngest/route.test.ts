@@ -88,4 +88,11 @@ describe("/api/inngest route handler", () => {
     expect(res).toBeDefined();
     expect([200, 400, 401]).toContain(res.status);
   });
+
+  it("exports correct Next.js route segment configuration", async () => {
+    const { maxDuration, runtime, dynamic } = await import("@/app/api/inngest/route");
+    expect(maxDuration).toBe(300);
+    expect(runtime).toBe("nodejs");
+    expect(dynamic).toBe("force-dynamic");
+  });
 });

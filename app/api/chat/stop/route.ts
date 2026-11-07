@@ -11,6 +11,15 @@ import { stopChatRequestSchema } from "@/schemas/chat/chat";
 const log = getLogger(["app", "api", "chat", "stop"]);
 
 /**
+ * Route segment configuration.
+ *
+ * @author Maruf Bepary
+ */
+export const maxDuration = 30;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
  * Cancels an in-progress AI chat response generation.
  * Immediately aborts the active stream via ChatAbortRegistry, publishes a finish event
  * to Inngest Realtime to close connected clients, and sends a cancellation event.
