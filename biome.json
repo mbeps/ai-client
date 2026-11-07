@@ -32,7 +32,8 @@
       "!.vscode",
       "!wiki",
       "!.agents",
-      "!pnpm-lock.yaml"
+      "!pnpm-lock.yaml",
+      ".github"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true
