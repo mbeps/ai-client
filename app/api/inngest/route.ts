@@ -4,6 +4,15 @@ import { inngest } from "@/lib/inngest/client";
 import { inngestFunctions } from "@/lib/inngest/functions";
 
 /**
+ * Route segment configuration.
+ *
+ * @author Maruf Bepary
+ */
+export const maxDuration = 300;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
  * Inngest HTTP serve handler for Next.js App Router.
  * Handles event dispatching, function execution, and step checkpointing.
  *
