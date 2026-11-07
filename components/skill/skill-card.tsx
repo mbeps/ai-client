@@ -37,11 +37,19 @@ interface SkillCardProps {
  */
 export function SkillCard({ skill }: SkillCardProps) {
   const loadSkills = useAppStore((state) => state.loadSkills);
+  const projects = useAppStore((state) => state.projects);
+  const assistants = useAppStore((state) => state.assistants);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.SETTINGS.SKILLS.detail(skill.id);
+
+  const scopeLabel = skill.projectId
+    ? `Project: ${projects.find((p) => p.id === skill.projectId)?.name || "Project"}`
+    : skill.assistantId
+      ? `Assistant: ${assistants.find((a) => a.id === skill.assistantId)?.name || "Assistant"}`
+      : "Global";
 
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true);
@@ -102,6 +110,9 @@ export function SkillCard({ skill }: SkillCardProps) {
             className="bg-muted py-0 font-mono text-[10px]"
           >
             /{skill.name}
+          </Badge>
+          <Badge variant="outline" className="py-0 text-[10px]">
+            {scopeLabel}
           </Badge>
           {skill.files && skill.files.length > 0 && (
             <Badge

@@ -274,6 +274,10 @@ export function ChatUI({
               promptIds={
                 currentProject?.promptIds || currentAssistant?.promptIds
               }
+              skillMode={
+                currentProject?.skillMode || currentAssistant?.skillMode
+              }
+              skillIds={currentProject?.skillIds || currentAssistant?.skillIds}
             />
           </div>
         </div>

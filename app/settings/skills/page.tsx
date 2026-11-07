@@ -2,6 +2,7 @@
 
 import { BrainCircuit, Plus, Upload } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { SkillCard } from "@/components/skill/skill-card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Agent Skills listing page.
- * Displays all user skills with search, enable/disable switches, and actions to create or upload skills.
+ * Displays all user skills with search, scope filtering, enable/disable switches, and actions to create or upload skills.
  * Displays skills in alphabetical order by name to prevent layout jumping when toggled or updated.
  *
  * @author Maruf Bepary
@@ -19,6 +20,9 @@ import { useAppStore } from "@/lib/store/use-app-store";
 export default function SkillsPage() {
   const skills = useAppStore((state) => state.skills);
   const loadSkills = useAppStore((state) => state.loadSkills);
+  const [scopeFilter, setScopeFilter] = useState<
+    "all" | "global" | "project" | "assistant"
+  >("all");
 
   return (
     <ResourceListPage
@@ -48,6 +52,33 @@ export default function SkillsPage() {
           </Button>
         </div>
       }
+      extraFilters={
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {(["all", "global", "project", "assistant"] as const).map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={scopeFilter === s ? "default" : "outline"}
+              className="h-8 text-xs capitalize"
+              onClick={() => setScopeFilter(s)}
+            >
+              {s === "all"
+                ? "All"
+                : s === "global"
+                  ? "Global"
+                  : s === "project"
+                    ? "Projects"
+                    : "Assistants"}
+            </Button>
+          ))}
+        </div>
+      }
+      customFilterFn={(s) => {
+        if (scopeFilter === "global") return !s.projectId && !s.assistantId;
+        if (scopeFilter === "project") return Boolean(s.projectId);
+        if (scopeFilter === "assistant") return Boolean(s.assistantId);
+        return true;
+      }}
       filterFn={(s, q) =>
         s.name.toLowerCase().includes(q.toLowerCase()) ||
         s.displayName.toLowerCase().includes(q.toLowerCase()) ||

@@ -384,6 +384,7 @@ function AssistantPageTabs(props: AssistantPageTabsProps) {
 
       <SidebarTabsContent value="skills">
         <SkillsConfigTab
+          assistantId={assistantId}
           skillMode={editor.form.skillMode}
           onSkillModeChange={(val) =>
             editor.setForm((prev) => ({ ...prev, skillMode: val }))

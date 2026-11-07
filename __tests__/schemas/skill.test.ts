@@ -97,6 +97,43 @@ describe("createSkillSchema", () => {
     });
     expect(emptyContent.success).toBe(false);
   });
+
+  it("accepts optional projectId or assistantId", () => {
+    const withProject = createSkillSchema.safeParse({
+      name: "proj-skill",
+      displayName: "Project Skill",
+      description: "Desc",
+      content: "Content",
+      projectId: "proj-1",
+    });
+    expect(withProject.success).toBe(true);
+
+    const withAssistant = createSkillSchema.safeParse({
+      name: "asst-skill",
+      displayName: "Assistant Skill",
+      description: "Desc",
+      content: "Content",
+      assistantId: "asst-1",
+    });
+    expect(withAssistant.success).toBe(true);
+  });
+
+  it("rejects when both projectId and assistantId are provided", () => {
+    const dual = createSkillSchema.safeParse({
+      name: "dual-skill",
+      displayName: "Dual Skill",
+      description: "Desc",
+      content: "Content",
+      projectId: "proj-1",
+      assistantId: "asst-1",
+    });
+    expect(dual.success).toBe(false);
+    if (!dual.success) {
+      expect(dual.error.issues[0].message).toContain(
+        "A skill cannot be scoped to both a project and an assistant",
+      );
+    }
+  });
 });
 
 describe("updateSkillSchema", () => {
@@ -106,6 +143,26 @@ describe("updateSkillSchema", () => {
       enabled: false,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts updating projectId or assistantId", () => {
+    const updateProj = updateSkillSchema.safeParse({
+      projectId: "proj-2",
+    });
+    expect(updateProj.success).toBe(true);
+
+    const updateAsst = updateSkillSchema.safeParse({
+      assistantId: "asst-2",
+    });
+    expect(updateAsst.success).toBe(true);
+  });
+
+  it("rejects update when both projectId and assistantId are provided", () => {
+    const dual = updateSkillSchema.safeParse({
+      projectId: "proj-1",
+      assistantId: "asst-1",
+    });
+    expect(dual.success).toBe(false);
   });
 
   it("validates slug if name is provided in update", () => {
@@ -139,6 +196,8 @@ describe("skillSchema", () => {
       content: "# Content",
       files: [],
       enabled: true,
+      projectId: "proj-1",
+      assistantId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

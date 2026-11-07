@@ -468,6 +468,7 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
 
       <SidebarTabsContent value="skills">
         <SkillsConfigTab
+          projectId={projectId}
           skillMode={editor.form.skillMode}
           onSkillModeChange={(val) =>
             editor.setForm((prev) => ({ ...prev, skillMode: val }))

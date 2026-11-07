@@ -80,4 +80,80 @@ describe("SkillsConfigTab", () => {
     );
     expect(screen.getByPlaceholderText(/search skills/i)).toBeInTheDocument();
   });
+
+  it("renders Project Skills section and handles project specific skills", () => {
+    const projectSkill: Skill = {
+      ...mockSkills[0],
+      id: "proj-sk-1",
+      name: "proj-skill",
+      displayName: "Project Skill",
+      projectId: "proj-1",
+    };
+
+    render(
+      <SkillsConfigTab
+        projectId="proj-1"
+        skillMode="dynamic"
+        onSkillModeChange={vi.fn()}
+        selectedSkillIds={new Set()}
+        onToggleSkill={vi.fn()}
+        skills={[...mockSkills, projectSkill]}
+      />,
+    );
+
+    expect(screen.getByText("Project Skills")).toBeInTheDocument();
+    expect(screen.getByText("Project Skill")).toBeInTheDocument();
+    const newSkillLink = screen.getByRole("link", { name: /new skill/i });
+    expect(newSkillLink).toHaveAttribute(
+      "href",
+      "/settings/skills/new?projectId=proj-1",
+    );
+  });
+
+  it("renders Assistant Skills section and handles assistant specific skills", () => {
+    const assistantSkill: Skill = {
+      ...mockSkills[0],
+      id: "asst-sk-1",
+      name: "asst-skill",
+      displayName: "Assistant Skill",
+      assistantId: "asst-1",
+    };
+
+    render(
+      <SkillsConfigTab
+        assistantId="asst-1"
+        skillMode="dynamic"
+        onSkillModeChange={vi.fn()}
+        selectedSkillIds={new Set()}
+        onToggleSkill={vi.fn()}
+        skills={[...mockSkills, assistantSkill]}
+      />,
+    );
+
+    expect(screen.getByText("Assistant Skills")).toBeInTheDocument();
+    expect(screen.getByText("Assistant Skill")).toBeInTheDocument();
+    const newSkillLink = screen.getByRole("link", { name: /new skill/i });
+    expect(newSkillLink).toHaveAttribute(
+      "href",
+      "/settings/skills/new?assistantId=asst-1",
+    );
+  });
+
+  it("renders empty state when entity has no scoped skills", () => {
+    render(
+      <SkillsConfigTab
+        projectId="proj-2"
+        skillMode="dynamic"
+        onSkillModeChange={vi.fn()}
+        selectedSkillIds={new Set()}
+        onToggleSkill={vi.fn()}
+        skills={mockSkills}
+      />,
+    );
+
+    expect(screen.getByText("Project Skills")).toBeInTheDocument();
+    expect(
+      screen.getByText(/no project-specific skills yet/i),
+    ).toBeInTheDocument();
+  });
 });

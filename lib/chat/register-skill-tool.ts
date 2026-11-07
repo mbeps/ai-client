@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schemas/skill-schema";
@@ -7,14 +7,29 @@ import { fenceBlock } from "@/lib/skills/fence-block";
 import type { SkillBundledFile } from "@/types/skill/skill";
 
 /**
+ * Scope context used to constrain dynamic skill loading to active entity or global skills.
+ *
+ * @author Maruf Bepary
+ */
+export interface SkillToolScopeContext {
+  projectId?: string | null;
+  assistantId?: string | null;
+}
+
+/**
  * Registers the internal `load_skill` tool so the model can dynamically load full instructions
  * and bundled reference files for any skill in the available skills catalog.
+ * Constrains lookups to permitted entity scope or global skills.
  *
  * @param userId - ID of the authenticated user
+ * @param context - Optional entity scope context (projectId or assistantId)
  * @returns Tools dict containing `load_skill`
  * @author Maruf Bepary
  */
-export function registerSkillTool(userId: string) {
+export function registerSkillTool(
+  userId: string,
+  context?: SkillToolScopeContext,
+) {
   return {
     load_skill: tool({
       description:
@@ -29,16 +44,34 @@ export function registerSkillTool(userId: string) {
       }),
       execute: async ({ skillName }) => {
         const cleanSlug = skillName.toLowerCase().trim();
+        const conditions = [
+          eq(skill.userId, userId),
+          eq(skill.name, cleanSlug),
+          eq(skill.enabled, true),
+        ];
+
+        if (context?.projectId) {
+          conditions.push(
+            or(
+              and(isNull(skill.projectId), isNull(skill.assistantId)),
+              eq(skill.projectId, context.projectId),
+            )!,
+          );
+        } else if (context?.assistantId) {
+          conditions.push(
+            or(
+              and(isNull(skill.projectId), isNull(skill.assistantId)),
+              eq(skill.assistantId, context.assistantId),
+            )!,
+          );
+        } else {
+          conditions.push(isNull(skill.projectId), isNull(skill.assistantId));
+        }
+
         const [found] = await db
           .select()
           .from(skill)
-          .where(
-            and(
-              eq(skill.userId, userId),
-              eq(skill.name, cleanSlug),
-              eq(skill.enabled, true),
-            ),
-          )
+          .where(and(...conditions))
           .limit(1);
 
         if (!found) {

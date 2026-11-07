@@ -1339,6 +1339,100 @@ describe("useMentionCommands", () => {
       ]);
     });
   });
+
+  describe("skillScopeContext isolation", () => {
+    const SCOPED_SKILLS = [
+      {
+        id: "global-sk-1",
+        name: "global-skill",
+        displayName: "Global Skill",
+        description: "Global description",
+        enabled: true,
+        projectId: null,
+        assistantId: null,
+      },
+      {
+        id: "proj-sk-1",
+        name: "proj-skill-1",
+        displayName: "Project Skill",
+        description: "Project 1 description",
+        enabled: true,
+        projectId: "proj-1",
+        assistantId: null,
+      },
+      {
+        id: "asst-sk-1",
+        name: "asst-skill-1",
+        displayName: "Assistant Skill",
+        description: "Assistant 1 description",
+        enabled: true,
+        projectId: null,
+        assistantId: "asst-1",
+      },
+    ];
+
+    beforeEach(() => {
+      useAppStore.setState({ skills: SCOPED_SKILLS as any, prompts: [] });
+    });
+
+    it("filters slash command skill suggestions using skillScopeContext in a project chat", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { projectId: "proj-1", skillMode: "dynamic" },
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      // Should show global-sk-1 and proj-sk-1, but not asst-sk-1
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "global-sk-1",
+        "proj-sk-1",
+      ]);
+    });
+
+    it("returns no skills when skillMode is none", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { projectId: "proj-1", skillMode: "none" },
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      expect(result.current.filteredItems).toHaveLength(0);
+    });
+  });
 });
 
 

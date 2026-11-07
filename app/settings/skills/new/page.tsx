@@ -2,7 +2,7 @@
 
 import { BrainCircuit, ChevronLeft, Plus, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,6 +34,9 @@ import { createSkillSchema } from "@/schemas/skill/skill";
  */
 export default function NewSkillPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultProjectId = searchParams.get("projectId") || undefined;
+  const defaultAssistantId = searchParams.get("assistantId") || undefined;
   const loadSkills = useAppStore((state) => state.loadSkills);
 
   const [activeTab, setActiveTab] = useQueryState(
@@ -62,7 +65,13 @@ export default function NewSkillPage() {
       }
       toast.success("Skill created");
       await loadSkills();
-      router.push(ROUTES.SETTINGS.SKILLS.path);
+      if (defaultProjectId) {
+        router.push(ROUTES.PROJECTS.detail(defaultProjectId));
+      } else if (defaultAssistantId) {
+        router.push(ROUTES.ASSISTANTS.detail(defaultAssistantId));
+      } else {
+        router.push(ROUTES.SETTINGS.SKILLS.path);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to create skill";
@@ -134,6 +143,8 @@ export default function NewSkillPage() {
 
         <SidebarTabsContent value="create">
           <CreateSkillForm
+            defaultProjectId={defaultProjectId}
+            defaultAssistantId={defaultAssistantId}
             onSubmit={onSubmitManual}
             onCancel={() => router.push(ROUTES.SETTINGS.SKILLS.path)}
             isSubmitting={isSubmitting}

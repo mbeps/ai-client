@@ -16,6 +16,7 @@ import type {
   MentionItem,
   MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
+import { filterAccessibleSkills } from "@/lib/skills/filter-accessible-skills";
 import { cn } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -110,6 +111,12 @@ export interface ChatInputProps {
 
   /** Allowed global prompt IDs when promptMode is 'specific'. */
   promptIds?: string[];
+
+  /** Skill mode for this scope ('dynamic' | 'none' | 'specific'). */
+  skillMode?: "dynamic" | "none" | "specific";
+
+  /** Allowed specific skill IDs when skillMode is 'specific'. */
+  skillIds?: string[];
 
   /** Custom label for the submit button (defaults to "Send" icon). */
   submitLabel?: string;
@@ -293,6 +300,12 @@ export function ChatInput(props: ChatInputProps) {
     [services.prompts, interaction.promptScopeContext],
   );
 
+  const accessibleSkills = useMemo(
+    () =>
+      filterAccessibleSkills(services.skills, interaction.skillScopeContext),
+    [services.skills, interaction.skillScopeContext],
+  );
+
   const containerClass = resolveContainerClassName(
     interaction.attachments.isDragging,
     props.className,
@@ -332,7 +345,7 @@ export function ChatInput(props: ChatInputProps) {
         selectedKbs={interaction.selections.selectedKbs}
         knowledgebases={services.knowledgebases}
         selectedSkills={interaction.selections.selectedSkills}
-        skills={services.skills}
+        skills={accessibleSkills}
         onRemoveAssistant={interaction.handleRemoveAssistant}
         onRemovePrompt={interaction.prompts.handleRemovePrompt}
         onRemoveKb={interaction.selections.handleRemoveKb}
@@ -374,7 +387,7 @@ export function ChatInput(props: ChatInputProps) {
         knowledgebases={services.knowledgebases}
         selectedKbs={interaction.selections.selectedKbs}
         handleToggleKb={interaction.selections.handleToggleKb}
-        skills={services.skills}
+        skills={accessibleSkills}
         selectedSkills={interaction.selections.selectedSkills}
         handleToggleSkill={interaction.selections.handleToggleSkill}
         prompts={accessiblePrompts}

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import SkillsPage from "@/app/settings/skills/page";
 import type { Skill } from "@/types/skill/skill";
@@ -11,10 +12,12 @@ const mockSkills: Skill[] = [
     userId: "user-1",
     name: "writing-plans",
     displayName: "Writing Plans",
-    description: "Write plans",
+    description: "Write structured plans",
     content: "content",
     files: [],
     enabled: false,
+    projectId: "proj-1",
+    assistantId: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-03-01"), // Most recently updated
   },
@@ -23,10 +26,12 @@ const mockSkills: Skill[] = [
     userId: "user-1",
     name: "brainstorming",
     displayName: "Brainstorming",
-    description: "Brainstorming",
+    description: "Brainstorm solutions",
     content: "content",
     files: [],
     enabled: true,
+    projectId: null,
+    assistantId: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"), // Oldest
   },
@@ -35,10 +40,12 @@ const mockSkills: Skill[] = [
     userId: "user-1",
     name: "karpathy-guidelines",
     displayName: "Karpathy Guidelines",
-    description: "Guidelines",
+    description: "Engineering rules",
     content: "content",
     files: [],
     enabled: false,
+    projectId: null,
+    assistantId: "asst-1",
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-02-01"), // Middle
   },
@@ -48,6 +55,8 @@ vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: (state: any) => any) =>
     selector({
       skills: mockSkills,
+      projects: [{ id: "proj-1", name: "Alpha Project" }],
+      assistants: [{ id: "asst-1", name: "Beta Assistant" }],
       loadSkills: mockLoadSkills,
       loadError: null,
     }),
@@ -68,6 +77,37 @@ describe("SkillsPage", () => {
       "Karpathy Guidelines",
       "Writing Plans",
     ]);
+  });
+
+  it("filters skills when scope filter buttons are clicked", async () => {
+    const user = userEvent.setup();
+    render(<SkillsPage />);
+
+    const globalFilterBtn = screen.getByRole("button", { name: "Global" });
+    await user.click(globalFilterBtn);
+
+    expect(screen.getByText("Brainstorming")).toBeInTheDocument();
+    expect(screen.queryByText("Karpathy Guidelines")).not.toBeInTheDocument();
+    expect(screen.queryByText("Writing Plans")).not.toBeInTheDocument();
+
+    const projectsFilterBtn = screen.getByRole("button", { name: "Projects" });
+    await user.click(projectsFilterBtn);
+
+    expect(screen.getByText("Writing Plans")).toBeInTheDocument();
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
+
+    const assistantsFilterBtn = screen.getByRole("button", { name: "Assistants" });
+    await user.click(assistantsFilterBtn);
+
+    expect(screen.getByText("Karpathy Guidelines")).toBeInTheDocument();
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
+
+    const allFilterBtn = screen.getByRole("button", { name: "All" });
+    await user.click(allFilterBtn);
+
+    expect(screen.getByText("Brainstorming")).toBeInTheDocument();
+    expect(screen.getByText("Karpathy Guidelines")).toBeInTheDocument();
+    expect(screen.getByText("Writing Plans")).toBeInTheDocument();
   });
 });
 

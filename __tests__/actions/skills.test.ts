@@ -149,6 +149,94 @@ describe("createSkill", () => {
     expect(chainable.insert).toHaveBeenCalledOnce();
   });
 
+  it("inserts a scoped skill with projectId when project exists", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: "proj-1" }]);
+    chainable.limit.mockResolvedValueOnce([]); // no existing skill name
+    const scopedRow = { ...SKILL_ROW, projectId: "proj-1" };
+    chainable.returning.mockResolvedValueOnce([scopedRow]);
+
+    const result = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Pragmatic code quality.",
+      content: "# Clean Code\nFollow guidelines.",
+      projectId: "proj-1",
+    });
+
+    expect(result).toEqual({ ok: true, value: scopedRow });
+  });
+
+  it("returns NOT_FOUND when projectId does not exist or is not owned", async () => {
+    chainable.where.mockResolvedValueOnce([]); // project not found
+    const result = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Desc",
+      content: "Content",
+      projectId: "proj-missing",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Project not found",
+      }),
+    });
+  });
+
+  it("inserts a scoped skill with assistantId when assistant exists", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: "asst-1" }]);
+    chainable.limit.mockResolvedValueOnce([]); // no existing skill name
+    const scopedRow = { ...SKILL_ROW, assistantId: "asst-1" };
+    chainable.returning.mockResolvedValueOnce([scopedRow]);
+
+    const result = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Pragmatic code quality.",
+      content: "# Clean Code\nFollow guidelines.",
+      assistantId: "asst-1",
+    });
+
+    expect(result).toEqual({ ok: true, value: scopedRow });
+  });
+
+  it("returns NOT_FOUND when assistantId does not exist or is not owned", async () => {
+    chainable.where.mockResolvedValueOnce([]); // assistant not found
+    const result = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Desc",
+      content: "Content",
+      assistantId: "asst-missing",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Assistant not found",
+      }),
+    });
+  });
+
+  it("returns INVALID_INPUT when both projectId and assistantId are provided", async () => {
+    const result = await createSkill({
+      name: "clean-code",
+      displayName: "Clean Code",
+      description: "Desc",
+      content: "Content",
+      projectId: "proj-1",
+      assistantId: "asst-1",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+  });
+
   it("returns CONFLICT error if slug already exists for user", async () => {
     chainable.limit.mockResolvedValueOnce([{ id: "existing-id" }]);
 
@@ -207,6 +295,62 @@ describe("updateSkill", () => {
 
     expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
+  });
+
+  it("updates skill with projectId when project exists", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: "proj-1" }]);
+    const updated = { ...SKILL_ROW, projectId: "proj-1" };
+    chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
+    chainable.returning.mockResolvedValueOnce([updated]);
+
+    const result = await updateSkill(SKILL_ROW.id, {
+      projectId: "proj-1",
+    });
+
+    expect(result).toEqual({ ok: true, value: updated });
+  });
+
+  it("returns NOT_FOUND when updating with non-existent projectId", async () => {
+    chainable.where.mockResolvedValueOnce([]); // project missing
+    const result = await updateSkill(SKILL_ROW.id, {
+      projectId: "proj-missing",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Project not found",
+      }),
+    });
+  });
+
+  it("updates skill with assistantId when assistant exists", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: "asst-1" }]);
+    const updated = { ...SKILL_ROW, assistantId: "asst-1" };
+    chainable.limit.mockResolvedValueOnce([SKILL_ROW]);
+    chainable.returning.mockResolvedValueOnce([updated]);
+
+    const result = await updateSkill(SKILL_ROW.id, {
+      assistantId: "asst-1",
+    });
+
+    expect(result).toEqual({ ok: true, value: updated });
+  });
+
+  it("returns NOT_FOUND when updating with non-existent assistantId", async () => {
+    chainable.where.mockResolvedValueOnce([]); // assistant missing
+    const result = await updateSkill(SKILL_ROW.id, {
+      assistantId: "asst-missing",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NOT_FOUND",
+        message: "Assistant not found",
+      }),
+    });
   });
 });
 

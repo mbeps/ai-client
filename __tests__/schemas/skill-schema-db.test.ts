@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { project } from "@/drizzle/schemas/project-schema";
 import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { skill } from "@/drizzle/schemas/skill-schema";
 
 describe("Database Skill Config Columns", () => {
   it("should have skillMode and skillIds on project schema", () => {
@@ -17,5 +18,10 @@ describe("Database Skill Config Columns", () => {
   it("should have skillMode and skillIds on transformAgent schema", () => {
     expect(transformAgent.skillMode).toBeDefined();
     expect(transformAgent.skillIds).toBeDefined();
+  });
+
+  it("should have projectId and assistantId on skill schema", () => {
+    expect(skill.projectId).toBeDefined();
+    expect(skill.assistantId).toBeDefined();
   });
 });
