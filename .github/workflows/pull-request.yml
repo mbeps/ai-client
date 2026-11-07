@@ -150,4 +150,4 @@ jobs:
       - name: Run Tests
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-        run: pnpm exec vitest run
+        run: pnpm exec vitest run --coverage
