@@ -3,8 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { disconnectMcpOAuth } from "@/actions/mcp-servers/disconnect-mcp-oauth";
+import { initiateMcpOAuth } from "@/actions/mcp-servers/initiate-mcp-oauth";
 import { updateInstalledServerHeaders } from "@/actions/mcp-servers/update-installed-server-headers";
 import { updateMcpServer as updateMcpServerAction } from "@/actions/mcp-servers/update-mcp-server";
 import { ServerFormFields } from "@/components/mcp/server-form-fields";
@@ -47,19 +50,68 @@ export function EditServerForm({ server }: EditServerFormProps) {
   const router = useRouter();
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
 
+  const [isOAuthConnecting, setIsOAuthConnecting] = useState(false);
+  const [isOAuthDisconnecting, setIsOAuthDisconnecting] = useState(false);
+
   const defaultValues: UpdateMcpServer = {
     name: server.name,
     url: server.url ?? "",
     headers: "", // SEC-07: never pre-populate; enter a new value to replace saved headers
     isPublic: server.isPublic,
+    authType: server.authType ?? (server.headers ? "headers" : "none"),
+    oauthClientId: server.oauthClientId ?? "",
+    oauthClientSecret: "",
+    oauthScope: server.oauthScope ?? "",
   };
 
   const form = useForm<UpdateMcpServer>({
-    resolver: zodResolver(updateMcpServerSchema),
+    resolver: zodResolver(updateMcpServerSchema) as any,
     defaultValues,
   });
 
   const { isSubmitting } = form.formState;
+
+  async function handleOAuthConnect() {
+    setIsOAuthConnecting(true);
+    try {
+      const res = await initiateMcpOAuth({ serverId: server.id });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to initiate OAuth");
+        return;
+      }
+      if (res.value.alreadyAuthorized) {
+        toast.success("OAuth already authorized");
+        await loadMcpServers();
+        router.refresh();
+        return;
+      }
+      if (res.value.authorizationUrl) {
+        window.location.href = res.value.authorizationUrl;
+      }
+    } catch {
+      toast.error("Failed to initiate OAuth authorization");
+    } finally {
+      setIsOAuthConnecting(false);
+    }
+  }
+
+  async function handleOAuthDisconnect() {
+    setIsOAuthDisconnecting(true);
+    try {
+      const res = await disconnectMcpOAuth({ serverId: server.id });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to disconnect OAuth");
+        return;
+      }
+      toast.success("OAuth disconnected");
+      await loadMcpServers();
+      router.refresh();
+    } catch {
+      toast.error("Failed to disconnect OAuth");
+    } finally {
+      setIsOAuthDisconnecting(false);
+    }
+  }
 
   async function onSubmit(data: UpdateMcpServer) {
     try {
@@ -98,6 +150,12 @@ export function EditServerForm({ server }: EditServerFormProps) {
               form={form}
               styled
               isInstalled={server.isInstalled}
+              serverId={server.id}
+              oauthConnected={server.oauthConnected}
+              onOAuthConnect={handleOAuthConnect}
+              onOAuthDisconnect={handleOAuthDisconnect}
+              isOAuthConnecting={isOAuthConnecting}
+              isOAuthDisconnecting={isOAuthDisconnecting}
               headerPlaceholder={
                 server.headers ? "Saved — enter new value to update" : undefined
               }

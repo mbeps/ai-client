@@ -262,6 +262,28 @@ describe("mcp server personal actions", () => {
       );
     });
 
+    it("preserves oauthClientSecret when oauthClientSecret is empty string", async () => {
+      const updated = {
+        id: "srv-1",
+        name: "Updated",
+        url: "https://example.com/new",
+        isPublic: false,
+      };
+      chainable.returning.mockResolvedValueOnce([updated]);
+
+      const result = await updateMcpServer("srv-1", {
+        name: "Updated",
+        url: "https://example.com/new",
+        oauthClientSecret: "",
+        isPublic: false,
+      });
+
+      expect(result).toEqual({ ok: true, value: updated });
+      expect(chainable.set).toHaveBeenCalledWith(
+        expect.not.objectContaining({ oauthClientSecret: expect.anything() }),
+      );
+    });
+
     it("throws Not Found when update returns empty array", async () => {
       chainable.returning.mockResolvedValueOnce([]);
 

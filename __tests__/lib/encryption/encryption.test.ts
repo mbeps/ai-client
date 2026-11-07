@@ -20,6 +20,14 @@ describe("Encryption / Decryption", () => {
     expect(decrypted).toBe(original);
   });
 
+  it("encrypts and decrypts empty string correctly", () => {
+    const original = "";
+    const encrypted = encrypt(original);
+    expect(encrypted.split(":")).toHaveLength(3);
+    const decrypted = decrypt(encrypted);
+    expect(decrypted).toBe(original);
+  });
+
   it("throws on invalid encrypted hash format", () => {
     expect(() => decrypt("invalid-hash")).toThrow(
       "Invalid encrypted text format",

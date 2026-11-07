@@ -12,6 +12,7 @@ const PUBLIC_PREFIXES = [
   "/auth", // login, 2fa, reset-password
   "/api/auth", // Better Auth handler at app/api/auth/[...all]/route.ts
   "/api/inngest", // Inngest serve handler
+  "/api/mcp/oauth/client-metadata", // Public OAuth Client ID Metadata Document (RFC 7591 / CIMD)
 ];
 
 /**

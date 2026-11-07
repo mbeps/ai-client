@@ -175,6 +175,7 @@ describe("getMcpPrompt action", () => {
       expect.objectContaining({
         headers: "owner-headers",
       }),
+      "user-1",
     );
   });
 
@@ -210,6 +211,7 @@ describe("getMcpPrompt action", () => {
       expect.objectContaining({
         headers: "subscriber-headers",
       }),
+      "user-1",
     );
   });
 
@@ -245,6 +247,7 @@ describe("getMcpPrompt action", () => {
       expect.objectContaining({
         headers: null,
       }),
+      "user-1",
     );
   });
 

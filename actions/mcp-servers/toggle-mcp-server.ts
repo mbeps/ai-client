@@ -104,6 +104,11 @@ export const toggleMcpServer = defineAction(
       headers: toggledInstall.headers,
       enabled: toggledInstall.enabled,
       isPublic: false,
+      authType: sourceServer.authType,
+      oauthClientId: toggledInstall.oauthClientId ?? sourceServer.oauthClientId,
+      oauthClientSecret:
+        toggledInstall.oauthClientSecret ?? sourceServer.oauthClientSecret,
+      oauthScope: sourceServer.oauthScope,
       createdAt: toggledInstall.createdAt,
       updatedAt: toggledInstall.updatedAt,
       isInstalled: true,

@@ -14,5 +14,11 @@ export function buildServerConfig(parsed: CreateMcpServer) {
     url: parsed.url,
     headers: parsed.headers ? encrypt(parsed.headers) : null,
     isPublic: parsed.isPublic ?? false,
+    authType: parsed.authType ?? (parsed.headers ? "headers" : "none"),
+    oauthClientId: parsed.oauthClientId ?? null,
+    oauthClientSecret: parsed.oauthClientSecret
+      ? encrypt(parsed.oauthClientSecret)
+      : null,
+    oauthScope: parsed.oauthScope ?? null,
   };
 }

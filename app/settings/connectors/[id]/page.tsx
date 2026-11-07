@@ -69,6 +69,17 @@ export default function McpServerPage() {
     }),
   );
 
+  const [oauthStatus] = useQueryState("oauth");
+  const [oauthError] = useQueryState("error");
+
+  useEffect(() => {
+    if (oauthStatus === "connected") {
+      toast.success("OAuth 2.1 connected successfully!");
+    } else if (oauthError) {
+      toast.error(`OAuth connection failed: ${oauthError}`);
+    }
+  }, [oauthStatus, oauthError]);
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">

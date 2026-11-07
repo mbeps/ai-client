@@ -93,7 +93,7 @@ export const getMcpPrompt = defineAction(
 
     // 2. Connect and fetch prompt
     try {
-      const config = mcpServerRowToConfig(effectiveRow);
+      const config = mcpServerRowToConfig(effectiveRow, session.user.id);
 
       const promptResult = await withMcpServer(config, async (client) => {
         try {

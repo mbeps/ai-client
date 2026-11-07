@@ -126,10 +126,38 @@ describe("EditServerForm — submission", () => {
         url: "https://mcp.example.com/sse",
         headers: "",
         isPublic: false,
+        authType: "headers",
+        oauthClientId: "",
+        oauthClientSecret: "",
+        oauthScope: "",
       });
       expect(updateInstalledServerHeaders).not.toHaveBeenCalled();
       expect(mockLoadMcpServers).toHaveBeenCalled();
       expect(mockRefresh).toHaveBeenCalled();
     });
+  });
+
+  it("renders OAuth tab and status for OAuth configured server", () => {
+    const oauthServer: McpServer = {
+      ...serverWithAuthHeader,
+      authType: "oauth",
+      oauthConnected: true,
+    };
+    render(<EditServerForm server={oauthServer} />);
+    expect(screen.getByText("OAuth Status")).toBeDefined();
+    expect(screen.getByText("Connected")).toBeDefined();
+    expect(screen.getByRole("button", { name: /disconnect/i })).toBeDefined();
+  });
+
+  it("renders Connect Account button when OAuth server is not connected", () => {
+    const oauthServer: McpServer = {
+      ...serverWithAuthHeader,
+      authType: "oauth",
+      oauthConnected: false,
+    };
+    render(<EditServerForm server={oauthServer} />);
+    expect(screen.getByText("OAuth Status")).toBeDefined();
+    expect(screen.getByText("Not Connected")).toBeDefined();
+    expect(screen.getByRole("button", { name: /connect account/i })).toBeDefined();
   });
 });

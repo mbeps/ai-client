@@ -161,6 +161,10 @@ export async function loadChatContext(
             name: mcpServer.name,
             url: mcpServer.url,
             headers: mcpServer.headers,
+            authType: mcpServer.authType,
+            oauthClientId: mcpServer.oauthClientId,
+            oauthClientSecret: mcpServer.oauthClientSecret,
+            oauthScope: mcpServer.oauthScope,
           })
           .from(mcpServer)
           .where(
@@ -172,6 +176,10 @@ export async function loadChatContext(
             name: mcpServer.name,
             url: mcpServer.url,
             headers: userMcpServerInstall.headers,
+            authType: mcpServer.authType,
+            oauthClientId: userMcpServerInstall.oauthClientId,
+            oauthClientSecret: userMcpServerInstall.oauthClientSecret,
+            oauthScope: mcpServer.oauthScope,
           })
           .from(userMcpServerInstall)
           .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))
@@ -185,7 +193,7 @@ export async function loadChatContext(
           ),
       ]).then(([personal, installed]) =>
         [...personal, ...installed].map((r) =>
-          mcpServerRowToConfig(r as McpServerRow),
+          mcpServerRowToConfig(r as McpServerRow, userId),
         ),
       ),
 

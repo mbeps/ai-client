@@ -36,9 +36,14 @@ export const updateMcpServer = defineAction(
     const parsed = updateMcpServerSchema.parse(data);
 
     const values = buildServerConfig(parsed);
-    // SEC-07: empty headers string means "no change" — preserve existing headers
-    const { headers: _h, ...restValues } = values;
-    const updateFields = parsed.headers === "" ? restValues : values;
+    // SEC-07: empty string means "no change" — preserve existing sensitive values
+    const updateFields = { ...values };
+    if (parsed.headers === "") {
+      delete (updateFields as any).headers;
+    }
+    if (parsed.oauthClientSecret === "") {
+      delete (updateFields as any).oauthClientSecret;
+    }
 
     const [updated] = await db
       .update(mcpServer)

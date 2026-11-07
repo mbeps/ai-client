@@ -141,12 +141,22 @@ describe("loadTransformContext", () => {
         name: "Personal MCP",
         url: "https://personal.example.com/mcp",
         headers: JSON.stringify({ "X-Personal": "p-secret" }),
+        authType: "headers",
+        oauthClientId: null,
+        oauthClientSecret: null,
+        oauthScope: null,
+        userId: "user-1",
       },
       {
         id: "srv-pub-1",
         name: "Installed Public MCP",
         url: "https://installed.example.com/mcp",
         headers: JSON.stringify({ "X-Installed": "i-secret" }),
+        authType: "headers",
+        oauthClientId: null,
+        oauthClientSecret: null,
+        oauthScope: null,
+        userId: "user-1",
       },
     ]);
   });

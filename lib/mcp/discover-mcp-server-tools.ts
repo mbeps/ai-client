@@ -79,5 +79,7 @@ export async function discoverMcpServerTools(serverId: string): Promise<{
       (row.userId === session.user.id ? row.headers : null),
   };
 
-  return discoverToolsAndResources(mcpServerRowToConfig(effectiveRow));
+  return discoverToolsAndResources(
+    mcpServerRowToConfig(effectiveRow, session.user.id),
+  );
 }

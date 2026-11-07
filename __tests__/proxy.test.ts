@@ -40,6 +40,17 @@ describe("Next.js proxy middleware", () => {
     expect(auth.api.getSession).not.toHaveBeenCalled();
   });
 
+  it("bypasses /api/mcp/oauth/client-metadata without requiring a session", async () => {
+    const req = new NextRequest(
+      "http://localhost:3000/api/mcp/oauth/client-metadata",
+    );
+    const res = await proxy(req);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(auth.api.getSession).not.toHaveBeenCalled();
+  });
+
   it("redirects unauthenticated requests on protected routes to /auth/login", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValueOnce(null);
 

@@ -3,6 +3,7 @@ import {
   index,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
@@ -24,7 +25,11 @@ export const mcpServer = pgTable(
     userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     url: text("url").notNull(),
+    authType: text("auth_type").notNull().default("none"),
     headers: text("headers"), // JSON object string for http headers
+    oauthClientId: text("oauth_client_id"),
+    oauthClientSecret: text("oauth_client_secret"),
+    oauthScope: text("oauth_scope"),
     enabled: boolean("enabled").notNull().default(true),
     isPublic: boolean("is_public").notNull().default(false),
     ...timestampColumns(),
@@ -47,6 +52,8 @@ export const userMcpServerInstall = pgTable(
       .notNull()
       .references(() => mcpServer.id, { onDelete: "cascade" }),
     headers: text("headers"), // Optional user-specific custom headers (JSON string)
+    oauthClientId: text("oauth_client_id"),
+    oauthClientSecret: text("oauth_client_secret"),
     enabled: boolean("enabled").notNull().default(true),
     ...timestampColumns(),
   },
@@ -57,5 +64,41 @@ export const userMcpServerInstall = pgTable(
       table.userId,
       table.serverId,
     ),
+  ],
+);
+
+/**
+ * Stores per-user OAuth credentials and token lifecycle state for MCP servers.
+ * Many-to-one with user and mcpServer (CASCADE DELETE).
+ * Encrypted tokens (AES-256-GCM) at rest.
+ */
+export const mcpOAuthCredential = pgTable(
+  "mcp_oauth_credential",
+  {
+    id: entityIdColumn(),
+    userId: userForeignKeyColumn(),
+    serverId: text("server_id")
+      .notNull()
+      .references(() => mcpServer.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    tokenType: text("token_type"),
+    scope: text("scope"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      mode: "date",
+    }),
+    clientInformation: text("client_information"),
+    authorizationServerInfo: text("authorization_server_info"),
+    codeVerifier: text("code_verifier"),
+    oauthState: text("oauth_state"),
+    stateExpiresAt: timestamp("state_expires_at", { mode: "date" }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("mcp_oauth_credential_user_server_idx").on(
+      table.userId,
+      table.serverId,
+    ),
+    index("mcp_oauth_credential_state_idx").on(table.oauthState),
   ],
 );
