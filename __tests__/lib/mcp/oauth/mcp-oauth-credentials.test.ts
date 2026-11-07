@@ -98,6 +98,22 @@ describe("mcp-oauth-credentials", () => {
       expect(res?.clientInformation).toBeNull();
       expect(res?.authorizationServerInfo).toBeNull();
     });
+
+    it("returns null for clientInformation when safeDecrypt returns empty string", async () => {
+      mockDb.query.mcpOAuthCredential.findFirst.mockResolvedValue({
+        id: "cred-1",
+        userId: "user-1",
+        serverId: "srv-1",
+        clientInformation: encrypt(""),
+      });
+
+      const res = await getMcpOAuthCredential(mockDb, {
+        userId: "user-1",
+        serverId: "srv-1",
+      });
+
+      expect(res?.clientInformation).toBeNull();
+    });
   });
 
   describe("getMcpOAuthCredentialByState", () => {

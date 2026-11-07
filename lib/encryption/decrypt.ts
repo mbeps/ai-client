@@ -10,7 +10,7 @@ import { ALGORITHM, getSecret } from "@/lib/encryption/shared";
 export function decrypt(hash: string): string {
   const [ivHex, authTagHex, encryptedText] = hash.split(":");
 
-  if (!ivHex || !authTagHex || !encryptedText) {
+  if (!ivHex || !authTagHex || encryptedText === undefined) {
     throw new Error(
       "Invalid encrypted text format. Expected iv:authTag:content",
     );

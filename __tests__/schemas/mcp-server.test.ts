@@ -172,5 +172,8 @@ describe("updateMcpServerSchema", () => {
       isPublic: false,
     });
     expect(withoutHeaders.authType).toBe("none");
+
+    const nonObject = createMcpServerSchema.safeParse(null);
+    expect(nonObject.success).toBe(false);
   });
 });

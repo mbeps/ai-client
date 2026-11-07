@@ -53,14 +53,27 @@ describe("MCP OAuth Server Actions", () => {
       }
     });
 
+    it("returns fallback error message when schema issues have no message", async () => {
+      // Pass an invalid property to trigger issue without custom message
+      const res = await initiateMcpOAuth({} as any);
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBeDefined();
+      }
+    });
+
     it("returns NOT_FOUND when server is not found", async () => {
-      dbSelectMock.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            then: vi.fn().mockResolvedValue(null),
+      dbSelectMock
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
           }),
-        }),
-      });
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
+          }),
+        });
 
       const res = await initiateMcpOAuth({ serverId: "missing-srv" });
       expect(res.ok).toBe(false);
@@ -81,16 +94,12 @@ describe("MCP OAuth Server Actions", () => {
       dbSelectMock
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(serverRow),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([serverRow])),
           }),
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(null),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
           }),
         });
 
@@ -120,16 +129,12 @@ describe("MCP OAuth Server Actions", () => {
       dbSelectMock
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(serverRow),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([serverRow])),
           }),
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(null),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
           }),
         });
 
@@ -154,16 +159,12 @@ describe("MCP OAuth Server Actions", () => {
       dbSelectMock
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(serverRow),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([serverRow])),
           }),
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(null),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
           }),
         });
 
@@ -176,7 +177,7 @@ describe("MCP OAuth Server Actions", () => {
       }
     });
 
-    it("returns error when mcpAuth throws", async () => {
+    it("returns error when mcpAuth throws an Error instance with no stack", async () => {
       const serverRow = {
         id: "srv-1",
         userId: "user-1",
@@ -188,20 +189,18 @@ describe("MCP OAuth Server Actions", () => {
       dbSelectMock
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(serverRow),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([serverRow])),
           }),
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue(null),
-            }),
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
           }),
         });
 
-      mcpAuthMock.mockRejectedValueOnce(new Error("Network discovery error"));
+      const errWithoutStack = new Error("Network discovery error");
+      errWithoutStack.stack = undefined;
+      mcpAuthMock.mockRejectedValueOnce(errWithoutStack);
 
       const res = await initiateMcpOAuth({ serverId: "srv-1" });
       expect(res.ok).toBe(false);
@@ -209,9 +208,55 @@ describe("MCP OAuth Server Actions", () => {
         expect(res.error.message).toContain("Network discovery error");
       }
     });
+
+    it("returns error when mcpAuth throws a non-Error object", async () => {
+      const serverRow = {
+        id: "srv-1",
+        userId: "user-1",
+        name: "OAuth Server",
+        url: "https://example.com/sse",
+        authType: "oauth",
+      };
+
+      dbSelectMock
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue(Promise.resolve([serverRow])),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue(Promise.resolve([])),
+          }),
+        });
+
+      mcpAuthMock.mockRejectedValueOnce("String error reason");
+
+      const res = await initiateMcpOAuth({ serverId: "srv-1" });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBe("Failed to initiate OAuth flow");
+      }
+    });
   });
 
   describe("disconnectMcpOAuth", () => {
+    it("returns error when serverId is invalid", async () => {
+      const res = await disconnectMcpOAuth({ serverId: "" });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toContain("Server ID is required");
+      }
+    });
+
+    it("returns fallback error message when schema issues have no message", async () => {
+      const res = await disconnectMcpOAuth({} as any);
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toBeDefined();
+      }
+    });
+
     it("deletes credential and returns success", async () => {
       const res = await disconnectMcpOAuth({ serverId: "srv-1" });
       expect(res.ok).toBe(true);

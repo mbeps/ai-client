@@ -48,6 +48,23 @@ describe("mcpServerRowToConfig", () => {
     expect(config.headers).toBe(rawHeaders);
   });
 
+  it("handles unencrypted/plain headers that throws on decrypt", () => {
+    const rawHeaders = '{"Authorization": "Bearer plain"}';
+    const row = {
+      id: "uuid-plain-headers",
+      userId: "user-1",
+      name: "Plain Headers MCP",
+      url: "http://localhost:3000/sse",
+      headers: rawHeaders,
+      enabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const config = mcpServerRowToConfig(row as any);
+    expect(config.headers).toBe(rawHeaders);
+  });
+
   it("handles null or undefined headers safely", () => {
     const row = {
       id: "uuid-3",
@@ -89,5 +106,22 @@ describe("mcpServerRowToConfig", () => {
 
     const overriddenConfig = mcpServerRowToConfig(row as any, "user-override");
     expect(overriddenConfig.userId).toBe("user-override");
+  });
+
+  it("handles non-encrypted/plain oauthClientSecret that throws on decrypt", () => {
+    const row = {
+      id: "uuid-plain-secret",
+      userId: "user-1",
+      name: "Plain Secret MCP",
+      url: "https://auth.example.com",
+      authType: "oauth",
+      oauthClientSecret: "plain-unencrypted-secret",
+      enabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const config = mcpServerRowToConfig(row as any);
+    expect(config.oauthClientSecret).toBe("plain-unencrypted-secret");
   });
 });

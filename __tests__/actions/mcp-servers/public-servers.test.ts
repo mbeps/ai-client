@@ -310,6 +310,60 @@ describe("listMcpServers", () => {
     expect(result[0].headers).toBeNull();
     expect(result[1].headers).toBeNull();
   });
+
+  it("handles active OAuth credentials and redacts oauthClientSecret", async () => {
+    const personalServer = {
+      id: "pers-oauth",
+      userId: "user-1",
+      name: "OAuth MCP",
+      url: "http://localhost:8000",
+      headers: null,
+      oauthClientSecret: "secret-123",
+      enabled: true,
+      isPublic: false,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+    };
+
+    const installedServer = {
+      id: "inst-srv-oauth",
+      userId: "author-user-4",
+      name: "Installed OAuth MCP",
+      url: "https://mcp.com",
+      headers: null,
+      oauthClientId: "cid-1",
+      oauthClientSecret: "secret-456",
+      authType: "oauth",
+      enabled: true,
+      isPublic: true,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-02"),
+      installId: "install-rec-oauth",
+    };
+
+    // First query: rawCreds where clause resolving array of credentials
+    chainable.where.mockResolvedValueOnce([
+      { serverId: "pers-oauth", accessToken: "token-abc" },
+      { serverId: "other", accessToken: null },
+    ]);
+    chainable.orderBy
+      .mockResolvedValueOnce([personalServer])
+      .mockResolvedValueOnce([installedServer]);
+
+    const res = await listMcpServers();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const result = res.value;
+
+    expect(result).toHaveLength(2);
+    const pers = result.find((s) => s.id === "pers-oauth");
+    expect(pers?.oauthClientSecret).toBe("[REDACTED]");
+    expect(pers?.oauthConnected).toBe(true);
+
+    const inst = result.find((s) => s.id === "inst-srv-oauth");
+    expect(inst?.oauthClientSecret).toBe("[REDACTED]");
+    expect(inst?.oauthConnected).toBe(false);
+  });
 });
 
 describe("listPublicMcpServers", () => {

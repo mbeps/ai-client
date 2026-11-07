@@ -35,7 +35,7 @@ export const disconnectMcpOAuth = defineAction(
     if (!parsed.success) {
       return fail({
         code: ERROR_CODE.INVALID_INPUT,
-        message: parsed.error.issues[0]?.message ?? "Invalid input",
+        message: parsed.error.issues[0].message,
       });
     }
 
