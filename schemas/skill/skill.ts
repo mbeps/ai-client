@@ -41,32 +41,48 @@ export const skillFileSchema = z.object({
   content: z.string(),
 });
 
-/**
- * Validates new Agent Skill creation.
- * Follows Open Agent Skills specification requirements.
- *
- * @author Maruf Bepary
- */
-export const createSkillSchema = z.object({
+const baseSkillFields = {
   name: skillSlugSchema,
   displayName: nameField,
   description: skillDescriptionSchema,
   content: z.string().min(1, "Instructions content (SKILL.md) is required"),
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
-});
+  projectId: z.string().nullable().optional(),
+  assistantId: z.string().nullable().optional(),
+};
 
 /**
- * Validates partial skill updates.
+ * Validates new Agent Skill creation.
+ * Follows Open Agent Skills specification requirements.
+ * Optional projectId or assistantId scopes the skill to a specific entity; mutual exclusion enforced.
  *
  * @author Maruf Bepary
  */
-export const updateSkillSchema = createSkillSchema
+export const createSkillSchema = z
+  .object(baseSkillFields)
+  .refine((data) => !(data.projectId && data.assistantId), {
+    message: "A skill cannot be scoped to both a project and an assistant",
+    path: ["assistantId"],
+  });
+
+/**
+ * Validates partial skill updates.
+ * Optional projectId or assistantId scopes the skill to a specific entity; mutual exclusion enforced.
+ *
+ * @author Maruf Bepary
+ */
+export const updateSkillSchema = z
+  .object(baseSkillFields)
   .omit({ files: true, enabled: true })
   .partial()
   .extend({
     files: z.array(skillFileSchema).optional(),
     enabled: z.boolean().optional(),
+  })
+  .refine((data) => !(data.projectId && data.assistantId), {
+    message: "A skill cannot be scoped to both a project and an assistant",
+    path: ["assistantId"],
   });
 
 /**
@@ -83,6 +99,8 @@ export const skillSchema = z.object({
   content: z.string().min(1),
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
+  projectId: z.string().nullable().optional(),
+  assistantId: z.string().nullable().optional(),
   createdAt: dateField,
   updatedAt: dateField,
 });

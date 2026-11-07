@@ -11,6 +11,10 @@ import {
   isPromptItem,
   isSkillItem,
 } from "@/hooks/chat/mention-item-guards";
+import {
+  filterAccessibleSkills,
+  type SkillScopeContext,
+} from "@/lib/skills/filter-accessible-skills";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -114,6 +118,7 @@ export function useMentionCommands(
   onSelectKnowledgebase?: (kb: Knowledgebase) => void,
   knowledgebases?: Knowledgebase[],
   promptScopeContext?: PromptScopeContext,
+  skillScopeContext?: SkillScopeContext,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const assistants = useAppStore((state) => state.assistants);
@@ -170,13 +175,17 @@ export function useMentionCommands(
     const q = commandQuery.toLowerCase();
 
     if (openTrigger === "/") {
-      const matchingSkills = skills
+      const accessibleSkills = filterAccessibleSkills(
+        skills,
+        skillScopeContext ?? {},
+      );
+
+      const matchingSkills = accessibleSkills
         .filter(
           (s) =>
-            s.enabled &&
-            (s.name.toLowerCase().includes(q) ||
-              s.displayName.toLowerCase().includes(q) ||
-              s.description?.toLowerCase().includes(q)),
+            s.name.toLowerCase().includes(q) ||
+            s.displayName.toLowerCase().includes(q) ||
+            s.description?.toLowerCase().includes(q),
         )
         .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
 
@@ -260,6 +269,7 @@ export function useMentionCommands(
     openTrigger,
     selectedServerIds,
     promptScopeContext,
+    skillScopeContext,
   ]);
 
   const handleInputChange = useCallback(

@@ -17,6 +17,12 @@ export interface BuildOrchestratorToolSetParams {
   mcpTools: Record<string, any>;
   selectedTools?: string[];
   ctx: {
+    chatRow?: {
+      id: string;
+      projectId?: string | null;
+      assistantId?: string | null;
+      knowledgebaseId?: string | null;
+    };
     activeKbIds?: string[];
     activeKbId?: string | null;
     kbIsReady?: boolean;

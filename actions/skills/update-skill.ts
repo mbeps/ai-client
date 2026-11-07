@@ -1,7 +1,11 @@
 "use server";
 
 import { z } from "zod";
+import { db } from "@/drizzle/db";
+import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { whereOwner } from "@/lib/db/where-owner";
 import { AppException } from "@/lib/error/app-exception";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -16,7 +20,7 @@ import type { SkillRow } from "@/types/skill/skill-row";
 
 /**
  * Updates an existing Agent Skill for the authenticated user.
- * Validates slug uniqueness if name is modified.
+ * Validates slug uniqueness if name is modified, and entity ownership if scoped.
  *
  * @param id - UUID of the skill to update
  * @param data - Partial skill update payload
@@ -43,6 +47,40 @@ export const updateSkill = defineAction(
         code: ERROR_CODE.INVALID_INPUT,
         message: validatedData.error.issues[0].message,
       });
+    }
+
+    if (validatedData.data.projectId) {
+      const [proj] = await db
+        .select()
+        .from(project)
+        .where(
+          whereOwner(project, validatedData.data.projectId, session.user.id),
+        );
+      if (!proj) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Project not found",
+        });
+      }
+    }
+
+    if (validatedData.data.assistantId) {
+      const [asst] = await db
+        .select()
+        .from(assistant)
+        .where(
+          whereOwner(
+            assistant,
+            validatedData.data.assistantId,
+            session.user.id,
+          ),
+        );
+      if (!asst) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Assistant not found",
+        });
+      }
     }
 
     try {

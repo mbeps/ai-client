@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { chat } from "@/drizzle/schemas/chat-schema";
@@ -127,13 +127,14 @@ export async function loadChatContext(
           (id): id is string => Boolean(id),
         );
 
+  const effectiveAssistantId =
+    chatRow.assistantId || selectedAssistantId || null;
+
   // 2. Parallel queries that depend on chatRow and candidateKbIds
   const [assistantRow, servers, kbRows, userSkills, userMemories] =
     await Promise.all([
       // Assistant lookup (if applicable)
       (() => {
-        const effectiveAssistantId =
-          chatRow.assistantId || selectedAssistantId || null;
         return effectiveAssistantId
           ? db
               .select({
@@ -229,13 +230,33 @@ export async function loadChatContext(
           );
       })(),
 
-      // Enabled user skills
-      db
-        .select()
-        .from(skill)
-        .where(
-          and(eq(skill.userId, userId), eq(skill.enabled, true)),
-        ) as Promise<SkillRow[]>,
+      // Enabled user skills scoped to this chat context
+      (() => {
+        const conditions = [eq(skill.userId, userId), eq(skill.enabled, true)];
+
+        if (chatRow.projectId) {
+          conditions.push(
+            or(
+              and(isNull(skill.projectId), isNull(skill.assistantId)),
+              eq(skill.projectId, chatRow.projectId),
+            )!,
+          );
+        } else if (effectiveAssistantId) {
+          conditions.push(
+            or(
+              and(isNull(skill.projectId), isNull(skill.assistantId)),
+              eq(skill.assistantId, effectiveAssistantId),
+            )!,
+          );
+        } else {
+          conditions.push(isNull(skill.projectId), isNull(skill.assistantId));
+        }
+
+        return db
+          .select()
+          .from(skill)
+          .where(and(...conditions)) as Promise<SkillRow[]>;
+      })(),
 
       // Ambient user memories
       retrieveRelevantMemories(userId, latestQuery).catch(() => [] as string[]),

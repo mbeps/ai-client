@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
-import type { z } from "zod";
+import { z } from "zod";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { createSkillSchema } from "@/schemas/skill/skill";
 
 /**
@@ -25,13 +33,37 @@ import { createSkillSchema } from "@/schemas/skill/skill";
  *
  * @author Maruf Bepary
  */
-const createSkillFormSchema = createSkillSchema.pick({
-  name: true,
-  displayName: true,
-  description: true,
-  content: true,
-  enabled: true,
-});
+const createSkillFormSchema = z
+  .object({
+    name: createSkillSchema.shape.name,
+    displayName: createSkillSchema.shape.displayName,
+    description: createSkillSchema.shape.description,
+    content: createSkillSchema.shape.content,
+    enabled: z.boolean().default(true),
+    scope: z.enum(["global", "project", "assistant"]),
+    projectId: z.string().nullable().optional(),
+    assistantId: z.string().nullable().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.scope === "project" && !data.projectId) return false;
+      return true;
+    },
+    {
+      message: "Please select a project",
+      path: ["projectId"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.scope === "assistant" && !data.assistantId) return false;
+      return true;
+    },
+    {
+      message: "Please select an assistant",
+      path: ["assistantId"],
+    },
+  );
 
 /**
  * Represents create skill form values.
@@ -52,24 +84,56 @@ type CreateSkillFormInputValues = z.input<typeof createSkillFormSchema>;
  * @author Maruf Bepary
  */
 export interface CreateSkillFormProps {
+  /** Default initial form values */
+  defaultValues?: Partial<CreateSkillFormValues>;
   /** Callback fired when the valid form is submitted */
   onSubmit: (values: CreateSkillFormValues) => Promise<void> | void;
   /** Callback fired when the cancel button is clicked */
   onCancel?: () => void;
   /** Whether the creation action is actively running */
   isSubmitting?: boolean;
+  /** Lock scope to a specific project */
+  defaultProjectId?: string;
+  /** Lock scope to a specific assistant */
+  defaultAssistantId?: string;
 }
 
 /**
  * Form component for authoring a new Agent Skill with metadata and instructions.
+ * Supports scoping to Global, Project, or Assistant.
  *
  * @author Maruf Bepary
  */
 export function CreateSkillForm({
+  defaultValues = {
+    name: "",
+    displayName: "",
+    description: "",
+    content: "",
+    enabled: true,
+  },
   onSubmit,
   onCancel,
   isSubmitting: externalIsSubmitting,
+  defaultProjectId,
+  defaultAssistantId,
 }: CreateSkillFormProps) {
+  const projects = useAppStore((state) => state.projects);
+  const assistants = useAppStore((state) => state.assistants);
+
+  const initialScope: "global" | "project" | "assistant" = defaultProjectId
+    ? "project"
+    : defaultAssistantId
+      ? "assistant"
+      : (defaultValues.scope ??
+        (defaultValues.projectId
+          ? "project"
+          : defaultValues.assistantId
+            ? "assistant"
+            : "global"));
+
+  const isScopeLocked = Boolean(defaultProjectId || defaultAssistantId);
+
   const form = useForm<
     CreateSkillFormInputValues,
     undefined,
@@ -77,15 +141,28 @@ export function CreateSkillForm({
   >({
     resolver: zodResolver(createSkillFormSchema),
     defaultValues: {
-      name: "",
-      displayName: "",
-      description: "",
-      content: "",
-      enabled: true,
+      name: defaultValues.name ?? "",
+      displayName: defaultValues.displayName ?? "",
+      description: defaultValues.description ?? "",
+      content: defaultValues.content ?? "",
+      enabled: defaultValues.enabled ?? true,
+      scope: initialScope,
+      projectId: defaultProjectId ?? defaultValues.projectId ?? null,
+      assistantId: defaultAssistantId ?? defaultValues.assistantId ?? null,
     },
   });
 
+  const selectedScope = form.watch("scope");
   const isSubmitting = externalIsSubmitting ?? form.formState.isSubmitting;
+
+  const handleSubmit = (values: CreateSkillFormValues) => {
+    const finalValues: CreateSkillFormValues = {
+      ...values,
+      projectId: values.scope === "project" ? values.projectId : null,
+      assistantId: values.scope === "assistant" ? values.assistantId : null,
+    };
+    return onSubmit(finalValues);
+  };
 
   return (
     <div className="space-y-6">
@@ -98,7 +175,7 @@ export function CreateSkillForm({
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
             <FormField
               control={form.control}
@@ -139,6 +216,118 @@ export function CreateSkillForm({
                 </FormItem>
               )}
             />
+          </div>
+
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="scope"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Scope</FormLabel>
+                  <FormControl>
+                    <Select
+                      disabled={isScopeLocked || isSubmitting}
+                      value={field.value}
+                      onValueChange={(
+                        val: "global" | "project" | "assistant",
+                      ) => {
+                        field.onChange(val);
+                        if (val === "global") {
+                          form.setValue("projectId", null);
+                          form.setValue("assistantId", null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select scope" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">
+                          Global (All Chats)
+                        </SelectItem>
+                        <SelectItem value="project">Project Scoped</SelectItem>
+                        <SelectItem value="assistant">
+                          Assistant Scoped
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormDescription>
+                    Where this skill can be loaded by AI agents.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedScope === "project" && (
+              <FormField
+                control={form.control}
+                name="projectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project</FormLabel>
+                    <FormControl>
+                      <Select
+                        disabled={Boolean(defaultProjectId) || isSubmitting}
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((proj) => (
+                            <SelectItem key={proj.id} value={proj.id}>
+                              {proj.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormDescription>
+                      Assign this skill exclusively to this project.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {selectedScope === "assistant" && (
+              <FormField
+                control={form.control}
+                name="assistantId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assistant</FormLabel>
+                    <FormControl>
+                      <Select
+                        disabled={Boolean(defaultAssistantId) || isSubmitting}
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assistant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assistants.map((asst) => (
+                            <SelectItem key={asst.id} value={asst.id}>
+                              {asst.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormDescription>
+                      Assign this skill exclusively to this assistant.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
 
           <FormField

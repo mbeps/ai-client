@@ -1,8 +1,19 @@
 "use client";
 
-import { Ban, Loader2, Save, SlidersHorizontal, Sparkles } from "lucide-react";
+import {
+  Ban,
+  Loader2,
+  Plus,
+  Save,
+  SlidersHorizontal,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
 import { SkillsPicker } from "@/components/chat/skills-picker";
+import { SkillCard } from "@/components/skill/skill-card";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Skill } from "@/types/skill/skill";
@@ -13,6 +24,8 @@ import type { Skill } from "@/types/skill/skill";
  * @author Maruf Bepary
  */
 export interface SkillsConfigTabProps {
+  projectId?: string;
+  assistantId?: string;
   skillMode: SkillMode;
   onSkillModeChange: (mode: SkillMode) => void;
   selectedSkillIds: Set<string>;
@@ -69,6 +82,8 @@ const MODE_OPTIONS: ModeOption[] = [
  * @author Maruf Bepary
  */
 export function SkillsConfigTab({
+  projectId,
+  assistantId,
   skillMode,
   onSkillModeChange,
   selectedSkillIds,
@@ -81,6 +96,17 @@ export function SkillsConfigTab({
   description = "Configure how agent skills and domain instructions are used.",
   className,
 }: SkillsConfigTabProps) {
+  const entitySkills = useMemo(() => {
+    if (projectId) return skills.filter((s) => s.projectId === projectId);
+    if (assistantId) return skills.filter((s) => s.assistantId === assistantId);
+    return [];
+  }, [skills, projectId, assistantId]);
+
+  const globalSkills = useMemo(
+    () => skills.filter((s) => !s.projectId && !s.assistantId),
+    [skills],
+  );
+
   return (
     <div className={cn("space-y-6", className)}>
       <div className="space-y-1">
@@ -149,13 +175,57 @@ export function SkillsConfigTab({
           </div>
           <div className="bg-card flex max-h-[500px] flex-col overflow-hidden rounded-md border p-4">
             <SkillsPicker
-              skills={skills}
+              skills={globalSkills}
               selectedIds={selectedSkillIds}
               onToggleSkill={onToggleSkill}
               onSelectSkills={onSelectSkills}
               maxHeight="420px"
             />
           </div>
+        </div>
+      )}
+
+      {(projectId || assistantId) && (
+        <div className="space-y-4 border-t pt-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <h4 className="text-base font-semibold">
+                {projectId ? "Project Skills" : "Assistant Skills"}
+              </h4>
+              <p className="text-muted-foreground text-xs">
+                Skills created exclusively for this{" "}
+                {projectId ? "project" : "assistant"}.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={
+                  projectId
+                    ? `${ROUTES.SETTINGS.SKILLS.new}?projectId=${projectId}`
+                    : `${ROUTES.SETTINGS.SKILLS.new}?assistantId=${assistantId}`
+                }
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New Skill
+              </Link>
+            </Button>
+          </div>
+
+          {entitySkills.length === 0 ? (
+            <div className="bg-muted/20 rounded-lg border border-dashed p-6 text-center">
+              <p className="text-muted-foreground text-xs">
+                No {projectId ? "project" : "assistant"}-specific skills yet.
+                Create one to define a skill accessible only in this{" "}
+                {projectId ? "project" : "assistant"}.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {entitySkills.map((s) => (
+                <SkillCard key={s.id} skill={s} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

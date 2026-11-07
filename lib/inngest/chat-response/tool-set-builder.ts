@@ -177,7 +177,12 @@ export function buildOrchestratorToolSet(
     : {};
 
   const skillTools =
-    ctx.availableSkills.length > 0 ? registerSkillTool(userId) : {};
+    ctx.availableSkills.length > 0
+      ? registerSkillTool(userId, {
+          projectId: ctx.chatRow?.projectId,
+          assistantId: ctx.chatRow?.assistantId,
+        })
+      : {};
 
   const skillAuthoringTools = isInternalToolAllowed(
     INTERNAL_TOOL_IDS.MANAGE_SKILL,

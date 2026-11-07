@@ -72,6 +72,8 @@ export async function createSkillForUser(
       content: data.content,
       files: data.files ?? [],
       enabled: data.enabled ?? true,
+      projectId: data.projectId ?? null,
+      assistantId: data.assistantId ?? null,
     })
     .returning();
 
@@ -119,6 +121,10 @@ export async function updateSkillForUser(
       ...(data.content !== undefined ? { content: data.content } : {}),
       ...(data.files !== undefined ? { files: data.files } : {}),
       ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
+      ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
+      ...(data.assistantId !== undefined
+        ? { assistantId: data.assistantId }
+        : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))

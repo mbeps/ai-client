@@ -239,6 +239,8 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     content: row.content,
     files: (row.files as any) ?? [],
     enabled: row.enabled,
+    projectId: row.projectId ?? null,
+    assistantId: row.assistantId ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   })),

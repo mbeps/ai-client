@@ -48,6 +48,8 @@ export interface ChatInteractionProps {
   assistantId?: string | null;
   promptMode?: "all" | "none" | "specific";
   promptIds?: string[];
+  skillMode?: "dynamic" | "none" | "specific";
+  skillIds?: string[];
 }
 
 /**
@@ -166,6 +168,16 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     [props.projectId, props.assistantId, props.promptMode, props.promptIds],
   );
 
+  const skillScopeContext = useMemo(
+    () => ({
+      projectId: props.projectId,
+      assistantId: props.assistantId,
+      skillMode: props.skillMode,
+      skillIds: props.skillIds,
+    }),
+    [props.projectId, props.assistantId, props.skillMode, props.skillIds],
+  );
+
   const mentions = useMentionCommands(
     input,
     setInput,
@@ -179,6 +191,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selections.onMentionKb,
     services.knowledgebases,
     promptScopeContext,
+    skillScopeContext,
   );
 
   const prompts = useChatPromptSelection(
@@ -241,6 +254,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     prompts,
     isSendDisabled,
     promptScopeContext,
+    skillScopeContext,
     submit,
     handleRemoveAssistant,
     handleOpenSubagents,
