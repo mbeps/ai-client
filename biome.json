@@ -33,7 +33,7 @@
       "!wiki",
       "!.agents",
       "!pnpm-lock.yaml",
-      ".github"
+      "!.github"
     ],
     "maxSize": 1048576,
     "ignoreUnknown": true
