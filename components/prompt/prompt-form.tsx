@@ -33,7 +33,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
  *
  * @author Maruf Bepary
  */
-const promptFormSchema = z
+export const promptFormSchema = z
   .object({
     title: z.string().min(1, "Title is required"),
     shortcut: z
