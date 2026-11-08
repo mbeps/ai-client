@@ -75,10 +75,45 @@ export function configureLoggingSync(): void {
         },
       ],
     });
-    initialized = true;
   } catch {
-    initialized = true;
+    // Absorb "Already configured" errors if LogTape was initialized earlier in process
   }
+
+  initialized = true;
+
+  // Route AI SDK warnings through LogTape instead of unformatted process.emitWarning
+  const aiWarningLog = getLogTapeLogger(["app", "ai", "warnings"]);
+  (globalThis as any).AI_SDK_LOG_WARNINGS = ({
+    warnings,
+    provider,
+    model,
+  }: {
+    warnings: any[];
+    provider?: string;
+    model?: string;
+  }) => {
+    const resolvedProvider = provider ?? "unknown";
+    const resolvedModel = model ?? "unknown";
+    for (const w of warnings) {
+      if (w.type === "compatibility") {
+        aiWarningLog.debug(
+          "AI SDK compatibility warning ({provider}/{model}): {feature} - {details}",
+          {
+            provider: resolvedProvider,
+            model: resolvedModel,
+            feature: w.feature ?? "unknown",
+            details: w.details ?? "",
+          },
+        );
+      } else {
+        aiWarningLog.warn("AI SDK warning ({provider}/{model}): {message}", {
+          provider: resolvedProvider,
+          model: resolvedModel,
+          message: w.message ?? w.feature ?? String(w),
+        });
+      }
+    }
+  };
 }
 
 /**

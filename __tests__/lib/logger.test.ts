@@ -223,5 +223,86 @@ describe("lib/logger", () => {
     expect(() => freshLogger.audit("TestAction", { userId: "user-1" }, "trace-999")).not.toThrow();
     vi.resetModules();
   });
+
+  it("routes AI_SDK_LOG_WARNINGS to LogTape debug and warn sinks", async () => {
+    vi.resetModules();
+    const debugMock = vi.fn();
+    const warnMock = vi.fn();
+    vi.doMock("@logtape/logtape", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@logtape/logtape")>();
+      return {
+        ...actual,
+        getLogger: vi.fn((category) => {
+          if (Array.isArray(category) && category.join(".").includes("ai.warnings")) {
+            return { debug: debugMock, warn: warnMock };
+          }
+          return actual.getLogger(category);
+        }),
+      };
+    });
+
+    const { configureLoggingSync: freshConfig } = await import("@/lib/logger");
+    freshConfig();
+
+    expect(typeof (globalThis as any).AI_SDK_LOG_WARNINGS).toBe("function");
+
+    // 1. Compatibility warning
+    (globalThis as any).AI_SDK_LOG_WARNINGS({
+      warnings: [
+        {
+          type: "compatibility",
+          feature: "JSON Schema propertyNames",
+          details: "Removed propertyNames",
+        },
+        {
+          type: "compatibility",
+        },
+      ],
+      provider: "openai.chat",
+      model: "test-model",
+    });
+
+    expect(debugMock).toHaveBeenCalledTimes(2);
+    expect(debugMock).toHaveBeenNthCalledWith(
+      1,
+      "AI SDK compatibility warning ({provider}/{model}): {feature} - {details}",
+      {
+        provider: "openai.chat",
+        model: "test-model",
+        feature: "JSON Schema propertyNames",
+        details: "Removed propertyNames",
+      },
+    );
+    expect(debugMock).toHaveBeenNthCalledWith(
+      2,
+      "AI SDK compatibility warning ({provider}/{model}): {feature} - {details}",
+      {
+        provider: "openai.chat",
+        model: "test-model",
+        feature: "unknown",
+        details: "",
+      },
+    );
+
+    // 2. Non-compatibility warning with fallback properties
+    (globalThis as any).AI_SDK_LOG_WARNINGS({
+      warnings: [
+        {
+          type: "unsupported",
+          message: "Feature X unsupported",
+        },
+        {
+          type: "deprecated",
+          feature: "old-param",
+        },
+        "raw-string-warning" as any,
+      ],
+    });
+
+    expect(warnMock).toHaveBeenCalledTimes(3);
+
+    vi.doUnmock("@logtape/logtape");
+    vi.resetModules();
+  });
 });
 

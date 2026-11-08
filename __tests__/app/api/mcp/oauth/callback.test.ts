@@ -34,6 +34,9 @@ const dbMock = vi.hoisted(() => ({
     mcpServer: {
       findFirst: vi.fn(),
     },
+    userMcpServerInstall: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 vi.mock("@/drizzle/db", () => ({ db: dbMock }));
@@ -160,5 +163,45 @@ describe("GET /api/mcp/oauth/callback", () => {
 
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("error=oauth_exchange_failed");
+  });
+
+  it("merges credentials from userMcpServerInstall for installed servers", async () => {
+    getSessionMock.mockResolvedValueOnce({ user: { id: "user-1" } });
+    getMcpOAuthCredentialByStateMock.mockResolvedValueOnce({
+      userId: "user-1",
+      serverId: "srv-installed",
+    });
+    dbMock.query.mcpServer.findFirst.mockResolvedValueOnce({
+      id: "srv-installed",
+      name: "Public Server",
+      url: "https://example.com/mcp",
+      authType: "oauth",
+      isPublic: true,
+      oauthClientId: null,
+      oauthClientSecret: null,
+    });
+    dbMock.query.userMcpServerInstall.findFirst.mockResolvedValueOnce({
+      oauthClientId: "install-client-id",
+      oauthClientSecret: "install-client-secret",
+    });
+    mcpAuthMock.mockResolvedValueOnce("AUTHORIZED");
+
+    const req = new Request(
+      "http://localhost:3000/api/mcp/oauth/callback?code=c1&state=s1",
+    );
+    const res = await GET(req);
+
+    expect(mcpAuthMock).toHaveBeenCalled();
+    const passedProvider = mcpAuthMock.mock.calls[0][0];
+    expect((passedProvider as any).server.oauthClientId).toBe(
+      "install-client-id",
+    );
+    expect((passedProvider as any).server.oauthClientSecret).toBe(
+      "install-client-secret",
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain(
+      "/settings/connectors/srv-installed?oauth=connected",
+    );
   });
 });

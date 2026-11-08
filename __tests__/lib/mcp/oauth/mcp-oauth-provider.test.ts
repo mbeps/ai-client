@@ -330,7 +330,29 @@ describe("McpOAuthProvider", () => {
         new URL("https://auth.example.com/authorize"),
       );
 
-      // 13. invalidateCredentials: with unknown scope
+      // 13. validateResourceURL
+      // 13a. Returns undefined when resource is undefined
+      expect(
+        await fallbackProvider.validateResourceURL(server.url, undefined),
+      ).toBeUndefined();
+
+      // 13b. Valid cross-origin resource URL returns URL object
+      const validResourceUrl = await fallbackProvider.validateResourceURL(
+        "https://hf.co/mcp",
+        "https://huggingface.co/mcp",
+      );
+      expect(validResourceUrl).toEqual(new URL("https://huggingface.co/mcp"));
+
+      // 13c. Blocked URL throws SSRF error
+      isBlockedUrlMock.mockResolvedValueOnce(true);
+      await expect(
+        fallbackProvider.validateResourceURL(
+          server.url,
+          "http://127.0.0.1:8080/mcp",
+        ),
+      ).rejects.toThrow(/blocked address/i);
+
+      // 14. invalidateCredentials: with unknown scope
       await fallbackProvider.invalidateCredentials("unknown" as any);
     } finally {
       if (originalUrl !== undefined) {

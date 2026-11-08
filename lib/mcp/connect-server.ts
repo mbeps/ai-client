@@ -4,6 +4,7 @@ import type { McpConnection } from "@/types/mcp/mcp-connection";
 
 const log = getLogger(["app", "mcp", "connect"]);
 
+import { cleanToolSchema } from "@/lib/mcp/clean-tool-schema";
 import { createConnectedClient } from "@/lib/mcp/create-connected-client";
 import { withTimeout } from "@/lib/mcp/with-timeout";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
@@ -31,7 +32,8 @@ export async function connectServer(
     );
 
     const boundedTools: Record<string, any> = {};
-    for (const [toolName, toolDef] of Object.entries(rawTools)) {
+    for (const [toolName, rawToolDef] of Object.entries(rawTools)) {
+      const toolDef = cleanToolSchema(rawToolDef);
       if (typeof toolDef?.execute === "function") {
         const originalExecute = toolDef.execute.bind(toolDef);
         boundedTools[toolName] = {
