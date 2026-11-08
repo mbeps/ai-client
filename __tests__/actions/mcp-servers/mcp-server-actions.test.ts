@@ -240,7 +240,7 @@ describe("mcp server personal actions", () => {
       expect(decrypt(passedSet.headers)).toBe('{"auth":"new"}');
     });
 
-    it("preserves headers when headers is empty string", async () => {
+    it("preserves headers when headers is empty string and authType is headers", async () => {
       const updated = {
         id: "srv-1",
         name: "Updated",
@@ -252,6 +252,7 @@ describe("mcp server personal actions", () => {
       const result = await updateMcpServer("srv-1", {
         name: "Updated",
         url: "https://example.com/new",
+        authType: "headers",
         headers: "",
         isPublic: false,
       });
