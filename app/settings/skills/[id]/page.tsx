@@ -1,18 +1,35 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import {
+  Download,
+  FileCode,
+  Globe,
+  Loader2,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { deleteSkill } from "@/actions/skills/delete-skill";
 import { exportSkillZip } from "@/actions/skills/export-skill";
 import { updateSkill } from "@/actions/skills/update-skill";
+import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
-import { SkillDetailHeader } from "@/components/skill/skill-detail-header";
-import { SkillDirectorySidebar } from "@/components/skill/skill-directory-sidebar";
-import { SkillFileEditor } from "@/components/skill/skill-file-editor";
+import {
+  SidebarTabs,
+  SidebarTabsContent,
+  SidebarTabsList,
+  SidebarTabsTrigger,
+} from "@/components/shared/sidebar-tabs";
+import { SkillDetailsTab } from "@/components/skill/skill-details-tab";
+import { SkillEditorTab } from "@/components/skill/skill-editor-tab";
+import { SkillExportTab } from "@/components/skill/skill-export-tab";
+import { SkillScopeTab } from "@/components/skill/skill-scope-tab";
 import { ROUTES } from "@/config/routes";
+import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { addOrUpdateFile } from "@/lib/skills/add-or-update-file";
 import { deleteFile } from "@/lib/skills/delete-file";
 import { deleteFolderPath } from "@/lib/skills/delete-folder-path";
@@ -222,6 +239,9 @@ type SkillFormState = {
   description: string;
   content: string;
   enabled: boolean;
+  scope: "global" | "project" | "assistant";
+  projectId: string | null;
+  assistantId: string | null;
 };
 
 /**
@@ -239,14 +259,26 @@ function buildInitialSkillForm(skill?: any): SkillFormState {
       description: "",
       content: "",
       enabled: true,
+      scope: "global",
+      projectId: null,
+      assistantId: null,
     };
   }
+  const scope: "global" | "project" | "assistant" = skill.projectId
+    ? "project"
+    : skill.assistantId
+      ? "assistant"
+      : "global";
+
   return {
     displayName: skill.displayName || "",
     name: skill.name,
     description: skill.description || "",
     content: skill.content,
     enabled: skill.enabled,
+    scope,
+    projectId: skill.projectId ?? null,
+    assistantId: skill.assistantId ?? null,
   };
 }
 
@@ -270,6 +302,8 @@ function buildSkillUpdatePayload(
     description: cleanDesc ? cleanDesc : undefined,
     content: form.content,
     enabled: form.enabled,
+    projectId: form.scope === "project" ? form.projectId : null,
+    assistantId: form.scope === "assistant" ? form.assistantId : null,
     files: filesToSave,
   };
 }
@@ -409,6 +443,14 @@ function SkillDetailPageContent({
   skillId: string;
   skill: any;
 }) {
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsString.withDefault("details").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
+
   const {
     form,
     setForm,
@@ -425,84 +467,117 @@ function SkillDetailPageContent({
 
   return (
     <PageContainer variant="full" className="space-y-6">
-      <SkillDetailHeader
-        displayName={form.displayName}
-        onDisplayNameChange={(val) =>
-          setForm((prev) => ({ ...prev, displayName: val }))
-        }
-        name={form.name}
-        onNameChange={(val) => setForm((prev) => ({ ...prev, name: val }))}
-        description={form.description}
-        onDescriptionChange={(val) =>
-          setForm((prev) => ({ ...prev, description: val }))
-        }
-        enabled={form.enabled}
-        onEnabledChange={(val) =>
-          setForm((prev) => ({ ...prev, enabled: val }))
-        }
-        onSave={() => handleSave()}
-        isSaving={savingSettings}
-        onDelete={() => setShowDeleteDialog(true)}
-        isDeleting={deleting}
-        onExport={handleExport}
-        isExporting={exporting}
-      />
+      <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
+        <SidebarTabsList>
+          <SidebarTabsTrigger value="details">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Details</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="editor">
+            <FileCode className="mr-2 h-4 w-4" />
+            <span>Editor</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="scope">
+            <Globe className="mr-2 h-4 w-4" />
+            <span>Scope</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="export">
+            <Download className="mr-2 h-4 w-4" />
+            <span>Export</span>
+          </SidebarTabsTrigger>
+          <SidebarTabsTrigger value="danger">
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Danger Zone</span>
+          </SidebarTabsTrigger>
+        </SidebarTabsList>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SkillFileEditor
-            key={directory.selectedFilePath}
-            filePath={directory.selectedFilePath}
-            content={directory.activeContent}
-            onChangeContent={directory.handleContentChange}
-            onRename={
-              !directory.isSkillMd
-                ? () => {
-                    const newPath = prompt(
-                      "Enter new file path:",
-                      directory.selectedFilePath,
-                    );
-                    if (newPath)
-                      directory.handleRenameFile(
-                        directory.selectedFilePath,
-                        newPath,
-                      );
-                  }
-                : undefined
+        <SidebarTabsContent value="details" className="w-full flex-1 space-y-6">
+          <SkillDetailsTab
+            displayName={form.displayName}
+            onDisplayNameChange={(val) =>
+              setForm((prev) => ({ ...prev, displayName: val }))
             }
-            onMove={
-              !directory.isSkillMd
-                ? () => directory.setFileToMove(directory.selectedFilePath)
-                : undefined
+            name={form.name}
+            onNameChange={(val) => setForm((prev) => ({ ...prev, name: val }))}
+            description={form.description}
+            onDescriptionChange={(val) =>
+              setForm((prev) => ({ ...prev, description: val }))
             }
-            onDelete={
-              !directory.isSkillMd
-                ? () => directory.handleDeleteFile(directory.selectedFilePath)
-                : undefined
+            enabled={form.enabled}
+            onEnabledChange={(val) =>
+              setForm((prev) => ({ ...prev, enabled: val }))
             }
+            onSave={() => handleSave()}
+            isSaving={savingSettings}
           />
-        </div>
+        </SidebarTabsContent>
 
-        <div className="lg:col-span-1">
-          <div className="sticky top-6">
-            <SkillDirectorySidebar
-              files={directory.files}
-              selectedPath={directory.selectedFilePath}
-              onSelectFile={directory.setSelectedFilePath}
-              onCreateFile={directory.handleCreateFile}
-              onCreateFolder={directory.handleCreateFolder}
-              onRenameFile={directory.handleRenameFile}
-              onDeleteFile={directory.handleDeleteFile}
-              onRenameFolder={directory.handleRenameFolder}
-              onDeleteFolder={directory.handleDeleteFolder}
-              onMoveFile={directory.handleMoveFile}
-              emptyFolders={directory.emptyFolders}
-              externalMoveFile={directory.fileToMove}
-              onClearExternalMoveFile={() => directory.setFileToMove(null)}
-            />
-          </div>
-        </div>
-      </div>
+        <SidebarTabsContent value="editor" className="w-full flex-1 space-y-6">
+          <SkillEditorTab
+            files={directory.files}
+            selectedFilePath={directory.selectedFilePath}
+            onSelectFile={directory.setSelectedFilePath}
+            activeContent={directory.activeContent}
+            onChangeContent={directory.handleContentChange}
+            onCreateFile={directory.handleCreateFile}
+            onCreateFolder={directory.handleCreateFolder}
+            onRenameFile={directory.handleRenameFile}
+            onDeleteFile={directory.handleDeleteFile}
+            onRenameFolder={directory.handleRenameFolder}
+            onDeleteFolder={directory.handleDeleteFolder}
+            onMoveFile={directory.handleMoveFile}
+            emptyFolders={directory.emptyFolders}
+            fileToMove={directory.fileToMove}
+            onClearFileToMove={() => directory.setFileToMove(null)}
+            isSkillMd={directory.isSkillMd}
+            onSave={() => handleSave()}
+            isSaving={savingSettings}
+          />
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="scope" className="w-full flex-1">
+          <SkillScopeTab
+            scope={form.scope}
+            onScopeChange={(val) =>
+              setForm((prev) => ({
+                ...prev,
+                scope: val,
+                projectId: val === "global" ? null : prev.projectId,
+                assistantId: val === "global" ? null : prev.assistantId,
+              }))
+            }
+            projectId={form.projectId}
+            onProjectIdChange={(val) =>
+              setForm((prev) => ({ ...prev, projectId: val }))
+            }
+            assistantId={form.assistantId}
+            onAssistantIdChange={(val) =>
+              setForm((prev) => ({ ...prev, assistantId: val }))
+            }
+            onSave={() => handleSave()}
+            isSaving={savingSettings}
+          />
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="export" className="w-full flex-1">
+          <SkillExportTab
+            onExport={handleExport}
+            isExporting={exporting}
+            skillName={form.displayName || form.name}
+          />
+        </SidebarTabsContent>
+
+        <SidebarTabsContent value="danger" className="w-full flex-1">
+          <DangerZoneCard
+            title="Danger Zone"
+            description="Irreversible actions for this agent skill."
+            consequences="Deleting this skill will permanently remove it from your skills library. This action cannot be undone."
+            buttonLabel="Delete Skill"
+            onDelete={() => setShowDeleteDialog(true)}
+            isDeleting={deleting}
+          />
+        </SidebarTabsContent>
+      </SidebarTabs>
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
@@ -524,6 +599,8 @@ function SkillDetailPageContent({
 export default function SkillDetailPage() {
   const params = useParams();
   const skillId = params.id as string;
+
+  useResourceHydration(["projects", "assistants", "skills"]);
 
   const skills = useAppStore((state) => state.skills);
   const skill = skills.find((s) => s.id === skillId);
