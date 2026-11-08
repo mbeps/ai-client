@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 const CAPABILITY_CONFIGS = [
-  { key: "capTools", label: "tools" },
-  { key: "capVision", label: "vision" },
-  { key: "capReasoning", label: "reasoning" },
-  { key: "capStructuredOutput", label: "structured" },
+  { key: "capTools", label: "Tools" },
+  { key: "capVision", label: "Vision" },
+  { key: "capReasoning", label: "Reasoning" },
+  { key: "capStructuredOutput", label: "Structured" },
 ] as const;
 
 /**

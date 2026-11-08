@@ -1,12 +1,11 @@
 "use client";
 
-import { Edit2, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleSlash, Edit2, Trash2 } from "lucide-react";
 import { ModelCapabilityBadges } from "@/components/settings/providers/model-table/model-capability-badges";
 import { ModelContextCell } from "@/components/settings/providers/model-table/model-context-cell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   Tooltip,
@@ -86,14 +85,28 @@ export function ModelTableRow({
         <ModelContextCell model={model} />
       </TableCell>
       <TableCell>
-        <Switch
-          checked={model.isEnabled}
-          disabled={isBusy}
-          onCheckedChange={(checked) => onToggleEnabled(model, checked)}
-        />
-      </TableCell>
-      <TableCell>
         <div className="flex justify-end gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => onToggleEnabled(model, !model.isEnabled)}
+                aria-label={model.isEnabled ? "Disable model" : "Enable model"}
+              >
+                {model.isEnabled ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <CircleSlash className="h-4 w-4 text-amber-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {model.isEnabled ? "Disable Model" : "Enable Model"}
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

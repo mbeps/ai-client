@@ -216,8 +216,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
               <TableHead className="w-[90px]">Type</TableHead>
               <TableHead className="min-w-[160px]">Capabilities</TableHead>
               <TableHead className="w-[120px]">Context</TableHead>
-              <TableHead className="w-[80px]">Enabled</TableHead>
-              <TableHead className="w-[100px] text-right">Actions</TableHead>
+              <TableHead className="w-[130px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -248,7 +247,7 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
             {filteredModels.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={7}
                   className="text-muted-foreground py-8 text-center text-sm"
                 >
                   No models found.
