@@ -38,6 +38,87 @@ function stripPayloadHeaders(
 }
 
 /**
+ * When an MCP server request was redirected across origins and returns 401 Unauthorized,
+ * any `resource_metadata="..."` URL in WWW-Authenticate that doesn't match the initial origin
+ * will cause @ai-sdk/mcp's `assertResourceMetadataUrlSameOrigin` to fail.
+ *
+ * Stripping cross-origin `resource_metadata` allows @ai-sdk/mcp to fall back to discovering
+ * metadata through `safeMcpFetch`, which follows redirects and invokes `validateResourceURL`.
+ *
+ * @param response - The original HTTP response
+ * @param initialUrl - The URL of the original request
+ * @param finalUrl - The URL of the final response after redirects
+ * @returns A new Response object with sanitized headers if necessary
+ * @author Maruf Bepary
+ */
+function sanitizeCrossOriginAuthResponse(
+  response: Response,
+  initialUrl: string,
+  finalUrl: string,
+): Response {
+  if (response.status !== 401) {
+    return response;
+  }
+
+  let initialOrigin: string;
+  let finalOrigin: string;
+  try {
+    initialOrigin = new URL(initialUrl).origin;
+    finalOrigin = new URL(finalUrl).origin;
+  } catch {
+    return response;
+  }
+
+  if (initialOrigin === finalOrigin) {
+    return response;
+  }
+
+  const authHeader = response.headers.get("www-authenticate");
+  if (!authHeader?.includes("resource_metadata")) {
+    return response;
+  }
+
+  const resourceMatch = authHeader.match(
+    /(?:^|[,\s])resource_metadata="([^"]*)"/i,
+  );
+  if (resourceMatch) {
+    try {
+      const metaOrigin = new URL(resourceMatch[1]).origin;
+      if (metaOrigin === initialOrigin) {
+        return response;
+      }
+    } catch {
+      // Invalid URL in resource_metadata, fall through to sanitize
+    }
+  }
+
+  const cleanedHeader = authHeader
+    .replace(/(?:^|[,\s])resource_metadata="?[^",]+"?(?=,|$|\s)/gi, "")
+    .replace(/^\s*,\s*|,\s*$/g, "")
+    .replace(/(Bearer)\s*,?\s*/gi, "$1 ")
+    .replace(/,\s*,/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const newHeaders = new Headers(response.headers);
+  if (cleanedHeader) {
+    newHeaders.set("www-authenticate", cleanedHeader);
+  } else {
+    newHeaders.delete("www-authenticate");
+  }
+
+  return new Proxy(response, {
+    get(target, prop) {
+      if (prop === "headers") {
+        return newHeaders;
+      }
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
  * Custom fetch wrapper for MCP HTTP transports.
  * Safely follows HTTP redirects (e.g. www to non-www, HTTP to HTTPS, canonical paths)
  * while re-validating every redirect target IP against SSRF rules via isBlockedUrl().
@@ -52,12 +133,13 @@ export async function safeMcpFetch(
   input: string | URL | Request,
   init?: RequestInit,
 ): Promise<Response> {
-  let currentUrl =
+  const initialUrl =
     typeof input === "string"
       ? input
       : input instanceof URL
         ? input.href
         : input.url;
+  let currentUrl = initialUrl;
   let currentInit = { ...init };
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -69,7 +151,11 @@ export async function safeMcpFetch(
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       if (!location) {
-        return response;
+        return sanitizeCrossOriginAuthResponse(
+          response,
+          initialUrl,
+          currentUrl,
+        );
       }
 
       const nextUrl = new URL(location, currentUrl);
@@ -101,7 +187,7 @@ export async function safeMcpFetch(
       continue;
     }
 
-    return response;
+    return sanitizeCrossOriginAuthResponse(response, initialUrl, currentUrl);
   }
 
   throw new AppException({

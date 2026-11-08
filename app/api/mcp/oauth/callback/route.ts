@@ -1,9 +1,12 @@
 import { auth as mcpAuth } from "@ai-sdk/mcp";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/drizzle/db";
-import { mcpServer } from "@/drizzle/schemas/mcp-server-schema";
+import {
+  mcpServer,
+  userMcpServerInstall,
+} from "@/drizzle/schemas/mcp-server-schema";
 import { auth } from "@/lib/auth/auth";
 import { getLogger } from "@/lib/logger";
 import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
@@ -81,9 +84,17 @@ export async function GET(req: Request) {
     );
   }
 
-  const serverRow = await db.query.mcpServer.findFirst({
-    where: eq(mcpServer.id, credential.serverId),
-  });
+  const [serverRow, installRow] = await Promise.all([
+    db.query.mcpServer.findFirst({
+      where: eq(mcpServer.id, credential.serverId),
+    }),
+    db.query.userMcpServerInstall.findFirst({
+      where: and(
+        eq(userMcpServerInstall.userId, session.user.id),
+        eq(userMcpServerInstall.serverId, credential.serverId),
+      ),
+    }),
+  ]);
 
   if (!serverRow) {
     log.warn("OAuth callback target server not found: {serverId}", {
@@ -94,7 +105,14 @@ export async function GET(req: Request) {
     );
   }
 
-  const serverConfig = mcpServerRowToConfig(serverRow, session.user.id);
+  const effectiveRow = {
+    ...serverRow,
+    oauthClientId: installRow?.oauthClientId ?? serverRow.oauthClientId,
+    oauthClientSecret:
+      installRow?.oauthClientSecret ?? serverRow.oauthClientSecret,
+  };
+
+  const serverConfig = mcpServerRowToConfig(effectiveRow, session.user.id);
   const provider = new McpOAuthProvider({
     server: serverConfig,
     userId: session.user.id,

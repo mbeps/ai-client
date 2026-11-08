@@ -248,6 +248,21 @@ export class McpOAuthProvider implements OAuthClientProvider {
     }
   }
 
+  async validateResourceURL(
+    _serverUrl: string | URL,
+    resource?: string,
+  ): Promise<URL | undefined> {
+    if (!resource) return undefined;
+
+    if (await isBlockedUrl(resource)) {
+      throw new Error(
+        `OAuth protected resource URL points to a blocked address: ${resource}`,
+      );
+    }
+
+    return new URL(resource);
+  }
+
   async invalidateCredentials(
     scope: "all" | "client" | "tokens" | "verifier",
   ): Promise<void> {

@@ -234,4 +234,157 @@ describe("safeMcpFetch", () => {
       safeMcpFetch("https://example.com/hop-0"),
     ).rejects.toThrow("Too many redirects (limit: 5)");
   });
+
+  describe("sanitizeCrossOriginAuthResponse edge cases", () => {
+    it("returns response directly on same-origin 401", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(null, {
+          status: 401,
+          headers: {
+            "www-authenticate":
+              'Bearer resource_metadata="https://first.com/metadata"',
+          },
+        }),
+      );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toBe(
+        'Bearer resource_metadata="https://first.com/metadata"',
+      );
+    });
+
+    it("handles 401 without WWW-Authenticate header or without resource_metadata", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: "https://other.com/api" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 401,
+            headers: { "www-authenticate": 'Bearer realm="api"' },
+          }),
+        );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toBe('Bearer realm="api"');
+    });
+
+    it("handles 401 where resource_metadata matches initialOrigin", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: "https://other.com/api" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 401,
+            headers: {
+              "www-authenticate":
+                'Bearer resource_metadata="https://first.com/metadata"',
+            },
+          }),
+        );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toBe(
+        'Bearer resource_metadata="https://first.com/metadata"',
+      );
+    });
+
+    it("deletes www-authenticate when resource_metadata is the only value", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: "https://other.com/api" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 401,
+            headers: {
+              "www-authenticate":
+                'resource_metadata="https://other.com/metadata"',
+            },
+          }),
+        );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toBeNull();
+    });
+
+    it("handles invalid URL in resource_metadata gracefully", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: "https://other.com/api" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ error: "denied" }), {
+            status: 401,
+            headers: {
+              "WWW-Authenticate": 'Bearer resource_metadata="not a url", scope="test"',
+            },
+          }),
+        );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toContain('scope="test"');
+      expect(res.headers.get("www-authenticate")).not.toContain("resource_metadata");
+      expect(await res.json()).toEqual({ error: "denied" });
+    });
+
+    it("handles unquoted resource_metadata parameter", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: "https://other.com/api" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 401,
+            headers: {
+              "www-authenticate": "Bearer resource_metadata=https://other.com/unquoted, scope=read",
+            },
+          }),
+        );
+
+      const res = await safeMcpFetch("https://first.com/api");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toBe("Bearer scope=read");
+    });
+
+    it("returns response as is when URL parsing fails", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(null, {
+          status: 401,
+          headers: {
+            "www-authenticate": 'Bearer resource_metadata="https://example.com/meta"',
+          },
+        }),
+      );
+
+      const res = await safeMcpFetch("invalid-url" as any);
+      expect(res.status).toBe(401);
+    });
+  });
 });
