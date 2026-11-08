@@ -11,8 +11,8 @@ import {
 import { useMemo, useState } from "react";
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 import {
-  HeaderPairsEditor,
   type HeaderPair,
+  HeaderPairsEditor,
 } from "@/components/mcp/header-pairs-editor";
 import {
   Accordion,
@@ -206,7 +206,7 @@ export function ServerFormFields<T extends FieldValues>({
   const initial = useMemo(
     () => parseInitialHeaders(form.getValues("headers" as Path<T>)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [form.getValues],
   );
 
   const [apiKey, setApiKey] = useState(initial.apiKey);
@@ -456,7 +456,8 @@ export function ServerFormFields<T extends FieldValues>({
                     />
                   </FormControl>
                   <FormDescription className="text-xs">
-                    HTTP header name for the API key (defaults to Authorization with Bearer prefix).
+                    HTTP header name for the API key (defaults to Authorization
+                    with Bearer prefix).
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -497,9 +498,9 @@ export function ServerFormFields<T extends FieldValues>({
                       />
                     </FormControl>
                     <FormDescription className="text-xs">
-                      Pre-registered OAuth client ID. Leave blank if the
-                      server supports Dynamic Client Registration (RFC 7591)
-                      or Client ID Metadata Documents.
+                      Pre-registered OAuth client ID. Leave blank if the server
+                      supports Dynamic Client Registration (RFC 7591) or Client
+                      ID Metadata Documents.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
