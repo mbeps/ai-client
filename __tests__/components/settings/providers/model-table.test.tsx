@@ -120,5 +120,16 @@ describe("ModelTableRow", () => {
 
     const typeBadge = screen.getByText("chat");
     expect(typeBadge).toHaveClass("capitalize");
+    expect(typeBadge.querySelector("svg")).toBeInTheDocument();
+
+    // Check capability badges (icon-only with screen-reader labels and tooltips)
+    expect(screen.getByText("Tool Calling")).toBeInTheDocument();
+    expect(screen.getByText("Vision")).toBeInTheDocument();
+    expect(screen.getByText("Reasoning")).toBeInTheDocument();
+    expect(screen.getByText("Structured Output")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tool Calling")).toBeInTheDocument();
+    expect(screen.getByLabelText("Vision")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reasoning")).toBeInTheDocument();
+    expect(screen.getByLabelText("Structured Output")).toBeInTheDocument();
   });
 });

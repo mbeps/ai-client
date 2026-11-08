@@ -1,17 +1,29 @@
 "use client";
 
-import { Command, Loader2, Settings, Shield } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Command,
+  FileText,
+  Globe,
+  Loader2,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { deletePrompt } from "@/actions/prompts/delete-prompt";
 import { updatePrompt } from "@/actions/prompts/update-prompt";
 import { PageHeader } from "@/components/page-header";
+import { PromptContentTab } from "@/components/prompt/prompt-content-tab";
+import { PromptDetailsTab } from "@/components/prompt/prompt-details-tab";
 import {
-  PromptForm,
   type PromptFormValues,
+  promptFormSchema,
 } from "@/components/prompt/prompt-form";
+import { PromptScopeTab } from "@/components/prompt/prompt-scope-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
@@ -21,6 +33,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { Form } from "@/components/ui/form";
 import { PROMPTS } from "@/config/prompts";
 import { ROUTES } from "@/config/routes";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
@@ -29,7 +42,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
 /**
  * Prompt editor page — client component for viewing and editing a single prompt.
  * Route parameter: `[id]` — Unique prompt identifier.
- * Features: edit title/shortcut/content, save changes, delete prompt, validation and error handling.
+ * Features: tabs for prompt details, content, scope, and danger zone.
  * Shows 404 if prompt not found.
  *
  * @author Maruf Bepary
@@ -42,7 +55,7 @@ export default function PromptDetailPage() {
 
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsString.withDefault("general").withOptions({
+    parseAsString.withDefault("details").withOptions({
       shallow: true,
       history: "replace",
     }),
@@ -58,6 +71,36 @@ export default function PromptDetailPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const form = useForm<PromptFormValues>({
+    resolver: zodResolver(promptFormSchema),
+    defaultValues: {
+      title: "",
+      shortcut: "",
+      content: "",
+      scope: "global",
+      projectId: null,
+      assistantId: null,
+    },
+  });
+
+  // Sync form state when prompt is available or changes
+  useEffect(() => {
+    if (prompt) {
+      form.reset({
+        title: prompt.title,
+        shortcut: prompt.shortcut,
+        content: prompt.content,
+        projectId: prompt.projectId,
+        assistantId: prompt.assistantId,
+        scope: prompt.projectId
+          ? "project"
+          : prompt.assistantId
+            ? "assistant"
+            : "global",
+      });
+    }
+  }, [prompt, form]);
 
   useEffect(() => {
     if (prompts.length === 0) {
@@ -84,8 +127,8 @@ export default function PromptDetailPage() {
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
-        projectId: values.projectId ?? null,
-        assistantId: values.assistantId ?? null,
+        projectId: values.scope === "project" ? values.projectId : null,
+        assistantId: values.scope === "assistant" ? values.assistantId : null,
       });
       if (!res.ok) {
         toast.error(res.error.message || "Failed to save prompt");
@@ -128,60 +171,63 @@ export default function PromptDetailPage() {
         description={`Edit shortcut: ${prompt.shortcut}`}
       />
 
-      <SidebarTabs value={tab} onValueChange={setTab} className="mt-6 w-full">
-        <SidebarTabsList>
-          <SidebarTabsTrigger value="general">
-            <Settings className="mr-2 h-4 w-4" />
-            General
-          </SidebarTabsTrigger>
-          <SidebarTabsTrigger value="danger">
-            <Shield className="mr-2 h-4 w-4" />
-            Danger Zone
-          </SidebarTabsTrigger>
-        </SidebarTabsList>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSave)}>
+          <SidebarTabs
+            value={tab}
+            onValueChange={setTab}
+            className="mt-6 w-full"
+          >
+            <SidebarTabsList>
+              <SidebarTabsTrigger value="details">
+                <Settings className="mr-2 h-4 w-4" />
+                Details
+              </SidebarTabsTrigger>
+              <SidebarTabsTrigger value="content">
+                <FileText className="mr-2 h-4 w-4" />
+                Prompt
+              </SidebarTabsTrigger>
+              <SidebarTabsTrigger value="scope">
+                <Globe className="mr-2 h-4 w-4" />
+                Scope
+              </SidebarTabsTrigger>
+              <SidebarTabsTrigger value="danger">
+                <Shield className="mr-2 h-4 w-4" />
+                Danger Zone
+              </SidebarTabsTrigger>
+            </SidebarTabsList>
 
-        <SidebarTabsContent value="general" className="space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Prompt Configuration</h3>
-            <p className="text-muted-foreground text-sm">
-              Modify the prompt title, shortcut, and expansion text.
-            </p>
-          </div>
+            <SidebarTabsContent value="details">
+              <PromptDetailsTab form={form} isSubmitting={savingSettings} />
+            </SidebarTabsContent>
 
-          <PromptForm
-            key={prompt.id}
-            defaultValues={{
-              title: prompt.title,
-              shortcut: prompt.shortcut,
-              content: prompt.content,
-              projectId: prompt.projectId,
-              assistantId: prompt.assistantId,
-              scope: prompt.projectId
-                ? "project"
-                : prompt.assistantId
-                  ? "assistant"
-                  : "global",
-            }}
-            onSubmit={handleSave}
-            placeholderContent={
-              PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
-            }
-            submitLabel="Save Changes"
-            isSubmitting={savingSettings}
-          />
-        </SidebarTabsContent>
+            <SidebarTabsContent value="content">
+              <PromptContentTab
+                form={form}
+                placeholderContent={
+                  PROMPTS.UI.EXAMPLES.PROMPT_CONTENT_PLACEHOLDER_EDIT
+                }
+                isSubmitting={savingSettings}
+              />
+            </SidebarTabsContent>
 
-        <SidebarTabsContent value="danger">
-          <DangerZoneCard
-            title="Danger Zone"
-            description="Irreversible actions for this prompt."
-            consequences="Deleting this prompt will permanently remove it from your shortcuts. This action cannot be undone."
-            buttonLabel="Delete Prompt"
-            onDelete={() => setShowDeleteDialog(true)}
-            isDeleting={deleting}
-          />
-        </SidebarTabsContent>
-      </SidebarTabs>
+            <SidebarTabsContent value="scope">
+              <PromptScopeTab form={form} isSubmitting={savingSettings} />
+            </SidebarTabsContent>
+
+            <SidebarTabsContent value="danger">
+              <DangerZoneCard
+                title="Danger Zone"
+                description="Irreversible actions for this prompt."
+                consequences="Deleting this prompt will permanently remove it from your shortcuts. This action cannot be undone."
+                buttonLabel="Delete Prompt"
+                onDelete={() => setShowDeleteDialog(true)}
+                isDeleting={deleting}
+              />
+            </SidebarTabsContent>
+          </SidebarTabs>
+        </form>
+      </Form>
 
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}

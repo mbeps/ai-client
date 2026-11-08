@@ -38,7 +38,9 @@ export const updateMcpServer = defineAction(
     const values = buildServerConfig(parsed);
     // SEC-07: empty string means "no change" — preserve existing sensitive values
     const updateFields = { ...values };
-    if (parsed.headers === "") {
+    if (parsed.authType === "none") {
+      updateFields.headers = null;
+    } else if (parsed.headers === "") {
       delete (updateFields as any).headers;
     }
     if (parsed.oauthClientSecret === "") {

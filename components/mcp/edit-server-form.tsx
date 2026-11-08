@@ -150,6 +150,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
               form={form}
               styled
               isInstalled={server.isInstalled}
+              showPublicToggle={false}
               serverId={server.id}
               oauthConnected={server.oauthConnected}
               onOAuthConnect={handleOAuthConnect}
@@ -162,7 +163,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
             />
           </CardContent>
 
-          <div className="flex justify-end border-t pt-4">
+          <div className="flex justify-end pt-2">
             <Button
               type="submit"
               disabled={isSubmitting}

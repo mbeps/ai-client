@@ -31,16 +31,16 @@ export interface SkillDetailHeaderProps {
   onEnabledChange: (value: boolean) => void;
   onSave: () => Promise<void> | void;
   isSaving: boolean;
-  onDelete: () => void;
-  isDeleting: boolean;
-  onExport: () => Promise<void> | void;
-  isExporting: boolean;
+  onDelete?: () => void;
+  isDeleting?: boolean;
+  onExport?: () => Promise<void> | void;
+  isExporting?: boolean;
 }
 
 /**
  * Top header section for the Skill Details page.
  * Provides inline editing for the skill title, slash command slug, and description,
- * along with action buttons (Enable toggle, Save, Dropdown for Export & Delete).
+ * along with action buttons (Enable toggle, Save).
  *
  * @author Maruf Bepary
  */
@@ -56,9 +56,9 @@ export function SkillDetailHeader({
   onSave,
   isSaving,
   onDelete,
-  isDeleting,
+  isDeleting = false,
   onExport,
-  isExporting,
+  isExporting = false,
 }: SkillDetailHeaderProps) {
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");

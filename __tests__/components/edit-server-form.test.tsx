@@ -70,13 +70,26 @@ describe("EditServerForm — header masking (SEC-07)", () => {
     expect(screen.queryByText(/secret-token/)).toBeNull();
   });
 
-  it("renders the headers textarea as empty", () => {
+  it("renders the API key input directly when server has headers", () => {
     render(<EditServerForm server={serverWithAuthHeader} />);
     // Placeholder is the "saved" hint since server has headers
-    const textarea = screen.getByPlaceholderText(
+    const apiKeyInput = screen.getByPlaceholderText(
       /Saved — enter new value to update/,
     );
-    expect((textarea as HTMLTextAreaElement).value).toBe("");
+    expect((apiKeyInput as HTMLInputElement).value).toBe("");
+  });
+
+  it("does not render API key input or accordion when server has no auth", () => {
+    const noAuthServer: McpServer = {
+      ...serverWithAuthHeader,
+      headers: null,
+      authType: "none",
+    };
+    render(<EditServerForm server={noAuthServer} />);
+    expect(
+      screen.queryByRole("button", { name: /advanced settings/i }),
+    ).toBeNull();
+    expect(screen.queryByLabelText(/api key/i)).toBeNull();
   });
 });
 
@@ -159,5 +172,10 @@ describe("EditServerForm — submission", () => {
     expect(screen.getByText("OAuth Status")).toBeDefined();
     expect(screen.getByText("Not Connected")).toBeDefined();
     expect(screen.getByRole("button", { name: /connect account/i })).toBeDefined();
+  });
+
+  it("does not render public server toggle in configuration form", () => {
+    render(<EditServerForm server={serverWithAuthHeader} />);
+    expect(screen.queryByLabelText(/public server/i)).toBeNull();
   });
 });

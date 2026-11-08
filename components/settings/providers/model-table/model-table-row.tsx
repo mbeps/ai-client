@@ -1,12 +1,19 @@
 "use client";
 
-import { Edit2, Trash2 } from "lucide-react";
+import {
+  Binary,
+  CheckCircle2,
+  CircleSlash,
+  Edit2,
+  MessageSquare,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { ModelCapabilityBadges } from "@/components/settings/providers/model-table/model-capability-badges";
 import { ModelContextCell } from "@/components/settings/providers/model-table/model-context-cell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   Tooltip,
@@ -14,6 +21,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
+
+/**
+ * Resolves the icon component for a model type.
+ *
+ * @param modelType - Target model type
+ * @returns Lucide icon component
+ * @author Maruf Bepary
+ */
+function getModelTypeIcon(modelType: string | null | undefined) {
+  if (modelType === "embedding") return Binary;
+  if (modelType === "both") return Sparkles;
+  return MessageSquare;
+}
 
 /**
  * Represents model table row props.
@@ -48,6 +68,8 @@ export function ModelTableRow({
   onEdit,
   onDelete,
 }: ModelTableRowProps) {
+  const ModelTypeIcon = getModelTypeIcon(model.modelType);
+
   return (
     <TableRow data-state={isSelected && "selected"}>
       <TableCell>
@@ -75,7 +97,8 @@ export function ModelTableRow({
         {providerName}
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className="capitalize">
+        <Badge variant="outline" className="gap-1 capitalize">
+          <ModelTypeIcon className="size-3 shrink-0" />
           {model.modelType}
         </Badge>
       </TableCell>
@@ -86,14 +109,28 @@ export function ModelTableRow({
         <ModelContextCell model={model} />
       </TableCell>
       <TableCell>
-        <Switch
-          checked={model.isEnabled}
-          disabled={isBusy}
-          onCheckedChange={(checked) => onToggleEnabled(model, checked)}
-        />
-      </TableCell>
-      <TableCell>
         <div className="flex justify-end gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => onToggleEnabled(model, !model.isEnabled)}
+                aria-label={model.isEnabled ? "Disable model" : "Enable model"}
+              >
+                {model.isEnabled ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <CircleSlash className="h-4 w-4 text-amber-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {model.isEnabled ? "Disable Model" : "Enable Model"}
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

@@ -14,7 +14,7 @@ export function ModelContextCell({ model }: { model: AiModelRow }) {
     model.modelType === "embedding" || model.modelType === "both";
   return (
     <div className="text-xs">
-      <div>{model.contextWindow.toLocaleString()} tokens</div>
+      <div>{model.contextWindow.toLocaleString()} t</div>
       {showDims && (
         <div className="text-muted-foreground">
           {model.embeddingDimensions ?? "-"} dims

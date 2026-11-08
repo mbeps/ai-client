@@ -79,7 +79,7 @@ export function ModelTableFilterToolbar(props: ModelTableFilterToolbarProps) {
             <span>Enabled</span>
           </SelectItem>
           <SelectItem value="disabled">
-            <CircleSlash className="text-muted-foreground size-4" />
+            <CircleSlash className="size-4 text-amber-500" />
             <span>Disabled</span>
           </SelectItem>
         </SelectContent>
