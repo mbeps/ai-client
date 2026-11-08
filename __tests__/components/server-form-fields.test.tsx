@@ -115,4 +115,14 @@ describe("ServerFormFields", () => {
     fireEvent.click(disconnectBtn);
     expect(onOAuthDisconnect).toHaveBeenCalled();
   });
+
+  it("renders public server toggle when showPublicToggle is true and isInstalled is false", () => {
+    render(<TestFormWrapper showPublicToggle={true} isInstalled={false} />);
+    expect(screen.getByLabelText(/public server/i)).toBeDefined();
+  });
+
+  it("does not render public server toggle when showPublicToggle is false", () => {
+    render(<TestFormWrapper showPublicToggle={false} isInstalled={false} />);
+    expect(screen.queryByLabelText(/public server/i)).toBeNull();
+  });
 });

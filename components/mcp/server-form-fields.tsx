@@ -45,6 +45,8 @@ export interface ServerFormFieldsProps<T extends FieldValues> {
   headerPlaceholder?: string;
   /** Whether the server is an installed community tool (read-only name/url/isPublic). */
   isInstalled?: boolean;
+  /** Whether to show the public server sharing toggle. Default true. */
+  showPublicToggle?: boolean;
   /** ID of the server being edited, if already saved. */
   serverId?: string;
   /** Whether OAuth 2.1 is currently connected for the authenticated user. */
@@ -74,6 +76,7 @@ export function ServerFormFields<T extends FieldValues>({
   styled = false,
   headerPlaceholder,
   isInstalled = false,
+  showPublicToggle = true,
   serverId,
   oauthConnected = false,
   onOAuthConnect,
@@ -374,7 +377,7 @@ export function ServerFormFields<T extends FieldValues>({
         </AccordionItem>
       </Accordion>
 
-      {!isInstalled && (
+      {!isInstalled && showPublicToggle && (
         <div className="mt-4 border-t pt-4">
           <FormField
             control={control}

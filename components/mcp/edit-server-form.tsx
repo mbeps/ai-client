@@ -150,6 +150,7 @@ export function EditServerForm({ server }: EditServerFormProps) {
               form={form}
               styled
               isInstalled={server.isInstalled}
+              showPublicToggle={false}
               serverId={server.id}
               oauthConnected={server.oauthConnected}
               onOAuthConnect={handleOAuthConnect}

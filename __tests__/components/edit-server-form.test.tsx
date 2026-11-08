@@ -160,4 +160,9 @@ describe("EditServerForm — submission", () => {
     expect(screen.getByText("Not Connected")).toBeDefined();
     expect(screen.getByRole("button", { name: /connect account/i })).toBeDefined();
   });
+
+  it("does not render public server toggle in configuration form", () => {
+    render(<EditServerForm server={serverWithAuthHeader} />);
+    expect(screen.queryByLabelText(/public server/i)).toBeNull();
+  });
 });
