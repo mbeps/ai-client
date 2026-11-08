@@ -118,4 +118,57 @@ describe("connectServer", () => {
     const streamResult = await connection.tools.streamer.execute({});
     expect(streamResult[Symbol.asyncIterator]).toBeTypeOf("function");
   });
+
+  it("cleans propertyNames from tool schemas upon connection", async () => {
+    const rawTools = {
+      hfTool: {
+        description: "Hugging Face tool with propertyNames",
+        inputSchema: {
+          jsonSchema: {
+            type: "object",
+            propertyNames: { pattern: "^[a-zA-Z0-9_-]+$" },
+            properties: {
+              tags: {
+                type: "object",
+                propertyNames: { pattern: "^tag_" },
+                additionalProperties: { type: "string" },
+              },
+            },
+          },
+        },
+        execute: vi.fn().mockResolvedValue({ content: [] }),
+      },
+      passiveHfTool: {
+        description: "Passive tool with propertyNames",
+        parameters: {
+          propertyNames: { type: "string" },
+          properties: { val: { type: "number" } },
+        },
+      },
+    };
+
+    const clientMock = {
+      tools: vi.fn().mockResolvedValue(rawTools),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    createConnectedClientMock.mockResolvedValue(clientMock);
+    withTimeoutMock.mockImplementation((promise: any) => promise);
+
+    const serverConfig = {
+      id: "srv-hf",
+      name: "Hugging Face",
+      url: "https://hf.co/mcp",
+    };
+    const connection = await connectServer(serverConfig as any);
+
+    expect(
+      connection.tools.hfTool.inputSchema.jsonSchema,
+    ).not.toHaveProperty("propertyNames");
+    expect(
+      connection.tools.hfTool.inputSchema.jsonSchema.properties.tags,
+    ).not.toHaveProperty("propertyNames");
+    expect(
+      connection.tools.passiveHfTool.parameters,
+    ).not.toHaveProperty("propertyNames");
+  });
 });
