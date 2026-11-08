@@ -1,6 +1,14 @@
 "use client";
 
-import { CheckCircle2, CircleSlash, Edit2, Trash2 } from "lucide-react";
+import {
+  Binary,
+  CheckCircle2,
+  CircleSlash,
+  Edit2,
+  MessageSquare,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { ModelCapabilityBadges } from "@/components/settings/providers/model-table/model-capability-badges";
 import { ModelContextCell } from "@/components/settings/providers/model-table/model-context-cell";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +21,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
+
+/**
+ * Resolves the icon component for a model type.
+ *
+ * @param modelType - Target model type
+ * @returns Lucide icon component
+ * @author Maruf Bepary
+ */
+function getModelTypeIcon(modelType: string | null | undefined) {
+  if (modelType === "embedding") return Binary;
+  if (modelType === "both") return Sparkles;
+  return MessageSquare;
+}
 
 /**
  * Represents model table row props.
@@ -47,6 +68,8 @@ export function ModelTableRow({
   onEdit,
   onDelete,
 }: ModelTableRowProps) {
+  const ModelTypeIcon = getModelTypeIcon(model.modelType);
+
   return (
     <TableRow data-state={isSelected && "selected"}>
       <TableCell>
@@ -74,7 +97,8 @@ export function ModelTableRow({
         {providerName}
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className="capitalize">
+        <Badge variant="outline" className="gap-1 capitalize">
+          <ModelTypeIcon className="size-3 shrink-0" />
           {model.modelType}
         </Badge>
       </TableCell>
