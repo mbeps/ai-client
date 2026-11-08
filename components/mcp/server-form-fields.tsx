@@ -256,12 +256,7 @@ export function ServerFormFields<T extends FieldValues>({
       )}
 
       {/* Advanced Accordion: Headers & OAuth Configuration */}
-      <Accordion
-        type="single"
-        collapsible
-        defaultValue="advanced-settings"
-        className="w-full"
-      >
+      <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="advanced-settings" className="border-none">
           <AccordionTrigger className="hover:text-foreground text-muted-foreground py-2 text-sm font-medium">
             Advanced Settings

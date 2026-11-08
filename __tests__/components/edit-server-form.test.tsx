@@ -72,6 +72,9 @@ describe("EditServerForm — header masking (SEC-07)", () => {
 
   it("renders the headers textarea as empty", () => {
     render(<EditServerForm server={serverWithAuthHeader} />);
+    // Expand accordion to reveal headers textarea
+    const trigger = screen.getByRole("button", { name: /advanced settings/i });
+    fireEvent.click(trigger);
     // Placeholder is the "saved" hint since server has headers
     const textarea = screen.getByPlaceholderText(
       /Saved — enter new value to update/,

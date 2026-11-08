@@ -49,7 +49,7 @@ describe("ServerFormFields", () => {
     expect(screen.getByRole("tab", { name: /oauth 2\.1/i })).toBeDefined();
   });
 
-  it("renders OAuth fields in advanced settings when authType is oauth", () => {
+  it("renders OAuth fields in advanced settings when expanded and authType is oauth", () => {
     render(
       <TestFormWrapper
         defaultValues={{
@@ -65,8 +65,13 @@ describe("ServerFormFields", () => {
       />,
     );
 
-    // Advanced settings accordion is open by default
-    expect(screen.getByText("Advanced Settings")).toBeDefined();
+    // Advanced settings accordion is collapsed by default
+    const trigger = screen.getByRole("button", { name: /advanced settings/i });
+    expect(trigger).toBeDefined();
+    expect(screen.queryByLabelText(/client id/i)).toBeNull();
+
+    // Expand accordion to reveal fields
+    fireEvent.click(trigger);
     expect(screen.getByLabelText(/client id/i)).toBeDefined();
     expect(screen.getByLabelText(/client secret/i)).toBeDefined();
     expect(screen.getByLabelText(/custom scope/i)).toBeDefined();
