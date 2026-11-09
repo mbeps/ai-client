@@ -41,20 +41,14 @@ export function useModelTableFilters() {
  * @author Maruf Bepary
  */
 export function useModelTableModals() {
-  const [editingModel, setEditingModel] = useState<AiModelRow | null>(null);
   const [modelToDelete, setModelToDelete] = useState<AiModelRow | null>(null);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   return {
-    editingModel,
-    setEditingModel,
     modelToDelete,
     setModelToDelete,
     isBulkDeleteConfirmOpen,
     setIsBulkDeleteConfirmOpen,
-    dialogOpen,
-    setDialogOpen,
   };
 }
 

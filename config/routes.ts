@@ -100,6 +100,12 @@ export const ROUTES = {
       new: `${SETTINGS_BASE}/providers/new` as const,
       detail: (id: string) => `${SETTINGS_BASE}/providers/${id}` as const,
     },
+    MODELS: {
+      path: `${SETTINGS_BASE}/providers?tab=models` as const,
+      name: "Models",
+      new: `${SETTINGS_BASE}/models/new` as const,
+      detail: (id: string) => `${SETTINGS_BASE}/models/${id}` as const,
+    },
     CONNECTORS: {
       path: `${SETTINGS_BASE}/connectors` as const,
       name: "Connectors",
