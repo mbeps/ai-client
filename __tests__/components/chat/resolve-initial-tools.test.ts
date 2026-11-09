@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { resolveInitialChatConfig } from "@/components/chat/use-chat-initial-state";
+import {
+  resolveInitialChatConfig,
+  resolveInitialReasoningEffort,
+} from "@/components/chat/use-chat-initial-state";
 import { DEFAULT_ENABLED_TOOLS, INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { Assistant } from "@/types/assistant/assistant";
+import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
 
 describe("resolveInitialChatConfig - tools resolution", () => {
@@ -104,5 +108,55 @@ describe("resolveInitialChatConfig - tools resolution", () => {
 
     const config = resolveInitialChatConfig([], project, assistant, null, undefined);
     expect(config.initialSelectedTools).toEqual([]);
+    expect(config.initialReasoningEffort).toBe("medium");
+  });
+
+  it("resolves reasoning effort from thread last user message", () => {
+    const thread: Message[] = [
+      {
+        id: "msg-1",
+        chatId: "chat-1",
+        role: "user",
+        content: "First turn",
+        parentId: null,
+        metadata: JSON.stringify({ reasoningEffort: "high" }),
+        attachments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "msg-2",
+        chatId: "chat-1",
+        role: "assistant",
+        content: "Response 1",
+        parentId: "msg-1",
+        metadata: null,
+        attachments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    expect(resolveInitialReasoningEffort(thread)).toBe("high");
+    const config = resolveInitialChatConfig(thread, undefined, undefined, null, undefined);
+    expect(config.initialReasoningEffort).toBe("high");
+  });
+
+  it("defaults reasoning effort to medium when no user message contains it", () => {
+    const thread: Message[] = [
+      {
+        id: "msg-1",
+        chatId: "chat-1",
+        role: "user",
+        content: "Hello",
+        parentId: null,
+        metadata: JSON.stringify({ model: "gpt-4o" }),
+        attachments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    expect(resolveInitialReasoningEffort(thread)).toBe("medium");
   });
 });

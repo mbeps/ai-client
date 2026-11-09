@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { deleteModel } from "@/actions/models/delete-model";
@@ -29,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ROUTES } from "@/config/routes";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -66,14 +68,10 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
     setTypeFilter,
   } = useModelTableFilters();
   const {
-    editingModel,
-    setEditingModel,
     modelToDelete,
     setModelToDelete,
     isBulkDeleteConfirmOpen,
     setIsBulkDeleteConfirmOpen,
-    dialogOpen,
-    setDialogOpen,
   } = useModelTableModals();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -181,16 +179,11 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingModel(null);
-              setDialogOpen(true);
-            }}
-            disabled={providers.length === 0}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Model
+          <Button size="sm" asChild disabled={providers.length === 0}>
+            <Link href={ROUTES.SETTINGS.MODELS.new}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Model
+            </Link>
           </Button>
         </div>
       </div>
@@ -236,10 +229,6 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
                     if (!res.ok) throw new Error(res.error.message);
                   })
                 }
-                onEdit={(m) => {
-                  setEditingModel(m);
-                  setDialogOpen(true);
-                }}
                 onDelete={(m) => setModelToDelete(m)}
               />
             ))}
@@ -259,11 +248,6 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
       </div>
 
       <ModelTableModals
-        dialogOpen={dialogOpen}
-        onDialogOpenChange={setDialogOpen}
-        providers={providers}
-        editingModel={editingModel}
-        onRefresh={onRefresh}
         modelToDelete={modelToDelete}
         onCloseDeleteModel={() => setModelToDelete(null)}
         isModelDeleteLoading={busyModelId === modelToDelete?.id}

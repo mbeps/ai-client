@@ -1,6 +1,7 @@
 import { ArrowRight, Bot, Mic, Plus, Save, Square, X } from "lucide-react";
 import { AttachmentsMenu } from "@/components/chat/attachments-menu";
 import { ContextUsagePill } from "@/components/chat/context-usage-pill";
+import { ReasoningEffortSelector } from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
@@ -15,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
@@ -329,6 +331,8 @@ export interface ChatInputToolbarProps {
   onSend: () => void;
   submitLabel?: string;
   isSendDisabled: boolean;
+  reasoningEffort?: ReasoningEffort;
+  onReasoningEffortChange?: (effort: ReasoningEffort) => void;
 }
 
 /**
@@ -345,6 +349,11 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
   const selectedServerCount = props.supportsTools
     ? props.selectedServerIds.size
     : 0;
+  const canConfigureReasoning = Boolean(
+    props.selectedModelObj?.capReasoning &&
+      props.selectedModelObj?.reasoningEffortFormat &&
+      props.selectedModelObj?.reasoningEffortFormat !== "none",
+  );
 
   return (
     <div className="flex items-center justify-between pt-1">
@@ -378,6 +387,16 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
         </ChatInputAttachmentsTrigger>
 
         <ModelSelector value={props.modelId} onValueChange={props.setModelId} />
+
+        {canConfigureReasoning &&
+          props.reasoningEffort &&
+          props.onReasoningEffortChange && (
+            <ReasoningEffortSelector
+              value={props.reasoningEffort}
+              onChange={props.onReasoningEffortChange}
+              disabled={props.hasNoModels || props.isLoading}
+            />
+          )}
       </div>
 
       <ChatInputActionButtons

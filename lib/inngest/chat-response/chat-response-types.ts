@@ -1,5 +1,6 @@
 import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 export type { CompletedToolRecord };
@@ -69,6 +70,7 @@ export interface SynthesisFallbackParams {
   systemPrompt: string;
   emit: (data: ChatStreamEvent) => Promise<void>;
   toolSourceMap: Record<string, string>;
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**

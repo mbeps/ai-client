@@ -9,6 +9,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { ModelCapabilityBadges } from "@/components/settings/providers/model-table/model-capability-badges";
 import { ModelContextCell } from "@/components/settings/providers/model-table/model-context-cell";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ROUTES } from "@/config/routes";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 
 /**
@@ -47,7 +49,7 @@ export type ModelTableRowProps = {
   isBusy: boolean;
   onToggleSelect: (id: string) => void;
   onToggleEnabled: (model: AiModelRow, checked: boolean) => void;
-  onEdit: (model: AiModelRow) => void;
+  onEdit?: (model: AiModelRow) => void;
   onDelete: (model: AiModelRow) => void;
 };
 
@@ -133,13 +135,18 @@ export function ModelTableRow({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isBusy}
-                onClick={() => onEdit(model)}
-              >
-                <Edit2 className="h-4 w-4" />
+              <Button size="sm" variant="outline" disabled={isBusy} asChild>
+                <Link
+                  href={ROUTES.SETTINGS.MODELS.detail(model.id)}
+                  aria-label="Edit Model"
+                  onClick={(_e) => {
+                    if (onEdit) {
+                      onEdit(model);
+                    }
+                  }}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Edit Model</TooltipContent>

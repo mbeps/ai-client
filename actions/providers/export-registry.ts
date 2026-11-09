@@ -11,6 +11,7 @@ import {
   type ExportProviderRegistryInput,
   exportProviderRegistryInputSchema,
   type ProviderModelType,
+  type ReasoningEffortFormat,
   type RegistryExport,
 } from "@/schemas/providers/provider-registry";
 import type { CommonError } from "@/types/error/common-error";
@@ -95,6 +96,17 @@ export const exportProviderRegistry = defineAction(
               reasoning: model.capReasoning,
               structuredOutput: model.capStructuredOutput,
             },
+            reasoningEffortFormat:
+              (model.reasoningEffortFormat as ReasoningEffortFormat) || "none",
+            modelOptions: model.modelOptions
+              ? (() => {
+                  try {
+                    return JSON.parse(model.modelOptions);
+                  } catch {
+                    return null;
+                  }
+                })()
+              : null,
             isManuallyAdded: model.isManuallyAdded,
             isEnabled: model.isEnabled,
           })),

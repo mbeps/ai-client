@@ -86,6 +86,7 @@ function extractRegeneratePayload(parentMsg: Message) {
     selectedSkillIds: meta.selectedSkillIds || [],
     subagentsEnabled: meta.subagentsEnabled,
     subagentModelId: meta.subagentModelId,
+    reasoningEffort: meta.reasoningEffort,
   };
 }
 

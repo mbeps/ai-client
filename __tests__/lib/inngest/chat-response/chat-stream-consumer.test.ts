@@ -650,5 +650,158 @@ describe("chat-stream-consumer", () => {
         }),
       ]);
     });
+
+    it("parses inline <think> tags from text-delta into reasoning-delta and text-delta", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+
+      async function* inlineStream() {
+        yield { type: "text-delta", text: "<think>Reasoning step 1. " };
+        yield { type: "text-delta", text: "Reasoning step 2.</think>Actual response." };
+      }
+
+      const result = await consumeModelStream(
+        inlineStream(),
+        abortController.signal,
+        emit,
+        {},
+        [],
+      );
+
+      expect(result.accumulatedReasoning).toBe("Reasoning step 1. Reasoning step 2.");
+      expect(result.accumulatedText).toBe("Actual response.");
+      expect(emitted).toEqual([
+        { type: "reasoning-delta", reasoning: "Reasoning step 1. " },
+        { type: "reasoning-delta", reasoning: "Reasoning step 2." },
+        { type: "text-delta", text: "Actual response." },
+      ]);
+    });
+
+    it("extracts direct reasoning_content from non-standard delta chunks", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+
+      async function* customChunkStream() {
+        yield { type: "custom", reasoning_content: "Direct thought" };
+        yield { type: "text-delta", text: "Direct answer" };
+      }
+
+      const result = await consumeModelStream(
+        customChunkStream(),
+        abortController.signal,
+        emit,
+        {},
+        [],
+      );
+
+      expect(result.accumulatedReasoning).toBe("Direct thought");
+      expect(result.accumulatedText).toBe("Direct answer");
+    });
+
+    it("flushes unclosed reasoning and text buffers on normal completion and abort", async () => {
+      // 1. Normal completion with unclosed reasoning tag buffer
+      {
+        const abortController = new AbortController();
+        const emitted: ChatStreamEvent[] = [];
+        const emit = async (event: ChatStreamEvent) => {
+          emitted.push(event);
+        };
+
+        async function* partialCloseStream() {
+          yield { type: "text-delta", text: "<think>Unclosed thought </th" };
+        }
+
+        const result = await consumeModelStream(
+          partialCloseStream(),
+          abortController.signal,
+          emit,
+          {},
+          [],
+        );
+
+        expect(result.accumulatedReasoning).toBe("Unclosed thought </th");
+      }
+
+      // 2. Aborted stream with unclosed reasoning tag buffer
+      {
+        const abortController = new AbortController();
+        const emitted: ChatStreamEvent[] = [];
+        const emit = async (event: ChatStreamEvent) => {
+          emitted.push(event);
+        };
+
+        async function* abortedStream() {
+          yield { type: "text-delta", text: "<think>In-flight thought </th" };
+          abortController.abort();
+          yield { type: "text-delta", text: "never reached" };
+        }
+
+        const result = await consumeModelStream(
+          abortedStream(),
+          abortController.signal,
+          emit,
+          {},
+          [],
+        );
+
+        expect(result.aborted).toBe(true);
+        expect(result.accumulatedReasoning).toBe("In-flight thought </th");
+      }
+
+      // 3. Normal completion with trailing text prefix in buffer
+      {
+        const abortController = new AbortController();
+        const emitted: ChatStreamEvent[] = [];
+        const emit = async (event: ChatStreamEvent) => {
+          emitted.push(event);
+        };
+
+        async function* textPrefixStream() {
+          yield { type: "text-delta", text: "Finished response <th" };
+        }
+
+        const result = await consumeModelStream(
+          textPrefixStream(),
+          abortController.signal,
+          emit,
+          {},
+          [],
+        );
+
+        expect(result.accumulatedText).toBe("Finished response <th");
+      }
+
+      // 4. Aborted stream with trailing text prefix in buffer
+      {
+        const abortController = new AbortController();
+        const emitted: ChatStreamEvent[] = [];
+        const emit = async (event: ChatStreamEvent) => {
+          emitted.push(event);
+        };
+
+        async function* abortedTextPrefixStream() {
+          yield { type: "text-delta", text: "In-flight text <th" };
+          abortController.abort();
+          yield { type: "text-delta", text: "never reached" };
+        }
+
+        const result = await consumeModelStream(
+          abortedTextPrefixStream(),
+          abortController.signal,
+          emit,
+          {},
+          [],
+        );
+
+        expect(result.aborted).toBe(true);
+        expect(result.accumulatedText).toBe("In-flight text <th");
+      }
+    });
   });
 });

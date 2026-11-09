@@ -39,5 +39,53 @@ describe("buildResolvedProvider", () => {
     expect(result.apiKey).toBe("decrypted");
     expect(result.sdkProvider).toBeDefined();
   });
+
+  it("parses valid modelOptions and passes reasoningEffortFormat", () => {
+    const providerRow: any = {
+      id: "prov-1",
+      name: "OpenRouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: "enc-key",
+      headers: "enc-headers",
+      requiresKey: true,
+    };
+    const modelRow: any = {
+      id: "model-1",
+      modelId: "deepseek-r1",
+      reasoningEffortFormat: "openrouter",
+      modelOptions: JSON.stringify({ enable_thinking: true }),
+    };
+
+    const result = buildResolvedProvider(
+      { provider: providerRow, model: modelRow },
+      "user-1",
+    );
+
+    expect(result.modelId).toBe("deepseek-r1");
+  });
+
+  it("handles malformed modelOptions gracefully without throwing", () => {
+    const providerRow: any = {
+      id: "prov-1",
+      name: "OpenRouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: "enc-key",
+      headers: "enc-headers",
+      requiresKey: true,
+    };
+    const modelRow: any = {
+      id: "model-1",
+      modelId: "deepseek-r1",
+      reasoningEffortFormat: "openrouter",
+      modelOptions: "{ invalid json",
+    };
+
+    const result = buildResolvedProvider(
+      { provider: providerRow, model: modelRow },
+      "user-1",
+    );
+
+    expect(result.modelId).toBe("deepseek-r1");
+  });
 });
 

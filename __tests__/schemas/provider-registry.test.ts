@@ -3,7 +3,10 @@ import {
   createModelSchema,
   createProviderSchema,
   exportProviderRegistryInputSchema,
+  modelOptionsSchema,
   providerModelTypeSchema,
+  reasoningEffortFormatSchema,
+  reasoningEffortSchema,
   registryExportSchema,
   updateModelSchema,
   updateProviderSchema,
@@ -17,6 +20,29 @@ describe("schemas/providers/provider-registry", () => {
     expect(providerModelTypeSchema.safeParse("embedding").success).toBe(true);
     expect(providerModelTypeSchema.safeParse("both").success).toBe(true);
     expect(providerModelTypeSchema.safeParse("other").success).toBe(false);
+  });
+
+  it("validates reasoningEffortFormatSchema", () => {
+    expect(reasoningEffortFormatSchema.safeParse("none").success).toBe(true);
+    expect(reasoningEffortFormatSchema.safeParse("openai").success).toBe(true);
+    expect(reasoningEffortFormatSchema.safeParse("openrouter").success).toBe(true);
+    expect(reasoningEffortFormatSchema.safeParse("anthropic").success).toBe(true);
+    expect(reasoningEffortFormatSchema.safeParse("invalid").success).toBe(false);
+  });
+
+  it("validates reasoningEffortSchema", () => {
+    expect(reasoningEffortSchema.safeParse("off").success).toBe(true);
+    expect(reasoningEffortSchema.safeParse("low").success).toBe(true);
+    expect(reasoningEffortSchema.safeParse("medium").success).toBe(true);
+    expect(reasoningEffortSchema.safeParse("high").success).toBe(true);
+    expect(reasoningEffortSchema.safeParse("extreme").success).toBe(false);
+  });
+
+  it("validates modelOptionsSchema", () => {
+    expect(
+      modelOptionsSchema.safeParse({ enable_thinking: true, budget: 1024 }).success,
+    ).toBe(true);
+    expect(modelOptionsSchema.safeParse("not-an-object").success).toBe(false);
   });
 
   it("validates createProviderSchema", () => {
@@ -60,6 +86,9 @@ describe("schemas/providers/provider-registry", () => {
       contextWindow: 128000,
       capTools: true,
       capVision: true,
+      capReasoning: true,
+      reasoningEffortFormat: "openrouter",
+      modelOptions: { enable_thinking: true },
     };
     expect(createModelSchema.safeParse(validModel).success).toBe(true);
 

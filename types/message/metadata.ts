@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 
@@ -46,6 +47,7 @@ export type ParsedMessageMetadata = {
   selectedKbIds: string[] | null;
   selectedSkillIds: string[] | null;
   reasoning: string | undefined;
+  reasoningEffort?: ReasoningEffort;
   usage: MessageUsage | null;
   finishReason: string | null;
   durationMs: number | null;

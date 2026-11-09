@@ -2,12 +2,30 @@ import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "metadata"]);
 
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type {
   MessageUsage,
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
+
+/**
+ * Validates and parses reasoning effort from metadata payload.
+ *
+ * @param val - Raw effort value to validate
+ * @returns Validated ReasoningEffort or undefined
+ * @author Maruf Bepary
+ */
+function parseReasoningEffort(val: unknown): ReasoningEffort | undefined {
+  if (
+    typeof val === "string" &&
+    (val === "off" || val === "low" || val === "medium" || val === "high")
+  ) {
+    return val;
+  }
+  return undefined;
+}
 
 /**
  * Parses string array.
@@ -159,6 +177,7 @@ export function parseMessageMetadata(
     selectedKbIds: null,
     selectedSkillIds: null,
     reasoning: undefined,
+    reasoningEffort: undefined,
     usage: null,
     finishReason: null,
     durationMs: null,
@@ -185,6 +204,7 @@ export function parseMessageMetadata(
       selectedSkillIds: parseStringArray(parsed.selectedSkillIds),
       reasoning:
         typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+      reasoningEffort: parseReasoningEffort(parsed.reasoningEffort),
       usage: parseUsage(parsed.usage),
       finishReason:
         typeof parsed.finishReason === "string" ? parsed.finishReason : null,

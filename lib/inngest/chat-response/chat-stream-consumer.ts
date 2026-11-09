@@ -1,4 +1,8 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import {
+  createInlineReasoningParser,
+  extractReasoningFromDelta,
+} from "@/lib/chat/stream/reasoning-stream-parser";
 import { toAppError } from "@/lib/error/to-app-error";
 import type { ChatStreamEvent, chatChannel } from "@/lib/inngest/chat-channel";
 import type {
@@ -297,8 +301,18 @@ export async function consumeModelStream(
     flushDeltas,
   };
 
+  const inlineParser = createInlineReasoningParser();
+
   for await (const chunk of fullStream) {
     if (abortSignal.aborted) {
+      const flushed = inlineParser.flush();
+      for (const part of flushed) {
+        if (part.type === "reasoning") {
+          await handleStreamReasoningDelta(part.text, ctx);
+        } else {
+          await handleStreamTextDelta(part.text, ctx);
+        }
+      }
       await ctx.flushDeltas();
       return {
         accumulatedText: ctx.accumulatedText,
@@ -308,12 +322,33 @@ export async function consumeModelStream(
     }
 
     if (chunk.type === "text-delta") {
-      await handleStreamTextDelta(chunk.text, ctx);
+      const parts = inlineParser.push(chunk.text);
+      for (const part of parts) {
+        if (part.type === "reasoning") {
+          await handleStreamReasoningDelta(part.text, ctx);
+        } else {
+          await handleStreamTextDelta(part.text, ctx);
+        }
+      }
     } else if (chunk.type === "reasoning-delta") {
       await handleStreamReasoningDelta(chunk.text, ctx);
     } else {
-      await ctx.flushDeltas();
-      await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
+      const directReasoning = extractReasoningFromDelta(chunk);
+      if (directReasoning) {
+        await handleStreamReasoningDelta(directReasoning, ctx);
+      } else {
+        await ctx.flushDeltas();
+        await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
+      }
+    }
+  }
+
+  const flushed = inlineParser.flush();
+  for (const part of flushed) {
+    if (part.type === "reasoning") {
+      await handleStreamReasoningDelta(part.text, ctx);
+    } else {
+      await handleStreamTextDelta(part.text, ctx);
     }
   }
 

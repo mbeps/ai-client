@@ -181,6 +181,7 @@ describe("MessageBubble message editing", () => {
       [],
       false,
       undefined,
+      "medium",
     );
 
     // Exits edit mode
@@ -264,6 +265,7 @@ describe("MessageBubble message editing", () => {
       [],
       false,
       undefined,
+      "medium",
     );
   });
 
@@ -307,6 +309,7 @@ describe("MessageBubble message editing", () => {
       [],
       false,
       undefined,
+      "medium",
     );
   });
 

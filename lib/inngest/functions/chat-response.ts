@@ -31,6 +31,7 @@ import { buildOrchestratorToolSet } from "@/lib/inngest/chat-response/tool-set-b
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -107,6 +108,7 @@ async function executeModelStreamPipeline(options: {
   result: ReturnType<typeof streamText>;
   accumulator: ExecutionAccumulator;
   persistAbortedResponse: () => Promise<boolean>;
+  reasoningEffort?: ReasoningEffort;
 }): Promise<void> {
   const {
     chatId,
@@ -168,6 +170,7 @@ async function executeModelStreamPipeline(options: {
       systemPrompt,
       emit,
       toolSourceMap,
+      reasoningEffort: options.reasoningEffort,
     });
     accumulator.accumulatedText += synthState.text;
     accumulator.accumulatedReasoning += synthState.reasoning;
@@ -252,6 +255,7 @@ export const generateChatResponse = inngest.createFunction(
       userEmail,
       userMessageId,
       model,
+      reasoningEffort,
       selectedServerIds,
       selectedTools,
       selectedAssistantId,
@@ -386,6 +390,7 @@ export const generateChatResponse = inngest.createFunction(
           allTools,
           hasAnyTools,
           maxSteps: orchestratorMaxSteps,
+          reasoningEffort,
         }),
       );
 
@@ -406,6 +411,7 @@ export const generateChatResponse = inngest.createFunction(
         result,
         accumulator,
         persistAbortedResponse,
+        reasoningEffort,
       });
     } catch (error: unknown) {
       await handleChatExecutionError(

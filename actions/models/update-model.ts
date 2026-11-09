@@ -65,6 +65,16 @@ export const updateModels = defineAction(
         ...(parsed.capStructuredOutput !== undefined
           ? { capStructuredOutput: parsed.capStructuredOutput }
           : {}),
+        ...(parsed.reasoningEffortFormat !== undefined
+          ? { reasoningEffortFormat: parsed.reasoningEffortFormat }
+          : {}),
+        ...(parsed.modelOptions !== undefined
+          ? {
+              modelOptions: parsed.modelOptions
+                ? JSON.stringify(parsed.modelOptions)
+                : null,
+            }
+          : {}),
         ...(parsed.isEnabled !== undefined
           ? { isEnabled: parsed.isEnabled }
           : {}),

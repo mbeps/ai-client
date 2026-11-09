@@ -95,4 +95,36 @@ describe("createModel action", () => {
     expect(res).toEqual({ ok: true, value: newModel });
     expect(chainable.insert).toHaveBeenCalled();
   });
+
+  it("inserts model with reasoningEffortFormat and modelOptions", async () => {
+    chainable.where.mockResolvedValueOnce([{ id: VALID_UUID }]);
+    const newModel = {
+      id: "model-2",
+      providerId: VALID_UUID,
+      userId: "user-1",
+      modelId: "claude-3-7-sonnet",
+      label: "Claude 3.7",
+      modelType: "chat",
+      contextWindow: 200000,
+      reasoningEffortFormat: "anthropic",
+      modelOptions: JSON.stringify({ temperature: 0.7 }),
+      isManuallyAdded: true,
+      isEnabled: true,
+    };
+    chainable.returning.mockResolvedValueOnce([newModel]);
+
+    const res = await createModel({
+      providerId: VALID_UUID,
+      modelId: "claude-3-7-sonnet",
+      label: "Claude 3.7",
+      modelType: "chat",
+      contextWindow: 200000,
+      capReasoning: true,
+      reasoningEffortFormat: "anthropic",
+      modelOptions: { temperature: 0.7 },
+    });
+
+    expect(res).toEqual({ ok: true, value: newModel });
+    expect(chainable.insert).toHaveBeenCalled();
+  });
 });

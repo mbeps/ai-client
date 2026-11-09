@@ -18,6 +18,7 @@ import type {
 } from "@/hooks/chat/use-mention-commands";
 import { filterAccessibleSkills } from "@/lib/skills/filter-accessible-skills";
 import { cn } from "@/lib/utils";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
@@ -44,6 +45,7 @@ export interface ChatInputProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -132,6 +134,9 @@ export interface ChatInputProps {
 
   /** Initial worker subagent model ID. */
   initialSubagentModelId?: string;
+
+  /** Initial reasoning effort level for reasoning-capable models. */
+  initialReasoningEffort?: ReasoningEffort;
 
   /** Optional custom class name applied to container. */
   className?: string;
@@ -274,6 +279,9 @@ function ChatInputMentionCommands(props: {
 export function ChatInput(props: ChatInputProps) {
   const defaults = resolveInputDefaults(props);
   const [input, setInput] = useState(defaults.initialValue);
+  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(
+    props.initialReasoningEffort ?? "medium",
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -286,6 +294,7 @@ export function ChatInput(props: ChatInputProps) {
     setInput,
     textareaRef,
     canMentionAssistant: defaults.canMentionAssistant,
+    reasoningEffort,
   });
 
   const defaultServers = useMemo(
@@ -414,6 +423,8 @@ export function ChatInput(props: ChatInputProps) {
         onSend={interaction.submit.handleSend}
         submitLabel={props.submitLabel}
         isSendDisabled={interaction.isSendDisabled}
+        reasoningEffort={reasoningEffort}
+        onReasoningEffortChange={setReasoningEffort}
       />
 
       <SubagentConfigDialog

@@ -16,6 +16,7 @@ import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error"
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import { getLogger } from "@/lib/logger";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -221,9 +222,13 @@ export function buildStreamExecutionConfig(params: {
   allTools?: Record<string, any>;
   hasAnyTools: boolean;
   maxSteps: number;
+  reasoningEffort?: ReasoningEffort;
 }) {
   return {
     model: params.resolved.sdkProvider.chat(params.resolvedModelId),
+    headers: params.reasoningEffort
+      ? { "x-ai-client-reasoning-effort": params.reasoningEffort }
+      : undefined,
     abortSignal: params.abortSignal,
     instructions: params.systemPrompt,
     messages: params.finalMessages,

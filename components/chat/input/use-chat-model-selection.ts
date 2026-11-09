@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
 
 /**
  * Represents model capability item.
@@ -11,6 +12,9 @@ export interface ModelCapabilityItem {
   name?: string;
   capVision?: boolean;
   capTools?: boolean;
+  capReasoning?: boolean;
+  reasoningEffortFormat?: ReasoningEffortFormat;
+  modelOptions?: string | null;
 }
 
 /**

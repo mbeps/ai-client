@@ -50,6 +50,7 @@ const INHERIT_OPTION: UserModelOption = {
   capVision: true,
   capReasoning: false,
   capStructuredOutput: true,
+  reasoningEffortFormat: "none",
   isEnabled: true,
   providerIsEnabled: true,
 };

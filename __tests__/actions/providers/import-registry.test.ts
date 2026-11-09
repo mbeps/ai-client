@@ -138,6 +138,8 @@ describe("importProviderRegistry action", () => {
                 structuredOutput: false,
               },
               isManuallyAdded: true,
+              reasoningEffortFormat: "openai",
+              modelOptions: { dimensions: 1536 },
             },
           ],
         },
