@@ -72,4 +72,40 @@ describe("embedDocuments batching", () => {
       }),
     );
   });
+
+  it("handles polymorphic text and image IngestChunkItem objects", async () => {
+    vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+      sdkProvider: { embeddingModel: vi.fn() },
+      modelId: "prefixed-model",
+    } as any);
+
+    const chunks = [
+      { type: "text" as const, text: "chunk one" },
+      { type: "image" as const, dataUrl: "data:image/png;base64,AAAA" },
+    ];
+
+    const result = await embedDocuments(chunks, "user-1");
+
+    expect(embedManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: ["passage: chunk one", "data:image/png;base64,AAAA"],
+      }),
+    );
+    expect(result).toHaveLength(2);
+  });
+
+  it("handles non-prefixed polymorphic chunks", async () => {
+    const chunks = [
+      { type: "text" as const, text: "plain text" },
+      { type: "image" as const, dataUrl: "data:image/png;base64,BBBB" },
+    ];
+
+    await embedDocuments(chunks, "user-1");
+
+    expect(embedManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: ["plain text", "data:image/png;base64,BBBB"],
+      }),
+    );
+  });
 });

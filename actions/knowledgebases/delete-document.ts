@@ -13,6 +13,7 @@ import { getLogger } from "@/lib/logger";
 import { deletePointsByDocumentId } from "@/lib/rag/qdrant-client";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
+import { deleteS3Prefix } from "@/lib/storage/delete-prefix";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
 import { deleteDocumentSchema } from "@/schemas/knowledgebase/knowledgebase";
 import type { CommonError } from "@/types/error/common-error";
@@ -66,6 +67,8 @@ export const deleteDocument = defineAction(
     await s3Client.send(
       new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: doc.s3Key }),
     );
+
+    await deleteS3Prefix(`kb/${doc.kbId}/images/${doc.id}/`);
 
     await db.delete(kbDocument).where(eq(kbDocument.id, validated.documentId));
 

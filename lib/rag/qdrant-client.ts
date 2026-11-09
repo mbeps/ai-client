@@ -24,6 +24,11 @@ export function clearCollectionCache(): void {
  */
 export type QdrantChunkPayload = {
   content: string;
+  chunkType?: "text" | "image";
+  imageS3Key?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
   kbId: string;
   documentId: string;
   chunkIndex: number;
@@ -63,9 +68,10 @@ function pointToScoredChunk(point: {
   payload?: Record<string, unknown> | null;
 }): ScoredChunk {
   const p = (point.payload || {}) as Partial<QdrantChunkPayload>;
-  return {
+  const chunk: ScoredChunk = {
     id: String(point.id),
     content: p.content ?? "",
+    chunkType: p.chunkType ?? "text",
     documentId: p.documentId ?? "",
     documentName: p.documentName ?? "",
     s3Key: p.s3Key ?? "",
@@ -73,6 +79,13 @@ function pointToScoredChunk(point: {
     kbId: p.kbId,
     kbName: p.kbName,
   };
+
+  if (p.imageS3Key) chunk.imageS3Key = p.imageS3Key;
+  if (p.mimeType) chunk.mimeType = p.mimeType;
+  if (p.width !== undefined) chunk.width = p.width;
+  if (p.height !== undefined) chunk.height = p.height;
+
+  return chunk;
 }
 
 /**

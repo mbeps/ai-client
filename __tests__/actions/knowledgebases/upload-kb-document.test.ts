@@ -24,9 +24,25 @@ vi.mock("@/config/env", () => ({
 
 vi.mock("@/config/knowledgebase", () => ({
   KB_CONFIG: {
-    ALLOWED_MIME_TYPES: new Set(["application/pdf", "text/plain", "text/markdown"]),
+    ALLOWED_MIME_TYPES: new Set([
+      "application/pdf",
+      "text/plain",
+      "text/markdown",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ]),
     MAX_FILE_SIZE_BYTES: 50 * 1024 * 1024,
   },
+}));
+
+const resolveEmbeddingProviderMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    modelRow: { capVision: true },
+  }),
+);
+vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
+  resolveEmbeddingProvider: resolveEmbeddingProviderMock,
 }));
 
 const uploadObjectMock = vi.hoisted(() => vi.fn());
@@ -207,6 +223,44 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
     if (!result.ok) {
       expect(result.error.code).toBe(ERROR_CODE.FILE_TOO_LARGE);
       expect(result.error.message).toBe("File exceeds the 50 MB size limit.");
+    }
+  });
+
+  it("allows image upload when embedding model has vision capability", async () => {
+    resolveEmbeddingProviderMock.mockResolvedValueOnce({
+      modelRow: { capVision: true },
+    });
+
+    const fd = new FormData();
+    const imageFile = new File([new Uint8Array(100)], "architecture.png", {
+      type: "image/png",
+    });
+    fd.append("file", imageFile);
+    fd.append("kbId", DOC_ROW.kbId);
+
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects image upload when embedding model does not have vision capability", async () => {
+    resolveEmbeddingProviderMock.mockResolvedValueOnce({
+      modelRow: { capVision: false },
+    });
+
+    const fd = new FormData();
+    const imageFile = new File([new Uint8Array(100)], "architecture.png", {
+      type: "image/png",
+    });
+    fd.append("file", imageFile);
+    fd.append("kbId", DOC_ROW.kbId);
+
+    const result = await uploadKbDocument(fd);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(ERROR_CODE.UNSUPPORTED_FILE_TYPE);
+      expect(result.error.message).toContain(
+        "Your configured embedding model does not support images",
+      );
     }
   });
 });

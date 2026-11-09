@@ -11,6 +11,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
@@ -102,6 +103,17 @@ export const uploadKbDocument = defineAction(
         message:
           "Spreadsheets and Office files are not supported. Use PDF, plain text or Markdown.",
       });
+    }
+
+    if (mimeType.startsWith("image/")) {
+      const resolved = await resolveEmbeddingProvider(session.user.id);
+      if (!resolved.modelRow?.capVision) {
+        return fail({
+          code: ERROR_CODE.UNSUPPORTED_FILE_TYPE,
+          message:
+            "Your configured embedding model does not support images. Select a vision-capable embedding model in Settings → Providers.",
+        });
+      }
     }
 
     if (file.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {

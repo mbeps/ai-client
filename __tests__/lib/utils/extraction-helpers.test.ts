@@ -88,6 +88,12 @@ describe("extractDocumentContent", () => {
     decodeSpy.mockRestore();
   });
 
+  it("returns empty string for image mime types", async () => {
+    const data = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const result = await extractDocumentContent(data, "image/png");
+    expect(result).toBe("");
+  });
+
   it("uses MAX_DOCUMENT_CHARS when limit is omitted or NaN", async () => {
     const data = new TextEncoder().encode("Hello default limit");
     const resultDefault = await extractDocumentContent(data, "text/plain");

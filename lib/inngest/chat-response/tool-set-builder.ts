@@ -157,11 +157,13 @@ export function buildOrchestratorToolSet(
   }
 
   const targetKbIds = resolveTargetKbIds(ctx);
+  const chatModelSupportsVision = Boolean(resolved?.modelRow?.capVision);
   const kbTools = registerKnowledgebaseTool(
     targetKbIds,
     ctx.kbIsReady ?? false,
     userId,
     selectedTools,
+    chatModelSupportsVision,
   );
   const hasKbTool = Object.keys(kbTools).length > 0;
 

@@ -171,6 +171,7 @@ describe("qdrant-client", () => {
         {
           id: "point-1",
           content: "Chunk content 1",
+          chunkType: "text",
           documentId: "doc-1",
           chunkIndex: 0,
           documentName: "Manual.pdf",
@@ -205,6 +206,7 @@ describe("qdrant-client", () => {
         {
           id: "point-empty",
           content: "",
+          chunkType: "text",
           documentId: "",
           chunkIndex: 0,
           documentName: "",
@@ -221,6 +223,50 @@ describe("qdrant-client", () => {
 
       const res = await searchSemanticVectors(2, [0.1, 0.2], ["kb-1"], 10);
       expect(res).toEqual([]);
+    });
+
+    it("maps image chunk payload fields correctly", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({
+        points: [
+          {
+            id: "img-point-1",
+            payload: {
+              content: "[Image: architecture.png]",
+              chunkType: "image",
+              imageS3Key: "kb/1/images/doc/img.png",
+              mimeType: "image/png",
+              width: 800,
+              height: 600,
+              documentId: "doc-1",
+              chunkIndex: 1,
+              documentName: "Manual.pdf",
+              s3Key: "path/to/manual.pdf",
+              kbId: "kb-1",
+              kbName: "Knowledge Base",
+            },
+          },
+        ],
+      });
+
+      const res = await searchSemanticVectors(2, [0.1, 0.2], ["kb-1"], 1);
+      expect(res).toEqual([
+        {
+          id: "img-point-1",
+          content: "[Image: architecture.png]",
+          chunkType: "image",
+          imageS3Key: "kb/1/images/doc/img.png",
+          mimeType: "image/png",
+          width: 800,
+          height: 600,
+          documentId: "doc-1",
+          chunkIndex: 1,
+          documentName: "Manual.pdf",
+          s3Key: "path/to/manual.pdf",
+          kbId: "kb-1",
+          kbName: "Knowledge Base",
+        },
+      ]);
     });
   });
 

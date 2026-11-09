@@ -37,6 +37,24 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
+vi.mock("@/lib/providers/resolve-embedding-provider", () => ({
+  resolveEmbeddingProvider: vi.fn().mockResolvedValue({
+    modelId: "test-model",
+    modelRow: { capVision: false },
+    providerRow: {},
+    sdkProvider: {},
+    apiKey: null,
+  }),
+}));
+
+vi.mock("@/lib/rag/extract-images-from-pdf", () => ({
+  extractImagesFromPdf: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/lib/storage/upload-object", () => ({
+  uploadObject: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/rag/extract-text-server", () => ({
   MAX_DOCUMENT_CHARS_LIMIT: 100,
   extractTextFromBuffer: vi.fn(),
@@ -60,10 +78,13 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
+import { extractImagesFromPdf } from "@/lib/rag/extract-images-from-pdf";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
+import { uploadObject } from "@/lib/storage/upload-object";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 function makeDoc(_overrides: Partial<KbDocumentRow> = {}): KbDocumentRow {
@@ -288,5 +309,238 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
 
     expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
     expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+  });
+
+  describe("multimodal vision support", () => {
+    it("extracts, uploads to S3, and embeds images from PDF when vision is supported", async () => {
+      vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+        modelId: "vision-model",
+        modelRow: { capVision: true },
+        providerRow: {},
+        sdkProvider: {},
+        apiKey: null,
+      } as any);
+
+      vi.mocked(extractTextFromBuffer).mockResolvedValue("page text");
+      vi.mocked(chunkText).mockReturnValue(["page text"]);
+      const imgBuffer = Buffer.from("fake-png-bytes");
+      vi.mocked(extractImagesFromPdf).mockResolvedValueOnce([
+        {
+          pageNumber: 1,
+          buffer: imgBuffer,
+          mimeType: "image/png",
+          width: 600,
+          height: 400,
+        },
+      ]);
+      vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2], [0.3, 0.4]]);
+
+      chainable.where
+        .mockResolvedValueOnce([{ id: "doc-1" }])
+        .mockResolvedValueOnce([{ name: "My KB" }]);
+
+      const result = await ingestDocumentPipeline(
+        makeDoc(),
+        Buffer.from("pdf-data"),
+        "user-1",
+      );
+
+      expect(uploadObject).toHaveBeenCalledWith(
+        "kb/kb-1/images/doc-1/0.png",
+        imgBuffer,
+        "image/png",
+      );
+      expect(embedDocuments).toHaveBeenCalledWith(
+        [
+          { type: "text", text: "page text" },
+          {
+            type: "image",
+            dataUrl: `data:image/png;base64,${imgBuffer.toString("base64")}`,
+            caption: "[Image: test.pdf - Page 1 (#1)]",
+          },
+        ],
+        "user-1",
+      );
+
+      expect(upsertChunkPointsMock).toHaveBeenCalledWith(
+        2,
+        expect.arrayContaining([
+          expect.objectContaining({
+            vector: [0.1, 0.2],
+            payload: expect.objectContaining({
+              chunkType: "text",
+              content: "page text",
+              chunkIndex: 0,
+            }),
+          }),
+          expect.objectContaining({
+            vector: [0.3, 0.4],
+            payload: expect.objectContaining({
+              chunkType: "image",
+              content: "[Image: test.pdf - Page 1 (#1)]",
+              imageS3Key: "kb/kb-1/images/doc-1/0.png",
+              mimeType: "image/png",
+              width: 600,
+              height: 400,
+              chunkIndex: 1,
+            }),
+          }),
+        ]),
+      );
+
+      expect(result.chunkCount).toBe(2);
+      expect(result.tokenCount).toBe(Math.round("page text".length / 4) + 256);
+    });
+
+    it("ingests standalone image document when vision is supported", async () => {
+      vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+        modelId: "vision-model",
+        modelRow: { capVision: true },
+        providerRow: {},
+        sdkProvider: {},
+        apiKey: null,
+      } as any);
+
+      vi.mocked(extractTextFromBuffer).mockResolvedValue("");
+      const imgBuffer = Buffer.from("image-bytes");
+      vi.mocked(embedDocuments).mockResolvedValue([[0.5, 0.6]]);
+
+      chainable.where
+        .mockResolvedValueOnce([{ id: "doc-img" }])
+        .mockResolvedValueOnce([{ name: "My KB" }]);
+
+      const doc = makeDoc({
+        id: "doc-img",
+        name: "diagram.png",
+        mimeType: "image/png",
+        s3Key: "kb/kb-1/doc-img/diagram.png",
+      });
+
+      const result = await ingestDocumentPipeline(doc, imgBuffer, "user-1");
+
+      expect(extractImagesFromPdf).not.toHaveBeenCalled();
+      expect(uploadObject).not.toHaveBeenCalled(); // already uploaded to s3Key by upload action
+      expect(embedDocuments).toHaveBeenCalledWith(
+        [
+          {
+            type: "image",
+            dataUrl: `data:image/png;base64,${imgBuffer.toString("base64")}`,
+            caption: "[Image: diagram.png]",
+          },
+        ],
+        "user-1",
+      );
+
+      expect(upsertChunkPointsMock).toHaveBeenCalledWith(
+        2,
+        expect.arrayContaining([
+          expect.objectContaining({
+            vector: [0.5, 0.6],
+            payload: expect.objectContaining({
+              chunkType: "image",
+              content: "[Image: diagram.png]",
+              imageS3Key: "kb/kb-1/doc-img/diagram.png",
+              mimeType: "image/png",
+              chunkIndex: 0,
+            }),
+          }),
+        ]),
+      );
+
+      expect(result.chunkCount).toBe(1);
+      expect(result.tokenCount).toBe(256);
+    });
+
+    it("ingests PDF with no text layer if images are extracted when vision is supported", async () => {
+      vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+        modelId: "vision-model",
+        modelRow: { capVision: true },
+        providerRow: {},
+        sdkProvider: {},
+        apiKey: null,
+      } as any);
+
+      vi.mocked(extractTextFromBuffer).mockResolvedValue("");
+      const imgBuffer = Buffer.from("scanned-page-png");
+      vi.mocked(extractImagesFromPdf).mockResolvedValueOnce([
+        {
+          pageNumber: 1,
+          buffer: imgBuffer,
+          mimeType: "image/png",
+          width: 800,
+          height: 1000,
+        },
+      ]);
+      vi.mocked(embedDocuments).mockResolvedValue([[0.7, 0.8]]);
+
+      chainable.where
+        .mockResolvedValueOnce([{ id: "doc-1" }])
+        .mockResolvedValueOnce([{ name: "My KB" }]);
+
+      const result = await ingestDocumentPipeline(
+        makeDoc(),
+        Buffer.from("scanned-pdf"),
+        "user-1",
+      );
+
+      expect(result.chunkCount).toBe(1);
+      expect(result.tokenCount).toBe(256);
+    });
+
+    it("ingests text/markdown file when vision is supported without extracting images", async () => {
+      vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+        modelId: "vision-model",
+        modelRow: { capVision: true },
+        providerRow: {},
+        sdkProvider: {},
+        apiKey: null,
+      } as any);
+
+      vi.mocked(extractTextFromBuffer).mockResolvedValue("markdown text");
+      vi.mocked(chunkText).mockReturnValue(["markdown text"]);
+      vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2]]);
+
+      chainable.where
+        .mockResolvedValueOnce([{ id: "doc-md" }])
+        .mockResolvedValueOnce([{ name: "My KB" }]);
+
+      const doc = makeDoc({
+        id: "doc-md",
+        name: "notes.md",
+        mimeType: "text/markdown",
+        s3Key: "kb/kb-1/doc-md/notes.md",
+      });
+
+      const result = await ingestDocumentPipeline(
+        doc,
+        Buffer.from("markdown-bytes"),
+        "user-1",
+      );
+
+      expect(extractImagesFromPdf).not.toHaveBeenCalled();
+      expect(result.chunkCount).toBe(1);
+    });
+
+    it("throws RagExtractionEmptyError when vision is disabled and image has no text", async () => {
+      vi.mocked(resolveEmbeddingProvider).mockResolvedValueOnce({
+        modelId: "text-model",
+        modelRow: { capVision: false },
+        providerRow: {},
+        sdkProvider: {},
+        apiKey: null,
+      } as any);
+
+      vi.mocked(extractTextFromBuffer).mockResolvedValue("");
+
+      const doc = makeDoc({
+        id: "doc-img",
+        name: "diagram.png",
+        mimeType: "image/png",
+      });
+
+      await expect(
+        ingestDocumentPipeline(doc, Buffer.from("image-bytes"), "user-1"),
+      ).rejects.toThrow(RagExtractionEmptyError);
+    });
   });
 });

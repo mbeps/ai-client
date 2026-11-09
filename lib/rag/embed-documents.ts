@@ -7,30 +7,46 @@ import { PREFIXED_EMBEDDING_MODELS } from "@/lib/rag/prefixed-embedding-models";
 const log = getLogger(["app", "rag", "embeddings"]);
 
 /**
+ * Polymorphic chunk item for embedding, supporting text and multimodal images.
+ */
+export type IngestChunkItem =
+  | { type: "text"; text: string }
+  | { type: "image"; dataUrl: string; caption?: string };
+
+/**
  * Batch embeds document chunks using per-user provider. Returns empty array for empty input.
+ * Supports plain string chunks or polymorphic IngestChunkItem (text or image data URL).
  *
  * @async
- * @param texts - Document chunk texts to embed
+ * @param chunks - Document chunk texts or polymorphic items to embed
  * @param userId - User ID for provider resolution
  * @returns Array of embedding vectors
  * @throws If provider not configured or embedding API fails
  * @author Maruf Bepary
  */
 export async function embedDocuments(
-  texts: string[],
+  chunks: Array<string | IngestChunkItem>,
   userId: string,
 ): Promise<number[][]> {
-  if (texts.length === 0) return [];
+  if (chunks.length === 0) return [];
 
   const resolved = await resolveEmbeddingProvider(userId);
   const embeddingModel = resolved.sdkProvider.embeddingModel(resolved.modelId);
 
-  const values = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId)
-    ? texts.map((t) => `passage: ${t}`)
-    : texts;
+  const isPrefixed = PREFIXED_EMBEDDING_MODELS.has(resolved.modelId);
 
-  log.debug("Batch embedding {count} texts with model {modelId}", {
-    count: texts.length,
+  const values = chunks.map((chunk) => {
+    if (typeof chunk === "string") {
+      return isPrefixed ? `passage: ${chunk}` : chunk;
+    }
+    if (chunk.type === "text") {
+      return isPrefixed ? `passage: ${chunk.text}` : chunk.text;
+    }
+    return chunk.dataUrl;
+  });
+
+  log.debug("Batch embedding {count} values with model {modelId}", {
+    count: chunks.length,
     modelId: resolved.modelId,
   });
 

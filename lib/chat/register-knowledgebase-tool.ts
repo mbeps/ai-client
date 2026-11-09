@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { PROMPTS } from "@/config/prompts";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
+import { getPresignedUrl } from "@/lib/storage/get-presigned-url";
 import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
 
 /**
@@ -12,6 +13,7 @@ import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
  * @param kbIsReady - Whether the knowledge bases have finished indexing
  * @param userId - ID of the authenticated user
  * @param selectedTools - Optional list of tool IDs selected for this chat
+ * @param chatModelSupportsVision - Whether current active chat completion model supports vision
  * @returns Object with search_knowledge_base tool if eligible, empty object otherwise
  * @author Maruf Bepary
  */
@@ -20,6 +22,7 @@ export function registerKnowledgebaseTool(
   kbIsReady: boolean,
   userId: string,
   selectedTools?: string[],
+  chatModelSupportsVision = true,
 ): Record<string, any> {
   const isGated =
     targetKbIds.length > 0 &&
@@ -64,16 +67,39 @@ export function registerKnowledgebaseTool(
           };
         }
 
+        const formattedResults = await Promise.all(
+          results.map(async (r) => {
+            const isImage = r.chunkType === "image";
+            let imageUrl: string | undefined;
+
+            if (isImage && chatModelSupportsVision && r.imageS3Key) {
+              try {
+                imageUrl = await getPresignedUrl(r.imageS3Key);
+              } catch {
+                imageUrl = undefined;
+              }
+            }
+
+            return {
+              content: r.content,
+              chunkType: r.chunkType ?? "text",
+              relevanceScore: r.score,
+              documentId: r.documentId,
+              documentName: r.documentName,
+              ...(imageUrl ? { imageUrl } : {}),
+              ...(r.mimeType ? { mimeType: r.mimeType } : {}),
+              ...(r.chunkIndex !== undefined
+                ? { chunkIndex: r.chunkIndex }
+                : {}),
+              ...(r.kbId ? { kbId: r.kbId } : {}),
+              ...(r.kbName ? { kbName: r.kbName } : {}),
+            };
+          }),
+        );
+
         return {
           success: true,
-          results: results.map((r) => ({
-            content: r.content,
-            relevanceScore: r.score,
-            documentId: r.documentId,
-            documentName: r.documentName,
-            ...(r.kbId ? { kbId: r.kbId } : {}),
-            ...(r.kbName ? { kbName: r.kbName } : {}),
-          })),
+          results: formattedResults,
           resultCount: results.length,
         };
       },

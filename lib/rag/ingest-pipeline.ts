@@ -4,22 +4,31 @@ import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
 import { getLogger } from "@/lib/logger";
+import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
 import { chunkText } from "@/lib/rag/chunk-text";
-import { embedDocuments } from "@/lib/rag/embed-documents";
+import {
+  embedDocuments,
+  type IngestChunkItem,
+} from "@/lib/rag/embed-documents";
+import { extractImagesFromPdf } from "@/lib/rag/extract-images-from-pdf";
 import {
   extractTextFromBuffer,
   MAX_DOCUMENT_CHARS_LIMIT,
 } from "@/lib/rag/extract-text-server";
 import {
   deletePointsByDocumentId,
+  type QdrantChunkPayload,
   upsertChunkPoints,
 } from "@/lib/rag/qdrant-client";
+import { uploadObject } from "@/lib/storage/upload-object";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const log = getLogger(["app", "rag", "pipeline"]);
 
 /**
- * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready. Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
+ * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready.
+ * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
+ * Supports multimodal embeddings (text and images) when the active embedding model has vision capability.
  *
  * @param doc - Fetched kbDocument row
  * @param buffer - File content fetched from S3 by the caller
@@ -39,8 +48,51 @@ export async function ingestDocumentPipeline(
     name: doc.name,
   });
 
+  const resolved = await resolveEmbeddingProvider(userId);
+  const supportsVision = Boolean(resolved.modelRow?.capVision);
+
   const text = await extractTextFromBuffer(buffer, doc.mimeType);
-  if (!text.trim()) {
+
+  type PreparedImageChunk = {
+    s3Key: string;
+    caption: string;
+    dataUrl: string;
+    mimeType: string;
+    width?: number;
+    height?: number;
+  };
+
+  const imageItems: PreparedImageChunk[] = [];
+
+  if (supportsVision) {
+    if (doc.mimeType === "application/pdf") {
+      const extractedImages = await extractImagesFromPdf(buffer);
+      for (let i = 0; i < extractedImages.length; i++) {
+        const img = extractedImages[i];
+        const imageS3Key = `kb/${doc.kbId}/images/${doc.id}/${i}.png`;
+        await uploadObject(imageS3Key, img.buffer, img.mimeType);
+        imageItems.push({
+          s3Key: imageS3Key,
+          caption: `[Image: ${doc.name} - Page ${img.pageNumber} (#${i + 1})]`,
+          dataUrl: `data:${img.mimeType};base64,${img.buffer.toString("base64")}`,
+          mimeType: img.mimeType,
+          width: img.width,
+          height: img.height,
+        });
+      }
+    } else if (doc.mimeType.startsWith("image/")) {
+      imageItems.push({
+        s3Key: doc.s3Key,
+        caption: `[Image: ${doc.name}]`,
+        dataUrl: `data:${doc.mimeType};base64,${buffer.toString("base64")}`,
+        mimeType: doc.mimeType,
+      });
+    }
+  }
+
+  const textChunks = text.trim() ? chunkText(text) : [];
+
+  if (textChunks.length === 0 && imageItems.length === 0) {
     const error = new RagExtractionEmptyError(
       `Document "${doc.name}" contains no readable text.`,
     );
@@ -52,8 +104,16 @@ export async function ingestDocumentPipeline(
   // Truncation detected when extraction hit the character limit
   const truncated = text.length >= MAX_DOCUMENT_CHARS_LIMIT;
 
-  const chunks = chunkText(text);
-  const embeddings = await embedDocuments(chunks, userId);
+  const embedInputs: IngestChunkItem[] = [
+    ...textChunks.map((t) => ({ type: "text" as const, text: t })),
+    ...imageItems.map((img) => ({
+      type: "image" as const,
+      dataUrl: img.dataUrl,
+      caption: img.caption,
+    })),
+  ];
+
+  const embeddings = await embedDocuments(embedInputs, userId);
 
   // Check if document or knowledgebase was deleted concurrently before storing chunks
   const [currentDoc] = await db
@@ -86,27 +146,63 @@ export async function ingestDocumentPipeline(
   // Replace points in Qdrant: delete old points for document, then upsert new points
   await deletePointsByDocumentId(doc.id);
 
-  if (dimensions > 0 && chunks.length > 0) {
-    await upsertChunkPoints(
-      dimensions,
-      chunks.map((content, i) => ({
-        id: crypto.randomUUID(),
-        vector: embeddings[i],
-        payload: {
-          content,
-          kbId: doc.kbId,
-          documentId: doc.id,
-          chunkIndex: i,
-          tokenCount: Math.round(content.length / 4),
-          documentName: doc.name,
-          kbName,
-          s3Key: doc.s3Key,
-        },
-      })),
-    );
+  const points: Array<{
+    id: string;
+    vector: number[];
+    payload: QdrantChunkPayload;
+  }> = [];
+
+  for (let i = 0; i < textChunks.length; i++) {
+    const content = textChunks[i];
+    points.push({
+      id: crypto.randomUUID(),
+      vector: embeddings[i],
+      payload: {
+        content,
+        chunkType: "text",
+        kbId: doc.kbId,
+        documentId: doc.id,
+        chunkIndex: i,
+        tokenCount: Math.round(content.length / 4),
+        documentName: doc.name,
+        kbName,
+        s3Key: doc.s3Key,
+      },
+    });
   }
 
-  const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
+  for (let j = 0; j < imageItems.length; j++) {
+    const img = imageItems[j];
+    const chunkIndex = textChunks.length + j;
+    points.push({
+      id: crypto.randomUUID(),
+      vector: embeddings[chunkIndex],
+      payload: {
+        content: img.caption,
+        chunkType: "image",
+        imageS3Key: img.s3Key,
+        mimeType: img.mimeType,
+        width: img.width,
+        height: img.height,
+        kbId: doc.kbId,
+        documentId: doc.id,
+        chunkIndex,
+        tokenCount: 256,
+        documentName: doc.name,
+        kbName,
+        s3Key: doc.s3Key,
+      },
+    });
+  }
+
+  if (dimensions > 0 && points.length > 0) {
+    await upsertChunkPoints(dimensions, points);
+  }
+
+  const tokenCount =
+    textChunks.reduce((s, c) => s + Math.round(c.length / 4), 0) +
+    imageItems.length * 256;
+  const chunkCount = points.length;
 
   // Update document: ready
   await db
@@ -114,7 +210,7 @@ export async function ingestDocumentPipeline(
     .set({
       status: "ready",
       statusMessage: truncated ? "Content truncated during extraction." : null,
-      chunkCount: chunks.length,
+      chunkCount,
       tokenCount,
       truncated,
       updatedAt: new Date(),
@@ -125,10 +221,10 @@ export async function ingestDocumentPipeline(
     "Document ingested successfully into Qdrant (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",
     {
       docId: doc.id,
-      chunkCount: chunks.length,
+      chunkCount,
       tokenCount,
     },
   );
 
-  return { chunkCount: chunks.length, tokenCount };
+  return { chunkCount, tokenCount };
 }

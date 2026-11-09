@@ -41,6 +41,10 @@ export async function extractDocumentContent(
     }
   }
 
+  if (mimeType.startsWith("image/")) {
+    return "";
+  }
+
   if (
     mimeType.startsWith("text/") ||
     mimeType === "application/json" ||

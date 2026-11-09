@@ -6,6 +6,11 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: mockHybridSearch,
 }));
 
+const mockGetPresignedUrl = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/storage/get-presigned-url", () => ({
+  getPresignedUrl: mockGetPresignedUrl,
+}));
+
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 
 describe("registerKnowledgebaseTool", () => {
@@ -72,6 +77,7 @@ describe("registerKnowledgebaseTool", () => {
       results: [
         {
           content: "Result content",
+          chunkType: "text",
           relevanceScore: 0.95,
           documentId: "doc-1",
           documentName: "doc.txt",
@@ -106,5 +112,103 @@ describe("registerKnowledgebaseTool", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("Missing mandatory 'query' parameter");
+
+    const resultUndefined = await (tools.search_knowledge_base as any).execute({});
+    expect(resultUndefined.success).toBe(false);
+  });
+
+  it("passes array of kbIds to hybridSearch when multiple targetKbIds provided", async () => {
+    mockHybridSearch.mockResolvedValueOnce([]);
+
+    const tools = registerKnowledgebaseTool(["kb-1", "kb-2"], true, "user-1");
+    await (tools.search_knowledge_base as any).execute({
+      query: "multi-kb test",
+    });
+
+    expect(mockHybridSearch).toHaveBeenCalledWith(["kb-1", "kb-2"], "multi-kb test", "user-1", 5);
+  });
+
+  describe("image chunk presigned URLs and vision gating", () => {
+    it("attaches presigned imageUrl when chunk is an image and chat model supports vision", async () => {
+      mockHybridSearch.mockResolvedValueOnce([
+        {
+          content: "[Image: architecture.png]",
+          chunkType: "image",
+          imageS3Key: "kb/kb-1/images/doc-1/0.png",
+          mimeType: "image/png",
+          score: 0.98,
+          documentId: "doc-1",
+          documentName: "architecture.png",
+          chunkIndex: 0,
+          kbId: "kb-1",
+          kbName: "Docs",
+        },
+      ]);
+      mockGetPresignedUrl.mockResolvedValueOnce("https://s3.example.com/presigned-image.png");
+
+      const tools = registerKnowledgebaseTool(["kb-1"], true, "user-1", undefined, true);
+      const result = await (tools.search_knowledge_base as any).execute({
+        query: "architecture diagram",
+      });
+
+      expect(mockGetPresignedUrl).toHaveBeenCalledWith("kb/kb-1/images/doc-1/0.png");
+      expect(result.results[0]).toEqual({
+        content: "[Image: architecture.png]",
+        chunkType: "image",
+        imageUrl: "https://s3.example.com/presigned-image.png",
+        mimeType: "image/png",
+        relevanceScore: 0.98,
+        documentId: "doc-1",
+        documentName: "architecture.png",
+        chunkIndex: 0,
+        kbId: "kb-1",
+        kbName: "Docs",
+      });
+    });
+
+    it("omits imageUrl when chat model does not support vision", async () => {
+      mockHybridSearch.mockResolvedValueOnce([
+        {
+          content: "[Image: architecture.png]",
+          chunkType: "image",
+          imageS3Key: "kb/kb-1/images/doc-1/0.png",
+          mimeType: "image/png",
+          score: 0.98,
+          documentId: "doc-1",
+          documentName: "architecture.png",
+        },
+      ]);
+
+      const tools = registerKnowledgebaseTool(["kb-1"], true, "user-1", undefined, false);
+      const result = await (tools.search_knowledge_base as any).execute({
+        query: "architecture diagram",
+      });
+
+      expect(mockGetPresignedUrl).not.toHaveBeenCalled();
+      expect(result.results[0].imageUrl).toBeUndefined();
+      expect(result.results[0].chunkType).toBe("image");
+    });
+
+    it("omits imageUrl gracefully if getPresignedUrl rejects", async () => {
+      mockHybridSearch.mockResolvedValueOnce([
+        {
+          content: "[Image: architecture.png]",
+          chunkType: "image",
+          imageS3Key: "kb/kb-1/images/doc-1/0.png",
+          score: 0.98,
+          documentId: "doc-1",
+          documentName: "architecture.png",
+        },
+      ]);
+      mockGetPresignedUrl.mockRejectedValueOnce(new Error("Signing failed"));
+
+      const tools = registerKnowledgebaseTool(["kb-1"], true, "user-1", undefined, true);
+      const result = await (tools.search_knowledge_base as any).execute({
+        query: "architecture diagram",
+      });
+
+      expect(result.results[0].imageUrl).toBeUndefined();
+      expect(result.results[0].content).toBe("[Image: architecture.png]");
+    });
   });
 });
