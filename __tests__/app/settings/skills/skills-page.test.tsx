@@ -16,8 +16,8 @@ const mockSkills: Skill[] = [
     content: "content",
     files: [],
     enabled: false,
-    projectId: "proj-1",
-    assistantId: null,
+    projectIds: ["proj-1"],
+    assistantIds: [],
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-03-01"), // Most recently updated
   },
@@ -30,8 +30,8 @@ const mockSkills: Skill[] = [
     content: "content",
     files: [],
     enabled: true,
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"), // Oldest
   },
@@ -44,8 +44,8 @@ const mockSkills: Skill[] = [
     content: "content",
     files: [],
     enabled: false,
-    projectId: null,
-    assistantId: "asst-1",
+    projectIds: [],
+    assistantIds: ["asst-1"],
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-02-01"), // Middle
   },

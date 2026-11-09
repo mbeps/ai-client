@@ -88,8 +88,8 @@ describe("PromptDetailPage", () => {
     title: "Markdown Converter",
     shortcut: "markdown-converter",
     content: "Convert text into markdown",
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };

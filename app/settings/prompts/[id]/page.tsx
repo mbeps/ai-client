@@ -78,9 +78,8 @@ export default function PromptDetailPage() {
       title: "",
       shortcut: "",
       content: "",
-      scope: "global",
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
     },
   });
 
@@ -91,13 +90,8 @@ export default function PromptDetailPage() {
         title: prompt.title,
         shortcut: prompt.shortcut,
         content: prompt.content,
-        projectId: prompt.projectId,
-        assistantId: prompt.assistantId,
-        scope: prompt.projectId
-          ? "project"
-          : prompt.assistantId
-            ? "assistant"
-            : "global",
+        projectIds: prompt.projectIds ?? [],
+        assistantIds: prompt.assistantIds ?? [],
       });
     }
   }, [prompt, form]);
@@ -127,8 +121,8 @@ export default function PromptDetailPage() {
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
-        projectId: values.scope === "project" ? values.projectId : null,
-        assistantId: values.scope === "assistant" ? values.assistantId : null,
+        projectIds: values.projectIds,
+        assistantIds: values.assistantIds,
       });
       if (!res.ok) {
         toast.error(res.error.message || "Failed to save prompt");

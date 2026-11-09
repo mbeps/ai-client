@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { assistant } from "@/drizzle/schemas/assistant-schema";
 import { chat } from "@/drizzle/schemas/chat-schema";
@@ -233,23 +233,22 @@ export async function loadChatContext(
       // Enabled user skills scoped to this chat context
       (() => {
         const conditions = [eq(skill.userId, userId), eq(skill.enabled, true)];
+        const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.assistantIds}) = 0`;
+        const matchScope = [];
 
         if (chatRow.projectId) {
-          conditions.push(
-            or(
-              and(isNull(skill.projectId), isNull(skill.assistantId)),
-              eq(skill.projectId, chatRow.projectId),
-            )!,
+          matchScope.push(sql`${chatRow.projectId} = ANY(${skill.projectIds})`);
+        }
+        if (effectiveAssistantId) {
+          matchScope.push(
+            sql`${effectiveAssistantId} = ANY(${skill.assistantIds})`,
           );
-        } else if (effectiveAssistantId) {
-          conditions.push(
-            or(
-              and(isNull(skill.projectId), isNull(skill.assistantId)),
-              eq(skill.assistantId, effectiveAssistantId),
-            )!,
-          );
+        }
+
+        if (matchScope.length > 0) {
+          conditions.push(or(isGlobal, ...matchScope)!);
         } else {
-          conditions.push(isNull(skill.projectId), isNull(skill.assistantId));
+          conditions.push(isGlobal);
         }
 
         return db

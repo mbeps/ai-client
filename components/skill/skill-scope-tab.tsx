@@ -11,28 +11,24 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
  * @author Maruf Bepary
  */
 export interface SkillScopeTabProps {
-  scope: "global" | "project" | "assistant";
-  onScopeChange: (scope: "global" | "project" | "assistant") => void;
-  projectId?: string | null;
-  onProjectIdChange: (id: string | null) => void;
-  assistantId?: string | null;
-  onAssistantIdChange: (id: string | null) => void;
+  projectIds: string[];
+  onProjectIdsChange: (ids: string[]) => void;
+  assistantIds: string[];
+  onAssistantIdsChange: (ids: string[]) => void;
   onSave: () => Promise<void> | void;
   isSaving: boolean;
 }
 
 /**
- * Skill scope tab component configuring skill visibility (global, project, or assistant).
+ * Skill scope tab component configuring skill visibility across projects and assistants.
  *
  * @author Maruf Bepary
  */
 export function SkillScopeTab({
-  scope,
-  onScopeChange,
-  projectId,
-  onProjectIdChange,
-  assistantId,
-  onAssistantIdChange,
+  projectIds,
+  onProjectIdsChange,
+  assistantIds,
+  onAssistantIdsChange,
   onSave,
   isSaving,
 }: SkillScopeTabProps) {
@@ -46,12 +42,10 @@ export function SkillScopeTab({
       </div>
 
       <SkillScopeSelector
-        scope={scope}
-        onScopeChange={onScopeChange}
-        projectId={projectId}
-        onProjectIdChange={onProjectIdChange}
-        assistantId={assistantId}
-        onAssistantIdChange={onAssistantIdChange}
+        projectIds={projectIds}
+        onProjectIdsChange={onProjectIdsChange}
+        assistantIds={assistantIds}
+        onAssistantIdsChange={onAssistantIdsChange}
         disabled={isSaving}
       />
 

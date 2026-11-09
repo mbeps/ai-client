@@ -116,9 +116,8 @@ describe("PromptForm", () => {
       title: "Code Review",
       shortcut: "review",
       content: "Review this code",
-      scope: "global",
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
     });
   });
 
@@ -149,9 +148,8 @@ describe("PromptForm", () => {
       title: "Project Specific Shortcut",
       shortcut: "pshort",
       content: "Project prompt content",
-      scope: "project",
-      projectId: "proj-1",
-      assistantId: null,
+      projectIds: ["proj-1"],
+      assistantIds: [],
     });
   });
 
@@ -182,9 +180,8 @@ describe("PromptForm", () => {
       title: "Assistant Specific Shortcut",
       shortcut: "ashort",
       content: "Assistant prompt content",
-      scope: "assistant",
-      projectId: null,
-      assistantId: "asst-1",
+      projectIds: [],
+      assistantIds: ["asst-1"],
     });
   });
 

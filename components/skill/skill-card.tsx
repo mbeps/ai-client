@@ -45,11 +45,21 @@ export function SkillCard({ skill }: SkillCardProps) {
 
   const detailUrl = ROUTES.SETTINGS.SKILLS.detail(skill.id);
 
-  const scopeLabel = skill.projectId
-    ? `Project: ${projects.find((p) => p.id === skill.projectId)?.name || "Project"}`
-    : skill.assistantId
-      ? `Assistant: ${assistants.find((a) => a.id === skill.assistantId)?.name || "Assistant"}`
-      : "Global";
+  const projectCount = skill.projectIds?.length ?? 0;
+  const assistantCount = skill.assistantIds?.length ?? 0;
+
+  let scopeLabel = "Global";
+  if (projectCount > 0 && assistantCount > 0) {
+    scopeLabel = `${projectCount} Proj, ${assistantCount} Asst`;
+  } else if (projectCount === 1) {
+    scopeLabel = `Project: ${projects.find((p) => p.id === skill.projectIds[0])?.name || "Project"}`;
+  } else if (projectCount > 1) {
+    scopeLabel = `${projectCount} Projects`;
+  } else if (assistantCount === 1) {
+    scopeLabel = `Assistant: ${assistants.find((a) => a.id === skill.assistantIds[0])?.name || "Assistant"}`;
+  } else if (assistantCount > 1) {
+    scopeLabel = `${assistantCount} Assistants`;
+  }
 
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true);

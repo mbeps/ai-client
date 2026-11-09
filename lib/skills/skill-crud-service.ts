@@ -1,10 +1,14 @@
 import { and, desc, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { skill } from "@/drizzle/schemas/skill-schema";
 import { AppException } from "@/lib/error/app-exception";
 import { assertNameAvailable } from "@/lib/skills/skill-name-availability";
 import { resolveSkillRow } from "@/lib/skills/skill-service";
-import type { CreateSkillInput, UpdateSkillInput } from "@/schemas/skill/skill";
+import type {
+  createSkillSchema,
+  UpdateSkillInput,
+} from "@/schemas/skill/skill";
 import {
   assertSkillBodyWithinBudget,
   assertSkillBundleWithinBudget,
@@ -51,7 +55,7 @@ export async function getSkillForUser(
  */
 export async function createSkillForUser(
   userId: string,
-  data: CreateSkillInput,
+  data: z.input<typeof createSkillSchema>,
 ): Promise<SkillRow> {
   const nameRes = await assertNameAvailable(userId, data.name);
   if (!nameRes.ok) {
@@ -72,8 +76,8 @@ export async function createSkillForUser(
       content: data.content,
       files: data.files ?? [],
       enabled: data.enabled ?? true,
-      projectId: data.projectId ?? null,
-      assistantId: data.assistantId ?? null,
+      projectIds: data.projectIds ?? [],
+      assistantIds: data.assistantIds ?? [],
     })
     .returning();
 
@@ -121,9 +125,9 @@ export async function updateSkillForUser(
       ...(data.content !== undefined ? { content: data.content } : {}),
       ...(data.files !== undefined ? { files: data.files } : {}),
       ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
-      ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
-      ...(data.assistantId !== undefined
-        ? { assistantId: data.assistantId }
+      ...(data.projectIds !== undefined ? { projectIds: data.projectIds } : {}),
+      ...(data.assistantIds !== undefined
+        ? { assistantIds: data.assistantIds }
         : {}),
       updatedAt: new Date(),
     })

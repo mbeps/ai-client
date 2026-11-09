@@ -42,11 +42,21 @@ export function PromptCard({ prompt }: PromptCardProps) {
 
   const detailUrl = ROUTES.SETTINGS.PROMPTS.detail(prompt.id);
 
-  const scopeLabel = prompt.projectId
-    ? `Project: ${projects.find((p) => p.id === prompt.projectId)?.name || "Project"}`
-    : prompt.assistantId
-      ? `Assistant: ${assistants.find((a) => a.id === prompt.assistantId)?.name || "Assistant"}`
-      : "Global";
+  const projectCount = prompt.projectIds?.length ?? 0;
+  const assistantCount = prompt.assistantIds?.length ?? 0;
+
+  let scopeLabel = "Global";
+  if (projectCount > 0 && assistantCount > 0) {
+    scopeLabel = `${projectCount} Proj, ${assistantCount} Asst`;
+  } else if (projectCount === 1) {
+    scopeLabel = `Project: ${projects.find((p) => p.id === prompt.projectIds[0])?.name || "Project"}`;
+  } else if (projectCount > 1) {
+    scopeLabel = `${projectCount} Projects`;
+  } else if (assistantCount === 1) {
+    scopeLabel = `Assistant: ${assistants.find((a) => a.id === prompt.assistantIds[0])?.name || "Assistant"}`;
+  } else if (assistantCount > 1) {
+    scopeLabel = `${assistantCount} Assistants`;
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true);

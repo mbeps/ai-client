@@ -13,8 +13,8 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: true,
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -27,8 +27,8 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: true,
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -41,8 +41,8 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: true,
-      projectId: "proj-1",
-      assistantId: null,
+      projectIds: ["proj-1"],
+      assistantIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -55,8 +55,8 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: true,
-      projectId: "proj-2",
-      assistantId: null,
+      projectIds: ["proj-2"],
+      assistantIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -69,8 +69,22 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: true,
-      projectId: null,
-      assistantId: "asst-1",
+      projectIds: [],
+      assistantIds: ["asst-1"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "s-dual",
+      userId: "u1",
+      name: "dual-skill",
+      displayName: "Dual Scope Skill",
+      description: "Desc",
+      content: "Content",
+      files: [],
+      enabled: true,
+      projectIds: ["proj-1", "proj-2"],
+      assistantIds: ["asst-1"],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -83,8 +97,8 @@ describe("filterAccessibleSkills", () => {
       content: "Content",
       files: [],
       enabled: false,
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -112,6 +126,7 @@ describe("filterAccessibleSkills", () => {
       "s-global-1",
       "s-global-2",
       "s-proj-1",
+      "s-dual",
     ]);
   });
 
@@ -121,7 +136,7 @@ describe("filterAccessibleSkills", () => {
       skillMode: "specific",
       skillIds: ["s-global-1"],
     });
-    expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-proj-1"]);
+    expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-proj-1", "s-dual"]);
   });
 
   it("returns assistant skills plus all global skills when in assistant with dynamic mode", () => {
@@ -133,6 +148,7 @@ describe("filterAccessibleSkills", () => {
       "s-global-1",
       "s-global-2",
       "s-asst-1",
+      "s-dual",
     ]);
   });
 
@@ -142,7 +158,7 @@ describe("filterAccessibleSkills", () => {
       skillMode: "specific",
       skillIds: ["s-global-2"],
     });
-    expect(result.map((s) => s.id)).toEqual(["s-global-2", "s-asst-1"]);
+    expect(result.map((s) => s.id)).toEqual(["s-global-2", "s-asst-1", "s-dual"]);
   });
 
   it("matches skillIds by name or id", () => {
@@ -151,6 +167,6 @@ describe("filterAccessibleSkills", () => {
       skillMode: "specific",
       skillIds: ["global-clean-code"],
     });
-    expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-proj-1"]);
+    expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-proj-1", "s-dual"]);
   });
 });

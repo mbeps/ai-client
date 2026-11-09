@@ -239,9 +239,8 @@ type SkillFormState = {
   description: string;
   content: string;
   enabled: boolean;
-  scope: "global" | "project" | "assistant";
-  projectId: string | null;
-  assistantId: string | null;
+  projectIds: string[];
+  assistantIds: string[];
 };
 
 /**
@@ -259,16 +258,10 @@ function buildInitialSkillForm(skill?: any): SkillFormState {
       description: "",
       content: "",
       enabled: true,
-      scope: "global",
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
     };
   }
-  const scope: "global" | "project" | "assistant" = skill.projectId
-    ? "project"
-    : skill.assistantId
-      ? "assistant"
-      : "global";
 
   return {
     displayName: skill.displayName || "",
@@ -276,9 +269,8 @@ function buildInitialSkillForm(skill?: any): SkillFormState {
     description: skill.description || "",
     content: skill.content,
     enabled: skill.enabled,
-    scope,
-    projectId: skill.projectId ?? null,
-    assistantId: skill.assistantId ?? null,
+    projectIds: skill.projectIds ?? [],
+    assistantIds: skill.assistantIds ?? [],
   };
 }
 
@@ -302,8 +294,8 @@ function buildSkillUpdatePayload(
     description: cleanDesc ? cleanDesc : undefined,
     content: form.content,
     enabled: form.enabled,
-    projectId: form.scope === "project" ? form.projectId : null,
-    assistantId: form.scope === "assistant" ? form.assistantId : null,
+    projectIds: form.projectIds,
+    assistantIds: form.assistantIds,
     files: filesToSave,
   };
 }
@@ -537,22 +529,13 @@ function SkillDetailPageContent({
 
         <SidebarTabsContent value="scope" className="w-full flex-1">
           <SkillScopeTab
-            scope={form.scope}
-            onScopeChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                scope: val,
-                projectId: val === "global" ? null : prev.projectId,
-                assistantId: val === "global" ? null : prev.assistantId,
-              }))
+            projectIds={form.projectIds}
+            onProjectIdsChange={(ids) =>
+              setForm((prev) => ({ ...prev, projectIds: ids }))
             }
-            projectId={form.projectId}
-            onProjectIdChange={(val) =>
-              setForm((prev) => ({ ...prev, projectId: val }))
-            }
-            assistantId={form.assistantId}
-            onAssistantIdChange={(val) =>
-              setForm((prev) => ({ ...prev, assistantId: val }))
+            assistantIds={form.assistantIds}
+            onAssistantIdsChange={(ids) =>
+              setForm((prev) => ({ ...prev, assistantIds: ids }))
             }
             onSave={() => handleSave()}
             isSaving={savingSettings}

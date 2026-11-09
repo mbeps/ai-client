@@ -13,6 +13,8 @@ const mockSkills: Skill[] = [
     files: [],
     enabled: true,
     userId: "u1",
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -87,7 +89,8 @@ describe("SkillsConfigTab", () => {
       id: "proj-sk-1",
       name: "proj-skill",
       displayName: "Project Skill",
-      projectId: "proj-1",
+      projectIds: ["proj-1"],
+      assistantIds: [],
     };
 
     render(
@@ -116,7 +119,8 @@ describe("SkillsConfigTab", () => {
       id: "asst-sk-1",
       name: "asst-skill",
       displayName: "Assistant Skill",
-      assistantId: "asst-1",
+      projectIds: [],
+      assistantIds: ["asst-1"],
     };
 
     render(

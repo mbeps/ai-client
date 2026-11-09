@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { MarkdownTabEditor } from "@/components/shared/markdown-tab-editor";
+import { ScopeConfigurator } from "@/components/shared/scope-configurator";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,56 +19,26 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PROMPTS } from "@/config/prompts";
-import { useAppStore } from "@/lib/store/use-app-store";
 
 /**
  * Validation schema for prompt form schema.
  *
  * @author Maruf Bepary
  */
-export const promptFormSchema = z
-  .object({
-    title: z.string().min(1, "Title is required"),
-    shortcut: z
-      .string()
-      .min(1, "Shortcut is required")
-      .regex(
-        /^[a-zA-Z0-9._-]+$/,
-        "Only letters, numbers, '.', '-', and '_' are allowed",
-      ),
-    content: z.string().min(1, "Content is required"),
-    scope: z.enum(["global", "project", "assistant"]),
-    projectId: z.string().nullable().optional(),
-    assistantId: z.string().nullable().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.scope === "project" && !data.projectId) return false;
-      return true;
-    },
-    {
-      message: "Please select a project",
-      path: ["projectId"],
-    },
-  )
-  .refine(
-    (data) => {
-      if (data.scope === "assistant" && !data.assistantId) return false;
-      return true;
-    },
-    {
-      message: "Please select an assistant",
-      path: ["assistantId"],
-    },
-  );
+export const promptFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  shortcut: z
+    .string()
+    .min(1, "Shortcut is required")
+    .regex(
+      /^[a-zA-Z0-9._-]+$/,
+      "Only letters, numbers, '.', '-', and '_' are allowed",
+    ),
+  content: z.string().min(1, "Content is required"),
+  projectIds: z.array(z.string()),
+  assistantIds: z.array(z.string()),
+});
 
 /**
  * Represents prompt form values.
@@ -96,9 +67,9 @@ export interface PromptFormProps {
   placeholderContent?: string;
   /** External submission status flag */
   isSubmitting?: boolean;
-  /** Lock scope to a specific project */
+  /** Pre-populate scope with a specific project */
   defaultProjectId?: string;
-  /** Lock scope to a specific assistant */
+  /** Pre-populate scope with a specific assistant */
   defaultAssistantId?: string;
 }
 
@@ -119,21 +90,12 @@ export function PromptForm({
   defaultProjectId,
   defaultAssistantId,
 }: PromptFormProps) {
-  const projects = useAppStore((state) => state.projects);
-  const assistants = useAppStore((state) => state.assistants);
-
-  const initialScope: "global" | "project" | "assistant" = defaultProjectId
-    ? "project"
-    : defaultAssistantId
-      ? "assistant"
-      : (defaultValues.scope ??
-        (defaultValues.projectId
-          ? "project"
-          : defaultValues.assistantId
-            ? "assistant"
-            : "global"));
-
-  const isScopeLocked = Boolean(defaultProjectId || defaultAssistantId);
+  const initialProjectIds = defaultProjectId
+    ? [defaultProjectId]
+    : (defaultValues.projectIds ?? []);
+  const initialAssistantIds = defaultAssistantId
+    ? [defaultAssistantId]
+    : (defaultValues.assistantIds ?? []);
 
   const form = useForm<PromptFormValues>({
     resolver: zodResolver(promptFormSchema),
@@ -141,22 +103,15 @@ export function PromptForm({
       title: defaultValues.title ?? "",
       shortcut: defaultValues.shortcut ?? "",
       content: defaultValues.content ?? "",
-      scope: initialScope,
-      projectId: defaultProjectId ?? defaultValues.projectId ?? null,
-      assistantId: defaultAssistantId ?? defaultValues.assistantId ?? null,
+      projectIds: initialProjectIds,
+      assistantIds: initialAssistantIds,
     },
   });
 
-  const selectedScope = form.watch("scope");
   const isSubmitting = externalIsSubmitting ?? form.formState.isSubmitting;
 
   const handleSubmit = (values: PromptFormValues) => {
-    const finalValues: PromptFormValues = {
-      ...values,
-      projectId: values.scope === "project" ? values.projectId : null,
-      assistantId: values.scope === "assistant" ? values.assistantId : null,
-    };
-    return onSubmit(finalValues);
+    return onSubmit(values);
   };
 
   return (
@@ -204,115 +159,17 @@ export function PromptForm({
           />
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="scope"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Scope</FormLabel>
-                <FormControl>
-                  <Select
-                    disabled={isScopeLocked || isSubmitting}
-                    value={field.value}
-                    onValueChange={(
-                      val: "global" | "project" | "assistant",
-                    ) => {
-                      field.onChange(val);
-                      if (val === "global") {
-                        form.setValue("projectId", null);
-                        form.setValue("assistantId", null);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select scope" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="global">Global (All Chats)</SelectItem>
-                      <SelectItem value="project">Project Scoped</SelectItem>
-                      <SelectItem value="assistant">
-                        Assistant Scoped
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormDescription>
-                  Where this prompt shortcut can be invoked.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {selectedScope === "project" && (
-            <FormField
-              control={form.control}
-              name="projectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project</FormLabel>
-                  <FormControl>
-                    <Select
-                      disabled={Boolean(defaultProjectId) || isSubmitting}
-                      value={field.value ?? ""}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map((proj) => (
-                          <SelectItem key={proj.id} value={proj.id}>
-                            {proj.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormDescription>
-                    Assign this shortcut exclusively to this project.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
-          {selectedScope === "assistant" && (
-            <FormField
-              control={form.control}
-              name="assistantId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assistant</FormLabel>
-                  <FormControl>
-                    <Select
-                      disabled={Boolean(defaultAssistantId) || isSubmitting}
-                      value={field.value ?? ""}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select assistant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assistants.map((asst) => (
-                          <SelectItem key={asst.id} value={asst.id}>
-                            {asst.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormDescription>
-                    Assign this shortcut exclusively to this assistant.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
+        <ScopeConfigurator
+          projectIds={form.watch("projectIds") ?? []}
+          onProjectIdsChange={(ids) =>
+            form.setValue("projectIds", ids, { shouldDirty: true })
+          }
+          assistantIds={form.watch("assistantIds") ?? []}
+          onAssistantIdsChange={(ids) =>
+            form.setValue("assistantIds", ids, { shouldDirty: true })
+          }
+          disabled={isSubmitting}
+        />
 
         <FormField
           control={form.control}

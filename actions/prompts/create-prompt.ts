@@ -45,28 +45,28 @@ export const createPrompt = defineAction(
 
     const validated = parsed.data;
 
-    if (validated.projectId) {
-      const [proj] = await db
-        .select()
+    if (validated.projectIds && validated.projectIds.length > 0) {
+      const owned = await db
+        .select({ id: project.id })
         .from(project)
-        .where(whereOwner(project, validated.projectId, session.user.id));
-      if (!proj) {
+        .where(whereOwner(project, validated.projectIds, session.user.id));
+      if (owned.length !== validated.projectIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Project not found",
+          message: "One or more projects not found",
         });
       }
     }
 
-    if (validated.assistantId) {
-      const [asst] = await db
-        .select()
+    if (validated.assistantIds && validated.assistantIds.length > 0) {
+      const owned = await db
+        .select({ id: assistant.id })
         .from(assistant)
-        .where(whereOwner(assistant, validated.assistantId, session.user.id));
-      if (!asst) {
+        .where(whereOwner(assistant, validated.assistantIds, session.user.id));
+      if (owned.length !== validated.assistantIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Assistant not found",
+          message: "One or more assistants not found",
         });
       }
     }
@@ -77,8 +77,8 @@ export const createPrompt = defineAction(
         title: validated.title,
         shortcut: validated.shortcut,
         content: validated.content,
-        projectId: validated.projectId ?? null,
-        assistantId: validated.assistantId ?? null,
+        projectIds: validated.projectIds,
+        assistantIds: validated.assistantIds,
         userId: session.user.id,
       })
       .returning();
