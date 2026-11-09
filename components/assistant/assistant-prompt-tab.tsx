@@ -35,6 +35,7 @@ export interface AssistantPromptTabProps {
   onSelectPromptIds?: (ids: Set<string>) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
 }
 
 interface ModeOption {
@@ -84,6 +85,7 @@ export function AssistantPromptTab({
   onSelectPromptIds,
   onSave,
   isSaving = false,
+  saveLabel = "Save Changes",
 }: AssistantPromptTabProps) {
   const prompts = useAppStore((state) => state.prompts);
 
@@ -260,7 +262,7 @@ export function AssistantPromptTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Changes
+          {saveLabel}
         </Button>
       </div>
     </div>

@@ -546,6 +546,11 @@ function useProjectPageResources(projectId: string) {
 export default function ProjectPage() {
   const params = useParams();
   const projectId = params.id as string;
+
+  if (projectId === "new") {
+    notFound();
+  }
+
   const { project, mcpServers, skills, normalizedKnowledgebases, isLoading } =
     useProjectPageResources(projectId);
 

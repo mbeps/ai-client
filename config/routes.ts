@@ -72,6 +72,7 @@ export const ROUTES = {
   PROJECTS: {
     path: PROJECTS_BASE,
     name: "Projects",
+    new: `${PROJECTS_BASE}/new` as const,
     detail: (id: string) => `${PROJECTS_BASE}/${id}` as const,
     chat: (projectId: string, chatId: string) =>
       `${PROJECTS_BASE}/${projectId}/${chatId}` as const,
@@ -79,6 +80,7 @@ export const ROUTES = {
   ASSISTANTS: {
     path: ASSISTANTS_BASE,
     name: "Assistants",
+    new: `${ASSISTANTS_BASE}/new` as const,
     detail: (id: string) => `${ASSISTANTS_BASE}/${id}` as const,
     chat: (assistantId: string, chatId: string) =>
       `${ASSISTANTS_BASE}/${assistantId}/${chatId}` as const,
