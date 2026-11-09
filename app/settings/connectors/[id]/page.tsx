@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   FileText,
   Globe,
-  Loader2,
   Server,
   Settings,
   Shield,
@@ -29,6 +28,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -81,11 +81,7 @@ export default function McpServerPage() {
   }, [oauthStatus, oauthError]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!server) {

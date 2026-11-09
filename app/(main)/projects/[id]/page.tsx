@@ -5,7 +5,6 @@ import {
   FileText,
   FolderKanban,
   Library,
-  Loader2,
   MessageSquare,
   MessageSquarePlus,
   Settings,
@@ -35,6 +34,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { ROUTES } from "@/config/routes";
 import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
@@ -567,11 +567,7 @@ export default function ProjectPage() {
   const projectChats = useProjectChats(projectId);
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!project) {

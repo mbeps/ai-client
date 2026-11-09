@@ -1,13 +1,11 @@
-import { Spinner } from "@/components/ui/spinner";
+import { AppShellSkeleton } from "@/components/skeletons/app-shell-skeleton";
 
 /**
  * Root loading fallback for page transitions.
- * Displays centered spinner while route data loads.
+ * Displays content-aware application shell skeleton while route data loads.
+ *
+ * @author Maruf Bepary
  */
 export default function RootLoading() {
-  return (
-    <div className="bg-background flex h-full min-h-screen w-full items-center justify-center">
-      <Spinner size="lg" />
-    </div>
-  );
+  return <AppShellSkeleton />;
 }

@@ -124,4 +124,20 @@ describe("ResourceListPage", () => {
     expect(cards[0]).toHaveTextContent("Resource One"); // id 1
     expect(cards[1]).toHaveTextContent("Resource Two"); // id 2
   });
+
+  it("renders skeleton card grid when isLoading is true", () => {
+    render(
+      <ResourceListPage
+        icon={<span>Icon</span>}
+        title="Test Resources"
+        description="Manage test resources"
+        items={[]}
+        emptyStateMessage="No resources found"
+        isLoading={true}
+      />,
+    );
+
+    expect(screen.getByTestId("resource-list-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("No resources found")).not.toBeInTheDocument();
+  });
 });

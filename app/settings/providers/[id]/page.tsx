@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ChevronLeft,
-  Database,
-  Loader2,
-  Save,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { ChevronLeft, Database, Save, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
@@ -26,6 +19,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { LoadingSwap } from "@/components/ui/loading-swap";
@@ -103,11 +97,7 @@ export default function ProviderDetailPage() {
   }, [provider]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!provider) {

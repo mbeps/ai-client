@@ -5,7 +5,6 @@ import {
   BrainCircuit,
   ChevronLeft,
   FileText,
-  Loader2,
   Plus,
   Settings,
   Wrench,
@@ -29,6 +28,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { ROUTES } from "@/config/routes";
@@ -157,11 +157,7 @@ export default function NewAssistantPage() {
   };
 
   if (hydrationLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   return (

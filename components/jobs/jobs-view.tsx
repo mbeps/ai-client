@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -18,6 +17,7 @@ import {
 import { JobsOfflineBanner } from "@/components/jobs/jobs-offline-banner";
 import { JobsStatCards } from "@/components/jobs/jobs-stat-cards";
 import { useJobsPolling } from "@/components/jobs/use-jobs-polling";
+import { TableListSkeleton } from "@/components/skeletons/table-list-skeleton";
 import type { JobFilterTab, JobItem } from "@/types/jobs";
 
 /**
@@ -198,11 +198,7 @@ export function JobsView() {
         loading={loading}
       />
 
-      {loading && jobs.length === 0 && (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="text-muted-foreground size-8 animate-spin" />
-        </div>
-      )}
+      {loading && jobs.length === 0 && <TableListSkeleton rows={4} />}
 
       <JobsList jobs={filteredJobs} onCancel={setCancelTarget} />
 

@@ -1,14 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Command,
-  FileText,
-  Globe,
-  Loader2,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { Command, FileText, Globe, Settings, Shield } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
@@ -33,6 +26,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Form } from "@/components/ui/form";
 import { PROMPTS } from "@/config/prompts";
 import { ROUTES } from "@/config/routes";
@@ -103,11 +97,7 @@ export default function PromptDetailPage() {
   }, [loadPrompts, prompts.length]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!prompt) {

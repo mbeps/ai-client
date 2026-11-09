@@ -1,16 +1,12 @@
-import { Spinner } from "@/components/ui/spinner";
+import { CardGridSkeleton } from "@/components/skeletons/card-grid-skeleton";
 
 /**
- * Loading skeleton for main app routes during async page transitions.
- * Displays centered spinner while route data loads.
+ * Loading skeleton fallback for main app routes during async page transitions.
+ * Displays content-aware card grid skeleton while route data loads.
  * Used by Next.js automatically during dynamic route rendering.
  *
  * @author Maruf Bepary
  */
 export default function MainLoading() {
-  return (
-    <div className="bg-background flex h-full w-full items-center justify-center">
-      <Spinner size="lg" />
-    </div>
-  );
+  return <CardGridSkeleton />;
 }

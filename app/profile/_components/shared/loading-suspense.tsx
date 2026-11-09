@@ -1,16 +1,14 @@
-import { Loader2Icon } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
+import { TableListSkeleton } from "@/components/skeletons/table-list-skeleton";
 
 /**
- * Suspense boundary with a centered spinner fallback for async profile tab content.
- * Wraps server components that fetch user data (passkeys, sessions, etc.).
+ * Suspense boundary with a skeleton fallback for async profile tab content.
+ * Wraps server components that fetch user data (passkeys, sessions, linked accounts).
  *
  * @author Maruf Bepary
  */
 export function LoadingSuspense({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<Loader2Icon className="size-20 animate-spin" />}>
-      {children}
-    </Suspense>
+    <Suspense fallback={<TableListSkeleton rows={3} />}>{children}</Suspense>
   );
 }

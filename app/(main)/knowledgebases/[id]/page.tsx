@@ -1,6 +1,6 @@
 "use client";
 
-import { Library, Loader2, Settings, Shield, Upload } from "lucide-react";
+import { Library, Settings, Shield, Upload } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,6 +26,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
@@ -458,11 +459,7 @@ export default function KnowledgebasePage() {
   const state = useKnowledgebasePageState(kbId);
 
   if (state.isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!state.kb) {

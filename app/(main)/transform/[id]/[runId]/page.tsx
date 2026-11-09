@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/shared/page-container";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { TransformRunFilesSection } from "@/components/workflows/transform-run/transform-run-files-section";
 import { TransformRunHeader } from "@/components/workflows/transform-run/transform-run-header";
@@ -186,11 +187,7 @@ export default function TransformRunDetailPage() {
     });
 
   if (isLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!run || !agent) {
