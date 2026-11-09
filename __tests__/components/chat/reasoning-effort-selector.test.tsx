@@ -36,7 +36,7 @@ describe("ReasoningEffortSelector", () => {
     ).toBeDefined();
   });
 
-  it("opens menu and calls onChange when a different effort option is chosen", () => {
+  it("opens popup and calls onChange when slider input changes", () => {
     const handleChange = vi.fn();
     render(
       <ReasoningEffortSelector value="medium" onChange={handleChange} />,
@@ -45,16 +45,38 @@ describe("ReasoningEffortSelector", () => {
     const trigger = screen.getByRole("button", {
       name: /Reasoning effort: Medium/i,
     });
-    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
 
     expect(screen.getByText("Reasoning Effort")).toBeDefined();
-    expect(screen.getByText("Disable reasoning")).toBeDefined();
-    expect(screen.getByText("Maximum depth and thoroughness")).toBeDefined();
 
-    const highOption = screen.getByText("Maximum depth and thoroughness");
-    fireEvent.click(highOption);
+    // Slider provides a range input with role "slider"
+    const sliderInput = screen.getByRole("slider", {
+      name: /Reasoning effort/i,
+    });
+    expect(sliderInput).toBeDefined();
+    expect(sliderInput.getAttribute("aria-valuenow")).toBe("2");
 
+    // Change slider to index 3 ("high")
+    fireEvent.change(sliderInput, { target: { value: "3" } });
     expect(handleChange).toHaveBeenCalledWith("high");
+  });
+
+  it("calls onChange when a notch label button is clicked", () => {
+    const handleChange = vi.fn();
+    render(
+      <ReasoningEffortSelector value="medium" onChange={handleChange} />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: /Reasoning effort: Medium/i,
+    });
+    fireEvent.click(trigger);
+
+    // Find and click the 'Off' notch label button
+    const offButton = screen.getByRole("button", { name: /^Off$/i });
+    fireEvent.click(offButton);
+
+    expect(handleChange).toHaveBeenCalledWith("off");
   });
 
   it("disables trigger button when disabled prop is true", () => {

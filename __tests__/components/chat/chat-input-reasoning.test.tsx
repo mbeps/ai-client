@@ -141,7 +141,7 @@ describe("ChatInput Reasoning Effort", () => {
     expect(lastCall[11]).toBe("low");
   });
 
-  it("allows changing reasoning effort via dropdown before submitting", () => {
+  it("allows changing reasoning effort via slider popup before submitting", () => {
     const handleSend = vi.fn();
     render(
       <TooltipProvider>
@@ -156,10 +156,12 @@ describe("ChatInput Reasoning Effort", () => {
     const trigger = screen.getByRole("button", {
       name: /Reasoning effort: Medium/i,
     });
-    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
 
-    const highOption = screen.getByText("Maximum depth and thoroughness");
-    fireEvent.click(highOption);
+    const sliderInput = screen.getByRole("slider", {
+      name: /Reasoning effort/i,
+    });
+    fireEvent.change(sliderInput, { target: { value: "3" } });
 
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Deep analysis please" } });
