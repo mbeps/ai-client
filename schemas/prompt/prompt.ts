@@ -56,7 +56,14 @@ export const createPromptSchema = z.object(basePromptFields);
  * @see {@link lib/actions/prompts/update-prompt.ts} for update action
  * @author Maruf Bepary
  */
-export const updatePromptSchema = z.object(basePromptFields).partial();
+export const updatePromptSchema = z
+  .object(basePromptFields)
+  .omit({ projectIds: true, assistantIds: true })
+  .partial()
+  .extend({
+    projectIds: z.array(z.string()).optional(),
+    assistantIds: z.array(z.string()).optional(),
+  });
 
 /**
  * Validates the full prompt object as stored in the database and loaded in the store.
