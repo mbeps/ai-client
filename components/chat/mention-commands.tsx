@@ -1,7 +1,6 @@
 "use client";
 
-import { Bot, BrainCircuit, Database, SquareTerminal, Zap } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bot, BrainCircuit, Database, SquareTerminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -86,7 +85,14 @@ export function MentionCommands({
           <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
           {trigger === "/" && skillItems.length > 0 && (
-            <CommandGroup heading="Skills">
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <BrainCircuit className="h-3.5 w-3.5" />
+                  <span>Skills</span>
+                </div>
+              }
+            >
               {skillItems.map((item) => {
                 const itemIndex = items.indexOf(item);
                 return (
@@ -100,7 +106,6 @@ export function MentionCommands({
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    <BrainCircuit className="text-primary h-4 w-4 shrink-0" />
                     <div className="flex w-full items-center justify-between overflow-hidden">
                       <span className="truncate font-medium">
                         {item.displayName || item.name}
@@ -116,7 +121,14 @@ export function MentionCommands({
           )}
 
           {trigger === "/" && promptItems.length > 0 && (
-            <CommandGroup heading="Prompts">
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <SquareTerminal className="h-3.5 w-3.5" />
+                  <span>Prompts</span>
+                </div>
+              }
+            >
               {promptItems.map((item) => {
                 const itemIndex = items.indexOf(item);
                 const isMcp = "isMcp" in item && item.isMcp;
@@ -132,12 +144,6 @@ export function MentionCommands({
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    {isMcp ? (
-                      <Zap className="h-4 w-4 shrink-0 text-amber-500" />
-                    ) : (
-                      <SquareTerminal className="text-muted-foreground h-4 w-4 shrink-0" />
-                    )}
-
                     <div className="flex w-full items-center justify-between overflow-hidden">
                       <span className="truncate font-medium">
                         {isMcp ? (item as any).name : (item as any).title}
@@ -165,7 +171,14 @@ export function MentionCommands({
           )}
 
           {trigger === "@" && assistantItems.length > 0 && (
-            <CommandGroup heading="Assistants">
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <Bot className="h-3.5 w-3.5" />
+                  <span>Assistants</span>
+                </div>
+              }
+            >
               {assistantItems.map((item) => {
                 const itemIndex = items.indexOf(item);
                 return (
@@ -179,15 +192,6 @@ export function MentionCommands({
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    <Avatar className="h-6 w-6 shrink-0">
-                      <AvatarImage
-                        src={(item as Assistant).avatar ?? undefined}
-                      />
-                      <AvatarFallback>
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-
                     <div className="flex w-full flex-col overflow-hidden">
                       <span className="truncate font-medium">
                         {(item as Assistant).name}
@@ -205,7 +209,14 @@ export function MentionCommands({
           )}
 
           {trigger === "#" && knowledgebaseItems.length > 0 && (
-            <CommandGroup heading="Knowledgebases">
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5" />
+                  <span>Knowledgebases</span>
+                </div>
+              }
+            >
               {knowledgebaseItems.map((item) => {
                 const itemIndex = items.indexOf(item);
                 return (
@@ -219,7 +230,6 @@ export function MentionCommands({
                         "bg-accent text-accent-foreground",
                     )}
                   >
-                    <Database className="h-4 w-4 shrink-0 text-blue-500" />
                     <div className="flex w-full flex-col overflow-hidden">
                       <span className="truncate font-medium">{item.name}</span>
                       {item.description && (
