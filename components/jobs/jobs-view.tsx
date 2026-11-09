@@ -119,16 +119,18 @@ export function JobsView() {
       if (res.ok) {
         setJobs(res.value.jobs || []);
         setOffline(Boolean(res.value.offline));
-        if (res.value.error && !res.value.offline) {
+        if (isManualRefresh && res.value.error && !res.value.offline) {
           toast.error(res.value.error);
         }
-      } else {
+      } else if (isManualRefresh) {
         toast.error(res.error.message || "Failed to load jobs");
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load jobs";
-      toast.error(message);
+      if (isManualRefresh) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load jobs";
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }

@@ -133,7 +133,6 @@ function buildRunsUrl(
   const url = new URL(`${baseUrl}/v2/runs`);
   url.searchParams.set("query", `event.data.userId == "${userId}"`);
   url.searchParams.set("limit", String(options?.limit ?? 20));
-  url.searchParams.set("include", "output");
 
   if (options?.status && options.status.length > 0) {
     for (const s of options.status) {
@@ -240,6 +239,7 @@ export async function fetchUserInngestRuns(
     if (!res.ok) {
       return {
         jobs: [],
+        offline: true,
         error: `Inngest API request failed with HTTP ${res.status}`,
       };
     }

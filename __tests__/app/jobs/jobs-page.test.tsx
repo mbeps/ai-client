@@ -538,4 +538,82 @@ describe("Running Jobs Page & JobsView Component", () => {
       screen.getByText(/no jobs matched "nonexistent"/i),
     ).toBeInTheDocument();
   });
+
+  it("suppresses error toast on background mount/polling but shows on manual refresh", async () => {
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        jobs: [],
+        offline: false,
+        error: "Failed to connect to background worker",
+      },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
+    });
+
+    // On mount / background polling, no toast should be emitted
+    expect(toast.error).not.toHaveBeenCalled();
+
+    // Now trigger manual refresh with same error condition
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        jobs: [],
+        offline: false,
+        error: "Failed to connect to background worker",
+      },
+    });
+
+    const refreshButton = screen.getByRole("button", { name: /refresh/i });
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      expect(mockListJobs).toHaveBeenCalledTimes(2);
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to connect to background worker",
+      );
+    });
+  });
+
+  it("suppresses toast on background polling action failure and network throws, shows on manual refresh", async () => {
+    // 1. Action failure on mount (background)
+    mockListJobs.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Server action failed" },
+    });
+
+    const { unmount } = render(<JobsView />);
+
+    await waitFor(() => {
+      expect(mockListJobs).toHaveBeenCalledTimes(1);
+    });
+
+    expect(toast.error).not.toHaveBeenCalled();
+    unmount();
+
+    // 2. Exception throw on manual refresh
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: { jobs: [], offline: false },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(mockListJobs).toHaveBeenCalledTimes(2);
+    });
+
+    mockListJobs.mockRejectedValueOnce(new Error("Network connection lost"));
+    const refreshButton = screen.getByRole("button", { name: /refresh/i });
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      expect(mockListJobs).toHaveBeenCalledTimes(3);
+      expect(toast.error).toHaveBeenCalledWith("Network connection lost");
+    });
+  });
 });

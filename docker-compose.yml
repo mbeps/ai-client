@@ -33,7 +33,7 @@ services:
     command: server /data --console-address ":9001"
 
   inngest:
-    image: inngest/inngest:latest
+    image: inngest/inngest:v1.45.1
     network_mode: host
     environment:
       - INNGEST_DEV=1
