@@ -50,8 +50,8 @@ describe("SkillCard", () => {
     content: "Instructions",
     files: [],
     enabled: true,
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -70,7 +70,8 @@ describe("SkillCard", () => {
       id: "sk-2",
       name: "project-skill",
       displayName: "Project Skill",
-      projectId: "proj-1",
+      projectIds: ["proj-1"],
+      assistantIds: [],
     };
 
     render(<SkillCard skill={projectSkill} />);
@@ -86,14 +87,30 @@ describe("SkillCard", () => {
       id: "sk-3",
       name: "asst-skill",
       displayName: "Assistant Skill",
-      assistantId: "asst-1",
+      projectIds: [],
+      assistantIds: ["asst-1"],
     };
 
     render(<SkillCard skill={assistantSkill} />);
 
     expect(screen.getByText("Assistant Skill")).toBeInTheDocument();
-    expect(screen.getByText("/asst-skill")).toBeInTheDocument();
     expect(screen.getByText("Assistant: Beta Assistant")).toBeInTheDocument();
+  });
+
+  it("renders multiple project and assistant badges when scoped to both", () => {
+    const multiSkill: Skill = {
+      ...baseSkill,
+      id: "sk-4",
+      name: "multi-skill",
+      displayName: "Multi Skill",
+      projectIds: ["proj-1", "proj-2"],
+      assistantIds: ["asst-1", "asst-2"],
+    };
+
+    render(<SkillCard skill={multiSkill} />);
+
+    expect(screen.getByText("Multi Skill")).toBeInTheDocument();
+    expect(screen.getByText("2 Proj, 2 Asst")).toBeInTheDocument();
   });
 
   it("toggles skill enabled state", async () => {

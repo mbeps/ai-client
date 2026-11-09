@@ -74,9 +74,14 @@ export default function SkillsPage() {
         </div>
       }
       customFilterFn={(s) => {
-        if (scopeFilter === "global") return !s.projectId && !s.assistantId;
-        if (scopeFilter === "project") return Boolean(s.projectId);
-        if (scopeFilter === "assistant") return Boolean(s.assistantId);
+        const isGlobal =
+          (!s.projectIds || s.projectIds.length === 0) &&
+          (!s.assistantIds || s.assistantIds.length === 0);
+        if (scopeFilter === "global") return isGlobal;
+        if (scopeFilter === "project")
+          return Boolean(s.projectIds && s.projectIds.length > 0);
+        if (scopeFilter === "assistant")
+          return Boolean(s.assistantIds && s.assistantIds.length > 0);
         return true;
       }}
       filterFn={(s, q) =>

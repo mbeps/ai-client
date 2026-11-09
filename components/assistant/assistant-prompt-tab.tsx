@@ -88,13 +88,20 @@ export function AssistantPromptTab({
   const prompts = useAppStore((state) => state.prompts);
 
   const globalPrompts = useMemo(
-    () => prompts.filter((p) => !p.projectId && !p.assistantId),
+    () =>
+      prompts.filter(
+        (p) =>
+          (!p.projectIds || p.projectIds.length === 0) &&
+          (!p.assistantIds || p.assistantIds.length === 0),
+      ),
     [prompts],
   );
 
   const assistantShortcuts = useMemo(
     () =>
-      assistantId ? prompts.filter((p) => p.assistantId === assistantId) : [],
+      assistantId
+        ? prompts.filter((p) => p.assistantIds?.includes(assistantId))
+        : [],
     [prompts, assistantId],
   );
 

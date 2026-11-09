@@ -67,9 +67,14 @@ export default function PromptsPage() {
         </div>
       }
       customFilterFn={(p) => {
-        if (scopeFilter === "global") return !p.projectId && !p.assistantId;
-        if (scopeFilter === "project") return Boolean(p.projectId);
-        if (scopeFilter === "assistant") return Boolean(p.assistantId);
+        const isGlobal =
+          (!p.projectIds || p.projectIds.length === 0) &&
+          (!p.assistantIds || p.assistantIds.length === 0);
+        if (scopeFilter === "global") return isGlobal;
+        if (scopeFilter === "project")
+          return Boolean(p.projectIds && p.projectIds.length > 0);
+        if (scopeFilter === "assistant")
+          return Boolean(p.assistantIds && p.assistantIds.length > 0);
         return true;
       }}
       filterFn={(p, q) =>

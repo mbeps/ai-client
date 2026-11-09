@@ -98,13 +98,13 @@ describe("createSkillSchema", () => {
     expect(emptyContent.success).toBe(false);
   });
 
-  it("accepts optional projectId or assistantId", () => {
+  it("accepts valid projectIds or assistantIds", () => {
     const withProject = createSkillSchema.safeParse({
       name: "proj-skill",
       displayName: "Project Skill",
       description: "Desc",
       content: "Content",
-      projectId: "proj-1",
+      projectIds: ["proj-1", "proj-2"],
     });
     expect(withProject.success).toBe(true);
 
@@ -113,26 +113,21 @@ describe("createSkillSchema", () => {
       displayName: "Assistant Skill",
       description: "Desc",
       content: "Content",
-      assistantId: "asst-1",
+      assistantIds: ["asst-1", "asst-2"],
     });
     expect(withAssistant.success).toBe(true);
   });
 
-  it("rejects when both projectId and assistantId are provided", () => {
+  it("accepts when both projectIds and assistantIds are provided", () => {
     const dual = createSkillSchema.safeParse({
       name: "dual-skill",
       displayName: "Dual Skill",
       description: "Desc",
       content: "Content",
-      projectId: "proj-1",
-      assistantId: "asst-1",
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
     });
-    expect(dual.success).toBe(false);
-    if (!dual.success) {
-      expect(dual.error.issues[0].message).toContain(
-        "A skill cannot be scoped to both a project and an assistant",
-      );
-    }
+    expect(dual.success).toBe(true);
   });
 });
 
@@ -145,24 +140,24 @@ describe("updateSkillSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts updating projectId or assistantId", () => {
+  it("accepts updating projectIds or assistantIds", () => {
     const updateProj = updateSkillSchema.safeParse({
-      projectId: "proj-2",
+      projectIds: ["proj-2"],
     });
     expect(updateProj.success).toBe(true);
 
     const updateAsst = updateSkillSchema.safeParse({
-      assistantId: "asst-2",
+      assistantIds: ["asst-2"],
     });
     expect(updateAsst.success).toBe(true);
   });
 
-  it("rejects update when both projectId and assistantId are provided", () => {
+  it("accepts update when both projectIds and assistantIds are provided", () => {
     const dual = updateSkillSchema.safeParse({
-      projectId: "proj-1",
-      assistantId: "asst-1",
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
     });
-    expect(dual.success).toBe(false);
+    expect(dual.success).toBe(true);
   });
 
   it("validates slug if name is provided in update", () => {
@@ -196,8 +191,8 @@ describe("skillSchema", () => {
       content: "# Content",
       files: [],
       enabled: true,
-      projectId: "proj-1",
-      assistantId: null,
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
       createdAt: new Date(),
       updatedAt: new Date(),
     });

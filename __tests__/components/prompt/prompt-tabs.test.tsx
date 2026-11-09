@@ -35,9 +35,8 @@ function FormWrapper({
     title: "Test Title",
     shortcut: "test-shortcut",
     content: "Test Content",
-    scope: "global",
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
   },
   onSubmit = vi.fn(),
 }: {
@@ -50,9 +49,8 @@ function FormWrapper({
       title: "",
       shortcut: "",
       content: "",
-      scope: "global",
-      projectId: null,
-      assistantId: null,
+      projectIds: [],
+      assistantIds: [],
       ...defaultValues,
     },
   });
@@ -141,7 +139,7 @@ describe("Prompt Form Tabs", () => {
   describe("PromptScopeTab", () => {
     it("renders global scope by default", () => {
       render(
-        <FormWrapper defaultValues={{ scope: "global" }}>
+        <FormWrapper defaultValues={{ projectIds: [], assistantIds: [] }}>
           {(form) => <PromptScopeTab form={form} />}
         </FormWrapper>,
       );
@@ -154,32 +152,34 @@ describe("Prompt Form Tabs", () => {
       );
     });
 
-    it("renders project select when project scope is selected", () => {
+    it("renders project selection when projectIds are populated", () => {
       render(
-        <FormWrapper defaultValues={{ scope: "project", projectId: "proj-1" }}>
+        <FormWrapper
+          defaultValues={{ projectIds: ["proj-1"], assistantIds: [] }}
+        >
           {(form) => <PromptScopeTab form={form} />}
         </FormWrapper>,
       );
 
-      expect(screen.getByRole("radio", { name: /project/i })).toBeInTheDocument();
-      expect(screen.getByRole("radio", { name: /project/i })).toHaveAttribute(
+      expect(screen.getByRole("radio", { name: /scoped/i })).toBeInTheDocument();
+      expect(screen.getByRole("radio", { name: /scoped/i })).toHaveAttribute(
         "aria-checked",
         "true",
       );
       expect(screen.getAllByText("Project One")[0]).toBeInTheDocument();
     });
 
-    it("renders assistant select when assistant scope is selected", () => {
+    it("renders assistant selection when assistantIds are populated", () => {
       render(
         <FormWrapper
-          defaultValues={{ scope: "assistant", assistantId: "asst-1" }}
+          defaultValues={{ projectIds: [], assistantIds: ["asst-1"] }}
         >
           {(form) => <PromptScopeTab form={form} />}
         </FormWrapper>,
       );
 
-      expect(screen.getByRole("radio", { name: /assistant/i })).toBeInTheDocument();
-      expect(screen.getByRole("radio", { name: /assistant/i })).toHaveAttribute(
+      expect(screen.getByRole("radio", { name: /scoped/i })).toBeInTheDocument();
+      expect(screen.getByRole("radio", { name: /scoped/i })).toHaveAttribute(
         "aria-checked",
         "true",
       );
@@ -189,14 +189,14 @@ describe("Prompt Form Tabs", () => {
     it("allows switching scope via clicking option cards", async () => {
       const user = userEvent.setup();
       render(
-        <FormWrapper defaultValues={{ scope: "global" }}>
+        <FormWrapper defaultValues={{ projectIds: [], assistantIds: [] }}>
           {(form) => <PromptScopeTab form={form} />}
         </FormWrapper>,
       );
 
-      const projectCard = screen.getByRole("radio", { name: /project/i });
-      await user.click(projectCard);
-      expect(projectCard).toHaveAttribute("aria-checked", "true");
+      const scopedCard = screen.getByRole("radio", { name: /scoped/i });
+      await user.click(scopedCard);
+      expect(scopedCard).toHaveAttribute("aria-checked", "true");
     });
   });
 });

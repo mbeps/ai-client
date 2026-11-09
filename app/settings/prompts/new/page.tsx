@@ -41,8 +41,8 @@ export default function NewPromptPage() {
         title: values.title.trim(),
         shortcut: values.shortcut.trim(),
         content: values.content.trim(),
-        projectId: values.projectId ?? null,
-        assistantId: values.assistantId ?? null,
+        projectIds: values.projectIds,
+        assistantIds: values.assistantIds,
       });
       if (!res.ok) {
         toast.error(res.error.message || "Failed to create prompt");

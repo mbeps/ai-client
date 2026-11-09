@@ -126,40 +126,35 @@ describe("createPromptSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts valid projectId", () => {
+  it("accepts valid projectIds", () => {
     const result = createPromptSchema.safeParse({
       title: "Title",
       content: "Content",
       shortcut: "shortcut",
-      projectId: "proj-123",
+      projectIds: ["proj-123", "proj-456"],
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts valid assistantId", () => {
+  it("accepts valid assistantIds", () => {
     const result = createPromptSchema.safeParse({
       title: "Title",
       content: "Content",
       shortcut: "shortcut",
-      assistantId: "asst-123",
+      assistantIds: ["asst-123", "asst-456"],
     });
     expect(result.success).toBe(true);
   });
 
-  it("rejects both projectId and assistantId provided together", () => {
+  it("accepts both projectIds and assistantIds provided together", () => {
     const result = createPromptSchema.safeParse({
       title: "Title",
       content: "Content",
       shortcut: "shortcut",
-      projectId: "proj-123",
-      assistantId: "asst-123",
+      projectIds: ["proj-123"],
+      assistantIds: ["asst-123"],
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0]?.message).toBe(
-        "A prompt cannot be scoped to both a project and an assistant",
-      );
-    }
+    expect(result.success).toBe(true);
   });
 });
 
@@ -185,24 +180,12 @@ describe("updatePromptSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts updating projectId and assistantId individually", () => {
-    expect(
-      updatePromptSchema.safeParse({ projectId: "proj-1" }).success,
-    ).toBe(true);
-    expect(
-      updatePromptSchema.safeParse({ assistantId: "asst-1" }).success,
-    ).toBe(true);
-    expect(
-      updatePromptSchema.safeParse({ projectId: null, assistantId: null }).success,
-    ).toBe(true);
-  });
-
-  it("rejects updating both projectId and assistantId together", () => {
+  it("accepts updating projectIds and assistantIds together", () => {
     const result = updatePromptSchema.safeParse({
-      projectId: "proj-1",
-      assistantId: "asst-1",
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });
 
@@ -227,8 +210,8 @@ describe("promptSchema, promptModeSchema, promptIdsSchema", () => {
       title: "Title",
       shortcut: "shortcut",
       content: "Content",
-      projectId: "proj-1",
-      assistantId: null,
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
       createdAt: new Date(),
       updatedAt: new Date(),
     };

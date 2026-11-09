@@ -48,15 +48,25 @@ export function filterAccessiblePrompts(
   const allowedSet = new Set(allowedPromptIds);
 
   return prompts.filter((p) => {
-    // 1. Scoped to a specific Project
-    if (p.projectId) {
-      return Boolean(projectId && p.projectId === projectId);
+    const isProjectScoped = Boolean(
+      projectId && p.projectIds?.includes(projectId),
+    );
+    const isAssistantScoped = Boolean(
+      assistantId && p.assistantIds?.includes(assistantId),
+    );
+    if (isProjectScoped || isAssistantScoped) {
+      return true;
     }
-    // 2. Scoped to a specific Assistant
-    if (p.assistantId) {
-      return Boolean(assistantId && p.assistantId === assistantId);
+
+    const isGlobal =
+      (!p.projectIds || p.projectIds.length === 0) &&
+      (!p.assistantIds || p.assistantIds.length === 0);
+
+    // If it has specific project or assistant scopes and neither matches:
+    if (!isGlobal) {
+      return false;
     }
-    // 3. Global Prompt (neither projectId nor assistantId is set)
+
     // In standalone global chat (no project, no assistant): always accessible
     if (!projectId && !assistantId) {
       return true;

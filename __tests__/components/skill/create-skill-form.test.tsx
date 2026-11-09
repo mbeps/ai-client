@@ -103,7 +103,8 @@ describe("CreateSkillForm", () => {
           displayName: "Global Skill",
           description: "Description",
           content: "Instructions content",
-          scope: "global",
+          projectIds: [],
+          assistantIds: [],
         }}
         onSubmit={onSubmitMock}
       />,
@@ -117,15 +118,14 @@ describe("CreateSkillForm", () => {
         expect.objectContaining({
           name: "global-skill",
           displayName: "Global Skill",
-          scope: "global",
-          projectId: null,
-          assistantId: null,
+          projectIds: [],
+          assistantIds: [],
         }),
       );
     });
   });
 
-  it("locks scope and project when defaultProjectId is passed", async () => {
+  it("sets project in projectIds when defaultProjectId is passed", async () => {
     const user = userEvent.setup();
     const onSubmitMock = vi.fn();
 
@@ -142,9 +142,6 @@ describe("CreateSkillForm", () => {
       />,
     );
 
-    const comboboxes = screen.getAllByRole("combobox");
-    expect(comboboxes[0]).toBeDisabled(); // Scope select
-
     const submitBtn = screen.getByRole("button", { name: /create skill/i });
     await user.click(submitBtn);
 
@@ -153,15 +150,14 @@ describe("CreateSkillForm", () => {
         expect.objectContaining({
           name: "project-skill",
           displayName: "Project Skill",
-          scope: "project",
-          projectId: "proj-1",
-          assistantId: null,
+          projectIds: ["proj-1"],
+          assistantIds: [],
         }),
       );
     });
   });
 
-  it("locks scope and assistant when defaultAssistantId is passed", async () => {
+  it("sets assistant in assistantIds when defaultAssistantId is passed", async () => {
     const user = userEvent.setup();
     const onSubmitMock = vi.fn();
 
@@ -178,9 +174,6 @@ describe("CreateSkillForm", () => {
       />,
     );
 
-    const comboboxes = screen.getAllByRole("combobox");
-    expect(comboboxes[0]).toBeDisabled(); // Scope select
-
     const submitBtn = screen.getByRole("button", { name: /create skill/i });
     await user.click(submitBtn);
 
@@ -189,9 +182,8 @@ describe("CreateSkillForm", () => {
         expect.objectContaining({
           name: "asst-skill",
           displayName: "Assistant Skill",
-          scope: "assistant",
-          projectId: null,
-          assistantId: "asst-1",
+          projectIds: [],
+          assistantIds: ["asst-1"],
         }),
       );
     });

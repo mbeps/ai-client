@@ -99,8 +99,8 @@ describe("SkillDetailPage", () => {
       },
     ],
     enabled: true,
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -200,19 +200,19 @@ describe("SkillDetailPage", () => {
     expect(screen.getByText("Primary Instructions")).toBeInTheDocument();
   });
 
-  it("switches scope to project and saves with projectId in payload", async () => {
+  it("switches scope to scoped and saves with projectIds in payload", async () => {
     const user = userEvent.setup();
     currentQueryTab = "scope";
     vi.mocked(updateSkill).mockResolvedValueOnce({
       ok: true,
-      value: { ...mockSkill, projectId: "proj-1" } as any,
+      value: { ...mockSkill, projectIds: ["proj-1"] } as any,
     });
 
     render(<SkillDetailPage />);
 
-    const projectRadio = screen.getByRole("radio", { name: /project/i });
-    await user.click(projectRadio);
-    expect(projectRadio).toHaveAttribute("aria-checked", "true");
+    const scopedRadio = screen.getByRole("radio", { name: /scoped/i });
+    await user.click(scopedRadio);
+    expect(scopedRadio).toHaveAttribute("aria-checked", "true");
 
     const saveButton = screen.getByRole("button", { name: /save changes/i });
     await user.click(saveButton);
@@ -223,8 +223,8 @@ describe("SkillDetailPage", () => {
         expect.objectContaining({
           name: "ai-sdk-nextjs",
           displayName: "AI SDK Nextjs",
-          projectId: null,
-          assistantId: null,
+          projectIds: expect.any(Array),
+          assistantIds: expect.any(Array),
         }),
       );
     });

@@ -39,30 +39,30 @@ export const createSkill = defineAction(
       });
     }
 
-    if (validated.data.projectId) {
-      const [proj] = await db
-        .select()
+    if (validated.data.projectIds && validated.data.projectIds.length > 0) {
+      const owned = await db
+        .select({ id: project.id })
         .from(project)
-        .where(whereOwner(project, validated.data.projectId, session.user.id));
-      if (!proj) {
+        .where(whereOwner(project, validated.data.projectIds, session.user.id));
+      if (owned.length !== validated.data.projectIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Project not found",
+          message: "One or more projects not found",
         });
       }
     }
 
-    if (validated.data.assistantId) {
-      const [asst] = await db
-        .select()
+    if (validated.data.assistantIds && validated.data.assistantIds.length > 0) {
+      const owned = await db
+        .select({ id: assistant.id })
         .from(assistant)
         .where(
-          whereOwner(assistant, validated.data.assistantId, session.user.id),
+          whereOwner(assistant, validated.data.assistantIds, session.user.id),
         );
-      if (!asst) {
+      if (owned.length !== validated.data.assistantIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Assistant not found",
+          message: "One or more assistants not found",
         });
       }
     }

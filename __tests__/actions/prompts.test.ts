@@ -86,6 +86,8 @@ const PROMPT_ROW = {
   title: "Code Review",
   shortcut: "cr",
   content: "Please review the following code:",
+  projectIds: [] as string[],
+  assistantIds: [] as string[],
   userId: "user-1",
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
@@ -205,79 +207,88 @@ describe("createPrompt", () => {
     });
   });
 
-  it("inserts a scoped prompt with projectId when project exists", async () => {
+  it("inserts a scoped prompt with projectIds when project exists", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "proj-1" }]);
-    const scopedRow = { ...PROMPT_ROW, projectId: "proj-1" };
+    const scopedRow = { ...PROMPT_ROW, projectIds: ["proj-1"] };
     chainable.returning.mockResolvedValueOnce([scopedRow]);
     const result = await createPrompt({
       title: "Project Prompt",
       shortcut: "pp",
       content: "Content",
-      projectId: "proj-1",
+      projectIds: ["proj-1"],
     });
     expect(result).toEqual({ ok: true, value: scopedRow });
     expect(chainable.insert).toHaveBeenCalledOnce();
   });
 
-  it("returns NOT_FOUND when projectId does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when projectIds do not exist or are not owned", async () => {
     chainable.where.mockResolvedValueOnce([]);
     const result = await createPrompt({
       title: "Project Prompt",
       shortcut: "pp",
       content: "Content",
-      projectId: "proj-1",
+      projectIds: ["proj-1"],
     });
     expect(result).toEqual({
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "Project not found",
+        message: "One or more projects not found",
       }),
     });
   });
 
-  it("inserts a scoped prompt with assistantId when assistant exists", async () => {
+  it("inserts a scoped prompt with assistantIds when assistant exists", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "asst-1" }]);
-    const scopedRow = { ...PROMPT_ROW, assistantId: "asst-1" };
+    const scopedRow = { ...PROMPT_ROW, assistantIds: ["asst-1"] };
     chainable.returning.mockResolvedValueOnce([scopedRow]);
     const result = await createPrompt({
       title: "Assistant Prompt",
       shortcut: "ap",
       content: "Content",
-      assistantId: "asst-1",
+      assistantIds: ["asst-1"],
     });
     expect(result).toEqual({ ok: true, value: scopedRow });
     expect(chainable.insert).toHaveBeenCalledOnce();
   });
 
-  it("returns NOT_FOUND when assistantId does not exist or is not owned", async () => {
+  it("returns NOT_FOUND when assistantIds do not exist or are not owned", async () => {
     chainable.where.mockResolvedValueOnce([]);
     const result = await createPrompt({
       title: "Assistant Prompt",
       shortcut: "ap",
       content: "Content",
-      assistantId: "asst-1",
+      assistantIds: ["asst-1"],
     });
     expect(result).toEqual({
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "Assistant not found",
+        message: "One or more assistants not found",
       }),
     });
   });
 
-  it("returns INVALID_INPUT when both projectId and assistantId are provided", async () => {
+  it("inserts a prompt when both projectIds and assistantIds are provided", async () => {
+    chainable.where
+      .mockResolvedValueOnce([{ id: "proj-1" }])
+      .mockResolvedValueOnce([{ id: "asst-1" }]);
+    const dualRow = {
+      ...PROMPT_ROW,
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
+    };
+    chainable.returning.mockResolvedValueOnce([dualRow]);
     const res = await createPrompt({
       title: "Dual Prompt",
       shortcut: "dual",
       content: "Content",
-      projectId: "proj-1",
-      assistantId: "asst-1",
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
     });
     expect(res).toEqual({
-      ok: false,
-      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      ok: true,
+      value: dualRow,
     });
   });
 
@@ -404,46 +415,64 @@ describe("updatePrompt", () => {
     });
   });
 
-  it("updates prompt with projectId when project exists", async () => {
+  it("updates prompt with projectIds when project exists", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "proj-1" }]);
-    const updated = { ...PROMPT_ROW, projectId: "proj-1" };
+    const updated = { ...PROMPT_ROW, projectIds: ["proj-1"] };
     chainable.returning.mockResolvedValueOnce([updated]);
-    const result = await updatePrompt(VALID_UUID, { projectId: "proj-1" });
+    const result = await updatePrompt(VALID_UUID, { projectIds: ["proj-1"] });
     expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
   });
 
-  it("returns NOT_FOUND when updating with non-existent projectId", async () => {
+  it("returns NOT_FOUND when updating with non-existent projectIds", async () => {
     chainable.where.mockResolvedValueOnce([]);
-    const res = await updatePrompt(VALID_UUID, { projectId: "proj-missing" });
+    const res = await updatePrompt(VALID_UUID, { projectIds: ["proj-missing"] });
     expect(res).toEqual({
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "Project not found",
+        message: "One or more projects not found",
       }),
     });
   });
 
-  it("updates prompt with assistantId when assistant exists", async () => {
+  it("updates prompt with assistantIds when assistant exists", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "asst-1" }]);
-    const updated = { ...PROMPT_ROW, assistantId: "asst-1" };
+    const updated = { ...PROMPT_ROW, assistantIds: ["asst-1"] };
     chainable.returning.mockResolvedValueOnce([updated]);
-    const result = await updatePrompt(VALID_UUID, { assistantId: "asst-1" });
+    const result = await updatePrompt(VALID_UUID, { assistantIds: ["asst-1"] });
     expect(result).toEqual({ ok: true, value: updated });
     expect(chainable.update).toHaveBeenCalledOnce();
   });
 
-  it("returns NOT_FOUND when updating with non-existent assistantId", async () => {
+  it("returns NOT_FOUND when updating with non-existent assistantIds", async () => {
     chainable.where.mockResolvedValueOnce([]);
-    const res = await updatePrompt(VALID_UUID, { assistantId: "asst-missing" });
+    const res = await updatePrompt(VALID_UUID, { assistantIds: ["asst-missing"] });
     expect(res).toEqual({
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "Assistant not found",
+        message: "One or more assistants not found",
       }),
     });
+  });
+
+  it("updates prompt with both projectIds and assistantIds together", async () => {
+    chainable.where
+      .mockResolvedValueOnce([{ id: "proj-1" }])
+      .mockResolvedValueOnce([{ id: "asst-1" }]);
+    const updated = {
+      ...PROMPT_ROW,
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
+    };
+    chainable.returning.mockResolvedValueOnce([updated]);
+    const result = await updatePrompt(VALID_UUID, {
+      projectIds: ["proj-1"],
+      assistantIds: ["asst-1"],
+    });
+    expect(result).toEqual({ ok: true, value: updated });
+    expect(chainable.update).toHaveBeenCalledOnce();
   });
 
   it("returns UNAUTHORIZED when unauthenticated", async () => {

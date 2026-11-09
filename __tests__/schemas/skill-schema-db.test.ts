@@ -20,8 +20,8 @@ describe("Database Skill Config Columns", () => {
     expect(transformAgent.skillIds).toBeDefined();
   });
 
-  it("should have projectId and assistantId on skill schema", () => {
-    expect(skill.projectId).toBeDefined();
-    expect(skill.assistantId).toBeDefined();
+  it("should have projectIds and assistantIds on skill schema", () => {
+    expect(skill.projectIds).toBeDefined();
+    expect(skill.assistantIds).toBeDefined();
   });
 });

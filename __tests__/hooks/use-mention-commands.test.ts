@@ -1256,6 +1256,8 @@ describe("useMentionCommands", () => {
         title: "Global Prompt",
         shortcut: "global",
         content: "Global content",
+        projectIds: [],
+        assistantIds: [],
         updatedAt: new Date(),
       },
       {
@@ -1263,7 +1265,8 @@ describe("useMentionCommands", () => {
         title: "Project Prompt",
         shortcut: "proj",
         content: "Project content",
-        projectId: "proj-1",
+        projectIds: ["proj-1"],
+        assistantIds: [],
         updatedAt: new Date(),
       },
       {
@@ -1271,7 +1274,8 @@ describe("useMentionCommands", () => {
         title: "Assistant Prompt",
         shortcut: "asst",
         content: "Assistant content",
-        assistantId: "asst-1",
+        projectIds: [],
+        assistantIds: ["asst-1"],
         updatedAt: new Date(),
       },
     ];
@@ -1348,8 +1352,8 @@ describe("useMentionCommands", () => {
         displayName: "Global Skill",
         description: "Global description",
         enabled: true,
-        projectId: null,
-        assistantId: null,
+        projectIds: [],
+        assistantIds: [],
       },
       {
         id: "proj-sk-1",
@@ -1357,8 +1361,8 @@ describe("useMentionCommands", () => {
         displayName: "Project Skill",
         description: "Project 1 description",
         enabled: true,
-        projectId: "proj-1",
-        assistantId: null,
+        projectIds: ["proj-1"],
+        assistantIds: [],
       },
       {
         id: "asst-sk-1",
@@ -1366,8 +1370,8 @@ describe("useMentionCommands", () => {
         displayName: "Assistant Skill",
         description: "Assistant 1 description",
         enabled: true,
-        projectId: null,
-        assistantId: "asst-1",
+        projectIds: [],
+        assistantIds: ["asst-1"],
       },
     ];
 

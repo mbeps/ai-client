@@ -51,10 +51,26 @@ export function filterAccessibleSkills(
 
   const enabledSkills = skills.filter((s) => s.enabled);
 
-  if (projectId) {
+  if (projectId || assistantId) {
     return enabledSkills.filter((s) => {
-      if (s.projectId === projectId) return true;
-      if (s.projectId || s.assistantId) return false;
+      const isProjectScoped = Boolean(
+        projectId && s.projectIds?.includes(projectId),
+      );
+      const isAssistantScoped = Boolean(
+        assistantId && s.assistantIds?.includes(assistantId),
+      );
+      if (isProjectScoped || isAssistantScoped) {
+        return true;
+      }
+
+      const isGlobal =
+        (!s.projectIds || s.projectIds.length === 0) &&
+        (!s.assistantIds || s.assistantIds.length === 0);
+
+      if (!isGlobal) {
+        return false;
+      }
+
       if (skillMode === "specific") {
         return skillIds.includes(s.id) || skillIds.includes(s.name);
       }
@@ -62,16 +78,9 @@ export function filterAccessibleSkills(
     });
   }
 
-  if (assistantId) {
-    return enabledSkills.filter((s) => {
-      if (s.assistantId === assistantId) return true;
-      if (s.projectId || s.assistantId) return false;
-      if (skillMode === "specific") {
-        return skillIds.includes(s.id) || skillIds.includes(s.name);
-      }
-      return true;
-    });
-  }
-
-  return enabledSkills.filter((s) => !s.projectId && !s.assistantId);
+  return enabledSkills.filter(
+    (s) =>
+      (!s.projectIds || s.projectIds.length === 0) &&
+      (!s.assistantIds || s.assistantIds.length === 0),
+  );
 }

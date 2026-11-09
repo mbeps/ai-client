@@ -51,10 +51,10 @@ describe("SkillScopeSelector", () => {
   it("renders with global scope active by default", () => {
     render(
       <SkillScopeSelector
-        scope="global"
-        onScopeChange={vi.fn()}
-        onProjectIdChange={vi.fn()}
-        onAssistantIdChange={vi.fn()}
+        projectIds={[]}
+        assistantIds={[]}
+        onProjectIdsChange={vi.fn()}
+        onAssistantIdsChange={vi.fn()}
       />,
     );
 
@@ -62,79 +62,51 @@ describe("SkillScopeSelector", () => {
     expect(globalRadio).toBeInTheDocument();
     expect(globalRadio).toHaveAttribute("aria-checked", "true");
     expect(
-      screen.getByText("Where this agent skill can be invoked."),
+      screen.getByText("Control where this resource can be invoked."),
     ).toBeInTheDocument();
   });
 
-  it("calls onScopeChange when clicking project or assistant card", async () => {
+  it("calls onProjectIdsChange and onAssistantIdsChange when cleared", async () => {
     const user = userEvent.setup();
-    const onScopeChange = vi.fn();
-    const onProjectIdChange = vi.fn();
-    const onAssistantIdChange = vi.fn();
+    const onProjectIdsChange = vi.fn();
+    const onAssistantIdsChange = vi.fn();
 
     render(
       <SkillScopeSelector
-        scope="global"
-        onScopeChange={onScopeChange}
-        onProjectIdChange={onProjectIdChange}
-        onAssistantIdChange={onAssistantIdChange}
-      />,
-    );
-
-    const projectRadio = screen.getByRole("radio", { name: /project/i });
-    await user.click(projectRadio);
-    expect(onScopeChange).toHaveBeenCalledWith("project");
-
-    const assistantRadio = screen.getByRole("radio", { name: /assistant/i });
-    await user.click(assistantRadio);
-    expect(onScopeChange).toHaveBeenCalledWith("assistant");
-  });
-
-  it("clears projectId and assistantId when switching to global scope", async () => {
-    const user = userEvent.setup();
-    const onScopeChange = vi.fn();
-    const onProjectIdChange = vi.fn();
-    const onAssistantIdChange = vi.fn();
-
-    render(
-      <SkillScopeSelector
-        scope="project"
-        projectId="proj-1"
-        onScopeChange={onScopeChange}
-        onProjectIdChange={onProjectIdChange}
-        onAssistantIdChange={onAssistantIdChange}
+        projectIds={["proj-1"]}
+        assistantIds={["asst-1"]}
+        onProjectIdsChange={onProjectIdsChange}
+        onAssistantIdsChange={onAssistantIdsChange}
       />,
     );
 
     const globalRadio = screen.getByRole("radio", { name: /global/i });
     await user.click(globalRadio);
-    expect(onScopeChange).toHaveBeenCalledWith("global");
-    expect(onProjectIdChange).toHaveBeenCalledWith(null);
-    expect(onAssistantIdChange).toHaveBeenCalledWith(null);
+
+    expect(onProjectIdsChange).toHaveBeenCalledWith([]);
+    expect(onAssistantIdsChange).toHaveBeenCalledWith([]);
   });
 
-  it("renders project dropdown when project scope is active", () => {
+  it("renders selected project badge when projectIds is populated", () => {
     render(
       <SkillScopeSelector
-        scope="project"
-        projectId="proj-1"
-        onScopeChange={vi.fn()}
-        onProjectIdChange={vi.fn()}
-        onAssistantIdChange={vi.fn()}
+        projectIds={["proj-1"]}
+        assistantIds={[]}
+        onProjectIdsChange={vi.fn()}
+        onAssistantIdsChange={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Alpha Project")).toBeInTheDocument();
   });
 
-  it("renders assistant dropdown when assistant scope is active", () => {
+  it("renders selected assistant badge when assistantIds is populated", () => {
     render(
       <SkillScopeSelector
-        scope="assistant"
-        assistantId="asst-1"
-        onScopeChange={vi.fn()}
-        onProjectIdChange={vi.fn()}
-        onAssistantIdChange={vi.fn()}
+        projectIds={[]}
+        assistantIds={["asst-1"]}
+        onProjectIdsChange={vi.fn()}
+        onAssistantIdsChange={vi.fn()}
       />,
     );
 

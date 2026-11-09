@@ -48,27 +48,22 @@ const baseSkillFields = {
   content: z.string().min(1, "Instructions content (SKILL.md) is required"),
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
-  projectId: z.string().nullable().optional(),
-  assistantId: z.string().nullable().optional(),
+  projectIds: z.array(z.string()).default([]),
+  assistantIds: z.array(z.string()).default([]),
 };
 
 /**
  * Validates new Agent Skill creation.
  * Follows Open Agent Skills specification requirements.
- * Optional projectId or assistantId scopes the skill to a specific entity; mutual exclusion enforced.
+ * projectIds and assistantIds arrays scope the skill to specific projects and/or assistants.
  *
  * @author Maruf Bepary
  */
-export const createSkillSchema = z
-  .object(baseSkillFields)
-  .refine((data) => !(data.projectId && data.assistantId), {
-    message: "A skill cannot be scoped to both a project and an assistant",
-    path: ["assistantId"],
-  });
+export const createSkillSchema = z.object(baseSkillFields);
 
 /**
  * Validates partial skill updates.
- * Optional projectId or assistantId scopes the skill to a specific entity; mutual exclusion enforced.
+ * projectIds and assistantIds arrays scope the skill to specific projects and/or assistants.
  *
  * @author Maruf Bepary
  */
@@ -79,10 +74,6 @@ export const updateSkillSchema = z
   .extend({
     files: z.array(skillFileSchema).optional(),
     enabled: z.boolean().optional(),
-  })
-  .refine((data) => !(data.projectId && data.assistantId), {
-    message: "A skill cannot be scoped to both a project and an assistant",
-    path: ["assistantId"],
   });
 
 /**
@@ -99,8 +90,8 @@ export const skillSchema = z.object({
   content: z.string().min(1),
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
-  projectId: z.string().nullable().optional(),
-  assistantId: z.string().nullable().optional(),
+  projectIds: z.array(z.string()).default([]),
+  assistantIds: z.array(z.string()).default([]),
   createdAt: dateField,
   updatedAt: dateField,
 });

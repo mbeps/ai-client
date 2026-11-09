@@ -53,30 +53,30 @@ export const updatePrompt = defineAction(
     }
     const validatedData = dataParsed.data;
 
-    if (validatedData.projectId) {
-      const [proj] = await db
-        .select()
+    if (validatedData.projectIds && validatedData.projectIds.length > 0) {
+      const owned = await db
+        .select({ id: project.id })
         .from(project)
-        .where(whereOwner(project, validatedData.projectId, session.user.id));
-      if (!proj) {
+        .where(whereOwner(project, validatedData.projectIds, session.user.id));
+      if (owned.length !== validatedData.projectIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Project not found",
+          message: "One or more projects not found",
         });
       }
     }
 
-    if (validatedData.assistantId) {
-      const [asst] = await db
-        .select()
+    if (validatedData.assistantIds && validatedData.assistantIds.length > 0) {
+      const owned = await db
+        .select({ id: assistant.id })
         .from(assistant)
         .where(
-          whereOwner(assistant, validatedData.assistantId, session.user.id),
+          whereOwner(assistant, validatedData.assistantIds, session.user.id),
         );
-      if (!asst) {
+      if (owned.length !== validatedData.assistantIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "Assistant not found",
+          message: "One or more assistants not found",
         });
       }
     }
@@ -90,10 +90,10 @@ export const updatePrompt = defineAction(
       updateValues.shortcut = validatedData.shortcut;
     if (validatedData.content !== undefined)
       updateValues.content = validatedData.content;
-    if (validatedData.projectId !== undefined)
-      updateValues.projectId = validatedData.projectId;
-    if (validatedData.assistantId !== undefined)
-      updateValues.assistantId = validatedData.assistantId;
+    if (validatedData.projectIds !== undefined)
+      updateValues.projectIds = validatedData.projectIds;
+    if (validatedData.assistantIds !== undefined)
+      updateValues.assistantIds = validatedData.assistantIds;
 
     const [row] = await db
       .update(prompt)

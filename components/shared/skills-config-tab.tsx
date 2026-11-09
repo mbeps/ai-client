@@ -97,13 +97,24 @@ export function SkillsConfigTab({
   className,
 }: SkillsConfigTabProps) {
   const entitySkills = useMemo(() => {
-    if (projectId) return skills.filter((s) => s.projectId === projectId);
-    if (assistantId) return skills.filter((s) => s.assistantId === assistantId);
-    return [];
+    return skills.filter((s) => {
+      const matchProject = Boolean(
+        projectId && s.projectIds?.includes(projectId),
+      );
+      const matchAssistant = Boolean(
+        assistantId && s.assistantIds?.includes(assistantId),
+      );
+      return matchProject || matchAssistant;
+    });
   }, [skills, projectId, assistantId]);
 
   const globalSkills = useMemo(
-    () => skills.filter((s) => !s.projectId && !s.assistantId),
+    () =>
+      skills.filter(
+        (s) =>
+          (!s.projectIds || s.projectIds.length === 0) &&
+          (!s.assistantIds || s.assistantIds.length === 0),
+      ),
     [skills],
   );
 

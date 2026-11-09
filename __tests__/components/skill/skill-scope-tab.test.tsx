@@ -6,12 +6,10 @@ import { useAppStore } from "@/lib/store/use-app-store";
 
 describe("SkillScopeTab", () => {
   const defaultProps = {
-    scope: "global" as const,
-    onScopeChange: vi.fn(),
-    projectId: null,
-    onProjectIdChange: vi.fn(),
-    assistantId: null,
-    onAssistantIdChange: vi.fn(),
+    projectIds: [],
+    onProjectIdsChange: vi.fn(),
+    assistantIds: [],
+    onAssistantIdsChange: vi.fn(),
     onSave: vi.fn(),
     isSaving: false,
   };
@@ -26,10 +24,7 @@ describe("SkillScopeTab", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /global/i })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /project/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: /assistant/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /scoped/i })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /save changes/i }),
     ).toBeInTheDocument();
@@ -47,15 +42,14 @@ describe("SkillScopeTab", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onScopeChange when scope radio is clicked", async () => {
+  it("switches to scoped mode when scoped radio is clicked", async () => {
     const user = userEvent.setup();
-    const onScopeChange = vi.fn();
 
-    render(<SkillScopeTab {...defaultProps} onScopeChange={onScopeChange} />);
+    render(<SkillScopeTab {...defaultProps} />);
 
-    const projectRadio = screen.getByRole("radio", { name: /project/i });
-    await user.click(projectRadio);
+    const scopedRadio = screen.getByRole("radio", { name: /scoped/i });
+    await user.click(scopedRadio);
 
-    expect(onScopeChange).toHaveBeenCalledWith("project");
+    expect(scopedRadio).toHaveAttribute("aria-checked", "true");
   });
 });

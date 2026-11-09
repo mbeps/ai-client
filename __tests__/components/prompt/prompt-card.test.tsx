@@ -41,8 +41,8 @@ describe("PromptCard", () => {
     title: "Global Prompt",
     shortcut: "glob",
     content: "Global prompt content",
-    projectId: null,
-    assistantId: null,
+    projectIds: [],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -61,7 +61,8 @@ describe("PromptCard", () => {
       id: "p2",
       title: "Project Prompt",
       shortcut: "/proj",
-      projectId: "proj-1",
+      projectIds: ["proj-1"],
+      assistantIds: [],
     };
 
     render(<PromptCard prompt={projectPrompt} />);
@@ -76,13 +77,29 @@ describe("PromptCard", () => {
       ...basePrompt,
       id: "p3",
       title: "Assistant Prompt",
-      assistantId: "asst-1",
+      projectIds: [],
+      assistantIds: ["asst-1"],
     };
 
     render(<PromptCard prompt={assistantPrompt} />);
 
     expect(screen.getByText("Assistant Prompt")).toBeInTheDocument();
     expect(screen.getByText("Assistant: Beta Assistant")).toBeInTheDocument();
+  });
+
+  it("renders multiple project and assistant badges when scoped to both", () => {
+    const multiPrompt: Prompt = {
+      ...basePrompt,
+      id: "p4",
+      title: "Multi Prompt",
+      projectIds: ["proj-1", "proj-2"],
+      assistantIds: ["asst-1", "asst-2"],
+    };
+
+    render(<PromptCard prompt={multiPrompt} />);
+
+    expect(screen.getByText("Multi Prompt")).toBeInTheDocument();
+    expect(screen.getByText("2 Proj, 2 Asst")).toBeInTheDocument();
   });
 
   it("opens delete dialog and deletes prompt", async () => {
