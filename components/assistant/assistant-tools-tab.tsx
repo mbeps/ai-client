@@ -21,6 +21,7 @@ export interface AssistantToolsTabProps {
   ) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
 }
 
 /**
@@ -35,6 +36,7 @@ export function AssistantToolsTab({
   onBulkSelect,
   onSave,
   isSaving = false,
+  saveLabel = "Save Tools",
 }: AssistantToolsTabProps) {
   return (
     <div className="space-y-6">
@@ -61,7 +63,7 @@ export function AssistantToolsTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Tools
+          {saveLabel}
         </Button>
       </div>
     </div>

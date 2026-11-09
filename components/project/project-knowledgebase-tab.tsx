@@ -16,6 +16,7 @@ export interface ProjectKnowledgebaseTabProps {
   onSelectKbId: (id: string | null) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
 }
 
 /**
@@ -29,6 +30,7 @@ export function ProjectKnowledgebaseTab({
   onSelectKbId,
   onSave,
   isSaving = false,
+  saveLabel = "Save Knowledge Base",
 }: ProjectKnowledgebaseTabProps) {
   return (
     <div className="space-y-6">
@@ -57,7 +59,7 @@ export function ProjectKnowledgebaseTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Knowledge Base
+          {saveLabel}
         </Button>
       </div>
     </div>

@@ -17,6 +17,7 @@ export interface AssistantSettingsTabProps {
   onDescriptionChange: (value: string) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
 }
 
 /**
@@ -31,6 +32,7 @@ export function AssistantSettingsTab({
   onDescriptionChange,
   onSave,
   isSaving = false,
+  saveLabel = "Save Details",
 }: AssistantSettingsTabProps) {
   return (
     <div className="space-y-6">
@@ -64,7 +66,7 @@ export function AssistantSettingsTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Details
+          {saveLabel}
         </Button>
       </div>
     </div>

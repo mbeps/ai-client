@@ -34,6 +34,7 @@ export interface SkillsConfigTabProps {
   skills: Skill[];
   onSave?: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
   title?: string;
   description?: string;
   className?: string;
@@ -92,6 +93,7 @@ export function SkillsConfigTab({
   skills,
   onSave,
   isSaving = false,
+  saveLabel = "Save Skills",
   title = "Skills Configuration",
   description = "Configure how agent skills and domain instructions are used.",
   className,
@@ -247,7 +249,7 @@ export function SkillsConfigTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Skills
+          {saveLabel}
         </Button>
       )}
     </div>

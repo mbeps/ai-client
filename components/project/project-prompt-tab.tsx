@@ -35,6 +35,7 @@ export interface ProjectPromptTabProps {
   onSelectPromptIds?: (ids: Set<string>) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
+  saveLabel?: string;
 }
 
 interface ModeOption {
@@ -84,6 +85,7 @@ export function ProjectPromptTab({
   onSelectPromptIds,
   onSave,
   isSaving = false,
+  saveLabel = "Save Changes",
 }: ProjectPromptTabProps) {
   const prompts = useAppStore((state) => state.prompts);
 
@@ -258,7 +260,7 @@ export function ProjectPromptTab({
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Changes
+          {saveLabel}
         </Button>
       </div>
     </div>

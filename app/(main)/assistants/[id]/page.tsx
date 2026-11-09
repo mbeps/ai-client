@@ -430,6 +430,11 @@ function AssistantPageTabs(props: AssistantPageTabsProps) {
 export default function AssistantPage() {
   const params = useParams();
   const assistantId = params.id as string;
+
+  if (assistantId === "new") {
+    notFound();
+  }
+
   const { assistant, mcpServers, skills, isLoading } =
     useAssistantPageResources(assistantId);
 

@@ -26,8 +26,16 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.PROJECTS.path).toBe("/projects");
   });
 
+  it("PROJECTS.new path", () => {
+    expect(ROUTES.PROJECTS.new).toBe("/projects/new");
+  });
+
   it("ASSISTANTS path", () => {
     expect(ROUTES.ASSISTANTS.path).toBe("/assistants");
+  });
+
+  it("ASSISTANTS.new path", () => {
+    expect(ROUTES.ASSISTANTS.new).toBe("/assistants/new");
   });
 
   it("KNOWLEDGEBASES path", () => {
