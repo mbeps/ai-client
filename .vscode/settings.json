@@ -1,4 +1,7 @@
 {
+  "files.watcherExclude": {
+    "**/__tests__/**": true
+  },
   "editor.defaultFormatter": "biomejs.biome",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {

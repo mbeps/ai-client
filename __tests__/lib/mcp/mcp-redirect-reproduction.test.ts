@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 const isBlockedUrlMock = vi.hoisted(() => vi.fn().mockResolvedValue(false));
-vi.mock("@/lib/mcp/url-guard/is-blocked-url", () => ({
+vi.mock("../../../lib/mcp/url-guard/is-blocked-url", () => ({
   isBlockedUrl: isBlockedUrlMock,
 }));
 
-import { buildTransport } from "@/lib/mcp/build-transport";
-import { McpOAuthProvider } from "@/lib/mcp/oauth/mcp-oauth-provider";
-import { safeMcpFetch } from "@/lib/mcp/safe-mcp-fetch";
+import { buildTransport } from "../../../lib/mcp/build-transport";
+import { McpOAuthProvider } from "../../../lib/mcp/oauth/mcp-oauth-provider";
+import { safeMcpFetch } from "../../../lib/mcp/safe-mcp-fetch";
 import { auth, createMCPClient } from "@ai-sdk/mcp";
 
 describe("MCP redirect bug reproduction", () => {
@@ -163,7 +163,6 @@ describe("MCP redirect bug reproduction", () => {
           url: "https://hf.co/mcp",
           authType: "oauth",
           oauthClientId: "hf-client-id",
-          oauthClientSecret: "hf-client-secret",
         },
         userId: "user-1",
         db: mockDb,

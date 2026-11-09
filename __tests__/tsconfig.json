@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "noCheck": true
+  },
+  "include": ["**/*"]
+}

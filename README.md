@@ -86,7 +86,6 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **Defence-in-Depth Security** — AES encryption at rest for API keys and headers, API route rate limiting, strict resource ownership verification, and edge Content Security Policy (CSP) headers via `proxy.ts`.
 - **Type-Safe Persistence & Error Contracts** — PostgreSQL 17 with Drizzle ORM, S3 orphaned attachment sweeping, LogTape structured logging, and a compile-time `Result<T, E>` error-handling pattern enforced via Biome GritQL rules.
 
-
 # Requirements
 
 - Node.js 24 or higher
