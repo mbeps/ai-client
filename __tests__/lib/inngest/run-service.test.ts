@@ -88,7 +88,7 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       expect(capturedUrl).toContain("http://127.0.0.1:8288/v2/runs");
       expect(capturedUrl).toContain("query=event.data.userId+%3D%3D+%22user-123%22");
       expect(capturedUrl).toContain("limit=20");
-      expect(capturedUrl).toContain("include=output");
+      expect(capturedUrl).not.toContain("include=output");
       expect(capturedHeaders?.Authorization).toBeUndefined();
 
       expect(result.jobs).toHaveLength(1);
@@ -420,7 +420,7 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       expect(result.error).toBe("network aborted");
     });
 
-    it("returns error string when Inngest responds with non-ok HTTP status", async () => {
+    it("returns error string when Inngest responds with non-ok HTTP status and flags offline: true", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
@@ -430,6 +430,7 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       const result = await fetchUserInngestRuns("user-123");
 
       expect(result.jobs).toEqual([]);
+      expect(result.offline).toBe(true);
       expect(result.error).toBe("Inngest API request failed with HTTP 404");
     });
 
@@ -460,6 +461,22 @@ describe("Inngest Run Service (Unified REST v2)", () => {
 
       expect(capturedUrl).toContain("http://my-inngest:8288/v2/runs");
       expect(capturedUrl).not.toContain("///v2");
+    });
+
+    it("strips trailing /api/inngest on INNGEST_BASE_URL cleanly", async () => {
+      mockEnv.INNGEST_BASE_URL = "http://127.0.0.1:3000/api/inngest/";
+      let capturedUrl = "";
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        capturedUrl = url.toString();
+        return { ok: true, status: 200, json: async () => ({ data: [] }) };
+      });
+
+      const { fetchUserInngestRuns } = await import("@/lib/inngest/run-service");
+      await fetchUserInngestRuns("user-123");
+
+      expect(capturedUrl).toContain("http://127.0.0.1:3000/v2/runs");
+      expect(capturedUrl).not.toContain("/api/inngest");
     });
   });
 

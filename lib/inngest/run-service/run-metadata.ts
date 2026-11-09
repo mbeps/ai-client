@@ -47,16 +47,20 @@ export function resolveInngestEventKey(): string | undefined {
 
 /**
  * Resolves the Inngest API base URL for REST v2 queries.
- * Trims trailing slashes to guarantee clean endpoint concatenation.
+ * Trims trailing slashes and removes accidental serve endpoint paths (/api/inngest).
  *
- * @returns Base URL without trailing slash
+ * @returns Base URL without trailing slash or serve endpoint suffix
  * @author Maruf Bepary
  */
 export function resolveInngestApiBaseUrl(): string {
   const base =
     env.INNGEST_BASE_URL ||
     (isDevMode() ? "http://127.0.0.1:8288" : "https://api.inngest.com");
-  return base.replace(/\/+$/, "");
+  return base
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/api\/inngest$/, "")
+    .replace(/\/+$/, "");
 }
 
 /**

@@ -18,7 +18,7 @@ export function useJobsPolling(
 
   // Initial fetch on mount
   useEffect(() => {
-    loadJobs(true);
+    loadJobs(false);
   }, [loadJobs]);
 
   // Tab visibility listener: pause polling when tab is hidden, refresh immediately when visible
