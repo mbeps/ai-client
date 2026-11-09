@@ -100,6 +100,7 @@ export function ChatUI({
     initialModelId,
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialReasoningEffort,
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
@@ -264,6 +265,7 @@ export function ChatUI({
               initialModelId={initialModelId}
               initialSubagentsEnabled={initialSubagentsEnabled}
               initialSubagentModelId={initialSubagentModelId}
+              initialReasoningEffort={initialReasoningEffort}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
               projectId={chat?.projectId}

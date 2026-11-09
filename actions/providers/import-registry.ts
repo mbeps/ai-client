@@ -174,6 +174,11 @@ export const importProviderRegistry = defineAction(
               capVision: incomingModel.capabilities.vision,
               capReasoning: incomingModel.capabilities.reasoning,
               capStructuredOutput: incomingModel.capabilities.structuredOutput,
+              reasoningEffortFormat:
+                incomingModel.reasoningEffortFormat ?? "none",
+              modelOptions: incomingModel.modelOptions
+                ? JSON.stringify(incomingModel.modelOptions)
+                : null,
               isManuallyAdded: incomingModel.isManuallyAdded,
               isEnabled: incomingModel.isEnabled ?? true,
             });

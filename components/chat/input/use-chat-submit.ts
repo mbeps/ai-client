@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { resolvePromptPayload } from "@/components/chat/input/resolve-prompt-payload";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -21,6 +22,7 @@ export interface UseChatSubmitOptions {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
   ) => void;
   isLoading?: boolean;
   isSendDisabled: boolean;
@@ -41,6 +43,7 @@ export interface UseChatSubmitOptions {
   selectedSkills: Set<string>;
   subagentsEnabled: boolean;
   subagentModelId?: string;
+  reasoningEffort?: ReasoningEffort;
   handleCommandKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
@@ -73,6 +76,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
+    reasoningEffort,
     handleCommandKeyDown,
   } = options;
 
@@ -97,6 +101,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
       Array.from(selectedSkills),
       subagentsEnabled,
       subagentModelId,
+      reasoningEffort,
     );
     setInput("");
     clearAttachments();
@@ -119,6 +124,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     selectedSkills,
     subagentsEnabled,
     subagentModelId,
+    reasoningEffort,
     setInput,
     clearAttachments,
     handleClearPrompts,

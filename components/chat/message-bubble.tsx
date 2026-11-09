@@ -20,6 +20,7 @@ import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -78,6 +79,7 @@ interface MessageBubbleProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -207,6 +209,7 @@ export function MessageBubble(props: MessageBubbleProps) {
       selectedSkillIds?: string[],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
+      reasoningEffort?: ReasoningEffort,
     ) => {
       onEdit(
         message.id,
@@ -221,6 +224,7 @@ export function MessageBubble(props: MessageBubbleProps) {
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
+        reasoningEffort,
       );
       handleCancel();
     },
@@ -296,6 +300,8 @@ export function MessageBubble(props: MessageBubbleProps) {
                         viewData.parsedMetadata.subagentsEnabled,
                       initialSubagentModelId:
                         viewData.parsedMetadata.subagentModelId,
+                      initialReasoningEffort:
+                        viewData.parsedMetadata.reasoningEffort,
                       servers,
                       thread,
                       activeChatAssistantId: assistantId,

@@ -22,6 +22,7 @@ import {
 import { executeStopStream } from "@/hooks/chat/stream/use-stream-stop";
 import { useStreamWatchdog } from "@/hooks/chat/stream/use-stream-watchdog";
 import { useApiError } from "@/hooks/use-api-error";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -214,6 +215,7 @@ export function useStreamResponse(
       selectedSkillIds: string[] = [],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
+      reasoningEffort?: ReasoningEffort,
     ): Promise<string> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
@@ -236,6 +238,7 @@ export function useStreamResponse(
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
+        reasoningEffort,
         addMessage,
         updateMessageAttachments,
         handleApiError,

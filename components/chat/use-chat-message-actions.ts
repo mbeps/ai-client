@@ -3,6 +3,7 @@ import type { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { extractCitations } from "@/lib/chat/extract-citations";
 import { resolveRegeneratePayload } from "@/lib/chat/extract-regenerate-payload";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
 
@@ -104,6 +105,7 @@ export function useChatMessageActions({
       selectedSkillIds: string[] = [],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
+      reasoningEffort?: ReasoningEffort,
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -119,6 +121,7 @@ export function useChatMessageActions({
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
+        reasoningEffort,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -138,6 +141,7 @@ export function useChatMessageActions({
       selectedSkillIds?: string[],
       subagentsEnabled?: boolean,
       subagentModelId?: string,
+      reasoningEffort?: ReasoningEffort,
     ) => {
       const msg = chat?.messages[id];
       if (!msg) return;
@@ -155,6 +159,7 @@ export function useChatMessageActions({
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
+        reasoningEffort,
       );
     },
     [chat, streamResponse],
@@ -180,6 +185,7 @@ export function useChatMessageActions({
         payload.selectedSkillIds,
         payload.subagentsEnabled,
         payload.subagentModelId,
+        payload.reasoningEffort,
       );
     },
     [chat, streamResponse],

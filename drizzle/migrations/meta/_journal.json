@@ -372,6 +372,20 @@
       "when": 1794067598187,
       "tag": "0052_safe_morph",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794171200000,
+      "tag": "0053_multi_scope_prompts_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794231599314,
+      "tag": "0054_ai_model_reasoning_effort",
+      "breakpoints": true
     }
   ]
 }

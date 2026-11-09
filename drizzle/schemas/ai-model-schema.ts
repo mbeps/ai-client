@@ -40,6 +40,10 @@ export const aiModel = pgTable(
     capStructuredOutput: boolean("cap_structured_output")
       .notNull()
       .default(false),
+    reasoningEffortFormat: text("reasoning_effort_format")
+      .notNull()
+      .default("none"),
+    modelOptions: text("model_options"),
     isManuallyAdded: boolean("is_manually_added").notNull().default(false),
     isEnabled: boolean("is_enabled").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -52,6 +56,10 @@ export const aiModel = pgTable(
     check(
       "ai_model_model_type_check",
       sql`${table.modelType} in ('chat', 'embedding', 'both')`,
+    ),
+    check(
+      "ai_model_reasoning_effort_format_check",
+      sql`${table.reasoningEffortFormat} in ('none', 'openai', 'openrouter', 'anthropic')`,
     ),
     index("ai_model_provider_id_idx").on(table.providerId),
     index("ai_model_user_id_idx").on(table.userId),

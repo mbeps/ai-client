@@ -182,4 +182,45 @@ describe("exportProviderRegistry", () => {
     expect(result.providers[0].models[2].modelType).toBe("chat");
     expect(result.providers[0].models[3].modelType).toBe("chat");
   });
+
+  it("handles modelOptions with valid JSON and catches malformed JSON", async () => {
+    const modelsWithOpts = [
+      {
+        ...MODEL_ROW,
+        id: "m-opts-1",
+        reasoningEffortFormat: "anthropic",
+        modelOptions: JSON.stringify({ temperature: 0.7 }),
+      },
+      {
+        ...MODEL_ROW,
+        id: "m-opts-2",
+        reasoningEffortFormat: null,
+        modelOptions: "invalid-json{",
+      },
+      {
+        ...MODEL_ROW,
+        id: "m-opts-3",
+        reasoningEffortFormat: "openai",
+        modelOptions: null,
+      },
+    ];
+
+    chainable.where
+      .mockResolvedValueOnce([PROVIDER_ROW])
+      .mockResolvedValueOnce(modelsWithOpts);
+
+    const res = await exportProviderRegistry();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+
+    const exportedModels = res.value.providers[0].models;
+    expect(exportedModels[0].reasoningEffortFormat).toBe("anthropic");
+    expect(exportedModels[0].modelOptions).toEqual({ temperature: 0.7 });
+
+    expect(exportedModels[1].reasoningEffortFormat).toBe("none");
+    expect(exportedModels[1].modelOptions).toBeNull();
+
+    expect(exportedModels[2].reasoningEffortFormat).toBe("openai");
+    expect(exportedModels[2].modelOptions).toBeNull();
+  });
 });

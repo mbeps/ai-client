@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
@@ -26,6 +27,7 @@ export interface BuildMetadataOptions {
   selectedSkillIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**
@@ -68,6 +70,7 @@ export interface StreamRequestOptions {
   selectedKbIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**
@@ -144,6 +147,7 @@ export interface StreamResponseExecutionParams {
   selectedSkillIds: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  reasoningEffort?: ReasoningEffort;
   addMessage: (chatId: string, message: any) => void;
   updateMessageAttachments: (
     chatId: string,

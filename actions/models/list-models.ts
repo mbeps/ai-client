@@ -65,6 +65,8 @@ export const listModels = defineAction(
         capVision: aiModel.capVision,
         capReasoning: aiModel.capReasoning,
         capStructuredOutput: aiModel.capStructuredOutput,
+        reasoningEffortFormat: aiModel.reasoningEffortFormat,
+        modelOptions: aiModel.modelOptions,
         isManuallyAdded: aiModel.isManuallyAdded,
         isEnabled: aiModel.isEnabled,
         createdAt: aiModel.createdAt,

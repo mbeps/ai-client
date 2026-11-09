@@ -39,9 +39,18 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import { cn } from "@/lib/utils";
+import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -126,6 +135,8 @@ type ModelFormInitialState = {
   capVision: boolean;
   capReasoning: boolean;
   capStructuredOutput: boolean;
+  reasoningEffortFormat: ReasoningEffortFormat;
+  modelOptions: string;
   isEnabled: boolean;
 };
 
@@ -154,6 +165,8 @@ function buildInitialModelFormState(
       capVision: false,
       capReasoning: false,
       capStructuredOutput: false,
+      reasoningEffortFormat: "none",
+      modelOptions: "",
       isEnabled: true,
     };
   }
@@ -171,6 +184,9 @@ function buildInitialModelFormState(
     capVision: Boolean(model.capVision),
     capReasoning: Boolean(model.capReasoning),
     capStructuredOutput: Boolean(model.capStructuredOutput),
+    reasoningEffortFormat:
+      (model.reasoningEffortFormat as ReasoningEffortFormat) ?? "none",
+    modelOptions: model.modelOptions ?? "",
     isEnabled: Boolean(model.isEnabled),
   };
 }
@@ -272,6 +288,8 @@ type ModelSavePayload = {
   capVision: boolean;
   capReasoning: boolean;
   capStructuredOutput: boolean;
+  reasoningEffortFormat: ReasoningEffortFormat;
+  modelOptions: Record<string, unknown> | null;
   isEnabled: boolean;
 };
 
@@ -299,6 +317,8 @@ async function saveModelRecord(
       capVision: payload.capVision,
       capReasoning: payload.capReasoning,
       capStructuredOutput: payload.capStructuredOutput,
+      reasoningEffortFormat: payload.reasoningEffortFormat,
+      modelOptions: payload.modelOptions,
       isEnabled: payload.isEnabled,
     });
     if (!res.ok) {
@@ -354,6 +374,26 @@ function useModelForm(
 
   const handleSave = async (): Promise<void> => {
     if (!canSave) return;
+
+    let parsedOptions: Record<string, unknown> | null = null;
+    if (form.modelOptions.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(form.modelOptions);
+        if (
+          typeof parsed !== "object" ||
+          parsed === null ||
+          Array.isArray(parsed)
+        ) {
+          toast.error("Model options must be a valid JSON object");
+          return;
+        }
+        parsedOptions = parsed as Record<string, unknown>;
+      } catch {
+        toast.error("Invalid JSON format in Model Options");
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const payload: ModelSavePayload = {
@@ -371,6 +411,8 @@ function useModelForm(
         capVision: form.capVision,
         capReasoning: form.capReasoning,
         capStructuredOutput: form.capStructuredOutput,
+        reasoningEffortFormat: form.reasoningEffortFormat,
+        modelOptions: parsedOptions,
         isEnabled: form.isEnabled,
       };
 
@@ -621,6 +663,70 @@ export function ModelFormDialog({
               updateField("capStructuredOutput", val)
             }
           />
+
+          {form.capReasoning && (
+            <div className="bg-muted/20 space-y-4 rounded-lg border p-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="reasoning-effort-format">
+                  Reasoning Effort Format
+                </Label>
+                <Select
+                  value={form.reasoningEffortFormat}
+                  onValueChange={(val) =>
+                    updateField(
+                      "reasoningEffortFormat",
+                      val as ReasoningEffortFormat,
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    id="reasoning-effort-format"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      None / Automatic (No parameter)
+                    </SelectItem>
+                    <SelectItem value="openai">
+                      OpenAI (reasoning_effort)
+                    </SelectItem>
+                    <SelectItem value="openrouter">
+                      OpenRouter (reasoning.effort)
+                    </SelectItem>
+                    <SelectItem value="anthropic">
+                      Anthropic / LiteLLM (thinking.budget_tokens)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  Controls how reasoning effort parameters are sent to the
+                  provider.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="model-options">
+                  Custom Model Options (JSON)
+                </Label>
+                <Textarea
+                  id="model-options"
+                  value={form.modelOptions}
+                  onChange={(event) =>
+                    updateField("modelOptions", event.target.value)
+                  }
+                  placeholder='e.g. {"enable_thinking": true}'
+                  className="font-mono text-xs"
+                  rows={3}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Optional JSON key-value overrides merged into completion
+                  requests.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <ResponsiveDialogFooter className="px-4 pt-2 sm:px-0">

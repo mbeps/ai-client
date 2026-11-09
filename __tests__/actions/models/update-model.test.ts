@@ -115,10 +115,13 @@ describe("updateModels action", () => {
     await updateModels("model-1", { capReasoning: false });
     await updateModels("model-1", { capStructuredOutput: true });
     await updateModels("model-1", { capStructuredOutput: false });
+    await updateModels("model-1", { reasoningEffortFormat: "openai" });
+    await updateModels("model-1", { modelOptions: { temperature: 0.7 } });
+    await updateModels("model-1", { modelOptions: null });
     await updateModels("model-1", { isEnabled: true });
     await updateModels("model-1", { isEnabled: false });
     await updateModels(["model-1"], { label: "Single Array" });
 
-    expect(chainable.set).toHaveBeenCalledTimes(16);
+    expect(chainable.set).toHaveBeenCalledTimes(19);
   });
 });

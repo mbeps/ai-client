@@ -7,6 +7,7 @@ import { useChatSubmit } from "@/components/chat/input/use-chat-submit";
 import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import { AttachmentVisionUnsupportedError } from "@/lib/error/attachment-vision-unsupported-error";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
@@ -30,6 +31,7 @@ export interface ChatInteractionProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
   ) => void;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
@@ -40,6 +42,7 @@ export interface ChatInteractionProps {
   initialSelectedAssistantId?: string;
   initialSelectedKbs?: string[];
   initialSelectedSkillIds?: string[];
+  initialReasoningEffort?: ReasoningEffort;
   onKnowledgebaseChange?: (kbIds: string[]) => void;
   activeChatAssistantId?: string | null;
   initialSubagentsEnabled?: boolean;
@@ -126,6 +129,7 @@ export interface UseChatInteractionOptions {
   setInput: (val: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   canMentionAssistant: boolean;
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**
@@ -230,6 +234,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selectedSkills: selections.selectedSkills,
     subagentsEnabled: selections.subagentsEnabled,
     subagentModelId: selections.subagentModelId,
+    reasoningEffort: options.reasoningEffort,
     handleCommandKeyDown: mentions.handleKeyDown,
   });
 

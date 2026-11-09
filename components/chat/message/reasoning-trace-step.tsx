@@ -27,9 +27,7 @@ export function ReasoningTraceStep({
   const [isOpen, setIsOpen] = useState(running);
 
   useEffect(() => {
-    if (running) {
-      setIsOpen(true);
-    }
+    setIsOpen(running);
   }, [running]);
 
   const status = running ? "running" : undefined;

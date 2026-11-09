@@ -230,6 +230,32 @@ describe("POST /api/chat — rate limiting (T9.1)", () => {
     });
   });
 
+  it("forwards reasoningEffort when provided in chat request payload", async () => {
+    vi.mocked(checkRateLimit).mockReturnValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        chatId: "11111111-1111-4111-8111-111111111111",
+        userMessageId: "22222222-2222-4222-8222-222222222222",
+        model: "o3-mini",
+        reasoningEffort: "high",
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "chat/response.generate",
+      data: expect.objectContaining({
+        model: "o3-mini",
+        reasoningEffort: "high",
+      }),
+    });
+  });
+
   it("returns 500 when database or inngest dispatch throws an error", async () => {
     vi.mocked(checkRateLimit).mockReturnValue({
       allowed: true,

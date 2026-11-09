@@ -92,6 +92,9 @@ export async function runSynthesisFallbackPass(
   try {
     const synthResult = streamText({
       model: resolved.sdkProvider.chat(resolvedModelId),
+      headers: params.reasoningEffort
+        ? { "x-ai-client-reasoning-effort": params.reasoningEffort }
+        : undefined,
       abortSignal: abortController.signal,
       instructions: systemPrompt,
       messages: synthesisMessages,

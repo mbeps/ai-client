@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROMPTS } from "@/config/prompts";
+import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import { dateField, idField } from "@/schemas/shared-fields";
 
 /**
@@ -124,6 +125,7 @@ export const messageMetadataSchema = z.object({
     )
     .optional(),
   reasoning: z.string().optional(),
+  reasoningEffort: reasoningEffortSchema.optional(),
   model: z.string().optional(),
 });
 
@@ -146,6 +148,7 @@ export const chatRequestSchema = z
     selectedKbIds: z.array(idField).max(5).optional(),
     subagentsEnabled: z.boolean().optional(),
     subagentModelId: z.string().max(100).optional(),
+    reasoningEffort: reasoningEffortSchema.optional(),
   })
   .strict();
 

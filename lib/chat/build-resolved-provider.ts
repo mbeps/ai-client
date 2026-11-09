@@ -2,6 +2,7 @@ import { buildSdkProvider } from "@/lib/chat/build-sdk-provider";
 import { decryptProviderField } from "@/lib/chat/decrypt-provider-field";
 import { getLogger } from "@/lib/logger";
 import { parseProviderHeaders } from "@/lib/providers/parse-provider-headers";
+import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
@@ -40,6 +41,24 @@ export function buildResolvedProvider(
 
   const headers = parseProviderHeaders(decryptedHeaders);
 
+  let parsedModelOptions: Record<string, unknown> | null = null;
+  if (row.model.modelOptions) {
+    try {
+      const parsed = JSON.parse(row.model.modelOptions);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
+        parsedModelOptions = parsed as Record<string, unknown>;
+      }
+    } catch {
+      log.warn("Failed to parse modelOptions for model {modelId}", {
+        modelId: row.model.modelId,
+      });
+    }
+  }
+
   log.info("Provider resolved for model {modelId} ({provider})", {
     modelId: row.model.modelId,
     provider: row.provider.name,
@@ -52,6 +71,9 @@ export function buildResolvedProvider(
       apiKey: decryptedApiKey,
       requiresKey: row.provider.requiresKey,
       headers,
+      reasoningEffortFormat:
+        (row.model.reasoningEffortFormat as ReasoningEffortFormat) ?? "none",
+      modelOptions: parsedModelOptions,
     }),
     modelId: row.model.modelId,
     providerRow: row.provider,

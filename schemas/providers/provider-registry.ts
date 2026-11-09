@@ -12,6 +12,64 @@ import { idField, nameField } from "@/schemas/shared-fields";
 export const providerModelTypeSchema = z.enum(["chat", "embedding", "both"]);
 
 /**
+ * Supported reasoning effort payload formats for OpenAI-compatible proxies.
+ * - "none": No request parameter sent; reasoning is model-default or automatic
+ * - "openai": Standard `reasoning_effort: "low" | "medium" | "high"`
+ * - "openrouter": OpenRouter format `reasoning: { effort: "low" | "medium" | "high" }`
+ * - "anthropic": Anthropic / LiteLLM format `thinking: { type: "enabled", budget_tokens: number }`
+ *
+ * @author Maruf Bepary
+ */
+export const REASONING_EFFORT_FORMATS = [
+  "none",
+  "openai",
+  "openrouter",
+  "anthropic",
+] as const;
+
+/**
+ * Type representing supported reasoning effort formats.
+ *
+ * @author Maruf Bepary
+ */
+export type ReasoningEffortFormat = (typeof REASONING_EFFORT_FORMATS)[number];
+
+/**
+ * Validates reasoning effort formatting options for provider models.
+ *
+ * @author Maruf Bepary
+ */
+export const reasoningEffortFormatSchema = z.enum(REASONING_EFFORT_FORMATS);
+
+/**
+ * Supported reasoning effort intensity levels.
+ *
+ * @author Maruf Bepary
+ */
+export const REASONING_EFFORTS = ["off", "low", "medium", "high"] as const;
+
+/**
+ * Type representing reasoning effort levels.
+ *
+ * @author Maruf Bepary
+ */
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
+/**
+ * Validates reasoning effort level selection.
+ *
+ * @author Maruf Bepary
+ */
+export const reasoningEffortSchema = z.enum(REASONING_EFFORTS);
+
+/**
+ * Validates arbitrary model-level JSON options passed through to completion requests.
+ *
+ * @author Maruf Bepary
+ */
+export const modelOptionsSchema = z.record(z.string(), z.unknown());
+
+/**
  * Validates custom HTTP headers as key-value pairs for provider endpoints.
  *
  * @author Maruf Bepary
@@ -79,6 +137,8 @@ export const createModelSchema = z.object({
   capVision: z.boolean().optional(),
   capReasoning: z.boolean().optional(),
   capStructuredOutput: z.boolean().optional(),
+  reasoningEffortFormat: reasoningEffortFormatSchema.optional(),
+  modelOptions: modelOptionsSchema.nullable().optional(),
   isEnabled: z.boolean().optional(),
 });
 
@@ -122,6 +182,8 @@ const registryModelSchema = z.object({
   contextWindow: z.number().int().positive().max(10_000_000),
   embeddingDimensions: z.number().int().positive().max(100_000).nullable(),
   capabilities: registryCapabilitiesSchema,
+  reasoningEffortFormat: reasoningEffortFormatSchema.optional(),
+  modelOptions: modelOptionsSchema.nullable().optional(),
   isManuallyAdded: z.boolean(),
   isEnabled: z.boolean().optional(),
 });

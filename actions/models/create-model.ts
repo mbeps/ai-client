@@ -65,6 +65,10 @@ export const createModel = defineAction(
         capVision: parsed.capVision,
         capReasoning: parsed.capReasoning,
         capStructuredOutput: parsed.capStructuredOutput,
+        reasoningEffortFormat: parsed.reasoningEffortFormat ?? "none",
+        modelOptions: parsed.modelOptions
+          ? JSON.stringify(parsed.modelOptions)
+          : null,
         isManuallyAdded: true,
         isEnabled: parsed.isEnabled ?? true,
       })

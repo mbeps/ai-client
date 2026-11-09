@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -235,5 +235,55 @@ describe("ModelFormDialog", () => {
     expect(mockInvalidate).toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("progressively discloses reasoning format and options when reasoning capability is toggled", async () => {
+    const user = userEvent.setup();
+    mockCreateModel.mockResolvedValueOnce({
+      ok: true,
+      value: { id: "m2" },
+    });
+
+    render(
+      <ModelFormDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        providers={dummyProviders}
+      />,
+    );
+
+    expect(screen.queryByText("Reasoning Effort Format")).not.toBeInTheDocument();
+
+    const reasoningCheckbox = screen.getByRole("checkbox", {
+      name: /reasoning/i,
+    });
+    await user.click(reasoningCheckbox);
+
+    expect(screen.getByText("Reasoning Effort Format")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Custom Model Options/i)).toBeInTheDocument();
+
+    const modelIdInput = screen.getByPlaceholderText(/gpt-4o-mini/i);
+    await user.type(modelIdInput, "deepseek-r1");
+
+    const labelInput = screen.getByPlaceholderText(/human-friendly/i);
+    await user.type(labelInput, "DeepSeek R1");
+
+    const optionsInput = screen.getByLabelText(/Custom Model Options/i);
+    fireEvent.change(optionsInput, {
+      target: { value: '{"enable_thinking":true}' },
+    });
+
+    const createBtn = screen.getByRole("button", { name: /create model/i });
+    await user.click(createBtn);
+
+    expect(mockCreateModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "deepseek-r1",
+        label: "DeepSeek R1",
+        capReasoning: true,
+        reasoningEffortFormat: "none",
+        modelOptions: { enable_thinking: true },
+      }),
+    );
   });
 });

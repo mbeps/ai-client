@@ -14,6 +14,7 @@ import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
+import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
 import type { CommonError } from "@/types/error/common-error";
 import type { Result } from "@/types/result";
 
@@ -60,6 +61,7 @@ type ProviderModelsResponse = {
 type DiscoveredModel = {
   id: string;
   types: Set<"chat" | "embedding">;
+  raw?: Record<string, unknown>;
 };
 
 /**
@@ -207,10 +209,56 @@ function collectDiscoveredModels(
       continue;
     }
     if (!modelsMap.has(modelId)) {
-      modelsMap.set(modelId, { id: modelId, types: new Set() });
+      modelsMap.set(modelId, {
+        id: modelId,
+        types: new Set(),
+        raw: m as Record<string, unknown>,
+      });
     }
     modelsMap.get(modelId)!.types.add(resolveType(modelId));
   }
+}
+
+/**
+ * Detects reasoning capability and formatting traits for a discovered model.
+ *
+ * @param modelId - Target model identifier
+ * @param raw - Raw model metadata from provider endpoint
+ * @returns Object with capReasoning boolean and reasoningEffortFormat
+ * @author Maruf Bepary
+ */
+function detectModelReasoningTraits(
+  modelId: string,
+  raw?: Record<string, unknown>,
+): {
+  capReasoning: boolean;
+  reasoningEffortFormat: ReasoningEffortFormat;
+} {
+  const supportedParams = Array.isArray(raw?.supported_parameters)
+    ? (raw.supported_parameters as string[])
+    : [];
+
+  if (
+    supportedParams.includes("include_reasoning") ||
+    supportedParams.includes("reasoning")
+  ) {
+    return { capReasoning: true, reasoningEffortFormat: "openrouter" };
+  }
+
+  if (supportedParams.includes("reasoning_effort")) {
+    return { capReasoning: true, reasoningEffortFormat: "openai" };
+  }
+
+  const idLower = modelId.toLowerCase();
+  const isReasoningModel =
+    /(?:^|\/|-)(?:r1|qwq|o1|o3|o4|reasoner|deepseek-r1)/i.test(idLower) ||
+    idLower.includes("thinking");
+
+  if (isReasoningModel) {
+    return { capReasoning: true, reasoningEffortFormat: "none" };
+  }
+
+  return { capReasoning: false, reasoningEffortFormat: "none" };
 }
 
 /**
@@ -258,6 +306,9 @@ async function batchSyncDiscoveredModels(
     const existing = existingMap.get(discovered.id);
 
     if (!existing) {
+      const { capReasoning, reasoningEffortFormat } =
+        detectModelReasoningTraits(discovered.id, discovered.raw);
+
       toInsert.push({
         providerId,
         userId,
@@ -267,8 +318,10 @@ async function batchSyncDiscoveredModels(
         contextWindow: 4096,
         capTools: false,
         capVision: false,
-        capReasoning: false,
+        capReasoning,
         capStructuredOutput: false,
+        reasoningEffortFormat,
+        modelOptions: null,
         isManuallyAdded: false,
         isEnabled: false,
       });

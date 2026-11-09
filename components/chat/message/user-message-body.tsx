@@ -4,6 +4,7 @@ import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowl
 import { ChatInput } from "@/components/chat/chat-input";
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { UserMessageContextChips } from "@/components/chat/message/user-message-context-chips";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
@@ -26,6 +27,7 @@ export interface UserMessageEditProps {
   initialSelectedSkillIds?: string[] | null;
   initialSubagentsEnabled?: boolean | null;
   initialSubagentModelId?: string | null;
+  initialReasoningEffort?: ReasoningEffort | null;
   servers?: (McpServer | PublicMcpServer)[];
   activeChatAssistantId?: string | null;
   thread?: Message[];
@@ -41,6 +43,7 @@ export interface UserMessageEditProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
   ) => void;
   onCancel: () => void;
 }
@@ -98,6 +101,7 @@ export function UserMessageBody({
         initialSelectedSkillIds={editProps.initialSelectedSkillIds ?? undefined}
         initialSubagentsEnabled={editProps.initialSubagentsEnabled ?? undefined}
         initialSubagentModelId={editProps.initialSubagentModelId ?? undefined}
+        initialReasoningEffort={editProps.initialReasoningEffort ?? undefined}
         servers={editProps.servers}
         thread={editProps.thread}
         activeChatAssistantId={editProps.activeChatAssistantId}

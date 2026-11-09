@@ -636,4 +636,64 @@ describe("syncProviderModels action", () => {
       error: expect.objectContaining({ code: "INTERNAL" }),
     });
   });
+
+  it("detects reasoning effort format for openrouter, openai, and pattern-matched models", async () => {
+    chainable.where
+      .mockResolvedValueOnce([
+        { id: "prov-1", baseUrl: "https://openrouter.ai/api/v1" },
+      ])
+      .mockResolvedValueOnce([]); // No existing models
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              id: "openrouter/model-a",
+              supported_parameters: ["include_reasoning"],
+            },
+            {
+              id: "openai/model-b",
+              supported_parameters: ["reasoning_effort"],
+            },
+            {
+              id: "deepseek/deepseek-r1",
+              supported_parameters: [],
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "openrouter/model-a",
+          capReasoning: true,
+          reasoningEffortFormat: "openrouter",
+        }),
+        expect.objectContaining({
+          modelId: "openai/model-b",
+          capReasoning: true,
+          reasoningEffortFormat: "openai",
+        }),
+        expect.objectContaining({
+          modelId: "deepseek/deepseek-r1",
+          capReasoning: true,
+          reasoningEffortFormat: "none",
+        }),
+      ]),
+    );
+
+    vi.unstubAllGlobals();
+  });
 });

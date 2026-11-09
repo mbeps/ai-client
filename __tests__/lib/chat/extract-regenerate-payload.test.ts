@@ -235,4 +235,20 @@ describe("resolveRegeneratePayload", () => {
       model: "m-1",
     });
   });
+
+  it("extracts reasoningEffort from parent message metadata", () => {
+    const parent = makeMessage({
+      id: "u1",
+      metadata: JSON.stringify({
+        model: "o3-mini",
+        reasoningEffort: "high",
+      }),
+    });
+    const chat = makeChat([
+      parent,
+      makeMessage({ id: "a1", role: "assistant", parentId: "u1" }),
+    ]);
+
+    expect(resolveRegeneratePayload(chat, "a1")?.payload.reasoningEffort).toBe("high");
+  });
 });

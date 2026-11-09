@@ -1,5 +1,6 @@
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
@@ -148,6 +149,26 @@ function resolveInitialSkillIds(
 }
 
 /**
+ * Resolves initial reasoning effort from the thread's last user message or defaults to 'medium'.
+ *
+ * @param thread - Array of chat messages in the conversation
+ * @returns Resolved reasoning effort
+ * @author Maruf Bepary
+ */
+export function resolveInitialReasoningEffort(
+  thread: Message[],
+): ReasoningEffort {
+  for (let i = thread.length - 1; i >= 0; i--) {
+    const msg = thread[i];
+    if (msg.role === "user" && msg.metadata) {
+      const { reasoningEffort } = parseMessageMetadata(msg.metadata);
+      if (reasoningEffort) return reasoningEffort;
+    }
+  }
+  return "medium";
+}
+
+/**
  * Represents initial chat config.
  *
  * @author Maruf Bepary
@@ -156,6 +177,7 @@ export interface InitialChatConfig {
   initialModelId: string | undefined;
   initialSubagentsEnabled: boolean;
   initialSubagentModelId: string | undefined;
+  initialReasoningEffort: ReasoningEffort;
   initialServerIds: string[];
   initialSelectedTools: string[];
   initialKbIds: string[];
@@ -196,6 +218,7 @@ export function resolveInitialChatConfig(
     ),
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialReasoningEffort: resolveInitialReasoningEffort(thread),
     initialServerIds,
     initialSelectedTools,
     initialKbIds: resolveInitialKbIds(chat, currentProject),

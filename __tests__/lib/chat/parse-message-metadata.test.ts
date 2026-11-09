@@ -214,6 +214,21 @@ describe("parseMessageMetadata", () => {
     expect(result.durationMs).toBe(87);
   });
 
+  it("parses valid reasoningEffort values and rejects invalid ones", () => {
+    expect(
+      parseMessageMetadata(JSON.stringify({ reasoningEffort: "high" })).reasoningEffort,
+    ).toBe("high");
+    expect(
+      parseMessageMetadata(JSON.stringify({ reasoningEffort: "off" })).reasoningEffort,
+    ).toBe("off");
+    expect(
+      parseMessageMetadata(JSON.stringify({ reasoningEffort: "invalid" })).reasoningEffort,
+    ).toBeUndefined();
+    expect(
+      parseMessageMetadata(JSON.stringify({ reasoningEffort: 42 })).reasoningEffort,
+    ).toBeUndefined();
+  });
+
   it("keeps an empty selectedSkillIds array rather than nulling it", () => {
     // [] IS an array, so the Array.isArray arm must win even though the array
     // is empty. A `||` based guard would wrongly return null here.

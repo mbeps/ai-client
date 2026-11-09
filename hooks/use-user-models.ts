@@ -6,7 +6,10 @@ import { fetchProviderRegistryWithCache } from "@/lib/providers/fetch-provider-r
 import { getProviderRegistryCachedData } from "@/lib/providers/get-provider-registry-cached-data";
 import { isProviderRegistryCacheFresh } from "@/lib/providers/is-provider-registry-cache-fresh";
 import { subscribeProviderRegistryCache } from "@/lib/providers/subscribe-provider-registry-cache";
-import type { ProviderModelType } from "@/schemas/providers/provider-registry";
+import type {
+  ProviderModelType,
+  ReasoningEffortFormat,
+} from "@/schemas/providers/provider-registry";
 import type { AiModelWithProvider } from "@/types/provider/ai-model-with-provider";
 
 const RETRY_COUNT = 1;
@@ -29,6 +32,8 @@ export type UserModelOption = {
   capVision: boolean;
   capReasoning: boolean;
   capStructuredOutput: boolean;
+  reasoningEffortFormat: ReasoningEffortFormat;
+  modelOptions?: string | null;
   isEnabled: boolean;
   providerIsEnabled: boolean;
 };
@@ -166,6 +171,9 @@ export function useUserModels(
         capVision: model.capVision,
         capReasoning: model.capReasoning,
         capStructuredOutput: model.capStructuredOutput,
+        reasoningEffortFormat:
+          (model.reasoningEffortFormat as ReasoningEffortFormat) || "none",
+        modelOptions: model.modelOptions,
         isEnabled: model.isEnabled,
         providerIsEnabled: model.providerIsEnabled,
       }))

@@ -40,6 +40,9 @@ export function buildMetadata(
   if (options.subagentsEnabled !== undefined) {
     metadataObj.subagentsEnabled = options.subagentsEnabled;
   }
+  if (options.reasoningEffort !== undefined) {
+    metadataObj.reasoningEffort = options.reasoningEffort;
+  }
   return metadataObj;
 }
 

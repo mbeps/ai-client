@@ -266,6 +266,7 @@ export async function executeStreamResponse(
       selectedKbIds: params.selectedKbIds,
       subagentsEnabled: params.subagentsEnabled,
       subagentModelId: params.subagentModelId,
+      reasoningEffort: params.reasoningEffort,
     },
     params.handleApiError,
   );
