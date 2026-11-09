@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { DynamicBreadcrumbs } from "@/components/shared/dynamic-breadcrumbs";
+import { AppShellSkeleton } from "@/components/skeletons/app-shell-skeleton";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Spinner } from "@/components/ui/spinner";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 
@@ -48,11 +48,7 @@ export function AuthenticatedLayout({
   }, [session, isPending, router]);
 
   if (isPending || !session) {
-    return (
-      <div className="bg-background flex h-dvh w-full items-center justify-center">
-        <Spinner size="xl" />
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
   return (

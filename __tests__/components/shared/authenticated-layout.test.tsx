@@ -40,7 +40,7 @@ describe("AuthenticatedLayout", () => {
     vi.clearAllMocks();
   });
 
-  it("renders a spinner while checking session", () => {
+  it("renders an app shell skeleton while checking session", () => {
     mockUseSession.mockReturnValue({ data: null, isPending: true });
 
     const { container } = render(
@@ -49,7 +49,7 @@ describe("AuthenticatedLayout", () => {
       </AuthenticatedLayout>,
     );
 
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByTestId("app-shell-skeleton")).toBeInTheDocument();
     expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
     expect(container.firstChild).toHaveClass("h-dvh", "w-full", "bg-background");
   });

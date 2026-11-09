@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Download,
-  FileCode,
-  Globe,
-  Loader2,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { Download, FileCode, Globe, Settings, Shield } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
@@ -24,6 +17,7 @@ import {
   SidebarTabsList,
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { SkillDetailsTab } from "@/components/skill/skill-details-tab";
 import { SkillEditorTab } from "@/components/skill/skill-editor-tab";
 import { SkillExportTab } from "@/components/skill/skill-export-tab";
@@ -598,11 +592,7 @@ export default function SkillDetailPage() {
   }, [loadSkills, skills.length]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   if (!skill) notFound();

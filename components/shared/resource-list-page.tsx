@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/shared/page-container";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
 import type { SortableResource } from "@/lib/sortable-resource";
 import { useAppStore } from "@/lib/store/use-app-store";
@@ -48,6 +49,8 @@ interface ResourceListPageProps<T extends SortableResource> {
   columns?: 2 | 3;
   /** Optional custom sort function. If omitted, items are sorted by updatedAt descending. */
   sortFn?: (items: T[]) => T[];
+  /** Whether data is currently loading. Renders skeleton card grid when true. */
+  isLoading?: boolean;
 }
 
 /**
@@ -72,6 +75,7 @@ export function ResourceListPage<T extends SortableResource>({
   banner,
   columns = 3,
   sortFn,
+  isLoading = false,
 }: ResourceListPageProps<T>) {
   const [search, setSearch] = useState("");
   const loadError = useAppStore((state) => state.loadError);
@@ -121,7 +125,35 @@ export function ResourceListPage<T extends SortableResource>({
         </p>
       )}
 
-      {sorted.length === 0 ? (
+      {isLoading ? (
+        <div className={gridColsClass} data-testid="resource-list-skeleton">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="border-border bg-card flex flex-col justify-between space-y-4 rounded-xl border p-5 shadow-xs"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-10 shrink-0 rounded-lg" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <Skeleton className="size-6 rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3.5 w-4/5" />
+              </div>
+              <div className="border-border/50 flex items-center justify-between border-t pt-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
         <div className={gridColsClass}>
           <EmptyState message={emptyStateMessage} />
         </div>

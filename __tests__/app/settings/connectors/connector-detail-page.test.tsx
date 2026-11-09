@@ -142,13 +142,13 @@ describe("McpServerPage (Connector Detail Page)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders loading spinner on initial mount when mcpServers is empty and calls loadMcpServers", () => {
+  it("renders loading skeleton on initial mount when mcpServers is empty and calls loadMcpServers", () => {
     // Keep listMcpServers pending so loading state remains active
     vi.mocked(listMcpServers).mockReturnValue(new Promise(() => {}));
 
-    const { container } = render(<McpServerPage />);
+    render(<McpServerPage />);
 
-    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+    expect(screen.getByTestId("entity-detail-skeleton")).toBeInTheDocument();
     expect(listMcpServers).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("GitHub Tools")).not.toBeInTheDocument();
   });

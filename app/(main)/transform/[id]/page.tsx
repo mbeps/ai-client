@@ -1,11 +1,11 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
+import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { AgentEditorHeader } from "@/components/workflows/sheet-flow/agent-editor-header";
 import { AgentEditorTabs } from "@/components/workflows/sheet-flow/agent-editor-tabs";
 import { useAgentEditorWorkflow } from "@/components/workflows/sheet-flow/use-agent-editor-workflow";
@@ -35,11 +35,7 @@ export default function AgentEditorPage() {
   const workflow = useAgentEditorWorkflow({ id, isNew, handleApiError });
 
   if (workflow.form.isLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <EntityDetailSkeleton />;
   }
 
   return (
