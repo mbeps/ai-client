@@ -143,12 +143,18 @@ describe("knowledgebase documents and CRUD actions", () => {
 
   describe("listDocuments", () => {
     it("returns documents when KB is owned by user", async () => {
-      chainable.where.mockResolvedValueOnce([{ id: KB_ID }]);
+      chainable.where
+        .mockResolvedValueOnce([{ id: KB_ID }])
+        .mockReturnValueOnce(chainable)
+        .mockResolvedValueOnce([]);
       const mockDocs = [{ id: DOC_ID, name: "file.pdf" }];
       chainable.orderBy.mockResolvedValueOnce(mockDocs);
 
       const result = await listDocuments(KB_ID);
-      expect(result).toEqual({ ok: true, value: mockDocs });
+      expect(result).toEqual({
+        ok: true,
+        value: [{ ...mockDocs[0], relationCount: 0 }],
+      });
     });
 
     it("throws 'Not Found' when KB does not exist or not owned by user", async () => {

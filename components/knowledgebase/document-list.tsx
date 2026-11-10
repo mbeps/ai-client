@@ -50,7 +50,8 @@ interface DocumentListProps {
 
 /**
  * Renders a scrollable list of uploaded documents in a knowledgebase.
- * Shows document name, processing status, chunk count, and file size.
+ * Shows document name, processing status, chunk count, file size, classification,
+ * summary, key entity tags, and graph relation count.
  * Includes delete button with confirmation for each document.
  *
  * @param props.documents - Array of uploaded documents to display.
@@ -92,13 +93,42 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
           STATUS_CONFIG[doc.status as keyof typeof STATUS_CONFIG] ??
           STATUS_CONFIG.pending;
         const Icon = cfg.icon;
+        const isReady = doc.status === "ready";
+        const hasCustomType =
+          isReady && doc.documentType && doc.documentType !== "general";
+        const relationCount = doc.relationCount ?? 0;
+        const hasRelations = isReady && relationCount > 0;
+        const hasSummary = isReady && Boolean(doc.summary);
+        const hasEntities =
+          isReady &&
+          Array.isArray(doc.keyEntities) &&
+          doc.keyEntities.length > 0;
+
         return (
-          <li key={doc.id} className="group flex items-center gap-2 px-3 py-2">
-            <FileText className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+          <li key={doc.id} className="group flex items-start gap-2 px-3 py-2">
+            <FileText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] leading-tight font-medium">
-                {doc.name}
-              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="truncate text-[13px] leading-tight font-medium">
+                  {doc.name}
+                </p>
+                {hasCustomType && (
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1 text-[9px] font-normal"
+                  >
+                    {doc.documentType.replace(/_/g, " ")}
+                  </Badge>
+                )}
+                {hasRelations && (
+                  <Badge
+                    variant="secondary"
+                    className="h-4 px-1 text-[9px] font-normal"
+                  >
+                    {relationCount} {relationCount === 1 ? "link" : "links"}
+                  </Badge>
+                )}
+              </div>
               <p className="text-muted-foreground mt-0.5 truncate text-[10px] leading-tight">
                 {doc.status === "failed" && doc.statusMessage ? (
                   <span className="text-destructive font-medium">
@@ -111,8 +141,34 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
                   </>
                 )}
               </p>
+              {hasSummary && (
+                <p className="text-muted-foreground mt-1 line-clamp-2 text-[11px] leading-snug">
+                  {doc.summary}
+                </p>
+              )}
+              {hasEntities && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                  {doc.keyEntities.slice(0, 4).map((entity) => (
+                    <Badge
+                      key={entity}
+                      variant="outline"
+                      className="h-4 px-1 text-[9px] font-normal"
+                    >
+                      {entity}
+                    </Badge>
+                  ))}
+                  {doc.keyEntities.length > 4 && (
+                    <Badge
+                      variant="secondary"
+                      className="h-4 px-1 text-[9px] font-normal"
+                    >
+                      +{doc.keyEntities.length - 4}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <Badge
                 variant={cfg.variant}
                 className="flex h-5 shrink-0 items-center gap-1 px-1.5 py-0 text-[10px] font-normal"
