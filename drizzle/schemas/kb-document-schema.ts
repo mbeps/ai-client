@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -11,6 +12,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "@/drizzle/schemas/auth-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
+import type {
+  KbDocumentType,
+  KbTocEntry,
+} from "@/types/knowledgebase/kb-document-row";
 
 /**
  * Stores documents uploaded to a knowledge base, tracking ingestion status and chunk counts.
@@ -40,6 +45,16 @@ export const kbDocument = pgTable(
     chunkCount: integer("chunk_count").notNull().default(0),
     tokenCount: integer("token_count").notNull().default(0),
     truncated: boolean("truncated").notNull().default(false),
+    documentType: text("document_type")
+      .$type<KbDocumentType>()
+      .notNull()
+      .default("general"),
+    summary: text("summary").notNull().default(""),
+    keyEntities: jsonb("key_entities").$type<string[]>().notNull().default([]),
+    tableOfContents: jsonb("table_of_contents")
+      .$type<KbTocEntry[]>()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
