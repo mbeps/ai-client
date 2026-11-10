@@ -22,7 +22,10 @@ import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
 /**
  * Performs hybrid retrieval over one or more knowledge bases using vector + full-text search in Qdrant.
  * Validates all knowledge bases are ready, embeds the query once, runs parallel semantic and keyword queries,
- * combines results using Reciprocal Rank Fusion, and returns top K chunks.
+ * combines results using Reciprocal Rank Fusion (RRF), and returns top K chunks.
+ *
+ * Can optionally be scoped to a specific subset of document IDs, allowing subagent retrieval tools
+ * to target individual documents discovered through graph traversal.
  * Normalizes rate limit errors to user-friendly messages.
  *
  * @param kbIdOrIds - Knowledge base ID or array of IDs to search
@@ -30,11 +33,11 @@ import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
  * @param userId - Authenticated user ID (for embedding provider resolution)
  * @param topK - Number of results to return (default: 5)
  * @param documentIds - Optional document IDs to scope chunk retrieval
- * @returns Top K ranked chunks by relevance
+ * @returns Top K ranked chunks by relevance with normalized reciprocal rank fusion scores
  * @throws {KnowledgebaseNotReadyError} When any requested KB indexing is not complete
  * @throws {RateLimitError} When embedding provider rate limits the request
- * @see {@link lib/rag/chunk.ts} for chunking strategy
- * @see {@link lib/rag/embed.ts} for embedding models
+ * @see {@link lib/rag/chunk-text.ts} for chunking strategy
+ * @see {@link lib/rag/embed-query.ts} for query embedding
  * @author Maruf Bepary
  */
 export async function hybridSearch(

@@ -17,6 +17,9 @@ import type { Result } from "@/types/result";
 /**
  * Lists KB documents (newest first) with status, chunk/token counts, metadata, and relation counts after validating ownership.
  *
+ * Computes bidirectional relationship counts across `kbDocumentRelation` (both inbound and outbound edges)
+ * for each document so the UI can surface graph connectivity badges directly in the document list.
+ *
  * @async
  * @param kbId - Knowledge base UUID
  * @returns Result containing documents ordered by createdAt DESC with relationCount

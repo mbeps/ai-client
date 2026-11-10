@@ -15,9 +15,10 @@ import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools
 
 /**
  * Determines active target knowledge base IDs from context.
+ * Normalizes both single `activeKbId` and multi-selection `activeKbIds` into an array.
  *
- * @param ctx - Target ctx
- * @returns The resolved result
+ * @param ctx - Context object containing active knowledge base IDs
+ * @returns Array of target knowledge base UUIDs
  * @author Maruf Bepary
  */
 function resolveTargetKbIds(ctx: {
@@ -32,10 +33,11 @@ function resolveTargetKbIds(ctx: {
 
 /**
  * Checks whether a specific internal tool is permitted by selectedTools.
+ * Returns true if no restriction filter was passed (`undefined`) or if explicitly included.
  *
- * @param toolId - Target tool id
- * @param selectedTools - Target selected tools
- * @returns The resolved result
+ * @param toolId - Internal tool ID to check
+ * @param selectedTools - Optional allowed tool ID whitelist
+ * @returns Whether the tool is permitted for this execution
  * @author Maruf Bepary
  */
 function isInternalToolAllowed(
@@ -47,10 +49,11 @@ function isInternalToolAllowed(
 
 /**
  * Determines whether subagent task delegation is enabled.
+ * True when the explicit `subagentsEnabled` flag is set or `delegate_task` is selected.
  *
- * @param subagentsEnabled - Target subagents enabled
- * @param selectedTools - Target selected tools
- * @returns The resolved result
+ * @param subagentsEnabled - Explicit subagent delegation flag from chat options
+ * @param selectedTools - Whitelist of permitted tool IDs
+ * @returns Whether subagent delegation is active
  * @author Maruf Bepary
  */
 function isSubagentEnabled(
@@ -66,10 +69,10 @@ function isSubagentEnabled(
 /**
  * Builds scratchpad tools if subagent delegation is active.
  *
- * @param enabled - Target enabled
+ * @param enabled - Whether scratchpad tools should be registered
  * @param chatId - Chat session identifier
- * @param messageId - Target message id
- * @returns The resolved result
+ * @param messageId - Current assistant message identifier
+ * @returns Registered scratchpad tools or empty object
  * @author Maruf Bepary
  */
 function buildScratchpadTools(
@@ -87,9 +90,10 @@ function buildScratchpadTools(
 
 /**
  * Builds subagent dispatch tools if delegation is enabled.
+ * Configures the delegate_task tool with default and optional custom worker models.
  *
- * @param params - Target params
- * @returns The resolved result
+ * @param params - Tool set configuration including available tools and models
+ * @returns Object with delegate_task tool if enabled, empty object otherwise
  * @author Maruf Bepary
  */
 function buildSubagentDispatchTools(params: {
@@ -119,9 +123,11 @@ function buildSubagentDispatchTools(params: {
 
 /**
  * Builds and registers all orchestrator and subagent dispatch tools.
+ * Resolves knowledge base subagent configuration using the dedicated worker model
+ * (falling back to orchestrator model) and attaches MCP, artifact, memory, and skill tools.
  *
- * @param params - Target params
- * @returns The resolved result
+ * @param params - Full orchestrator tool set builder configuration
+ * @returns Configured tools and feature flags for orchestrator execution
  * @author Maruf Bepary
  */
 export function buildOrchestratorToolSet(

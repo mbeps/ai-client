@@ -25,11 +25,17 @@ const KB_SUBAGENT_SYSTEM_PROMPT =
  * @author Maruf Bepary
  */
 export interface RunKbSubagentParams {
+  /** User's natural language search query. */
   query: string;
+  /** List of knowledge base IDs attached to the conversation. */
   targetKbIds: string[];
+  /** Authenticated user identifier for credential and provider lookup. */
   userId: string;
+  /** Language model instance to drive the internal subagent tool loop (e.g. worker model or orchestrator fallback). */
   model?: any;
+  /** Total token context window of the executing model for budget guarding (defaults to 16,384). */
   contextWindow?: number;
+  /** Optional cancellation signal to terminate subagent execution. */
   abortSignal?: AbortSignal;
 }
 
@@ -39,19 +45,32 @@ export interface RunKbSubagentParams {
  * @author Maruf Bepary
  */
 export interface RunKbSubagentResult {
+  /** Synthesized answer formulated by the isolated subagent from retrieved facts. */
   answer?: string;
+  /** Normalized citations preserved for UI citation pills and preview components. */
   results: Array<{
+    /** Extracted textual excerpt or chunk content. */
     content: string;
+    /** Relative relevance score (from RRF or vector similarity). */
     relevanceScore: number;
+    /** Unique document UUID. */
     documentId: string;
+    /** Original filename of the document. */
     documentName: string;
+    /** Knowledge base UUID where the document resides. */
     kbId?: string;
+    /** Knowledge base human-readable name. */
     kbName?: string;
   }>;
+  /** Discovered relationship edges relevant to the synthesized response. */
   relatedDocuments?: Array<{
+    /** Source document display name. */
     sourceDocName: string;
+    /** Target document display name. */
     targetDocName: string;
+    /** Directed semantic relationship (e.g., references, supersedes, supplements, contradicts, depicts). */
     relationType: string;
+    /** Grounding reason for the semantic relationship. */
     reason: string;
   }>;
 }

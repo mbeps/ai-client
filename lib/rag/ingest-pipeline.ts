@@ -21,13 +21,19 @@ import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 const log = getLogger(["app", "rag", "pipeline"]);
 
 /**
- * Shared ingestion pipeline: extract → chunk → embed → upsert into Qdrant → mark doc ready. Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
+ * Shared ingestion pipeline: extract text → chunk text → embed → extract metadata/TOC →
+ * upsert into Qdrant → mark doc ready with metadata → generate bidirectional relationship graph edges.
+ * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
  *
- * @param doc - Fetched kbDocument row
- * @param buffer - File content fetched from S3 by the caller
- * @param userId - User ID for per-user embedding provider
- * @param providedKbName - The provided kb name parameter.
+ * Catches LLM metadata and relationship generation errors gracefully, falling back to deterministic
+ * headings and excerpts so vector indexing is never blocked by provider failures.
+ *
+ * @param doc - Fetched kbDocument row to ingest
+ * @param buffer - File content fetched from S3 storage
+ * @param userId - User ID for per-user embedding and chat provider resolution
+ * @param providedKbName - Optional knowledge base display name override
  * @returns Chunk and token counts of the newly inserted chunks
+ * @throws {RagExtractionEmptyError} When the file contains no extractable text
  * @author Maruf Bepary
  */
 export async function ingestDocumentPipeline(

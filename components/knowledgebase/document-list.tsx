@@ -50,13 +50,14 @@ interface DocumentListProps {
 
 /**
  * Renders a scrollable list of uploaded documents in a knowledgebase.
- * Shows document name, processing status, chunk count, file size, classification,
- * summary, key entity tags, and graph relation count.
+ * Shows document name, processing status, chunk count, file size, classification badge
+ * (for non-general documents), high-density summary preview, entity tags, and graph relation count badge.
  * Includes delete button with confirmation for each document.
  *
- * @param props.documents - Array of uploaded documents to display.
- * @param props.onDeleted - Callback invoked after successful document deletion.
- * @returns List of document items or empty state message.
+ * @param props - Component properties
+ * @param props.documents - Array of uploaded documents to display
+ * @param props.onDeleted - Callback invoked after successful document deletion
+ * @returns List of document items or empty state message
  * @author Maruf Bepary
  */
 export function DocumentList({ documents, onDeleted }: DocumentListProps) {

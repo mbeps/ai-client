@@ -10,9 +10,13 @@ import type { KbTocEntry } from "@/types/knowledgebase/kb-document-row";
  * @author Maruf Bepary
  */
 export interface ExploreKbGraphParams {
+  /** Target knowledge base IDs to scope graph exploration. */
   kbIds: string[];
+  /** Optional case-insensitive search keyword to match on title, summary, documentType, or keyEntities. */
   query?: string;
+  /** Optional start document ID for undirected BFS neighborhood traversal. */
   startDocId?: string;
+  /** Hop depth for BFS traversal (clamped between 1 and 3, defaults to 1). */
   depth?: number;
 }
 
@@ -22,13 +26,21 @@ export interface ExploreKbGraphParams {
  * @author Maruf Bepary
  */
 export interface KbGraphDocumentNode {
+  /** Document unique identifier. */
   id: string;
+  /** Original document filename. */
   name: string;
+  /** Document classification (e.g., technical_spec, manual, report, policy, reference, general). */
   documentType: string;
+  /** High-density abstractive summary generated at ingestion time. */
   summary: string;
+  /** Key domain entities extracted from the document. */
   keyEntities: string[];
+  /** Total number of embedded chunk points stored in Qdrant. */
   chunkCount: number;
+  /** Total estimated token count of the document. */
   tokenCount: number;
+  /** Chunk-indexed structural table of contents. */
   tableOfContents: KbTocEntry[];
 }
 
@@ -38,11 +50,17 @@ export interface KbGraphDocumentNode {
  * @author Maruf Bepary
  */
 export interface KbGraphRelationEdge {
+  /** Source document UUID. */
   sourceDocId: string;
+  /** Source document display name. */
   sourceDocName: string;
+  /** Target document UUID. */
   targetDocId: string;
+  /** Target document display name. */
   targetDocName: string;
+  /** Directed relationship semantic (references, supersedes, supplements, contradicts, depicts). */
   relationType: string;
+  /** Explanation or justification for this semantic link. */
   reason: string;
 }
 
@@ -52,7 +70,9 @@ export interface KbGraphRelationEdge {
  * @author Maruf Bepary
  */
 export interface ExploreKbGraphResult {
+  /** Discovered or traversed document nodes within the scoped knowledge bases. */
   documents: KbGraphDocumentNode[];
+  /** Interconnecting relationship edges between the returned document nodes. */
   relations: KbGraphRelationEdge[];
 }
 

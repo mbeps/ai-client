@@ -218,11 +218,12 @@ export async function searchKeywordChunks(
 /**
  * Fetches chunk points for a document across collections, filtered by chunkIndex range and sorted ascending.
  *
- * @param documentId Target document UUID
- * @param kbIds Scoped knowledge base UUIDs
- * @param startIndex Optional inclusive lower bound chunk index
- * @param endIndex Optional inclusive upper bound chunk index
+ * @param documentId - Target document UUID
+ * @param kbIds - Scoped knowledge base UUIDs
+ * @param startIndex - Optional inclusive lower bound chunk index
+ * @param endIndex - Optional inclusive upper bound chunk index
  * @returns Array of ScoredChunk objects sorted ascending by chunkIndex
+ * @author Maruf Bepary
  */
 export async function getDocumentChunksByRange(
   documentId: string,

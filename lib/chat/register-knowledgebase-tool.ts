@@ -6,17 +6,27 @@ import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
 
 /**
  * Configuration options for the isolated Knowledge Base subagent.
+ * Enables the orchestrator to pass the resolved chat or worker model and context
+ * limits down to the isolated research loop.
  *
  * @author Maruf Bepary
  */
 export interface KnowledgebaseSubagentConfig {
+  /** Language model instance used to power the internal subagent tool loop. */
   model?: any;
+  /** Maximum token context window of the model for context budget enforcement. */
   contextWindow?: number;
 }
 
 /**
  * Registers the internal search_knowledge_base tool for semantic, keyword,
  * and graph-guided retrieval across active knowledge bases attached to the conversation.
+ *
+ * Internally runs an isolated Knowledge Base reader subagent (`runKbSubagent`) with access
+ * to graph traversal, chunk search, and bounded document reading tools. This preserves
+ * the main chat context window by keeping raw multi-page document chunks isolated while
+ * returning a synthesized answer, discovered document relationships, and structured
+ * citations compatible with the chat UI citation preview components.
  *
  * @param targetKbIds - List of knowledge base IDs attached to the chat
  * @param kbIsReady - Whether the knowledge bases have finished indexing
