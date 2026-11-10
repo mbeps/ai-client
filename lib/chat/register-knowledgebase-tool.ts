@@ -1,17 +1,28 @@
 import { tool } from "ai";
 import { PROMPTS } from "@/config/prompts";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import { hybridSearch } from "@/lib/rag/hybrid-search";
+import { runKbSubagent } from "@/lib/rag/run-kb-subagent";
 import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
 
 /**
- * Registers the internal search_knowledge_base tool for semantic and keyword retrieval
- * across active knowledge bases attached to the conversation.
+ * Configuration options for the isolated Knowledge Base subagent.
+ *
+ * @author Maruf Bepary
+ */
+export interface KnowledgebaseSubagentConfig {
+  model?: any;
+  contextWindow?: number;
+}
+
+/**
+ * Registers the internal search_knowledge_base tool for semantic, keyword,
+ * and graph-guided retrieval across active knowledge bases attached to the conversation.
  *
  * @param targetKbIds - List of knowledge base IDs attached to the chat
  * @param kbIsReady - Whether the knowledge bases have finished indexing
  * @param userId - ID of the authenticated user
  * @param selectedTools - Optional list of tool IDs selected for this chat
+ * @param subagentConfig - Optional model and context window config for isolated subagent execution
  * @returns Object with search_knowledge_base tool if eligible, empty object otherwise
  * @author Maruf Bepary
  */
@@ -20,6 +31,7 @@ export function registerKnowledgebaseTool(
   kbIsReady: boolean,
   userId: string,
   selectedTools?: string[],
+  subagentConfig?: KnowledgebaseSubagentConfig,
 ): Record<string, any> {
   const isGated =
     targetKbIds.length > 0 &&
@@ -48,14 +60,15 @@ export function registerKnowledgebaseTool(
           };
         }
 
-        const results = await hybridSearch(
-          targetKbIds.length === 1 ? targetKbIds[0] : targetKbIds,
-          normalizedQuery,
+        const subagentResult = await runKbSubagent({
+          query: normalizedQuery,
+          targetKbIds,
           userId,
-          5,
-        );
+          model: subagentConfig?.model,
+          contextWindow: subagentConfig?.contextWindow,
+        });
 
-        if (results.length === 0) {
+        if (subagentResult.results.length === 0 && !subagentResult.answer) {
           return {
             success: true,
             results: [],
@@ -66,15 +79,67 @@ export function registerKnowledgebaseTool(
 
         return {
           success: true,
-          results: results.map((r) => ({
-            content: r.content,
-            relevanceScore: r.score,
-            documentId: r.documentId,
-            documentName: r.documentName,
-            ...(r.kbId ? { kbId: r.kbId } : {}),
-            ...(r.kbName ? { kbName: r.kbName } : {}),
-          })),
-          resultCount: results.length,
+          results: subagentResult.results,
+          resultCount: subagentResult.results.length,
+          ...(subagentResult.answer ? { answer: subagentResult.answer } : {}),
+          ...(subagentResult.relatedDocuments &&
+          subagentResult.relatedDocuments.length > 0
+            ? { relatedDocuments: subagentResult.relatedDocuments }
+            : {}),
+        };
+      },
+      toModelOutput: ({ output }: { output: any }) => {
+        if (!output?.success) {
+          return {
+            type: "text",
+            value: output?.error ?? "Failed to search knowledge base.",
+          };
+        }
+
+        if (
+          (!output?.results || output.results.length === 0) &&
+          !output?.answer
+        ) {
+          return {
+            type: "text",
+            value:
+              output?.message ??
+              "No matching documents found in knowledge base.",
+          };
+        }
+
+        if (output?.answer) {
+          let text = `KNOWLEDGE BASE SYNTHESIS:\n${output.answer}\n`;
+
+          if (output.relatedDocuments && output.relatedDocuments.length > 0) {
+            text += `\nDOCUMENT RELATIONSHIPS:\n${output.relatedDocuments
+              .map(
+                (r: any) =>
+                  `- "${r.sourceDocName}" ${r.relationType} "${r.targetDocName}"`,
+              )
+              .join("\n")}\n`;
+          }
+
+          if (output.results && output.results.length > 0) {
+            text += `\nSOURCES:\n${output.results
+              .map((r: any) => `- "${r.documentName}"`)
+              .join("\n")}`;
+          }
+
+          return {
+            type: "text",
+            value: text.trim(),
+          };
+        }
+
+        return {
+          type: "text",
+          value: output.results
+            .map(
+              (r: any, i: number) =>
+                `[Source ${i + 1}: ${r.documentName}]\n${r.content}`,
+            )
+            .join("\n\n"),
         };
       },
     }),

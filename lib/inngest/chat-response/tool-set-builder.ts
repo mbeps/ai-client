@@ -157,11 +157,21 @@ export function buildOrchestratorToolSet(
   }
 
   const targetKbIds = resolveTargetKbIds(ctx);
+  const kbSubagentModel = workerResolved
+    ? workerResolved.sdkProvider.chat(workerResolved.modelId)
+    : resolved.sdkProvider.chat(resolvedModelId);
+  const kbSubagentContextWindow =
+    workerResolved?.contextWindow ?? resolved.contextWindow;
+
   const kbTools = registerKnowledgebaseTool(
     targetKbIds,
     ctx.kbIsReady ?? false,
     userId,
     selectedTools,
+    {
+      model: kbSubagentModel,
+      contextWindow: kbSubagentContextWindow,
+    },
   );
   const hasKbTool = Object.keys(kbTools).length > 0;
 
