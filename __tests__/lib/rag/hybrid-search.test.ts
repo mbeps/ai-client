@@ -277,4 +277,29 @@ describe("hybridSearch", () => {
     const result = await hybridSearch("kb-1", "test query", "user-1", 5);
     expect(result).toEqual([{ id: "chunk-1" }]);
   });
+
+  it("forwards optional documentIds to searchSemanticVectors and searchKeywordChunks", async () => {
+    setupKbMock([{ id: "kb-1", indexStatus: "ready" }]);
+    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+    searchSemanticVectorsMock.mockResolvedValueOnce([]);
+    searchKeywordChunksMock.mockResolvedValueOnce([]);
+    applyRRFMock.mockReturnValue([]);
+
+    await hybridSearch("kb-1", "test query", "user-1", 5, ["doc-abc", "doc-xyz"]);
+
+    expect(searchSemanticVectorsMock).toHaveBeenCalledWith(
+      2,
+      [0.1, 0.2],
+      ["kb-1"],
+      20,
+      ["doc-abc", "doc-xyz"],
+    );
+    expect(searchKeywordChunksMock).toHaveBeenCalledWith(
+      2,
+      "test query",
+      ["kb-1"],
+      20,
+      ["doc-abc", "doc-xyz"],
+    );
+  });
 });

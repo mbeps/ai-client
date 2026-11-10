@@ -58,11 +58,23 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
   upsertChunkPoints: upsertChunkPointsMock,
 }));
 
+const extractDocumentMetadataMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/rag/extract-document-metadata", () => ({
+  extractDocumentMetadata: extractDocumentMetadataMock,
+}));
+
+const generateDocumentRelationsMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/rag/generate-document-relations", () => ({
+  generateDocumentRelations: generateDocumentRelationsMock,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
+import { extractDocumentMetadata } from "@/lib/rag/extract-document-metadata";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";
+import { generateDocumentRelations } from "@/lib/rag/generate-document-relations";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
@@ -90,6 +102,15 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     chainable.where.mockResolvedValue([{ id: "doc-1" }]);
+    extractDocumentMetadataMock.mockResolvedValue({
+      documentType: "general",
+      summary: "Default summary",
+      keyEntities: ["Entity1"],
+      tableOfContents: [
+        { title: "Section 1", chunkStartIndex: 0, chunkEndIndex: 0 },
+      ],
+    });
+    generateDocumentRelationsMock.mockResolvedValue(0);
   });
 
   it("deletes old points in Qdrant and upserts new points with expected fields", async () => {
@@ -167,6 +188,28 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
       statusMessage: null,
       chunkCount: 1,
       truncated: false,
+      documentType: "general",
+      summary: "Default summary",
+      keyEntities: ["Entity1"],
+      tableOfContents: [
+        { title: "Section 1", chunkStartIndex: 0, chunkEndIndex: 0 },
+      ],
+    });
+    expect(extractDocumentMetadataMock).toHaveBeenCalledWith({
+      documentName: "test.pdf",
+      chunks: ["hello"],
+      userId: "user-1",
+    });
+    expect(generateDocumentRelationsMock).toHaveBeenCalledWith({
+      doc: {
+        id: "doc-1",
+        kbId: "kb-1",
+        name: "test.pdf",
+        documentType: "general",
+        summary: "Default summary",
+        keyEntities: ["Entity1"],
+      },
+      userId: "user-1",
     });
   });
 
@@ -228,6 +271,7 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
     expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
     expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
     expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+    expect(generateDocumentRelationsMock).not.toHaveBeenCalled();
   });
 
   it("uses providedKbName directly without DB lookup when provided", async () => {

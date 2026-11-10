@@ -6,10 +6,12 @@ import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error"
 import { getLogger } from "@/lib/logger";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
+import { extractDocumentMetadata } from "@/lib/rag/extract-document-metadata";
 import {
   extractTextFromBuffer,
   MAX_DOCUMENT_CHARS_LIMIT,
 } from "@/lib/rag/extract-text-server";
+import { generateDocumentRelations } from "@/lib/rag/generate-document-relations";
 import {
   deletePointsByDocumentId,
   upsertChunkPoints,
@@ -54,6 +56,11 @@ export async function ingestDocumentPipeline(
 
   const chunks = chunkText(text);
   const embeddings = await embedDocuments(chunks, userId);
+  const metadata = await extractDocumentMetadata({
+    documentName: doc.name,
+    chunks,
+    userId,
+  });
 
   // Check if document or knowledgebase was deleted concurrently before storing chunks
   const [currentDoc] = await db
@@ -117,9 +124,25 @@ export async function ingestDocumentPipeline(
       chunkCount: chunks.length,
       tokenCount,
       truncated,
+      documentType: metadata.documentType,
+      summary: metadata.summary,
+      keyEntities: metadata.keyEntities,
+      tableOfContents: metadata.tableOfContents,
       updatedAt: new Date(),
     })
     .where(eq(kbDocument.id, doc.id));
+
+  await generateDocumentRelations({
+    doc: {
+      id: doc.id,
+      kbId: doc.kbId,
+      name: doc.name,
+      documentType: metadata.documentType,
+      summary: metadata.summary,
+      keyEntities: metadata.keyEntities,
+    },
+    userId,
+  });
 
   log.info(
     "Document ingested successfully into Qdrant (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",

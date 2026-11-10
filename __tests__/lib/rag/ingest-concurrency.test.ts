@@ -58,6 +58,19 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
   upsertChunkPoints: upsertChunkPointsMock,
 }));
 
+vi.mock("@/lib/rag/extract-document-metadata", () => ({
+  extractDocumentMetadata: vi.fn().mockResolvedValue({
+    documentType: "general",
+    summary: "",
+    keyEntities: [],
+    tableOfContents: [],
+  }),
+}));
+
+vi.mock("@/lib/rag/generate-document-relations", () => ({
+  generateDocumentRelations: vi.fn().mockResolvedValue(0),
+}));
+
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
 import { extractTextFromBuffer } from "@/lib/rag/extract-text-server";

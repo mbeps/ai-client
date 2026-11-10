@@ -5,22 +5,16 @@ import type { ScoredChunk } from "@/types/rag/chunk-result";
 
 const log = getLogger(["app", "rag", "qdrant"]);
 
-/**
- * In-memory cache of verified collections to avoid redundant HTTP collectionExists calls.
- */
+/** In-memory cache of verified collections to avoid redundant HTTP collectionExists calls. */
 const verifiedCollections = new Set<string>();
 
-/**
- * Clears the in-memory verified collections cache (used in tests).
- */
+/** Clears the in-memory verified collections cache (used in tests). */
 export function clearCollectionCache(): void {
   verifiedCollections.clear();
 }
 
 /**
  * Payload schema stored alongside vectors in Qdrant points.
- * All chunk text and denormalized document/knowledge base attributes
- * are stored directly in Qdrant payloads for single-hop retrieval.
  */
 export type QdrantChunkPayload = {
   content: string;
@@ -33,9 +27,7 @@ export type QdrantChunkPayload = {
   s3Key: string;
 };
 
-/**
- * Singleton Qdrant client instance connecting via configured environment variables.
- */
+/** Singleton Qdrant client instance connecting via configured environment variables. */
 const qdrantClient = new QdrantClient({
   url: env.QDRANT_URL,
   apiKey: env.QDRANT_API_KEY || undefined,
@@ -107,23 +99,18 @@ export async function ensureQdrantCollection(
       },
     });
 
-    // Create keyword payload index for efficient multi-KB filtering
-    await qdrantClient.createPayloadIndex(collectionName, {
-      field_name: "kbId",
-      field_schema: "keyword",
-    });
-
-    // Create keyword payload index for document deletion
-    await qdrantClient.createPayloadIndex(collectionName, {
-      field_name: "documentId",
-      field_schema: "keyword",
-    });
-
-    // Create full-text payload index for keyword search
-    await qdrantClient.createPayloadIndex(collectionName, {
-      field_name: "content",
-      field_schema: "text",
-    });
+    const indexes: Array<{
+      field_name: string;
+      field_schema: "keyword" | "text" | "integer";
+    }> = [
+      { field_name: "kbId", field_schema: "keyword" },
+      { field_name: "documentId", field_schema: "keyword" },
+      { field_name: "content", field_schema: "text" },
+      { field_name: "chunkIndex", field_schema: "integer" },
+    ];
+    for (const idx of indexes) {
+      await qdrantClient.createPayloadIndex(collectionName, idx);
+    }
   }
 
   verifiedCollections.add(collectionName);
@@ -147,11 +134,7 @@ export async function upsertChunkPoints(
   if (points.length === 0) return;
 
   const collectionName = await ensureQdrantCollection(dimensions);
-  await qdrantClient.upsert(collectionName, {
-    wait: true,
-    points,
-  });
-
+  await qdrantClient.upsert(collectionName, { wait: true, points });
   log.debug("Upserted {count} points into Qdrant {collection}", {
     count: points.length,
     collection: collectionName,
@@ -159,12 +142,13 @@ export async function upsertChunkPoints(
 }
 
 /**
- * Performs semantic vector search on Qdrant, filtered by knowledge base IDs.
+ * Performs semantic vector search on Qdrant, filtered by knowledge base IDs and optional document IDs.
  *
  * @param dimensions Embedding vector dimensionality
  * @param vector Query embedding vector
  * @param kbIds Knowledge base UUIDs to scope retrieval
  * @param limit Maximum candidate results to return
+ * @param documentIds Optional document UUIDs to scope retrieval
  * @returns Array of ScoredChunk objects sorted by similarity
  */
 export async function searchSemanticVectors(
@@ -172,20 +156,21 @@ export async function searchSemanticVectors(
   vector: number[],
   kbIds: string[],
   limit: number,
+  documentIds?: string[],
 ): Promise<ScoredChunk[]> {
   if (kbIds.length === 0) return [];
 
   const collectionName = await ensureQdrantCollection(dimensions);
+  const must: Record<string, unknown>[] = [
+    { key: "kbId", match: { any: kbIds } },
+  ];
+  if (documentIds?.length) {
+    must.push({ key: "documentId", match: { any: documentIds } });
+  }
+
   const res = await qdrantClient.query(collectionName, {
     query: vector,
-    filter: {
-      must: [
-        {
-          key: "kbId",
-          match: { any: kbIds },
-        },
-      ],
-    },
+    filter: { must },
     limit,
     with_payload: true,
   });
@@ -194,12 +179,13 @@ export async function searchSemanticVectors(
 }
 
 /**
- * Performs full-text keyword search on Qdrant chunk text, filtered by knowledge base IDs.
+ * Performs full-text keyword search on Qdrant chunk text, filtered by KB IDs and optional doc IDs.
  *
  * @param dimensions Embedding vector dimensionality
  * @param queryText Search query text
  * @param kbIds Knowledge base UUIDs to scope retrieval
  * @param limit Maximum candidate results to return
+ * @param documentIds Optional document UUIDs to scope retrieval
  * @returns Array of ScoredChunk objects matching text query
  */
 export async function searchKeywordChunks(
@@ -207,28 +193,71 @@ export async function searchKeywordChunks(
   queryText: string,
   kbIds: string[],
   limit: number,
+  documentIds?: string[],
 ): Promise<ScoredChunk[]> {
   if (kbIds.length === 0 || !queryText.trim()) return [];
 
   const collectionName = await ensureQdrantCollection(dimensions);
+  const must: Record<string, unknown>[] = [
+    { key: "kbId", match: { any: kbIds } },
+    { key: "content", match: { text: queryText } },
+  ];
+  if (documentIds?.length) {
+    must.push({ key: "documentId", match: { any: documentIds } });
+  }
+
   const res = await qdrantClient.query(collectionName, {
-    filter: {
-      must: [
-        {
-          key: "kbId",
-          match: { any: kbIds },
-        },
-        {
-          key: "content",
-          match: { text: queryText },
-        },
-      ],
-    },
+    filter: { must },
     limit,
     with_payload: true,
   });
 
   return (res.points || []).map(pointToScoredChunk);
+}
+
+/**
+ * Fetches chunk points for a document across collections, filtered by chunkIndex range and sorted ascending.
+ *
+ * @param documentId Target document UUID
+ * @param kbIds Scoped knowledge base UUIDs
+ * @param startIndex Optional inclusive lower bound chunk index
+ * @param endIndex Optional inclusive upper bound chunk index
+ * @returns Array of ScoredChunk objects sorted ascending by chunkIndex
+ */
+export async function getDocumentChunksByRange(
+  documentId: string,
+  kbIds: string[],
+  startIndex?: number,
+  endIndex?: number,
+): Promise<ScoredChunk[]> {
+  if (kbIds.length === 0) return [];
+
+  const collectionsRes = await qdrantClient.getCollections();
+  const chunks: ScoredChunk[] = [];
+
+  for (const col of collectionsRes.collections) {
+    if (!col.name.startsWith("kb_chunks_")) continue;
+
+    const res = await qdrantClient.scroll(col.name, {
+      filter: {
+        must: [
+          { key: "documentId", match: { value: documentId } },
+          { key: "kbId", match: { any: kbIds } },
+        ],
+      },
+      limit: 1000,
+      with_payload: true,
+    });
+
+    for (const point of res.points || []) {
+      const chunk = pointToScoredChunk(point);
+      if (startIndex !== undefined && chunk.chunkIndex < startIndex) continue;
+      if (endIndex !== undefined && chunk.chunkIndex > endIndex) continue;
+      chunks.push(chunk);
+    }
+  }
+
+  return chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
 }
 
 /**
@@ -244,9 +273,7 @@ export async function deletePointsByDocumentId(
     if (col.name.startsWith("kb_chunks_")) {
       await qdrantClient.delete(col.name, {
         wait: true,
-        filter: {
-          must: [{ key: "documentId", match: { value: documentId } }],
-        },
+        filter: { must: [{ key: "documentId", match: { value: documentId } }] },
       });
     }
   }
@@ -265,9 +292,7 @@ export async function deletePointsByKbIds(kbIds: string[]): Promise<void> {
     if (col.name.startsWith("kb_chunks_")) {
       await qdrantClient.delete(col.name, {
         wait: true,
-        filter: {
-          must: [{ key: "kbId", match: { any: kbIds } }],
-        },
+        filter: { must: [{ key: "kbId", match: { any: kbIds } }] },
       });
     }
   }

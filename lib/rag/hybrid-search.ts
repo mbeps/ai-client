@@ -29,6 +29,7 @@ import type { ChunkResult, ScoredChunk } from "@/types/rag/chunk-result";
  * @param query - User search query
  * @param userId - Authenticated user ID (for embedding provider resolution)
  * @param topK - Number of results to return (default: 5)
+ * @param documentIds - Optional document IDs to scope chunk retrieval
  * @returns Top K ranked chunks by relevance
  * @throws {KnowledgebaseNotReadyError} When any requested KB indexing is not complete
  * @throws {RateLimitError} When embedding provider rate limits the request
@@ -41,6 +42,7 @@ export async function hybridSearch(
   query: string,
   userId: string,
   topK = env.RAG_TOP_K,
+  documentIds?: string[],
 ): Promise<ChunkResult[]> {
   const normalizedQuery = query.trim();
 
@@ -90,6 +92,7 @@ export async function hybridSearch(
       embedding,
       kbIds,
       RAG_CONFIG.SEARCH_CANDIDATE_LIMIT,
+      ...(documentIds ? [documentIds] : []),
     ).catch((err) => {
       log.error("Semantic vector query failed: {error}", {
         error: err instanceof Error ? err.message : String(err),
@@ -102,6 +105,7 @@ export async function hybridSearch(
       normalizedQuery,
       kbIds,
       RAG_CONFIG.SEARCH_CANDIDATE_LIMIT,
+      ...(documentIds ? [documentIds] : []),
     ).catch((err) => {
       log.error("Keyword query failed: {error}", {
         error: err instanceof Error ? err.message : String(err),
