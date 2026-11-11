@@ -174,6 +174,13 @@ describe("KB Inngest Functions", () => {
       expect(chainable.set).toHaveBeenCalledWith({
         status: "pending",
         statusMessage: null,
+        ingestSteps: {
+          uploading: { status: "completed" },
+          extracting: { status: "pending" },
+          embedding: { status: "pending" },
+          metadata: { status: "pending" },
+          relations: { status: "pending" },
+        },
         updatedAt: expect.any(Date),
       });
       expect(inngest.send).toHaveBeenCalledWith([

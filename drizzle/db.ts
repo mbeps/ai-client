@@ -5,6 +5,7 @@ import * as aiProviderSchema from "@/drizzle/schemas/ai-provider-schema";
 import * as assistantSchema from "@/drizzle/schemas/assistant-schema";
 import * as authSchema from "@/drizzle/schemas/auth-schema";
 import * as chatSchema from "@/drizzle/schemas/chat-schema";
+import * as kbDocumentRelationSchema from "@/drizzle/schemas/kb-document-relation-schema";
 import * as kbDocumentSchema from "@/drizzle/schemas/kb-document-schema";
 import * as knowledgebaseSchema from "@/drizzle/schemas/knowledgebase-schema";
 import * as mcpServerSchema from "@/drizzle/schemas/mcp-server-schema";
@@ -24,6 +25,7 @@ const schema = {
   ...authSchema,
   ...chatSchema,
   ...kbDocumentSchema,
+  ...kbDocumentRelationSchema,
   ...knowledgebaseSchema,
   ...mcpServerSchema,
   ...projectSchema,

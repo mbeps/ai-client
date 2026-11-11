@@ -9,8 +9,18 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { UserModelOption } from "@/hooks/use-user-models";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
+
+const GLOBAL_MODEL_SENTINEL = "__global__";
 
 /**
  * Represents kb settings tab props.
@@ -22,6 +32,10 @@ export interface KbSettingsTabProps {
   onNameChange: (value: string) => void;
   description: string;
   onDescriptionChange: (value: string) => void;
+  metadataModelId?: string | null;
+  onMetadataModelChange?: (value: string | null) => void;
+  chatModels?: UserModelOption[];
+  globalKbModelLabel?: string;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
   embeddingModelLabel: string;
@@ -39,18 +53,32 @@ export function KbSettingsTab({
   onNameChange,
   description,
   onDescriptionChange,
+  metadataModelId = null,
+  onMetadataModelChange,
+  chatModels = [],
+  globalKbModelLabel,
   onSave,
   isSaving = false,
   embeddingModelLabel,
   kb,
   onReindex,
 }: KbSettingsTabProps) {
+  const hasMatchingModel =
+    Boolean(metadataModelId) &&
+    chatModels.some((model) => model.id === metadataModelId);
+  const selectedModelValue = hasMatchingModel
+    ? (metadataModelId as string)
+    : GLOBAL_MODEL_SENTINEL;
+  const globalOptionLabel = globalKbModelLabel
+    ? `Use Global Default (${globalKbModelLabel})`
+    : "Use Global Default";
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">Knowledge Base Details</h3>
         <p className="text-muted-foreground text-sm">
-          Manage the knowledge base name and description.
+          Manage the knowledge base name, description, and model settings.
         </p>
       </div>
 
@@ -71,6 +99,37 @@ export function KbSettingsTab({
             placeholder="Describe what this knowledge base contains..."
             rows={4}
           />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="kb-metadata-model" className="text-sm font-medium">
+            Metadata &amp; Relations Model
+          </label>
+          <Select
+            value={selectedModelValue}
+            onValueChange={(value) =>
+              onMetadataModelChange?.(
+                value === GLOBAL_MODEL_SENTINEL ? null : value,
+              )
+            }
+          >
+            <SelectTrigger id="kb-metadata-model" className="w-full">
+              <SelectValue placeholder={globalOptionLabel} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={GLOBAL_MODEL_SENTINEL}>
+                {globalOptionLabel}
+              </SelectItem>
+              {chatModels.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.label} ({model.providerName})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            Used to extract document metadata and relations when ingesting
+            documents into this knowledge base.
+          </p>
         </div>
         <Button
           onClick={onSave}

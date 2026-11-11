@@ -113,6 +113,17 @@ describe("uploadKbDocument — DB-first ordering with compensation (T2.5)", () =
     expect(result.ok).toBe(true);
 
     expect(order.indexOf("db-insert")).toBeLessThan(order.indexOf("s3-upload"));
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingestSteps: {
+          uploading: { status: "completed" },
+          extracting: { status: "pending" },
+          embedding: { status: "pending" },
+          metadata: { status: "pending" },
+          relations: { status: "pending" },
+        },
+      }),
+    );
   });
 
   it("compensates by deleting the inserted row when uploadObject rejects", async () => {

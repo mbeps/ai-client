@@ -261,4 +261,57 @@ describe("ingestDocument", () => {
       }),
     );
   });
+
+  it("marks the active failed step in ingestSteps when pipeline fails during embedding", async () => {
+    const doc = { id: "doc-1", kbId: "kb-1", s3Key: "path/to/doc.pdf" };
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([doc]),
+      })
+      .mockReturnValue(mockSelect);
+
+    const chainableUpdate = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue(undefined),
+    };
+    dbMock.update.mockReturnValue(chainableUpdate);
+
+    s3ClientMock.send.mockResolvedValue({
+      Body: {
+        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array([1])),
+      },
+    });
+
+    ingestDocumentPipelineMock.mockImplementationOnce(
+      async (_doc, _buf, _userId, _kbName, onStepChange) => {
+        onStepChange?.("extracting");
+        onStepChange?.("embedding");
+        throw new Error("Embedding API down");
+      },
+    );
+    isRateLimitErrorMock.mockReturnValue(false);
+
+    await expect(ingestDocument("doc-1", "user-1")).rejects.toThrow(
+      "Embedding API down",
+    );
+
+    expect(chainableUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        ingestSteps: {
+          uploading: { status: "completed" },
+          extracting: { status: "completed" },
+          embedding: { status: "failed", error: "Embedding API down" },
+          metadata: { status: "pending" },
+          relations: { status: "pending" },
+        },
+      }),
+    );
+  });
 });

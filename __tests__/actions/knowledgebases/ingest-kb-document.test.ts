@@ -93,6 +93,13 @@ describe("ingestKbDocument action", () => {
     expect(chainable.set).toHaveBeenCalledWith({
       status: "processing",
       statusMessage: null,
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "loading" },
+        embedding: { status: "pending" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
     });
     expect(inngest.send).toHaveBeenCalledWith({
       name: "knowledgebase/document.ingest",

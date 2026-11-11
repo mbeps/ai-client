@@ -1,18 +1,21 @@
 "use client";
 
-import { Library, Settings, Shield, Upload } from "lucide-react";
+import { Library, Network, Settings, Shield, Upload } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { deleteKnowledgebase } from "@/actions/knowledgebases/delete-knowledgebase";
 import { getKnowledgebase } from "@/actions/knowledgebases/get-knowledgebase";
+import { ingestKbDocument } from "@/actions/knowledgebases/ingest-kb-document";
 import { listDocuments } from "@/actions/knowledgebases/list-documents";
 import { reindexKnowledgebase } from "@/actions/knowledgebases/reindex-knowledgebase";
 import { updateKnowledgebase } from "@/actions/knowledgebases/update-knowledgebase";
+import { uploadKbDocument } from "@/actions/knowledgebases/upload-kb-document";
 import { listModels } from "@/actions/models/list-models";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { DocumentList } from "@/components/knowledgebase/document-list";
+import { KbGraphTab } from "@/components/knowledgebase/kb-graph-tab";
 import { KbSettingsTab } from "@/components/knowledgebase/kb-settings-tab";
 import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
@@ -30,34 +33,51 @@ import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skele
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
-import { useUserModels } from "@/hooks/use-user-models";
+import { type UserModelOption, useUserModels } from "@/hooks/use-user-models";
 import { logger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 /**
- * Resolves embedding model label.
+ * Labels resolved from global settings and enabled models for KB configuration display.
  *
- * @returns The resolved result
  * @author Maruf Bepary
  */
-async function resolveEmbeddingModelLabel(): Promise<string> {
-  const [settingsRes, modelsRes] = await Promise.all([
+type KbModelLabels = {
+  embeddingModelLabel: string;
+  globalKbModelLabel?: string;
+};
+
+/**
+ * Resolves global embedding and KB metadata model labels.
+ *
+ * @returns The resolved model labels.
+ * @author Maruf Bepary
+ */
+async function resolveKbModelLabels(): Promise<KbModelLabels> {
+  const [settingsRes, embeddingModelsRes, chatModelsRes] = await Promise.all([
     getUserSettings(),
     listModels({ type: "embedding", isEnabled: true }),
+    listModels({ type: "chat", isEnabled: true }),
   ]);
 
   const settings = settingsRes.ok ? settingsRes.value : null;
-  const embeddingModels = modelsRes.ok ? modelsRes.value : [];
-  const defaultId = settings?.defaultEmbeddingModelId;
+  const embeddingModels = embeddingModelsRes.ok ? embeddingModelsRes.value : [];
+  const chatModels = chatModelsRes.ok ? chatModelsRes.value : [];
+
   const activeEmbedding =
-    embeddingModels.find((m) => m.id === defaultId) || embeddingModels[0];
+    embeddingModels.find((m) => m.id === settings?.defaultEmbeddingModelId) ||
+    embeddingModels[0];
 
-  if (!activeEmbedding) {
-    return "Not configured";
-  }
+  const kbDefaultId =
+    settings?.defaultKbModelId ?? settings?.defaultChatModelId ?? null;
+  const activeKbModel =
+    chatModels.find((m) => m.id === kbDefaultId) || chatModels[0];
 
-  return activeEmbedding.label;
+  return {
+    embeddingModelLabel: activeEmbedding?.label ?? "Not configured",
+    globalKbModelLabel: activeKbModel?.label,
+  };
 }
 
 /**
@@ -71,18 +91,22 @@ function useKnowledgebaseDetail(kbId: string) {
   const [kb, setKb] = useState<KnowledgebaseRow | null>(null);
   const [embeddingModelLabel, setEmbeddingModelLabel] =
     useState<string>("Not configured");
+  const [globalKbModelLabel, setGlobalKbModelLabel] = useState<
+    string | undefined
+  >(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchKb = useCallback(async () => {
     try {
-      const [res, label] = await Promise.all([
+      const [res, labels] = await Promise.all([
         getKnowledgebase(kbId),
-        resolveEmbeddingModelLabel(),
+        resolveKbModelLabels(),
       ]);
       if (res.ok) {
         setKb(res.value);
       }
-      setEmbeddingModelLabel(label);
+      setEmbeddingModelLabel(labels.embeddingModelLabel);
+      setGlobalKbModelLabel(labels.globalKbModelLabel);
     } catch (error) {
       logger.error("Failed to fetch knowledgebase", error);
     } finally {
@@ -124,6 +148,7 @@ function useKnowledgebaseDetail(kbId: string) {
   return {
     kb,
     embeddingModelLabel,
+    globalKbModelLabel,
     isLoading,
     fetchKb,
     handleReindex,
@@ -146,6 +171,10 @@ function useKnowledgebaseDocuments(
 ) {
   const [documents, setDocuments] = useState<KbDocumentRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
+  // Uploads in flight before the server action returns a persisted row.
+  const [pendingUploads, setPendingUploads] = useState<
+    { tempId: string; name: string }[]
+  >([]);
 
   const fetchDocuments = useCallback(() => {
     listDocuments(kbId)
@@ -161,16 +190,17 @@ function useKnowledgebaseDocuments(
     fetchDocuments();
   }, [fetchDocuments]);
 
-  const hasInFlightDocs = documents.some(
-    (d) => d.status === "pending" || d.status === "processing",
-  );
+  const hasInFlightDocs =
+    documents.some(
+      (d) => d.status === "pending" || d.status === "processing",
+    ) || pendingUploads.length > 0;
 
   useEffect(() => {
     if (indexStatus !== "indexing" && !hasInFlightDocs) return;
 
     const interval = setInterval(() => {
       fetchDocuments();
-    }, 3000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [indexStatus, hasInFlightDocs, fetchDocuments]);
@@ -192,17 +222,95 @@ function useKnowledgebaseDocuments(
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
-  const handleUploadSuccess = useCallback((doc: KbDocumentRow) => {
-    setDocuments((prev) => [{ ...doc, status: "processing" }, ...prev]);
-  }, []);
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      const tempId = crypto.randomUUID();
+      setPendingUploads((prev) => [...prev, { tempId, name: file.name }]);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("kbId", kbId);
+
+        const uploadRes = await uploadKbDocument(formData);
+        if (!uploadRes.ok) {
+          toast.error(uploadRes.error.message || "Upload failed");
+          return;
+        }
+
+        const doc = uploadRes.value;
+        setPendingUploads((prev) =>
+          prev.filter((item) => item.tempId !== tempId),
+        );
+
+        const ingestRes = await ingestKbDocument(doc.id);
+        if (!ingestRes.ok) {
+          const errMsg = ingestRes.error.message || "Ingestion failed";
+          setDocuments((prev) => [
+            {
+              ...doc,
+              status: "failed",
+              statusMessage: errMsg,
+            },
+            ...prev,
+          ]);
+          return;
+        }
+
+        toast.success(`"${file.name}" uploaded and queued for processing`);
+        setDocuments((prev) => [doc, ...prev]);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        toast.error(msg);
+      } finally {
+        setPendingUploads((prev) =>
+          prev.filter((item) => item.tempId !== tempId),
+        );
+      }
+    },
+    [kbId],
+  );
+
+  // Placeholder rows for uploads awaiting their persisted server row.
+  // shortcut: fabricated minimal rows (no s3Key/userId) exist only until the
+  // upload action returns; upgrade path is server-sent events if the upload
+  // window grows beyond the action round-trip.
+  const pendingRows: KbDocumentRow[] = pendingUploads.map((upload) => ({
+    id: upload.tempId,
+    kbId,
+    userId: "",
+    name: upload.name,
+    mimeType: "",
+    size: 0,
+    s3Key: "",
+    status: "pending",
+    statusMessage: null,
+    chunkCount: 0,
+    tokenCount: 0,
+    truncated: false,
+    documentType: "general",
+    summary: "",
+    keyEntities: [],
+    tableOfContents: [],
+    ingestSteps: {
+      uploading: { status: "loading" },
+      extracting: { status: "pending" },
+      embedding: { status: "pending" },
+      metadata: { status: "pending" },
+      relations: { status: "pending" },
+    },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
 
   return {
     documents,
+    displayDocuments: [...pendingRows, ...documents],
     hasInFlightDocs,
     showUpload,
     setShowUpload,
     handleDeleted,
-    handleUploadSuccess,
+    handleUploadFile,
   };
 }
 
@@ -220,12 +328,14 @@ function useKnowledgebaseSettings(
 ) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [metadataModelId, setMetadataModelId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (kb) {
       setName(kb.name);
       setDescription(kb.description ?? "");
+      setMetadataModelId(kb.metadataModelId ?? null);
     }
   }, [kb]);
 
@@ -233,10 +343,15 @@ function useKnowledgebaseSettings(
     if (!kb) return;
     setIsSaving(true);
     try {
-      await updateKnowledgebase(kb.id, {
+      const res = await updateKnowledgebase(kb.id, {
         name,
         description,
+        metadataModelId,
       });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to save settings");
+        return;
+      }
       toast.success("Settings saved");
       onSaved();
     } catch {
@@ -251,6 +366,8 @@ function useKnowledgebaseSettings(
     setName,
     description,
     setDescription,
+    metadataModelId,
+    setMetadataModelId,
     isSaving,
     handleSaveSettings,
   };
@@ -280,6 +397,7 @@ function useKnowledgebasePageState(kbId: string) {
   });
 
   const { models, isLoading: isModelsLoading } = useUserModels("embedding");
+  const { models: chatModels } = useUserModels("chat");
   const hasNoModels = !isModelsLoading && models.length === 0;
 
   const hasAutoTriggeredReindexRef = useRef(false);
@@ -300,6 +418,7 @@ function useKnowledgebasePageState(kbId: string) {
     docs,
     settings,
     deletion,
+    chatModels,
     isUploadDisabled: isModelsLoading || hasNoModels,
     hasNoModels,
   };
@@ -315,12 +434,15 @@ type KnowledgebasePageTabsProps = {
   setActiveTab: (tab: string) => void;
   kb: KnowledgebaseRow;
   documents: KbDocumentRow[];
+  displayDocuments: KbDocumentRow[];
   onReindex: () => void;
   onOpenUpload: () => void;
   onDocumentDeleted: (id: string) => void;
   isUploadDisabled: boolean;
   settings: ReturnType<typeof useKnowledgebaseSettings>;
+  chatModels: UserModelOption[];
   embeddingModelLabel: string;
+  globalKbModelLabel?: string;
   onDeleteClick: () => void;
   isDeleting: boolean;
 };
@@ -338,12 +460,15 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
     setActiveTab,
     kb,
     documents,
+    displayDocuments,
     onReindex,
     onOpenUpload,
     onDocumentDeleted,
     isUploadDisabled,
     settings,
+    chatModels,
     embeddingModelLabel,
+    globalKbModelLabel,
     onDeleteClick,
     isDeleting,
   } = props;
@@ -358,6 +483,10 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
         <SidebarTabsTrigger value="documents">
           <Library className="mr-2 h-4 w-4" />
           <span>Documents</span>
+        </SidebarTabsTrigger>
+        <SidebarTabsTrigger value="graph">
+          <Network className="mr-2 h-4 w-4" />
+          <span>Graph</span>
         </SidebarTabsTrigger>
         <SidebarTabsTrigger value="settings">
           <Settings className="mr-2 h-4 w-4" />
@@ -385,8 +514,15 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
               Upload
             </Button>
           </div>
-          <DocumentList documents={documents} onDeleted={onDocumentDeleted} />
+          <DocumentList
+            documents={displayDocuments}
+            onDeleted={onDocumentDeleted}
+          />
         </div>
+      </SidebarTabsContent>
+
+      <SidebarTabsContent value="graph" className="w-full min-w-0 flex-1">
+        <KbGraphTab kbId={kb.id} />
       </SidebarTabsContent>
 
       <SidebarTabsContent value="settings">
@@ -395,6 +531,10 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
           onNameChange={settings.setName}
           description={settings.description}
           onDescriptionChange={settings.setDescription}
+          metadataModelId={settings.metadataModelId}
+          onMetadataModelChange={settings.setMetadataModelId}
+          chatModels={chatModels}
+          globalKbModelLabel={globalKbModelLabel}
           onSave={settings.handleSaveSettings}
           isSaving={settings.isSaving}
           embeddingModelLabel={embeddingModelLabel}
@@ -448,6 +588,10 @@ export default function KnowledgebasePage() {
   const params = useParams();
   const kbId = params.id as string;
 
+  if (kbId === "new") {
+    notFound();
+  }
+
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsString.withDefault("documents").withOptions({
@@ -467,7 +611,10 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <PageContainer className="space-y-6">
+    <PageContainer
+      variant={activeTab === "graph" ? "wide" : "default"}
+      className="space-y-6"
+    >
       <KnowledgebaseHeader kb={state.kb} />
 
       {state.hasNoModels ? (
@@ -479,21 +626,23 @@ export default function KnowledgebasePage() {
         setActiveTab={setActiveTab}
         kb={state.kb}
         documents={state.docs.documents}
+        displayDocuments={state.docs.displayDocuments}
         onReindex={state.handleReindex}
         onOpenUpload={() => state.docs.setShowUpload(true)}
         onDocumentDeleted={state.docs.handleDeleted}
         isUploadDisabled={state.isUploadDisabled}
         settings={state.settings}
+        chatModels={state.chatModels}
         embeddingModelLabel={state.embeddingModelLabel}
+        globalKbModelLabel={state.globalKbModelLabel}
         onDeleteClick={() => state.deletion.setShowDelete(true)}
         isDeleting={state.deletion.isDeleting}
       />
 
       <UploadDocumentDialog
-        kbId={kbId}
         open={state.docs.showUpload}
         onOpenChange={state.docs.setShowUpload}
-        onSuccess={state.docs.handleUploadSuccess}
+        onUpload={state.docs.handleUploadFile}
       />
 
       <DeleteConfirmDialog

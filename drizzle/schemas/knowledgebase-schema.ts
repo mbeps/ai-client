@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import {
   entityIdColumn,
   timestampColumns,
@@ -19,6 +20,9 @@ export const knowledgebase = pgTable(
     userId: userForeignKeyColumn(),
     name: text("name").notNull(),
     description: text("description"),
+    metadataModelId: text("metadata_model_id").references(() => aiModel.id, {
+      onDelete: "set null",
+    }),
     indexStatus: text("index_status")
       .$type<"ready" | "stale" | "indexing">()
       .notNull()

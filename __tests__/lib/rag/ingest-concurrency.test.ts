@@ -19,20 +19,21 @@ vi.mock("@/config/env", () => ({
 }));
 
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of [
-    "select",
-    "from",
-    "insert",
-    "values",
-    "update",
-    "set",
-    "delete",
-  ]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
-  c.where = vi.fn();
-  return c;
+  const selectChain = {} as Record<string, ReturnType<typeof vi.fn>>;
+  selectChain.from = vi.fn().mockImplementation(() => selectChain);
+  selectChain.where = vi.fn();
+
+  const updateChain = {} as Record<string, ReturnType<typeof vi.fn>>;
+  updateChain.set = vi.fn().mockImplementation(() => updateChain);
+  updateChain.where = vi.fn().mockResolvedValue(undefined);
+
+  return {
+    select: vi.fn().mockImplementation(() => selectChain),
+    update: vi.fn().mockImplementation(() => updateChain),
+    where: selectChain.where,
+    set: updateChain.set,
+    updateWhere: updateChain.where,
+  };
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
@@ -56,6 +57,19 @@ const upsertChunkPointsMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/rag/qdrant-client", () => ({
   deletePointsByDocumentId: deletePointsByDocumentIdMock,
   upsertChunkPoints: upsertChunkPointsMock,
+}));
+
+vi.mock("@/lib/rag/extract-document-metadata", () => ({
+  extractDocumentMetadata: vi.fn().mockResolvedValue({
+    documentType: "general",
+    summary: "",
+    keyEntities: [],
+    tableOfContents: [],
+  }),
+}));
+
+vi.mock("@/lib/rag/generate-document-relations", () => ({
+  generateDocumentRelations: vi.fn().mockResolvedValue(0),
 }));
 
 import { chunkText } from "@/lib/rag/chunk-text";
@@ -105,7 +119,9 @@ describe("ingestDocumentPipeline concurrency resilience", () => {
 
     expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
     // Verify document was not marked ready since it was deleted concurrently
-    expect(chainable.update).not.toHaveBeenCalled();
+    expect(chainable.set).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: "ready" }),
+    );
     expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-concurrency-1");
   });
 });

@@ -1,8 +1,10 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Plus, Save } from "lucide-react";
+import Link from "next/link";
 import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/config/routes";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 
 /**
@@ -34,12 +36,20 @@ export function ProjectKnowledgebaseTab({
 }: ProjectKnowledgebaseTabProps) {
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Knowledge Base</h3>
-        <p className="text-muted-foreground text-sm">
-          Attach a knowledge base to provide context to the AI in all chats
-          within this project.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold">Knowledge Base</h3>
+          <p className="text-muted-foreground text-sm">
+            Attach a knowledge base to provide context to the AI in all chats
+            within this project.
+          </p>
+        </div>
+        <Button asChild size="sm" variant="outline" className="shrink-0">
+          <Link href={ROUTES.KNOWLEDGEBASES.new}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            New Knowledgebase
+          </Link>
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -48,7 +58,7 @@ export function ProjectKnowledgebaseTab({
           mode="single"
           selectedIds={new Set(selectedKbId ? [selectedKbId] : [])}
           onSelect={(ids) => onSelectKbId(Array.from(ids)[0] || null)}
-          className="max-w-2xl"
+          className="w-full"
           allowEmpty
           emptyLabel="Do not use a knowledge base (None)"
         />

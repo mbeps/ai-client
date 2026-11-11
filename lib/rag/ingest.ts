@@ -7,7 +7,12 @@ import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { normalizeIngestErrorMessage } from "@/lib/error/normalize-ingest-error";
 import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { ingestDocumentPipeline } from "@/lib/rag/ingest-pipeline";
+import {
+  buildFailedIngestSteps,
+  createInitialIngestSteps,
+} from "@/lib/rag/ingest-steps";
 import { S3_BUCKET, s3Client } from "@/lib/storage/s3-instance";
+import type { KbIngestStepId } from "@/types/knowledgebase/kb-ingest-steps";
 
 /**
  * Synchronizes the parent knowledgebase index status based on in-flight documents.
@@ -60,11 +65,16 @@ export async function ingestDocument(
   if (!doc) throw new Error(`Document not found: ${documentId}`);
 
   // Mark as processing
+  let activeStep: KbIngestStepId = "extracting";
   await db
     .update(kbDocument)
     .set({
       status: "processing",
       statusMessage: null,
+      ingestSteps: createInitialIngestSteps({
+        uploading: { status: "completed" },
+        extracting: { status: "loading" },
+      }),
       updatedAt: new Date(),
     })
     .where(eq(kbDocument.id, documentId));
@@ -76,7 +86,9 @@ export async function ingestDocument(
     );
     const buffer = Buffer.from(await s3Res.Body!.transformToByteArray());
 
-    await ingestDocumentPipeline(doc, buffer, userId);
+    await ingestDocumentPipeline(doc, buffer, userId, undefined, (step) => {
+      activeStep = step;
+    });
 
     await syncKnowledgebaseIndexStatus(doc.kbId);
   } catch (err) {
@@ -88,6 +100,7 @@ export async function ingestDocument(
       .set({
         status: "failed",
         statusMessage: errorMessage,
+        ingestSteps: buildFailedIngestSteps(activeStep, errorMessage),
         updatedAt: new Date(),
       })
       .where(eq(kbDocument.id, documentId));

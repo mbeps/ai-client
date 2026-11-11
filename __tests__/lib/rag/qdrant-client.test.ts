@@ -6,6 +6,7 @@ const mockQdrantClient = vi.hoisted(() => ({
   createPayloadIndex: vi.fn(),
   upsert: vi.fn(),
   query: vi.fn(),
+  scroll: vi.fn(),
   getCollections: vi.fn(),
   delete: vi.fn(),
 }));
@@ -24,6 +25,7 @@ import {
   deletePointsByKbIds,
   ensureQdrantCollection,
   getCollectionName,
+  getDocumentChunksByRange,
   searchKeywordChunks,
   searchSemanticVectors,
   upsertChunkPoints,
@@ -59,7 +61,7 @@ describe("qdrant-client", () => {
           distance: "Cosine",
         },
       });
-      expect(mockQdrantClient.createPayloadIndex).toHaveBeenCalledTimes(3);
+      expect(mockQdrantClient.createPayloadIndex).toHaveBeenCalledTimes(4);
       expect(mockQdrantClient.createPayloadIndex).toHaveBeenCalledWith("kb_chunks_1024", {
         field_name: "kbId",
         field_schema: "keyword",
@@ -71,6 +73,10 @@ describe("qdrant-client", () => {
       expect(mockQdrantClient.createPayloadIndex).toHaveBeenCalledWith("kb_chunks_1024", {
         field_name: "content",
         field_schema: "text",
+      });
+      expect(mockQdrantClient.createPayloadIndex).toHaveBeenCalledWith("kb_chunks_1024", {
+        field_name: "chunkIndex",
+        field_schema: "integer",
       });
     });
 
@@ -222,6 +228,25 @@ describe("qdrant-client", () => {
       const res = await searchSemanticVectors(2, [0.1, 0.2], ["kb-1"], 10);
       expect(res).toEqual([]);
     });
+
+    it("appends documentId filter when documentIds array is non-empty", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({ points: [] });
+
+      await searchSemanticVectors(2, [0.1, 0.2], ["kb-1"], 10, ["doc-1", "doc-2"]);
+
+      expect(mockQdrantClient.query).toHaveBeenCalledWith("kb_chunks_2", {
+        query: [0.1, 0.2],
+        filter: {
+          must: [
+            { key: "kbId", match: { any: ["kb-1"] } },
+            { key: "documentId", match: { any: ["doc-1", "doc-2"] } },
+          ],
+        },
+        limit: 10,
+        with_payload: true,
+      });
+    });
   });
 
   describe("searchKeywordChunks", () => {
@@ -277,6 +302,122 @@ describe("qdrant-client", () => {
       mockQdrantClient.query.mockResolvedValue({});
 
       const res = await searchKeywordChunks(1024, "query text", ["kb-2"], 5);
+      expect(res).toEqual([]);
+    });
+
+    it("appends documentId filter when documentIds array is non-empty", async () => {
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+      mockQdrantClient.query.mockResolvedValue({ points: [] });
+
+      await searchKeywordChunks(1024, "query text", ["kb-2"], 5, ["doc-2"]);
+
+      expect(mockQdrantClient.query).toHaveBeenCalledWith("kb_chunks_1024", {
+        filter: {
+          must: [
+            { key: "kbId", match: { any: ["kb-2"] } },
+            { key: "content", match: { text: "query text" } },
+            { key: "documentId", match: { any: ["doc-2"] } },
+          ],
+        },
+        limit: 5,
+        with_payload: true,
+      });
+    });
+  });
+
+  describe("getDocumentChunksByRange", () => {
+    it("returns empty array when kbIds is empty", async () => {
+      const res = await getDocumentChunksByRange("doc-1", []);
+      expect(res).toEqual([]);
+      expect(mockQdrantClient.getCollections).not.toHaveBeenCalled();
+    });
+
+    it("fetches chunks from matching collections, filters by range, and sorts ascending", async () => {
+      mockQdrantClient.getCollections.mockResolvedValue({
+        collections: [
+          { name: "kb_chunks_1024" },
+          { name: "unrelated_collection" },
+        ],
+      });
+      mockQdrantClient.scroll.mockResolvedValue({
+        points: [
+          {
+            id: "p0",
+            payload: {
+              content: "chunk 0",
+              chunkIndex: 0,
+              documentId: "doc-1",
+              documentName: "doc.txt",
+              s3Key: "s3/doc.txt",
+              kbId: "kb-1",
+              kbName: "KB 1",
+            },
+          },
+          {
+            id: "p3",
+            payload: {
+              content: "chunk 3",
+              chunkIndex: 3,
+              documentId: "doc-1",
+              documentName: "doc.txt",
+              s3Key: "s3/doc.txt",
+              kbId: "kb-1",
+              kbName: "KB 1",
+            },
+          },
+          {
+            id: "p1",
+            payload: {
+              content: "chunk 1",
+              chunkIndex: 1,
+              documentId: "doc-1",
+              documentName: "doc.txt",
+              s3Key: "s3/doc.txt",
+              kbId: "kb-1",
+              kbName: "KB 1",
+            },
+          },
+          {
+            id: "p5",
+            payload: {
+              content: "chunk 5",
+              chunkIndex: 5,
+              documentId: "doc-1",
+              documentName: "doc.txt",
+              s3Key: "s3/doc.txt",
+              kbId: "kb-1",
+              kbName: "KB 1",
+            },
+          },
+        ],
+      });
+
+      const res = await getDocumentChunksByRange("doc-1", ["kb-1"], 1, 3);
+
+      expect(mockQdrantClient.scroll).toHaveBeenCalledWith("kb_chunks_1024", {
+        filter: {
+          must: [
+            { key: "documentId", match: { value: "doc-1" } },
+            { key: "kbId", match: { any: ["kb-1"] } },
+          ],
+        },
+        limit: 1000,
+        with_payload: true,
+      });
+
+      // Filtered to [1, 3] and sorted ascending
+      expect(res).toHaveLength(2);
+      expect(res[0].chunkIndex).toBe(1);
+      expect(res[1].chunkIndex).toBe(3);
+    });
+
+    it("handles undefined startIndex, endIndex, and missing points", async () => {
+      mockQdrantClient.getCollections.mockResolvedValue({
+        collections: [{ name: "kb_chunks_1024" }],
+      });
+      mockQdrantClient.scroll.mockResolvedValue({});
+
+      const res = await getDocumentChunksByRange("doc-1", ["kb-1"]);
       expect(res).toEqual([]);
     });
   });

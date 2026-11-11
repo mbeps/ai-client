@@ -27,6 +27,9 @@ export const userSettings = pgTable(
       () => aiModel.id,
       { onDelete: "set null" },
     ),
+    defaultKbModelId: text("default_kb_model_id").references(() => aiModel.id, {
+      onDelete: "set null",
+    }),
     memoryEnabled: boolean("memory_enabled").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")

@@ -303,7 +303,7 @@ export function KnowledgebasePickerDialog({
       emptyTitle="No knowledge bases available."
       emptyAction={{
         label: "Create a knowledge base",
-        href: ROUTES.KNOWLEDGEBASES.path,
+        href: ROUTES.KNOWLEDGEBASES.new,
       }}
       manageAction={{
         label: "Manage Knowledge Bases",
