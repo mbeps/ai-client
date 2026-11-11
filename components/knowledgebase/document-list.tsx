@@ -15,6 +15,11 @@ import { deleteDocument } from "@/actions/knowledgebases/delete-document";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
 
 const STATUS_CONFIG = {
@@ -225,19 +230,25 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
                 }
                 title={doc.name}
                 description="Document details"
+                tooltip={`Details`}
               >
                 <DocumentDetailsContent doc={doc} />
               </ResponsiveDetails>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                aria-label={`Delete ${doc.name}`}
-                disabled={isPending}
-                onClick={() => handleDelete(doc.id)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0"
+                    aria-label={`Delete ${doc.name}`}
+                    disabled={isPending}
+                    onClick={() => handleDelete(doc.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{`Delete`}</TooltipContent>
+              </Tooltip>
             </div>
           </li>
         );
