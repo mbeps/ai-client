@@ -588,6 +588,10 @@ export default function KnowledgebasePage() {
   const params = useParams();
   const kbId = params.id as string;
 
+  if (kbId === "new") {
+    notFound();
+  }
+
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsString.withDefault("documents").withOptions({

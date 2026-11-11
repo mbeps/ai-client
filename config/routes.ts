@@ -88,6 +88,7 @@ export const ROUTES = {
   KNOWLEDGEBASES: {
     path: KNOWLEDGEBASES_BASE,
     name: "Knowledge Bases",
+    new: `${KNOWLEDGEBASES_BASE}/new` as const,
     detail: (id: string) => `${KNOWLEDGEBASES_BASE}/${id}` as const,
   },
   SETTINGS: {

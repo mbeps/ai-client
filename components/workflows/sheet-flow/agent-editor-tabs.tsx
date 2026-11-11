@@ -6,10 +6,12 @@ import {
   FileText,
   History,
   List,
+  Plus,
   Settings,
   Shield,
   Wrench,
 } from "lucide-react";
+import Link from "next/link";
 import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
@@ -21,10 +23,12 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
 import { TransformContextTab } from "@/components/workflows/sheet-flow/transform-context-tab";
 import { TransformRunsTab } from "@/components/workflows/sheet-flow/transform-runs-tab";
 import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-steps-tab";
+import { ROUTES } from "@/config/routes";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -202,12 +206,20 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
       </SidebarTabsContent>
 
       <SidebarTabsContent value="knowledge" className="space-y-4">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold">Knowledge Bases</h3>
-          <p className="text-muted-foreground text-sm">
-            Select knowledge bases to provide additional context for this
-            transformation agent.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Knowledge Bases</h3>
+            <p className="text-muted-foreground text-sm">
+              Select knowledge bases to provide additional context for this
+              transformation agent.
+            </p>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link href={ROUTES.KNOWLEDGEBASES.new}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              New Knowledgebase
+            </Link>
+          </Button>
         </div>
         <div className="bg-card rounded-lg border p-4">
           <KnowledgebasePicker
