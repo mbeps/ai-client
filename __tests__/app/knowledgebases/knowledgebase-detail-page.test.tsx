@@ -60,6 +60,14 @@ vi.mock("@/hooks/use-user-models", () => ({
   }),
 }));
 
+vi.mock("@/components/knowledgebase/kb-graph-tab", () => ({
+  KbGraphTab: ({ kbId }: { kbId: string }) => (
+    <div data-testid="kb-graph-tab" data-kbid={kbId}>
+      Knowledgebase Graph Tab
+    </div>
+  ),
+}));
+
 vi.mock("@/components/knowledgebase/upload-document-dialog", () => ({
   UploadDocumentDialog: ({
     open,
@@ -267,5 +275,18 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
 
     // Auto-reindex should NOT be triggered while documents are in flight
     expect(mockReindexKnowledgebase).not.toHaveBeenCalled();
+  });
+
+  it("renders the Graph tab trigger alongside Documents and Settings", async () => {
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: baseKb });
+    mockListDocuments.mockResolvedValue({ ok: true, value: [] });
+
+    render(<KnowledgebasePage />);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(screen.getByRole("tab", { name: /graph/i })).toBeInTheDocument();
   });
 });

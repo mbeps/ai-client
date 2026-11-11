@@ -1,6 +1,6 @@
 "use client";
 
-import { Library, Settings, Shield, Upload } from "lucide-react";
+import { Library, Network, Settings, Shield, Upload } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,6 +13,7 @@ import { updateKnowledgebase } from "@/actions/knowledgebases/update-knowledgeba
 import { listModels } from "@/actions/models/list-models";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
 import { DocumentList } from "@/components/knowledgebase/document-list";
+import { KbGraphTab } from "@/components/knowledgebase/kb-graph-tab";
 import { KbSettingsTab } from "@/components/knowledgebase/kb-settings-tab";
 import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
@@ -359,6 +360,10 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
           <Library className="mr-2 h-4 w-4" />
           <span>Documents</span>
         </SidebarTabsTrigger>
+        <SidebarTabsTrigger value="graph">
+          <Network className="mr-2 h-4 w-4" />
+          <span>Graph</span>
+        </SidebarTabsTrigger>
         <SidebarTabsTrigger value="settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
@@ -387,6 +392,10 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
           </div>
           <DocumentList documents={documents} onDeleted={onDocumentDeleted} />
         </div>
+      </SidebarTabsContent>
+
+      <SidebarTabsContent value="graph">
+        <KbGraphTab kbId={kb.id} />
       </SidebarTabsContent>
 
       <SidebarTabsContent value="settings">
