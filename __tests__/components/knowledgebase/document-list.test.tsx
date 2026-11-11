@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockDeleteDocument = vi.hoisted(() => vi.fn());
@@ -12,6 +13,11 @@ const mockToast = vi.hoisted(() => ({
 }));
 vi.mock("sonner", () => ({
   toast: mockToast,
+}));
+
+// Mock useIsMobile hook (desktop by default)
+vi.mock("@/hooks/use-is-mobile", () => ({
+  useIsMobile: vi.fn().mockReturnValue(false),
 }));
 
 import { DocumentList } from "@/components/knowledgebase/document-list";
@@ -52,7 +58,7 @@ describe("DocumentList", () => {
     expect(screen.getByText("No documents uploaded yet.")).toBeInTheDocument();
   });
 
-  it("renders ready document with documentType, relationCount, summary, and keyEntities badges", () => {
+  it("renders compact row with name, status, and chunk/size line only", () => {
     const doc = createMockDoc({
       name: "API Spec.pdf",
       status: "ready",
@@ -73,56 +79,53 @@ describe("DocumentList", () => {
 
     expect(screen.getByText("API Spec.pdf")).toBeInTheDocument();
     expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByText("12 chunks · 2.0 KB")).toBeInTheDocument();
 
-    // documentType badge (technical_spec -> technical spec)
+    // Metadata is hidden from the row and only visible in the details popup
+    expect(screen.queryByText("technical spec")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 links")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Detailed specification of the API endpoints and security.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Auth")).not.toBeInTheDocument();
+  });
+
+  it("opens details popup showing type, metrics, links, summary, and entities", async () => {
+    const user = userEvent.setup();
+    const doc = createMockDoc({
+      name: "API Spec.pdf",
+      status: "ready",
+      documentType: "technical_spec",
+      relationCount: 2,
+      summary: "Detailed specification of the API endpoints and security.",
+      keyEntities: ["Auth", "OAuth"],
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /details/i }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("technical spec")).toBeInTheDocument();
-
-    // relationCount badge ("2 links")
+    expect(screen.getByText("4,500")).toBeInTheDocument();
     expect(screen.getByText("2 links")).toBeInTheDocument();
-
-    // summary text
     expect(
       screen.getByText(
         "Detailed specification of the API endpoints and security.",
       ),
     ).toBeInTheDocument();
-
-    // first 4 keyEntities badges
     expect(screen.getByText("Auth")).toBeInTheDocument();
     expect(screen.getByText("OAuth")).toBeInTheDocument();
-    expect(screen.getByText("RateLimiter")).toBeInTheDocument();
-    expect(screen.getByText("PostgreSQL")).toBeInTheDocument();
-
-    // overflow badge for remaining 2 entities
-    expect(screen.getByText("+2")).toBeInTheDocument();
-    expect(screen.queryByText("Redis")).not.toBeInTheDocument();
   });
 
-  it("renders singular '1 link' for relationCount of 1 and does not show documentType badge when general", () => {
+  it("hides links stat, summary, and entities sections in details popup when empty", async () => {
+    const user = userEvent.setup();
     const doc = createMockDoc({
       name: "Overview.txt",
       status: "ready",
       documentType: "general",
-      relationCount: 1,
-      summary: "A brief overview document.",
-      keyEntities: ["Project", "Overview"],
-    });
-
-    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
-
-    expect(screen.getByText("Overview.txt")).toBeInTheDocument();
-    expect(screen.getByText("1 link")).toBeInTheDocument();
-    expect(screen.queryByText("general")).not.toBeInTheDocument();
-    expect(screen.getByText("Project")).toBeInTheDocument();
-    expect(screen.getByText("Overview")).toBeInTheDocument();
-    expect(screen.queryByText(/\+/)).not.toBeInTheDocument();
-  });
-
-  it("does not render relationCount badge when relationCount is 0 or undefined", () => {
-    const doc = createMockDoc({
-      name: "Notes.md",
-      status: "ready",
-      documentType: "manual",
       relationCount: 0,
       summary: "",
       keyEntities: [],
@@ -130,9 +133,13 @@ describe("DocumentList", () => {
 
     render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
 
-    expect(screen.getByText("Notes.md")).toBeInTheDocument();
-    expect(screen.getByText("manual")).toBeInTheDocument();
-    expect(screen.queryByText(/link/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /details/i }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("general")).toBeInTheDocument();
+    expect(screen.queryByText("Links")).not.toBeInTheDocument();
+    expect(screen.queryByText("Summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entities")).not.toBeInTheDocument();
   });
 
   it("renders pending, processing, and failed status documents without ready-only metadata", () => {
@@ -209,8 +216,7 @@ describe("DocumentList", () => {
 
     render(<DocumentList documents={[doc]} onDeleted={onDeleted} />);
 
-    const deleteBtn = screen.getByRole("button");
-    fireEvent.click(deleteBtn);
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
 
     await waitFor(() => {
       expect(mockDeleteDocument).toHaveBeenCalledWith({
@@ -230,7 +236,7 @@ describe("DocumentList", () => {
 
     render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
 
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalledWith("Permission denied");
@@ -246,7 +252,7 @@ describe("DocumentList", () => {
 
     render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
 
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalledWith("Failed to delete document");
@@ -259,7 +265,7 @@ describe("DocumentList", () => {
 
     render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
 
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalledWith("Failed to delete document");
