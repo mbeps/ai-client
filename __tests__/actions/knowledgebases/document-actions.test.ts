@@ -238,5 +238,54 @@ describe("knowledgebase documents and CRUD actions", () => {
 
       expect(result).toEqual({ ok: true, value: updatedKb });
     });
+
+    it("updates metadataModelId when an owned chat model UUID is provided", async () => {
+      const modelUuid = "33333333-3333-4333-8333-333333333333";
+      const updatedKb = {
+        id: KB_ID,
+        name: "Existing",
+        description: "Existing",
+        metadataModelId: modelUuid,
+      };
+      chainable.where.mockResolvedValueOnce([{ id: modelUuid }]);
+      chainable.returning.mockResolvedValueOnce([updatedKb]);
+
+      const result = await updateKnowledgebase(KB_ID, {
+        metadataModelId: modelUuid,
+      });
+
+      expect(result).toEqual({ ok: true, value: updatedKb });
+    });
+
+    it("clears metadataModelId when null is passed", async () => {
+      const updatedKb = {
+        id: KB_ID,
+        name: "Existing",
+        description: "Existing",
+        metadataModelId: null,
+      };
+      chainable.returning.mockResolvedValueOnce([updatedKb]);
+
+      const result = await updateKnowledgebase(KB_ID, {
+        metadataModelId: null,
+      });
+
+      expect(result).toEqual({ ok: true, value: updatedKb });
+    });
+
+    it("fails with NOT_FOUND when metadataModelId is not an owned chat model", async () => {
+      const modelUuid = "33333333-3333-4333-8333-333333333333";
+      chainable.where.mockResolvedValueOnce([]);
+
+      const result = await updateKnowledgebase(KB_ID, {
+        metadataModelId: modelUuid,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.message).toBe("Not Found");
+      }
+      expect(chainable.update).not.toHaveBeenCalled();
+    });
   });
 });

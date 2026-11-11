@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { setDefaultChatModel } from "@/actions/models/set-default-chat-model";
 import { setDefaultEmbeddingModel } from "@/actions/models/set-default-embedding-model";
+import { setDefaultKbModel } from "@/actions/models/set-default-kb-model";
 import {
   Card,
   CardContent,
@@ -21,7 +22,11 @@ import {
 } from "@/components/ui/combobox";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
+import type { CommonError } from "@/types/error/common-error";
+import type { Result } from "@/types/result";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
+
+const DEFAULT_KB_SENTINEL = "__default_chat__";
 
 /**
  * Represents model item.
@@ -47,6 +52,22 @@ type DefaultModelPickerProps = {
 };
 
 /**
+ * Props for a single default model selector card.
+ *
+ * @author Maruf Bepary
+ */
+type ModelSelectCardProps = {
+  title: string;
+  description: string;
+  items: ModelItem[];
+  value: ModelItem | null;
+  placeholder: string;
+  emptyText: string;
+  disabled: boolean;
+  onSelect: (item: ModelItem) => void;
+};
+
+/**
  * Performs to item.
  *
  * @param model - Target model
@@ -62,7 +83,65 @@ function toItem(model: UserModelOption): ModelItem {
 }
 
 /**
- * Dropdown selectors for default chat and embedding models.
+ * Reusable card containing a labelled combobox selector for a model default.
+ *
+ * @author Maruf Bepary
+ */
+function ModelSelectCard({
+  title,
+  description,
+  items,
+  value,
+  placeholder,
+  emptyText,
+  disabled,
+  onSelect,
+}: ModelSelectCardProps) {
+  return (
+    <Card className="shadow-none">
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Combobox
+          items={items}
+          value={value}
+          onValueChange={(nextValue) => onSelect(nextValue as ModelItem)}
+          itemToStringValue={(item) => (item as ModelItem).label}
+          disabled={disabled}
+        >
+          <ComboboxInput
+            placeholder={placeholder}
+            showClear={false}
+            className="w-full"
+          />
+          <ComboboxContent className="w-90 max-w-full">
+            <ComboboxEmpty>{emptyText}</ComboboxEmpty>
+            <ComboboxList>
+              {(item) => {
+                const model = item as ModelItem;
+                return (
+                  <ComboboxItem value={item} key={model.id}>
+                    <div className="flex flex-col">
+                      <span>{model.label}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {model.providerName}
+                      </span>
+                    </div>
+                  </ComboboxItem>
+                );
+              }}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Dropdown selectors for default chat, embedding, and knowledge base models.
  * Allows users to set which models to use by default across the application.
  * Triggers cache invalidation on selection change.
  *
@@ -85,6 +164,17 @@ export function DefaultModelPicker({
     () => embeddingModels.map(toItem),
     [embeddingModels],
   );
+  const kbItems = useMemo<ModelItem[]>(
+    () => [
+      {
+        id: DEFAULT_KB_SENTINEL,
+        label: "Use Default Chat Model",
+        providerName: "Inherits Default Chat Model",
+      },
+      ...chatItems,
+    ],
+    [chatItems],
+  );
 
   const selectedChat =
     chatItems.find((item) => item.id === settings?.defaultChatModelId) ??
@@ -96,142 +186,87 @@ export function DefaultModelPicker({
     ) ??
     embeddingItems[0] ??
     null;
+  const selectedKb =
+    kbItems.find((item) => item.id === settings?.defaultKbModelId) ??
+    kbItems[0];
 
-  const handleSetChat = async (item: ModelItem | null): Promise<void> => {
-    if (!item || isSaving) return;
-
+  const applyDefaultUpdate = async (
+    action: () => Promise<Result<void, CommonError>>,
+    fallbackError: string,
+    successMessage: string,
+  ): Promise<void> => {
     setIsSaving(true);
     try {
-      const res = await setDefaultChatModel(item.id);
+      const res = await action();
       if (!res.ok) {
-        toast.error(res.error.message || "Failed to set chat model");
+        toast.error(res.error.message || fallbackError);
         return;
       }
       invalidateProviderRegistryCache();
       await onRefresh();
-      toast.success("Default chat model updated");
+      toast.success(successMessage);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to set chat model",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSetEmbedding = async (item: ModelItem | null): Promise<void> => {
-    if (!item || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      const res = await setDefaultEmbeddingModel(item.id);
-      if (!res.ok) {
-        toast.error(res.error.message || "Failed to set embedding model");
-        return;
-      }
-      invalidateProviderRegistryCache();
-      await onRefresh();
-      toast.success("Default embedding model updated");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to set embedding model",
-      );
+      toast.error(error instanceof Error ? error.message : fallbackError);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base">Default Chat Model</CardTitle>
-          <CardDescription>
-            Used when chat requests do not specify a configured model.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Combobox
-            items={chatItems}
-            value={selectedChat}
-            onValueChange={(value) =>
-              void handleSetChat((value as ModelItem | null) ?? null)
-            }
-            itemToStringValue={(value) => (value as ModelItem).label}
-            disabled={isSaving || chatItems.length === 0}
-          >
-            <ComboboxInput
-              placeholder={selectedChat?.label ?? "No chat models"}
-              showClear={false}
-              className="w-full"
-            />
-            <ComboboxContent className="w-[360px] max-w-full">
-              <ComboboxEmpty>No chat models available.</ComboboxEmpty>
-              <ComboboxList>
-                {(item) => {
-                  const model = item as ModelItem;
-                  return (
-                    <ComboboxItem value={item} key={model.id}>
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {model.providerName}
-                        </span>
-                      </div>
-                    </ComboboxItem>
-                  );
-                }}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-3">
+      <ModelSelectCard
+        title="Default Chat Model"
+        description="Used when chat requests do not specify a configured model."
+        items={chatItems}
+        value={selectedChat}
+        placeholder={selectedChat?.label ?? "No chat models"}
+        emptyText="No chat models available."
+        disabled={isSaving || chatItems.length === 0}
+        onSelect={(item) =>
+          void applyDefaultUpdate(
+            () => setDefaultChatModel(item.id),
+            "Failed to set chat model",
+            "Default chat model updated",
+          )
+        }
+      />
 
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base">Default Embedding Model</CardTitle>
-          <CardDescription>
-            Used by RAG ingestion and retrieval for all knowledge bases.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Combobox
-            items={embeddingItems}
-            value={selectedEmbedding}
-            onValueChange={(value) =>
-              void handleSetEmbedding((value as ModelItem | null) ?? null)
-            }
-            itemToStringValue={(value) => (value as ModelItem).label}
-            disabled={isSaving || embeddingItems.length === 0}
-          >
-            <ComboboxInput
-              placeholder={selectedEmbedding?.label ?? "No embedding models"}
-              showClear={false}
-              className="w-full"
-            />
-            <ComboboxContent className="w-[360px] max-w-full">
-              <ComboboxEmpty>No embedding models available.</ComboboxEmpty>
-              <ComboboxList>
-                {(item) => {
-                  const model = item as ModelItem;
-                  return (
-                    <ComboboxItem value={item} key={model.id}>
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {model.providerName}
-                        </span>
-                      </div>
-                    </ComboboxItem>
-                  );
-                }}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </CardContent>
-      </Card>
+      <ModelSelectCard
+        title="Default Embedding Model"
+        description="Used by RAG ingestion and retrieval for all knowledge bases."
+        items={embeddingItems}
+        value={selectedEmbedding}
+        placeholder={selectedEmbedding?.label ?? "No embedding models"}
+        emptyText="No embedding models available."
+        disabled={isSaving || embeddingItems.length === 0}
+        onSelect={(item) =>
+          void applyDefaultUpdate(
+            () => setDefaultEmbeddingModel(item.id),
+            "Failed to set embedding model",
+            "Default embedding model updated",
+          )
+        }
+      />
+
+      <ModelSelectCard
+        title="Default Knowledge Base Model"
+        description="Used to extract document metadata and relations when ingesting documents."
+        items={kbItems}
+        value={selectedKb}
+        placeholder={selectedKb.label}
+        emptyText="No chat models available."
+        disabled={isSaving || chatItems.length === 0}
+        onSelect={(item) =>
+          void applyDefaultUpdate(
+            () =>
+              setDefaultKbModel(
+                item.id === DEFAULT_KB_SENTINEL ? null : item.id,
+              ),
+            "Failed to set knowledge base model",
+            "Default knowledge base model updated",
+          )
+        }
+      />
     </div>
   );
 }

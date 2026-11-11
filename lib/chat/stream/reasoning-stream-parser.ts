@@ -341,9 +341,11 @@ export function createReasoningNormalizingFetch(options: {
     }
 
     let modifiedBody = init?.body;
+    let hasStructuredResponseFormat = false;
     if (typeof modifiedBody === "string" && modifiedBody.startsWith("{")) {
       try {
         const parsedBody = JSON.parse(modifiedBody);
+        hasStructuredResponseFormat = parsedBody.response_format != null;
         const transformed = transformChatCompletionRequestBody(parsedBody, {
           reasoningEffortFormat,
           reasoningEffort: activeEffort,
@@ -473,7 +475,10 @@ export function createReasoningNormalizingFetch(options: {
       });
     }
 
-    if (contentType.includes("application/json")) {
+    if (
+      !hasStructuredResponseFormat &&
+      contentType.includes("application/json")
+    ) {
       try {
         const text = await response.text();
         try {

@@ -24,7 +24,11 @@ export const createKnowledgebaseSchema = z.object({
  *
  * @author Maruf Bepary
  */
-export const updateKnowledgebaseSchema = createKnowledgebaseSchema.partial();
+export const updateKnowledgebaseSchema = createKnowledgebaseSchema
+  .partial()
+  .extend({
+    metadataModelId: idField.nullable().optional(),
+  });
 
 /**
  * Validates document deletion from a knowledgebase.
@@ -51,6 +55,7 @@ export const knowledgebaseSchema = z.object({
   userId: z.string(),
   name: nameField,
   description: descriptionField,
+  metadataModelId: idField.nullable().optional(),
   documentCount: z.number().int().nonnegative(),
   indexStatus: z.enum(["ready", "stale", "indexing"]),
   createdAt: z.date(),

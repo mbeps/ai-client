@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
 import { inngest } from "@/lib/inngest/client";
+import { createInitialIngestSteps } from "@/lib/rag/ingest-steps";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import type { CommonError } from "@/types/error/common-error";
@@ -76,7 +77,14 @@ export const ingestKbDocument = defineAction(
     // 3. Execution via Inngest background job
     await db
       .update(kbDocument)
-      .set({ status: "processing", statusMessage: null })
+      .set({
+        status: "processing",
+        statusMessage: null,
+        ingestSteps: createInitialIngestSteps({
+          uploading: { status: "completed" },
+          extracting: { status: "loading" },
+        }),
+      })
       .where(eq(kbDocument.id, validatedId));
 
     await inngest.send({

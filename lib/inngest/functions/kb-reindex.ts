@@ -4,6 +4,7 @@ import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { createInitialIngestSteps } from "@/lib/rag/ingest-steps";
 
 const log = getLogger(["inngest", "kb", "reindex"]);
 
@@ -63,6 +64,9 @@ export const reindexKbFunction = inngest.createFunction(
         .set({
           status: "pending",
           statusMessage: null,
+          ingestSteps: createInitialIngestSteps({
+            uploading: { status: "completed" },
+          }),
           updatedAt: new Date(),
         })
         .where(eq(kbDocument.kbId, kbId));

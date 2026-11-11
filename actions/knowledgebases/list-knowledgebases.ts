@@ -38,6 +38,7 @@ export const listKnowledgebases = defineAction(
         userId: knowledgebase.userId,
         name: knowledgebase.name,
         description: knowledgebase.description,
+        metadataModelId: knowledgebase.metadataModelId,
         indexStatus: knowledgebase.indexStatus,
         lastIndexedAt: knowledgebase.lastIndexedAt,
         createdAt: knowledgebase.createdAt,

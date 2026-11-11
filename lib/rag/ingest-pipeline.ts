@@ -12,13 +12,33 @@ import {
   MAX_DOCUMENT_CHARS_LIMIT,
 } from "@/lib/rag/extract-text-server";
 import { generateDocumentRelations } from "@/lib/rag/generate-document-relations";
+import { createInitialIngestSteps } from "@/lib/rag/ingest-steps";
 import {
   deletePointsByDocumentId,
   upsertChunkPoints,
 } from "@/lib/rag/qdrant-client";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import type {
+  KbIngestStepEntry,
+  KbIngestStepId,
+  KbIngestStepsState,
+} from "@/types/knowledgebase/kb-ingest-steps";
 
 const log = getLogger(["app", "rag", "pipeline"]);
+
+/**
+ * Persists intermediate ingestion step progress onto the document row so
+ * polling clients reflect live sub-step transitions.
+ */
+async function persistIngestSteps(
+  documentId: string,
+  ingestSteps: KbIngestStepsState,
+): Promise<void> {
+  await db
+    .update(kbDocument)
+    .set({ ingestSteps, updatedAt: new Date() })
+    .where(eq(kbDocument.id, documentId));
+}
 
 /**
  * Shared ingestion pipeline: extract text → chunk text → embed → extract metadata/TOC →
@@ -41,12 +61,14 @@ export async function ingestDocumentPipeline(
   buffer: Buffer,
   userId: string,
   providedKbName?: string,
+  onStepChange?: (step: KbIngestStepId) => void,
 ): Promise<{ chunkCount: number; tokenCount: number }> {
   log.debug("Ingesting document (id: {docId}, name: {name})", {
     docId: doc.id,
     name: doc.name,
   });
 
+  onStepChange?.("extracting");
   const text = await extractTextFromBuffer(buffer, doc.mimeType);
   if (!text.trim()) {
     const error = new RagExtractionEmptyError(
@@ -59,14 +81,17 @@ export async function ingestDocumentPipeline(
 
   // Truncation detected when extraction hit the character limit
   const truncated = text.length >= MAX_DOCUMENT_CHARS_LIMIT;
-
   const chunks = chunkText(text);
-  const embeddings = await embedDocuments(chunks, userId);
-  const metadata = await extractDocumentMetadata({
-    documentName: doc.name,
-    chunks,
-    userId,
+
+  onStepChange?.("embedding");
+  let steps = createInitialIngestSteps({
+    uploading: { status: "completed" },
+    extracting: { status: "completed" },
+    embedding: { status: "loading" },
   });
+  await persistIngestSteps(doc.id, steps);
+
+  const embeddings = await embedDocuments(chunks, userId);
 
   // Check if document or knowledgebase was deleted concurrently before storing chunks
   const [currentDoc] = await db
@@ -119,9 +144,64 @@ export async function ingestDocumentPipeline(
     );
   }
 
+  onStepChange?.("metadata");
+  steps = {
+    ...steps,
+    embedding: { status: "completed" },
+    metadata: { status: "loading" },
+  };
+  await persistIngestSteps(doc.id, steps);
+
+  let metadataError: string | undefined;
+  const metadata = await extractDocumentMetadata({
+    documentName: doc.name,
+    chunks,
+    userId,
+    kbId: doc.kbId,
+    onFallback: (reason) => {
+      metadataError = reason;
+    },
+  });
+
+  const metadataEntry: KbIngestStepEntry = metadataError
+    ? { status: "failed", error: metadataError }
+    : { status: "completed" };
+
+  onStepChange?.("relations");
+  steps = {
+    ...steps,
+    metadata: metadataEntry,
+    relations: { status: "loading" },
+  };
+  await persistIngestSteps(doc.id, steps);
+
+  let relationsError: string | undefined;
+  await generateDocumentRelations({
+    doc: {
+      id: doc.id,
+      kbId: doc.kbId,
+      name: doc.name,
+      documentType: metadata.documentType,
+      summary: metadata.summary,
+      keyEntities: metadata.keyEntities,
+    },
+    userId,
+    onError: (reason) => {
+      relationsError = reason;
+    },
+  });
+
+  const relationsEntry: KbIngestStepEntry = relationsError
+    ? { status: "failed", error: relationsError }
+    : { status: "completed" };
+  steps = {
+    ...steps,
+    relations: relationsEntry,
+  };
+
   const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
 
-  // Update document: ready
+  // Update document: ready (after relations finish so polling sees complete metadata + edges)
   await db
     .update(kbDocument)
     .set({
@@ -134,21 +214,10 @@ export async function ingestDocumentPipeline(
       summary: metadata.summary,
       keyEntities: metadata.keyEntities,
       tableOfContents: metadata.tableOfContents,
+      ingestSteps: steps,
       updatedAt: new Date(),
     })
     .where(eq(kbDocument.id, doc.id));
-
-  await generateDocumentRelations({
-    doc: {
-      id: doc.id,
-      kbId: doc.kbId,
-      name: doc.name,
-      documentType: metadata.documentType,
-      summary: metadata.summary,
-      keyEntities: metadata.keyEntities,
-    },
-    userId,
-  });
 
   log.info(
     "Document ingested successfully into Qdrant (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",

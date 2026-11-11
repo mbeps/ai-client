@@ -19,20 +19,21 @@ vi.mock("@/config/env", () => ({
 
 // Drizzle awaits terminate at `.where(...)` for selects and updates.
 const chainable = vi.hoisted(() => {
-  const c = {} as Record<string, ReturnType<typeof vi.fn>>;
-  for (const m of [
-    "select",
-    "from",
-    "insert",
-    "values",
-    "update",
-    "set",
-    "delete",
-  ]) {
-    c[m] = vi.fn().mockImplementation(() => c);
-  }
-  c.where = vi.fn();
-  return c;
+  const selectChain = {} as Record<string, ReturnType<typeof vi.fn>>;
+  selectChain.from = vi.fn().mockImplementation(() => selectChain);
+  selectChain.where = vi.fn();
+
+  const updateChain = {} as Record<string, ReturnType<typeof vi.fn>>;
+  updateChain.set = vi.fn().mockImplementation(() => updateChain);
+  updateChain.where = vi.fn().mockResolvedValue(undefined);
+
+  return {
+    select: vi.fn().mockImplementation(() => selectChain),
+    update: vi.fn().mockImplementation(() => updateChain),
+    where: selectChain.where,
+    set: updateChain.set,
+    updateWhere: updateChain.where,
+  };
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
@@ -195,22 +196,26 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
         { title: "Section 1", chunkStartIndex: 0, chunkEndIndex: 0 },
       ],
     });
-    expect(extractDocumentMetadataMock).toHaveBeenCalledWith({
-      documentName: "test.pdf",
-      chunks: ["hello"],
-      userId: "user-1",
-    });
-    expect(generateDocumentRelationsMock).toHaveBeenCalledWith({
-      doc: {
-        id: "doc-1",
-        kbId: "kb-1",
-        name: "test.pdf",
-        documentType: "general",
-        summary: "Default summary",
-        keyEntities: ["Entity1"],
-      },
-      userId: "user-1",
-    });
+    expect(extractDocumentMetadataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentName: "test.pdf",
+        chunks: ["hello"],
+        userId: "user-1",
+      }),
+    );
+    expect(generateDocumentRelationsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        doc: {
+          id: "doc-1",
+          kbId: "kb-1",
+          name: "test.pdf",
+          documentType: "general",
+          summary: "Default summary",
+          keyEntities: ["Entity1"],
+        },
+        userId: "user-1",
+      }),
+    );
   });
 
   it("throws RagExtractionEmptyError when extraction is empty", async () => {
@@ -332,5 +337,99 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
 
     expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
     expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+  });
+
+  it("tracks step transitions and notifies onStepChange through all pipeline stages", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("hello world");
+    vi.mocked(chunkText).mockReturnValue(["hello"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.5]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
+
+    const stepsObserved: string[] = [];
+    await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+      undefined,
+      (step) => stepsObserved.push(step),
+    );
+
+    expect(stepsObserved).toEqual([
+      "extracting",
+      "embedding",
+      "metadata",
+      "relations",
+    ]);
+
+    expect(chainable.set.mock.calls.map((c) => c[0].ingestSteps)).toEqual([
+      {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "loading" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
+      {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "completed" },
+        metadata: { status: "loading" },
+        relations: { status: "pending" },
+      },
+      {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "completed" },
+        metadata: { status: "completed" },
+        relations: { status: "loading" },
+      },
+      {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "completed" },
+        metadata: { status: "completed" },
+        relations: { status: "completed" },
+      },
+    ]);
+  });
+
+  it("marks metadata or relations step as failed when fallback/error callbacks fire while keeping doc ready", async () => {
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("hello world");
+    vi.mocked(chunkText).mockReturnValue(["hello"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.5]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "My KB" }]);
+
+    extractDocumentMetadataMock.mockImplementationOnce(async ({ onFallback }) => {
+      onFallback?.("No chat model configured");
+      return {
+        documentType: "general",
+        summary: "Fallback",
+        keyEntities: [],
+        tableOfContents: [],
+      };
+    });
+
+    generateDocumentRelationsMock.mockImplementationOnce(async ({ onError }) => {
+      onError?.("Relation LLM timeout");
+      return 0;
+    });
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    const finalUpdate = chainable.set.mock.calls.at(-1)![0];
+    expect(finalUpdate.status).toBe("ready");
+    expect(finalUpdate.ingestSteps).toEqual({
+      uploading: { status: "completed" },
+      extracting: { status: "completed" },
+      embedding: { status: "completed" },
+      metadata: { status: "failed", error: "No chat model configured" },
+      relations: { status: "failed", error: "Relation LLM timeout" },
+    });
   });
 });

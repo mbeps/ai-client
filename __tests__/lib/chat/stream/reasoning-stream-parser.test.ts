@@ -528,6 +528,38 @@ describe("createReasoningNormalizingFetch", () => {
     expect(data.choices[0].message.content).toBe("<think>My thoughts</think>\nFinal answer");
   });
 
+  it("skips <think> injection on application/json responses when request sets response_format", async () => {
+    const mockFetch = async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: '{"ok":true}',
+                reasoning: "Let me format this JSON properly",
+              },
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+
+    const customFetch = createReasoningNormalizingFetch({ baseFetch: mockFetch });
+    const res = await customFetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      body: JSON.stringify({
+        model: "openrouter/free",
+        response_format: { type: "json_schema", json_schema: { name: "test", schema: {} } },
+      }),
+    });
+    const data = await res.json();
+    expect(data.choices[0].message.content).toBe('{"ok":true}');
+  });
+
   it("handles application/json responses that fail parsing", async () => {
     const mockFetch = async () =>
       new Response("not json", {

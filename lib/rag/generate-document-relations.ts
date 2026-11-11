@@ -1,4 +1,3 @@
-import { generateText } from "ai";
 import { and, eq, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
@@ -8,8 +7,9 @@ import {
   kbDocumentRelation,
 } from "@/drizzle/schemas/kb-document-relation-schema";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { generateStructuredObject } from "@/lib/chat/generate-structured-object";
 import { getLogger } from "@/lib/logger";
+import { resolveKbModelProvider } from "@/lib/rag/resolve-kb-model-provider";
 
 const log = getLogger(["app", "rag", "relations"]);
 const MAX_CANDIDATES = 15;
@@ -27,8 +27,18 @@ const relationItemSchema = z.object({
   reason: z.string(),
 });
 
+const kbDocumentRelationsSchema = z.object({
+  relations: z
+    .array(relationItemSchema)
+    .describe(
+      "Proposed relationship edges between the target document and candidate documents.",
+    ),
+});
+
+type RelationItem = z.infer<typeof relationItemSchema>;
+
 const SYSTEM_PROMPT =
-  'Analyze relationships between the target document and candidates in the KB. Return strict JSON: { "relations": [{ "sourceDocId": string, "targetDocId": string, "relationType": "references" | "supersedes" | "supplements" | "contradicts" | "depicts", "reason": string }] }. Exactly one endpoint must be targetDocId, the other must be in candidates, with no self-loops.';
+  'Analyze relationships between the target document and candidate documents in the knowledge base. Return valid JSON `{ "relations": [...] }` (use `[]` if none qualify). Each item must include `sourceDocId`, `targetDocId`, `relationType` (one of: references, supersedes, supplements, contradicts, depicts), and `reason`, with no self-loops and exactly one endpoint matching the target document id.';
 
 export interface GenerateDocumentRelationsParams {
   doc: {
@@ -40,6 +50,7 @@ export interface GenerateDocumentRelationsParams {
     keyEntities?: string[] | null;
   };
   userId: string;
+  onError?: (reason: string) => void;
 }
 
 interface ExistingDoc {
@@ -105,51 +116,73 @@ function pruneCandidates(
     .map((item) => item.c);
 }
 
-/**
- * Extracts JSON string payload from potential markdown code fences or narrative wrapper.
- */
-function extractJsonPayload(text: string): string {
-  const trimmed = text.trim();
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const raw = fence ? fence[1].trim() : trimmed;
-  const brace = raw.indexOf("{");
-  const bracket = raw.indexOf("[");
-  let start = -1;
-  let end = -1;
-
-  if (brace !== -1 && (bracket === -1 || brace < bracket)) {
-    start = brace;
-    end = raw.lastIndexOf("}");
-  } else if (bracket !== -1) {
-    start = bracket;
-    end = raw.lastIndexOf("]");
-  }
-
-  return start !== -1 && end > start ? raw.slice(start, end + 1) : raw;
-}
+const RELATION_ARRAY_KEYS = [
+  "relations",
+  "edges",
+  "relationships",
+  "items",
+] as const;
 
 /**
- * Parses JSON text into a raw relations array.
+ * Extracts raw relation candidates from arrays, known wrapper keys,
+ * single-edge objects, or empty objects (`{}`).
  */
-function parseRawRelations(rawJson: string): unknown[] {
-  try {
-    const parsed: unknown = JSON.parse(rawJson);
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && typeof parsed === "object" && "relations" in parsed) {
-      const rels = (parsed as { relations?: unknown }).relations;
-      return Array.isArray(rels) ? rels : [];
+function extractRawRelationItems(parsed: unknown): unknown[] | null {
+  if (Array.isArray(parsed)) return parsed;
+
+  const record = parsed as Record<string, unknown>;
+  for (const key of RELATION_ARRAY_KEYS) {
+    if (key in record) {
+      return Array.isArray(record[key]) ? record[key] : null;
     }
-  } catch {
-    // Malformed JSON
   }
-  return [];
+
+  if ("sourceDocId" in record && "targetDocId" in record) {
+    return [record];
+  }
+  if (Object.keys(record).length === 0) {
+    return [];
+  }
+  return null;
 }
 
 /**
- * Validates, filters, and deduplicates relationship edges.
+ * Recovers valid relation items from raw arrays, alias wrapper keys,
+ * single-edge objects, or uppercase relationType variants.
+ */
+function salvageRelationsPayload(
+  parsed: unknown,
+): { relations: RelationItem[] } | null {
+  const rawItems = extractRawRelationItems(parsed);
+  if (!rawItems) {
+    return null;
+  }
+
+  const relations = rawItems.flatMap((item) => {
+    const normalized =
+      item && typeof item === "object" && "relationType" in item
+        ? {
+            ...(item as Record<string, unknown>),
+            relationType:
+              typeof (item as { relationType?: unknown }).relationType ===
+              "string"
+                ? (item as { relationType: string }).relationType
+                    .trim()
+                    .toLowerCase()
+                : (item as { relationType?: unknown }).relationType,
+          }
+        : item;
+    const check = relationItemSchema.safeParse(normalized);
+    return check.success ? [check.data] : [];
+  });
+  return { relations };
+}
+
+/**
+ * Filters and deduplicates schema-validated relationship edges against target and candidate bounds.
  */
 function sanitizeAndDeduplicateEdges(
-  rawItems: unknown[],
+  rawItems: RelationItem[],
   targetDocId: string,
   candidateIds: Set<string>,
 ): ValidatedEdge[] {
@@ -157,15 +190,12 @@ function sanitizeAndDeduplicateEdges(
   const seen = new Set<string>();
 
   for (const item of rawItems) {
-    const parsed = relationItemSchema.safeParse(item);
-    if (!parsed.success) continue;
-
     const {
       sourceDocId: src,
       targetDocId: dst,
       relationType: type,
       reason,
-    } = parsed.data;
+    } = item;
     const trimmedReason = reason.trim();
     if (!trimmedReason || src === dst) continue;
 
@@ -198,6 +228,7 @@ function sanitizeAndDeduplicateEdges(
 export async function generateDocumentRelations({
   doc,
   userId,
+  onError,
 }: GenerateDocumentRelationsParams): Promise<number> {
   try {
     await db
@@ -244,7 +275,7 @@ export async function generateDocumentRelations({
     );
     const candidateIds = new Set(topCandidates.map((c) => c.id));
 
-    const resolved = await resolveDefaultChatProvider(userId);
+    const resolved = await resolveKbModelProvider(userId, doc.kbId);
     const prompt = `Target Document:\n${JSON.stringify(
       {
         id: doc.id,
@@ -257,16 +288,20 @@ export async function generateDocumentRelations({
       2,
     )}\n\nCandidate Documents:\n${JSON.stringify(topCandidates, null, 2)}`;
 
-    const result = await generateText({
+    const { relations } = await generateStructuredObject({
       model: resolved.sdkProvider.chat(resolved.modelId),
+      schema: kbDocumentRelationsSchema,
+      schemaName: "document_relations",
+      schemaDescription:
+        "Semantic relationship edges between the target document and candidate documents.",
       system: SYSTEM_PROMPT,
       prompt,
       temperature: 0,
+      salvage: salvageRelationsPayload,
     });
 
-    const rawItems = parseRawRelations(extractJsonPayload(result.text));
     const validEdges = sanitizeAndDeduplicateEdges(
-      rawItems,
+      relations,
       doc.id,
       candidateIds,
     );
@@ -288,11 +323,13 @@ export async function generateDocumentRelations({
 
     return inserted.length;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     log.warn("Error generating document relations via LLM: {error}", {
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
       documentId: doc.id,
       documentName: doc.name,
     });
+    onError?.(message);
     return 0;
   }
 }

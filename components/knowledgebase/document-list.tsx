@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Check,
   CheckCircle2,
   Clock,
   FileText,
@@ -20,7 +21,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { KB_INGEST_STEPS } from "@/config/knowledgebase";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
+import type {
+  KbIngestStepStatus,
+  KbIngestStepsState,
+} from "@/types/knowledgebase/kb-ingest-steps";
 
 const STATUS_CONFIG = {
   pending: {
@@ -206,6 +212,11 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
                   </>
                 )}
               </p>
+              {doc.ingestSteps &&
+                doc.status !== "ready" &&
+                doc.status !== "failed" && (
+                  <DocumentProgressSteps steps={doc.ingestSteps} />
+                )}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <Badge
@@ -250,6 +261,50 @@ export function DocumentList({ documents, onDeleted }: DocumentListProps) {
                 <TooltipContent>{`Delete`}</TooltipContent>
               </Tooltip>
             </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * Renders checkbox-sized step indicators for a document's ingestion progress.
+ * Only shown while a document is in-flight (not ready or failed).
+ *
+ * @param props - Component properties
+ * @param props.steps - Current ingestion step states
+ */
+function DocumentProgressSteps({ steps }: { steps: KbIngestStepsState }) {
+  return (
+    <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+      {KB_INGEST_STEPS.map((step) => {
+        const entry = steps[step.id];
+        const status: KbIngestStepStatus = entry?.status ?? "pending";
+        if (status === "pending") return null;
+
+        return (
+          <li key={step.id} className="flex items-center gap-1">
+            {status === "completed" && (
+              <Check className="h-3 w-3 shrink-0 text-emerald-600" />
+            )}
+            {status === "loading" && (
+              <Loader2 className="text-primary h-3 w-3 shrink-0 animate-spin" />
+            )}
+            {status === "failed" && (
+              <XCircle className="text-destructive h-3 w-3 shrink-0" />
+            )}
+            <span
+              className={`text-[10px] leading-tight ${
+                status === "loading"
+                  ? "text-foreground font-medium"
+                  : status === "failed"
+                    ? "text-destructive font-medium"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {step.label}
+            </span>
           </li>
         );
       })}

@@ -16,6 +16,7 @@ import type {
   KbDocumentType,
   KbTocEntry,
 } from "@/types/knowledgebase/kb-document-row";
+import type { KbIngestStepsState } from "@/types/knowledgebase/kb-ingest-steps";
 
 /**
  * Stores documents uploaded to a knowledge base, tracking ingestion status and chunk counts.
@@ -55,6 +56,9 @@ export const kbDocument = pgTable(
       .$type<KbTocEntry[]>()
       .notNull()
       .default([]),
+    ingestSteps: jsonb("ingest_steps")
+      .$type<KbIngestStepsState | null>()
+      .default(null),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

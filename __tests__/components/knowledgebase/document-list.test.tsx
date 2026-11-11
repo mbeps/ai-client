@@ -271,4 +271,104 @@ describe("DocumentList", () => {
       expect(mockToast.error).toHaveBeenCalledWith("Failed to delete document");
     });
   });
+
+  it("renders inline ingest steps under the document name for in-flight documents", () => {
+    const doc = createMockDoc({
+      id: "doc-inflight",
+      name: "inflight.pdf",
+      status: "processing",
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "loading" },
+        embedding: { status: "pending" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.getByText("Uploading document")).toBeInTheDocument();
+    expect(screen.getByText("Extracting & chunking text")).toBeInTheDocument();
+    // Pending steps are skipped.
+    expect(screen.queryByText("Generating embeddings")).not.toBeInTheDocument();
+    expect(screen.queryByText("Generating metadata")).not.toBeInTheDocument();
+    expect(screen.queryByText("Creating relations")).not.toBeInTheDocument();
+  });
+
+  it("renders a failed step label for failed ingest steps", () => {
+    const doc = createMockDoc({
+      id: "doc-step-failed",
+      name: "step-failed.pdf",
+      status: "processing",
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "failed", error: "Chunking failed" },
+        embedding: { status: "pending" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.getByText("Extracting & chunking text")).toBeInTheDocument();
+    expect(screen.queryByText("Generating embeddings")).not.toBeInTheDocument();
+  });
+
+  it("hides inline ingest steps for ready documents", () => {
+    const doc = createMockDoc({
+      id: "doc-ready",
+      name: "ready.pdf",
+      status: "ready",
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "completed" },
+        metadata: { status: "completed" },
+        relations: { status: "completed" },
+      },
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.queryByText("Uploading document")).not.toBeInTheDocument();
+    expect(screen.queryByText("Extracting & chunking text")).not.toBeInTheDocument();
+  });
+
+  it("hides inline ingest steps for failed documents", () => {
+    const doc = createMockDoc({
+      id: "doc-failed",
+      name: "failed.pdf",
+      status: "failed",
+      statusMessage: "Pipeline crashed",
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "failed", error: "Pipeline crashed" },
+        embedding: { status: "pending" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.queryByText("Uploading document")).not.toBeInTheDocument();
+    expect(screen.queryByText("Extracting & chunking text")).not.toBeInTheDocument();
+    expect(screen.getByText("Pipeline crashed")).toBeInTheDocument();
+  });
+
+  it("hides inline ingest steps when ingestSteps is undefined", () => {
+    const doc = createMockDoc({
+      id: "doc-no-steps",
+      name: "no-steps.pdf",
+      status: "processing",
+      ingestSteps: undefined,
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.queryByText("Uploading document")).not.toBeInTheDocument();
+    expect(screen.queryByText("Extracting & chunking text")).not.toBeInTheDocument();
+  });
 });

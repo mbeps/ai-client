@@ -1,3 +1,4 @@
+import { NoObjectGeneratedError } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMock = vi.hoisted(() => {
@@ -22,7 +23,7 @@ const dbMock = vi.hoisted(() => {
 });
 
 const generateTextMock = vi.hoisted(() => vi.fn());
-const resolveDefaultChatProviderMock = vi.hoisted(() => vi.fn());
+const resolveKbModelProviderMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/drizzle/db", () => ({
   db: {
@@ -32,12 +33,16 @@ vi.mock("@/drizzle/db", () => ({
   },
 }));
 
-vi.mock("ai", () => ({
-  generateText: generateTextMock,
-}));
+vi.mock("ai", async () => {
+  const actual = await vi.importActual<typeof import("ai")>("ai");
+  return {
+    ...actual,
+    generateText: generateTextMock,
+  };
+});
 
-vi.mock("@/lib/chat/resolve-default-chat-provider", () => ({
-  resolveDefaultChatProvider: resolveDefaultChatProviderMock,
+vi.mock("@/lib/rag/resolve-kb-model-provider", () => ({
+  resolveKbModelProvider: resolveKbModelProviderMock,
 }));
 
 import {
@@ -71,7 +76,7 @@ describe("generateDocumentRelations", () => {
       onConflictDoNothing: dbMock.mockInsertConflict,
     });
 
-    resolveDefaultChatProviderMock.mockResolvedValue({
+    resolveKbModelProviderMock.mockResolvedValue({
       sdkProvider: {
         chat: vi.fn().mockReturnValue("mock-chat-model"),
       },
@@ -91,7 +96,7 @@ describe("generateDocumentRelations", () => {
     expect(dbMock.delete).toHaveBeenCalledTimes(1);
     expect(dbMock.mockDeleteWhere).toHaveBeenCalledTimes(1);
     expect(dbMock.select).toHaveBeenCalledTimes(1);
-    expect(resolveDefaultChatProviderMock).not.toHaveBeenCalled();
+    expect(resolveKbModelProviderMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
@@ -126,7 +131,7 @@ describe("generateDocumentRelations", () => {
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({ relations: [] }),
+      output: { relations: [] },
     });
 
     const count = await generateDocumentRelations({
@@ -138,6 +143,7 @@ describe("generateDocumentRelations", () => {
     expect(generateTextMock).toHaveBeenCalledTimes(1);
     const callArgs = generateTextMock.mock.calls[0][0];
 
+    expect(callArgs.output).toBeDefined();
     expect(callArgs.prompt).toContain("doc-high-0");
     expect(callArgs.prompt).toContain("doc-high-4");
     expect(callArgs.prompt).not.toContain("doc-low-19");
@@ -163,7 +169,7 @@ describe("generateDocumentRelations", () => {
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         relations: [
           {
             sourceDocId: "doc-target",
@@ -184,7 +190,7 @@ describe("generateDocumentRelations", () => {
             reason: "Security policy provides governance context for target.",
           },
         ],
-      }),
+      },
     });
 
     dbMock.mockInsertReturning.mockResolvedValueOnce([
@@ -237,70 +243,90 @@ describe("generateDocumentRelations", () => {
     ];
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
-    generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
-        relations: [
-          // 1. Valid edge
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-valid-peer",
-            relationType: "references",
-            reason: "Target references API endpoints.",
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Schema validation failed"),
+        text: JSON.stringify({
+          relations: [
+            // 1. Valid edge
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-valid-peer",
+              relationType: "references",
+              reason: "Target references API endpoints.",
+            },
+            // 2. Self-loop
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-target",
+              relationType: "references",
+              reason: "Self loop.",
+            },
+            // 3. Outbound to unknown doc ID
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-foreign-hallucination",
+              relationType: "references",
+              reason: "Non-existent doc.",
+            },
+            // 4. Inbound from unknown doc ID
+            {
+              sourceDocId: "doc-foreign-inbound",
+              targetDocId: "doc-target",
+              relationType: "references",
+              reason: "Unknown source doc.",
+            },
+            // 5. Neither endpoint is doc.id
+            {
+              sourceDocId: "doc-other-1",
+              targetDocId: "doc-other-2",
+              relationType: "references",
+              reason: "Irrelevant edge.",
+            },
+            // 6. Invalid relationType
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-valid-peer",
+              relationType: "invalid_relation_type",
+              reason: "Bad type.",
+            },
+            // 7. Empty reason
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-valid-peer",
+              relationType: "supplements",
+              reason: "   ",
+            },
+            // 8. Non-object/invalid shape in array
+            "not-an-object",
+            // 9. Duplicate of valid edge 1
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-valid-peer",
+              relationType: "references",
+              reason: "Duplicate edge.",
+            },
+          ],
+        }),
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
           },
-          // 2. Self-loop
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-target",
-            relationType: "references",
-            reason: "Self loop.",
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
           },
-          // 3. Outbound to unknown doc ID
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-foreign-hallucination",
-            relationType: "references",
-            reason: "Non-existent doc.",
-          },
-          // 4. Inbound from unknown doc ID
-          {
-            sourceDocId: "doc-foreign-inbound",
-            targetDocId: "doc-target",
-            relationType: "references",
-            reason: "Unknown source doc.",
-          },
-          // 5. Neither endpoint is doc.id
-          {
-            sourceDocId: "doc-other-1",
-            targetDocId: "doc-other-2",
-            relationType: "references",
-            reason: "Irrelevant edge.",
-          },
-          // 6. Invalid relationType
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-valid-peer",
-            relationType: "invalid_relation_type",
-            reason: "Bad type.",
-          },
-          // 7. Empty reason
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-valid-peer",
-            relationType: "supplements",
-            reason: "   ",
-          },
-          // 8. Non-object/invalid shape in array
-          "not-an-object",
-          // 9. Duplicate of valid edge 1
-          {
-            sourceDocId: "doc-target",
-            targetDocId: "doc-valid-peer",
-            relationType: "references",
-            reason: "Duplicate edge.",
-          },
-        ],
+        },
+        finishReason: "stop",
       }),
-    });
+    );
 
     dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
 
@@ -326,7 +352,7 @@ describe("generateDocumentRelations", () => {
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         relations: [
           {
             sourceDocId: "doc-target",
@@ -335,7 +361,7 @@ describe("generateDocumentRelations", () => {
             reason: "Self-loop edge.",
           },
         ],
-      }),
+      },
     });
 
     const count = await generateDocumentRelations({
@@ -359,8 +385,11 @@ describe("generateDocumentRelations", () => {
     ];
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
-    generateTextMock.mockResolvedValueOnce({
-      text: `\`\`\`json
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Expected object"),
+        text: `\`\`\`json
 [
   {
     "sourceDocId": "doc-peer",
@@ -370,7 +399,24 @@ describe("generateDocumentRelations", () => {
   }
 ]
 \`\`\``,
-    });
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
 
@@ -403,9 +449,29 @@ describe("generateDocumentRelations", () => {
     ];
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
-    generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({ relations: "not-an-array" }),
-    });
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Invalid relations"),
+        text: JSON.stringify({ relations: "not-an-array" }),
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     const count = await generateDocumentRelations({
       doc: targetDoc,
@@ -426,7 +492,7 @@ describe("generateDocumentRelations", () => {
       },
     ]);
 
-    resolveDefaultChatProviderMock.mockRejectedValueOnce(
+    resolveKbModelProviderMock.mockRejectedValueOnce(
       new Error("No chat provider configured"),
     );
 
@@ -470,9 +536,29 @@ describe("generateDocumentRelations", () => {
       },
     ]);
 
-    generateTextMock.mockResolvedValueOnce({
-      text: "Malformed JSON response from model",
-    });
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        cause: new SyntaxError("Unexpected token"),
+        text: "Malformed JSON response from model",
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     const count = await generateDocumentRelations({
       doc: targetDoc,
@@ -493,9 +579,29 @@ describe("generateDocumentRelations", () => {
       },
     ]);
 
-    generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify(12345),
-    });
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Expected object"),
+        text: JSON.stringify(12345),
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     const count = await generateDocumentRelations({
       doc: targetDoc,
@@ -529,7 +635,7 @@ describe("generateDocumentRelations", () => {
 
     dbMock.mockSelectWhere.mockResolvedValueOnce(existingDocs);
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         relations: [
           {
             sourceDocId: "doc-target-minimal",
@@ -538,7 +644,7 @@ describe("generateDocumentRelations", () => {
             reason: "Target contradicts legacy approach.",
           },
         ],
-      }),
+      },
     });
 
     dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
@@ -614,7 +720,7 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
 
     dbMock.mockSelectWhere.mockResolvedValueOnce([candidateB, candidateA]);
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({ relations: [] }),
+      output: { relations: [] },
     });
 
     await generateDocumentRelations({
@@ -630,5 +736,281 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
     const promptJson = JSON.parse(callArgs.prompt.split("Candidate Documents:\n")[1]);
     expect(promptJson[0].name).toBe("Alpha Document");
     expect(promptJson[1].name).toBe("Beta Document");
+  });
+
+  it("invokes onError when relation generation fails", async () => {
+    const onError = vi.fn();
+    dbMock.mockDeleteWhere.mockRejectedValueOnce(new Error("DB offline"));
+
+    const count = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+
+    expect(count).toBe(0);
+    expect(onError).toHaveBeenCalledWith("DB offline");
+
+    onError.mockClear();
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-1",
+        name: "Other",
+        documentType: "general",
+        summary: "Summary",
+        keyEntities: [],
+      },
+    ]);
+    generateTextMock.mockRejectedValueOnce("Rate limited");
+
+    await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+    expect(onError).toHaveBeenCalledWith("Rate limited");
+  });
+
+  it("recovers relations via fallback & tolerant payload salvage when NoObjectGeneratedError has empty text or alias keys", async () => {
+    const onError = vi.fn();
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-peer-1",
+        name: "Student Completion Letter",
+        documentType: "report",
+        summary: "Confirms graduation.",
+        keyEntities: ["Maruf Bepary"],
+      },
+    ]);
+
+    generateTextMock
+      .mockRejectedValueOnce(
+        new NoObjectGeneratedError({
+          message: "No object generated: could not parse the response.",
+          cause: new SyntaxError("Unexpected end of JSON input"),
+          text: "",
+          response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+          usage: {
+            inputTokens: 1,
+            outputTokens: 1,
+            totalTokens: 2,
+            inputTokenDetails: {
+              noCacheTokens: 1,
+              cacheReadTokens: 0,
+              cacheWriteTokens: 0,
+            },
+            outputTokenDetails: {
+              textTokens: 1,
+              reasoningTokens: 0,
+            },
+          },
+          finishReason: "stop",
+        }),
+      )
+      .mockResolvedValueOnce({
+        text: JSON.stringify({
+          edges: [
+            {
+              sourceDocId: "doc-target",
+              targetDocId: "doc-peer-1",
+              relationType: "REFERENCES",
+              reason: "Reference letter complements completion letter.",
+            },
+          ],
+        }),
+      });
+
+    dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
+
+    const count = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+
+    expect(count).toBe(1);
+    expect(onError).not.toHaveBeenCalled();
+    expect(dbMock.mockInsertValues).toHaveBeenCalledWith([
+      {
+        kbId: "kb-1",
+        sourceDocId: "doc-target",
+        targetDocId: "doc-peer-1",
+        relationType: "references",
+        reason: "Reference letter complements completion letter.",
+      },
+    ]);
+  });
+
+  it("salvages single-edge object payloads, empty objects {}, and skips non-string relationType items", async () => {
+    const onError = vi.fn();
+    dbMock.mockSelectWhere
+      .mockResolvedValueOnce([
+        {
+          id: "doc-peer-1",
+          name: "Peer 1",
+          documentType: "report",
+          summary: "Summary",
+          keyEntities: [],
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "doc-peer-1",
+          name: "Peer 1",
+          documentType: "report",
+          summary: "Summary",
+          keyEntities: [],
+        },
+      ]);
+
+    generateTextMock
+      .mockRejectedValueOnce(
+        new NoObjectGeneratedError({
+          message: "No object generated: response did not match schema.",
+          cause: new Error("Mismatch"),
+          text: JSON.stringify({
+            sourceDocId: "doc-target",
+            targetDocId: "doc-peer-1",
+            relationType: "supplements",
+            reason: "Single edge object",
+          }),
+          response: { id: "1", timestamp: new Date(), modelId: "test" },
+          usage: {
+            inputTokens: 1,
+            outputTokens: 1,
+            totalTokens: 2,
+            inputTokenDetails: {
+              noCacheTokens: 1,
+              cacheReadTokens: 0,
+              cacheWriteTokens: 0,
+            },
+            outputTokenDetails: { textTokens: 1, reasoningTokens: 0 },
+          },
+          finishReason: "stop",
+        }),
+      );
+    dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
+
+    const singleCount = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+    expect(singleCount).toBe(1);
+    expect(onError).not.toHaveBeenCalled();
+
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Mismatch"),
+        text: "{}",
+        response: { id: "1", timestamp: new Date(), modelId: "test" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: { textTokens: 1, reasoningTokens: 0 },
+        },
+        finishReason: "stop",
+      }),
+    );
+
+    const emptyObjCount = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+    expect(emptyObjCount).toBe(0);
+    expect(onError).not.toHaveBeenCalled();
+
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-peer-1",
+        name: "Peer 1",
+        documentType: "report",
+        summary: "Summary",
+        keyEntities: [],
+      },
+    ]);
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Mismatch"),
+        text: JSON.stringify([
+          {
+            sourceDocId: "doc-target",
+            targetDocId: "doc-peer-1",
+            relationType: 123,
+            reason: "Numeric type",
+          },
+        ]),
+        response: { id: "1", timestamp: new Date(), modelId: "test" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: { textTokens: 1, reasoningTokens: 0 },
+        },
+        finishReason: "stop",
+      }),
+    );
+
+    const badTypeCount = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+    expect(badTypeCount).toBe(0);
+    expect(onError).not.toHaveBeenCalled();
+
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-peer-1",
+        name: "Peer 1",
+        documentType: "report",
+        summary: "Summary",
+        keyEntities: [],
+      },
+    ]);
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Mismatch"),
+        text: JSON.stringify({ unexpected: "payload" }),
+        response: { id: "1", timestamp: new Date(), modelId: "test" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: { textTokens: 1, reasoningTokens: 0 },
+        },
+        finishReason: "stop",
+      }),
+    );
+
+    const unrecognizedCount = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+    expect(unrecognizedCount).toBe(0);
+    expect(onError).toHaveBeenCalledWith(
+      "No object generated: response did not match schema.",
+    );
   });
 });

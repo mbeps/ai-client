@@ -1,7 +1,7 @@
-import { generateText } from "ai";
 import { z } from "zod";
-import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { generateStructuredObject } from "@/lib/chat/generate-structured-object";
 import { getLogger } from "@/lib/logger";
+import { resolveKbModelProvider } from "@/lib/rag/resolve-kb-model-provider";
 import type {
   KbDocumentType,
   KbTocEntry,
@@ -24,9 +24,13 @@ const kbDocumentMetadataSchema = z.object({
       "reference",
       "general",
     ])
-    .catch("general"),
-  summary: z.string().catch(""),
-  keyEntities: z.array(z.string()).catch([]),
+    .describe("Primary classification category of the document."),
+  summary: z
+    .string()
+    .describe("Concise high-density summary of the document contents."),
+  keyEntities: z
+    .array(z.string())
+    .describe("Distinct key entities, systems, people, or concepts mentioned."),
   tableOfContents: z
     .array(
       z.object({
@@ -35,16 +39,20 @@ const kbDocumentMetadataSchema = z.object({
         chunkEndIndex: z.number(),
       }),
     )
-    .catch([]),
+    .describe(
+      "Table of contents entries referencing inclusive [Chunk i] start and end indices.",
+    ),
 });
 
 const METADATA_SYSTEM_PROMPT =
-  'Analyze the document chunks and return strict JSON: { documentType ("technical_spec" | "manual" | "report" | "policy" | "reference" | "general"), summary (string), keyEntities (string[]), tableOfContents ({ title, chunkStartIndex, chunkEndIndex }[]) } using [Chunk i] indices.';
+  "Analyze the document chunks and extract structured metadata: documentType classification, concise summary, keyEntities, and tableOfContents using [Chunk i] indices.";
 
 export interface ExtractDocumentMetadataParams {
   documentName: string;
   chunks: string[];
   userId: string;
+  kbId?: string;
+  onFallback?: (reason: string) => void;
 }
 
 export interface ExtractedDocumentMetadata {
@@ -161,21 +169,6 @@ export function buildDeterministicToc(chunks: string[]): KbTocEntry[] {
 }
 
 /**
- * Extracts JSON substring from potential markdown code fences or narrative wrapper.
- */
-function extractJsonPayload(text: string): string {
-  const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const candidate = fenceMatch ? fenceMatch[1].trim() : trimmed;
-  const firstBrace = candidate.indexOf("{");
-  const lastBrace = candidate.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    return candidate.slice(firstBrace, lastBrace + 1);
-  }
-  return candidate;
-}
-
-/**
  * Sanitizes and clamps table of contents chunk index boundaries.
  */
 function sanitizeTocEntries(
@@ -233,6 +226,8 @@ export async function extractDocumentMetadata({
   documentName,
   chunks,
   userId,
+  kbId,
+  onFallback,
 }: ExtractDocumentMetadataParams): Promise<ExtractedDocumentMetadata> {
   if (chunks.length === 0) {
     return {
@@ -249,46 +244,40 @@ export async function extractDocumentMetadata({
   const deterministicSummary = firstNonEmpty.trim().slice(0, 350);
 
   try {
-    const resolved = await resolveDefaultChatProvider(userId);
+    const resolved = await resolveKbModelProvider(userId, kbId);
     const sampledText = sampleChunksText(chunks);
-    const result = await generateText({
+    const data = await generateStructuredObject({
       model: resolved.sdkProvider.chat(resolved.modelId),
+      schema: kbDocumentMetadataSchema,
+      schemaName: "document_metadata",
+      schemaDescription:
+        "Extracted document classification, summary, key entities, and chunk-indexed table of contents.",
       system: METADATA_SYSTEM_PROMPT,
       prompt: `Document Name: ${documentName}\n\nDocument Chunks:\n${sampledText}`,
       temperature: 0,
     });
 
-    const rawJson = extractJsonPayload(result.text);
-    const parsed = kbDocumentMetadataSchema.safeParse(JSON.parse(rawJson));
-
-    if (parsed.success) {
-      const data = parsed.data;
-      const sanitizedToc = sanitizeTocEntries(
-        data.tableOfContents,
-        chunks.length,
-      );
-      return {
-        documentType: data.documentType,
-        summary: data.summary.trim() || deterministicSummary,
-        keyEntities: data.keyEntities.map((e) => e.trim()).filter(Boolean),
-        tableOfContents:
-          sanitizedToc.length > 0 ? sanitizedToc : deterministicToc,
-      };
-    }
-    log.warn(
-      "Failed to parse document metadata JSON from LLM, using fallback",
-      {
-        documentName,
-      },
+    const sanitizedToc = sanitizeTocEntries(
+      data.tableOfContents,
+      chunks.length,
     );
+    return {
+      documentType: data.documentType,
+      summary: data.summary.trim() || deterministicSummary,
+      keyEntities: data.keyEntities.map((e) => e.trim()).filter(Boolean),
+      tableOfContents:
+        sanitizedToc.length > 0 ? sanitizedToc : deterministicToc,
+    };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     log.warn(
       "Error generating document metadata via LLM, using fallback: {error}",
       {
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
         documentName,
       },
     );
+    onFallback?.(message);
   }
 
   return {

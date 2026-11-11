@@ -48,8 +48,11 @@ export function ReasoningTraceStep({
         </TraceLine>
       </TraceCollapsibleTrigger>
       <TraceCollapsibleContent>
-        <div className="custom-scrollbar bg-muted/20 text-muted-foreground/90 max-h-[500px] overflow-y-auto rounded-md p-3 leading-relaxed">
-          <MarkdownRenderer content={text} />
+        <div className="custom-scrollbar bg-muted/20 text-muted-foreground/90 max-h-125 overflow-y-auto rounded-md p-3 leading-relaxed">
+          <MarkdownRenderer
+            className="text-sm text-neutral-700"
+            content={text}
+          />
           {running && (
             <span className="bg-primary/40 ml-1 inline-block h-3.5 w-1.5 animate-pulse align-middle" />
           )}

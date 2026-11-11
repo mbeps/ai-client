@@ -11,6 +11,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
+import { createInitialIngestSteps } from "@/lib/rag/ingest-steps";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
@@ -131,6 +132,9 @@ export const uploadKbDocument = defineAction(
         size: file.size,
         s3Key,
         status: "pending",
+        ingestSteps: createInitialIngestSteps({
+          uploading: { status: "completed" },
+        }),
       })
       .returning();
 

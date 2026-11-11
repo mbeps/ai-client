@@ -1,14 +1,19 @@
+import { NoObjectGeneratedError } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const generateTextMock = vi.hoisted(() => vi.fn());
-const resolveDefaultChatProviderMock = vi.hoisted(() => vi.fn());
+const resolveKbModelProviderMock = vi.hoisted(() => vi.fn());
 
-vi.mock("ai", () => ({
-  generateText: generateTextMock,
-}));
+vi.mock("ai", async () => {
+  const actual = await vi.importActual<typeof import("ai")>("ai");
+  return {
+    ...actual,
+    generateText: generateTextMock,
+  };
+});
 
-vi.mock("@/lib/chat/resolve-default-chat-provider", () => ({
-  resolveDefaultChatProvider: resolveDefaultChatProviderMock,
+vi.mock("@/lib/rag/resolve-kb-model-provider", () => ({
+  resolveKbModelProvider: resolveKbModelProviderMock,
 }));
 
 import {
@@ -20,7 +25,7 @@ describe("extractDocumentMetadata", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    resolveDefaultChatProviderMock.mockResolvedValue({
+    resolveKbModelProviderMock.mockResolvedValue({
       sdkProvider: {
         chat: vi.fn().mockReturnValue("mock-chat-model"),
       },
@@ -41,7 +46,7 @@ describe("extractDocumentMetadata", () => {
       keyEntities: [],
       tableOfContents: [],
     });
-    expect(resolveDefaultChatProviderMock).not.toHaveBeenCalled();
+    expect(resolveKbModelProviderMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
@@ -58,14 +63,14 @@ describe("extractDocumentMetadata", () => {
     expect(result.documentType).toBe("general");
   });
 
-  it("parses valid LLM JSON response without code fences", async () => {
+  it("parses valid structured output response", async () => {
     const chunks = [
       "Chunk 0 content introducing the system.",
       "Chunk 1 content detailing the architecture.",
     ];
 
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         documentType: "technical_spec",
         summary:
           "This is a detailed technical specification of the system architecture.",
@@ -82,13 +87,14 @@ describe("extractDocumentMetadata", () => {
             chunkEndIndex: 1,
           },
         ],
-      }),
+      },
     });
 
     const result = await extractDocumentMetadata({
       documentName: "arch-spec.md",
       chunks,
       userId: "user-1",
+      kbId: "kb-1",
     });
 
     expect(result).toEqual({
@@ -109,16 +115,26 @@ describe("extractDocumentMetadata", () => {
         },
       ],
     });
-    expect(resolveDefaultChatProviderMock).toHaveBeenCalledWith("user-1");
+    expect(resolveKbModelProviderMock).toHaveBeenCalledWith("user-1", "kb-1");
     expect(generateTextMock).toHaveBeenCalledTimes(1);
+    const callArgs = generateTextMock.mock.calls[0][0];
+    expect(callArgs.output).toBeDefined();
+    expect(callArgs.output.name).toBe("object");
+    const responseFormat = await callArgs.output.responseFormat;
+    expect(responseFormat.type).toBe("json");
+    expect(responseFormat.schema.properties.documentType).not.toHaveProperty(
+      "default",
+    );
   });
 
-  it("strips markdown json fences and extracts JSON payload surrounded by text", async () => {
+  it("strips <think> blocks and markdown json fences when Output.object throws NoObjectGeneratedError with text", async () => {
     const chunks = ["API documentation chunk."];
 
-    generateTextMock.mockResolvedValueOnce({
-      text: `Here is the metadata you requested:
-\`\`\`json
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        cause: new SyntaxError("Unexpected token"),
+        text: `<think>Reasoning about {ref}</think>\n\`\`\`json
 {
   "documentType": "reference",
   "summary": "API endpoint reference documentation.",
@@ -131,9 +147,25 @@ describe("extractDocumentMetadata", () => {
     }
   ]
 }
-\`\`\`
-Hope this helps!`,
-    });
+\`\`\``,
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     const result = await extractDocumentMetadata({
       documentName: "api-reference.md",
@@ -151,7 +183,7 @@ Hope this helps!`,
     const chunks = ["First chunk", "Second chunk", "Third chunk"];
 
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         documentType: "general",
         summary: "Document summary.",
         keyEntities: ["Entity A"],
@@ -167,7 +199,7 @@ Hope this helps!`,
             chunkEndIndex: 0,
           },
         ],
-      }),
+      },
     });
 
     const result = await extractDocumentMetadata({
@@ -191,7 +223,7 @@ Hope this helps!`,
   });
 
   it("falls back to deterministic TOC and excerpt summary when provider resolution fails", async () => {
-    resolveDefaultChatProviderMock.mockRejectedValueOnce(
+    resolveKbModelProviderMock.mockRejectedValueOnce(
       new Error("No chat model configured"),
     );
 
@@ -259,9 +291,9 @@ Hope this helps!`,
   });
 
   it("falls back to chunk-window TOC and heuristic report type when LLM emits malformed JSON syntax", async () => {
-    generateTextMock.mockResolvedValueOnce({
-      text: "NOT_VALID_JSON",
-    });
+    generateTextMock.mockRejectedValueOnce(
+      new Error("Expected property name or '}' in JSON at position 2"),
+    );
 
     const chunks = [
       "Plain paragraph 0 with plain text information.",
@@ -298,9 +330,29 @@ Hope this helps!`,
   });
 
   it("falls back when LLM emits valid JSON but invalid schema", async () => {
-    generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify(12345),
-    });
+    generateTextMock.mockRejectedValueOnce(
+      new NoObjectGeneratedError({
+        message: "No object generated: response did not match schema.",
+        cause: new Error("Schema mismatch"),
+        text: JSON.stringify(12345),
+        response: { id: "1", timestamp: new Date(), modelId: "test-chat-model" },
+        usage: {
+          inputTokens: 1,
+          outputTokens: 1,
+          totalTokens: 2,
+          inputTokenDetails: {
+            noCacheTokens: 1,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+          outputTokenDetails: {
+            textTokens: 1,
+            reasoningTokens: 0,
+          },
+        },
+        finishReason: "stop",
+      }),
+    );
 
     const chunks = ["Sample chunk content."];
 
@@ -348,12 +400,12 @@ Hope this helps!`,
 
   it("uses deterministic fallback when LLM outputs empty tableOfContents and empty summary", async () => {
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         documentType: "manual",
         summary: "   ",
         keyEntities: ["User Guide"],
         tableOfContents: [],
-      }),
+      },
     });
 
     const chunks = [
@@ -389,12 +441,12 @@ Hope this helps!`,
     const chunks = [hugeChunk, hugeChunk, hugeChunk];
 
     generateTextMock.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output: {
         documentType: "general",
         summary: "Summary of large doc.",
         keyEntities: [],
         tableOfContents: [],
-      }),
+      },
     });
 
     await extractDocumentMetadata({
@@ -408,6 +460,45 @@ Hope this helps!`,
     expect(callArgs.prompt.length).toBeLessThan(13_000);
     expect(callArgs.prompt).toContain("[Chunk 0]");
     expect(callArgs.prompt).not.toContain("[Chunk 2]");
+  });
+
+  it("invokes onFallback when LLM call fails or returns invalid schema", async () => {
+    const onFallback = vi.fn();
+    resolveKbModelProviderMock.mockRejectedValueOnce(
+      new Error("No chat model configured"),
+    );
+
+    await extractDocumentMetadata({
+      documentName: "doc.txt",
+      chunks: ["Hello world"],
+      userId: "user-1",
+      onFallback,
+    });
+    expect(onFallback).toHaveBeenCalledWith("No chat model configured");
+
+    onFallback.mockClear();
+    generateTextMock.mockRejectedValueOnce("String error");
+    await extractDocumentMetadata({
+      documentName: "doc.txt",
+      chunks: ["Hello world"],
+      userId: "user-1",
+      onFallback,
+    });
+    expect(onFallback).toHaveBeenCalledWith("String error");
+
+    onFallback.mockClear();
+    generateTextMock.mockRejectedValueOnce(
+      new Error("No object generated: response did not match schema."),
+    );
+    await extractDocumentMetadata({
+      documentName: "doc.txt",
+      chunks: ["Hello world"],
+      userId: "user-1",
+      onFallback,
+    });
+    expect(onFallback).toHaveBeenCalledWith(
+      "No object generated: response did not match schema.",
+    );
   });
 });
 
