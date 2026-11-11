@@ -394,7 +394,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
         </div>
       </SidebarTabsContent>
 
-      <SidebarTabsContent value="graph">
+      <SidebarTabsContent value="graph" className="w-full min-w-0 flex-1">
         <KbGraphTab kbId={kb.id} />
       </SidebarTabsContent>
 
@@ -476,7 +476,10 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <PageContainer className="space-y-6">
+    <PageContainer
+      variant={activeTab === "graph" ? "wide" : "default"}
+      className="space-y-6"
+    >
       <KnowledgebaseHeader kb={state.kb} />
 
       {state.hasNoModels ? (

@@ -100,6 +100,20 @@ describe("getKnowledgebaseGraph", () => {
         relationType: "references",
         reason: "Architecture references security policies",
       },
+      {
+        id: "rel-dangling",
+        sourceDocId: "doc-1",
+        targetDocId: "doc-deleted-or-not-ready",
+        relationType: "references",
+        reason: "Target doc is not ready",
+      },
+      {
+        id: "rel-self",
+        sourceDocId: "doc-1",
+        targetDocId: "doc-1",
+        relationType: "references",
+        reason: "Self loop",
+      },
     ];
 
     // 2. Documents query
@@ -130,7 +144,7 @@ describe("getKnowledgebaseGraph", () => {
         chunkCount: 0,
         tokenCount: 0,
       });
-      expect(result.value.relations).toEqual(mockRelations);
+      expect(result.value.relations).toEqual([mockRelations[0]]);
     }
   });
 

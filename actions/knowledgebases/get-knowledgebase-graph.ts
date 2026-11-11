@@ -72,6 +72,14 @@ export const getKnowledgebaseGraph = defineAction(
         .where(eq(kbDocumentRelation.kbId, kbId)),
     ]);
 
+    const readyDocIds = new Set(docs.map((d) => d.id));
+    const validRelations = relations.filter(
+      (r) =>
+        readyDocIds.has(r.sourceDocId) &&
+        readyDocIds.has(r.targetDocId) &&
+        r.sourceDocId !== r.targetDocId,
+    );
+
     return ok({
       documents: docs.map((d) => ({
         id: d.id,
@@ -82,7 +90,7 @@ export const getKnowledgebaseGraph = defineAction(
         chunkCount: d.chunkCount ?? 0,
         tokenCount: d.tokenCount ?? 0,
       })),
-      relations: relations.map((r) => ({
+      relations: validRelations.map((r) => ({
         id: r.id,
         sourceDocId: r.sourceDocId,
         targetDocId: r.targetDocId,
