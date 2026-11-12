@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { resetClientState } from "@/lib/store/reset-client-state";
 import {
@@ -73,6 +73,11 @@ describe("useChatToolsStore", () => {
     ).toBeUndefined();
   });
 
+  it("clearChatTools is a no-op when chat id was not customized", () => {
+    useChatToolsStore.getState().clearChatTools("chat-missing");
+    expect(useChatToolsStore.getState().toolsByChat).toEqual({});
+  });
+
   it("clears specific chat tools and clears all", () => {
     useChatToolsStore.getState().setChatTools("chat-1", ["a:tool:1"]);
     useChatToolsStore.getState().setChatTools("chat-2", ["b:tool:2"]);
@@ -91,5 +96,46 @@ describe("useChatToolsStore", () => {
     useChatToolsStore.getState().setChatTools("chat-1", ["a:tool:1"]);
     resetClientState();
     expect(useChatToolsStore.getState().toolsByChat).toEqual({});
+  });
+});
+
+describe("useChatToolsStore SSR fallback", () => {
+  it("uses noopStorage when window is undefined", async () => {
+    vi.resetModules();
+    const windowValue = globalThis.window;
+    // Stub window so the persist storage factory falls back to noopStorage,
+    // mirroring a server (SSR) render where window does not exist.
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      const { useChatToolsStore: serverStore } = await import(
+        "@/lib/store/use-chat-tools-store"
+      );
+
+      // setItem: the persist middleware writes after each state change.
+      serverStore.getState().setChatTools("chat-ssr", ["a:tool:1"]);
+      expect(serverStore.getState().toolsByChat["chat-ssr"]).toEqual([
+        "a:tool:1",
+      ]);
+
+      // removeItem: persist clears the noop storage entry.
+      serverStore.persist.clearStorage();
+
+      // getItem: rehydration reads noopStorage, which returns null. Run after
+      // writes so the rehydrated payload does not mask the other noop methods.
+      await serverStore.persist.rehydrate();
+      expect(serverStore.getState().toolsByChat["chat-ssr"]).toEqual([
+        "a:tool:1",
+      ]);
+    } finally {
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: windowValue,
+      });
+      vi.resetModules();
+    }
   });
 });
