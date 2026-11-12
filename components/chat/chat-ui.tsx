@@ -251,6 +251,7 @@ export function ChatUI({
           <div className="mx-auto max-w-4xl">
             <ChatInput
               key={chatId}
+              chatId={chatId}
               onSend={handleSend}
               isLoading={isLoading}
               onStop={stopStream}

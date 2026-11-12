@@ -29,6 +29,9 @@ import type { Message } from "@/types/message/message";
  * Defines behavior callbacks and UI configuration for message input.
  */
 export interface ChatInputProps {
+  /** Optional chat session identifier for persisting user tool choices. */
+  chatId?: string;
+
   /**
    * Callback invoked when user submits a message with content, attachments,
    * model selection, MCP tools, knowledgebases, and skills.

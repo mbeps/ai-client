@@ -12,6 +12,10 @@ import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { useUserModels } from "@/hooks/use-user-models";
 import { authClient } from "@/lib/auth/auth-client";
 import { useAppStore } from "@/lib/store/use-app-store";
+import {
+  NEW_CHAT_TOOLS_KEY,
+  useChatToolsStore,
+} from "@/lib/store/use-chat-tools-store";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -51,6 +55,7 @@ export default function HomePage() {
     }
 
     const chatId = await createChatDb(content.slice(0, 60));
+    useChatToolsStore.getState().transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
     router.push(
       `${ROUTES.CHATS.detail(chatId)}?msg=${encodeURIComponent(content)}`,
     );
@@ -126,7 +131,11 @@ export default function HomePage() {
 
         {/* Chat input */}
         <div className="mt-auto w-full max-w-3xl pb-2 md:mt-0 md:pb-0">
-          <ChatInput onSend={handleStart} servers={enabledServers} />
+          <ChatInput
+            chatId={NEW_CHAT_TOOLS_KEY}
+            onSend={handleStart}
+            servers={enabledServers}
+          />
         </div>
       </div>
     </div>

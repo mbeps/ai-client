@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
+import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
+import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
 
@@ -9,6 +11,7 @@ import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
  * @author Maruf Bepary
  */
 export interface ChatInputSelectionsOptions {
+  chatId?: string;
   initialSelectedServerIds?: string[];
   initialSelectedTools?: readonly string[] | string[];
   initialSelectedKbs?: string[];
@@ -26,19 +29,37 @@ const EMPTY_SET = new Set<string>();
  *
  * @param initialServerIds - The initial server ids parameter.
  * @param initialTools - The initial tools parameter.
+ * @param chatId - Optional chat session identifier for local storage persistence.
  * @returns Hook state and control handlers.
  * @author Maruf Bepary
  */
 function useToolSelections(
   initialServerIds?: string[],
   initialTools?: readonly string[] | string[],
+  chatId?: string,
 ) {
+  const persistedTools = useChatToolsStore((s) =>
+    chatId ? s.toolsByChat[chatId] : undefined,
+  );
+
+  const effectiveInitialTools =
+    persistedTools !== undefined
+      ? persistedTools
+      : (initialTools ?? DEFAULT_ENABLED_TOOLS);
+  const effectiveInitialServerIds =
+    persistedTools !== undefined
+      ? extractServerIdsFromTools(persistedTools)
+      : initialServerIds;
+
   const [selectedServerIds, setSelectedServerIds] = useState<Set<string>>(
-    () => new Set(initialServerIds),
+    () => new Set(effectiveInitialServerIds),
   );
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
-    () => new Set(initialTools ?? DEFAULT_ENABLED_TOOLS),
+    () => new Set(effectiveInitialTools),
   );
+
+  const selectedToolsRef = useRef(selectedTools);
+  selectedToolsRef.current = selectedTools;
 
   const toolSeedKey = initialTools
     ? Array.from(initialTools).join("::")
@@ -47,36 +68,61 @@ function useToolSelections(
   useEffect(() => {
     if (lastToolSeedKey.current === toolSeedKey) return;
     lastToolSeedKey.current = toolSeedKey;
+    // If user has customized tools for this chat, do not overwrite with unhydrated defaults
+    if (persistedTools !== undefined) return;
     setSelectedTools(new Set(initialTools ?? DEFAULT_ENABLED_TOOLS));
-  }, [toolSeedKey, initialTools]);
+  }, [toolSeedKey, initialTools, persistedTools]);
 
   const serverSeedKey = (initialServerIds ?? EMPTY_STRING_ARRAY).join("::");
   const lastServerSeedKey = useRef(serverSeedKey);
   useEffect(() => {
     if (lastServerSeedKey.current === serverSeedKey) return;
     lastServerSeedKey.current = serverSeedKey;
+    if (persistedTools !== undefined) return;
     setSelectedServerIds(new Set(initialServerIds));
-  }, [serverSeedKey, initialServerIds]);
+  }, [serverSeedKey, initialServerIds, persistedTools]);
 
-  const toggleTool = useCallback((serverId: string, toolName: string) => {
-    const toolId = `${serverId}:tool:${toolName}`;
-    setSelectedTools((prev) => {
-      if (prev.has(toolId)) return toggleSetItem(prev, toolId);
-      setSelectedServerIds((prevServers) => new Set(prevServers).add(serverId));
-      return toggleSetItem(prev, toolId);
-    });
-  }, []);
+  const toggleTool = useCallback(
+    (serverId: string, toolName: string) => {
+      const toolId = `${serverId}:tool:${toolName}`;
+      const nextTools = toggleSetItem(selectedToolsRef.current, toolId);
+      selectedToolsRef.current = nextTools;
+      setSelectedTools(nextTools);
+
+      if (nextTools.has(toolId)) {
+        setSelectedServerIds((prev) => new Set(prev).add(serverId));
+      }
+
+      if (chatId) {
+        useChatToolsStore
+          .getState()
+          .setChatTools(chatId, Array.from(nextTools));
+      }
+    },
+    [chatId],
+  );
 
   const handleBulkSelect = useCallback(
     (serverId: string, toolNames: string[], select: boolean) => {
       if (select) {
         setSelectedServerIds((prev) => new Set(prev).add(serverId));
       }
-      setSelectedTools((prev) =>
-        updateBulkToolSelection(prev, serverId, toolNames, select),
+      const nextTools = updateBulkToolSelection(
+        selectedToolsRef.current,
+        serverId,
+        toolNames,
+        select,
       );
+      selectedToolsRef.current = nextTools;
+      setSelectedTools(nextTools);
+
+      if (chatId) {
+        useChatToolsStore
+          .getState()
+          .setChatTools(chatId, Array.from(nextTools));
+      }
     },
-    [],
+    [chatId],
   );
 
   return {
@@ -252,6 +298,7 @@ export function useChatInputSelections(props: ChatInputSelectionsOptions) {
   const tools = useToolSelections(
     props.initialSelectedServerIds,
     props.initialSelectedTools,
+    props.chatId,
   );
   const kbs = useKnowledgebaseSelections(
     props.initialSelectedKbs,
