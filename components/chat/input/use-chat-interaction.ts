@@ -19,6 +19,7 @@ import type { Skill } from "@/types/skill/skill";
  * @author Maruf Bepary
  */
 export interface ChatInteractionProps {
+  chatId?: string;
   onSend: (
     content: string,
     attachments: Attachment[],

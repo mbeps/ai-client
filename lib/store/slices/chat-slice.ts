@@ -21,6 +21,7 @@ import { groupMessagesByChatId } from "@/lib/store/slices/chat/group-messages-by
 import { initializeChatsFromRows } from "@/lib/store/slices/chat/initialize-chats-from-rows";
 import { mergeUpsertedChat } from "@/lib/store/slices/chat/merge-upserted-chat";
 import { populateMessagesAndTree } from "@/lib/store/slices/chat/populate-messages-and-tree";
+import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import type { AppState } from "@/types/app/app-state";
 
 /**
@@ -282,6 +283,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (
   },
 
   deleteChatDb: async (chatId) => {
+    useChatToolsStore.getState().clearChatTools(chatId);
     const previousChat = get().chats[chatId];
     set((state) => {
       const { [chatId]: removed, ...rest } = state.chats;

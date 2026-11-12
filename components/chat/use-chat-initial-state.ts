@@ -1,4 +1,5 @@
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
+import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Assistant } from "@/types/assistant/assistant";
@@ -100,13 +101,7 @@ function resolveInitialTools(
 
   if (Array.isArray(configuredTools)) {
     const selectedTools = configuredTools.filter((t) => t.includes(":tool:"));
-    const serverIds = Array.from(
-      new Set(
-        configuredTools
-          .map((t) => t.split(":")[0])
-          .filter((id): id is string => Boolean(id) && id !== "internal"),
-      ),
-    );
+    const serverIds = extractServerIdsFromTools(configuredTools);
     return {
       initialServerIds: serverIds,
       initialSelectedTools: selectedTools,
