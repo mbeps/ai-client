@@ -30,6 +30,10 @@ export const transformAgent = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    subagentIds: text("subagent_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     requiresFileUpload: boolean("requires_file_upload").notNull().default(true),
     steps: text("steps").notNull().default("[]"),
     ...timestampColumns(),

@@ -28,7 +28,7 @@ describe("buildChatFromRows", () => {
       id: "chat-1",
       title: "Test Chat",
       projectId: "proj-1",
-      assistantId: "asst-1",
+      agentId: "asst-1",
       knowledgebaseId: "kb-1",
       projectName: "Project 1",
       assistantName: "Assistant 1",

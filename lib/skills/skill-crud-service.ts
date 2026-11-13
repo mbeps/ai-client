@@ -77,7 +77,7 @@ export async function createSkillForUser(
       files: data.files ?? [],
       enabled: data.enabled ?? true,
       projectIds: data.projectIds ?? [],
-      assistantIds: data.assistantIds ?? [],
+      agentIds: data.assistantIds ?? [],
     })
     .returning();
 
@@ -127,7 +127,7 @@ export async function updateSkillForUser(
       ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
       ...(data.projectIds !== undefined ? { projectIds: data.projectIds } : {}),
       ...(data.assistantIds !== undefined
-        ? { assistantIds: data.assistantIds }
+        ? { agentIds: data.assistantIds }
         : {}),
       updatedAt: new Date(),
     })

@@ -78,7 +78,7 @@ export const createPrompt = defineAction(
         shortcut: validated.shortcut,
         content: validated.content,
         projectIds: validated.projectIds,
-        assistantIds: validated.assistantIds,
+        agentIds: validated.assistantIds,
         userId: session.user.id,
       })
       .returning();

@@ -207,7 +207,7 @@ describe("createChat", () => {
     expect(chainable.values).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-        assistantId: "f47ac10b-58cc-4372-a567-0e02b2c3d480",
+        agentId: "f47ac10b-58cc-4372-a567-0e02b2c3d480",
       }),
     );
   });

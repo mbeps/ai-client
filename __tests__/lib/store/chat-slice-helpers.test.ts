@@ -149,7 +149,7 @@ describe("chat store pure helpers", () => {
       id: "chat-1",
       title: "Test Chat",
       projectId: "proj-1",
-      assistantId: "asst-1",
+      agentId: "asst-1",
       knowledgebaseId: "kb-1",
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-02T00:00:00Z"),
@@ -171,7 +171,7 @@ describe("chat store pure helpers", () => {
       const row: ChatRow = {
         ...baseRow,
         projectId: null,
-        assistantId: null,
+        agentId: null,
         knowledgebaseId: null,
       };
       const chat = buildHydratedChat(row, undefined, false);
@@ -697,7 +697,7 @@ describe("chat store pure helpers", () => {
         id: "c-new",
         title: "Brand New Chat",
         projectId: "p-1",
-        assistantId: "a-1",
+        agentId: "a-1",
         knowledgebaseId: "kb-1",
         createdAt: new Date("2026-03-01T00:00:00Z"),
         updatedAt: new Date("2026-03-01T00:00:00Z"),
@@ -721,7 +721,7 @@ describe("chat store pure helpers", () => {
         id: "c-new-nulls",
         title: "Chat With Nulls",
         projectId: null,
-        assistantId: null,
+        agentId: null,
         knowledgebaseId: null,
         createdAt: new Date("2026-03-01T00:00:00Z"),
         updatedAt: new Date("2026-03-01T00:00:00Z"),

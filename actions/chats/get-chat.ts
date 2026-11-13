@@ -34,7 +34,7 @@ export const getChat = defineAction(
       })
       .from(chat)
       .leftJoin(project, eq(chat.projectId, project.id))
-      .leftJoin(assistant, eq(chat.assistantId, assistant.id))
+      .leftJoin(assistant, eq(chat.agentId, assistant.id))
       .where(and(eq(chat.id, chatId), eq(chat.userId, session.user.id)));
 
     if (!chatRow) {

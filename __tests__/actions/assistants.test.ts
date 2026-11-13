@@ -283,7 +283,7 @@ describe("deleteAssistant", () => {
     });
     expect(chainable.transaction).toHaveBeenCalledOnce();
     expect(chainable.update).toHaveBeenCalledOnce(); // unlink chats
-    expect(chainable.set).toHaveBeenCalledWith({ assistantId: null });
+    expect(chainable.set).toHaveBeenCalledWith({ agentId: null });
     expect(chainable.delete).toHaveBeenCalledOnce(); // delete assistant
   });
 

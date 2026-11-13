@@ -50,16 +50,14 @@ export function registerSkillTool(
           eq(skill.enabled, true),
         ];
 
-        const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.assistantIds}) = 0`;
+        const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.agentIds}) = 0`;
         const matchScope = [];
 
         if (context?.projectId) {
           matchScope.push(sql`${context.projectId} = ANY(${skill.projectIds})`);
         }
         if (context?.assistantId) {
-          matchScope.push(
-            sql`${context.assistantId} = ANY(${skill.assistantIds})`,
-          );
+          matchScope.push(sql`${context.assistantId} = ANY(${skill.agentIds})`);
         }
 
         if (matchScope.length > 0) {

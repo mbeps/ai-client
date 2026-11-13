@@ -57,7 +57,7 @@ export const createChat = defineAction(
         title: validated.title ?? "New Chat",
         userId: session.user.id,
         projectId: validated.projectId ?? null,
-        assistantId: validated.assistantId ?? null,
+        agentId: validated.assistantId ?? null,
       })
       .returning();
 
@@ -65,7 +65,7 @@ export const createChat = defineAction(
       chatId: newChat.id,
       userId: session.user.id,
       projectId: newChat.projectId,
-      assistantId: newChat.assistantId,
+      assistantId: newChat.agentId,
     });
 
     return ok(newChat);

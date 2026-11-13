@@ -20,5 +20,5 @@ import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
  */
 export const deleteAssistant = deleteEntityFactory({
   table: assistant,
-  unbind: { table: chat, field: chat.assistantId },
+  unbind: { table: chat, field: chat.agentId },
 });

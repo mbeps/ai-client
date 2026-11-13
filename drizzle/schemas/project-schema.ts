@@ -29,6 +29,10 @@ export const project = pgTable(
       .notNull()
       .default("all"),
     promptIds: text("prompt_ids").array().notNull().default(sql`'{}'::text[]`),
+    subagentIds: text("subagent_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     knowledgebaseId: text("knowledgebase_id"),
     ...timestampColumns(),
   },

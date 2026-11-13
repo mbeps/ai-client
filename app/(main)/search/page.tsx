@@ -32,7 +32,7 @@ export default async function SearchPage() {
     id: row.id,
     title: row.title,
     projectId: row.projectId ?? undefined,
-    assistantId: row.assistantId ?? undefined,
+    assistantId: row.agentId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),

@@ -17,5 +17,6 @@ export interface ChatWithMessages extends ChatRow {
   messages: MessageRow[];
   attachments: AttachmentRow[];
   projectName?: string;
+  agentName?: string;
   assistantName?: string;
 }

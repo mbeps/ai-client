@@ -86,7 +86,7 @@ export async function loadChatContext(
     .select({
       id: chat.id,
       projectId: chat.projectId,
-      assistantId: chat.assistantId,
+      assistantId: chat.agentId,
       knowledgebaseId: chat.knowledgebaseId,
       projectTableId: project.id,
       projectGlobalPrompt: project.globalPrompt,
@@ -233,7 +233,7 @@ export async function loadChatContext(
       // Enabled user skills scoped to this chat context
       (() => {
         const conditions = [eq(skill.userId, userId), eq(skill.enabled, true)];
-        const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.assistantIds}) = 0`;
+        const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.agentIds}) = 0`;
         const matchScope = [];
 
         if (chatRow.projectId) {
@@ -241,7 +241,7 @@ export async function loadChatContext(
         }
         if (effectiveAssistantId) {
           matchScope.push(
-            sql`${effectiveAssistantId} = ANY(${skill.assistantIds})`,
+            sql`${effectiveAssistantId} = ANY(${skill.agentIds})`,
           );
         }
 

@@ -1,3 +1,4 @@
+import type { Agent } from "@/types/agent/agent";
 import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { AttachmentRow } from "@/types/attachment/attachment-row";
@@ -43,6 +44,12 @@ export type AppState = {
    * Reusable chat personas with system prompts and tool configurations.
    */
   assistants: Assistant[];
+
+  /**
+   * All unified AI Agents (built-in + custom).
+   * Optional during Phase 1 until Phase 4 store migration completes.
+   */
+  agents?: Agent[];
 
   /**
    * All quick-insert prompts (slash-commands).

@@ -32,6 +32,9 @@ export type TransformAgent = {
   /** IDs of knowledge bases available for all steps. */
   knowledgeBaseIds: string[];
 
+  /** IDs of linked Layer-2 leaf subagents available to workflow steps. */
+  subagentIds?: string[];
+
   /** Whether users can upload input files for this workflow. */
   requiresFileUpload: boolean;
 

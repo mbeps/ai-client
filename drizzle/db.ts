@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { env } from "@/config/env";
+import * as agentSchema from "@/drizzle/schemas/agent-schema";
 import * as aiModelSchema from "@/drizzle/schemas/ai-model-schema";
 import * as aiProviderSchema from "@/drizzle/schemas/ai-provider-schema";
-import * as assistantSchema from "@/drizzle/schemas/assistant-schema";
 import * as authSchema from "@/drizzle/schemas/auth-schema";
 import * as chatSchema from "@/drizzle/schemas/chat-schema";
 import * as kbDocumentRelationSchema from "@/drizzle/schemas/kb-document-relation-schema";
@@ -19,9 +19,9 @@ import * as userSettingsSchema from "@/drizzle/schemas/user-settings-schema";
 import * as workflowSchema from "@/drizzle/schemas/workflow-schema";
 
 const schema = {
+  ...agentSchema,
   ...aiModelSchema,
   ...aiProviderSchema,
-  ...assistantSchema,
   ...authSchema,
   ...chatSchema,
   ...kbDocumentSchema,

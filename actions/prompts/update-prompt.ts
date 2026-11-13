@@ -93,7 +93,7 @@ export const updatePrompt = defineAction(
     if (validatedData.projectIds !== undefined)
       updateValues.projectIds = validatedData.projectIds;
     if (validatedData.assistantIds !== undefined)
-      updateValues.assistantIds = validatedData.assistantIds;
+      updateValues.agentIds = validatedData.assistantIds;
 
     const [row] = await db
       .update(prompt)

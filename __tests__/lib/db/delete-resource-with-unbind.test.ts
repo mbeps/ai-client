@@ -63,8 +63,8 @@ describe("deleteResourceWithUnbind", () => {
       expect(resolveFieldKey(chat, chat.projectId)).toBe("projectId");
     });
 
-    it("resolves property key for chat.assistantId column object", () => {
-      expect(resolveFieldKey(chat, chat.assistantId)).toBe("assistantId");
+    it("resolves property key for chat.agentId column object", () => {
+      expect(resolveFieldKey(chat, chat.agentId)).toBe("agentId");
     });
 
     it("resolves property key from plain mock table", () => {
@@ -155,19 +155,19 @@ describe("deleteResourceWithUnbind", () => {
       expect(chainable.delete).toHaveBeenCalledWith(project);
     });
 
-    it("unbinds chat.assistantId correctly without '[object Object]' key", async () => {
+    it("unbinds chat.agentId correctly without '[object Object]' key", async () => {
       chainable.returning.mockResolvedValueOnce([{ id: "asst-1" }]);
 
       const result = await deleteResourceWithUnbind(
         assistant,
         "asst-1",
         "user-1",
-        { table: chat, field: chat.assistantId },
+        { table: chat, field: chat.agentId },
       );
 
       expect(result).toEqual([{ id: "asst-1" }]);
       expect(chainable.update).toHaveBeenCalledWith(chat);
-      expect(chainable.set).toHaveBeenCalledWith({ assistantId: null });
+      expect(chainable.set).toHaveBeenCalledWith({ agentId: null });
       expect(chainable.delete).toHaveBeenCalledWith(assistant);
     });
 
