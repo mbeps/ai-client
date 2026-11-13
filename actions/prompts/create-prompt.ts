@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
-import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { agent } from "@/drizzle/schemas/agent-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -58,15 +58,16 @@ export const createPrompt = defineAction(
       }
     }
 
-    if (validated.assistantIds && validated.assistantIds.length > 0) {
+    const agentIds = validated.agentIds ?? validated.assistantIds;
+    if (agentIds && agentIds.length > 0) {
       const owned = await db
-        .select({ id: assistant.id })
-        .from(assistant)
-        .where(whereOwner(assistant, validated.assistantIds, session.user.id));
-      if (owned.length !== validated.assistantIds.length) {
+        .select({ id: agent.id })
+        .from(agent)
+        .where(whereOwner(agent, agentIds, session.user.id));
+      if (owned.length !== agentIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "One or more assistants not found",
+          message: "One or more agents not found",
         });
       }
     }
@@ -78,7 +79,7 @@ export const createPrompt = defineAction(
         shortcut: validated.shortcut,
         content: validated.content,
         projectIds: validated.projectIds,
-        agentIds: validated.assistantIds,
+        agentIds,
         userId: session.user.id,
       })
       .returning();

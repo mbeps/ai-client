@@ -397,4 +397,72 @@ describe("updateProject", () => {
       error: expect.objectContaining({ code: "UNAUTHORIZED" }),
     });
   });
+
+  it("returns INVALID_INPUT when update payload fails schema validation", async () => {
+    const res = await updateProject(VALID_UUID, { name: "" });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+
+    const rootBadUpdate = await updateProject(VALID_UUID, null as never);
+    expect(rootBadUpdate).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+
+    const rootBadCreate = await createProject(null as never);
+    expect(rootBadCreate).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+  });
+
+  it("validates and updates subagentIds when provided", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: VALID_UUID, name: "Leaf", subagentIds: [] },
+    ]);
+    chainable.returning.mockResolvedValueOnce([
+      { ...PROJECT_ROW, subagentIds: [VALID_UUID] },
+    ]);
+    const res = await updateProject(VALID_UUID, { subagentIds: [VALID_UUID] });
+    expect(res.ok).toBe(true);
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ subagentIds: [VALID_UUID] }),
+    );
+  });
+
+  it("rejects subagentIds when target is an orchestrator agent", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: VALID_UUID, name: "Orchestrator", subagentIds: ["other-id"] },
+    ]);
+    const res = await updateProject(VALID_UUID, { subagentIds: [VALID_UUID] });
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+    expect(chainable.update).not.toHaveBeenCalled();
+  });
+
+  it("validates subagentIds in createProject and rejects invalid target", async () => {
+    chainable.where.mockResolvedValueOnce([]);
+    const badRes = await createProject({
+      name: "Proj",
+      subagentIds: [VALID_UUID],
+    });
+    expect(badRes).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "INVALID_INPUT" }),
+    });
+    expect(chainable.insert).not.toHaveBeenCalled();
+
+    chainable.returning.mockResolvedValueOnce([
+      { ...PROJECT_ROW, subagentIds: ["builtin:researcher"] },
+    ]);
+    const okRes = await createProject({
+      name: "Proj",
+      subagentIds: ["builtin:researcher"],
+    });
+    expect(okRes.ok).toBe(true);
+  });
 });

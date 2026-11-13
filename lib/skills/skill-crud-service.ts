@@ -77,7 +77,7 @@ export async function createSkillForUser(
       files: data.files ?? [],
       enabled: data.enabled ?? true,
       projectIds: data.projectIds ?? [],
-      agentIds: data.assistantIds ?? [],
+      agentIds: data.agentIds ?? data.assistantIds ?? [],
     })
     .returning();
 
@@ -116,6 +116,7 @@ export async function updateSkillForUser(
     assertSkillBundleWithinBudget(data.files);
   }
 
+  const resolvedAgentIds = data.agentIds ?? data.assistantIds;
   const [row] = await db
     .update(skill)
     .set({
@@ -126,9 +127,7 @@ export async function updateSkillForUser(
       ...(data.files !== undefined ? { files: data.files } : {}),
       ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
       ...(data.projectIds !== undefined ? { projectIds: data.projectIds } : {}),
-      ...(data.assistantIds !== undefined
-        ? { agentIds: data.assistantIds }
-        : {}),
+      ...(resolvedAgentIds !== undefined ? { agentIds: resolvedAgentIds } : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(skill.id, existing.id), eq(skill.userId, userId)))

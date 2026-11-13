@@ -29,14 +29,14 @@ export const createChat = defineAction(
   async (
     title?: string,
     projectId?: string,
-    assistantId?: string,
+    agentId?: string,
   ): Promise<Result<ChatRow, CommonError>> => {
     const session = await requireSession();
 
     const parsed = createChatSchema.safeParse({
       title,
       projectId,
-      assistantId,
+      agentId,
     });
     if (!parsed.success) {
       return fail({
@@ -57,7 +57,7 @@ export const createChat = defineAction(
         title: validated.title ?? "New Chat",
         userId: session.user.id,
         projectId: validated.projectId ?? null,
-        agentId: validated.assistantId ?? null,
+        agentId: validated.agentId ?? validated.assistantId ?? null,
       })
       .returning();
 
@@ -65,7 +65,7 @@ export const createChat = defineAction(
       chatId: newChat.id,
       userId: session.user.id,
       projectId: newChat.projectId,
-      assistantId: newChat.agentId,
+      agentId: newChat.agentId,
     });
 
     return ok(newChat);

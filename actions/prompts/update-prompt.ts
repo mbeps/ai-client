@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { agent } from "@/drizzle/schemas/agent-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -66,17 +66,16 @@ export const updatePrompt = defineAction(
       }
     }
 
-    if (validatedData.assistantIds && validatedData.assistantIds.length > 0) {
+    const agentIds = validatedData.agentIds ?? validatedData.assistantIds;
+    if (agentIds && agentIds.length > 0) {
       const owned = await db
-        .select({ id: assistant.id })
-        .from(assistant)
-        .where(
-          whereOwner(assistant, validatedData.assistantIds, session.user.id),
-        );
-      if (owned.length !== validatedData.assistantIds.length) {
+        .select({ id: agent.id })
+        .from(agent)
+        .where(whereOwner(agent, agentIds, session.user.id));
+      if (owned.length !== agentIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "One or more assistants not found",
+          message: "One or more agents not found",
         });
       }
     }
@@ -92,8 +91,7 @@ export const updatePrompt = defineAction(
       updateValues.content = validatedData.content;
     if (validatedData.projectIds !== undefined)
       updateValues.projectIds = validatedData.projectIds;
-    if (validatedData.assistantIds !== undefined)
-      updateValues.agentIds = validatedData.assistantIds;
+    if (agentIds !== undefined) updateValues.agentIds = agentIds;
 
     const [row] = await db
       .update(prompt)

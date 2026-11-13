@@ -3,6 +3,7 @@
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { validateTargetSubagentIds } from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -37,6 +38,16 @@ export const createTransformAgent = defineAction(
       });
     }
     const validated = parsed.data;
+    const subagentIds = validated.subagentIds ?? [];
+    if (subagentIds.length > 0) {
+      const linkCheck = await validateTargetSubagentIds(
+        session.user.id,
+        subagentIds,
+      );
+      if (!linkCheck.ok) {
+        return linkCheck;
+      }
+    }
 
     const [row] = await db
       .insert(transformAgent)
@@ -49,6 +60,7 @@ export const createTransformAgent = defineAction(
         skillMode: validated.skillMode,
         skillIds: validated.skillIds,
         knowledgeBaseIds: validated.knowledgeBaseIds,
+        subagentIds,
         requiresFileUpload: validated.requiresFileUpload,
         steps: JSON.stringify(validated.steps),
         userId: session.user.id,

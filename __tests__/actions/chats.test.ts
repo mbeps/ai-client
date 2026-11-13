@@ -437,7 +437,7 @@ describe("getChat", () => {
       whereCallCount++;
       if (whereCallCount === 1)
         return Promise.resolve([
-          { chat: CHAT_ROW, projectName: "My Project", assistantName: "Bot" },
+          { chat: CHAT_ROW, projectName: "My Project", agentName: "Bot" },
         ]);
       if (whereCallCount === 3) return Promise.resolve([]);
       return chainable;
@@ -453,7 +453,34 @@ describe("getChat", () => {
         messages: [MESSAGE_ROW],
         attachments: [],
         projectName: "My Project",
+        agentName: "Bot",
         assistantName: "Bot",
+      }),
+    });
+  });
+
+  it("resolves built-in agent name when chat.agentId is a builtin:* ID", async () => {
+    let whereCallCount = 0;
+    chainable.where.mockImplementation(() => {
+      whereCallCount++;
+      if (whereCallCount === 1)
+        return Promise.resolve([
+          {
+            chat: { ...CHAT_ROW, agentId: "builtin:researcher" },
+            projectName: null,
+            agentName: null,
+          },
+        ]);
+      return chainable;
+    });
+    chainable.orderBy.mockResolvedValueOnce([]);
+
+    const result = await getChat(CHAT_UUID);
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({
+        agentName: "Researcher",
+        assistantName: "Researcher",
       }),
     });
   });
@@ -464,7 +491,7 @@ describe("getChat", () => {
       whereCallCount++;
       if (whereCallCount === 1)
         return Promise.resolve([
-          { chat: CHAT_ROW, projectName: null, assistantName: null },
+          { chat: CHAT_ROW, projectName: null, agentName: null },
         ]);
       return chainable;
     });

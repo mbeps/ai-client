@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { validateTargetSubagentIds } from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -41,6 +42,16 @@ export const updateTransformAgent = defineAction(
     }
     const validated = parsed.data;
 
+    if (validated.subagentIds && validated.subagentIds.length > 0) {
+      const linkCheck = await validateTargetSubagentIds(
+        session.user.id,
+        validated.subagentIds,
+      );
+      if (!linkCheck.ok) {
+        return linkCheck;
+      }
+    }
+
     const values: Record<string, unknown> = {};
     if (validated.name !== undefined) values.name = validated.name;
     if (validated.description !== undefined)
@@ -54,6 +65,8 @@ export const updateTransformAgent = defineAction(
     if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;
     if (validated.knowledgeBaseIds !== undefined)
       values.knowledgeBaseIds = validated.knowledgeBaseIds;
+    if (validated.subagentIds !== undefined)
+      values.subagentIds = validated.subagentIds;
     if (validated.requiresFileUpload !== undefined)
       values.requiresFileUpload = validated.requiresFileUpload;
     if (validated.steps !== undefined)

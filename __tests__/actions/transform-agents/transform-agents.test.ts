@@ -349,6 +349,42 @@ describe("transform agents actions", () => {
         }),
       });
     });
+
+    it("validates and persists subagentIds on create and update", async () => {
+      chainable.where.mockResolvedValueOnce([]);
+      const badCreate = await createTransformAgent({
+        name: "WF",
+        subagentIds: ["11111111-1111-4111-8111-111111111111"],
+      });
+      expect(badCreate).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
+
+      const created = { id: agentId, name: "WF", subagentIds: ["builtin:worker"] };
+      chainable.returning.mockResolvedValueOnce([created]);
+      const okCreate = await createTransformAgent({
+        name: "WF",
+        subagentIds: ["builtin:worker"],
+      });
+      expect(okCreate).toEqual({ ok: true, value: created });
+
+      chainable.where.mockResolvedValueOnce([]);
+      const badUpdate = await updateTransformAgent(agentId, {
+        subagentIds: ["11111111-1111-4111-8111-111111111111"],
+      });
+      expect(badUpdate).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: "INVALID_INPUT" }),
+      });
+
+      const updated = { id: agentId, subagentIds: ["builtin:reviewer"] };
+      chainable.returning.mockResolvedValueOnce([updated]);
+      const okUpdate = await updateTransformAgent(agentId, {
+        subagentIds: ["builtin:reviewer"],
+      });
+      expect(okUpdate).toEqual({ ok: true, value: updated });
+    });
   });
 
   describe("getTransformAgent", () => {
