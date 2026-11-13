@@ -21,8 +21,8 @@ import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
-import type { Assistant } from "@/types/assistant/assistant";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Citation } from "@/types/chat/citation";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -61,8 +61,8 @@ interface MessageBubbleProps {
   isLatest: boolean;
   /** Assistant ID bound to the chat. */
   assistantId?: string | null;
-  /** Optional assistants list to resolve assistant names. */
-  assistants?: Assistant[];
+  /** Optional agents list to resolve agent names. */
+  assistants?: Agent[];
   /** Callback to delete this message from the conversation tree. */
   onDelete: (id: string) => void;
   /** Callback to edit this message, which creates a new branch. */

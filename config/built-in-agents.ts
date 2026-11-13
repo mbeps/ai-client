@@ -23,17 +23,6 @@ export const LINKABLE_BUILT_IN_AGENT_IDS = [
   "builtin:worker",
 ] as const;
 
-/**
- * Union type of all built-in agent identifiers.
- */
-export type BuiltInAgentId = (typeof BUILT_IN_AGENT_IDS)[number];
-
-/**
- * Union type of linkable built-in agent identifiers.
- */
-export type LinkableBuiltInAgentId =
-  (typeof LINKABLE_BUILT_IN_AGENT_IDS)[number];
-
 const EPOCH_DATE = new Date("2026-01-01T00:00:00.000Z");
 
 const GENERAL_BUILT_IN_GUARDRAILS = {

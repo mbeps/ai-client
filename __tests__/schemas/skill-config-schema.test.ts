@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProjectSchema, projectSchema, updateProjectSchema } from "@/schemas/project/project";
-import { createAssistantSchema, assistantSchema, updateAssistantSchema } from "@/schemas/assistant/assistant";
+import { createAgentSchema, agentEntitySchema, updateAgentSchema } from "@/schemas/agent/agent";
 import { createTransformAgentSchema, updateTransformAgentSchema } from "@/schemas/workflows/transform-agent";
 import { skillModeSchema, skillIdsSchema } from "@/schemas/skill/skill-config";
 
@@ -32,20 +32,21 @@ describe("Skill Config Schemas", () => {
     expect(updateData.skillMode).toBe("none");
   });
 
-  it("should accept skillMode and skillIds in assistant schemas", () => {
-    const data = createAssistantSchema.parse({
-      name: "Test Assistant",
+  it("should accept skillMode and skillIds in agent schemas", () => {
+    const data = createAgentSchema.parse({
+      name: "Test Agent",
       skillMode: "none",
       skillIds: [],
     });
     expect(data.skillMode).toBe("none");
 
-    const updateData = updateAssistantSchema.parse({
+    const updateData = updateAgentSchema.parse({
       skillMode: "specific",
       skillIds: ["skill-a"],
     });
     expect(updateData.skillMode).toBe("specific");
     expect(updateData.skillIds).toEqual(["skill-a"]);
+    expect(agentEntitySchema.shape.skillMode).toBeDefined();
   });
 
   it("should accept skillMode and skillIds in transform agent schemas", () => {

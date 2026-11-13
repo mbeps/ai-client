@@ -1,9 +1,5 @@
 import type { AgentGuardrails } from "@/drizzle/schemas/agent-schema";
-
-/**
- * Skill loading strategy configured for an Agent.
- */
-export type SkillMode = "dynamic" | "none" | "specific";
+import type { SkillMode } from "@/schemas/skill/skill-config";
 
 /**
  * Prompt shortcut visibility strategy configured for an Agent.

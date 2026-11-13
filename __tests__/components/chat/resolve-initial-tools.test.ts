@@ -4,7 +4,8 @@ import {
   resolveInitialReasoningEffort,
 } from "@/components/chat/use-chat-initial-state";
 import { DEFAULT_ENABLED_TOOLS, INTERNAL_TOOL_IDS } from "@/config/tools";
-import type { Assistant } from "@/types/assistant/assistant";
+import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
+import type { Agent } from "@/types/agent/agent";
 import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
 
@@ -16,15 +17,22 @@ describe("resolveInitialChatConfig - tools resolution", () => {
   });
 
   it("honors empty tools when an assistant has explicitly configured tools as empty array", () => {
-    const assistant: Assistant = {
+    const assistant: Agent = {
       id: "asst-1",
       userId: "user-1",
       name: "Markdown Converter",
       description: "Converts text into markdown",
       prompt: "Be brief",
+      subagentPrompt: "",
+      modelId: null,
+      knowledgebaseIds: [],
       tools: [], // All tools disabled, including canvas!
       skillMode: "dynamic",
       skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      subagentIds: [],
+      guardrails: { ...DEFAULT_AGENT_GUARDRAILS },
       avatar: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -37,15 +45,22 @@ describe("resolveInitialChatConfig - tools resolution", () => {
   });
 
   it("honors custom tools when assistant has selected specific tools without canvas", () => {
-    const assistant: Assistant = {
+    const assistant: Agent = {
       id: "asst-2",
       userId: "user-1",
       name: "Excel Assistant",
       description: "Handles spreadsheets",
       prompt: "Help with excel",
+      subagentPrompt: "",
+      modelId: null,
+      knowledgebaseIds: [],
       tools: ["excel-server:tool:read_sheet"],
       skillMode: "dynamic",
       skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      subagentIds: [],
+      guardrails: { ...DEFAULT_AGENT_GUARDRAILS },
       avatar: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -92,15 +107,22 @@ describe("resolveInitialChatConfig - tools resolution", () => {
       updatedAt: new Date(),
     };
 
-    const assistant: Assistant = {
+    const assistant: Agent = {
       id: "asst-1",
       userId: "user-1",
       name: "Assistant without Canvas",
       description: "",
       prompt: "",
+      subagentPrompt: "",
+      modelId: null,
+      knowledgebaseIds: [],
       tools: [],
       skillMode: "dynamic",
       skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      subagentIds: [],
+      guardrails: { ...DEFAULT_AGENT_GUARDRAILS },
       avatar: null,
       createdAt: new Date(),
       updatedAt: new Date(),

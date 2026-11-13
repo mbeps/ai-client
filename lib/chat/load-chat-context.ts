@@ -25,7 +25,7 @@ import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
-export interface LoadedAgentSummary {
+interface LoadedAgentSummary {
   id: string;
   name: string;
   prompt: string | null;
